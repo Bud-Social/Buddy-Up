@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.db import models
 from common.models import TimestampedModel, SoftDeleteModel
 
@@ -26,7 +28,7 @@ class Post(TimestampedModel, SoftDeleteModel):
         ('reviewed', 'Reviewed'),
     ]
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     author = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='posts')
     post_type = models.CharField(max_length=20, choices=POST_TYPES)
     body = models.TextField(blank=True)

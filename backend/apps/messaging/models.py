@@ -1,9 +1,11 @@
+from uuid import uuid4
+
 from django.db import models
 from common.models import TimestampedModel, SoftDeleteModel
 
 
 class Conversation(TimestampedModel):
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     participants = models.ManyToManyField('profiles.Profile', related_name='conversations')
     is_group = models.BooleanField(default=False)
     group_name = models.CharField(max_length=100, blank=True)
@@ -35,7 +37,7 @@ class Message(TimestampedModel, SoftDeleteModel):
         ('accountability_ping', 'Accountability Ping'),
     ]
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='sent_messages')
     message_type = models.CharField(max_length=25, choices=MESSAGE_TYPES, default='text')

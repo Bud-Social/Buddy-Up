@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.db import models
 from common.models import TimestampedModel, SoftDeleteModel
 
@@ -11,7 +13,7 @@ class MealPlan(TimestampedModel):
         ('gluten_free', 'Gluten-Free'), ('other', 'Other'),
     ]
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     creator = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='meal_plans')
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -61,7 +63,7 @@ class MealPlanReview(TimestampedModel):
 
 
 class TrainingProgramme(TimestampedModel):
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     creator = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='marketplace_programmes')
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -83,7 +85,7 @@ class Product(TimestampedModel):
         ('other', 'Other'),
     ]
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=200)
     brand = models.CharField(max_length=100)
     description = models.TextField(blank=True)

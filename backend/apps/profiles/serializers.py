@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Q
 from .models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship
 from apps.gyms.models import Gym, GymMembership
 
@@ -30,7 +31,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
     def get_buddy_count(self, obj):
         return BuddyRelationship.objects.filter(
-            (BuddyRelationship.Q(from_user=obj) | BuddyRelationship.Q(to_user=obj)),
+            (Q(from_user=obj) | Q(to_user=obj)),
             status='confirmed'
         ).count()
 
@@ -57,8 +58,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         if not viewer or viewer == obj:
             return False
         return BuddyRelationship.objects.filter(
-            (BuddyRelationship.Q(from_user=viewer, to_user=obj) |
-             BuddyRelationship.Q(from_user=obj, to_user=viewer)),
+            (Q(from_user=viewer, to_user=obj) |
+             Q(from_user=obj, to_user=viewer)),
             status='confirmed'
         ).exists()
 
@@ -74,8 +75,8 @@ class ProfileSerializer(serializers.ModelSerializer):
             return None
         try:
             br = BuddyRelationship.objects.get(
-                (BuddyRelationship.Q(from_user=viewer, to_user=obj) |
-                 BuddyRelationship.Q(from_user=obj, to_user=viewer))
+                (Q(from_user=viewer, to_user=obj) |
+                 Q(from_user=obj, to_user=viewer))
             )
             return br.status
         except BuddyRelationship.DoesNotExist:
@@ -88,8 +89,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         if viewer == obj:
             return False
         return BlockRelationship.objects.filter(
-            (BlockRelationship.Q(blocker=viewer, blocked=obj) |
-             BlockRelationship.Q(blocker=obj, blocked=viewer))
+            (Q(blocker=viewer, blocked=obj) |
+             Q(blocker=obj, blocked=viewer))
         ).exists()
 
 

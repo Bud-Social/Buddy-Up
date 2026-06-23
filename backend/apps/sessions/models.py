@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.db import models
 from common.models import TimestampedModel
 
@@ -50,7 +52,7 @@ class BookingSession(TimestampedModel):
         ('no_show', 'No Show'),
     ]
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     client = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='bookings_as_client')
     trainer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='bookings_as_trainer')
     session_type = models.CharField(max_length=20, choices=SESSION_TYPES)

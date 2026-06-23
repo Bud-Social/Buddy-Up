@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.db import models
 from common.models import TimestampedModel, SoftDeleteModel
 
@@ -15,7 +17,7 @@ class Gym(TimestampedModel, SoftDeleteModel):
         ('tiered', 'Tiered'),
     ]
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     name = models.CharField(max_length=60, unique=True)
     handle = models.CharField(max_length=60, unique=True)
     description = models.TextField(max_length=500, blank=True)

@@ -1,5 +1,6 @@
 from django.db import models
 from common.models import TimestampedModel
+from uuid import uuid4
 
 
 class ArtifactTransaction(TimestampedModel):
@@ -28,7 +29,7 @@ class ArtifactTransaction(TimestampedModel):
         ('held', 'Held (Escrow)'),
     ]
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='transactions')
     transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
     artifact_type = models.CharField(max_length=30)

@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.db import models
 from common.models import TimestampedModel
 
@@ -22,7 +24,7 @@ class BuddyLive(TimestampedModel):
         ('ended', 'Ended'),
     ]
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     host = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='hosted_lives')
     title = models.CharField(max_length=80)
     live_type = models.CharField(max_length=20, choices=LIVE_TYPES)

@@ -4,6 +4,7 @@ from datetime import date as date_type
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
 from django.utils import timezone
+from django.db.models import Q
 from django.contrib.postgres.search import SearchVector, SearchQuery
 from rest_framework import views, permissions, status, generics
 from rest_framework.response import Response
@@ -68,8 +69,8 @@ class UserProfileView(generics.RetrieveAPIView):
         profile = get_object_or_404(Profile, username=self.kwargs['username'])
 
         blocked = BlockRelationship.objects.filter(
-            (BlockRelationship.Q(blocker=profile) & BlockRelationship.Q(blocked=request.user.profile if request.user.is_authenticated else None)) |
-            (BlockRelationship.Q(blocker=request.user.profile if request.user.is_authenticated else None) & BlockRelationship.Q(blocked=profile))
+            (Q(blocker=profile) & Q(blocked=request.user.profile if request.user.is_authenticated else None)) |
+            (Q(blocker=request.user.profile if request.user.is_authenticated else None) & Q(blocked=profile))
         ).exists() if request.user.is_authenticated else False
 
         if blocked:
@@ -82,8 +83,8 @@ class UserProfileView(generics.RetrieveAPIView):
         if profile.privacy_level == 'private' and (
             not request.user.is_authenticated or
             not BuddyRelationship.objects.filter(
-                (BuddyRelationship.Q(from_user=request.user.profile, to_user=profile) |
-                 BuddyRelationship.Q(from_user=profile, to_user=request.user.profile)),
+                (Q(from_user=request.user.profile, to_user=profile) |
+                 Q(from_user=profile, to_user=request.user.profile)),
                 status='confirmed'
             ).exists()
         ):
@@ -146,8 +147,8 @@ class SendBuddyRequestView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         blocked = BlockRelationship.objects.filter(
-            (BlockRelationship.Q(blocker=request.user.profile, blocked=target) |
-             BlockRelationship.Q(blocker=target, blocked=request.user.profile))
+            (Q(blocker=request.user.profile, blocked=target) |
+             Q(blocker=target, blocked=request.user.profile))
         ).exists()
         if blocked:
             return Response({
@@ -157,8 +158,8 @@ class SendBuddyRequestView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         existing = BuddyRelationship.objects.filter(
-            (BuddyRelationship.Q(from_user=request.user.profile, to_user=target) |
-             BuddyRelationship.Q(from_user=target, to_user=request.user.profile))
+            (Q(from_user=request.user.profile, to_user=target) |
+             Q(from_user=target, to_user=request.user.profile))
         ).first()
 
         if existing:
@@ -201,8 +202,8 @@ class SendBuddyRequestView(views.APIView):
     def delete(self, request, username):
         target = get_object_or_404(Profile, username=username)
         BuddyRelationship.objects.filter(
-            (BuddyRelationship.Q(from_user=request.user.profile, to_user=target) |
-             BuddyRelationship.Q(from_user=target, to_user=request.user.profile))
+            (Q(from_user=request.user.profile, to_user=target) |
+             Q(from_user=target, to_user=request.user.profile))
         ).delete()
         return Response({
             'success': True, 'data': None,
@@ -308,12 +309,12 @@ class BlockUserView(views.APIView):
             blocked=target,
         )
         BuddyRelationship.objects.filter(
-            (BuddyRelationship.Q(from_user=request.user.profile, to_user=target) |
-             BuddyRelationship.Q(from_user=target, to_user=request.user.profile))
+            (Q(from_user=request.user.profile, to_user=target) |
+             Q(from_user=target, to_user=request.user.profile))
         ).delete()
         FollowRelationship.objects.filter(
-            (FollowRelationship.Q(follower=request.user.profile, followee=target) |
-             FollowRelationship.Q(follower=target, followee=request.user.profile))
+            (Q(follower=request.user.profile, followee=target) |
+             Q(follower=target, followee=request.user.profile))
         ).delete()
 
         return Response({

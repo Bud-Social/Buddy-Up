@@ -30,13 +30,11 @@ class FeedView(views.APIView):
                 author_id__in=followed_ids,
                 visibility='public',
                 moderation_status='clean',
-                post_type__ne='moment',
             ).select_related('author').order_by('-created_at')
         elif tab == 'nearby':
             queryset = Post.objects.filter(
                 visibility='public',
                 moderation_status='clean',
-                post_type__ne='moment',
             )
             if user_profile.location_city:
                 queryset = queryset.filter(location_label__icontains=user_profile.location_city)
@@ -56,7 +54,6 @@ class FeedView(views.APIView):
 
             queryset = Post.objects.filter(
                 moderation_status='clean',
-                post_type__ne='moment',
                 visibility__in=['public'],
             ).select_related('author').annotate(
                 rank=db_models.Case(

@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 from django.db import models
 from common.models import TimestampedModel
 
@@ -27,7 +29,7 @@ class Notification(TimestampedModel):
         ('new_device_login', 'New Device Login'),
     ]
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     recipient = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='notifications')
     notification_type = models.CharField(max_length=30, choices=TYPE_CHOICES)
     title = models.CharField(max_length=200)

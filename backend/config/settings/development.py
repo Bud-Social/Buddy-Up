@@ -30,3 +30,19 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# ── Local Development Overrides (no Docker) ──────────────────────────
+
+DATABASES['default'] = {
+    'ENGINE': 'django.db.backends.sqlite3',
+    'NAME': BASE_DIR / 'db.sqlite3',
+}
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
+
+CELERY_BROKER_URL = 'memory://'
+CELERY_TASK_ALWAYS_EAGER = True

@@ -25,7 +25,6 @@ INSTALLED_APPS = [
     'social_django',
     'django_otp',
     'django_otp.plugins.otp_totp',
-    'encrypted_model_fields',
 
     # BuddyUp apps
     'apps.accounts',
@@ -167,9 +166,9 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.ScopedRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'registration': '10/hour',
-        'login': '5/10min',
-        'otp': '3/hour',
+        'registration': '10/h',
+        'login': '30/h',
+        'otp': '3/h',
     },
 }
 
@@ -200,9 +199,6 @@ AUTHENTICATION_BACKENDS = (
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('GOOGLE_OAUTH2_KEY', '')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('GOOGLE_OAUTH2_SECRET', '')
-
-# Encryption
-ENCRYPTED_FIELDS_KEYDIR = BASE_DIR / 'field-encryption-keys'
 
 # Minimum age
 BUDDYUP_MINIMUM_AGE = 16
