@@ -8,3 +8,4 @@ export { livesApi } from './lives';
 export { walletApi } from './wallet';
 export { sessionsApi } from './sessions';
 export { marketplaceApi } from './marketplace';
+export { messagingApi } from './messaging';
