@@ -1,13 +1,14 @@
 interface AvatarProps {
   src?: string; alt: string; size?: 'sm' | 'md' | 'lg' | 'xl';
   showRepRing?: boolean; streakProgress?: number; className?: string;
+  onClick?: (e: React.MouseEvent) => void;
 }
 const sz: Record<string, string> = { sm: 'w-8 h-8', md: 'w-10 h-10', lg: 'w-14 h-14', xl: 'w-20 h-20' };
 const rs: Record<string, string> = { sm: 'w-10 h-10', md: 'w-12 h-12', lg: 'w-16 h-16', xl: 'w-22 h-22' };
 
-export function Avatar({ src, alt, size = 'md', showRepRing = false, streakProgress = 0, className }: AvatarProps) {
+export function Avatar({ src, alt, size = 'md', showRepRing = false, streakProgress = 0, className, onClick }: AvatarProps) {
   const img = (
-    <div className={`rounded-full bg-buddy-surface overflow-hidden flex-shrink-0 ${sz[size]} ${className || ''}`}>
+    <div className={`rounded-full bg-buddy-surface overflow-hidden flex-shrink-0 ${sz[size]} ${className || ''}`} onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined}>
       {src ? <img src={src} alt={alt} className="w-full h-full object-cover" loading="lazy" /> : (
         <div className="w-full h-full flex items-center justify-center bg-buddy-green/20 text-buddy-green font-heading font-semibold text-lg">
           {alt.charAt(0).toUpperCase()}

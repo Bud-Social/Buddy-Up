@@ -7,6 +7,8 @@ urlpatterns = [
     path('search/', views.ProfileSearchView.as_view(), name='search'),
     path('onboarding/', views.OnboardingView.as_view(), name='onboarding'),
     path('blocked/', views.BlockedUsersView.as_view(), name='blocked_users'),
+    path('pending-requests/', views.PendingBuddyRequestsView.as_view(), name='pending_requests'),
+    path('buddies/search/', views.BuddySearchView.as_view(), name='buddy_search'),
 
     path('<str:username>/', views.UserProfileView.as_view(), name='user_profile'),
     path('<str:username>/buddy/', views.SendBuddyRequestView.as_view(), name='buddy_request'),
@@ -14,6 +16,7 @@ urlpatterns = [
     path('<str:username>/buddy/decline/', views.DeclineBuddyRequestView.as_view(), name='buddy_decline'),
     path('<str:username>/follow/', views.FollowUserView.as_view(), name='follow'),
     path('<str:username>/block/', views.BlockUserView.as_view(), name='block'),
+    path('<str:username>/ping/', views.SendPingView.as_view(), name='ping'),
     path('<str:username>/buddies/', views.BuddiesListView.as_view(), name='buddies'),
     path('<str:username>/followers/', views.FollowersListView.as_view(), name='followers'),
     path('<str:username>/following/', views.FollowingListView.as_view(), name='following'),

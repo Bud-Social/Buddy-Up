@@ -1,11 +1,16 @@
+import uuid
+from datetime import date as date_type
+
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
+from django.utils import timezone
 from django.contrib.postgres.search import SearchVector, SearchQuery
 from rest_framework import views, permissions, status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 
-from .models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship
+from .models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship, AccountabilityPing, SharedGoal
+from .buddy_notifications import notify_buddy_request, notify_buddy_accepted, notify_follow
 from .serializers import (
     ProfileSerializer, ProfileUpdateSerializer, OnboardingSerializer,
     BuddyRequestSerializer, ProfileSearchSerializer,
@@ -172,6 +177,7 @@ class SendBuddyRequestView(views.APIView):
                     }, status=status.HTTP_400_BAD_REQUEST)
                 existing.status = 'confirmed'
                 existing.save(update_fields=['status'])
+                notify_buddy_accepted(str(request.user.profile.user_id), str(target.user_id))
                 return Response({
                     'success': True, 'data': {'status': 'confirmed'},
                     'message': f'You and @{target.username} are now BuddyUp Buddies! 🎉',
@@ -183,6 +189,8 @@ class SendBuddyRequestView(views.APIView):
             to_user=target,
             status='pending',
         )
+
+        notify_buddy_request(str(request.user.profile.user_id), str(target.user_id))
 
         return Response({
             'success': True, 'data': {'status': 'pending'},
@@ -216,6 +224,8 @@ class AcceptBuddyRequestView(views.APIView):
         )
         buddy_req.status = 'confirmed'
         buddy_req.save(update_fields=['status'])
+
+        notify_buddy_accepted(str(target.user_id), str(request.user.profile.user_id))
 
         return Response({
             'success': True, 'data': {'status': 'confirmed'},
@@ -261,6 +271,7 @@ class FollowUserView(views.APIView):
             follower=request.user.profile,
             followee=target,
         )
+        notify_follow(str(request.user.profile.user_id), str(target.user_id))
         return Response({
             'success': True, 'data': None,
             'message': f'Now following @{target.username}.',
@@ -425,4 +436,121 @@ class ProfileSearchView(views.APIView):
                 'next': paginator.get_next_link(),
                 'previous': paginator.get_previous_link(),
             },
+        })
+
+
+class PendingBuddyRequestsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from .serializers import ProfileSerializer
+        pending = BuddyRelationship.objects.filter(
+            to_user=request.user.profile,
+            status='pending',
+        ).select_related('from_user')
+        profiles = [br.from_user for br in pending]
+        serializer = ProfileSerializer(profiles, many=True, context={'request': request})
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class BuddySearchView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        q = request.query_params.get('q', '')
+        from .serializers import ProfileSerializer
+
+        user_profile = request.user.profile
+        confirmed_buddies = BuddyRelationship.objects.filter(
+            (db_models.Q(from_user=user_profile) | db_models.Q(to_user=user_profile)),
+            status='confirmed',
+        ).values_list(
+            db_models.Case(db_models.When(from_user=user_profile, then='to_user_id'), default='from_user_id'),
+            flat=True,
+        )
+
+        queryset = Profile.objects.filter(
+            user_id__in=confirmed_buddies,
+        )
+
+        if q:
+            queryset = queryset.filter(
+                db_models.Q(username__icontains=q) | db_models.Q(display_name__icontains=q),
+            )
+
+        serializer = ProfileSerializer(queryset, many=True, context={'request': request})
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class SendPingView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, username):
+        target = get_object_or_404(Profile, username=username)
+        user_profile = request.user.profile
+
+        is_buddy = BuddyRelationship.objects.filter(
+            (db_models.Q(from_user=user_profile, to_user=target) |
+             db_models.Q(from_user=target, to_user=user_profile)),
+            status='confirmed',
+        ).exists()
+
+        if not is_buddy:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You must be buddies to send a ping.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        today_pings = AccountabilityPing.objects.filter(
+            from_user=user_profile,
+            to_user=target,
+            created_at__date=timezone.now().date(),
+        ).count()
+
+        if today_pings >= 1:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You can only send 1 accountability ping per buddy per day.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        message = request.data.get('message', "How's your workout going? 💪")
+        ping = AccountabilityPing.objects.create(
+            from_user=user_profile,
+            to_user=target,
+            message=message[:100],
+        )
+
+        from apps.notifications.tasks import create_notification
+        create_notification.delay(
+            str(target.user_id),
+            'accountability_ping',
+            f'{user_profile.display_name} pinged you! 💪',
+            message[:100],
+            {
+                'from_user_id': str(user_profile.user_id),
+                'from_username': user_profile.username,
+                'ping_id': str(ping.id),
+            },
+        )
+
+        return Response({
+            'success': True,
+            'data': {'ping_id': str(ping.id)},
+            'message': f'Ping sent to @{target.username}!',
+            'errors': None,
+            'pagination': None,
         })

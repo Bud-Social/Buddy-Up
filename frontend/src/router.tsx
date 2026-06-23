@@ -38,6 +38,7 @@ const Notifications = lazy(() => import('@/pages/app/Notifications'));
 const Profile = lazy(() => import('@/pages/app/Profile'));
 const UserProfile = lazy(() => import('@/pages/app/UserProfile'));
 const Settings = lazy(() => import('@/pages/app/Settings'));
+const BuddiesPage = lazy(() => import('@/pages/app/BuddiesPage'));
 
 const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Privacy = lazy(() => import('@/pages/legal/Privacy'));
@@ -95,6 +96,7 @@ export const router = createBrowserRouter([
           { path: '/notifications', element: <SWrapper><Notifications /></SWrapper> },
           { path: '/profile', element: <SWrapper><Profile /></SWrapper> },
           { path: '/profile/edit', element: <SWrapper><Profile /></SWrapper> },
+          { path: '/buddies', element: <SWrapper><BuddiesPage /></SWrapper> },
           { path: '/settings', element: <SWrapper><Settings /></SWrapper> },
         ],
       },

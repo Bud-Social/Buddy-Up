@@ -1,22 +1,49 @@
 import { create } from 'zustand';
 
-interface Notification { id: string; type: string; message: string; read: boolean; created_at: string; }
+export interface AppNotification {
+  id: string;
+  notification_type: string;
+  title: string;
+  body: string;
+  metadata: Record<string, unknown>;
+  is_read: boolean;
+  created_at: string;
+}
 
 interface NotificationState {
-  notifications: Notification[]; unreadCount: number;
-  setNotifications: (n: Notification[]) => void;
-  addNotification: (n: Notification) => void;
+  notifications: AppNotification[];
+  unreadCount: number;
+  setNotifications: (n: AppNotification[]) => void;
+  addNotification: (n: AppNotification) => void;
   markRead: (id: string) => void;
   markAllRead: () => void;
 }
 
 export const useNotificationStore = create<NotificationState>((set) => ({
-  notifications: [], unreadCount: 0,
-  setNotifications: (n) => set({ notifications: n, unreadCount: n.filter((x) => !x.read).length }),
-  addNotification: (n) => set((s) => ({ notifications: [n, ...s.notifications], unreadCount: s.unreadCount + 1 })),
-  markRead: (id) => set((s) => ({
-    notifications: s.notifications.map((n) => n.id === id ? { ...n, read: true } : n),
-    unreadCount: Math.max(0, s.unreadCount - 1),
-  })),
-  markAllRead: () => set((s) => ({ notifications: s.notifications.map((n) => ({ ...n, read: true })), unreadCount: 0 })),
+  notifications: [],
+  unreadCount: 0,
+
+  setNotifications: (n) =>
+    set({
+      notifications: n,
+      unreadCount: n.filter((x) => !x.is_read).length,
+    }),
+
+  addNotification: (n) =>
+    set((s) => ({
+      notifications: [n, ...s.notifications],
+      unreadCount: s.unreadCount + (n.is_read ? 0 : 1),
+    })),
+
+  markRead: (id) =>
+    set((s) => ({
+      notifications: s.notifications.map((n) => (n.id === id ? { ...n, is_read: true } : n)),
+      unreadCount: Math.max(0, s.unreadCount - 1),
+    })),
+
+  markAllRead: () =>
+    set((s) => ({
+      notifications: s.notifications.map((n) => ({ ...n, is_read: true })),
+      unreadCount: 0,
+    })),
 }));

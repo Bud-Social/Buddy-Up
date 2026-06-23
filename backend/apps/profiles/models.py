@@ -93,3 +93,35 @@ class BlockRelationship(TimestampedModel):
     class Meta:
         db_table = 'profiles_block_relationship'
         unique_together = ('blocker', 'blocked')
+
+
+class AccountabilityPing(TimestampedModel):
+    from_user = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='pings_sent')
+    to_user = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='pings_received')
+    message = models.CharField(max_length=100, default="How's your workout going? 💪")
+    responded = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'profiles_accountability_ping'
+        indexes = [
+            models.Index(fields=['to_user', '-created_at']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['from_user', 'to_user'],
+                condition=models.Q(created_at__date=models.functions.Now()),
+                name='one_ping_per_buddy_per_day',
+            ),
+        ]
+
+
+class SharedGoal(TimestampedModel):
+    title = models.CharField(max_length=100)
+    description = models.CharField(max_length=300, blank=True)
+    target = models.CharField(max_length=100)
+    buddies = models.ManyToManyField(Profile, related_name='shared_goals')
+    created_by = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='goals_created')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'profiles_shared_goal'
