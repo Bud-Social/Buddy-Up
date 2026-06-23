@@ -5,3 +5,4 @@ export { feedApi } from './feed';
 export { notificationsApi } from './notifications';
 export { gymsApi } from './gyms';
 export { livesApi } from './lives';
+export { walletApi } from './wallet';

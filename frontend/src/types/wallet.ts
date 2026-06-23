@@ -7,6 +7,7 @@ export interface ArtifactTransaction {
   artifact_type: string;
   quantity: number;
   direction: 'credit' | 'debit';
+  counterparty_id: string | null;
   counterparty_name: string | null;
   reference_id: string;
   status: TransactionStatus;
