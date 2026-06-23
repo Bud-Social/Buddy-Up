@@ -1,0 +1,14 @@
+{
+  "name": "BuddyUp",
+  "short_name": "BuddyUp",
+  "description": "Health & fitness social platform — train with buddies, join live workouts, eat better.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#00C896",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,37 @@
+import { NavLink } from 'react-router-dom';
+import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, MessageCircle, Bell, Wallet, User, Settings, HelpCircle } from 'lucide-react';
+import { useNotificationStore } from '@/store/notificationStore';
+
+const main = [
+  { to: '/feed', icon: Home, label: 'Home' }, { to: '/discover', icon: Search, label: 'Discover' },
+  { to: '/lives', icon: Radio, label: 'Lives' }, { to: '/gyms', icon: Dumbbell, label: 'Gyms' },
+  { to: '/trainers', icon: Users, label: 'Trainers' }, { to: '/marketplace', icon: ShoppingBag, label: 'Marketplace' },
+  { to: '/sessions', icon: Calendar, label: 'Sessions' }, { to: '/messages', icon: MessageCircle, label: 'Messages' },
+  { to: '/notifications', icon: Bell, label: 'Notifications' }, { to: '/wallet', icon: Wallet, label: 'Wallet' },
+  { to: '/profile', icon: User, label: 'Profile' },
+];
+const bottom = [{ to: '/settings', icon: Settings, label: 'Settings' }, { to: '/help', icon: HelpCircle, label: 'Help' }];
+
+export function Sidebar() {
+  const unread = useNotificationStore((s) => s.unreadCount);
+  return (
+    <aside className="fixed left-0 top-0 h-full w-64 bg-buddy-surface border-r border-buddy-surface-raised flex flex-col z-30">
+      <div className="p-5 border-b border-buddy-surface-raised"><h1 className="font-display text-2xl font-extrabold text-buddy-green">BuddyUp</h1></div>
+      <nav className="flex-1 overflow-y-auto py-3 px-3 scrollbar-hide">
+        {main.map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 text-sm font-medium transition-colors ${isActive ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised'}`}>
+            <Icon size={18} /><span>{label}</span>
+            {label === 'Notifications' && unread > 0 && <span className="ml-auto bg-buddy-red text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{unread > 99 ? '99+' : unread}</span>}
+          </NavLink>
+        ))}
+      </nav>
+      <div className="p-3 border-t border-buddy-surface-raised">
+        {bottom.map(({ to, icon: Icon, label }) => (
+          <NavLink key={to} to={to} className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl mb-1 text-sm font-medium transition-colors ${isActive ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised'}`}>
+            <Icon size={18} /><span>{label}</span>
+          </NavLink>
+        ))}
+      </div>
+    </aside>
+  );
+}

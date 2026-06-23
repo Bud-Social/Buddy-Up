@@ -1,0 +1,47 @@
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+*.so
+.mypy_cache/
+
+# ── Django ──────────────────────────────────────────────────────────
+backend/staticfiles/
+backend/media/
+*.log
+db.sqlite3
+
+# ── Node ────────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/build/
+
+# ── Environment ─────────────────────────────────────────────────────
+.env
+.env.prod
+.env.local
+.env.*.local
+
+# ── IDE ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── OS ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Docker ──────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── SSL / Secrets ───────────────────────────────────────────────────
+nginx/ssl/*
+!nginx/ssl/.gitkeep

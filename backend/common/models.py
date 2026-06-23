@@ -1,0 +1,22 @@
+from django.db import models
+from uuid import uuid4
+
+class TimestampedModel(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+class SoftDeleteModel(models.Model):
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)
+
+    class Meta:
+        abstract = True
+
+    def soft_delete(self):
+        from django.utils import timezone
+        self.deleted_at = timezone.now()
+        self.is_deleted = True
+        self.save(update_fields=['deleted_at', 'is_deleted'])

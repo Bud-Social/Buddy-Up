@@ -1,0 +1,107 @@
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.utils import timezone
+from common.utils import hash_dob, calculate_age
+from .models import User, OTPToken
+from apps.profiles.models import Profile
+
+
+class RegisterSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    password = serializers.CharField(write_only=True, min_length=8)
+    dob = serializers.DateField()
+    username = serializers.CharField(min_length=3, max_length=30)
+    display_name = serializers.CharField(min_length=1, max_length=50)
+    role = serializers.ChoiceField(choices=Profile.ROLE_CHOICES, default='user')
+    accepted_terms = serializers.BooleanField()
+    accepted_privacy = serializers.BooleanField()
+    accepted_guidelines = serializers.BooleanField()
+    is_16_plus = serializers.BooleanField()
+    referral_code = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError('An account with this email already exists.')
+        return value.lower()
+
+    def validate_username(self, value):
+        if Profile.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError('This username is already taken.')
+        if not value.replace('_', '').isalnum():
+            raise serializers.ValidationError('Username may only contain letters, numbers, and underscores.')
+        return value.lower()
+
+    def validate_password(self, value):
+        validate_password(value)
+        return value
+
+    def validate_is_16_plus(self, value):
+        if not value:
+            raise serializers.ValidationError('You must confirm you are 16 or older.')
+        return value
+
+    def validate(self, data):
+        age = calculate_age(data['dob'])
+        if age < 16:
+            raise serializers.ValidationError({'dob': 'BuddyUp is for users aged 16 and over. You cannot create an account at this time.'})
+        data['age'] = age
+        return data
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+    remember_me = serializers.BooleanField(default=False)
+
+
+class OTPSerializer(serializers.Serializer):
+    otp = serializers.CharField(min_length=6, max_length=6)
+    channel = serializers.ChoiceField(choices=['email', 'phone'])
+
+
+class ResendOTPSerializer(serializers.Serializer):
+    channel = serializers.ChoiceField(choices=['email', 'phone'])
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=8)
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+
+class SocialAuthSerializer(serializers.Serializer):
+    access_token = serializers.CharField()
+    id_token = serializers.CharField(required=False, allow_blank=True)
+
+
+class TOTPSetupSerializer(serializers.Serializer):
+    code = serializers.CharField(min_length=6, max_length=6)
+    secret = serializers.CharField()
+
+
+class TOTPVerifySerializer(serializers.Serializer):
+    code = serializers.CharField(min_length=6, max_length=6)
+
+
+class DeviceSessionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id']
