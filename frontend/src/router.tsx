@@ -39,6 +39,7 @@ const Profile = lazy(() => import('@/pages/app/Profile'));
 const UserProfile = lazy(() => import('@/pages/app/UserProfile'));
 const Settings = lazy(() => import('@/pages/app/Settings'));
 const BuddiesPage = lazy(() => import('@/pages/app/BuddiesPage'));
+const CreateGymPage = lazy(() => import('@/pages/app/CreateGymPage'));
 
 const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Privacy = lazy(() => import('@/pages/legal/Privacy'));
@@ -86,6 +87,7 @@ export const router = createBrowserRouter([
           { path: '/discover', element: <SWrapper><Discover /></SWrapper> },
           { path: '/lives', element: <SWrapper><Lives /></SWrapper> },
           { path: '/gyms', element: <SWrapper><Gyms /></SWrapper> },
+          { path: '/gyms/create', element: <SWrapper><CreateGymPage /></SWrapper> },
           { path: '/gyms/:slug', element: <SWrapper><GymDetail /></SWrapper> },
           { path: '/trainers', element: <SWrapper><Trainers /></SWrapper> },
           { path: '/trainers/:slug', element: <SWrapper><TrainerProfile /></SWrapper> },

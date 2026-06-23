@@ -3,3 +3,5 @@ export { authApi } from './auth';
 export { profilesApi } from './profiles';
 export { feedApi } from './feed';
 export { notificationsApi } from './notifications';
+export { gymsApi } from './gyms';
+export { livesApi } from './lives';
