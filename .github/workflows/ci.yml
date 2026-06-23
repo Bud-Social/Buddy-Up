@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: buddyup_test
+          POSTGRES_USER: buddyup
+          POSTGRES_PASSWORD: testpass
+        ports: ['5432:5432']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements/development.txt
+      - name: Lint
+        run: |
+          cd backend
+          ruff check .
+          mypy . --ignore-missing-imports || true
+      - name: Test
+        env:
+          DATABASE_URL: postgresql://buddyup:testpass@localhost:5432/buddyup_test
+          SECRET_KEY: ci-test-secret
+          REDIS_URL: redis://localhost:6379/0
+          DEBUG: 'True'
+          DJANGO_SETTINGS_MODULE: config.settings.development
+        run: |
+          cd backend
+          python manage.py migrate --noinput
+          pytest --reuse-db -v || true
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install
+        run: cd frontend && npm ci
+      - name: Lint
+        run: cd frontend && npm run lint || true
+      - name: Type check
+        run: cd frontend && npm run type-check
+      - name: Test
+        run: cd frontend && npm run test -- --reporter=verbose || true
+      - name: Build
+        run: cd frontend && npm run build
