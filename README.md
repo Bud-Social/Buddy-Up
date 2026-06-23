@@ -35,10 +35,10 @@ make dev
 ```
 
 The platform will be running at:
-- **Frontend:** http://localhost:5173
-- **Backend API:** http://localhost:8000/api/v1/
-- **Swagger Docs:** http://localhost:8000/api/schema/swagger/
-- **Django Admin:** http://localhost:8000/admin/
+- **Frontend:** http://localhost:3002
+- **Backend API:** http://localhost:8002/api/v1/
+- **Swagger Docs:** http://localhost:8002/api/schema/swagger/
+- **Django Admin:** http://localhost:8002/admin/
 
 ## Environment Variables
 
@@ -176,8 +176,8 @@ buddyup/
 # Check what's using a port
 lsof -i :5432
 lsof -i :6379
-lsof -i :8000
-lsof -i :5173
+lsof -i :8002
+lsof -i :3002
 ```
 
 **Redis connection errors:**

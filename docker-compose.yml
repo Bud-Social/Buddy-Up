@@ -48,7 +48,7 @@ services:
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
-             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+              daphne -b 0.0.0.0 -p 8002 config.asgi:application"
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.development
       - DATABASE_URL=postgresql://buddyup:${DB_PASSWORD:-devpassword}@db:5432/buddyup_dev
@@ -56,20 +56,20 @@ services:
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-prod}
       - DEBUG=True
       - ALLOWED_HOSTS=localhost,127.0.0.1,backend
-      - CORS_ALLOWED_ORIGINS=http://localhost:5173,http://frontend:5173
+      - CORS_ALLOWED_ORIGINS=http://localhost:3002,http://frontend:3002
     volumes:
       - ./backend:/app
       - backend_static:/app/staticfiles
       - backend_media:/app/media
     ports:
-      - "8000:8000"
+      - "8002:8002"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8002/api/v1/health/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -133,10 +133,10 @@ services:
       target: development
     container_name: buddyup_frontend
     restart: unless-stopped
-    command: npm run dev -- --host 0.0.0.0 --port 5173
+    command: npm run dev -- --host 0.0.0.0 --port 3002
     environment:
-      - VITE_API_BASE_URL=http://localhost:8000/api/v1
-      - VITE_WS_BASE_URL=ws://localhost:8000
+      - VITE_API_BASE_URL=http://localhost:8002/api/v1
+      - VITE_WS_BASE_URL=ws://localhost:8002
       - VITE_AGORA_APP_ID=${VITE_AGORA_APP_ID}
       - VITE_GOOGLE_MAPS_KEY=${VITE_GOOGLE_MAPS_KEY}
       - VITE_FIREBASE_CONFIG=${VITE_FIREBASE_CONFIG}
@@ -145,7 +145,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     ports:
-      - "5173:5173"
+      - "3002:3002"
     depends_on:
       - backend
 

@@ -10,7 +10,7 @@ FROM base AS development
 COPY package*.json ./
 RUN npm ci
 COPY . .
-EXPOSE 5173
+EXPOSE 3002
 
 # ── Build ─────────────────────────────────────────────────────────────
 FROM base AS builder

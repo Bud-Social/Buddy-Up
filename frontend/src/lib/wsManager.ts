@@ -9,7 +9,7 @@ class WsManager {
   private accessToken: string | null = null;
 
   private constructor() {
-    this.baseUrl = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8000';
+    this.baseUrl = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8002';
   }
 
   static getInstance() { if (!WsManager.instance) WsManager.instance = new WsManager(); return WsManager.instance; }
