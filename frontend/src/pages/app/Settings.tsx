@@ -81,6 +81,44 @@ export default function Settings() {
         </div>
       )}
 
+      {activeSection === 'notifications' && (
+        <div className="space-y-4">
+          <Button variant="ghost" onClick={() => setActiveSection(null)} className="mb-2">← Back</Button>
+          <h2 className="font-heading text-lg font-semibold">Notification Preferences</h2>
+          <div className="space-y-3">
+            {[
+              { label: 'Push notifications', key: 'push_enabled' },
+              { label: 'Email notifications', key: 'email_enabled' },
+              { label: 'In-app notifications', key: 'in_app_enabled' },
+            ].map(({ label, key }) => (
+              <Card key={key} className="p-4 flex items-center justify-between">
+                <span className="text-sm">{label}</span>
+                <div className="w-10 h-6 rounded-full bg-buddy-green relative cursor-pointer">
+                  <div className="absolute right-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow" />
+                </div>
+              </Card>
+            ))}
+          </div>
+          <h3 className="font-heading font-semibold text-sm mt-4 mb-2">Per-Category Settings</h3>
+          <div className="space-y-2">
+            {['Buddy requests', 'Buddy accepted', 'New followers', 'Comments', 'Live starting', 'Session reminders', 'Streak milestones', 'Accountability pings'].map((label) => (
+              <Card key={label} className="p-3 flex items-center justify-between">
+                <span className="text-sm">{label}</span>
+                <div className="w-10 h-6 rounded-full bg-buddy-green relative cursor-pointer">
+                  <div className="absolute right-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow" />
+                </div>
+              </Card>
+            ))}
+          </div>
+          <div className="mt-4">
+            <h3 className="font-heading font-semibold text-sm mb-2">Quiet Hours</h3>
+            <Card className="p-4">
+              <p className="text-sm text-buddy-text-secondary">No notifications between 10 PM and 6 AM</p>
+            </Card>
+          </div>
+        </div>
+      )}
+
       {activeSection === 'security' && (
         <div className="space-y-4">
           <Button variant="ghost" onClick={() => setActiveSection(null)} className="mb-2">← Back</Button>
