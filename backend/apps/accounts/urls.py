@@ -12,4 +12,7 @@ urlpatterns = [
     path('forgot-password/', views.PasswordResetRequestView.as_view(), name='forgot_password'),
     path('reset-password/', views.PasswordResetConfirmView.as_view(), name='reset_password'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
+    path('deactivate/', views.DeactivateAccountView.as_view(), name='deactivate'),
+    path('delete/', views.DeleteAccountView.as_view(), name='delete'),
+    path('export-data/', views.ExportUserDataView.as_view(), name='export_data'),
 ]

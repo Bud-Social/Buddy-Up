@@ -1,6 +1,7 @@
 from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta
+from django.db.models import Q
 
 
 @shared_task
@@ -42,3 +43,85 @@ def cleanup_expired_sessions():
     DeviceSession.objects.filter(
         last_active__lt=timezone.now() - timedelta(days=90),
     ).update(is_active=False)
+
+
+@shared_task
+def delete_user_data(user_id: str):
+    from .models import User
+    from apps.profiles.models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship
+    from apps.feed.models import Post, Comment, Reaction
+    from apps.messaging.models import Message
+
+    try:
+        user = User.objects.get(id=user_id, deleted_at__isnull=False)
+        profile = Profile.objects.get(user=user)
+    except (User.DoesNotExist, Profile.DoesNotExist):
+        return
+
+    Post.objects.filter(author=profile).update(
+        body='[Deleted Account]', is_anonymous=True,
+        media_urls=[], workout_log_data=None, meal_data=None, progress_data=None,
+    )
+    Comment.objects.filter(author=profile).update(
+        body='[Deleted Account]', is_anonymous=True,
+    )
+
+    BuddyRelationship.objects.filter(
+        Q(from_user=profile) | Q(to_user=profile),
+    ).delete()
+    FollowRelationship.objects.filter(
+        Q(follower=profile) | Q(followee=profile),
+    ).delete()
+    BlockRelationship.objects.filter(
+        Q(blocker=profile) | Q(blocked=profile),
+    ).delete()
+
+    Message.objects.filter(sender=profile).delete()
+
+    profile.delete()
+
+    user.delete()
+
+
+@shared_task
+def export_user_data(user_id: str):
+    import json
+    from django.core.serializers.json import DjangoJSONEncoder
+    from .models import User
+    from apps.profiles.models import Profile
+    from apps.feed.models import Post, Comment
+    from apps.messaging.models import Message
+    from apps.wallet.models import ArtifactTransaction
+    from apps.sessions.models import BookingSession
+
+    try:
+        user = User.objects.get(id=user_id)
+        profile = Profile.objects.get(user=user)
+    except (User.DoesNotExist, Profile.DoesNotExist):
+        return
+
+    data = {
+        'exported_at': timezone.now().isoformat(),
+        'user': {
+            'id': str(user.id),
+            'email': user.email,
+            'phone': user.phone,
+            'created_at': user.created_at.isoformat(),
+        },
+        'profile': {
+            'username': profile.username,
+            'display_name': profile.display_name,
+            'bio': profile.bio,
+            'role': profile.role,
+            'verification_status': profile.verification_status,
+        },
+        'posts': list(Post.objects.filter(author=profile).values()),
+        'comments': list(Comment.objects.filter(author=profile).values()),
+        'messages': list(Message.objects.filter(sender=profile).values()),
+        'transactions': list(ArtifactTransaction.objects.filter(user=profile).values()),
+        'sessions': list(BookingSession.objects.filter(
+            Q(client=profile) | Q(trainer=profile),
+        ).values()),
+    }
+
+    print(f'[DEV] Data export for {user.email}: {json.dumps(data, cls=DjangoJSONEncoder)[:500]}...')

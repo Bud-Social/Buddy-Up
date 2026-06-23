@@ -541,3 +541,80 @@ def health_check(request):
         'version': '1.0.0',
         'database': 'connected' if db_ok else 'disconnected',
     })
+
+
+class DeactivateAccountView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        user.is_active = False
+        user.deleted_at = timezone.now()
+        user.deletion_type = 'user'
+        user.save(update_fields=['is_active', 'deleted_at', 'deletion_type'])
+
+        _log_event(user, 'account_deactivated', request)
+
+        return Response({
+            'success': True,
+            'data': {'reactivatable_until': (timezone.now() + timedelta(days=30)).isoformat()},
+            'message': 'Account deactivated. It can be reactivated within 30 days by logging in.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class DeleteAccountView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        confirm = request.data.get('confirm', '').lower()
+
+        if confirm != 'delete my account':
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Please type "delete my account" to confirm.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        _log_event(user, 'account_deleted', request)
+
+        user.is_active = False
+        user.deleted_at = timezone.now()
+        user.deletion_type = 'user'
+        user.save(update_fields=['is_active', 'deleted_at', 'deletion_type'])
+
+        DeviceSession.objects.filter(user=user).update(is_active=False)
+
+        from .tasks import delete_user_data
+        delete_user_data.apply_async(
+            args=[str(user.id)],
+            countdown=timedelta(days=30).total_seconds(),
+        )
+
+        return Response({
+            'success': True,
+            'data': {
+                'hard_deletion_scheduled': (timezone.now() + timedelta(days=30)).isoformat(),
+            },
+            'message': 'Account deletion initiated. Your data will be permanently deleted in 30 days. Log in within 30 days to cancel.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class ExportUserDataView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from .tasks import export_user_data
+        export_user_data.delay(str(request.user.id))
+
+        return Response({
+            'success': True,
+            'data': None,
+            'message': 'Data export requested. You will receive a download link via email when ready.',
+            'errors': None,
+            'pagination': None,
+        })
