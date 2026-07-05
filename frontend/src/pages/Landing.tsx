@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Star, ChevronRight, Play, Download, Users, Radio, Dumbbell } from 'lucide-react';
+import { Check, Star, ChevronRight, Play, Download, Users, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
@@ -10,31 +10,26 @@ const features = {
     title: 'Live Sessions',
     desc: 'Drop into live HIIT, yoga, or strength sessions anytime. Host your own or join a trainer.',
     points: ['Open Sweat — public, free lives', 'Buddy Circle — private group sessions', 'Random Drop — surprise match!', 'Gym scheduled lives with RSVP'],
-    emoji: '📡',
   },
   gyms: {
     title: 'Gyms',
     desc: 'Create or join fitness communities with built-in live schedules, member feeds, and subscription tiers.',
     points: ['Public, private, or secret gyms', 'Trainer & moderator roles', 'Gym wallet with revenue splits', 'Weekly live schedule'],
-    emoji: '🏋️',
   },
   trainers: {
     title: 'Trainers',
     desc: 'Find certified trainers and health practitioners. Book 1:1 sessions, buy programmes, and get verified.',
     points: ['Verified badges & reviews', 'Session booking & escrow', 'Async training programmes', 'Availability calendar'],
-    emoji: '🧑‍🏫',
   },
   mealPlans: {
     title: 'Meal Plans',
     desc: 'Purchase meal plans from verified nutritionists. AI-personalised to your goals and preferences.',
     points: ['11 diet types available', 'AI adjusts portions & macros', 'Shopping list included', 'Verified nutritionist badges'],
-    emoji: '🍽️',
   },
   buddyFeed: {
     title: 'Buddy Feed',
     desc: 'Share workouts, meals, progress, and moments with your fitness family.',
     points: ['7 post types to share', 'Fitness-themed reactions', 'Workout & meal log cards', 'Progress transformations'],
-    emoji: '📰',
   },
 };
 
@@ -112,12 +107,12 @@ export default function Landing() {
         <h2 className="font-display text-3xl font-extrabold text-center mb-16">Why <span className="text-buddy-green">BuddyUp</span>?</h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
-            { emoji: '🤝', title: 'Find Your Buddy', desc: 'Connect with people who match your fitness level, goals, and schedule.' },
-            { emoji: '📡', title: 'Live Workouts, Anytime', desc: 'Drop into a live HIIT class, run a yoga session, or join a random workout at any time.' },
-            { emoji: '🏋️', title: 'Gyms Built Around You', desc: 'Create or join communities that keep you accountable and motivated.' },
-          ].map(({ emoji, title, desc }) => (
+            { icon: Handshake, title: 'Find Your Buddy', desc: 'Connect with people who match your fitness level, goals, and schedule.' },
+            { icon: Radio, title: 'Live Workouts, Anytime', desc: 'Drop into a live HIIT class, run a yoga session, or join a random workout at any time.' },
+            { icon: Dumbbell, title: 'Gyms Built Around You', desc: 'Create or join communities that keep you accountable and motivated.' },
+          ].map(({ icon: Icon, title, desc }) => (
             <Card key={title} className="p-8 text-center hover:bg-buddy-surface-raised transition-colors">
-              <div className="text-5xl mb-6">{emoji}</div>
+              <div className="mb-6 flex justify-center"><Icon size={48} className="text-buddy-green" /></div>
               <h3 className="font-heading text-xl font-semibold mb-3">{title}</h3>
               <p className="text-buddy-text-secondary">{desc}</p>
             </Card>
@@ -131,15 +126,15 @@ export default function Landing() {
         <p className="text-buddy-text-secondary text-center mb-16 max-w-xl mx-auto">Five simple steps to your fitness family.</p>
         <div className="grid md:grid-cols-5 gap-6">
           {[
-            { step: 1, emoji: '👤', title: 'Create Profile', desc: 'Set your goals, activity level, and preferences.' },
-            { step: 2, emoji: '🔍', title: 'Find Buddies', desc: 'Discover people who match your vibe and fitness goals.' },
-            { step: 3, emoji: '📡', title: 'Train Together', desc: 'Join live sessions or Random Drops with your buddies.' },
-            { step: 4, emoji: '🏋️', title: 'Build Your Gym', desc: 'Create a community around your fitness passion.' },
-            { step: 5, emoji: '🔥', title: 'Stay Accountable', desc: 'Track streaks, share progress, and cheer each other on.' },
-          ].map(({ step, emoji, title, desc }) => (
+            { step: 1, icon: User, title: 'Create Profile', desc: 'Set your goals, activity level, and preferences.' },
+            { step: 2, icon: Search, title: 'Find Buddies', desc: 'Discover people who match your vibe and fitness goals.' },
+            { step: 3, icon: Radio, title: 'Train Together', desc: 'Join live sessions or Random Drops with your buddies.' },
+            { step: 4, icon: Dumbbell, title: 'Build Your Gym', desc: 'Create a community around your fitness passion.' },
+            { step: 5, icon: Flame, title: 'Stay Accountable', desc: 'Track streaks, share progress, and cheer each other on.' },
+          ].map(({ step, icon: Icon, title, desc }) => (
             <div key={step} className="text-center">
-              <div className="w-16 h-16 rounded-2xl bg-buddy-green/10 flex items-center justify-center text-2xl mx-auto mb-4 relative">
-                {emoji}
+              <div className="w-16 h-16 rounded-2xl bg-buddy-green/10 flex items-center justify-center mx-auto mb-4 relative">
+                <Icon size={24} className="text-buddy-green" />
                 <span className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-buddy-green text-buddy-black font-mono font-bold text-xs flex items-center justify-center">{step}</span>
               </div>
               <h4 className="font-heading font-semibold text-sm mb-1">{title}</h4>
@@ -155,12 +150,21 @@ export default function Landing() {
         <p className="text-buddy-text-secondary text-center mb-12">All the tools you need to reach your fitness goals.</p>
 
         <div className="flex overflow-x-auto gap-2 mb-8 scrollbar-hide justify-center">
-          {Object.entries(features).map(([key, { title, emoji }]) => (
-            <button key={key} onClick={() => setActiveFeature(key)}
-              className={`px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
-                activeFeature === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary border border-buddy-surface'
-              }`}>{emoji} {title}</button>
-          ))}
+          {['live', 'gyms', 'trainers', 'mealPlans', 'buddyFeed'].map((key) => {
+            const tabIcons: Record<string, React.ReactNode> = {
+              live: <Radio size={16} />,
+              gyms: <Dumbbell size={16} />,
+              trainers: <GraduationCap size={16} />,
+              mealPlans: <Utensils size={16} />,
+              buddyFeed: <Newspaper size={16} />,
+            };
+            return (
+              <button key={key} onClick={() => setActiveFeature(key)}
+                className={`px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
+                  activeFeature === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary border border-buddy-surface'
+                }`}>{tabIcons[key]} {features[key as keyof typeof features].title}</button>
+            );
+          })}
         </div>
 
         <Card className="p-8 md:p-12">
@@ -178,7 +182,16 @@ export default function Landing() {
               </ul>
             </div>
             <div className="bg-buddy-surface rounded-2xl p-8 flex items-center justify-center">
-              <span className="text-8xl">{features[activeFeature as keyof typeof features].emoji}</span>
+              {(() => {
+                const featureIcons: Record<string, React.ReactNode> = {
+                  live: <Radio size={96} className="text-buddy-green" />,
+                  gyms: <Dumbbell size={96} className="text-buddy-green" />,
+                  trainers: <GraduationCap size={96} className="text-buddy-green" />,
+                  mealPlans: <Utensils size={96} className="text-buddy-green" />,
+                  buddyFeed: <Newspaper size={96} className="text-buddy-green" />,
+                };
+                return featureIcons[activeFeature];
+              })()}
             </div>
           </div>
         </Card>
@@ -210,7 +223,7 @@ export default function Landing() {
       {/* ── 6. TRAINERS CTA ── */}
       <section className="bg-buddy-surface py-24">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <span className="text-5xl">🧑‍🏫</span>
+          <GraduationCap size={48} className="text-buddy-electric mx-auto" />
           <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Are you a trainer or health professional?</h2>
           <p className="text-buddy-text-secondary max-w-xl mx-auto mb-8">
             BuddyUp helps you reach clients, run live sessions, and build your fitness community. Verified profiles. Real revenue.
@@ -224,7 +237,7 @@ export default function Landing() {
       {/* ── 7. GYM FOUNDERS CTA ── */}
       <section className="py-24">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <span className="text-5xl">🏋️</span>
+          <Dumbbell size={48} className="text-buddy-green mx-auto" />
           <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Start your own gym on BuddyUp</h2>
           <p className="text-buddy-text-secondary max-w-xl mx-auto mb-8">
             Build a paid or free fitness community. Set a schedule. Grow your tribe.
@@ -273,11 +286,11 @@ export default function Landing() {
           <p className="text-buddy-text-secondary mb-8">Get the BuddyUp app on your phone.</p>
           <div className="flex gap-4 justify-center flex-wrap">
             <a href="#" className="inline-flex items-center gap-3 bg-buddy-black rounded-2xl px-6 py-4 hover:bg-buddy-surface-raised transition-colors">
-              <span className="text-2xl">🍎</span>
+              <Smartphone size={24} className="text-buddy-text-secondary" />
               <div className="text-left"><p className="text-xs text-buddy-text-secondary">Download on the</p><p className="font-heading font-semibold">App Store</p></div>
             </a>
             <a href="#" className="inline-flex items-center gap-3 bg-buddy-black rounded-2xl px-6 py-4 hover:bg-buddy-surface-raised transition-colors">
-              <span className="text-2xl">▶️</span>
+              <Play size={24} className="text-buddy-text-secondary" />
               <div className="text-left"><p className="text-xs text-buddy-text-secondary">Get it on</p><p className="font-heading font-semibold">Google Play</p></div>
             </a>
           </div>

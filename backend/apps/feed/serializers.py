@@ -1,5 +1,41 @@
 from rest_framework import serializers
-from .models import Post, Comment, Reaction, Save
+from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, PollVote
+from apps.gyms.models import Gym
+
+
+class PollOptionSerializer(serializers.ModelSerializer):
+    vote_count = serializers.SerializerMethodField()
+    user_voted = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PollOption
+        fields = ['id', 'text', 'order', 'vote_count', 'user_voted']
+
+    def get_vote_count(self, obj):
+        return obj.votes.count()
+
+    def get_user_voted(self, obj):
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return False
+        return obj.votes.filter(voter=request.user.profile).exists()
+
+
+class PollSerializer(serializers.ModelSerializer):
+    options = PollOptionSerializer(many=True, read_only=True)
+    total_votes = serializers.ReadOnlyField()
+    is_closed = serializers.ReadOnlyField()
+    user_voted_option_ids = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Poll
+        fields = ['id', 'question', 'closes_at', 'allow_multiple', 'total_votes', 'is_closed', 'options', 'user_voted_option_ids']
+
+    def get_user_voted_option_ids(self, obj):
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return []
+        return list(obj.votes.filter(voter=request.user.profile).values_list('option_id', flat=True))
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -49,17 +85,21 @@ class PostSerializer(serializers.ModelSerializer):
     comment_count = serializers.SerializerMethodField()
     repost_count = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
+    poll = serializers.SerializerMethodField()
+    gym_tag_name = serializers.SerializerMethodField()
+    original_post_data = serializers.SerializerMethodField()
+    reposters = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
         fields = [
-            'id', 'post_type', 'body', 'is_anonymous', 'gym_tag_id',
-            'visibility', 'is_repost', 'original_post_id', 'quote_body',
-            'location_label', 'workout_log_data', 'meal_data', 'progress_data',
-            'media_urls', 'tags', 'view_count', 'moderation_status',
-            'author_data', 'reaction_counts', 'user_reaction',
-            'comment_count', 'repost_count', 'is_saved',
-            'created_at', 'updated_at',
+        'id', 'post_type', 'body', 'is_anonymous', 'gym_tag_id', 'gym_tag_name',
+        'visibility', 'is_repost', 'original_post_id', 'quote_body',
+        'location_label', 'workout_log_data', 'meal_data', 'progress_data',
+        'media_urls', 'tags', 'view_count', 'moderation_status',
+        'author_data', 'reaction_counts', 'user_reaction',
+        'comment_count', 'repost_count', 'is_saved', 'is_pinned',
+        'poll', 'original_post_data', 'reposters', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'view_count', 'moderation_status', 'created_at', 'updated_at']
 
@@ -98,12 +138,57 @@ class PostSerializer(serializers.ModelSerializer):
             return False
         return obj.saves.filter(user=request.user.profile).exists()
 
+    def get_poll(self, obj):
+        if hasattr(obj, 'poll'):
+            return PollSerializer(obj.poll, context=self.context).data
+        return None
+
+    def get_gym_tag_name(self, obj):
+        return obj.gym_tag.name if obj.gym_tag else None
+
+    def get_original_post_data(self, obj):
+        if obj.is_repost and obj.original_post:
+            orig = obj.original_post
+            return {
+                'id': str(orig.id),
+                'author_data': {
+                    'user_id': str(orig.author.user_id),
+                    'username': orig.author.username,
+                    'display_name': orig.author.display_name,
+                    'avatar_url': orig.author.avatar_url,
+                },
+                'body': orig.body,
+                'media_urls': orig.media_urls,
+                'created_at': orig.created_at.isoformat(),
+            }
+        return None
+
+    def get_reposters(self, obj):
+        if not obj.is_repost or not obj.original_post_id:
+            return []
+        reposts = Post.objects.filter(
+            original_post_id=obj.original_post_id,
+            is_repost=True,
+        ).select_related('author')[:20]
+        return [
+            {
+                'user_id': str(r.author.user_id),
+                'display_name': r.author.display_name,
+                'avatar_url': r.author.avatar_url,
+            }
+            for r in reposts
+        ]
+
 
 class PostCreateSerializer(serializers.ModelSerializer):
+    gym_tag = serializers.PrimaryKeyRelatedField(
+        queryset=Gym.objects.all(), required=False, allow_null=True
+    )
+
     class Meta:
         model = Post
         fields = [
-            'post_type', 'body', 'is_anonymous', 'gym_tag_id', 'visibility',
+            'post_type', 'body', 'is_anonymous', 'gym_tag', 'visibility',
             'location_label', 'workout_log_data', 'meal_data', 'progress_data',
             'media_urls', 'tags',
         ]
@@ -130,3 +215,13 @@ class SaveSerializer(serializers.ModelSerializer):
     class Meta:
         model = Save
         fields = ['post_id', 'collection']
+
+
+class FeedPostSerializer(PostSerializer):
+    class Meta(PostSerializer.Meta):
+        model = FeedPost
+
+
+class GymPostSerializer(PostSerializer):
+    class Meta(PostSerializer.Meta):
+        model = GymPost

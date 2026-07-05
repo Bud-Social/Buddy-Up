@@ -29,6 +29,30 @@ def expire_moments():
 
 
 @shared_task
+def send_mention_notifications(post_id: str, author_profile_id: str):
+    """Send in-app notifications to all @-mentioned users in a post."""
+    try:
+        from .models import Post
+        from apps.notifications.models import Notification
+        from apps.profiles.models import Profile
+
+        post = Post.objects.select_related('author').get(id=post_id)
+        author = post.author
+        mentioned = post.mentioned_profiles.exclude(user_id=author_profile_id)
+
+        for profile in mentioned:
+            Notification.objects.create(
+                recipient=profile,
+                notification_type='post_reaction',  # reuse closest type; extend later
+                title=f'{author.display_name} mentioned you in a post',
+                body=post.body[:200],
+                metadata={'post_id': str(post.id), 'author_username': author.username},
+            )
+    except Exception:
+        pass
+
+
+@shared_task
 def cleanup_moment_media():
     from .models import Post
     cutoff = timezone.now() - timedelta(days=7)

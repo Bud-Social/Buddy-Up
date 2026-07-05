@@ -23,29 +23,45 @@ class ArtifactTransactionSerializer(serializers.ModelSerializer):
 class TipSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=30)
     artifact_type = serializers.ChoiceField(choices=['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'])
-    quantity = serializers.IntegerField(min_value=1)
+    quantity = serializers.IntegerField(min_value=1, max_value=10000)
     message = serializers.CharField(max_length=200, required=False, allow_blank=True)
 
 
-class PurchaseArtifactsSerializer(serializers.Serializer):
+class InitializePurchaseSerializer(serializers.Serializer):
     artifact_type = serializers.ChoiceField(choices=['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'])
-    quantity = serializers.IntegerField(min_value=1)
-    payment_method = serializers.ChoiceField(choices=['stripe', 'mpesa', 'flutterwave', 'paypal'])
+    quantity = serializers.IntegerField(min_value=1, max_value=100000)
+    payment_method = serializers.ChoiceField(choices=['card', 'mpesa', 'bank_transfer'])
     bundle = serializers.CharField(required=False, allow_blank=True)
+    mpesa_phone = serializers.CharField(required=False, allow_blank=True)
+    card_details = serializers.DictField(required=False, allow_null=True)
+
+
+class ConfirmPurchaseSerializer(serializers.Serializer):
+    tx_ref = serializers.CharField(max_length=100)
+    flutterwave_id = serializers.CharField(max_length=100)
+    otp = serializers.CharField(required=False, allow_blank=True)
+
+
+class BankResolveSerializer(serializers.Serializer):
+    account_number = serializers.CharField(max_length=20)
+    bank_code = serializers.CharField(max_length=10)
 
 
 class WithdrawSerializer(serializers.Serializer):
     artifact_type = serializers.ChoiceField(choices=['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'])
-    quantity = serializers.IntegerField(min_value=1)
-    method = serializers.ChoiceField(choices=['mpesa', 'bank_transfer', 'paypal', 'flutterwave'])
+    quantity = serializers.IntegerField(min_value=1, max_value=100000)
+    method = serializers.ChoiceField(choices=['mpesa', 'bank_transfer', 'paypal'])
     phone_number = serializers.CharField(required=False, allow_blank=True)
     bank_account = serializers.CharField(required=False, allow_blank=True)
+    bank_code = serializers.CharField(required=False, allow_blank=True)
+    bank_name = serializers.CharField(required=False, allow_blank=True)
+    account_name = serializers.CharField(required=False, allow_blank=True)
 
 
 class GiftArtifactsSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=30)
     artifact_type = serializers.ChoiceField(choices=['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'])
-    quantity = serializers.IntegerField(min_value=1)
+    quantity = serializers.IntegerField(min_value=1, max_value=10000)
     message = serializers.CharField(max_length=200, required=False, allow_blank=True)
 
 
@@ -69,6 +85,10 @@ BUNDLES = {
     'dumbbell_50': {'artifact': 'dumbbell', 'qty': 50, 'price': 4.00},
     'barbell_10': {'artifact': 'barbell', 'qty': 10, 'price': 4.50},
     'burpee_5': {'artifact': 'burpee', 'qty': 5, 'price': 4.50},
+    'squat_10': {'artifact': 'squat', 'qty': 10, 'price': 3.50},
+    'sprint_10': {'artifact': 'sprint', 'qty': 10, 'price': 5.00},
+    'pr_5': {'artifact': 'pr', 'qty': 5, 'price': 10.00},
+    'champion_1': {'artifact': 'champion', 'qty': 1, 'price': 25.00},
 }
 
 PLATFORM_CUTS = {

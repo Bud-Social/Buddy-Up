@@ -52,4 +52,7 @@ export const profilesApi = {
 
   ping: (username: string, message?: string) =>
     apiClient.post<ApiResponse<{ ping_id: string }>>(`/profiles/${username}/ping/`, { message }).then((r) => r.data),
+
+  searchProfiles: (params: { q: string; limit?: number }) =>
+    apiClient.get<ApiResponse<Profile[]>>('/profiles/search/', { params }).then((r) => r.data),
 };

@@ -40,6 +40,9 @@ class BuddyLive(TimestampedModel):
     replay_saved = models.BooleanField(default=False)
     agora_channel = models.CharField(max_length=100, blank=True)
     mux_asset_id = models.CharField(max_length=100, blank=True)
+    mux_playback_id = models.CharField(max_length=100, blank=True)
+    livekit_egress_id = models.CharField(max_length=100, blank=True)
+    client_recording_session_id = models.CharField(max_length=100, blank=True)
     co_hosts = models.ManyToManyField('profiles.Profile', blank=True, related_name='co_hosted_lives')
     scheduled_for = models.DateTimeField(null=True, blank=True)
     is_recurring = models.BooleanField(default=False)
@@ -53,4 +56,38 @@ class BuddyLive(TimestampedModel):
             models.Index(fields=['live_type']),
             models.Index(fields=['host', '-created_at']),
             models.Index(fields=['gym', 'status']),
+        ]
+
+
+class LiveRSVP(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    live = models.ForeignKey(BuddyLive, on_delete=models.CASCADE, related_name='rsvps')
+    user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='live_rsvps')
+
+    class Meta:
+        db_table = 'lives_rsvp'
+        unique_together = ['live', 'user']
+
+
+class LiveAttendee(TimestampedModel):
+    ROLE_CHOICES = [
+        ('host', 'Host'),
+        ('co_host', 'Co-Host'),
+        ('attendee', 'Attendee'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    live = models.ForeignKey(BuddyLive, on_delete=models.CASCADE, related_name='attendees')
+    user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='live_attendances')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='attendee')
+    joined_at = models.DateTimeField(auto_now_add=True)
+    left_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'lives_attendee'
+        verbose_name = 'Live Attendee'
+        verbose_name_plural = 'Live Attendees'
+        indexes = [
+            models.Index(fields=['live', '-joined_at']),
+            models.Index(fields=['user', '-joined_at']),
         ]

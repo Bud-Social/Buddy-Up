@@ -37,8 +37,9 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = useAuthStore.getState().refreshToken;
         const r = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, { refresh: refreshToken });
-        const { access } = r.data;
-        useAuthStore.getState().setAccessToken(access);
+        const { access, refresh: newRefresh } = r.data?.data || r.data;
+        if (!access) throw new Error('No access token in response');
+        useAuthStore.getState().setTokens(access, newRefresh || refreshToken);
         processQueue(null, access);
         orig.headers.Authorization = `Bearer ${access}`;
         return apiClient(orig);

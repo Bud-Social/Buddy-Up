@@ -1,19 +1,24 @@
-import uuid
-import secrets
-from datetime import timedelta
-
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
 from django.utils import timezone
-from django.conf import settings
+from django.core.cache import cache
 
 from rest_framework import views, permissions, status
 from rest_framework.response import Response
 
-from common.pagination import CursorPagination, PageNumberPagination
-from .models import BuddyLive
-from .serializers import BuddyLiveSerializer, CreateLiveSerializer, RandomDropRequestSerializer
-from apps.profiles.models import BuddyRelationship, BlockRelationship
+from common.pagination import CursorPagination
+from .models import BuddyLive, LiveAttendee
+from .serializers import BuddyLiveSerializer, CreateLiveSerializer, RandomDropRequestSerializer, LiveAttendeeSerializer
+from .provider_service import get_live_credentials, generate_live_channel_id
+from apps.profiles.models import Profile, BuddyRelationship
+from apps.wallet.models import ArtifactTransaction
+
+
+def get_live_viewer_count(live_id):
+    try:
+        return cache.scard(f'live_viewers:{live_id}')
+    except (AttributeError, TypeError):
+        return 0
 
 
 class LiveBrowserView(views.APIView):
@@ -37,6 +42,7 @@ class LiveBrowserView(views.APIView):
         if category:
             queryset = queryset.filter(category=category)
 
+        count = queryset.count()
         paginator = CursorPagination()
         page = paginator.paginate_queryset(queryset.select_related('host'), request)
         serializer = BuddyLiveSerializer(page, many=True, context={'request': request})
@@ -47,7 +53,7 @@ class LiveBrowserView(views.APIView):
             'message': 'OK',
             'errors': None,
             'pagination': {
-                'count': paginator.page.paginator.count,
+                'count': count,
                 'next': paginator.get_next_link(),
                 'previous': paginator.get_previous_link(),
             },
@@ -62,6 +68,7 @@ class LiveDetailView(views.APIView):
             BuddyLive.objects.select_related('host'),
             id=live_id,
         )
+        live.viewer_count_cache = get_live_viewer_count(str(live.id))
         serializer = BuddyLiveSerializer(live, context={'request': request})
         return Response({
             'success': True,
@@ -80,7 +87,7 @@ class StartLiveView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        channel_id = f"live_{secrets.token_hex(8)}"
+        channel_id = generate_live_channel_id()
 
         live = BuddyLive.objects.create(
             host=request.user.profile,
@@ -102,10 +109,23 @@ class StartLiveView(views.APIView):
         if 'co_hosts' in data:
             live.co_hosts.set(data['co_hosts'])
 
+        credentials = get_live_credentials(live, request)
+
+        if live.status == 'live':
+            from apps.notifications.tasks import send_live_started_notification
+            send_live_started_notification.delay(str(live.id), str(request.user.profile.user_id))
+
+        if live.status == 'live':
+            from .tasks import start_livekit_recording
+            start_livekit_recording.delay(str(live.id))
+
         output = BuddyLiveSerializer(live, context={'request': request})
         return Response({
             'success': True,
-            'data': output.data,
+            'data': {
+                'live': output.data,
+                'credentials': credentials,
+            },
             'message': 'Live session created.',
             'errors': None,
             'pagination': None,
@@ -129,7 +149,6 @@ class EndLiveView(views.APIView):
         live.replay_saved = request.data.get('save_replay', False)
         live.save(update_fields=['status', 'ended_at', 'replay_saved'])
 
-        # TODO: Trigger replay processing via Mux
         if live.replay_saved:
             from .tasks import process_live_replay
             process_live_replay.delay(str(live.id))
@@ -169,20 +188,69 @@ class JoinLiveView(views.APIView):
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_403_FORBIDDEN)
 
-        if live.artifact_fee:
-            # TODO: Deduct artifacts from wallet
-            pass
+        if live.access == 'gym_members':
+            if not live.gym_id:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'This live is for gym members only.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_403_FORBIDDEN)
+            from apps.gyms.models import GymMembership
+            is_member = GymMembership.objects.filter(
+                gym_id=live.gym_id, member=request.user.profile, subscription_active=True,
+            ).exists()
+            if not is_member and request.user.profile != live.host:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'This live is for gym members only.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_403_FORBIDDEN)
 
-        # TODO: Generate Agora token
-        token = f"temp_token_{live.agora_channel}"
+        if live.artifact_fee:
+            from apps.wallet.views import _deduct_artifacts, _credit_artifacts, _platform_cut
+            from apps.wallet.models import ArtifactTransaction
+
+            for art_type, qty in live.artifact_fee.items():
+                if qty > 0:
+                    if not _deduct_artifacts(request.user.profile, art_type, qty):
+                        return Response({
+                            'success': False, 'data': None,
+                            'message': f'Insufficient {art_type} artifacts. Need {qty}.',
+                            'errors': None, 'pagination': None,
+                        }, status=status.HTTP_402_PAYMENT_REQUIRED)
+                    cut = _platform_cut('live_fee', art_type, qty)
+                    host_credit = qty - cut
+                    if host_credit > 0:
+                        _credit_artifacts(live.host, art_type, host_credit)
+                    ArtifactTransaction.objects.create(
+                        user=request.user.profile, transaction_type='live_fee',
+                        artifact_type=art_type, quantity=qty, direction='debit',
+                        counterparty=live.host, status='completed',
+                    )
+                    if host_credit > 0:
+                        ArtifactTransaction.objects.create(
+                            user=live.host, transaction_type='live_fee',
+                            artifact_type=art_type, quantity=host_credit, direction='credit',
+                            counterparty=request.user.profile, status='completed',
+                        )
+
+        credentials = get_live_credentials(live, request)
+
+        # Track attendee
+        user = request.user.profile
+        role = 'host' if user == live.host else 'co_host' if live.co_hosts.filter(id=user.id).exists() else 'attendee'
+        LiveAttendee.objects.update_or_create(
+            live=live, user=user,
+            defaults={'role': role, 'left_at': None},
+        )
 
         return Response({
             'success': True,
             'data': {
-                'agora_channel': live.agora_channel,
-                'agora_token': token,
-                'agora_app_id': settings.AGORA_APP_ID if hasattr(settings, 'AGORA_APP_ID') else '',
+                'credentials': credentials,
                 'live_type': live.live_type,
+                'host_name': live.host.display_name,
+                'host_user_id': live.host.user_id,
             },
             'message': 'Joined live session.',
             'errors': None,
@@ -198,23 +266,27 @@ class RandomDropStartView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        from django.core.cache import cache
         pool_key = f"random_drop:{data['activity_type']}"
+        profile = request.user.profile
         entry = {
-            'user_id': str(request.user.profile.user_id),
-            'username': request.user.profile.username,
+            'user_id': str(profile.user_id),
+            'username': profile.username,
+            'display_name': profile.display_name,
+            'avatar_url': profile.avatar_url,
             'duration': data['duration'],
             'timestamp': timezone.now().isoformat(),
             'timezone': str(timezone.get_current_timezone()),
         }
-        import json
-        cache.zadd(pool_key, {json.dumps(entry): timezone.now().timestamp()})
-
-        cache.set(
-            f"random_drop_user:{request.user.profile.user_id}",
-            json.dumps(entry),
-            timeout=300,
-        )
+        try:
+            import json
+            cache.zadd(pool_key, {json.dumps(entry): timezone.now().timestamp()})
+            cache.set(
+                f"random_drop_user:{request.user.profile.user_id}",
+                json.dumps(entry),
+                timeout=300,
+            )
+        except (AttributeError, TypeError):
+            pass
 
         return Response({
             'success': True,
@@ -233,7 +305,6 @@ class RandomDropStatusView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        from django.core.cache import cache
         import json
 
         user_data = cache.get(f"random_drop_user:{request.user.profile.user_id}")
@@ -253,8 +324,11 @@ class RandomDropStatusView(views.APIView):
                 'success': True,
                 'data': {
                     'status': 'matched',
-                    'agora_channel': match.get('channel'),
-                    'agora_token': match.get('token'),
+                    'live_id': match.get('live_id'),
+                    'credentials': {
+                        'agora': match.get('agora', {}),
+                        'livekit': match.get('livekit', {}),
+                    },
                 },
                 'message': 'Match found!',
                 'errors': None,
@@ -270,7 +344,6 @@ class RandomDropStatusView(views.APIView):
         })
 
     def delete(self, request):
-        from django.core.cache import cache
         cache.delete(f"random_drop_user:{request.user.profile.user_id}")
         return Response({
             'success': True, 'data': None,
@@ -303,11 +376,340 @@ class RSVPLiveView(views.APIView):
 
     def post(self, request, live_id):
         live = get_object_or_404(BuddyLive, id=live_id, status='scheduled')
-        # TODO: Store RSVP in Redis or DB
+        from .models import LiveRSVP
+
+        rsvp, created = LiveRSVP.objects.get_or_create(
+            live=live, user=request.user.profile,
+        )
+        if not created:
+            rsvp.delete()
+            return Response({
+                'success': True,
+                'data': None,
+                'message': 'RSVP cancelled.',
+                'errors': None, 'pagination': None,
+            })
+
         return Response({
             'success': True,
             'data': None,
             'message': 'RSVP confirmed! You will be notified when the live starts.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class RefundGiftView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id, tx_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host can refund gifts.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        tx = get_object_or_404(ArtifactTransaction, id=tx_id, status='completed')
+
+        counterparty = tx.counterparty
+        if not counterparty:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Cannot refund — no counterparty found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.wallet.views import _deduct_artifacts, _credit_artifacts
+
+        if not _deduct_artifacts(live.host, tx.artifact_type, tx.quantity):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Insufficient artifacts to refund.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        _credit_artifacts(counterparty, tx.artifact_type, tx.quantity)
+
+        tx.status = 'refunded'
+        tx.save(update_fields=['status'])
+
+        ArtifactTransaction.objects.create(
+            user=live.host, transaction_type='refund',
+            artifact_type=tx.artifact_type, quantity=tx.quantity,
+            direction='debit', counterparty=counterparty,
+            status='completed', reference_id=f'live_refund_{live_id}',
+            description=f'Refund of {tx.quantity} {tx.artifact_type} to @{counterparty.username}',
+        )
+        ArtifactTransaction.objects.create(
+            user=counterparty, transaction_type='refund',
+            artifact_type=tx.artifact_type, quantity=tx.quantity,
+            direction='credit', counterparty=live.host,
+            status='completed', reference_id=f'live_refund_{live_id}',
+            description=f'Refund from @{live.host.username}',
+        )
+
+        return Response({
+            'success': True, 'data': None,
+            'message': f'Refunded {tx.quantity} {tx.artifact_type} to @{counterparty.username}.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class AddCoHostView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host can add co-hosts.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        username = request.data.get('username', '')
+        profile = get_object_or_404(Profile, username=username)
+
+        if profile == live.host:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You are already the host.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        live.co_hosts.add(profile)
+        return Response({
+            'success': True, 'data': None,
+            'message': f'@{profile.username} is now a co-host.',
+            'errors': None, 'pagination': None,
+        })
+
+    def delete(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host can remove co-hosts.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        username = request.data.get('username', '')
+        profile = get_object_or_404(Profile, username=username)
+        live.co_hosts.remove(profile)
+        return Response({
+            'success': True, 'data': None,
+            'message': f'@{profile.username} is no longer a co-host.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class LiveCredentialsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        credentials = get_live_credentials(live, request)
+        viewer_count = get_live_viewer_count(str(live.id))
+        return Response({
+            'success': True,
+            'data': {
+                'credentials': credentials,
+                'live_type': live.live_type,
+                'title': live.title,
+                'host_name': live.host.display_name,
+                'host_user_id': live.host.user_id,
+                'host_avatar': live.host.avatar_url,
+                'status': live.status,
+                'viewer_count': viewer_count,
+                'co_hosts': [
+                    {'user_id': p.user_id, 'display_name': p.display_name, 'avatar_url': p.avatar_url}
+                    for p in live.co_hosts.all()
+                ],
+            },
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class UserLivesView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, username):
+        profile = get_object_or_404(Profile, username=username)
+        tab = request.query_params.get('tab', 'all')
+
+        if tab == 'live':
+            queryset = BuddyLive.objects.filter(host=profile, status='live')
+        elif tab == 'scheduled':
+            queryset = BuddyLive.objects.filter(host=profile, status='scheduled')
+        elif tab == 'replays':
+            queryset = BuddyLive.objects.filter(host=profile, status='ended', replay_saved=True)
+        elif tab == 'co_hosted':
+            queryset = BuddyLive.objects.filter(co_hosts=profile)
+        else:
+            queryset = BuddyLive.objects.filter(
+                db_models.Q(host=profile) | db_models.Q(co_hosts=profile)
+            ).distinct()
+
+        queryset = queryset.select_related('host')
+
+        count = queryset.count()
+        paginator = CursorPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        serializer = BuddyLiveSerializer(page, many=True, context={'request': request})
+
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': 'OK',
+            'errors': None,
+            'pagination': {
+                'count': count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
+        })
+
+
+class InitiateClientRecordingView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile and not live.co_hosts.filter(id=request.user.profile.id).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host or co-host can initiate recording.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        if live.status != 'live':
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Live is not active.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from uuid import uuid4
+        session_id = uuid4().hex[:16]
+        live.client_recording_session_id = session_id
+        live.save(update_fields=['client_recording_session_id'])
+
+        return Response({
+            'success': True, 'data': {'session_id': session_id},
+            'message': 'Recording session initialized.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class UploadReplayChunkView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile and not live.co_hosts.filter(id=request.user.profile.id).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host or co-host can upload recording chunks.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        if not live.client_recording_session_id:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No recording session active.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        chunk_index = request.data.get('chunk_index')
+        chunk_file = request.FILES.get('chunk')
+        if chunk_index is None or not chunk_file:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'chunk_index and chunk file required.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if chunk_file.size > 50 * 1024 * 1024:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Chunk size exceeds 50 MB limit.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        ext = chunk_file.name.split('.')[-1].lower() if '.' in chunk_file.name else ''
+        if ext not in ('webm', 'mp4'):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only WebM and MP4 chunks are accepted.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from .recording import save_client_replay_chunk
+        ok = save_client_replay_chunk(
+            str(live.id), int(chunk_index), chunk_file.read(),
+            live.client_recording_session_id,
+        )
+        if not ok:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Failed to save chunk.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            'success': True, 'data': None,
+            'message': f'Chunk {chunk_index} saved.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CompleteClientReplayView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile and not live.co_hosts.filter(id=request.user.profile.id).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host or co-host can complete a replay.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        if not live.client_recording_session_id:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No recording session active.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from .tasks import process_live_replay
+        process_live_replay.delay(str(live.id))
+
+        return Response({
+            'success': True, 'data': None,
+            'message': 'Replay processing started.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class LiveAttendeesView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        attendees = LiveAttendee.objects.filter(
+            live=live, left_at__isnull=True,
+        ).select_related('user').order_by('joined_at')
+
+        serializer = LiveAttendeeSerializer(attendees, many=True)
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': 'OK',
             'errors': None,
             'pagination': None,
         })

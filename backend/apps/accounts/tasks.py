@@ -1,13 +1,43 @@
 from celery import shared_task
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
 
 
 @shared_task
-def send_otp_email(user_id: str, otp: str):
-    # TODO: Implement SendGrid OTP email sending
-    pass
+def send_otp_email(user_id: str, otp: str, purpose: str = 'registration'):
+    from .models import User
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return
+
+    username = user.email.split('@')[0]
+    subject = {
+        'registration': 'Verify your BuddyUp email',
+        'login': 'Your BuddyUp login code',
+        'password_reset': 'Reset your BuddyUp password',
+    }.get(purpose, 'Your BuddyUp verification code')
+
+    html = render_to_string('emails/otp.html', {
+        'username': username,
+        'otp': otp,
+        'purpose': purpose,
+    })
+    plain = strip_tags(html)
+
+    send_mail(
+        subject=subject,
+        message=plain,
+        html_message=html,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
 
 
 @shared_task
@@ -18,14 +48,55 @@ def send_otp_sms(user_id: str, otp: str):
 
 @shared_task
 def send_welcome_email(user_id: str):
-    # TODO: Send welcome email
-    pass
+    from .models import User
+    from apps.profiles.models import Profile
+    try:
+        user = User.objects.get(id=user_id)
+        profile = Profile.objects.get(user=user)
+    except (User.DoesNotExist, Profile.DoesNotExist):
+        return
+
+    html = render_to_string('emails/welcome.html', {
+        'username': profile.display_name or user.email.split('@')[0],
+    })
+    plain = strip_tags(html)
+
+    send_mail(
+        subject='Welcome to BuddyUp!',
+        message=plain,
+        html_message=html,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
 
 
 @shared_task
 def send_login_alert_email(user_id: str, ip_address: str, device: str):
-    # TODO: Send new device login alert
-    pass
+    from .models import User
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return
+
+    settings_url = 'https://buddyup.app/settings'
+
+    html = render_to_string('emails/login_alert.html', {
+        'username': user.email.split('@')[0],
+        'ip_address': ip_address,
+        'device': device,
+        'settings_url': settings_url,
+    })
+    plain = strip_tags(html)
+
+    send_mail(
+        subject='New login to your BuddyUp account',
+        message=plain,
+        html_message=html,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=False,
+    )
 
 
 @shared_task
@@ -79,7 +150,6 @@ def delete_user_data(user_id: str):
     Message.objects.filter(sender=profile).delete()
 
     profile.delete()
-
     user.delete()
 
 

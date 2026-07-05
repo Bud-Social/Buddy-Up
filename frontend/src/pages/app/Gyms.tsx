@@ -112,6 +112,11 @@ export default function Gyms() {
                   <p className="text-xs text-buddy-text-secondary mt-0.5">@{gym.handle} · {gym.category.replace('_', ' ')}</p>
                   <div className="flex items-center gap-3 mt-1.5 text-xs text-buddy-text-secondary">
                     <span className="flex items-center gap-1"><Users size={12} /> {gym.member_count}</span>
+                    {gym.is_reviews_enabled && gym.average_rating !== undefined && (
+                      <span className="flex items-center gap-1 text-yellow-500">
+                        <Star size={12} className="fill-current" /> {gym.average_rating.toFixed(1)} ({gym.review_count})
+                      </span>
+                    )}
                     <span className="flex items-center gap-1">{accessIcon(gym.access_type)} {gym.access_type}</span>
                     {gym.location_city && <span>📍 {gym.location_city}</span>}
                   </div>

@@ -12,4 +12,6 @@ urlpatterns = [
     path('<uuid:post_id>/react/', views.ReactionView.as_view(), name='react'),
     path('<uuid:post_id>/repost/', views.RepostView.as_view(), name='repost'),
     path('<uuid:post_id>/save/', views.SaveView.as_view(), name='save'),
+    path('<uuid:post_id>/pin/', views.PostPinView.as_view(), name='pin'),
+    path('<uuid:post_id>/poll/vote/', views.PollVoteView.as_view(), name='poll_vote'),
 ]

@@ -24,6 +24,23 @@ export interface BundleInfo {
   savings: number;
 }
 
+export interface InitializeResponse {
+  tx_ref: string;
+  flutterwave_ref?: string;
+  status?: string;
+  requires_otp?: boolean;
+  public_key: string;
+  amount?: number;
+  currency?: string;
+  customer_email?: string;
+  customer_name?: string;
+}
+
+export interface BankInfo {
+  code: string;
+  name: string;
+}
+
 export const walletApi = {
   getBalance: () =>
     apiClient.get<ApiResponse<BalanceResponse>>('/wallet/balance/').then((r) => r.data),
@@ -31,9 +48,14 @@ export const walletApi = {
   getTransactions: (params?: { type?: string; direction?: string; cursor?: string }) =>
     apiClient.get<ApiResponse<ArtifactTransaction[]>>('/wallet/transactions/', { params }).then((r) => r.data),
 
-  purchase: (artifact_type: string, quantity: number, payment_method: string, bundle?: string) =>
-    apiClient.post<ApiResponse<{ transaction: ArtifactTransaction; new_balance: Record<string, number> }>>('/wallet/purchase/', {
-      artifact_type, quantity, payment_method, bundle,
+  initializePurchase: (artifact_type: string, quantity: number, payment_method: string, options?: { bundle?: string; mpesa_phone?: string; card_details?: Record<string, string> }) =>
+    apiClient.post<ApiResponse<InitializeResponse>>('/wallet/purchase/initialize/', {
+      artifact_type, quantity, payment_method, ...options,
+    }).then((r) => r.data),
+
+  confirmPurchase: (tx_ref: string, flutterwave_id: string) =>
+    apiClient.post<ApiResponse<{ transaction: ArtifactTransaction; new_balance: Record<string, number> }>>('/wallet/purchase/confirm/', {
+      tx_ref, flutterwave_id,
     }).then((r) => r.data),
 
   tip: (username: string, artifact_type: string, quantity: number, message?: string) =>
@@ -42,9 +64,17 @@ export const walletApi = {
   gift: (username: string, artifact_type: string, quantity: number, message?: string) =>
     apiClient.post<ApiResponse<null>>('/wallet/gift/', { username, artifact_type, quantity, message }).then((r) => r.data),
 
-  withdraw: (artifact_type: string, quantity: number, method: string, phone_number?: string) =>
+  withdraw: (artifact_type: string, quantity: number, method: string, options?: { phone_number?: string; bank_account?: string; bank_code?: string; account_name?: string }) =>
     apiClient.post<ApiResponse<ArtifactTransaction>>('/wallet/withdraw/', {
-      artifact_type, quantity, method, phone_number,
+      artifact_type, quantity, method, ...options,
+    }).then((r) => r.data),
+
+  getBanks: (country?: string) =>
+    apiClient.get<ApiResponse<BankInfo[]>>('/wallet/withdraw/banks/', { params: country ? { country } : {} }).then((r) => r.data),
+
+  resolveBank: (account_number: string, bank_code: string) =>
+    apiClient.post<ApiResponse<{ account_number: string; bank_code: string; account_name: string }>>('/wallet/withdraw/bank-resolve/', {
+      account_number, bank_code,
     }).then((r) => r.data),
 
   getBundles: () =>

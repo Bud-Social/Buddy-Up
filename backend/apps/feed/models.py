@@ -14,6 +14,7 @@ class Post(TimestampedModel, SoftDeleteModel):
         ('meal', 'Meal'),
         ('progress', 'Progress'),
         ('moment', 'Moment (Story)'),
+        ('poll', 'Poll'),
     ]
     VISIBILITY_CHOICES = [
         ('public', 'Public'),
@@ -45,8 +46,10 @@ class Post(TimestampedModel, SoftDeleteModel):
     media_urls = models.JSONField(default=list)
     tags = models.JSONField(default=list)
     view_count = models.IntegerField(default=0)
+    is_pinned = models.BooleanField(default=False)
     moderation_status = models.CharField(max_length=15, choices=MODERATION_CHOICES, default='clean')
     pinned_comment = models.ForeignKey('Comment', null=True, blank=True, on_delete=models.SET_NULL, related_name='pinned_on')
+    mentioned_profiles = models.ManyToManyField('profiles.Profile', blank=True, related_name='mention_posts')
 
     class Meta:
         db_table = 'feed_post'
@@ -56,6 +59,26 @@ class Post(TimestampedModel, SoftDeleteModel):
             models.Index(fields=['visibility', 'moderation_status']),
             models.Index(fields=['gym_tag', '-created_at']),
         ]
+
+class FeedPostManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(gym_tag__isnull=True)
+
+class GymPostManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(gym_tag__isnull=False)
+
+class FeedPost(Post):
+    objects = FeedPostManager()
+
+    class Meta:
+        proxy = True
+
+class GymPost(Post):
+    objects = GymPostManager()
+
+    class Meta:
+        proxy = True
 
 
 class Comment(TimestampedModel):
@@ -73,20 +96,10 @@ class Comment(TimestampedModel):
 
 
 class Reaction(TimestampedModel):
-    REACTION_CHOICES = [
-        ('pump', 'Pump 💪'),
-        ('fire', 'Fire 🔥'),
-        ('respect', 'Respect 🤝'),
-        ('grind', 'Grind 😤'),
-        ('lets_go', "Let's Go 🏋️"),
-        ('haha', 'Haha 😂'),
-        ('too_hard', 'Too Hard 💀'),
-    ]
-
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reactions', null=True, blank=True)
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='reactions', null=True, blank=True)
     author = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='reactions')
-    reaction_type = models.CharField(max_length=15, choices=REACTION_CHOICES)
+    reaction_type = models.CharField(max_length=20)
 
     class Meta:
         db_table = 'feed_reaction'
@@ -104,3 +117,46 @@ class Save(TimestampedModel):
     class Meta:
         db_table = 'feed_save'
         unique_together = ('user', 'post')
+
+
+class Poll(TimestampedModel):
+    """A poll attached to a Post (post_type='poll')."""
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    post = models.OneToOneField(Post, on_delete=models.CASCADE, related_name='poll')
+    question = models.CharField(max_length=300)
+    closes_at = models.DateTimeField(null=True, blank=True)
+    allow_multiple = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'feed_poll'
+
+    @property
+    def total_votes(self):
+        return self.votes.count()
+
+    @property
+    def is_closed(self):
+        from django.utils import timezone
+        return self.closes_at is not None and self.closes_at <= timezone.now()
+
+
+class PollOption(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name='options')
+    text = models.CharField(max_length=200)
+    order = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        db_table = 'feed_poll_option'
+        ordering = ['order']
+
+
+class PollVote(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    poll = models.ForeignKey(Poll, on_delete=models.CASCADE, related_name='votes')
+    option = models.ForeignKey(PollOption, on_delete=models.CASCADE, related_name='votes')
+    voter = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='poll_votes')
+
+    class Meta:
+        db_table = 'feed_poll_vote'
+        unique_together = ('poll', 'voter', 'option')

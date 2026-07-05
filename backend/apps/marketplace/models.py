@@ -75,6 +75,33 @@ class TrainingProgramme(TimestampedModel):
 
     class Meta:
         db_table = 'marketplace_programme'
+        indexes = [
+            models.Index(fields=['creator']),
+            models.Index(fields=['category']),
+            models.Index(fields=['is_published', '-purchase_count']),
+        ]
+
+
+class TrainingProgrammePurchase(TimestampedModel):
+    programme = models.ForeignKey(TrainingProgramme, on_delete=models.CASCADE, related_name='purchases')
+    buyer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='programme_purchases')
+    tx_id = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_programme_purchase'
+        unique_together = ('programme', 'buyer')
+
+
+class TrainingProgrammeReview(TimestampedModel):
+    purchase = models.OneToOneField(TrainingProgrammePurchase, on_delete=models.CASCADE, related_name='review')
+    buyer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='programme_reviews')
+    programme = models.ForeignKey(TrainingProgramme, on_delete=models.CASCADE, related_name='reviews_list')
+    rating = models.IntegerField()
+    body = models.TextField(blank=True, max_length=500)
+
+    class Meta:
+        db_table = 'marketplace_programme_review'
+        unique_together = ('purchase', 'buyer')
 
 
 class Product(TimestampedModel):
@@ -104,3 +131,75 @@ class Product(TimestampedModel):
             models.Index(fields=['category']),
             models.Index(fields=['is_active']),
         ]
+
+
+class MarketplaceEvent(TimestampedModel):
+    EVENT_TYPES = [
+        ('in_person', 'In Person'),
+        ('online', 'Online'),
+        ('hybrid', 'Hybrid'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    creator = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='created_events')
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='events')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    cover_image_url = models.URLField(blank=True)
+    event_type = models.CharField(max_length=15, choices=EVENT_TYPES, default='in_person')
+    location = models.CharField(max_length=300, blank=True)
+    online_url = models.URLField(blank=True)
+    start_datetime = models.DateTimeField()
+    end_datetime = models.DateTimeField()
+    timezone = models.CharField(max_length=60, default='UTC')
+    capacity = models.IntegerField(default=0)  # 0 = unlimited
+    ticket_price_artifacts = models.JSONField(default=dict)
+    is_free = models.BooleanField(default=True)
+    is_published = models.BooleanField(default=True)
+    is_cancelled = models.BooleanField(default=False)
+    attendee_count = models.IntegerField(default=0)
+    tags = models.JSONField(default=list)
+    category = models.CharField(max_length=50, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_event'
+        ordering = ['start_datetime']
+        indexes = [
+            models.Index(fields=['creator']),
+            models.Index(fields=['gym']),
+            models.Index(fields=['start_datetime', 'is_published']),
+        ]
+
+    def __str__(self):
+        return self.title
+
+
+class EventTicket(TimestampedModel):
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('cancelled', 'Cancelled'),
+        ('refunded', 'Refunded'),
+        ('used', 'Used'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    event = models.ForeignKey(MarketplaceEvent, on_delete=models.CASCADE, related_name='tickets')
+    holder = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='event_tickets')
+    ticket_code = models.UUIDField(default=uuid4, unique=True, editable=False)
+    tier = models.CharField(max_length=50, default='Standard')
+    price_paid_artifacts = models.JSONField(default=dict)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+    is_checked_in = models.BooleanField(default=False)
+    checked_in_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_event_ticket'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['holder']),
+            models.Index(fields=['event', 'holder']),
+            models.Index(fields=['ticket_code']),
+        ]
+
+    def __str__(self):
+        return f'Ticket {self.ticket_code} for {self.event.title}'

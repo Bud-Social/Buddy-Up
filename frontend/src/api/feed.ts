@@ -27,8 +27,8 @@ export const feedApi = {
   getComments: (postId: string) =>
     apiClient.get<ApiResponse<Comment[]>>(`/feed/${postId}/comments/`).then((r) => r.data),
 
-  comment: (postId: string, body: string, parent_id?: string) =>
-    apiClient.post<ApiResponse<Comment>>(`/feed/${postId}/comments/`, { body, parent_id }).then((r) => r.data),
+  comment: (postId: string, payload: { body: string; parent_id?: string }) =>
+    apiClient.post<ApiResponse<Comment>>(`/feed/${postId}/comments/`, payload).then((r) => r.data),
 
   deleteComment: (postId: string, commentId: string) =>
     apiClient.delete(`/feed/${postId}/comments/${commentId}/`).then((r) => r.data),
@@ -38,6 +38,12 @@ export const feedApi = {
 
   save: (postId: string, collection?: string) =>
     apiClient.post<ApiResponse<null>>(`/feed/${postId}/save/`, { collection }).then((r) => r.data),
+
+  voteOnPoll: (postId: string, optionIds: string[]) =>
+    apiClient.post<ApiResponse<any>>(`/feed/${postId}/poll/vote/`, { option_ids: optionIds }).then((r) => r.data),
+
+  pin: (postId: string) =>
+    apiClient.post<ApiResponse<{ is_pinned: boolean }>>(`/feed/${postId}/pin/`).then((r) => r.data),
 
   unsave: (postId: string) =>
     apiClient.delete(`/feed/${postId}/save/`).then((r) => r.data),

@@ -41,8 +41,16 @@ app.conf.beat_schedule = {
         'task': 'apps.lives.tasks.scan_random_drop_pool',
         'schedule': 30.0,
     },
-    'process-live-replays': {
-        'task': 'apps.lives.tasks.process_live_replays',
+    'retry-failed-replays': {
+        'task': 'apps.lives.tasks.retry_failed_replays',
+        'schedule': crontab(minute='*/30'),
+    },
+    'clear-locked-balance': {
+        'task': 'apps.wallet.tasks.clear_locked_balance',
+        'schedule': crontab(hour='*/2'),
+    },
+    'process-pending-withdrawals': {
+        'task': 'apps.wallet.tasks.process_pending_withdrawals',
         'schedule': crontab(minute='*/15'),
     },
 }

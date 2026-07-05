@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Shield, Bell, Lock, CreditCard, HelpCircle, User, Eye, Moon, Sun, Globe, Volume2, Trash2, UserX, Download } from 'lucide-react';
+import { ChevronRight, Shield, Bell, Lock, CreditCard, HelpCircle, User, Eye, Moon, Sun, Globe, Volume2, Trash2, UserX, Download, Smartphone, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -36,11 +36,19 @@ export default function Settings() {
   const [isDeactivating, setIsDeactivating] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
+  const [totpEnabled, setTotpEnabled] = useState(false);
+  const [totpDisablePassword, setTotpDisablePassword] = useState('');
+  const [totpDisableError, setTotpDisableError] = useState('');
+  const [isDisablingTotp, setIsDisablingTotp] = useState(false);
+
   useEffect(() => {
     if (activeSection === 'blocked') {
       profilesApi.getBlocked().then((res) => setBlockedUsers(res.data || [])).catch(() => {});
     }
-  }, [activeSection]);
+    if (activeSection === 'security') {
+      setTotpEnabled(user?.totp_enabled || false);
+    }
+  }, [activeSection, user]);
 
   const handleDeactivate = async () => {
     setIsDeactivating(true);
@@ -55,9 +63,23 @@ export default function Settings() {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      // TODO: Call export endpoint
       setTimeout(() => setIsExporting(false), 2000);
     } catch { setIsExporting(false); }
+  };
+
+  const handleDisableTotp = async () => {
+    setTotpDisableError('');
+    setIsDisablingTotp(true);
+    try {
+      await authApi.disableTotp(totpDisablePassword);
+      setTotpEnabled(false);
+      setTotpDisablePassword('');
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      setTotpDisableError(data?.message || 'Failed to disable 2FA.');
+    } finally {
+      setIsDisablingTotp(false);
+    }
   };
 
   if (!activeSection) {
@@ -165,11 +187,63 @@ export default function Settings() {
       {activeSection === 'security' && (
         <div className="space-y-4">
           <h2 className="font-heading text-xl font-semibold">Security</h2>
-          <Card className="p-4 space-y-2">
-            <p className="text-sm font-medium">Two-Factor Authentication</p>
-            <p className="text-xs text-buddy-text-secondary">Add an extra layer of security to your account.</p>
-            <Button variant="outline" size="sm">Enable 2FA</Button>
+
+          <Card className="p-4">
+            <div className="flex items-start gap-3">
+              <Smartphone size={20} className="text-buddy-green mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Two-Factor Authentication</p>
+                <p className="text-xs text-buddy-text-secondary mt-0.5">
+                  {totpEnabled ? 'Your account is protected with an authenticator app.' : 'Add an extra layer of security to your account.'}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  {totpEnabled ? (
+                    <>
+                      <CheckCircle size={14} className="text-buddy-green" />
+                      <span className="text-xs text-buddy-green font-medium">Enabled</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle size={14} className="text-buddy-text-secondary" />
+                      <span className="text-xs text-buddy-text-secondary">Disabled</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 space-y-2">
+              {totpEnabled ? (
+                <>
+                  <Button variant="ghost" size="sm" className="text-buddy-red" onClick={() => setTotpDisablePassword(' ')}>
+                    Disable 2FA
+                  </Button>
+                  {totpDisablePassword.length > 0 && (
+                    <div className="space-y-2 pt-2 border-t border-buddy-surface-raised">
+                      <p className="text-xs text-buddy-text-secondary">Enter your password to disable 2FA:</p>
+                      <Input
+                        type="password"
+                        value={totpDisablePassword}
+                        onChange={(e) => setTotpDisablePassword(e.target.value)}
+                        placeholder="Current password"
+                      />
+                      {totpDisableError && <p className="text-xs text-buddy-red">{totpDisableError}</p>}
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" onClick={() => { setTotpDisablePassword(''); setTotpDisableError(''); }}>Cancel</Button>
+                        <Button size="sm" variant="destructive" onClick={handleDisableTotp} isLoading={isDisablingTotp} disabled={!totpDisablePassword}>
+                          Confirm Disable
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => navigate('/totp-setup')}>
+                  <Smartphone size={14} className="mr-1" /> Enable 2FA
+                </Button>
+              )}
+            </div>
           </Card>
+
           <Card className="p-4">
             <p className="text-sm font-medium mb-2">Active Sessions</p>
             <div className="space-y-2">

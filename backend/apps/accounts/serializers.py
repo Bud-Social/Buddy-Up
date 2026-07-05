@@ -99,6 +99,18 @@ class TOTPSetupSerializer(serializers.Serializer):
 
 class TOTPVerifySerializer(serializers.Serializer):
     code = serializers.CharField(min_length=6, max_length=6)
+    secret = serializers.CharField(required=False, allow_blank=True)
+
+
+class RegistrationOTPSerializer(serializers.Serializer):
+    registration_token = serializers.CharField()
+    otp = serializers.CharField(min_length=6, max_length=6)
+
+
+class LoginOTPSerializer(serializers.Serializer):
+    login_token = serializers.CharField()
+    otp = serializers.CharField(min_length=6, max_length=6)
+    remember_me = serializers.BooleanField(default=False)
 
 
 class DeviceSessionSerializer(serializers.ModelSerializer):

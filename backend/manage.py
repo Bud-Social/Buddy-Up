@@ -2,6 +2,9 @@
 import os
 import sys
 
+import dotenv
+dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
 def main():
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
     try:

@@ -411,11 +411,19 @@ class ProfileSearchView(views.APIView):
         queryset = Profile.objects.filter(privacy_level='public')
 
         if q:
-            queryset = queryset.annotate(
-                search=SearchVector('username', 'display_name', 'bio'),
-            ).filter(
-                search=SearchQuery(q)
-            )
+            from django.db import connection
+            if connection.vendor == 'postgresql':
+                queryset = queryset.annotate(
+                    search=SearchVector('username', 'display_name', 'bio'),
+                ).filter(
+                    search=SearchQuery(q)
+                )
+            else:
+                queryset = queryset.filter(
+                    Q(username__icontains=q) |
+                    Q(display_name__icontains=q) |
+                    Q(bio__icontains=q)
+                )
         if role:
             queryset = queryset.filter(role=role)
         if location:

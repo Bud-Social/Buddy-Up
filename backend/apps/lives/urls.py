@@ -11,5 +11,13 @@ urlpatterns = [
     path('<uuid:live_id>/rsvp/', views.RSVPLiveView.as_view(), name='rsvp'),
     path('random-drop/start/', views.RandomDropStartView.as_view(), name='random_drop_start'),
     path('random-drop/status/', views.RandomDropStatusView.as_view(), name='random_drop_status'),
+    path('<uuid:live_id>/credentials/', views.LiveCredentialsView.as_view(), name='credentials'),
+    path('<uuid:live_id>/refund-gift/<uuid:tx_id>/', views.RefundGiftView.as_view(), name='refund_gift'),
+    path('<uuid:live_id>/co-host/', views.AddCoHostView.as_view(), name='co_host'),
+    path('<uuid:live_id>/recording/init/', views.InitiateClientRecordingView.as_view(), name='recording_init'),
+    path('<uuid:live_id>/recording/upload/', views.UploadReplayChunkView.as_view(), name='recording_upload'),
+    path('<uuid:live_id>/recording/complete/', views.CompleteClientReplayView.as_view(), name='recording_complete'),
+    path('<uuid:live_id>/attendees/', views.LiveAttendeesView.as_view(), name='attendees'),
     path('gym/<uuid:gym_id>/schedule/', views.GymScheduleView.as_view(), name='gym_schedule'),
+    path('profile/<str:username>/', views.UserLivesView.as_view(), name='user_lives'),
 ]

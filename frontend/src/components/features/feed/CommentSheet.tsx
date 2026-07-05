@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Send, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
+import { RichText } from '@/components/ui/RichText';
 import { feedApi } from '@/api';
 import type { Comment } from '@/types';
 
@@ -26,7 +27,7 @@ export function CommentSheet({ postId, isOpen, onClose }: CommentSheetProps) {
     if (!body.trim()) return;
     setIsLoading(true);
     try {
-      const res = await feedApi.comment(postId, body.trim());
+      const res = await feedApi.comment(postId, { body: body.trim() });
       setComments((prev) => [res.data as unknown as Comment, ...prev]);
       setBody('');
     } catch {} finally { setIsLoading(false); }
@@ -35,60 +36,72 @@ export function CommentSheet({ postId, isOpen, onClose }: CommentSheetProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-buddy-black">
-      <div className="flex items-center justify-between p-4 border-b border-buddy-surface">
-        <h2 className="font-heading font-semibold text-lg">Comments</h2>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-buddy-surface text-buddy-text-secondary">
-          <X size={22} />
-        </button>
-      </div>
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-buddy-black/40 backdrop-blur-sm" onClick={onClose} />
+      
+      {/* Sheet Content */}
+      <div className="relative w-full h-[70vh] bg-buddy-surface rounded-t-3xl flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.5)] border-t border-buddy-surface-raised animate-in slide-in-from-bottom duration-300">
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-12 h-1.5 bg-buddy-surface-raised rounded-full" />
+        </div>
+        
+        <div className="flex items-center justify-between px-4 pb-2">
+          <h2 className="font-heading font-semibold text-lg">Comments <span className="text-buddy-text-secondary text-sm font-normal ml-1">({comments.length})</span></h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-buddy-surface-raised text-buddy-text-secondary">
+            <X size={20} />
+          </button>
+        </div>
 
-      <div className="flex gap-2 px-4 py-2 border-b border-buddy-surface">
-        {(['newest', 'oldest', 'top'] as const).map((s) => (
-          <button key={s} onClick={() => setSort(s)}
-            className={`text-xs px-3 py-1.5 rounded-full capitalize transition-colors ${sort === s ? 'bg-buddy-green text-buddy-black font-medium' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
-          >{s}</button>
-        ))}
-      </div>
+        <div className="flex gap-2 px-4 py-2 border-b border-buddy-surface-raised">
+          {(['newest', 'oldest', 'top'] as const).map((s) => (
+            <button key={s} onClick={() => setSort(s)}
+              className={`text-xs px-3 py-1.5 rounded-full capitalize transition-colors ${sort === s ? 'bg-buddy-green text-buddy-black font-medium' : 'text-buddy-text-secondary hover:bg-buddy-surface-raised hover:text-buddy-text-primary'}`}
+            >{s}</button>
+          ))}
+        </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-        {comments.length === 0 ? (
-          <div className="text-center py-12 text-buddy-text-secondary">No comments yet. Be the first!</div>
-        ) : (
-          comments.map((c) => (
-            <div key={c.id} className="flex gap-3">
-              <Avatar src={c.author_data?.avatar_url} alt={c.author_data?.display_name || 'User'} size="sm" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm">
-                  <span className="font-medium">{c.author_data?.display_name}</span>
-                  <span className="text-buddy-text-secondary text-xs ml-1">@{c.author_data?.username}</span>
-                </p>
-                <p className="text-sm mt-0.5">{c.body}</p>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-xs text-buddy-text-secondary">{new Date(c.created_at).toLocaleDateString()}</span>
-                  <button className="text-xs text-buddy-text-secondary hover:text-buddy-green">
-                    <Heart size={12} className="inline mr-0.5" /> Reply
-                  </button>
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+          {comments.length === 0 ? (
+            <div className="text-center py-12 text-buddy-text-secondary">No comments yet. Be the first!</div>
+          ) : (
+            comments.map((c) => (
+              <div key={c.id} className="flex gap-3">
+                <Avatar src={c.author_data?.avatar_url} alt={c.author_data?.display_name || 'User'} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm">
+                    <span className="font-medium">{c.author_data?.display_name}</span>
+                    <span className="text-buddy-text-secondary text-xs ml-1">@{c.author_data?.username}</span>
+                  </p>
+                  <p className="text-sm mt-0.5">
+                    <RichText text={c.body} />
+                  </p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs text-buddy-text-secondary">{new Date(c.created_at).toLocaleDateString()}</span>
+                    <button className="text-xs text-buddy-text-secondary hover:text-buddy-green">
+                      <Heart size={12} className="inline mr-0.5" /> Reply
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
 
-      <div className="p-4 border-t border-buddy-surface">
-        <div className="flex gap-3 items-center">
-          <input
-            type="text"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Add a comment..."
-            className="flex-1 bg-buddy-surface rounded-xl px-4 py-3 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
-            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-          />
-          <Button size="sm" onClick={handleSubmit} isLoading={isLoading} disabled={!body.trim()}>
-            <Send size={14} />
-          </Button>
+        <div className="p-4 border-t border-buddy-surface-raised bg-buddy-surface">
+          <div className="flex gap-3 items-center">
+            <input
+              type="text"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Add a comment..."
+              className="flex-1 bg-buddy-surface-raised rounded-xl px-4 py-3 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-buddy-green/40"
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            />
+            <Button size="sm" onClick={handleSubmit} isLoading={isLoading} disabled={!body.trim()}>
+              <Send size={14} />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

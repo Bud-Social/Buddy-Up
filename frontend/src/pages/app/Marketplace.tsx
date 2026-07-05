@@ -1,17 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ShoppingBag, Utensils, Dumbbell, Pill, Star, ExternalLink, Sparkles, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ShoppingBag, Utensils, Dumbbell, Pill, Star, ExternalLink, Plus, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
-import { Modal } from '@/components/ui/Modal';
 import { marketplaceApi } from '@/api/marketplace';
 import type { MealPlan, TrainingProgrammeMP, ProductMP } from '@/api/marketplace';
 
-type Tab = 'meal_plans' | 'programmes' | 'products';
+type Tab = 'events' | 'meal_plans' | 'programmes' | 'products';
 
 export default function Marketplace() {
-  const [tab, setTab] = useState<Tab>('meal_plans');
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>('events');
 
   return (
     <div className="max-w-lg mx-auto p-4">
@@ -19,6 +20,7 @@ export default function Marketplace() {
 
       <div className="flex rounded-xl bg-buddy-surface p-1 mb-4">
         {[
+          { key: 'events' as const, label: 'Events', icon: Calendar },
           { key: 'meal_plans' as const, label: 'Meal Plans', icon: Utensils },
           { key: 'programmes' as const, label: 'Programmes', icon: Dumbbell },
           { key: 'products' as const, label: 'Products', icon: ShoppingBag },
@@ -30,6 +32,7 @@ export default function Marketplace() {
         ))}
       </div>
 
+      {tab === 'events' && <EventsTab />}
       {tab === 'meal_plans' && <MealPlansTab />}
       {tab === 'programmes' && <ProgrammesTab />}
       {tab === 'products' && <ProductsTab />}
@@ -38,10 +41,10 @@ export default function Marketplace() {
 }
 
 function MealPlansTab() {
+  const navigate = useNavigate();
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dietFilter, setDietFilter] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState<MealPlan | null>(null);
 
   const fetchPlans = useCallback(async () => {
     setIsLoading(true);
@@ -64,6 +67,10 @@ function MealPlansTab() {
         ))}
       </div>
 
+      <div className="flex justify-end mb-2">
+        <button onClick={() => navigate('/marketplace/meal-plans/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
+      </div>
+
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -75,7 +82,7 @@ function MealPlansTab() {
       ) : (
         <div className="space-y-3">
           {plans.map((plan) => (
-            <Card key={plan.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer" onClick={() => setSelectedPlan(plan)}>
+            <Card key={plan.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer" onClick={() => navigate(`/marketplace/meal-plans/${plan.id}`)}>
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <h3 className="font-heading font-semibold text-sm">{plan.title}</h3>
@@ -95,47 +102,13 @@ function MealPlansTab() {
         </div>
       )}
 
-      <Modal isOpen={!!selectedPlan} onClose={() => setSelectedPlan(null)} title={selectedPlan?.title} size="lg">
-        {selectedPlan && (
-          <div className="space-y-4 max-h-96 overflow-y-auto">
-            <p className="text-sm text-buddy-text-secondary">{selectedPlan.description}</p>
-            <div className="flex gap-2 text-xs">
-              <Badge variant="blue" label={`${selectedPlan.duration_weeks} weeks`} />
-              <Badge variant="green" label={selectedPlan.diet_type.replace('_', ' ')} />
-              {selectedPlan.calorie_range && <Badge variant="silver" label={selectedPlan.calorie_range} />}
-            </div>
-            <div>
-              <h4 className="font-heading font-semibold text-sm mb-2">Preview (Day 1)</h4>
-              <div className="bg-buddy-surface rounded-xl p-3 text-sm text-buddy-text-secondary">
-                {selectedPlan.preview_day ? (
-                  <div className="space-y-2">
-                    {Object.entries(selectedPlan.preview_day as Record<string, string>).map(([k, v]) => (
-                      <p key={k}><span className="font-medium capitalize">{k}:</span> {v}</p>
-                    ))}
-                  </div>
-                ) : (
-                  <p>Purchase to view the full meal plan.</p>
-                )}
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button className="flex-1" onClick={() => marketplaceApi.purchaseMealPlan(selectedPlan.id).then(() => setSelectedPlan(null))}>
-                Purchase Plan
-              </Button>
-              {selectedPlan.is_purchased && (
-                <Button variant="outline" className="flex-1" onClick={() => marketplaceApi.personaliseMealPlan(selectedPlan.id)}>
-                  <Sparkles size={14} className="mr-1" /> AI Personalise
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-      </Modal>
+
     </>
   );
 }
 
 function ProgrammesTab() {
+  const navigate = useNavigate();
   const [programmes, setProgrammes] = useState<TrainingProgrammeMP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -150,11 +123,14 @@ function ProgrammesTab() {
 
   return (
     <div className="space-y-3">
+      <div className="flex justify-end mb-2">
+        <button onClick={() => navigate('/marketplace/programmes/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
+      </div>
       {programmes.length === 0 ? (
         <div className="text-center py-20 text-buddy-text-secondary">No training programmes available yet.</div>
       ) : (
         programmes.map((p) => (
-          <Card key={p.id} className="p-4">
+          <Card key={p.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer" onClick={() => navigate(`/marketplace/programmes/${p.id}`)}>
             <div className="flex items-start justify-between mb-2">
               <div>
                 <h3 className="font-heading font-semibold text-sm">{p.title}</h3>
@@ -178,6 +154,7 @@ function ProgrammesTab() {
 }
 
 function ProductsTab() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<ProductMP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [category, setCategory] = useState('');
@@ -201,6 +178,10 @@ function ProductsTab() {
         ))}
       </div>
 
+      <div className="flex justify-end mb-2">
+        <button onClick={() => navigate('/marketplace/products/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
+      </div>
+
       {isLoading ? (
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -210,7 +191,7 @@ function ProductsTab() {
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {products.map((p) => (
-            <Card key={p.id} className="p-3">
+            <Card key={p.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer" onClick={() => navigate(`/marketplace/products/${p.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center text-3xl">
                 {p.image_url ? <img src={p.image_url} alt={p.name} className="w-full h-full rounded-xl object-cover" /> : <Pill size={32} className="text-buddy-text-secondary/30" />}
               </div>
@@ -222,6 +203,80 @@ function ProductsTab() {
                 <a href={p.affiliate_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-buddy-electric hover:underline" onClick={(e) => e.stopPropagation()}>
                   <ExternalLink size={12} /> View
                 </a>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function EventsTab() {
+  const navigate = useNavigate();
+  const [events, setEvents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(true);
+    marketplaceApi.getEvents(true)
+      .then((res) => setEvents(res.data || []))
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  return (
+    <>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-sm font-semibold">Upcoming Events</h2>
+        <div className="flex gap-2">
+          <button onClick={() => navigate('/marketplace/events/my-tickets')} className="text-xs font-medium text-buddy-text-secondary hover:text-buddy-text-primary px-2">
+            My Tickets
+          </button>
+          <button onClick={() => navigate('/marketplace/events/create')} className="flex items-center gap-1 text-xs font-medium bg-buddy-green/10 text-buddy-green px-3 py-1.5 rounded-full hover:bg-buddy-green hover:text-buddy-black transition-colors">
+            <Plus size={14} /> Create
+          </button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="p-4 animate-pulse"><div className="h-24 bg-buddy-surface-raised rounded-xl" /></Card>
+          ))}
+        </div>
+      ) : events.length === 0 ? (
+        <div className="text-center py-20 text-buddy-text-secondary">No upcoming events found.</div>
+      ) : (
+        <div className="space-y-3">
+          {events.map((event) => (
+            <Card key={event.id} className="p-0 overflow-hidden hover:ring-2 ring-buddy-green transition-all cursor-pointer" onClick={() => navigate(`/marketplace/events/${event.id}`)}>
+              <div className="flex flex-col sm:flex-row h-full">
+                {event.cover_image_url && (
+                  <div className="w-full sm:w-1/3 h-32 sm:h-auto bg-buddy-surface-raised relative">
+                    <img src={event.cover_image_url} alt={event.title} className="w-full h-full object-cover" />
+                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-buddy-black/80 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wider text-buddy-gold">
+                      {event.event_type.replace('_', ' ')}
+                    </div>
+                  </div>
+                )}
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg leading-tight mb-1 truncate">{event.title}</h3>
+                    <p className="text-xs text-buddy-text-secondary line-clamp-2">{event.description || 'No description provided.'}</p>
+                  </div>
+                  
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-xs text-buddy-text-secondary">
+                      <Calendar size={14} className="text-buddy-green" />
+                      {new Date(event.start_datetime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    
+                    <div className="text-sm font-bold text-buddy-green">
+                      {event.is_free ? 'Free' : Object.entries(event.ticket_price_artifacts || {}).map(([k, v]) => `${v} ${k}s`).join(', ')}
+                    </div>
+                  </div>
+                </div>
               </div>
             </Card>
           ))}

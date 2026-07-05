@@ -1,6 +1,10 @@
 import uuid
 import hashlib
 import secrets
+import io
+import base64
+import qrcode
+import pyotp
 from datetime import timedelta
 
 from django.utils import timezone
@@ -19,8 +23,17 @@ from .serializers import (
     ResendOTPSerializer, PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer, ChangePasswordSerializer,
     SocialAuthSerializer, TOTPSetupSerializer, TOTPVerifySerializer,
+    RegistrationOTPSerializer, LoginOTPSerializer,
 )
 from apps.profiles.models import Profile
+from .tasks import send_otp_email, send_welcome_email, send_login_alert_email
+
+try:
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+    GOOGLE_AUTH_AVAILABLE = True
+except ImportError:
+    GOOGLE_AUTH_AVAILABLE = False
 
 
 def _get_client_ip(request):
@@ -71,6 +84,23 @@ def _log_event(user, event_type, request, metadata=None):
     )
 
 
+def _generate_temp_token(user, purpose, expiry_minutes=5):
+    token = RefreshToken.for_user(user)
+    token['purpose'] = purpose
+    token.set_exp(lifetime=timedelta(minutes=expiry_minutes))
+    return str(token)
+
+
+def _verify_temp_token(token_str, expected_purpose):
+    try:
+        token = AccessToken(token_str)
+        if token.get('purpose') != expected_purpose:
+            return None
+        return User.objects.get(id=token['user_id'])
+    except Exception:
+        return None
+
+
 class RegisterView(views.APIView):
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'registration'
@@ -86,6 +116,7 @@ class RegisterView(views.APIView):
             phone=data.get('phone', ''),
             dob_hash=hash_dob(data['dob']),
             is_adult=data['age'] >= 18,
+            email_verified=False,
             last_login_ip=_get_client_ip(request),
             consent_log={
                 'tos_version': '1.0',
@@ -115,14 +146,100 @@ class RegisterView(views.APIView):
             channel='email',
             expires_at=timezone.now() + timedelta(minutes=10),
         )
-        # TODO: send OTP via SendGrid
-        print(f"[DEV] OTP for {user.email}: {otp}")
+        send_otp_email.delay(str(user.id), otp, 'registration')
 
-        _log_event(user, 'login', request)
+        _log_event(user, 'registration', request)
+
+        reg_token = _generate_temp_token(user, 'registration', expiry_minutes=10)
+
+        return Response({
+            'success': True,
+            'data': {
+                'registration_token': reg_token,
+                'email': user.email,
+                'user_id': str(user.id),
+                'message': 'Account created. Please verify your email with the OTP sent.',
+            },
+            'message': 'Registration successful. Please verify your email.',
+            'errors': None,
+            'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class VerifyRegistrationOTPView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'otp'
+
+    def post(self, request):
+        serializer = RegistrationOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        user = _verify_temp_token(data['registration_token'], 'registration')
+        if not user:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid or expired registration token.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.email_verified:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Email already verified.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            otp_token = OTPToken.objects.filter(
+                user=user, channel='email', is_used=False
+            ).latest('created_at')
+        except OTPToken.DoesNotExist:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No pending verification. Please request a new OTP.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not otp_token.is_valid():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'OTP has expired or been used.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if otp_token.code != data['otp']:
+            otp_token.attempts += 1
+            otp_token.save(update_fields=['attempts'])
+            if otp_token.attempts >= 3:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Too many failed attempts. Please request a new OTP after 30 minutes.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid OTP code.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_token.is_used = True
+        otp_token.save(update_fields=['is_used'])
+
+        user.email_verified = True
+        user.save(update_fields=['email_verified'])
+
+        profile = user.profile
+        if profile.verification_status == 'none':
+            profile.verification_status = 'email'
+            profile.save(update_fields=['verification_status'])
 
         tokens = _get_tokens_for_user(user)
         _create_device_session(user, tokens['refresh'], request)
 
+        _log_event(user, 'email_verified', request)
+
+        from apps.profiles.serializers import ProfileSerializer
         return Response({
             'success': True,
             'data': {
@@ -131,48 +248,18 @@ class RegisterView(views.APIView):
                 'user': {
                     'id': str(user.id),
                     'email': user.email,
-                    'email_verified': user.email_verified,
+                    'email_verified': True,
                     'phone_verified': user.phone_verified,
                     'is_adult': user.is_adult,
+                    'totp_enabled': user.totp_enabled,
                     'created_at': user.created_at.isoformat(),
                 },
-                'profile': {
-                    'user_id': str(user.id),
-                    'username': data['username'],
-                    'display_name': data['display_name'],
-                    'bio': '',
-                    'avatar_url': '',
-                    'cover_url': '',
-                    'pronouns': '',
-                    'location_city': '',
-                    'location_country': '',
-                    'role': data['role'],
-                    'verification_status': 'none',
-                    'privacy_level': 'private',
-                    'streak_days': 0,
-                    'artifact_balance': {},
-                    'buddy_count': 0,
-                    'following_count': 0,
-                    'follower_count': 0,
-                    'gym_count': 0,
-                    'post_count': 0,
-                    'show_active_status': True,
-                    'is_anonymous_posting': False,
-                    'external_link': '',
-                    'workout_schedule': None,
-                    'created_at': timezone.now().isoformat(),
-                    'updated_at': timezone.now().isoformat(),
-                    'is_buddy': False,
-                    'is_following': False,
-                    'buddy_status': None,
-                    'is_blocked': False,
-                },
-                'message': 'Account created. Please verify your email.',
+                'profile': ProfileSerializer(profile).data,
             },
-            'message': 'Registration successful',
+            'message': 'Email verified successfully. Welcome to BuddyUp!',
             'errors': None,
             'pagination': None,
-        }, status=status.HTTP_201_CREATED)
+        }, status=status.HTTP_200_OK)
 
 
 class LoginView(views.APIView):
@@ -218,8 +305,107 @@ class LoginView(views.APIView):
                 'pagination': None,
             }, status=status.HTTP_403_FORBIDDEN)
 
+        if not user.email_verified:
+            return Response({
+                'success': False,
+                'data': None,
+                'message': 'Please verify your email before logging in. Check your inbox for the OTP.',
+                'errors': None,
+                'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
         user.last_login_ip = _get_client_ip(request)
         user.save(update_fields=['last_login_ip'])
+
+        otp = _generate_otp()
+        OTPToken.objects.create(
+            user=user,
+            code=otp,
+            channel='email',
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        send_otp_email.delay(str(user.id), otp, 'login')
+
+        login_token = _generate_temp_token(user, 'login', expiry_minutes=5)
+
+        return Response({
+            'success': True,
+            'data': {
+                'require_otp': True,
+                'login_token': login_token,
+                'masked_email': f'{user.email[:3]}***@{user.email.split("@")[1]}' if '@' in user.email else user.email,
+            },
+            'message': 'OTP sent to your email.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class VerifyLoginOTPView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'otp'
+
+    def post(self, request):
+        serializer = LoginOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        user = _verify_temp_token(data['login_token'], 'login')
+        if not user:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid or expired login token.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            otp_token = OTPToken.objects.filter(
+                user=user, channel='email', is_used=False
+            ).latest('created_at')
+        except OTPToken.DoesNotExist:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No pending OTP. Please login again.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not otp_token.is_valid():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'OTP has expired. Please login again.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if otp_token.code != data['otp']:
+            otp_token.attempts += 1
+            otp_token.save(update_fields=['attempts'])
+            if otp_token.attempts >= 3:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Too many failed attempts. Please login again.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid OTP code.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        otp_token.is_used = True
+        otp_token.save(update_fields=['is_used'])
+
+        if user.totp_enabled:
+            temp_token = _generate_temp_token(user, 'totp_challenge', expiry_minutes=5)
+            return Response({
+                'success': True,
+                'data': {
+                    'require_totp': True,
+                    'temp_token': temp_token,
+                },
+                'message': 'OTP verified. Please enter your authenticator code.',
+                'errors': None,
+                'pagination': None,
+            })
 
         tokens = _get_tokens_for_user(user, remember_me=data.get('remember_me', False))
         _create_device_session(user, tokens['refresh'], request)
@@ -248,12 +434,285 @@ class LoginView(views.APIView):
                     'email_verified': user.email_verified,
                     'phone_verified': user.phone_verified,
                     'is_adult': user.is_adult,
+                    'totp_enabled': user.totp_enabled,
                     'created_at': user.created_at.isoformat(),
                 },
                 'profile': profile,
                 'new_device': new_device,
             },
             'message': 'Login successful',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class TOTPSetupView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.totp_enabled:
+            return Response({
+                'success': False, 'data': None,
+                'message': '2FA is already enabled.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        secret = pyotp.random_base32()
+        provisioning_uri = pyotp.totp.TOTP(secret).provisioning_uri(
+            name=request.user.email,
+            issuer_name='BuddyUp',
+        )
+
+        qr = qrcode.make(provisioning_uri)
+        buf = io.BytesIO()
+        qr.save(buf, format='PNG')
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+
+        return Response({
+            'success': True,
+            'data': {
+                'secret': secret,
+                'provisioning_uri': provisioning_uri,
+                'qr_code': f'data:image/png;base64,{qr_b64}',
+            },
+            'message': 'TOTP setup initiated. Scan the QR code with your authenticator app.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class TOTPVerifyView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.user.totp_enabled:
+            return Response({
+                'success': False, 'data': None,
+                'message': '2FA is already enabled.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = TOTPVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        secret = data.get('secret', '')
+        code = data['code']
+
+        totp = pyotp.TOTP(secret)
+        if not totp.verify(code):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid code. Please try again.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.totp_secret = secret
+        request.user.totp_enabled = True
+        request.user.save(update_fields=['totp_secret', 'totp_enabled'])
+
+        _log_event(request.user, '2fa_enabled', request)
+
+        return Response({
+            'success': True,
+            'data': None,
+            'message': 'Two-factor authentication enabled successfully.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class TOTPDisableView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.totp_enabled:
+            return Response({
+                'success': False, 'data': None,
+                'message': '2FA is not enabled.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        password = request.data.get('password', '')
+        if not request.user.check_password(password):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Incorrect password.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.totp_secret = ''
+        request.user.totp_enabled = False
+        request.user.save(update_fields=['totp_secret', 'totp_enabled'])
+
+        _log_event(request.user, '2fa_disabled', request)
+
+        return Response({
+            'success': True,
+            'data': None,
+            'message': 'Two-factor authentication disabled.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class TOTPChallengeView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'otp'
+
+    def post(self, request):
+        temp_token = request.data.get('temp_token', '')
+        code = request.data.get('code', '')
+
+        user = _verify_temp_token(temp_token, 'totp_challenge')
+        if not user:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid or expired session.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.totp_enabled:
+            return Response({
+                'success': False, 'data': None,
+                'message': '2FA is not enabled for this account.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        totp = pyotp.TOTP(user.totp_secret)
+        if not totp.verify(code):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid authenticator code.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        tokens = _get_tokens_for_user(user)
+        _create_device_session(user, tokens['refresh'], request)
+
+        from apps.profiles.serializers import ProfileSerializer
+        profile = ProfileSerializer(user.profile).data
+
+        return Response({
+            'success': True,
+            'data': {
+                'access': tokens['access'],
+                'refresh': tokens['refresh'],
+                'user': {
+                    'id': str(user.id),
+                    'email': user.email,
+                    'email_verified': user.email_verified,
+                    'phone_verified': user.phone_verified,
+                    'is_adult': user.is_adult,
+                    'totp_enabled': user.totp_enabled,
+                    'created_at': user.created_at.isoformat(),
+                },
+                'profile': profile,
+            },
+            'message': 'TOTP verified. Login successful.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class GoogleLoginView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'login'
+
+    def post(self, request):
+        credential = request.data.get('credential', '')
+        if not credential:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Google credential is required.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not GOOGLE_AUTH_AVAILABLE:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Google authentication is not configured.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        client_id = settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
+        if not client_id:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Google OAuth is not configured.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        try:
+            info = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id, clock_skew_in_seconds=60)
+        except ValueError as e:
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Invalid Google token: {e}',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        email = info.get('email', '').lower()
+        google_id = info.get('sub', '')
+        name = info.get('name', email.split('@')[0])
+        picture = info.get('picture', '')
+
+        if not email:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Google account has no email.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user = None
+        try:
+            user = User.objects.get(email=email)
+            user.google_id = google_id
+            user.email_verified = True
+            user.save(update_fields=['google_id', 'email_verified'])
+        except User.DoesNotExist:
+            user = User.objects.create_user(
+                email=email,
+                password=None,
+                google_id=google_id,
+                email_verified=True,
+                is_adult=True,
+                last_login_ip=_get_client_ip(request),
+            )
+            from apps.profiles.models import Profile
+            Profile.objects.create(
+                user=user,
+                username=email.split('@')[0],
+                display_name=name,
+                role='user',
+                privacy_level='private',
+                avatar_url=picture,
+            )
+
+        tokens = _get_tokens_for_user(user)
+        _create_device_session(user, tokens['refresh'], request)
+        _log_event(user, 'login', request, metadata={'method': 'google'})
+
+        from apps.profiles.serializers import ProfileSerializer
+        profile = ProfileSerializer(user.profile).data
+
+        return Response({
+            'success': True,
+            'data': {
+                'access': tokens['access'],
+                'refresh': tokens['refresh'],
+                'user': {
+                    'id': str(user.id),
+                    'email': user.email,
+                    'email_verified': user.email_verified,
+                    'phone_verified': user.phone_verified,
+                    'is_adult': user.is_adult,
+                    'totp_enabled': user.totp_enabled,
+                    'created_at': user.created_at.isoformat(),
+                },
+                'profile': profile,
+            },
+            'message': 'Google login successful.',
             'errors': None,
             'pagination': None,
         })
@@ -299,14 +758,37 @@ class TokenRefreshView(views.APIView):
         try:
             token = RefreshToken(refresh_token)
             access = str(token.access_token)
-            token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
-            DeviceSession.objects.filter(
-                refresh_token_hash=token_hash
-            ).update(last_active=timezone.now())
+
+            new_refresh = None
+            if getattr(settings, 'SIMPLE_JWT', {}).get('ROTATE_REFRESH_TOKENS', True):
+                token.blacklist()
+                user_id = token.payload.get('user_id')
+                try:
+                    user = User.objects.get(id=user_id)
+                    new_token = RefreshToken.for_user(user)
+                    new_token['device_id'] = token.payload.get('device_id', str(uuid.uuid4()))
+                    new_refresh = str(new_token)
+                except User.DoesNotExist:
+                    new_refresh = None
+
+            old_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+            session = DeviceSession.objects.filter(refresh_token_hash=old_hash).first()
+            if session:
+                if new_refresh:
+                    new_hash = hashlib.sha256(new_refresh.encode()).hexdigest()
+                    DeviceSession.objects.filter(id=session.id).update(
+                        refresh_token_hash=new_hash, last_active=timezone.now()
+                    )
+                else:
+                    DeviceSession.objects.filter(id=session.id).update(last_active=timezone.now())
+
+            data = {'access': access}
+            if new_refresh:
+                data['refresh'] = new_refresh
 
             return Response({
                 'success': True,
-                'data': {'access': access},
+                'data': data,
                 'message': 'Token refreshed',
                 'errors': None,
                 'pagination': None,
@@ -414,8 +896,9 @@ class ResendOTPView(views.APIView):
             channel=data['channel'],
             expires_at=timezone.now() + timedelta(minutes=10),
         )
-        # TODO: send OTP via SendGrid/SMS
-        print(f"[DEV] OTP for {request.user.email}: {otp}")
+        if data['channel'] == 'email':
+            send_otp_email.delay(str(request.user.id), otp, 'registration')
+        # TODO: send OTP via SMS (Africa's Talking)
 
         return Response({
             'success': True,
@@ -480,6 +963,13 @@ class PasswordResetConfirmView(views.APIView):
 
         user = otp_token.user
         user.set_password(data['new_password'])
+
+        if user.totp_enabled:
+            user.totp_enabled = False
+            user.totp_secret = ''
+            _log_event(user, '2fa_disabled', request,
+                       metadata={'reason': 'password_reset'})
+
         user.save()
 
         otp_token.is_used = True

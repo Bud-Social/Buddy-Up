@@ -10,9 +10,9 @@ export function useNotificationListener() {
   useEffect(() => {
     if (!profile?.user_id) return;
 
-    const ws = wsManager.connect(`ws/user/${profile.user_id}`);
+    wsManager.connect(`ws/user/${profile.user_id}/`);
 
-    const unsub = wsManager.onMessage(`ws/user/${profile.user_id}`, (data: unknown) => {
+    const unsub = wsManager.onMessage(`ws/user/${profile.user_id}/`, (data: unknown) => {
       const payload = data as { type?: string; title?: string; body?: string; metadata?: Record<string, unknown> };
 
       if (payload?.type === 'event_notification') {
@@ -31,7 +31,7 @@ export function useNotificationListener() {
 
     return () => {
       unsub();
-      wsManager.disconnect(`ws/user/${profile.user_id}`);
+      wsManager.disconnect(`ws/user/${profile.user_id}/`);
     };
   }, [profile?.user_id]);
 }

@@ -1,0 +1,21 @@
+port: 7880
+bind_addresses:
+  - "0.0.0.0"
+rtc:
+  port_range_start: 7881
+  port_range_end: 7881
+  use_external_ip: false
+redis:
+  address: redis:6379
+  password: ${REDIS_PASSWORD}
+keys:
+  ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
+logging:
+  level: info
+  format: text
+turn:
+  enabled: false
+ingress:
+  enabled: false
+egress:
+  enabled: false

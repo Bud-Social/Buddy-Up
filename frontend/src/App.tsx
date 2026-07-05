@@ -29,7 +29,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
       }
       try {
         const res = await authApi.refreshToken(refreshToken);
-        setTokens(res.data.access, refreshToken);
+        setTokens(res.data.access, res.data.refresh || refreshToken);
         const profileRes = await import('@/api').then((m) => m.profilesApi.getMyProfile());
         const user = useAuthStore.getState().user;
         if (profileRes.data && user) {

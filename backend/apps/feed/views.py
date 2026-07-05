@@ -1,17 +1,31 @@
+import os
+import uuid
+
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
 from django.utils import timezone
-from datetime import timedelta
-from collections import Counter
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
-from rest_framework import views, permissions, status, generics
+from rest_framework import views, permissions, status
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
 
-from common.pagination import CursorPagination, PageNumberPagination
-from .models import Post, Comment, Reaction, Save
-from .serializers import PostSerializer, PostCreateSerializer, CommentSerializer, ReactionSerializer, SaveSerializer
-from apps.profiles.models import Profile, BuddyRelationship
+from common.pagination import CursorPagination
+from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote
+from .serializers import PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer, ReactionSerializer, SaveSerializer, PollSerializer
+from apps.profiles.models import BuddyRelationship
+
+
+def _handle_media_uploads(request_files):
+    """Save uploaded files to media storage and return list of public URLs."""
+    urls = []
+    for f in request_files:
+        ext = os.path.splitext(f.name)[1].lower()
+        filename = f'posts/{uuid.uuid4().hex}{ext}'
+        saved_name = default_storage.save(filename, ContentFile(f.read()))
+        url = default_storage.url(saved_name)
+        urls.append(url)
+    return urls
 
 
 class FeedView(views.APIView):
@@ -22,23 +36,22 @@ class FeedView(views.APIView):
         cursor = request.query_params.get('cursor')
 
         user_profile = request.user.profile
-        now = timezone.now()
 
         if tab == 'following':
             followed_ids = user_profile.following.values_list('followee_id', flat=True)
-            queryset = Post.objects.filter(
+            queryset = FeedPost.objects.filter(
                 author_id__in=followed_ids,
                 visibility='public',
                 moderation_status='clean',
-            ).select_related('author').order_by('-created_at')
+            ).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
         elif tab == 'nearby':
-            queryset = Post.objects.filter(
+            queryset = FeedPost.objects.filter(
                 visibility='public',
                 moderation_status='clean',
             )
             if user_profile.location_city:
                 queryset = queryset.filter(location_label__icontains=user_profile.location_city)
-            queryset = queryset.select_related('author').order_by('-created_at')
+            queryset = queryset.select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
         else:  # for_you
             buddy_ids = set(
                 BuddyRelationship.objects.filter(
@@ -52,22 +65,28 @@ class FeedView(views.APIView):
             followed_ids = set(user_profile.following.values_list('followee_id', flat=True))
             gym_ids = set(user_profile.gym_memberships.filter(subscription_active=True).values_list('gym_id', flat=True))
 
-            queryset = Post.objects.filter(
+            queryset = FeedPost.objects.filter(
                 moderation_status='clean',
                 visibility__in=['public'],
-            ).select_related('author').annotate(
+            ).select_related('author', 'gym_tag').annotate(
                 rank=db_models.Case(
                     db_models.When(author_id__in=buddy_ids, then=db_models.Value(100)),
                     db_models.When(author_id__in=followed_ids, then=db_models.Value(50)),
                     db_models.When(gym_tag_id__in=gym_ids, then=db_models.Value(75)),
                     default=db_models.Value(10),
                 ),
-            ).order_by('-rank', '-created_at')
+            ).order_by('-is_pinned', '-rank', '-created_at')
 
+        count = queryset.count()
         paginator = CursorPagination()
         paginator.ordering = '-created_at'
         page = paginator.paginate_queryset(queryset, request)
-        serializer = PostSerializer(page, many=True, context={'request': request})
+        page_posts = list(page)
+
+        reposted_original_ids = {p.original_post_id for p in page_posts if p.is_repost and p.original_post_id}
+        deduped_posts = [p for p in page_posts if not (not p.is_repost and p.id in reposted_original_ids)]
+
+        serializer = FeedPostSerializer(deduped_posts, many=True, context={'request': request})
 
         return Response({
             'success': True,
@@ -75,7 +94,7 @@ class FeedView(views.APIView):
             'message': 'OK',
             'errors': None,
             'pagination': {
-                'count': paginator.page.paginator.count,
+                'count': len(deduped_posts),
                 'next': paginator.get_next_link(),
                 'previous': paginator.get_previous_link(),
             },
@@ -142,17 +161,76 @@ class CreatePostView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        serializer = PostCreateSerializer(data=request.data)
+        # Handle file uploads — build media_urls from uploaded files
+        uploaded_files = request.FILES.getlist('media')
+        media_urls = []
+        if uploaded_files:
+            try:
+                media_urls = _handle_media_uploads(uploaded_files)
+            except Exception:
+                pass
+
+        # Merge uploaded URLs with any pre-existing media_urls (e.g. from mobile)
+        existing_urls = request.data.getlist('media_urls') or []
+        all_media_urls = existing_urls + media_urls
+
+        # Build mutable data dict
+        data = request.data.dict() if hasattr(request.data, 'dict') else dict(request.data)
+        data['media_urls'] = all_media_urls
+
+        serializer = PostCreateSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        data = serializer.validated_data
+        validated = serializer.validated_data
+        validated['media_urls'] = all_media_urls
 
         post = Post.objects.create(
             author=request.user.profile,
-            **data,
+            **validated,
         )
 
-        from .tasks import moderate_content
-        moderate_content.delay(str(post.id))
+        # Handle poll creation
+        poll_question = request.data.get('poll_question', '').strip()
+        poll_options_raw = request.data.getlist('poll_options')
+        if not poll_options_raw:
+            # Try JSON list
+            import json
+            try:
+                poll_options_raw = json.loads(request.data.get('poll_options_json', '[]'))
+            except Exception:
+                poll_options_raw = []
+
+        if poll_question and len(poll_options_raw) >= 2:
+            closes_at = request.data.get('poll_closes_at') or None
+            allow_multiple = request.data.get('poll_allow_multiple', 'false').lower() == 'true'
+            poll = Poll.objects.create(
+                post=post,
+                question=poll_question,
+                closes_at=closes_at,
+                allow_multiple=allow_multiple,
+            )
+            for i, opt_text in enumerate(poll_options_raw[:10]):
+                if opt_text.strip():
+                    PollOption.objects.create(poll=poll, text=opt_text.strip(), order=i)
+
+        # Handle @mentions — store and send notifications
+        mentioned_user_ids = request.data.getlist('mentioned_users')
+        if mentioned_user_ids:
+            from apps.profiles.models import Profile
+            profiles = Profile.objects.filter(user_id__in=mentioned_user_ids)
+            post.mentioned_profiles.set(profiles)
+
+            # Fire mention notifications asynchronously
+            try:
+                from .tasks import send_mention_notifications
+                send_mention_notifications.delay(str(post.id), str(request.user.profile.user_id))
+            except Exception:
+                pass
+
+        try:
+            from .tasks import moderate_content
+            moderate_content.delay(str(post.id))
+        except Exception:
+            pass
 
         output = PostSerializer(post, context={'request': request})
         return Response({
@@ -162,6 +240,43 @@ class CreatePostView(views.APIView):
             'errors': None,
             'pagination': None,
         }, status=status.HTTP_201_CREATED)
+
+
+class PollVoteView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id, post_type='poll')
+        try:
+            poll = post.poll
+        except Poll.DoesNotExist:
+            return Response({'success': False, 'message': 'Poll not found.'}, status=404)
+
+        if poll.is_closed:
+            return Response({'success': False, 'message': 'This poll has closed.'}, status=400)
+
+        option_ids = request.data.getlist('option_ids')
+        if not option_ids:
+            option_id = request.data.get('option_id')
+            if option_id:
+                option_ids = [option_id]
+
+        if not option_ids:
+            return Response({'success': False, 'message': 'No option selected.'}, status=400)
+
+        if not poll.allow_multiple and len(option_ids) > 1:
+            return Response({'success': False, 'message': 'This poll only allows one vote.'}, status=400)
+
+        # Remove previous votes if not multi-select
+        if not poll.allow_multiple:
+            PollVote.objects.filter(poll=poll, voter=request.user.profile).delete()
+
+        for option_id in option_ids:
+            option = get_object_or_404(PollOption, id=option_id, poll=poll)
+            PollVote.objects.get_or_create(poll=poll, option=option, voter=request.user.profile)
+
+        serializer = PollSerializer(poll, context={'request': request})
+        return Response({'success': True, 'data': serializer.data, 'message': 'Vote recorded.', 'errors': None, 'pagination': None})
 
 
 class CommentsView(views.APIView):
@@ -241,11 +356,11 @@ class ReactionView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, post_id):
-        reaction_type = request.data.get('reaction_type')
-        if reaction_type not in dict(Reaction.REACTION_CHOICES):
+        reaction_type = request.data.get('reaction_type', '').strip()
+        if not reaction_type:
             return Response({
                 'success': False, 'data': None,
-                'message': 'Invalid reaction type.',
+                'message': 'Reaction type is required.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -346,9 +461,9 @@ class SavedPostsView(views.APIView):
         post_ids = saves.values_list('post_id', flat=True)
         posts = Post.objects.filter(
             id__in=post_ids,
-            moderation_status__ne='removed',
-        ).select_related('author').order_by('-created_at')
+        ).exclude(moderation_status='removed').select_related('author').order_by('-created_at')
 
+        count = posts.count()
         paginator = CursorPagination()
         page = paginator.paginate_queryset(posts, request)
         serializer = PostSerializer(page, many=True, context={'request': request})
@@ -359,8 +474,30 @@ class SavedPostsView(views.APIView):
             'message': 'OK',
             'errors': None,
             'pagination': {
-                'count': paginator.page.paginator.count,
+                'count': count,
                 'next': paginator.get_next_link(),
                 'previous': paginator.get_previous_link(),
             },
         })
+
+
+class PostPinView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+        if post.gym_tag:
+            from apps.gyms.models import GymMembership
+            is_admin = GymMembership.objects.filter(
+                gym=post.gym_tag, member=request.user.profile,
+                role__in=['owner', 'co_owner', 'moderator']
+            ).exists()
+            if not is_admin and post.author != request.user.profile:
+                return Response({'success': False, 'message': 'Not authorized to pin this post.'}, status=403)
+        else:
+            if post.author != request.user.profile:
+                return Response({'success': False, 'message': 'Not authorized.'}, status=403)
+
+        post.is_pinned = not post.is_pinned
+        post.save(update_fields=['is_pinned'])
+        return Response({'success': True, 'data': {'is_pinned': post.is_pinned}, 'message': 'Pin toggled.', 'errors': None, 'pagination': None})

@@ -245,3 +245,59 @@ def cleanup_old_notifications():
     from .models import Notification
     cutoff = timezone.now() - timedelta(days=90)
     Notification.objects.filter(created_at__lt=cutoff, is_read=True).delete()
+
+
+@shared_task
+def send_live_started_notification(live_id: str, host_profile_id: str):
+    from apps.profiles.models import Profile, BuddyRelationship
+    from .models import Notification
+    from django.db.models import Q
+
+    try:
+        host = Profile.objects.get(user_id=host_profile_id)
+    except Profile.DoesNotExist:
+        return
+
+    from django.db.models import Value as V
+    from django.db.models.functions import Concat
+
+    buddies = Profile.objects.filter(
+        Q(buddy_sent__to_user=host, buddy_sent__status='confirmed') |
+        Q(buddy_received__from_user=host, buddy_received__status='confirmed'),
+    ).distinct()
+
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+    channel_layer = get_channel_layer()
+
+    for buddy in buddies:
+        n = Notification.objects.create(
+            recipient=buddy,
+            notification_type='live_starting',
+            title=f'{host.display_name} is live now!',
+            body=f'@{host.username} just started "{host.display_name}\'s live" — join the sweat!',
+            metadata={
+                'live_id': live_id,
+                'host_user_id': host_profile_id,
+                'host_display_name': host.display_name,
+                'host_username': host.username,
+                'host_avatar_url': host.avatar_url,
+            },
+        )
+        try:
+            async_to_sync(channel_layer.group_send)(
+                f'user_{buddy.user_id}',
+                {
+                    'type': 'event_notification',
+                    'data': {
+                        'id': str(n.id),
+                        'type': 'live_starting',
+                        'title': n.title,
+                        'body': n.body,
+                        'metadata': n.metadata,
+                        'created_at': n.created_at.isoformat(),
+                    },
+                },
+            )
+        except:
+            pass

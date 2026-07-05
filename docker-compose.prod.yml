@@ -58,6 +58,9 @@ services:
       - FLUTTERWAVE_SECRET_KEY=${FLUTTERWAVE_SECRET_KEY}
       - AGORA_APP_ID=${AGORA_APP_ID}
       - AGORA_APP_CERTIFICATE=${AGORA_APP_CERTIFICATE}
+      - LIVEKIT_URL=wss://livekit:7880
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
       - MUX_TOKEN_ID=${MUX_TOKEN_ID}
       - MUX_TOKEN_SECRET=${MUX_TOKEN_SECRET}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -71,6 +74,21 @@ services:
       - buddyup_internal
     depends_on:
       - db
+      - redis
+      - livekit
+
+  livekit:
+    image: livekit/livekit-server:latest
+    restart: always
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880"
+      - "7881:7881/udp"
+    networks:
+      - buddyup_internal
+    depends_on:
       - redis
 
   celery-worker:

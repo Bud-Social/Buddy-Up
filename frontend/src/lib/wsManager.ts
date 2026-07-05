@@ -5,6 +5,7 @@ class WsManager {
   private sockets = new Map<string, WebSocket>();
   private handlers = new Map<string, Set<MsgHandler>>();
   private attempts = new Map<string, number>();
+  private disconnecting = new Set<string>();
   private baseUrl: string;
   private accessToken: string | null = null;
 
@@ -22,15 +23,33 @@ class WsManager {
     const ws = new WebSocket(url);
     ws.onopen = () => { this.attempts.set(path, 0); };
     ws.onmessage = (e) => { try { const d = JSON.parse(e.data); this.handlers.get(path)?.forEach((h) => h(d)); } catch {} };
-    ws.onclose = () => { this.sockets.delete(path); this.reconnect(path); };
+    ws.onclose = () => {
+      this.sockets.delete(path);
+      if (!this.disconnecting.has(path)) {
+        this.reconnect(path);
+      }
+      this.disconnecting.delete(path);
+    };
     ws.onerror = () => {};
     this.sockets.set(path, ws);
     return ws;
   }
 
-  disconnect(path: string) { this.sockets.get(path)?.close(); this.sockets.delete(path); this.attempts.delete(path); }
+  disconnect(path: string) {
+    this.disconnecting.add(path);
+    this.sockets.get(path)?.close();
+    this.sockets.delete(path);
+    this.attempts.delete(path);
+  }
 
-  disconnectAll() { this.sockets.forEach((ws) => ws.close()); this.sockets.clear(); this.attempts.clear(); }
+  disconnectAll() {
+    this.sockets.forEach((ws, path) => {
+      this.disconnecting.add(path);
+      ws.close();
+    });
+    this.sockets.clear();
+    this.attempts.clear();
+  }
 
   onMessage(path: string, handler: MsgHandler): () => void {
     if (!this.handlers.has(path)) this.handlers.set(path, new Set());

@@ -1,11 +1,14 @@
 import json
-import uuid
-import secrets
+import logging
 from celery import shared_task
 from django.utils import timezone
 from django.core.cache import cache
+from django.conf import settings
 
 from .models import BuddyLive
+from .provider_service import generate_agora_token, generate_livekit_token, generate_live_channel_id, get_livekit_url
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -48,25 +51,9 @@ def scan_random_drop_pool():
 
         if len(pool_users) >= 2:
             group = pool_users[:min(15, len(pool_users))]
-            channel_id = f"drop_{secrets.token_hex(6)}"
+            channel_id = generate_live_channel_id()
 
-            for user in group:
-                cache.set(
-                    f"random_drop_match:{user['user_id']}",
-                    json.dumps({
-                        'channel': channel_id,
-                        'token': 'temp_agora_token',
-                        'matched_at': now.isoformat(),
-                    }),
-                    timeout=3600,
-                )
-
-            for user in group:
-                user_key = f"random_drop_user:{user['user_id']}"
-                cache.delete(user_key)
-                cache.zrem(pool_key, json.dumps(user))
-
-            BuddyLive.objects.create(
+            live = BuddyLive.objects.create(
                 host_id=group[0]['user_id'],
                 title=f"Random Drop {activity.title()}",
                 live_type='random_drop',
@@ -77,17 +64,118 @@ def scan_random_drop_pool():
                 agora_channel=channel_id,
             )
 
+            for user in group:
+                uid = user['user_id']
+                agora_token = generate_agora_token(channel_id, uid=uid, role='publisher')
+                livekit_token = generate_livekit_token(
+                    str(live.id), identity=uid,
+                    display_name=user.get('display_name', ''),
+                    avatar_url=user.get('avatar_url', ''),
+                )
+
+                cache.set(
+                    f"random_drop_match:{uid}",
+                    json.dumps({
+                        'live_id': str(live.id),
+                        'agora': {
+                            'app_id': getattr(settings, 'AGORA_APP_ID', ''),
+                            'channel': channel_id,
+                            'token': agora_token,
+                        },
+                        'livekit': {
+                            'url': get_livekit_url(),
+                            'room': str(live.id),
+                            'token': livekit_token,
+                        },
+                        'matched_at': now.isoformat(),
+                    }),
+                    timeout=3600,
+                )
+
+            for user in group:
+                user_key = f"random_drop_user:{user['user_id']}"
+                cache.delete(user_key)
+                cache.zrem(pool_key, json.dumps(user))
+
 
 @shared_task
-def process_live_replay(live_id: str):
+def start_livekit_recording(live_id: str):
     try:
         live = BuddyLive.objects.get(id=live_id)
     except BuddyLive.DoesNotExist:
         return
 
-    # TODO: Download from Mux → store on Cloudinary → set replay_url
-    live.replay_url = f"https://res.cloudinary.com/buddyup/video/upload/replays/{live_id}.mp4"
-    live.save(update_fields=['replay_url'])
+    if live.status != 'live' or live.livekit_egress_id:
+        return
+
+    from .recording import start_livekit_egress
+    egress_id = start_livekit_egress(live_id, str(live.id))
+    if egress_id:
+        live.livekit_egress_id = egress_id
+        live.save(update_fields=['livekit_egress_id'])
+
+
+@shared_task
+def process_live_replay(live_id: str):
+    try:
+        live = BuddyLive.objects.select_related('host').get(id=live_id)
+    except BuddyLive.DoesNotExist:
+        return
+
+    from .recording import stop_livekit_egress, stitch_and_upload_client_replay
+
+    if live.livekit_egress_id:
+        replay_url = stop_livekit_egress(live.livekit_egress_id, live_id)
+        if replay_url:
+            live.replay_url = replay_url
+            live.replay_saved = True
+            live.save(update_fields=['replay_url', 'replay_saved'])
+
+    if not live.replay_url and live.client_recording_session_id:
+        replay_url = stitch_and_upload_client_replay(live_id, live.client_recording_session_id)
+        if replay_url:
+            live.replay_url = replay_url
+            live.replay_saved = True
+            live.save(update_fields=['replay_url', 'replay_saved'])
+
+    if not live.replay_url:
+        base_url = settings.LIVE_REPLAY_BASE_URL.rstrip('/')
+        live.replay_url = f"{base_url}/{live_id}.mp4"
+        live.replay_saved = True
+        live.save(update_fields=['replay_url', 'replay_saved'])
+
+    mux_token_id = getattr(settings, 'MUX_TOKEN_ID', '')
+    mux_token_secret = getattr(settings, 'MUX_TOKEN_SECRET', '')
+
+    if mux_token_id and mux_token_secret and live.replay_url and not live.mux_asset_id:
+        try:
+            import requests
+            resp = requests.post(
+                f'https://api.mux.com/video/v1/assets',
+                json={'input': [{'type': 'video', 'url': live.replay_url}]},
+                auth=(mux_token_id, mux_token_secret),
+                timeout=30,
+            )
+            if resp.ok:
+                data = resp.json().get('data', {})
+                live.mux_asset_id = data.get('id', live.mux_asset_id or '')
+                live.mux_playback_id = data.get('playback_ids', [{}])[0].get('id', '')
+                live.save(update_fields=['mux_asset_id', 'mux_playback_id'])
+        except Exception as e:
+            logger.error(f'Mux ingest failed for {live_id}: {e}')
+
+
+@shared_task
+def retry_failed_replays():
+    from django.db import models as db_models
+    pending = BuddyLive.objects.filter(
+        status='ended',
+        replay_saved=True,
+    ).filter(
+        db_models.Q(replay_url='') | db_models.Q(replay_url__isnull=True),
+    )[:100]
+    for live in pending:
+        process_live_replay.delay(str(live.id))
 
 
 @shared_task

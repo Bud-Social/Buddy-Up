@@ -8,6 +8,7 @@ export interface User {
   email_verified: boolean;
   phone_verified: boolean;
   is_adult: boolean;
+  totp_enabled?: boolean;
   created_at: string;
 }
 

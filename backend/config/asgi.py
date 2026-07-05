@@ -1,4 +1,7 @@
 import os
+import dotenv
+dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
+
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack

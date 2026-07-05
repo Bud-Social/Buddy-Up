@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Loader2 } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
-import { CreatePostSheet } from '@/components/features/feed/CreatePostSheet';
 import { feedApi } from '@/api';
 import type { Post, ApiResponse } from '@/types';
 
@@ -13,7 +12,6 @@ export default function Feed() {
   const [activeTab, setActiveTab] = useState<FeedTab>('for_you');
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const cursorRef = useRef<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
@@ -36,7 +34,9 @@ export default function Feed() {
       } else {
         setPosts((prev) => [...prev, ...newPosts]);
       }
-      cursorRef.current = res.pagination?.next ? new URLSearchParams(res.pagination.next.split('?')[1]).get('cursor') || undefined : undefined;
+      cursorRef.current = res.pagination?.next
+        ? new URLSearchParams(res.pagination.next.split('?')[1]).get('cursor') || undefined
+        : undefined;
       setHasMore(!!res.pagination?.next);
     } catch {} finally {
       setIsLoading(false);
@@ -61,12 +61,13 @@ export default function Feed() {
     return () => obs.disconnect();
   }, [hasMore, isLoading, activeTab, fetchPosts]);
 
-  const handleSave = async (postId: string) => {
-    try { await feedApi.save(postId); } catch {}
+  const handleNewPost = (post: Post) => {
+    setPosts(prev => [post, ...prev]);
   };
 
   return (
     <div className="max-w-lg mx-auto">
+      {/* Tab bar */}
       <div className="sticky top-0 z-10 bg-buddy-black/95 backdrop-blur-lg border-b border-buddy-surface px-4 py-3">
         <div className="flex gap-1 bg-buddy-surface rounded-xl p-1">
           {tabs.map(({ key, label }) => (
@@ -85,17 +86,16 @@ export default function Feed() {
         </div>
       </div>
 
-      <div className="px-4 py-3">
-        <button
-          onClick={() => setIsCreating(true)}
-          className="w-full flex items-center gap-2 bg-buddy-surface hover:bg-buddy-surface-raised rounded-xl px-4 py-3 text-buddy-text-secondary text-sm transition-colors"
-        >
-          <Plus size={18} className="text-buddy-green" />
-          Share your workout, meal, or progress...
-        </button>
+      {/* Composer */}
+      <div className="px-4 pt-4 pb-2">
+        <PostComposer
+          placeholder="Share your workout, meal, or progress..."
+          onPost={handleNewPost}
+        />
       </div>
 
-      <div className="px-4 space-y-4 pb-8">
+      {/* Feed */}
+      <div className="px-4 space-y-3 pb-8 pt-2">
         {posts.length === 0 && !isLoading && (
           <div className="text-center py-20">
             <p className="text-buddy-text-secondary text-lg">No posts yet</p>
@@ -110,7 +110,6 @@ export default function Feed() {
             key={post.id}
             post={post}
             onComment={(id) => setCommentPostId(id)}
-            onSave={handleSave}
           />
         ))}
 
@@ -130,11 +129,6 @@ export default function Feed() {
           onClose={() => setCommentPostId(null)}
         />
       )}
-
-      <CreatePostSheet
-        isOpen={isCreating}
-        onClose={() => setIsCreating(false)}
-      />
     </div>
   );
 }

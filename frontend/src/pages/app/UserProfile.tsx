@@ -1,21 +1,32 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import { Zap } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Radio, Play, Clock, Users, Loader, Zap } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { BuddyButton } from '@/components/features/profiles/BuddyButton';
 import { profilesApi } from '@/api';
+import { livesApi } from '@/api/lives';
+import ReplayPlayer from '@/components/live/ReplayPlayer';
 import type { Profile } from '@/types';
+import type { BuddyLive } from '@/types/live';
+
+type ProfileTab = 'posts' | 'lives';
 
 export default function UserProfile() {
   const { username } = useParams();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [pingLoading, setPingLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
+
+  const [lives, setLives] = useState<BuddyLive[]>([]);
+  const [livesLoading, setLivesLoading] = useState(false);
+  const [replayLive, setReplayLive] = useState<BuddyLive | null>(null);
 
   const fetchProfile = useCallback(async () => {
     if (!username) return;
@@ -56,6 +67,21 @@ export default function UserProfile() {
       setPingLoading(false);
     }
   };
+
+  const fetchLives = async () => {
+    if (!profile?.username) return;
+    setLivesLoading(true);
+    try {
+      const res = await livesApi.getUserLives(profile.username);
+      setLives(res.data || []);
+    } catch {} finally {
+      setLivesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'lives' && profile?.username) fetchLives();
+  }, [activeTab, profile?.username]);
 
   if (isLoading) return (
     <div className="max-w-lg mx-auto p-4">
@@ -159,11 +185,73 @@ export default function UserProfile() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-3 gap-1">
-        {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="aspect-square bg-buddy-surface rounded-lg" />
+      <div className="flex border-b border-buddy-surface mb-4">
+        {(['posts', 'lives'] as ProfileTab[]).map((tab) => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`flex-1 pb-3 text-sm font-medium capitalize ${activeTab === tab ? 'text-buddy-green border-b-2 border-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+          >{tab}</button>
         ))}
       </div>
+
+      {activeTab === 'lives' ? (
+        livesLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader size={24} className="animate-spin text-buddy-text-secondary" />
+          </div>
+        ) : lives.length === 0 ? (
+          <div className="text-center py-20">
+            <Radio size={40} className="mx-auto text-buddy-text-secondary/30 mb-3" />
+            <p className="text-buddy-text-secondary">No lives yet</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {lives.map((live) => (
+              <Card key={live.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer"
+                onClick={() => live.status === 'live' ? navigate(`/live/${live.id}`) : null}>
+                <div className="flex items-start gap-3">
+                  <div className="relative">
+                    <Avatar src={live.host?.avatar_url} alt={live.host?.display_name || 'User'} size="lg" />
+                    {live.status === 'live' && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 bg-buddy-red rounded-full border-2 border-buddy-black animate-pulse" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-heading font-semibold text-sm truncate">{live.title}</h3>
+                    <p className="text-xs text-buddy-text-secondary mt-0.5 capitalize">{live.live_type.replace(/_/g, ' ')} · {live.category}</p>
+                    <div className="flex items-center gap-3 mt-2 text-xs text-buddy-text-secondary">
+                      <span className="flex items-center gap-1"><Users size={12} /> {live.viewer_peak || 0}</span>
+                      {live.status === 'live' && <span className="flex items-center gap-1 text-buddy-red"><Radio size={12} /> LIVE</span>}
+                      {live.scheduled_for && <span className="flex items-center gap-1"><Clock size={12} /> {new Date(live.scheduled_for).toLocaleDateString()}</span>}
+                      {live.status === 'ended' && live.replay_url && (
+                        <Button size="sm" variant="outline" className="ml-auto gap-1.5"
+                          onClick={(e) => { e.stopPropagation(); setReplayLive(live); }}>
+                          <Play size={12} /> Watch
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
+      ) : (
+        <div className="grid grid-cols-3 gap-1">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="aspect-square bg-buddy-surface rounded-lg" />
+          ))}
+        </div>
+      )}
+
+      {replayLive && (
+        <ReplayPlayer
+          title={replayLive.title}
+          hostName={replayLive.host?.display_name || 'Unknown'}
+          replayUrl={replayLive.replay_url}
+          muxPlaybackId={replayLive.mux_playback_id}
+          onClose={() => setReplayLive(null)}
+        />
+      )}
     </div>
   );
 }

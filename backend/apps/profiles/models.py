@@ -39,6 +39,7 @@ class Profile(TimestampedModel):
     privacy_level = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='public')
     external_link = models.URLField(blank=True)
     workout_schedule = models.JSONField(null=True, blank=True)
+    saved_payment_methods = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = 'profiles_profile'

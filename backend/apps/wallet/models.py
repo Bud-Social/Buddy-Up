@@ -8,6 +8,8 @@ class ArtifactTransaction(TimestampedModel):
         ('purchase', 'Purchase'),
         ('tip_sent', 'Tip Sent'),
         ('tip_received', 'Tip Received'),
+        ('gift_sent', 'Gift Sent'),
+        ('gift_received', 'Gift Received'),
         ('live_fee', 'Live Fee'),
         ('gym_subscription', 'Gym Subscription'),
         ('session_fee', 'Session Fee'),
@@ -42,6 +44,11 @@ class ArtifactTransaction(TimestampedModel):
     fiat_currency = models.CharField(max_length=5, default='KES')
     payment_provider = models.CharField(max_length=30, blank=True)
     clearance_at = models.DateTimeField(null=True, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True)
+    bank_account = models.CharField(max_length=100, blank=True)
+    tx_ref = models.CharField(max_length=100, blank=True, db_index=True)
+    flutterwave_id = models.CharField(max_length=100, blank=True)
+    flutterwave_response = models.JSONField(null=True, blank=True)
     description = models.CharField(max_length=255, blank=True)
 
     class Meta:

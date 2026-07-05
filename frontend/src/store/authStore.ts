@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { wsManager } from '@/lib/wsManager';
 import type { User, Profile } from '@/types';
 
 interface AuthState {
@@ -16,12 +18,35 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false, accessToken: null, refreshToken: null, user: null, profile: null, isLoading: true,
-  setTokens: (access, refresh) => set({ accessToken: access, refreshToken: refresh, isAuthenticated: true }),
-  setAccessToken: (access) => set({ accessToken: access }),
-  setUser: (user, profile) => set({ user, profile, isAuthenticated: true, isLoading: false }),
-  setProfile: (profile) => set({ profile }),
-  logout: () => set({ isAuthenticated: false, accessToken: null, refreshToken: null, user: null, profile: null, isLoading: false }),
-  setLoading: (loading) => set({ isLoading: loading }),
-}));
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      isAuthenticated: false, accessToken: null, refreshToken: null, user: null, profile: null, isLoading: true,
+      setTokens: (access, refresh) => {
+        wsManager.setAccessToken(access);
+        set({ accessToken: access, refreshToken: refresh, isAuthenticated: true });
+      },
+      setAccessToken: (access) => {
+        wsManager.setAccessToken(access);
+        set({ accessToken: access });
+      },
+      setUser: (user, profile) => set({ user, profile, isAuthenticated: true, isLoading: false }),
+      setProfile: (profile) => set({ profile }),
+      logout: () => {
+        wsManager.setAccessToken(null);
+        wsManager.disconnectAll();
+        set({ isAuthenticated: false, accessToken: null, refreshToken: null, user: null, profile: null, isLoading: false });
+      },
+      setLoading: (loading) => set({ isLoading: loading }),
+    }),
+    {
+      name: 'buddyup-auth',
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        user: state.user,
+        profile: state.profile,
+      }),
+    }
+  )
+);

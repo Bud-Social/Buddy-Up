@@ -1,17 +1,15 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Dumbbell, GraduationCap, Stethoscope } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { getPasswordStrength } from '@/utils/passwordStrength';
 import { calculateAge } from '@/utils/ageCheck';
 import { authApi } from '@/api';
-import { useAuthStore } from '@/store/authStore';
 
 export default function Register() {
   const navigate = useNavigate();
-  const setTokens = useAuthStore((s) => s.setTokens);
-  const setUser = useAuthStore((s) => s.setUser);
 
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
@@ -58,9 +56,7 @@ export default function Register() {
         email, password, dob, username, display_name: displayName || username, role,
         accepted_terms: acceptedTerms, accepted_privacy: true, accepted_guidelines: true, is_16_plus: true,
       });
-      setTokens(res.data.access, res.data.refresh);
-      setUser(res.data.user, res.data.profile);
-      navigate('/onboarding');
+      navigate(`/verify-registration-otp?token=${encodeURIComponent(res.data.registration_token)}&email=${encodeURIComponent(res.data.email)}`);
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
       setError(data?.message || 'Registration failed. Please try again.');
@@ -138,12 +134,12 @@ export default function Register() {
               <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">I am a...</label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { value: 'user', label: 'Regular User', emoji: '🏋️' },
-                  { value: 'trainer', label: 'Trainer', emoji: '🧑‍🏫' },
-                  { value: 'practitioner', label: 'Health Pro', emoji: '🩺' },
-                ].map(({ value, label, emoji }) => (
+                  { value: 'user', label: 'Regular User', icon: Dumbbell },
+                  { value: 'trainer', label: 'Trainer', icon: GraduationCap },
+                  { value: 'practitioner', label: 'Health Pro', icon: Stethoscope },
+                ].map(({ value, label, icon: Icon }) => (
                   <button key={value} type="button" onClick={() => setRole(value)} className={`p-3 rounded-xl border-2 text-center text-sm transition-colors ${role === value ? 'border-buddy-green bg-buddy-green/10' : 'border-buddy-surface-raised hover:border-buddy-text-secondary/30'}`}>
-                    <div className="text-xl mb-1">{emoji}</div>
+                    <div className="mb-1 flex justify-center"><Icon size={20} className={role === value ? 'text-buddy-green' : 'text-buddy-text-secondary'} /></div>
                     <div className="font-medium text-xs">{label}</div>
                   </button>
                 ))}
