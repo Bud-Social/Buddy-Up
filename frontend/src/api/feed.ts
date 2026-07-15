@@ -50,4 +50,29 @@ export const feedApi = {
 
   getSaved: (collection?: string) =>
     apiClient.get<ApiResponse<Post[]>>('/feed/saved/', { params: collection ? { collection } : {} }).then((r) => r.data),
+
+  getDrafts: () =>
+    apiClient.get<ApiResponse<unknown[]>>('/feed/drafts/').then((r) => r.data),
+
+  saveDraft: (data: Record<string, unknown>) =>
+    apiClient.post<ApiResponse<unknown>>('/feed/drafts/', data).then((r) => r.data),
+
+  deleteDraft: (draftId: string) =>
+    apiClient.delete(`/feed/drafts/${draftId}/`).then((r) => r.data),
+
+  analyzeWorkout: () =>
+    apiClient.get<ApiResponse<any>>('/feed/workout/analyze/').then((r) => r.data),
+
+  getHealthInsights: (period: 'weekly' | 'monthly' = 'weekly') =>
+    apiClient.get<ApiResponse<any>>('/feed/health-insights/', { params: { period } }).then((r) => r.data),
+
+  analyzeWorkoutForm: (file: File, exercise?: string) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    if (exercise) formData.append('exercise', exercise);
+    return apiClient.post<ApiResponse<any>>('/feed/workout-form/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000,
+    }).then((r) => r.data);
+  },
 };

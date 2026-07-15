@@ -1,4 +1,21 @@
 from celery import shared_task
+from django.db import models as db_models
+
+
+@shared_task
+def check_expired_subscriptions():
+    from django.utils import timezone
+    from .models import GymMembership
+    expired = GymMembership.objects.filter(
+        subscription_active=True,
+        subscription_expires_at__lt=timezone.now(),
+    ).select_related('gym')
+    for membership in expired:
+        membership.subscription_active = False
+        membership.save(update_fields=['subscription_active'])
+        Gym.objects.filter(id=membership.gym_id).update(
+            member_count=db_models.F('member_count') - 1
+        )
 
 
 @shared_task

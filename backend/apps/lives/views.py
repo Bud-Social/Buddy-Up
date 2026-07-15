@@ -8,8 +8,13 @@ from rest_framework.response import Response
 
 from common.pagination import CursorPagination
 from .models import BuddyLive, LiveAttendee
-from .serializers import BuddyLiveSerializer, CreateLiveSerializer, RandomDropRequestSerializer, LiveAttendeeSerializer
+from .serializers import (
+    BuddyLiveSerializer, CreateLiveSerializer, RandomDropRequestSerializer,
+    LiveAttendeeSerializer, EndLiveInputSerializer, CoHostInputSerializer,
+    RecordingChunkInputSerializer,
+)
 from .provider_service import get_live_credentials, generate_live_channel_id
+from .access import can_access_live, has_live_admission, may_publish_media
 from apps.profiles.models import Profile, BuddyRelationship
 from apps.wallet.models import ArtifactTransaction
 
@@ -83,6 +88,19 @@ class StartLiveView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        # Prevent starting a second concurrent live session
+        existing_live = BuddyLive.objects.filter(
+            host=request.user.profile, status='live'
+        ).first()
+        if existing_live:
+            return Response({
+                'success': False,
+                'data': None,
+                'message': 'You already have an active live session. End it before starting a new one.',
+                'errors': None,
+                'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+
         serializer = CreateLiveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -109,7 +127,9 @@ class StartLiveView(views.APIView):
         if 'co_hosts' in data:
             live.co_hosts.set(data['co_hosts'])
 
-        credentials = get_live_credentials(live, request)
+        credentials = get_live_credentials(
+            live, request, can_publish=may_publish_media(live, request.user.profile),
+        )
 
         if live.status == 'live':
             from apps.notifications.tasks import send_live_started_notification
@@ -146,7 +166,9 @@ class EndLiveView(views.APIView):
 
         live.status = 'ended'
         live.ended_at = timezone.now()
-        live.replay_saved = request.data.get('save_replay', False)
+        serializer = EndLiveInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        live.replay_saved = serializer.validated_data['save_replay']
         live.save(update_fields=['status', 'ended_at', 'replay_saved'])
 
         if live.replay_saved:
@@ -175,53 +197,33 @@ class JoinLiveView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if live.access == 'buddies':
-            is_buddy = BuddyRelationship.objects.filter(
-                (db_models.Q(from_user=request.user.profile, to_user=live.host) |
-                 db_models.Q(from_user=live.host, to_user=request.user.profile)),
-                status='confirmed',
-            ).exists()
-            if not is_buddy and request.user.profile != live.host:
-                return Response({
-                    'success': False, 'data': None,
-                    'message': 'This live is for buddies only.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_403_FORBIDDEN)
+        user = request.user.profile
+        if not can_access_live(live, user):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You do not have access to this live session.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
 
-        if live.access == 'gym_members':
-            if not live.gym_id:
-                return Response({
-                    'success': False, 'data': None,
-                    'message': 'This live is for gym members only.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_403_FORBIDDEN)
-            from apps.gyms.models import GymMembership
-            is_member = GymMembership.objects.filter(
-                gym_id=live.gym_id, member=request.user.profile, subscription_active=True,
-            ).exists()
-            if not is_member and request.user.profile != live.host:
-                return Response({
-                    'success': False, 'data': None,
-                    'message': 'This live is for gym members only.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_403_FORBIDDEN)
+        # Rejoining must never charge the entry fee twice.
+        already_admitted = has_live_admission(live, user)
 
-        if live.artifact_fee:
-            from apps.wallet.views import _deduct_artifacts, _credit_artifacts, _platform_cut
+        if live.artifact_fee and not already_admitted:
+            from apps.wallet.utils import deduct_artifacts, credit_artifacts, platform_cut
             from apps.wallet.models import ArtifactTransaction
 
             for art_type, qty in live.artifact_fee.items():
                 if qty > 0:
-                    if not _deduct_artifacts(request.user.profile, art_type, qty):
+                    if not deduct_artifacts(request.user.profile, art_type, qty):
                         return Response({
                             'success': False, 'data': None,
                             'message': f'Insufficient {art_type} artifacts. Need {qty}.',
                             'errors': None, 'pagination': None,
                         }, status=status.HTTP_402_PAYMENT_REQUIRED)
-                    cut = _platform_cut('live_fee', art_type, qty)
+                    cut = platform_cut('live_fee', art_type, qty)
                     host_credit = qty - cut
                     if host_credit > 0:
-                        _credit_artifacts(live.host, art_type, host_credit)
+                        credit_artifacts(live.host, art_type, host_credit)
                     ArtifactTransaction.objects.create(
                         user=request.user.profile, transaction_type='live_fee',
                         artifact_type=art_type, quantity=qty, direction='debit',
@@ -234,10 +236,11 @@ class JoinLiveView(views.APIView):
                             counterparty=request.user.profile, status='completed',
                         )
 
-        credentials = get_live_credentials(live, request)
+        credentials = get_live_credentials(
+            live, request, can_publish=may_publish_media(live, user),
+        )
 
         # Track attendee
-        user = request.user.profile
         role = 'host' if user == live.host else 'co_host' if live.co_hosts.filter(id=user.id).exists() else 'attendee'
         LiveAttendee.objects.update_or_create(
             live=live, user=user,
@@ -421,16 +424,16 @@ class RefundGiftView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        from apps.wallet.views import _deduct_artifacts, _credit_artifacts
+        from apps.wallet.utils import deduct_artifacts, credit_artifacts
 
-        if not _deduct_artifacts(live.host, tx.artifact_type, tx.quantity):
+        if not deduct_artifacts(live.host, tx.artifact_type, tx.quantity):
             return Response({
                 'success': False, 'data': None,
                 'message': 'Insufficient artifacts to refund.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        _credit_artifacts(counterparty, tx.artifact_type, tx.quantity)
+        credit_artifacts(counterparty, tx.artifact_type, tx.quantity)
 
         tx.status = 'refunded'
         tx.save(update_fields=['status'])
@@ -469,8 +472,9 @@ class AddCoHostView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_403_FORBIDDEN)
 
-        username = request.data.get('username', '')
-        profile = get_object_or_404(Profile, username=username)
+        serializer = CoHostInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        profile = get_object_or_404(Profile, username=serializer.validated_data['username'])
 
         if profile == live.host:
             return Response({
@@ -495,8 +499,9 @@ class AddCoHostView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_403_FORBIDDEN)
 
-        username = request.data.get('username', '')
-        profile = get_object_or_404(Profile, username=username)
+        serializer = CoHostInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        profile = get_object_or_404(Profile, username=serializer.validated_data['username'])
         live.co_hosts.remove(profile)
         return Response({
             'success': True, 'data': None,
@@ -510,7 +515,16 @@ class LiveCredentialsView(views.APIView):
 
     def get(self, request, live_id):
         live = get_object_or_404(BuddyLive, id=live_id)
-        credentials = get_live_credentials(live, request)
+        profile = request.user.profile
+        if not can_access_live(live, profile) or not has_live_admission(live, profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Join the live session before requesting media credentials.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        credentials = get_live_credentials(
+            live, request, can_publish=may_publish_media(live, profile),
+        )
         viewer_count = get_live_viewer_count(str(live.id))
         return Response({
             'success': True,
@@ -624,12 +638,14 @@ class UploadReplayChunkView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        chunk_index = request.data.get('chunk_index')
+        input_serializer = RecordingChunkInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        chunk_index = input_serializer.validated_data['chunk_index']
         chunk_file = request.FILES.get('chunk')
-        if chunk_index is None or not chunk_file:
+        if not chunk_file:
             return Response({
                 'success': False, 'data': None,
-                'message': 'chunk_index and chunk file required.',
+                'message': 'chunk file is required.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 

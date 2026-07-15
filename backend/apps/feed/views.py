@@ -1,6 +1,7 @@
 import os
 import uuid
 
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
 from django.utils import timezone
@@ -8,11 +9,17 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 
 from rest_framework import views, permissions, status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from common.pagination import CursorPagination
-from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote
-from .serializers import PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer, ReactionSerializer, SaveSerializer, PollSerializer
+from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft
+from .serializers import (
+    PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer,
+    ReactionSerializer, SaveSerializer, PollSerializer, DraftSerializer,
+    CommentCreateSerializer, ReactionInputSerializer, RepostSerializer,
+    SavePostSerializer, PollCreateSerializer, OptionVoteSerializer,
+)
 from apps.profiles.models import BuddyRelationship
 
 
@@ -189,19 +196,19 @@ class CreatePostView(views.APIView):
         )
 
         # Handle poll creation
-        poll_question = request.data.get('poll_question', '').strip()
-        poll_options_raw = request.data.getlist('poll_options')
-        if not poll_options_raw:
-            # Try JSON list
-            import json
-            try:
-                poll_options_raw = json.loads(request.data.get('poll_options_json', '[]'))
-            except Exception:
-                poll_options_raw = []
+        poll_serializer = PollCreateSerializer(data=request.data)
+        poll_serializer.is_valid(raise_exception=True)
+        poll_data = poll_serializer.validated_data
+        poll_question = poll_data.get('poll_question', '').strip()
+        import json
+        try:
+            poll_options_raw = json.loads(poll_data.get('poll_options_json', '[]'))
+        except Exception:
+            poll_options_raw = request.data.getlist('poll_options')
 
         if poll_question and len(poll_options_raw) >= 2:
-            closes_at = request.data.get('poll_closes_at') or None
-            allow_multiple = request.data.get('poll_allow_multiple', 'false').lower() == 'true'
+            closes_at = poll_data.get('poll_closes_at') or None
+            allow_multiple = poll_data.get('poll_allow_multiple', False)
             poll = Poll.objects.create(
                 post=post,
                 question=poll_question,
@@ -255,9 +262,11 @@ class PollVoteView(views.APIView):
         if poll.is_closed:
             return Response({'success': False, 'message': 'This poll has closed.'}, status=400)
 
-        option_ids = request.data.getlist('option_ids')
+        serializer = OptionVoteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        option_ids = serializer.validated_data.get('option_ids', [])
         if not option_ids:
-            option_id = request.data.get('option_id')
+            option_id = serializer.validated_data.get('option_id')
             if option_id:
                 option_ids = [option_id]
 
@@ -308,8 +317,11 @@ class CommentsView(views.APIView):
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
         post = get_object_or_404(Post, id=post_id)
-        body = request.data.get('body', '')[:500]
-        parent_id = request.data.get('parent_id')
+        serializer = CommentCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        body = data['body'][:500]
+        parent_id = data.get('parent_id')
 
         parent = None
         if parent_id:
@@ -320,7 +332,7 @@ class CommentsView(views.APIView):
             author=request.user.profile,
             body=body,
             parent=parent,
-            is_anonymous=request.data.get('is_anonymous', False),
+            is_anonymous=data.get('is_anonymous', False),
         )
 
         serializer = CommentSerializer(comment, context={'request': request})
@@ -356,13 +368,9 @@ class ReactionView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, post_id):
-        reaction_type = request.data.get('reaction_type', '').strip()
-        if not reaction_type:
-            return Response({
-                'success': False, 'data': None,
-                'message': 'Reaction type is required.',
-                'errors': None, 'pagination': None,
-            }, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ReactionInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reaction_type = serializer.validated_data['reaction_type']
 
         Reaction.objects.update_or_create(
             post_id=post_id,
@@ -402,7 +410,9 @@ class RepostView(views.APIView):
 
     def post(self, request, post_id):
         original = get_object_or_404(Post, id=post_id, visibility='public', moderation_status='clean')
-        quote_body = request.data.get('quote_body', '')
+        serializer = RepostSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        quote_body = serializer.validated_data.get('quote_body', '')
 
         repost = Post.objects.create(
             author=request.user.profile,
@@ -428,7 +438,9 @@ class SaveView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, post_id):
-        collection = request.data.get('collection', '')
+        serializer = SavePostSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        collection = serializer.validated_data.get('collection', '')
         Save.objects.get_or_create(
             user=request.user.profile,
             post_id=post_id,
@@ -501,3 +513,192 @@ class PostPinView(views.APIView):
         post.is_pinned = not post.is_pinned
         post.save(update_fields=['is_pinned'])
         return Response({'success': True, 'data': {'is_pinned': post.is_pinned}, 'message': 'Pin toggled.', 'errors': None, 'pagination': None})
+
+
+class DraftListCreateView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        drafts = Draft.objects.filter(author=request.user.profile).order_by('-updated_at')
+        serializer = DraftSerializer(drafts, many=True)
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    def post(self, request):
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        data['author'] = request.user.profile.user_id
+
+        existing_id = data.pop('id', None)
+        if existing_id:
+            try:
+                draft = Draft.objects.get(id=existing_id, author=request.user.profile)
+                serializer = DraftSerializer(draft, data=data, partial=True)
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+                return Response({
+                    'success': True, 'data': serializer.data,
+                    'message': 'Draft updated.', 'errors': None, 'pagination': None,
+                })
+            except Draft.DoesNotExist:
+                pass
+
+        serializer = DraftSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(author=request.user.profile)
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'Draft saved.', 'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class DraftDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self, draft_id, user_profile):
+        return get_object_or_404(Draft, id=draft_id, author=user_profile)
+
+    def delete(self, request, draft_id):
+        draft = self.get_object(draft_id, request.user.profile)
+        draft.delete()
+        return Response({
+            'success': True, 'data': None,
+            'message': 'Draft deleted.', 'errors': None, 'pagination': None,
+        })
+
+
+class WorkoutAnalysisView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        import requests as http_requests
+        profile = request.user.profile
+        posts = Post.objects.filter(
+            author=profile, post_type='workout_log',
+            workout_log_data__isnull=False,
+        ).order_by('created_at').values('workout_log_data', 'created_at')
+
+        history = []
+        for p in posts:
+            entry = p['workout_log_data']
+            if isinstance(entry, dict):
+                entry['date'] = p['created_at'].isoformat()
+                history.append({'workout_log_data': entry})
+
+        if not history:
+            return Response({
+                'success': True, 'data': None,
+                'message': 'No workout logs found.',
+                'errors': None, 'pagination': None,
+            })
+
+        ai_url = f'{settings.AI_SERVICE_URL}/api/v1/workout/analyze'
+        try:
+            resp = http_requests.post(ai_url, json={'history': history}, timeout=30)
+            resp.raise_for_status()
+            return Response({
+                'success': True, 'data': resp.json(),
+                'message': 'Workout analysis complete.',
+                'errors': None, 'pagination': None,
+            })
+        except http_requests.RequestException as e:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Workout analysis service unavailable.',
+                'errors': str(e), 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class HealthInsightsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        import requests as http_requests
+        profile = request.user.profile
+        period = request.query_params.get('period', 'weekly')
+
+        cutoff = timezone.now() - timezone.timedelta(days=7 if period == 'weekly' else 30)
+        workout_posts = Post.objects.filter(
+            author=profile, post_type='workout_log',
+            workout_log_data__isnull=False, created_at__gte=cutoff,
+        ).order_by('created_at').values('workout_log_data', 'created_at')
+
+        workouts = []
+        for p in workout_posts:
+            entry = dict(p['workout_log_data'])
+            entry['date'] = p['created_at'].isoformat()
+            workouts.append({'workout_log_data': entry})
+
+        meal_posts = Post.objects.filter(
+            author=profile, post_type='meal',
+            meal_data__isnull=False, created_at__gte=cutoff,
+        ).order_by('created_at').values('meal_data')
+
+        meals = [{'meal_data': dict(m['meal_data'])} for m in meal_posts if m['meal_data']]
+
+        streak = {
+            'days': profile.streak_days,
+            'longest_streak': profile.streak_days,
+        }
+
+        payload = {
+            'workouts': workouts,
+            'meals': meals,
+            'streak': streak,
+            'period': period,
+        }
+
+        ai_url = f'{settings.AI_SERVICE_URL}/api/v1/health-insights/analyze'
+        try:
+            resp = http_requests.post(ai_url, json=payload, timeout=30)
+            resp.raise_for_status()
+            return Response({
+                'success': True, 'data': resp.json(),
+                'message': 'Health insights generated.',
+                'errors': None, 'pagination': None,
+            })
+        except http_requests.RequestException as e:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Health insights service unavailable.',
+                'errors': str(e), 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class WorkoutFormAnalysisView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        import requests as http_requests
+        file = request.FILES.get('image')
+        exercise = request.data.get('exercise', 'auto')
+
+        if not file:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No image provided.',
+                'errors': 'image field is required.', 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        ai_url = f'{settings.AI_SERVICE_URL}/api/v1/form-analyzer/analyze'
+        try:
+            resp = http_requests.post(
+                ai_url,
+                files={'file': (file.name, file.read(), file.content_type)},
+                data={'exercise': exercise},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            return Response({
+                'success': True, 'data': resp.json(),
+                'message': 'Form analysis complete.',
+                'errors': None, 'pagination': None,
+            })
+        except http_requests.RequestException as e:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Form analysis service unavailable.',
+                'errors': str(e), 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)

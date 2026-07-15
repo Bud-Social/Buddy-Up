@@ -6,6 +6,7 @@ export interface User {
   id: string;
   email: string;
   email_verified: boolean;
+  phone?: string;
   phone_verified: boolean;
   is_adult: boolean;
   totp_enabled?: boolean;
@@ -22,6 +23,11 @@ export interface Profile {
   pronouns: string;
   location_city: string;
   location_country: string;
+  external_link?: string;
+  is_anonymous_posting?: boolean;
+  is_buddy?: boolean;
+  buddy_status?: string;
+  is_following?: boolean;
   role: UserRole;
   verification_status: VerificationStatus;
   privacy_level: PrivacyLevel;

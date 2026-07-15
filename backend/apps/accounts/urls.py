@@ -22,4 +22,7 @@ urlpatterns = [
     path('deactivate/', views.DeactivateAccountView.as_view(), name='deactivate'),
     path('delete/', views.DeleteAccountView.as_view(), name='delete'),
     path('export-data/', views.ExportUserDataView.as_view(), name='export_data'),
+    path('sessions/', views.DeviceSessionsListView.as_view(), name='device_sessions'),
+    path('logout-all/', views.LogoutAllSessionsView.as_view(), name='logout_all'),
+    path('activity-log/', views.ActivityLogView.as_view(), name='activity_log'),
 ]

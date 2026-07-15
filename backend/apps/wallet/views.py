@@ -3,7 +3,7 @@ import uuid
 from datetime import timedelta
 
 from django.shortcuts import get_object_or_404
-from django.db import models as db_models, transaction
+from django.db import models as db_models
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -18,62 +18,21 @@ from .serializers import (
     InitializePurchaseSerializer, ConfirmPurchaseSerializer,
     BankResolveSerializer, WithdrawSerializer,
     GiftArtifactsSerializer, ARTIFACT_VALUES, ARTIFACT_LABELS,
-    BUNDLES, PLATFORM_CUTS,
+    BUNDLES,
 )
 from apps.profiles.models import Profile
 from .flutterwave import FlutterwaveClient
-
-
-def _get_balance_dict(profile):
-    return profile.artifact_balance or {
-        'dumbbell': 0, 'barbell': 0, 'burpee': 0,
-        'squat': 0, 'sprint': 0, 'pr': 0, 'champion': 0,
-    }
-
-
-def _deduct_artifacts(profile, artifact_type, quantity):
-    from .models import Profile as ProfileModel
-    with transaction.atomic():
-        profile_ref = ProfileModel.objects.select_for_update().get(pk=profile.pk)
-        balance = _get_balance_dict(profile_ref)
-        if balance.get(artifact_type, 0) < quantity:
-            return False
-        balance[artifact_type] -= quantity
-        profile_ref.artifact_balance = balance
-        profile_ref.save(update_fields=['artifact_balance'])
-    return True
-
-
-def _credit_artifacts(profile, artifact_type, quantity):
-    from .models import Profile as ProfileModel
-    with transaction.atomic():
-        profile_ref = ProfileModel.objects.select_for_update().get(pk=profile.pk)
-        balance = _get_balance_dict(profile_ref)
-        balance[artifact_type] = balance.get(artifact_type, 0) + quantity
-        profile_ref.artifact_balance = balance
-        profile_ref.save(update_fields=['artifact_balance'])
-
-
-def _calculate_fiat(balance_dict, currency='USD'):
-    total = sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in balance_dict.items())
-    return {
-        'amount': round(total, 2),
-        'currency': currency,
-        'display': f'{currency} {total:,.2f}',
-    }
-
-
-def _platform_cut(transaction_type, artifact_type, quantity):
-    rate = PLATFORM_CUTS.get(transaction_type, 0.20)
-    cut_qty = max(1, int(quantity * rate))
-    return cut_qty
+from .utils import (
+    _get_profile_balance, deduct_artifacts, credit_artifacts,
+    platform_cut, calculate_fiat,
+)
 
 
 class WalletBalanceView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        balance = _get_balance_dict(request.user.profile)
+        balance = _get_profile_balance(request.user.profile)
 
         balance_list = [{
             'artifact_type': k,
@@ -82,7 +41,7 @@ class WalletBalanceView(views.APIView):
             'usd_value': round(ARTIFACT_VALUES.get(k, 0) * v, 2),
         } for k, v in balance.items()]
 
-        fiat = _calculate_fiat(balance)
+        fiat = calculate_fiat(balance)
 
         return Response({
             'success': True,
@@ -246,7 +205,7 @@ class ConfirmPurchaseView(views.APIView):
             return Response({
                 'success': True, 'data': {
                     'transaction': ArtifactTransactionSerializer(tx).data,
-                    'new_balance': _get_balance_dict(request.user.profile),
+                    'new_balance': _get_profile_balance(request.user.profile),
                 },
                 'message': 'Already confirmed.',
                 'errors': None, 'pagination': None,
@@ -268,7 +227,7 @@ class ConfirmPurchaseView(views.APIView):
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_402_PAYMENT_REQUIRED)
 
-            _credit_artifacts(request.user.profile, tx.artifact_type, tx.quantity)
+            credit_artifacts(request.user.profile, tx.artifact_type, tx.quantity)
             tx.status = 'completed'
             tx.flutterwave_id = data['flutterwave_id']
             tx.flutterwave_response = verification.data
@@ -278,7 +237,7 @@ class ConfirmPurchaseView(views.APIView):
                 'success': True,
                 'data': {
                     'transaction': ArtifactTransactionSerializer(tx).data,
-                    'new_balance': _get_balance_dict(request.user.profile),
+                    'new_balance': _get_profile_balance(request.user.profile),
                 },
                 'message': f'Purchased {tx.quantity} {ARTIFACT_LABELS.get(tx.artifact_type, tx.artifact_type)}(s).',
                 'errors': None, 'pagination': None,
@@ -369,7 +328,7 @@ class FlutterwaveWebhookView(views.APIView):
                 tx.flutterwave_id = flutterwave_id
                 tx.flutterwave_response = event_data
                 tx.save(update_fields=['status', 'flutterwave_id', 'flutterwave_response'])
-                _credit_artifacts(tx.user, tx.artifact_type, tx.quantity)
+                credit_artifacts(tx.user, tx.artifact_type, tx.quantity)
             except ArtifactTransaction.DoesNotExist:
                 pass
 
@@ -405,17 +364,17 @@ class TipUserView(views.APIView):
         artifact_type = data['artifact_type']
         quantity = data['quantity']
 
-        if not _deduct_artifacts(request.user.profile, artifact_type, quantity):
+        if not deduct_artifacts(request.user.profile, artifact_type, quantity):
             return Response({
                 'success': False, 'data': None,
                 'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        cut = _platform_cut('tip', artifact_type, quantity)
+        cut = platform_cut('tip', artifact_type, quantity)
         creator_qty = quantity - cut
 
-        _credit_artifacts(target, artifact_type, creator_qty)
+        credit_artifacts(target, artifact_type, creator_qty)
 
         ArtifactTransaction.objects.create(
             user=request.user.profile,
@@ -478,14 +437,14 @@ class GiftArtifactsView(views.APIView):
         artifact_type = data['artifact_type']
         quantity = data['quantity']
 
-        if not _deduct_artifacts(request.user.profile, artifact_type, quantity):
+        if not deduct_artifacts(request.user.profile, artifact_type, quantity):
             return Response({
                 'success': False, 'data': None,
                 'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        _credit_artifacts(target, artifact_type, quantity)
+        credit_artifacts(target, artifact_type, quantity)
 
         ArtifactTransaction.objects.create(
             user=request.user.profile,
@@ -546,7 +505,7 @@ class WithdrawView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if not _deduct_artifacts(profile, artifact_type, quantity):
+        if not deduct_artifacts(profile, artifact_type, quantity):
             return Response({
                 'success': False, 'data': None,
                 'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
@@ -607,7 +566,7 @@ class WithdrawView(views.APIView):
                 else:
                     tx.status = 'failed'
                     tx.save(update_fields=['status', 'flutterwave_id', 'flutterwave_response'])
-                    _credit_artifacts(profile, artifact_type, quantity)
+                    credit_artifacts(profile, artifact_type, quantity)
                     return Response({
                         'success': False, 'data': None,
                         'message': transfer_resp.message or 'Transfer failed. Funds returned to balance.',
@@ -617,7 +576,7 @@ class WithdrawView(views.APIView):
                 tx.status = 'failed'
                 tx.flutterwave_response = recipient_resp.data
                 tx.save(update_fields=['status', 'flutterwave_response'])
-                _credit_artifacts(profile, artifact_type, quantity)
+                credit_artifacts(profile, artifact_type, quantity)
                 return Response({
                     'success': False, 'data': None,
                     'message': recipient_resp.message or 'Could not create recipient.',

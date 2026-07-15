@@ -263,8 +263,13 @@ function StartLiveSheet({ onClose }: { onClose: () => void }) {
       const res = await livesApi.startLive(payload);
       onClose();
       navigate(`/live/${res.data.live.id}`);
-    } catch {
-      setSubmitError('Failed to start live. Please try again.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      if (err?.response?.status === 409) {
+        setSubmitError(msg || 'You already have an active live session. End it first.');
+      } else {
+        setSubmitError('Failed to start live. Please try again.');
+      }
     } finally { setIsSubmitting(false); }
   };
 

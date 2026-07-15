@@ -37,6 +37,34 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── AI MICROSERVICE ────────────────────────────────────────────────────
+  ai-service:
+    build:
+      context: ./backend/ai_service
+      dockerfile: Dockerfile
+    container_name: buddyup_ai_service
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload
+    environment:
+      - AI_REDIS_URL=redis://redis:6379/0
+      - AI_LOG_LEVEL=DEBUG
+      - AI_MODEL_CACHE_DIR=/models
+    volumes:
+      - ./backend/ai_service/app:/app/app
+    ports:
+      - "8003:8003"
+    depends_on:
+      redis:
+        condition: service_healthy
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # GPU is optional — the service degrades gracefully to CPU
+
   # ── BACKEND (Django + Daphne) ─────────────────────────────────────────
   backend:
     build:
@@ -66,9 +94,10 @@ services:
       - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
       - AGORA_APP_ID=${AGORA_APP_ID}
       - AGORA_APP_CERTIFICATE=${AGORA_APP_CERTIFICATE}
-      - LIVEKIT_URL=${LIVEKIT_URL:-wss://buddy-up-hf40obqn.livekit.cloud}
-      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
-      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - LIVEKIT_URL=${LIVEKIT_URL:-ws://localhost:7880}
+      - LIVEKIT_INTERNAL_URL=http://livekit:7880
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
       - MUX_TOKEN_ID=${MUX_TOKEN_ID}
       - MUX_TOKEN_SECRET=${MUX_TOKEN_SECRET}
     volumes:
@@ -80,6 +109,24 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+
+  # ── SELF-HOSTED WEBRTC (development) ────────────────────────────────
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: buddyup_livekit
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.dev.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "50000-50100:50000-50100/udp"
+    depends_on:
       redis:
         condition: service_healthy
     healthcheck:

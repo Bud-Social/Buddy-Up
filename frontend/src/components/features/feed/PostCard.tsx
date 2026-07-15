@@ -135,8 +135,9 @@ function PollCard({ poll, postId }: { poll: NonNullable<Post['poll']>; postId: s
   );
 }
 
-function MediaGallery({ urls }: { urls: string[] }) {
+function MediaGallery({ urls, blurred }: { urls: string[]; blurred?: boolean }) {
   const [idx, setIdx] = useState(0);
+  const [revealed, setRevealed] = useState(false);
   if (!urls.length) return null;
   const currentUrl = urls[idx];
   const isVideo = /\.(mp4|mov|webm)/i.test(currentUrl);
@@ -144,13 +145,21 @@ function MediaGallery({ urls }: { urls: string[] }) {
   return (
     <div className="mt-3 relative rounded-xl overflow-hidden bg-buddy-surface">
       {isVideo ? (
-        <video src={currentUrl} controls autoPlay muted loop className="w-full max-h-96 object-cover" />
+        <video src={currentUrl} controls autoPlay muted loop className={`w-full max-h-96 object-cover ${blurred && !revealed ? 'blur-xl' : ''}`} />
       ) : isAudio ? (
         <div className="p-4 bg-buddy-surface-raised w-full">
           <audio src={currentUrl} controls className="w-full" />
         </div>
       ) : (
-        <img src={currentUrl} alt="" className="w-full max-h-96 object-cover" loading="lazy" />
+        <img src={currentUrl} alt="" className={`w-full max-h-96 object-cover ${blurred && !revealed ? 'blur-xl' : ''}`} loading="lazy" />
+      )}
+      {blurred && !revealed && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+          <button onClick={(e) => { e.stopPropagation(); setRevealed(true); }}
+            className="px-4 py-2 rounded-full bg-buddy-surface text-sm text-buddy-text-primary font-medium hover:bg-buddy-surface-raised transition-colors">
+            Sensitive content. Tap to reveal.
+          </button>
+        </div>
       )}
       {urls.length > 1 && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
@@ -352,7 +361,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           {displayPost.post_type === 'poll' && (displayPost as any).poll && <PollCard poll={(displayPost as any).poll} postId={displayPost.id} />}
 
           {/* Media */}
-          <MediaGallery urls={displayPost.media_urls || []} />
+          <MediaGallery urls={displayPost.media_urls || []} blurred={post.moderation_status === 'flagged'} />
 
           {/* Heart pop overlay */}
           {heartPop?.show && (
@@ -392,7 +401,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
             {showReactionPicker && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowReactionPicker(false)} />
-                <div className="absolute right-full bottom-0 mr-2 z-20 shadow-2xl">
+                <div className="absolute right-full top-0 mr-2 z-20 shadow-2xl max-h-[80vh] overflow-y-auto">
                   <EmojiPicker
                     theme={Theme.DARK}
                     emojiStyle={EmojiStyle.APPLE}

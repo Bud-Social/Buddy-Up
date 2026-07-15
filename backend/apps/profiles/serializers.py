@@ -132,6 +132,13 @@ class BuddyRequestSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=30)
 
 
+class PingMessageSerializer(serializers.Serializer):
+    message = serializers.CharField(
+        max_length=100, required=False, allow_blank=True,
+        default="How's your workout going? 💪",
+    )
+
+
 class ProfileSearchSerializer(serializers.Serializer):
     q = serializers.CharField(max_length=200, required=False, allow_blank=True)
     role = serializers.ChoiceField(choices=Profile.ROLE_CHOICES, required=False)

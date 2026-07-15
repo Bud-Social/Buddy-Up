@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.core.validators import MinValueValidator, MaxValueValidator
+from rest_framework.exceptions import ValidationError
 from .models import (
     MealPlan, MealPlanPurchase, MealPlanReview,
     TrainingProgramme, TrainingProgrammePurchase, TrainingProgrammeReview,
@@ -282,3 +283,8 @@ class CreateEventSerializer(serializers.Serializer):
     tags = serializers.ListField(child=serializers.CharField(), default=list)
     category = serializers.CharField(required=False, allow_blank=True, max_length=50)
     gym_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class ReviewInputSerializer(serializers.Serializer):
+    rating = serializers.IntegerField(default=5, min_value=1, max_value=5)
+    body = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')

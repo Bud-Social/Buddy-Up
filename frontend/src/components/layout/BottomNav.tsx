@@ -21,7 +21,7 @@ export function BottomNav() {
           return (
             <NavLink key={to} to={to} className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[48px] min-h-[48px] ${center ? 'relative -mt-5' : ''}`}>
               {center ? (
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full ${active ? 'bg-buddy-green' : 'bg-buddy-green/80'} text-buddy-black shadow-lg shadow-buddy-green/25`}>
+                <div className={`flex items-center justify-center w-12 h-12 rounded-full ${active ? 'bg-buddy-green' : 'bg-buddy-green/80'} text-buddy-white shadow-lg shadow-buddy-green/25`}>
                   <Icon size={22} strokeWidth={2.5} />
                 </div>
               ) : (

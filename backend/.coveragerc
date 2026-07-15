@@ -1,0 +1,16 @@
+[run]
+source = .
+omit = */migrations/*, */tests/*, manage.py, *__init__*, *settings/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    self.assert*
+    @abc.abstractmethod
+    @abstractmethod
+
+fail_under = 40

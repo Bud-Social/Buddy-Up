@@ -69,13 +69,13 @@ export default function Gyms() {
         />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide">
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide snap-x snap-mandatory">
         <button onClick={() => setCategory('')}
-          className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${!category ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors snap-start ${!category ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}
         >All</button>
         {categories.map((c) => (
           <button key={c} onClick={() => setCategory(c)}
-            className={`px-3 py-1.5 rounded-full text-xs capitalize whitespace-nowrap transition-colors ${category === c ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs capitalize whitespace-nowrap transition-colors snap-start ${category === c ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}
           >{c.replace('_', ' ')}</button>
         ))}
       </div>

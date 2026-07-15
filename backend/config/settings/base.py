@@ -174,7 +174,7 @@ REST_FRAMEWORK = {
 
 # JWT
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -209,7 +209,7 @@ AUTHENTICATION_BACKENDS = (
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.environ.get('GOOGLE_CLIENT_ID', '')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '')
 
-GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY', os.environ.get('GOOGLE_CLIENT_ID', ''))
+GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY', '')
 
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/feed'
 
@@ -235,19 +235,29 @@ AGORA_APP_CERTIFICATE = os.environ.get('AGORA_APP_CERTIFICATE', '')
 
 # LiveKit
 LIVEKIT_URL = os.environ.get('LIVEKIT_URL', '')
+LIVEKIT_INTERNAL_URL = os.environ.get('LIVEKIT_INTERNAL_URL', LIVEKIT_URL)
 LIVEKIT_API_KEY = os.environ.get('LIVEKIT_API_KEY', '')
 LIVEKIT_API_SECRET = os.environ.get('LIVEKIT_API_SECRET', '')
+
+# Self-hosted, S3-compatible replay storage (MinIO in the production compose stack).
+LIVE_RECORDING_S3_ENDPOINT = os.environ.get('LIVE_RECORDING_S3_ENDPOINT', '')
+LIVE_RECORDING_S3_BUCKET = os.environ.get('LIVE_RECORDING_S3_BUCKET', 'buddyup-replays')
+LIVE_RECORDING_S3_ACCESS_KEY = os.environ.get('LIVE_RECORDING_S3_ACCESS_KEY', '')
+LIVE_RECORDING_S3_SECRET_KEY = os.environ.get('LIVE_RECORDING_S3_SECRET_KEY', '')
+LIVE_REPLAY_BASE_URL = os.environ.get('LIVE_REPLAY_BASE_URL', '')
 
 # Mux (replay recording)
 MUX_TOKEN_ID = os.environ.get('MUX_TOKEN_ID', '')
 MUX_TOKEN_SECRET = os.environ.get('MUX_TOKEN_SECRET', '')
-LIVE_REPLAY_BASE_URL = os.environ.get('LIVE_REPLAY_BASE_URL', 'https://res.cloudinary.com/dsktkughi/video/upload/replays/')
 
 # Flutterwave
 FLUTTERWAVE_SECRET_KEY = os.environ.get('FLUTTERWAVE_SECRET_KEY', '')
 FLUTTERWAVE_PUBLIC_KEY = os.environ.get('FLUTTERWAVE_PUBLIC_KEY', '')
 FLUTTERWAVE_WEBHOOK_HASH = os.environ.get('FLUTTERWAVE_WEBHOOK_HASH', '')
 FLUTTERWAVE_ENCRYPTION_KEY = os.environ.get('FLUTTERWAVE_ENCRYPTION_KEY', '')
+
+# AI microservice
+AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://ai-service:8003')
 
 # Minimum age
 BUDDYUP_MINIMUM_AGE = 16

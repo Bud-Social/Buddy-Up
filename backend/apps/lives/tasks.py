@@ -139,8 +139,13 @@ def process_live_replay(live_id: str):
             live.save(update_fields=['replay_url', 'replay_saved'])
 
     if not live.replay_url:
-        base_url = settings.LIVE_REPLAY_BASE_URL.rstrip('/')
-        live.replay_url = f"{base_url}/{live_id}.mp4"
+        from common.s3_utils import generate_presigned_url
+        presigned = generate_presigned_url(f'replays/{live_id}.mp4')
+        if presigned:
+            live.replay_url = presigned
+        else:
+            base_url = settings.LIVE_REPLAY_BASE_URL.rstrip('/')
+            live.replay_url = f"{base_url}/{live_id}.mp4"
         live.replay_saved = True
         live.save(update_fields=['replay_url', 'replay_saved'])
 

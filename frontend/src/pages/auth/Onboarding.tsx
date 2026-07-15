@@ -16,6 +16,18 @@ const dietLabels: Record<string, string> = { none: 'None', vegan: 'Vegan', veget
 const times = ['early_morning', 'morning', 'afternoon', 'evening', 'night', 'flexible'] as const;
 const timeLabels: Record<string, string> = { early_morning: 'Early Morning', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', night: 'Night', flexible: 'Flexible' };
 
+interface OnboardingPlan {
+  primary_goal: string;
+  recommended_trainer_specialties: string[];
+  recommended_gym_categories: string[];
+  suggested_workout_plan: { frequency: string; focus: string; sample_split: string[] };
+  activity_level_advice: string;
+  time_preference_advice: string;
+  buddy_matching_hint: string;
+  meal_plan_recommendation: string;
+  recommended_dietary_tags: string[];
+}
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const setProfile = useAuthStore((s) => s.setProfile);
@@ -26,6 +38,7 @@ export default function Onboarding() {
   const [diet, setDiet] = useState('none');
   const [preferredTime, setPreferredTime] = useState('flexible');
   const [isLoading, setIsLoading] = useState(false);
+  const [plan, setPlan] = useState<OnboardingPlan | null>(null);
 
   const toggleMulti = (item: string, selected: string[], setter: (v: string[]) => void) => {
     setter(selected.includes(item) ? selected.filter((s) => s !== item) : [...selected, item]);
@@ -41,8 +54,18 @@ export default function Onboarding() {
         dietary_preference: diet,
         preferred_time: preferredTime,
       });
-      setProfile(res.data);
-      navigate('/feed');
+      const data = res.data as any;
+      if (data?.profile) {
+        setProfile(data.profile);
+      } else {
+        setProfile(res.data);
+      }
+      if (data?.onboarding_plan) {
+        setPlan(data.onboarding_plan);
+        setStep(6);
+      } else {
+        navigate('/feed');
+      }
     } catch {
       navigate('/feed');
     } finally {
@@ -50,7 +73,7 @@ export default function Onboarding() {
     }
   };
 
-  const totalSteps = 5;
+  const totalSteps = plan ? 6 : 5;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-buddy-black">
@@ -58,12 +81,16 @@ export default function Onboarding() {
         <h1 className="font-display text-3xl font-extrabold text-center mb-2">
           Set Your <span className="text-buddy-green">Goals</span>
         </h1>
-        <p className="text-buddy-text-secondary text-center mb-2">Step {step} of {totalSteps}</p>
-        <div className="flex gap-1 mb-6">
-          {Array.from({ length: totalSteps }).map((_, i) => (
-            <div key={i} className={`flex-1 h-1 rounded-full ${i < step ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`} />
-          ))}
-        </div>
+        {step < 6 && (
+          <>
+            <p className="text-buddy-text-secondary text-center mb-2">Step {step} of {totalSteps}</p>
+            <div className="flex gap-1 mb-6">
+              {Array.from({ length: totalSteps }).map((_, i) => (
+                <div key={i} className={`flex-1 h-1 rounded-full ${i < step ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`} />
+              ))}
+            </div>
+          </>
+        )}
 
         {step === 1 && (
           <div className="space-y-4">
@@ -144,6 +171,55 @@ export default function Onboarding() {
               <Button variant="ghost" onClick={() => setStep(4)} className="flex-1">Back</Button>
               <Button onClick={handleComplete} isLoading={isLoading} className="flex-1" size="lg">Complete Setup</Button>
             </div>
+          </div>
+        )}
+
+        {step === 6 && plan && (
+          <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-1">
+            <p className="text-buddy-green font-heading font-semibold text-lg text-center">Your Personalised Plan</p>
+
+            <div>
+              <p className="text-xs text-buddy-text-secondary uppercase tracking-wider mb-1">Recommended Workout Plan</p>
+              <p className="text-sm font-medium">{plan.suggested_workout_plan.frequency} — {plan.suggested_workout_plan.focus}</p>
+              <div className="flex flex-wrap gap-1 mt-2">
+                {plan.suggested_workout_plan.sample_split.map((day: string, i: number) => (
+                  <span key={i} className="text-xs px-2 py-1 rounded-full bg-buddy-surface-raised text-buddy-text-secondary">{day}</span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-buddy-text-secondary uppercase tracking-wider mb-1">Trainers & Gym Focus</p>
+              <div className="flex flex-wrap gap-1">
+                {plan.recommended_trainer_specialties.map((s: string) => (
+                  <span key={s} className="text-xs px-2 py-1 rounded-md bg-buddy-green/10 text-buddy-green">{s.replace(/_/g, ' ')}</span>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {plan.recommended_gym_categories.map((c: string) => (
+                  <span key={c} className="text-xs px-2 py-1 rounded-md bg-buddy-surface-raised text-buddy-text-secondary">{c}</span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-buddy-text-secondary uppercase tracking-wider mb-1">Activity Advice</p>
+              <p className="text-sm">{plan.activity_level_advice}</p>
+            </div>
+
+            <div>
+              <p className="text-xs text-buddy-text-secondary uppercase tracking-wider mb-1">Meal Plan Direction</p>
+              <p className="text-sm">{plan.meal_plan_recommendation}</p>
+            </div>
+
+            <div>
+              <p className="text-xs text-buddy-text-secondary uppercase tracking-wider mb-1">Buddy Matching</p>
+              <p className="text-sm">{plan.buddy_matching_hint}</p>
+            </div>
+
+            <Button className="w-full" size="lg" onClick={() => navigate('/feed')}>
+              Start Your Journey
+            </Button>
           </div>
         )}
       </Card>

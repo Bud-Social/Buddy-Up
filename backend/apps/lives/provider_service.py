@@ -87,7 +87,7 @@ def generate_agora_token(channel_name, uid=0, role='publisher', token_expire_sec
     return '007' + base64.b64encode(compressed).decode('utf-8')
 
 
-def generate_livekit_token(room_name, identity, display_name='', avatar_url='', metadata='', token_expire_sec=86400):
+def generate_livekit_token(room_name, identity, display_name='', avatar_url='', metadata='', can_publish=False, token_expire_sec=86400):
     api_key = getattr(settings, 'LIVEKIT_API_KEY', '')
     api_secret = getattr(settings, 'LIVEKIT_API_SECRET', '')
 
@@ -102,10 +102,10 @@ def generate_livekit_token(room_name, identity, display_name='', avatar_url='', 
         .with_name(display_name or identity) \
         .with_grants(
             livekit_api.VideoGrants(
-                room_join=True,
-                room=room_name,
-                can_publish=True,
-                can_subscribe=True,
+            room_join=True,
+            room=room_name,
+            can_publish=can_publish,
+            can_subscribe=True,
             )
         ) \
         .with_ttl(datetime.timedelta(seconds=token_expire_sec))
@@ -126,7 +126,7 @@ def generate_live_channel_id():
     return f"live_{secrets.token_hex(8)}"
 
 
-def get_live_credentials(live, request=None, uid=None):
+def get_live_credentials(live, request=None, uid=None, can_publish=False):
     agora_channel = live.agora_channel
     livekit_room = str(live.id)
 
@@ -142,18 +142,21 @@ def get_live_credentials(live, request=None, uid=None):
     else:
         identity = f"anon_{secrets.token_hex(4)}"
 
-    agora_token = generate_agora_token(agora_channel, uid=identity, role='publisher')
-    livekit_token = generate_livekit_token(livekit_room, identity=identity, display_name=display_name, avatar_url=avatar_url)
+    # Agora is deliberately no longer issued to clients. LiveKit is the
+    # self-hosted WebRTC transport for all new rooms.
+    livekit_token = generate_livekit_token(
+        livekit_room, identity=identity, display_name=display_name,
+        avatar_url=avatar_url, can_publish=can_publish,
+    )
 
     return {
         'agora': {
-            'app_id': getattr(settings, 'AGORA_APP_ID', ''),
-            'channel': agora_channel,
-            'token': agora_token,
+            'app_id': '', 'channel': agora_channel, 'token': None,
         },
         'livekit': {
             'url': get_livekit_url(),
             'room': livekit_room,
             'token': livekit_token,
+            'can_publish': can_publish,
         },
     }

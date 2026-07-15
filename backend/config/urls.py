@@ -22,7 +22,7 @@ urlpatterns = [
     path('api/v1/ai/', include('apps.ai.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('', include('social_django.urls', namespace='social')),
+    path('auth/social/', include('social_django.urls', namespace='social')),
 ]
 
 if settings.DEBUG:

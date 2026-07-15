@@ -1,17 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radio, Play, Clock, Users, Loader } from 'lucide-react';
+import { Radio, Play, Clock, Users, Loader, Camera, Settings, Moon, Sun, Monitor, Contrast, MessageCircle, Heart } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { CropModal } from '@/components/ui/CropModal';
+import { useToast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { profilesApi } from '@/api';
+import { gymsApi } from '@/api/gyms';
 import { livesApi } from '@/api/lives';
 import ReplayPlayer from '@/components/live/ReplayPlayer';
 import type { BuddyLive } from '@/types/live';
+import type { Post } from '@/types';
+import type { Gym } from '@/types';
 
 type ProfileTab = 'posts' | 'lives' | 'gyms' | 'achievements';
 
@@ -22,16 +27,28 @@ export default function Profile() {
   const logout = useAuthStore((s) => s.logout);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggle);
+  const { toast } = useToast();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
   const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState(profile?.bio || '');
   const [editDisplayName, setEditDisplayName] = useState(profile?.display_name || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
 
   const [lives, setLives] = useState<BuddyLive[]>([]);
   const [livesLoading, setLivesLoading] = useState(false);
   const [replayLive, setReplayLive] = useState<BuddyLive | null>(null);
+
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+
+  const [gyms, setGyms] = useState<Gym[]>([]);
+  const [gymsLoading, setGymsLoading] = useState(false);
+
+  const [cropImage, setCropImage] = useState<string | null>(null);
 
   const fetchLives = async () => {
     if (!profile?.username) return;
@@ -39,14 +56,68 @@ export default function Profile() {
     try {
       const res = await livesApi.getUserLives(profile.username, { tab: 'all' });
       setLives(res.data || []);
-    } catch {} finally {
+    } catch {
+      toast('error', 'Failed to load lives');
+    } finally {
       setLivesLoading(false);
+    }
+  };
+
+  const fetchPosts = async () => {
+    if (!profile?.username) return;
+    setPostsLoading(true);
+    try {
+      const res = await profilesApi.getProfilePosts(profile.username);
+      setPosts(res.data || []);
+    } catch {
+      toast('error', 'Failed to load posts');
+    } finally {
+      setPostsLoading(false);
+    }
+  };
+
+  const fetchGyms = async () => {
+    setGymsLoading(true);
+    try {
+      const res = await gymsApi.list({ my: true });
+      setGyms(res.data || []);
+    } catch {
+      toast('error', 'Failed to load gyms');
+    } finally {
+      setGymsLoading(false);
     }
   };
 
   useEffect(() => {
     if (activeTab === 'lives') fetchLives();
+    if (activeTab === 'posts') fetchPosts();
+    if (activeTab === 'gyms') fetchGyms();
   }, [activeTab]);
+
+  const handleAvatarFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCropImage(url);
+    e.target.value = '';
+  };
+
+  const handleCropDone = async (blob: Blob) => {
+    const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+    setUploadingAvatar(true);
+    try {
+      const res = await profilesApi.uploadAvatar(file);
+      setAvatarUrl(res.data.avatar_url);
+      setProfile({ ...profile!, avatar_url: res.data.avatar_url });
+      toast('success', 'Avatar updated');
+    } catch {
+      toast('error', 'Failed to upload avatar');
+    } finally {
+      setUploadingAvatar(false);
+      setCropImage(null);
+      URL.revokeObjectURL(cropImage || '');
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -59,7 +130,10 @@ export default function Profile() {
       const res = await profilesApi.updateProfile({ bio: editBio, display_name: editDisplayName });
       setProfile(res.data);
       setIsEditing(false);
-    } catch {} finally {
+      toast('success', 'Profile updated');
+    } catch {
+      toast('error', 'Failed to save profile');
+    } finally {
       setIsSaving(false);
     }
   };
@@ -76,7 +150,15 @@ export default function Profile() {
     <div className="max-w-lg mx-auto p-4">
       <Card className="p-6 mb-6">
         <div className="flex items-start gap-4 mb-4">
-          <Avatar src={profile.avatar_url} alt={profile.display_name} size="xl" showRepRing streakProgress={profile.streak_days > 0 ? Math.min(profile.streak_days / 365 * 100, 100) : 0} />
+          <div className="relative flex-shrink-0">
+            <Avatar src={avatarUrl} alt={profile.display_name} size="xl" showRepRing streakProgress={profile.streak_days > 0 ? Math.min(profile.streak_days / 365 * 100, 100) : 0} />
+            <button onClick={() => avatarInputRef.current?.click()}
+              className="absolute bottom-0 right-0 p-1.5 rounded-full bg-buddy-green text-buddy-black hover:bg-buddy-green-deep transition-colors shadow-lg"
+              disabled={uploadingAvatar}>
+              {uploadingAvatar ? <Loader size={12} className="animate-spin" /> : <Camera size={12} />}
+            </button>
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileSelected} />
+          </div>
           <div className="flex-1 min-w-0">
             {isEditing ? (
               <div className="space-y-2">
@@ -123,10 +205,20 @@ export default function Profile() {
           </div>
         )}
 
-        {!isEditing && <Button variant="outline" className="w-full mb-2" onClick={() => { setEditBio(profile.bio || ''); setEditDisplayName(profile.display_name); setIsEditing(true); }}>Edit Profile</Button>}
+        {!isEditing && (
+          <div className="flex gap-2 mb-2">
+            <Button variant="outline" className="flex-1" onClick={() => navigate('/profile/edit')}>Edit Profile</Button>
+            <Button variant="outline" onClick={() => navigate('/settings')}>
+              <Settings size={16} />
+            </Button>
+          </div>
+        )}
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" className="flex-1" onClick={toggleTheme}>
-            {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
+          <Button variant="ghost" size="sm" className="flex-1 gap-1.5" onClick={toggleTheme}>
+            {theme === 'dark' && <><Moon size={14} /> Dark</>}
+            {theme === 'light' && <><Sun size={14} /> Light</>}
+            {theme === 'high-contrast' && <><Contrast size={14} /> High Contrast</>}
+            {theme === 'ambient' && <><Monitor size={14} /> Ambient</>}
           </Button>
           <Button variant="ghost" size="sm" className="flex-1 text-buddy-red hover:text-buddy-red" onClick={handleLogout}>Sign Out</Button>
         </div>
@@ -141,7 +233,44 @@ export default function Profile() {
       </div>
 
       <div className="grid grid-cols-3 gap-1">
-        {activeTab === 'lives' ? (
+        {activeTab === 'posts' ? (
+          postsLoading ? (
+            <div className="col-span-3 flex items-center justify-center py-20">
+              <Loader size={24} className="animate-spin text-buddy-text-secondary" />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="col-span-3 text-center py-20">
+              <MessageCircle size={40} className="mx-auto text-buddy-text-secondary/30 mb-3" />
+              <p className="text-buddy-text-secondary">No posts yet</p>
+            </div>
+          ) : (
+            <div className="col-span-3 space-y-2">
+              {posts.map((post) => (
+                <Card key={post.id} className="p-3">
+                  <div className="flex items-start gap-2 mb-2">
+                    <Avatar src={post.author_data.avatar_url} alt={post.author_data.display_name} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{post.author_data.display_name}</p>
+                      <p className="text-[10px] text-buddy-text-secondary">{new Date(post.created_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm mb-2">{post.body}</p>
+                  {post.media_urls.length > 0 && (
+                    <div className={`grid gap-1 mb-2 ${post.media_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                      {post.media_urls.slice(0, 4).map((url, i) => (
+                        <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg" loading="lazy" />
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-4 text-xs text-buddy-text-secondary">
+                    <span className="flex items-center gap-1"><Heart size={12} /> {Object.values(post.reaction_counts).reduce((a, b) => a + b, 0)}</span>
+                    <span className="flex items-center gap-1"><MessageCircle size={12} /> {post.comment_count}</span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )
+        ) : activeTab === 'lives' ? (
           livesLoading ? (
             <div className="col-span-3 flex items-center justify-center py-20">
               <Loader size={24} className="animate-spin text-buddy-text-secondary" />
@@ -185,17 +314,34 @@ export default function Profile() {
             </div>
           )
         ) : activeTab === 'gyms' ? (
-          <div className="col-span-3 text-center py-20">
-            <p className="text-buddy-text-secondary">Joined gyms will appear here</p>
-          </div>
-        ) : activeTab === 'achievements' ? (
+          gymsLoading ? (
+            <div className="col-span-3 flex items-center justify-center py-20">
+              <Loader size={24} className="animate-spin text-buddy-text-secondary" />
+            </div>
+          ) : gyms.length === 0 ? (
+            <div className="col-span-3 text-center py-20">
+              <p className="text-buddy-text-secondary">No gyms joined yet</p>
+              <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate('/gyms')}>Browse Gyms</Button>
+            </div>
+          ) : (
+            <div className="col-span-3 space-y-2">
+              {gyms.map((gym) => (
+                <Card key={gym.id} className="p-3 flex items-center gap-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer"
+                  onClick={() => navigate(`/gym/${gym.handle}`)}>
+                  <Avatar src={gym.logo_url} alt={gym.name} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{gym.name}</p>
+                    <p className="text-xs text-buddy-text-secondary truncate">{gym.location_city}{gym.location_country ? `, ${gym.location_country}` : ''}</p>
+                  </div>
+                  <span className="text-xs text-buddy-text-secondary">{gym.member_count} members</span>
+                </Card>
+              ))}
+            </div>
+          )
+        ) : (
           <div className="col-span-3 text-center py-20">
             <p className="text-buddy-text-secondary">Achievements coming soon</p>
           </div>
-        ) : (
-          Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="aspect-square bg-buddy-surface rounded-lg" />
-          ))
         )}
       </div>
 
@@ -206,6 +352,14 @@ export default function Profile() {
           replayUrl={replayLive.replay_url}
           muxPlaybackId={replayLive.mux_playback_id}
           onClose={() => setReplayLive(null)}
+        />
+      )}
+
+      {cropImage && (
+        <CropModal
+          imageUrl={cropImage}
+          onCrop={handleCropDone}
+          onClose={() => { setCropImage(null); URL.revokeObjectURL(cropImage); }}
         />
       )}
     </div>

@@ -8,6 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['icons/*.svg', 'favicon-*.png'],
       manifest: {
         name: 'BuddyUp',
         short_name: 'BuddyUp',
@@ -15,10 +16,65 @@ export default defineConfig({
         theme_color: '#0A0A0A',
         background_color: '#0A0A0A',
         display: 'standalone',
+        start_url: '/',
+        scope: '/',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
+          { src: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
         ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^https:\/\/.*\.(png|jpg|jpeg|webp|avif|gif|svg)(\?.*)?$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'image-cache',
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^\/api\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
+              networkTimeoutSeconds: 10,
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            urlPattern: /^\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'navigation-cache',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+        navigateFallback: '/offline.html',
+        navigateFallbackDenylist: [/\/api\//],
       },
     }),
   ],

@@ -8,8 +8,9 @@ from django.db import models as db_models
 from django.utils import timezone
 from .auth import get_user_from_token, get_token_from_scope
 from apps.lives.models import BuddyLive
+from apps.lives.access import can_access_live, has_live_admission
 from apps.wallet.models import ArtifactTransaction
-from apps.wallet.views import _deduct_artifacts, _credit_artifacts
+from apps.wallet.utils import deduct_artifacts, credit_artifacts
 
 _viewer_sets: dict[str, set] = {}
 
@@ -139,6 +140,9 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
 
         self.user_id = str(self.user.id)
         self.profile = await database_sync_to_async(lambda: getattr(self.user, 'profile', None))()
+        if not await database_sync_to_async(self._may_connect)():
+            await self.close(code=4003)
+            return
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
@@ -189,6 +193,13 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
         except Exception:
             pass
 
+    def _may_connect(self):
+        try:
+            live = BuddyLive.objects.prefetch_related('co_hosts', 'attendees').get(id=self.live_id)
+        except BuddyLive.DoesNotExist:
+            return False
+        return can_access_live(live, self.profile) and has_live_admission(live, self.profile)
+
     def _update_viewer_peak(self, viewer_count):
         try:
             live = BuddyLive.objects.get(id=self.live_id)
@@ -206,21 +217,21 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
             return None
 
     async def _process_gift(self, artifact_type: str, quantity: int):
-        from apps.wallet.views import _platform_cut
+        from apps.wallet.utils import platform_cut
 
         host = await self._get_live_host()
         if not host or host.user_id == self.user_id:
             return None
 
-        ok = await database_sync_to_async(_deduct_artifacts)(self.profile, artifact_type, quantity)
+        ok = await database_sync_to_async(deduct_artifacts)(self.profile, artifact_type, quantity)
         if not ok:
             return None
 
-        cut = await database_sync_to_async(_platform_cut)('tip', artifact_type, quantity)
+        cut = await database_sync_to_async(platform_cut)('tip', artifact_type, quantity)
         host_credit = quantity - cut
 
         if host_credit > 0:
-            await database_sync_to_async(_credit_artifacts)(host, artifact_type, host_credit)
+            await database_sync_to_async(credit_artifacts)(host, artifact_type, host_credit)
 
         tx = await database_sync_to_async(ArtifactTransaction.objects.create)(
             user=self.profile, transaction_type='tip_sent',
@@ -240,7 +251,7 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
                 user=host, transaction_type='platform_cut',
                 artifact_type=artifact_type, quantity=cut,
                 direction='debit', status='completed',
-                description=f'Platform fee ({int(_platform_cut("tip", artifact_type, 100))}%)',
+                description=f'Platform fee ({int(platform_cut("tip", artifact_type, 100))}%)',
             )
 
         try:

@@ -160,3 +160,26 @@ class PollVote(TimestampedModel):
     class Meta:
         db_table = 'feed_poll_vote'
         unique_together = ('poll', 'voter', 'option')
+
+
+class Draft(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    author = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='drafts')
+    post_type = models.CharField(max_length=20, choices=Post.POST_TYPES, default='text')
+    body = models.TextField(blank=True)
+    visibility = models.CharField(max_length=15, choices=Post.VISIBILITY_CHOICES, default='public')
+    gym_tag = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='drafts')
+    location_label = models.CharField(max_length=200, blank=True)
+    media_urls = models.JSONField(default=list)
+    tags = models.JSONField(default=list)
+    poll_question = models.CharField(max_length=300, blank=True)
+    poll_options = models.JSONField(default=list)
+    poll_allow_multiple = models.BooleanField(default=False)
+    mentioned_user_ids = models.JSONField(default=list)
+    is_anonymous = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'feed_draft'
+        indexes = [
+            models.Index(fields=['author', '-updated_at']),
+        ]

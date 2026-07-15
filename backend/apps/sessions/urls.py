@@ -13,5 +13,8 @@ urlpatterns = [
     path('bookings/<uuid:booking_id>/review/', views.ReviewView.as_view(), name='review'),
     path('my-availability/', views.AvailabilityView.as_view(), name='my_availability'),
     path('programmes/', views.ProgrammeListView.as_view(), name='programmes'),
-    path('programmes/<uuid:programme_id>/enroll/', views.ProgrammeEnrollmentView.as_view(), name='enroll'),
+    path('programmes/<int:programme_id>/enroll/', views.ProgrammeEnrollmentView.as_view(), name='enroll'),
+    path('programmes/<int:programme_id>/weeks/', views.ProgrammeWeekListView.as_view(), name='programme_weeks'),
+    path('programmes/<int:programme_id>/weeks/<int:week_number>/complete/', views.ProgrammeWeekCompleteView.as_view(), name='complete_week'),
+    path('my-enrollments/', views.MyEnrolmentsView.as_view(), name='my_enrollments'),
 ]

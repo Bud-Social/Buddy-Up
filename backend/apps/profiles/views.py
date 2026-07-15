@@ -14,7 +14,7 @@ from .models import Profile, BuddyRelationship, FollowRelationship, BlockRelatio
 from .buddy_notifications import notify_buddy_request, notify_buddy_accepted, notify_follow
 from .serializers import (
     ProfileSerializer, ProfileUpdateSerializer, OnboardingSerializer,
-    BuddyRequestSerializer, ProfileSearchSerializer,
+    BuddyRequestSerializer, ProfileSearchSerializer, PingMessageSerializer,
 )
 from common.pagination import CursorPagination, PageNumberPagination
 from common.permissions import AreBuddies
@@ -124,10 +124,116 @@ class OnboardingView(views.APIView):
         user.preferences = serializer.validated_data
         user.save(update_fields=['preferences'])
 
+        onboarding_plan = None
+        import requests as http_requests
+        try:
+            ai_url = f'{settings.AI_SERVICE_URL}/api/v1/onboarding/personalise'
+            resp = http_requests.post(ai_url, json=serializer.validated_data, timeout=15)
+            resp.raise_for_status()
+            onboarding_plan = resp.json()
+        except Exception:
+            pass
+
         return Response({
             'success': True,
-            'data': ProfileSerializer(profile, context={'request': request}).data,
+            'data': {
+                'profile': ProfileSerializer(profile, context={'request': request}).data,
+                'onboarding_plan': onboarding_plan,
+            },
             'message': 'Onboarding complete. Welcome to BuddyUp!',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+
+
+def _validate_image_file(file):
+    if not file:
+        return 'No file provided.'
+
+    if file.size > MAX_UPLOAD_SIZE:
+        return f'File size exceeds {MAX_UPLOAD_SIZE // (1024*1024)} MB limit.'
+
+    import os
+    ext = os.path.splitext(file.name)[1].lower()
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        return f'File type "{ext}" is not supported. Allowed: {", ".join(sorted(ALLOWED_IMAGE_EXTENSIONS))}.'
+
+    try:
+        from PIL import Image
+        from io import BytesIO
+        Image.open(BytesIO(file.read()))
+        file.seek(0)
+    except Exception:
+        return 'File is not a valid image or is corrupted.'
+
+    return None
+
+
+class AvatarUploadView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        file = request.FILES.get('avatar')
+        error = _validate_image_file(file)
+        if error:
+            return Response({
+                'success': False, 'data': None,
+                'message': error,
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        import os
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        ext = os.path.splitext(file.name)[1].lower() or '.jpg'
+        filename = f'avatars/{request.user.profile.user_id}{ext}'
+        saved_name = default_storage.save(filename, ContentFile(file.read()))
+        url = default_storage.url(saved_name)
+
+        request.user.profile.avatar_url = url
+        request.user.profile.save(update_fields=['avatar_url'])
+
+        return Response({
+            'success': True,
+            'data': {'avatar_url': url},
+            'message': 'Avatar updated.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class CoverUploadView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        file = request.FILES.get('cover')
+        error = _validate_image_file(file)
+        if error:
+            return Response({
+                'success': False, 'data': None,
+                'message': error,
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        import os
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        ext = os.path.splitext(file.name)[1].lower() or '.jpg'
+        filename = f'covers/{request.user.profile.user_id}{ext}'
+        saved_name = default_storage.save(filename, ContentFile(file.read()))
+        url = default_storage.url(saved_name)
+
+        request.user.profile.cover_url = url
+        request.user.profile.save(update_fields=['cover_url'])
+
+        return Response({
+            'success': True,
+            'data': {'cover_url': url},
+            'message': 'Cover updated.',
             'errors': None,
             'pagination': None,
         })
@@ -536,11 +642,12 @@ class SendPingView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_429_TOO_MANY_REQUESTS)
 
-        message = request.data.get('message', "How's your workout going? 💪")
+        input_serializer = PingMessageSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
         ping = AccountabilityPing.objects.create(
             from_user=user_profile,
             to_user=target,
-            message=message[:100],
+            message=input_serializer.validated_data.get('message', "How's your workout going? 💪")[:100],
         )
 
         from apps.notifications.tasks import create_notification
@@ -560,6 +667,73 @@ class SendPingView(views.APIView):
             'success': True,
             'data': {'ping_id': str(ping.id)},
             'message': f'Ping sent to @{target.username}!',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class ProfileRecommendationsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        import requests as http_requests
+        profile = request.user.profile
+        ai_url = f'{settings.AI_SERVICE_URL}/api/v1/embeddings/match'
+        try:
+            resp = http_requests.post(
+                ai_url,
+                json={'profile_id': str(profile.user_id), 'top_k': 20},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            matches = resp.json().get('matches', [])
+        except Exception:
+            return Response({
+                'success': True, 'data': [],
+                'message': 'Recommendations unavailable at this time.',
+                'errors': None, 'pagination': None,
+            })
+
+        matched_ids = [m['profile_id'] for m in matches]
+        if not matched_ids:
+            return Response({
+                'success': True, 'data': [],
+                'message': 'No recommendations found.',
+                'errors': None, 'pagination': None,
+            })
+
+        exclude_ids = {str(profile.user_id)}
+        exclude_ids.update(
+            str(pid) for pid in BuddyRelationship.objects.filter(
+                db_models.Q(from_user=profile) | db_models.Q(to_user=profile),
+            ).values_list('from_user_id', 'to_user_id')
+        )
+        exclude_ids.update(
+            str(pid) for pid in BlockRelationship.objects.filter(
+                db_models.Q(blocker=profile) | db_models.Q(blocked=profile),
+            ).values_list('blocker_id', 'blocked_id')
+        )
+
+        profiles_qs = Profile.objects.filter(
+            pk__in=matched_ids
+        ).exclude(
+            pk__in=list(exclude_ids)
+        ).select_related('user')
+
+        profile_map = {str(p.user_id): p for p in profiles_qs}
+        ordered = []
+        for m in matches:
+            p = profile_map.get(m['profile_id'])
+            if p:
+                ordered.append({
+                    'profile': ProfileSerializer(p, context={'request': request}).data,
+                    'match_score': m['score'],
+                })
+
+        return Response({
+            'success': True,
+            'data': ordered,
+            'message': 'OK',
             'errors': None,
             'pagination': None,
         })

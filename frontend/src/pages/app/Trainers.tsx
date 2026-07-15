@@ -40,10 +40,10 @@ export default function Trainers() {
           className="w-full bg-buddy-surface border border-transparent rounded-xl pl-10 pr-4 py-3 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:border-buddy-green/30" />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide">
-        <button onClick={() => setSpecialty('')} className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap capitalize transition-colors ${!specialty ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>All</button>
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide snap-x snap-mandatory">
+        <button onClick={() => setSpecialty('')} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap capitalize transition-colors snap-start ${!specialty ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>All</button>
         {specialties.map((s) => (
-          <button key={s} onClick={() => setSpecialty(s)} className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap capitalize transition-colors ${specialty === s ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{s.replace('_', ' ')}</button>
+          <button key={s} onClick={() => setSpecialty(s)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap capitalize transition-colors snap-start ${specialty === s ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{s.replace('_', ' ')}</button>
         ))}
       </div>
 

@@ -80,4 +80,22 @@ export const authApi = {
   resetPassword: (token: string, new_password: string) => apiClient.post<ApiResponse<null>>('/auth/reset-password/', { token, new_password }).then((r) => r.data),
   googleLogin: (credential: string) => apiClient.post<ApiResponse<TokenResponse>>('/auth/google/', { credential }).then((r) => r.data),
   appleLogin: (access_token: string) => apiClient.post<ApiResponse<TokenResponse>>('/auth/apple/', { access_token }).then((r) => r.data),
+
+  changePassword: (current_password: string, new_password: string) =>
+    apiClient.post<ApiResponse<null>>('/auth/change-password/', { current_password, new_password }).then((r) => r.data),
+
+  deactivateAccount: () =>
+    apiClient.post<ApiResponse<{ reactivatable_until: string }>>('/auth/deactivate/').then((r) => r.data),
+
+  deleteAccount: (confirm: string) =>
+    apiClient.post<ApiResponse<{ hard_deletion_scheduled: string }>>('/auth/delete/', { confirm }).then((r) => r.data),
+
+  exportData: () =>
+    apiClient.post<ApiResponse<null>>('/auth/export-data/').then((r) => r.data),
+
+  getSessions: () =>
+    apiClient.get<ApiResponse<Array<{ id: string; device_name: string; ip_address: string; location: string; last_active: string; created_at: string; is_current: boolean }>>>('/auth/sessions/').then((r) => r.data),
+
+  logoutAllSessions: () =>
+    apiClient.post<ApiResponse<null>>('/auth/logout-all/').then((r) => r.data),
 };

@@ -68,7 +68,7 @@ export default function Feed() {
   return (
     <div className="max-w-lg mx-auto">
       {/* Tab bar */}
-      <div className="sticky top-0 z-10 bg-buddy-black/95 backdrop-blur-lg border-b border-buddy-surface px-4 py-3">
+      <div className="sticky top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3">
         <div className="flex gap-1 bg-buddy-surface rounded-xl p-1">
           {tabs.map(({ key, label }) => (
             <button

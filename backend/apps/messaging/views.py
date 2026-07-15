@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 from common.pagination import CursorPagination
 from .models import Conversation, Message, MessageReaction
-from .serializers import ConversationSerializer, MessageSerializer
+from .serializers import ConversationSerializer, MessageSerializer, StartConversationInputSerializer, SendMessageInputSerializer, MessageReactionSerializer
 from apps.profiles.models import BuddyRelationship, Profile
 
 
@@ -30,17 +30,9 @@ class StartConversationView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        participant_usernames = request.data.get('participants', [])
-
-        if isinstance(participant_usernames, str):
-            participant_usernames = [participant_usernames]
-
-        if len(participant_usernames) < 1:
-            return Response({
-                'success': False, 'data': None,
-                'message': 'At least one participant required.',
-                'errors': None, 'pagination': None,
-            }, status=status.HTTP_400_BAD_REQUEST)
+        input_serializer = StartConversationInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        participant_usernames = input_serializer.validated_data['participants']
 
         participants = list(Profile.objects.filter(username__in=participant_usernames))
         if len(participants) != len(participant_usernames):
@@ -83,7 +75,7 @@ class StartConversationView(views.APIView):
 
         conv = Conversation.objects.create(
             is_group=len(all_participants) > 2,
-            group_name=request.data.get('group_name', ''),
+            group_name=input_serializer.validated_data.get('group_name', ''),
             created_by=request.user.profile,
         )
         conv.participants.set(all_participants)
@@ -143,15 +135,18 @@ class MessageListView(views.APIView):
 
     def post(self, request, conversation_id):
         conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
+        input_serializer = SendMessageInputSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
+        data = input_serializer.validated_data
 
         msg = Message.objects.create(
             conversation=conv,
             sender=request.user.profile,
-            message_type=request.data.get('message_type', 'text'),
-            body=request.data.get('body', ''),
-            media_url=request.data.get('media_url', ''),
-            reply_to_id=request.data.get('reply_to_id'),
-            metadata=request.data.get('metadata', {}),
+            message_type=data.get('message_type', 'text'),
+            body=data.get('body', ''),
+            media_url=data.get('media_url', ''),
+            reply_to_id=data.get('reply_to_id'),
+            metadata=data.get('metadata', {}),
         )
 
         conv.last_message_text = msg.body[:200] if msg.body else msg.message_type
@@ -189,8 +184,10 @@ class MessageReactionView(views.APIView):
     def post(self, request, message_id):
         msg = get_object_or_404(Message, id=message_id)
         get_object_or_404(Conversation, id=msg.conversation_id, participants=request.user.profile)
+        input_serializer = MessageReactionSerializer(data=request.data)
+        input_serializer.is_valid(raise_exception=True)
 
-        emoji = request.data.get('emoji', '❤️')
+        emoji = input_serializer.validated_data['emoji']
         MessageReaction.objects.get_or_create(
             message=msg, user=request.user.profile, emoji=emoji[:10],
         )

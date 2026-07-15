@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from django.db import models as db_models
 from django.utils import timezone
 from django.conf import settings
-from django.contrib.postgres.search import SearchVector, SearchQuery
+
 
 from rest_framework import views, permissions, status, generics
 from rest_framework.response import Response
@@ -14,13 +14,16 @@ import requests
 
 from common.pagination import PageNumberPagination
 from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite
-from .serializers import (
+from     .serializers import (
     GymSerializer, CreateGymSerializer, GymMembershipSerializer,
     GymCategorySerializer, JoinRequestSerializer, CreateJoinRequestSerializer,
     ApproveRejectSerializer, GymInviteSerializer, CreateInviteSerializer,
+    DonationInputSerializer, ReviewReplyInputSerializer, ManageMemberRoleSerializer,
     HandleCheckSerializer, GymSchedulePostSerializer, GymReviewSerializer, GymDonationSerializer,
 )
 from .models import GymSchedulePost, GymReview, GymDonation
+from apps.wallet.utils import deduct_artifacts
+from apps.wallet.serializers import ARTIFACT_VALUES, ARTIFACT_LABELS
 
 
 class GymListView(views.APIView):
@@ -40,9 +43,10 @@ class GymListView(views.APIView):
             queryset = Gym.objects.filter(access_type__in=['public', 'private'])
 
         if q:
-            queryset = queryset.annotate(
-                search=SearchVector('name', 'description', 'tags'),
-            ).filter(search=SearchQuery(q))
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(name__icontains=q) | Q(description__icontains=q) | Q(tags__icontains=q)
+            )
 
         if category:
             queryset = queryset.filter(categories__name=category)
@@ -319,7 +323,17 @@ class JoinGymView(views.APIView):
         if gym.access_type == 'public':
             role = 'member'
             if gym.join_fee_artifacts:
-                pass
+                gym_wallet = dict(gym.wallet_balance) if gym.wallet_balance else {}
+                for at, qty in gym.join_fee_artifacts.items():
+                    if not deduct_artifacts(request.user.profile, at, qty):
+                        return Response({
+                            'success': False, 'data': None,
+                            'message': f'Insufficient {at} balance to pay the join fee.',
+                            'errors': None, 'pagination': None,
+                        }, status=status.HTTP_402_PAYMENT_REQUIRED)
+                    fee_key = f'join_fee_{at}'
+                    gym_wallet[fee_key] = gym_wallet.get(fee_key, 0) + qty
+                Gym.objects.filter(id=gym.id).update(wallet_balance=gym_wallet)
             GymMembership.objects.create(
                 gym=gym,
                 member=request.user.profile,
@@ -440,7 +454,9 @@ class ManageMemberView(views.APIView):
         get_object_or_404(GymMembership, gym=gym, member=request.user.profile, role__in=['owner', 'co_owner', 'moderator'])
 
         target = get_object_or_404(GymMembership, gym=gym, member_id=user_id)
-        new_role = request.data.get('role')
+        serializer = ManageMemberRoleSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_role = serializer.validated_data.get('role')
 
         if new_role and new_role in dict(GymMembership.ROLE_CHOICES):
             if new_role in ['owner', 'co_owner']:
@@ -746,6 +762,51 @@ class GymSchedulePostListView(views.APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+class GymSchedulePostDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, gym_slug, post_id):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        post = get_object_or_404(GymSchedulePost, id=post_id, gym=gym)
+        get_object_or_404(
+            GymMembership, gym=gym, member=request.user.profile,
+            role__in=['owner', 'co_owner', 'trainer', 'moderator'],
+        )
+        allowed = ['title', 'content', 'activity_type', 'custom_activity_type',
+                    'location_mode', 'start_time', 'end_time', 'recurrence',
+                    'recurrence_end_date', 'recurrence_days', 'max_slots', 'timezone']
+        for k in allowed:
+            if k in request.data:
+                setattr(post, k, request.data[k])
+        post.save(update_fields=[k for k in allowed if k in request.data])
+        return Response({
+            'success': True,
+            'data': GymSchedulePostSerializer(post, context={'request': request}).data,
+            'message': 'Schedule post updated.',
+            'errors': None, 'pagination': None,
+        })
+
+    def delete(self, request, gym_slug, post_id):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        post = get_object_or_404(GymSchedulePost, id=post_id, gym=gym)
+        membership = get_object_or_404(
+            GymMembership, gym=gym, member=request.user.profile,
+            role__in=['owner', 'co_owner', 'trainer', 'moderator'],
+        )
+        if post.author != request.user.profile and membership.role not in ('owner', 'co_owner'):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the author or gym owner can delete schedule posts.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        post.delete()
+        return Response({
+            'success': True, 'data': None,
+            'message': 'Schedule post deleted.',
+            'errors': None, 'pagination': None,
+        })
+
+
 class GymReviewListView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -803,41 +864,45 @@ class GymDonationCreateView(views.APIView):
         if not gym.is_donations_enabled:
             return Response({'success': False, 'message': 'Donations are disabled.'}, status=400)
 
-        amount = request.data.get('amount')
-        message = request.data.get('message', '')
-        
-        try:
-            amount = float(amount)
-            if amount <= 0:
-                raise ValueError
-        except (TypeError, ValueError):
-            return Response({'success': False, 'message': 'Invalid amount.'}, status=400)
+        serializer = DonationInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        artifact_type = data['artifact_type']
+        quantity = data.get('quantity')
+        message = data.get('message', '')
+        amount = data.get('amount', 0)
 
-        # Basic simulated artifact transaction
+        if quantity is not None:
+            if not deduct_artifacts(request.user.profile, artifact_type, quantity):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'Insufficient {artifact_type} balance.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_402_PAYMENT_REQUIRED)
+
         from apps.wallet.models import ArtifactTransaction
-        
-        # In a real app we'd deduct from user balance here (assuming they have enough)
-        # We simulate the deduction and gym addition
+
+        fiat_value = amount
+        if not fiat_value and quantity:
+            fiat_value = round(ARTIFACT_VALUES.get(artifact_type, 0) * quantity, 2)
+
         donation = GymDonation.objects.create(
-            gym=gym, donor=request.user.profile, amount=amount, message=message
+            gym=gym, donor=request.user.profile, amount=fiat_value, message=message
         )
-        
+
         ArtifactTransaction.objects.create(
             user=request.user.profile,
-            transaction_type='gym_subscription', # fallback for general gym xfer
-            artifact_type='gym_donation',
-            quantity=1,
+            transaction_type='gym_subscription',
+            artifact_type=artifact_type,
+            quantity=quantity or 1,
             direction='debit',
-            fiat_amount=amount,
+            fiat_amount=fiat_value,
             status='completed',
-            description=f'Donation to {gym.name}'
+            description=f'Donation to {gym.name}',
         )
-        
-        # Increase gym's wallet balance
-        gym_wallet = gym.wallet_balance
-        if 'donations_received' not in gym_wallet:
-            gym_wallet['donations_received'] = 0.0
-        gym_wallet['donations_received'] += amount
+
+        gym_wallet = dict(gym.wallet_balance) if gym.wallet_balance else {}
+        gym_wallet['donations_received'] = gym_wallet.get('donations_received', 0.0) + fiat_value
         gym.save(update_fields=['wallet_balance'])
         
         return Response({
@@ -862,9 +927,9 @@ class GymReviewReplyView(views.APIView):
             role__in=['owner', 'co_owner', 'moderator']
         )
         
-        reply_text = request.data.get('reply_text', '').strip()
-        if not reply_text:
-            return Response({'success': False, 'message': 'Reply text is required.'}, status=400)
+        serializer = ReviewReplyInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reply_text = serializer.validated_data['reply_text'].strip()
             
         from django.utils import timezone
         review.reply_text = reply_text

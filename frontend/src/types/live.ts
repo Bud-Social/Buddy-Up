@@ -5,13 +5,14 @@ export type LiveStatus = 'scheduled' | 'live' | 'ended';
 export interface AgoraCredentials {
   app_id: string;
   channel: string;
-  token: string;
+  token: string | null;
 }
 
 export interface LiveKitCredentials {
   url: string;
   room: string;
   token: string;
+  can_publish: boolean;
 }
 
 export interface LiveCredentials {

@@ -20,4 +20,5 @@ urlpatterns = [
     path('events/<uuid:event_id>/', views.EventDetailView.as_view(), name='event_detail'),
     path('events/<uuid:event_id>/tickets/', views.PurchaseEventTicketView.as_view(), name='purchase_ticket'),
     path('events/tickets/<uuid:ticket_id>/', views.EventTicketDetailView.as_view(), name='ticket_detail'),
+    path('food-recognize/', views.FoodRecognizeView.as_view(), name='food_recognize'),
 ]

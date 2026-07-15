@@ -14,9 +14,8 @@ interface BuddyButtonProps {
 }
 
 function getBuddyState(profile: Profile): BuddyState {
-  if ((profile as { is_buddy?: boolean }).is_buddy) return 'confirmed';
-  const status = (profile as { buddy_status?: string }).buddy_status;
-  if (status === 'pending') return 'pending_received';
+  if (profile.is_buddy) return 'confirmed';
+  if (profile.buddy_status === 'pending') return 'pending_received';
   return 'none';
 }
 

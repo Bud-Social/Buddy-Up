@@ -4,6 +4,7 @@ import { Check, Star, ChevronRight, Play, Download, Users, Radio, Dumbbell, Hand
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
+import { Logo } from '@/components/ui/Logo';
 
 const features = {
   live: {
@@ -77,6 +78,9 @@ export default function Landing() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-buddy-green/5 to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto px-6 pt-24 pb-36 text-center relative z-10">
+          <div className="flex justify-center mb-6">
+            <Logo size="xl" className="mx-auto" />
+          </div>
           <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
             Find your<br />
             <span className="text-buddy-green">fitness family.</span>
@@ -302,7 +306,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div>
-              <h3 className="font-display text-xl font-extrabold text-buddy-green mb-4">BuddyUp</h3>
+              <Logo size="md" className="mb-2" />
               <p className="text-sm text-buddy-text-secondary">Find your fitness family.</p>
             </div>
             <div>

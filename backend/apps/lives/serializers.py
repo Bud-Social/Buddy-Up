@@ -2,6 +2,18 @@ from rest_framework import serializers
 from .models import BuddyLive, LiveAttendee
 
 
+class EndLiveInputSerializer(serializers.Serializer):
+    save_replay = serializers.BooleanField(default=False)
+
+
+class CoHostInputSerializer(serializers.Serializer):
+    username = serializers.CharField()
+
+
+class RecordingChunkInputSerializer(serializers.Serializer):
+    chunk_index = serializers.IntegerField(min_value=0)
+
+
 class BuddyLiveSerializer(serializers.ModelSerializer):
     host = serializers.SerializerMethodField()
     viewer_count = serializers.SerializerMethodField()

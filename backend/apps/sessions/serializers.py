@@ -83,6 +83,22 @@ class ReviewSerializer(serializers.ModelSerializer):
         }
 
 
+class BookingActionSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=['start', 'complete', 'cancel'])
+
+
+class AvailabilityCreateSerializer(serializers.Serializer):
+    day_of_week = serializers.IntegerField(min_value=0, max_value=6)
+    start_time = serializers.TimeField()
+    end_time = serializers.TimeField()
+    buffer_minutes = serializers.IntegerField(default=0, min_value=0, max_value=120)
+
+
+class ReviewCreateSerializer(serializers.Serializer):
+    rating = serializers.IntegerField(default=5, min_value=1, max_value=5)
+    body = serializers.CharField(max_length=500, required=False, allow_blank=True)
+
+
 class ProgrammeSerializer(serializers.ModelSerializer):
     trainer_data = serializers.SerializerMethodField()
 
@@ -97,4 +113,30 @@ class ProgrammeSerializer(serializers.ModelSerializer):
             'username': obj.trainer.username,
             'display_name': obj.trainer.display_name,
             'avatar_url': obj.trainer.avatar_url,
+        }
+
+
+class ProgrammeWeekSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProgrammeWeek
+        fields = ['id', 'programme_id', 'week_number', 'title', 'description',
+                   'video_url', 'pdf_url', 'exercises', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class ProgrammeEnrollmentSerializer(serializers.ModelSerializer):
+    programme_data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProgrammeEnrollment
+        fields = ['id', 'client_id', 'programme_id', 'programme_data',
+                   'completed_weeks', 'progress_pct', 'created_at']
+        read_only_fields = ['id', 'client_id', 'progress_pct', 'created_at']
+
+    def get_programme_data(self, obj):
+        return {
+            'id': str(obj.programme.id),
+            'title': obj.programme.title,
+            'description': obj.programme.description,
+            'duration_weeks': obj.programme.duration_weeks,
         }

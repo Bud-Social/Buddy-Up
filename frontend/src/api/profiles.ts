@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { ApiResponse, Profile } from '@/types';
+import type { ApiResponse, Profile, Post } from '@/types';
 
 export const profilesApi = {
   getProfile: (username: string) =>
@@ -55,4 +55,23 @@ export const profilesApi = {
 
   searchProfiles: (params: { q: string; limit?: number }) =>
     apiClient.get<ApiResponse<Profile[]>>('/profiles/search/', { params }).then((r) => r.data),
+
+  getProfilePosts: (username: string) =>
+    apiClient.get<ApiResponse<Post[]>>(`/profiles/${username}/posts/`).then((r) => r.data),
+
+  uploadAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    return apiClient.post<ApiResponse<{ avatar_url: string }>>('/profiles/me/avatar/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data);
+  },
+
+  uploadCover: (file: File) => {
+    const formData = new FormData();
+    formData.append('cover', file);
+    return apiClient.post<ApiResponse<{ cover_url: string }>>('/profiles/me/cover/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data);
+  },
 };

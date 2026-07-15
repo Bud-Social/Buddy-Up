@@ -4,6 +4,8 @@ from . import views
 app_name = 'profiles'
 urlpatterns = [
     path('me/', views.MyProfileView.as_view(), name='my_profile'),
+    path('me/avatar/', views.AvatarUploadView.as_view(), name='avatar_upload'),
+    path('me/cover/', views.CoverUploadView.as_view(), name='cover_upload'),
     path('search/', views.ProfileSearchView.as_view(), name='search'),
     path('onboarding/', views.OnboardingView.as_view(), name='onboarding'),
     path('blocked/', views.BlockedUsersView.as_view(), name='blocked_users'),
@@ -20,4 +22,5 @@ urlpatterns = [
     path('<str:username>/buddies/', views.BuddiesListView.as_view(), name='buddies'),
     path('<str:username>/followers/', views.FollowersListView.as_view(), name='followers'),
     path('<str:username>/following/', views.FollowingListView.as_view(), name='following'),
+    path('recommendations/', views.ProfileRecommendationsView.as_view(), name='recommendations'),
 ]

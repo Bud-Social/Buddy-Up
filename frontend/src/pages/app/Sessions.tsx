@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/store/authStore';
 import { Calendar, Clock, MapPin, Video, Star, XCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
@@ -11,20 +12,25 @@ import { sessionsApi } from '@/api/sessions';
 import type { BookingSession } from '@/api/sessions';
 
 export default function Sessions() {
+  const navigate = useNavigate();
+  const profile = useAuthStore((s) => s.profile);
   const [bookings, setBookings] = useState<BookingSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [viewRole, setViewRole] = useState<'client' | 'trainer'>('client');
   const [reviewModal, setReviewModal] = useState<{ bookingId: string; trainerName: string } | null>(null);
   const [rating, setRating] = useState(5);
   const [reviewBody, setReviewBody] = useState('');
 
   useEffect(() => {
+    if (!profile) return;
     setIsLoading(true);
-    sessionsApi.getMyBookings(undefined, tab === 'upcoming' ? 'confirmed' : 'completed')
+    const roleParam = viewRole === 'trainer' ? 'trainer' : undefined;
+    sessionsApi.getMyBookings(roleParam, tab === 'upcoming' ? 'confirmed' : 'completed')
       .then((res) => setBookings(res.data || []))
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, [tab]);
+  }, [profile, tab, viewRole]);
 
   const handleCancel = async (bookingId: string) => {
     try {
@@ -60,7 +66,26 @@ export default function Sessions() {
 
   return (
     <div className="max-w-lg mx-auto p-4">
-      <h1 className="font-display text-2xl font-extrabold mb-4">Sessions</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <h1 className="font-display text-2xl font-extrabold">Sessions</h1>
+        {profile?.role !== 'user' && (
+          <Button variant="outline" size="sm" onClick={() => navigate('/sessions/offering')}>
+            Manage Session Offerings
+          </Button>
+        )}
+      </div>
+
+      {profile?.role !== 'user' && (
+        <div className="flex rounded-xl bg-buddy-surface p-1 mb-4">
+          {[
+            { key: 'client' as const, label: 'Client Bookings' },
+            { key: 'trainer' as const, label: 'Trainer Bookings' },
+          ].map(({ key, label }) => (
+            <button key={key} onClick={() => setViewRole(key)}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${viewRole === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{label}</button>
+          ))}
+        </div>
+      )}
 
       <div className="flex rounded-xl bg-buddy-surface p-1 mb-4">
         {[

@@ -256,6 +256,8 @@ export default function LiveRoom() {
   const fetchRoomData = useCallback(async () => {
     if (!liveId) return;
     try {
+      // Admission performs access and payment checks before a media token is issued.
+      await livesApi.joinLive(liveId);
       const res = await livesApi.getLiveCredentials(liveId);
       setRoomData(res.data);
     } catch {
@@ -384,7 +386,7 @@ export default function LiveRoom() {
 
       let camOk = false;
       let micOk = false;
-      try {
+      if (creds.can_publish) try {
         await room.localParticipant.enableCameraAndMicrophone();
         camOk = true;
         micOk = true;
@@ -484,23 +486,15 @@ export default function LiveRoom() {
     setConnectionState('connecting');
 
     const livekitOk = creds.livekit?.url && creds.livekit?.token;
-    const agoraOk = !!creds.agora?.app_id;
-
     if (livekitOk) {
       const ok = await joinLiveKit(creds.livekit, attempt);
       if (connectAttemptRef.current !== attempt) return;
       if (ok) return;
     }
 
-    if (agoraOk) {
-      const ok = await joinAgora(creds.agora, attempt);
-      if (connectAttemptRef.current !== attempt) return;
-      if (ok) return;
-    }
-
     setConnectionState('failed');
-    setError('No video provider available.');
-  }, [roomData, joinAgora, joinLiveKit]);
+    setError('The self-hosted video service is unavailable.');
+  }, [roomData, joinLiveKit]);
 
   useEffect(() => {
     if (roomData && roomData.status !== 'ended') connect();
@@ -1056,17 +1050,19 @@ export default function LiveRoom() {
                         }
                       }} autoPlay muted playsInline className="w-full h-full object-cover" />
                     ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center gap-1">
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 bg-buddy-surface-raised/60">
                         {att.avatarUrl ? (
-                          <img src={att.avatarUrl} alt={att.displayName} className="w-8 h-8 rounded-full object-cover" />
+                          <img src={att.avatarUrl} alt={att.displayName} className="w-14 h-14 rounded-full object-cover ring-2 ring-buddy-surface-raised" />
                         ) : (
-                          <div className="w-8 h-8 rounded-full bg-buddy-surface-raised flex items-center justify-center text-buddy-text-secondary text-xs font-semibold">
+                          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-buddy-green/30 to-buddy-electric/20 flex items-center justify-center text-white text-xl font-bold ring-2 ring-buddy-surface-raised">
                             {att.displayName.charAt(0).toUpperCase()}
                           </div>
                         )}
-                        <span className="text-[9px] text-white/60 truncate max-w-[80%]">{att.displayName.split(' ')[0]}</span>
-                        {!att.hasMicOn && !att.hasVideoOn && (
-                          <span className="text-[8px] text-buddy-text-secondary/60 mt-0.5">Listening Only</span>
+                        <span className="text-[9px] text-white/70 truncate max-w-[80%] text-center font-medium">{att.displayName}</span>
+                        {!att.hasMicOn && !att.hasVideoOn ? (
+                          <span className="text-[8px] text-buddy-text-secondary/60 bg-buddy-black/40 px-1.5 py-0.5 rounded-full">Listening Only</span>
+                        ) : (
+                          <span className="text-[8px] text-buddy-text-secondary/60 bg-buddy-black/40 px-1.5 py-0.5 rounded-full">Camera Off</span>
                         )}
                       </div>
                     )}

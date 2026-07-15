@@ -30,7 +30,6 @@ jobs:
         run: |
           cd backend
           ruff check .
-          mypy . --ignore-missing-imports || true
       - name: Test
         env:
           DATABASE_URL: postgresql://buddyup:testpass@localhost:5432/buddyup_test
@@ -41,7 +40,7 @@ jobs:
         run: |
           cd backend
           python manage.py migrate --noinput
-          pytest --reuse-db -v || true
+          pytest --reuse-db -v
 
   frontend:
     runs-on: ubuntu-latest
@@ -53,10 +52,10 @@ jobs:
       - name: Install
         run: cd frontend && npm ci
       - name: Lint
-        run: cd frontend && npm run lint || true
+        run: cd frontend && npm run lint
       - name: Type check
         run: cd frontend && npm run type-check
       - name: Test
-        run: cd frontend && npm run test -- --reporter=verbose || true
+        run: cd frontend && npm run test -- --reporter=verbose
       - name: Build
         run: cd frontend && npm run build

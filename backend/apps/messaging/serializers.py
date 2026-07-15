@@ -2,6 +2,28 @@ from rest_framework import serializers
 from .models import Conversation, Message, MessageReaction
 
 
+class StartConversationInputSerializer(serializers.Serializer):
+    participants = serializers.ListField(
+        child=serializers.CharField(), allow_empty=False,
+    )
+    group_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+
+
+class SendMessageInputSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=5000, allow_blank=True)
+    message_type = serializers.ChoiceField(
+        choices=['text', 'image', 'video', 'audio', 'file'],
+        default='text',
+    )
+    media_url = serializers.URLField(required=False, allow_blank=True)
+    reply_to_id = serializers.CharField(required=False, allow_null=True)
+    metadata = serializers.JSONField(required=False, default=dict)
+
+
+class MessageReactionSerializer(serializers.Serializer):
+    emoji = serializers.CharField(max_length=20)
+
+
 class MessageSerializer(serializers.ModelSerializer):
     sender_data = serializers.SerializerMethodField()
     reply_data = serializers.SerializerMethodField()

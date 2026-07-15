@@ -2,9 +2,10 @@ port: 7880
 bind_addresses:
   - "0.0.0.0"
 rtc:
-  port_range_start: 7881
-  port_range_end: 7881
-  use_external_ip: false
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50100
+  use_external_ip: true
 redis:
   address: redis:6379
   password: ${REDIS_PASSWORD}
@@ -14,8 +15,13 @@ logging:
   level: info
   format: text
 turn:
-  enabled: false
+  enabled: true
+  udp_port: 3478
+  tls_port: 5349
+  domain: ${LIVEKIT_TURN_DOMAIN}
+  cert_file: /etc/livekit-certs/fullchain.pem
+  key_file: /etc/livekit-certs/privkey.pem
 ingress:
   enabled: false
 egress:
-  enabled: false
+  enabled: true

@@ -2591,3 +2591,26 @@ send_verification_decision.delay(user_id)    # After admin reviews KYC
 *Target directory: C:\Users\Imani\Documents\Buddy-Up\buddyup_platform_prompt.md*
 *Stack: React 18 + TypeScript + Vite | Django 5 + DRF | Django Channels | PostgreSQL | Redis | Celery | Agora.io | Mux | Cloudinary | Stripe + M-Pesa + Flutterwave*
 *Age restriction: 16+ strictly enforced*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+AI Models Needed (8 identified):
+1. Workout Form Analyzer — computer vision for exercise form feedback (HIGH priority)
+2. Food Recognition & Nutrition AI — photo-to-calories/macros (HIGH)
+3. Content Moderation AI — NSFW + hate speech detection (MEDIUM)
+4. Feed Ranking Engine — ML-powered personalisation (MEDIUM)
+5. Trainer-Buddy Matching — recommendation algorithm (MEDIUM)
+6. Meal Plan Personalisation (LLM) — GPT-4o integration (MEDIUM)
+7. Workout Log Analysis — progression + plateau detection (LOW-MEDIUM)
+8. Health Insights Engine — cross-domain NLG summaries (LOW)

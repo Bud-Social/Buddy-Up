@@ -105,6 +105,20 @@ make seed
 
 ## Production Deployment
 
+### Self-hosted live media
+
+Production live media uses LiveKit, its Egress worker, and MinIO; Agora, Mux,
+and Cloudinary are not required for this path. Point `rtc.buddyup.app` and
+`turn.buddyup.app` at the server and use a certificate valid for both names
+(a wildcard certificate is suitable). Set the `LIVEKIT_*` and `MINIO_*`
+variables from `.env.example` with strong unique values.
+
+Open these inbound ports in the host firewall: `80/tcp`, `443/tcp`,
+`7881/tcp`, `3478/udp`, `5349/tcp`, and `50000-50100/udp`. The public
+`rtc` endpoint carries signalling; WebRTC media uses the ICE/TURN ports.
+Replay files remain on the internal MinIO service and are exposed through
+`https://buddyup.app/replays/`.
+
 ### Option 1: Railway (managed)
 
 1. Connect GitHub repo to Railway

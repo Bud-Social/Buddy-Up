@@ -113,6 +113,19 @@ class LoginOTPSerializer(serializers.Serializer):
     remember_me = serializers.BooleanField(default=False)
 
 
+class TOTPChallengeSerializer(serializers.Serializer):
+    temp_token = serializers.CharField()
+    code = serializers.CharField(min_length=6, max_length=6)
+
+
+class TOTPDisableSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True)
+
+
+class GoogleLoginSerializer(serializers.Serializer):
+    credential = serializers.CharField()
+
+
 class DeviceSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

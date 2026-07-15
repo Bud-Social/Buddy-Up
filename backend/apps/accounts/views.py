@@ -19,11 +19,12 @@ from common.utils import hash_dob, calculate_age
 from common.pagination import CursorPagination
 from .models import User, OTPToken, DeviceSession, AccountEvent
 from .serializers import (
-    RegisterSerializer, LoginSerializer, OTPSerializer,
-    ResendOTPSerializer, PasswordResetRequestSerializer,
-    PasswordResetConfirmSerializer, ChangePasswordSerializer,
-    SocialAuthSerializer, TOTPSetupSerializer, TOTPVerifySerializer,
-    RegistrationOTPSerializer, LoginOTPSerializer,
+    RegisterSerializer, LoginSerializer, OTPSerializer, ResendOTPSerializer,
+    PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
+    ChangePasswordSerializer, SocialAuthSerializer,
+    TOTPSetupSerializer, TOTPVerifySerializer,
+    LoginOTPSerializer, RegistrationOTPSerializer,
+    TOTPChallengeSerializer, TOTPDisableSerializer, GoogleLoginSerializer,
 )
 from apps.profiles.models import Profile
 from .tasks import send_otp_email, send_welcome_email, send_login_alert_email
@@ -533,8 +534,10 @@ class TOTPDisableView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        password = request.data.get('password', '')
-        if not request.user.check_password(password):
+        serializer = TOTPDisableSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if not request.user.check_password(serializer.validated_data['password']):
             return Response({
                 'success': False, 'data': None,
                 'message': 'Incorrect password.',
@@ -561,8 +564,10 @@ class TOTPChallengeView(views.APIView):
     throttle_scope = 'otp'
 
     def post(self, request):
-        temp_token = request.data.get('temp_token', '')
-        code = request.data.get('code', '')
+        serializer = TOTPChallengeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        temp_token = serializer.validated_data['temp_token']
+        code = serializer.validated_data['code']
 
         user = _verify_temp_token(temp_token, 'totp_challenge')
         if not user:
@@ -620,13 +625,9 @@ class GoogleLoginView(views.APIView):
     throttle_scope = 'login'
 
     def post(self, request):
-        credential = request.data.get('credential', '')
-        if not credential:
-            return Response({
-                'success': False, 'data': None,
-                'message': 'Google credential is required.',
-                'errors': None, 'pagination': None,
-            }, status=status.HTTP_400_BAD_REQUEST)
+        serializer = GoogleLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        credential = serializer.validated_data['credential']
 
         if not GOOGLE_AUTH_AVAILABLE:
             return Response({
@@ -1107,4 +1108,88 @@ class ExportUserDataView(views.APIView):
             'message': 'Data export requested. You will receive a download link via email when ready.',
             'errors': None,
             'pagination': None,
+        })
+
+
+class DeviceSessionsListView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        sessions = DeviceSession.objects.filter(
+            user=request.user, is_active=True
+        ).order_by('-last_active')
+
+        data = []
+        for s in sessions:
+            data.append({
+                'id': str(s.id),
+                'device_name': s.device_name,
+                'ip_address': s.ip_address,
+                'location': s.location,
+                'last_active': s.last_active.isoformat(),
+                'created_at': s.created_at.isoformat(),
+                'is_current': s.refresh_token_hash == hashlib.sha256(
+                    (request.auth or '').encode() if hasattr(request, 'auth') and request.auth else b''
+                ).hexdigest()[:64] if hasattr(request, 'auth') else False,
+            })
+
+        return Response({
+            'success': True, 'data': data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+
+class LogoutAllSessionsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        DeviceSession.objects.filter(user=request.user, is_active=True).update(is_active=False)
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+        for token in OutstandingToken.objects.filter(user=request.user):
+            BlacklistedToken.objects.get_or_create(token=token)
+
+        _log_event(request.user, 'password_changed', request,
+                   metadata={'action': 'logout_all_sessions'})
+
+        return Response({
+            'success': True, 'data': None,
+            'message': 'All other sessions have been signed out.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class ActivityLogView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from common.pagination import CursorPagination
+
+        event_type = request.query_params.get('type', '')
+        events = AccountEvent.objects.filter(user=request.user).order_by('-created_at')
+
+        if event_type:
+            events = events.filter(event_type=event_type)
+
+        paginator = CursorPagination()
+        paginator.ordering = '-created_at'
+        page = paginator.paginate_queryset(events, request)
+
+        data = []
+        for e in page:
+            data.append({
+                'id': str(e.id),
+                'event_type': e.event_type,
+                'ip_address': e.ip_address,
+                'metadata': e.metadata,
+                'created_at': e.created_at.isoformat(),
+            })
+
+        return Response({
+            'success': True, 'data': data,
+            'message': 'OK', 'errors': None,
+            'pagination': {
+                'count': paginator.page.paginator.count if hasattr(paginator, 'page') else len(data),
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
         })

@@ -26,9 +26,12 @@ export default function Marketplace() {
           { key: 'products' as const, label: 'Products', icon: ShoppingBag },
         ].map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setTab(key)}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1 ${
               tab === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
-            }`}><Icon size={14} /> {label}</button>
+            }`}>
+            <Icon size={14} className="flex-shrink-0" />
+            <span className="hidden sm:inline truncate">{label}</span>
+          </button>
         ))}
       </div>
 
@@ -60,10 +63,10 @@ function MealPlansTab() {
 
   return (
     <>
-      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide">
-        <button onClick={() => setDietFilter('')} className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap capitalize transition-colors ${!dietFilter ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>All</button>
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide snap-x snap-mandatory">
+        <button onClick={() => setDietFilter('')} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap capitalize transition-colors snap-start ${!dietFilter ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>All</button>
         {diets.map((d) => (
-          <button key={d} onClick={() => setDietFilter(d)} className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap capitalize transition-colors ${dietFilter === d ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{d.replace('_', ' ')}</button>
+          <button key={d} onClick={() => setDietFilter(d)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap capitalize transition-colors snap-start ${dietFilter === d ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{d.replace('_', ' ')}</button>
         ))}
       </div>
 
@@ -171,10 +174,10 @@ function ProductsTab() {
 
   return (
     <>
-      <div className="flex gap-2 pb-3 mb-2">
-        <button onClick={() => setCategory('')} className={`px-3 py-1.5 rounded-full text-xs capitalize transition-colors ${!category ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>All</button>
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide snap-x snap-mandatory">
+        <button onClick={() => setCategory('')} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs capitalize transition-colors snap-start ${!category ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>All</button>
         {cats.map((c) => (
-          <button key={c} onClick={() => setCategory(c)} className={`px-3 py-1.5 rounded-full text-xs capitalize transition-colors ${category === c ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{c}</button>
+          <button key={c} onClick={() => setCategory(c)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs capitalize transition-colors snap-start ${category === c ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{c}</button>
         ))}
       </div>
 

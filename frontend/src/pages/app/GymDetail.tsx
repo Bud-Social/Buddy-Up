@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { gymsApi, livesApi, feedApi, profilesApi } from '@/api';
+import { gymsApi, livesApi, feedApi, profilesApi, marketplaceApi } from '@/api';
 import type { Gym, GymMembership, Profile } from '@/types';
 import type { BuddyLive } from '@/types/live';
 import type { GymSchedulePost, GymReview } from '@/types/gym';
@@ -592,7 +592,7 @@ export default function GymDetail() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold flex items-center gap-2"><Tag className="text-buddy-electric" size={20} /> Gym Events</h2>
               {isAdmin && (
-                <Button size="sm" onClick={() => alert('Create Event Modal UI to be implemented in Marketplace Events')}>
+                <Button size="sm" onClick={() => { setScheduleActivity('event'); setShowScheduleModal(true); }}>
                   <Plus size={16} className="mr-1" /> Create Event
                 </Button>
               )}
@@ -643,9 +643,14 @@ export default function GymDetail() {
                           <div className="text-sm font-bold text-buddy-green">
                             {event.is_free ? 'Free' : Object.entries(event.ticket_price_artifacts || {}).map(([k, v]) => `${v} ${k}s`).join(', ')}
                           </div>
-                          <Button size="sm" variant={event.is_registered ? 'outline' : 'primary'} onClick={() => {
-                            // Implement event ticketing UI interaction here later
-                            alert('Event purchase/register flow to be integrated');
+                          <Button size="sm" variant={event.is_registered ? 'outline' : 'primary'} onClick={async () => {
+                              try {
+                                await marketplaceApi.buyEventTicket(event.id);
+                                const res = await gymsApi.getEvents(slug!);
+                                setEvents(res.data);
+                              } catch (e: any) {
+                                alert(e?.response?.data?.message || 'Failed to register for event.');
+                              }
                           }}>
                             {event.is_registered ? 'Registered' : (event.is_free ? 'RSVP' : 'Buy Ticket')}
                           </Button>
@@ -795,12 +800,12 @@ export default function GymDetail() {
               <div className="space-y-1">
                 <label className="text-xs text-buddy-text-secondary">Start Time</label>
                 <input type="datetime-local" value={scheduleStartTime} onChange={(e) => setScheduleStartTime(e.target.value)}
-                  className="w-full bg-buddy-black rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30 [color-scheme:dark]" />
+                   className="w-full bg-buddy-black rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
               </div>
               <div className="space-y-1">
                 <label className="text-xs text-buddy-text-secondary">End Time</label>
                 <input type="datetime-local" value={scheduleEndTime} onChange={(e) => setScheduleEndTime(e.target.value)}
-                  className="w-full bg-buddy-black rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30 [color-scheme:dark]" />
+                  className="w-full bg-buddy-black rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
               </div>
             </div>
 
@@ -827,7 +832,7 @@ export default function GymDetail() {
               <div className="space-y-1">
                 <label className="text-xs text-buddy-text-secondary">Recurrence End Date</label>
                 <input type="date" value={scheduleRecurrenceEnd} onChange={(e) => setScheduleRecurrenceEnd(e.target.value)}
-                  className="w-full bg-buddy-black rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30 [color-scheme:dark]" />
+                   className="w-full bg-buddy-black rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
               </div>
             )}
             <textarea value={scheduleContent} onChange={(e) => setScheduleContent(e.target.value)} rows={3}

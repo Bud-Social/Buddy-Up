@@ -75,8 +75,10 @@ class GymSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_active_today(self, obj):
-        # mock implementation
-        return obj.member_count // 10 if obj.member_count else 0
+        from .models import ScheduleSlotEnrollment
+        return ScheduleSlotEnrollment.objects.filter(
+            schedule_post__gym=obj, is_active=True
+        ).values('member').distinct().count()
 
     def get_average_rating(self, obj):
         from django.db.models import Avg
@@ -372,6 +374,23 @@ class ScheduleSlotEnrollmentSerializer(serializers.ModelSerializer):
             'activity_type': sp.activity_type,
             'start_time': sp.start_time.isoformat() if sp.start_time else None,
         }
+
+
+class DonationInputSerializer(serializers.Serializer):
+    artifact_type = serializers.ChoiceField(choices=['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'], default='dumbbell')
+    quantity = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    message = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
+    amount = serializers.FloatField(min_value=0, default=0)
+
+
+class ReviewReplyInputSerializer(serializers.Serializer):
+    reply_text = serializers.CharField(max_length=1000)
+
+
+class ManageMemberRoleSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(
+        choices=['member', 'trainer', 'moderator'], required=False, allow_null=True,
+    )
 
 
 class CreateEnrollmentSerializer(serializers.Serializer):

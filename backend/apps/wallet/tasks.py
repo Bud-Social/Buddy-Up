@@ -1,5 +1,6 @@
 import logging
 from celery import shared_task
+from django.db import transaction as db_transaction
 from django.utils import timezone
 from datetime import timedelta
 
@@ -53,7 +54,30 @@ def process_pending_withdrawals():
 @shared_task
 def clear_locked_balance():
     from .models import ArtifactTransaction
-    ArtifactTransaction.objects.filter(
+    from .utils import _get_balance_dict
+    from apps.profiles.models import Profile
+
+    held = ArtifactTransaction.objects.filter(
         status='held',
         clearance_at__lte=timezone.now(),
-    ).update(status='completed')
+    ).select_related('user', 'counterparty')
+
+    for tx in held:
+        with db_transaction.atomic():
+            profile_ref = Profile.objects.select_for_update().get(pk=tx.user.pk)
+            locked = _get_balance_dict(profile_ref.locked_balance)
+            qty = locked.get(tx.artifact_type, 0)
+            if qty < tx.quantity:
+                tx.status = 'failed'
+                tx.description = 'Auto-release failed: insufficient locked balance.'
+                tx.save(update_fields=['status', 'description'])
+                continue
+            locked[tx.artifact_type] = qty - tx.quantity
+            profile_ref.locked_balance = locked
+            balance = _get_balance_dict(profile_ref.artifact_balance)
+            balance[tx.artifact_type] = balance.get(tx.artifact_type, 0) + tx.quantity
+            profile_ref.artifact_balance = balance
+            profile_ref.save(update_fields=['locked_balance', 'artifact_balance'])
+            tx.status = 'completed'
+            tx.description = 'Auto-released (clearance_at reached).'
+            tx.save(update_fields=['status', 'description'])

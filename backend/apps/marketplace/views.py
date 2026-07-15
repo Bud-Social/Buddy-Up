@@ -1,8 +1,11 @@
+import requests
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
 from django.utils import timezone
 
 from rest_framework import views, permissions, status
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from common.pagination import PageNumberPagination
@@ -12,15 +15,13 @@ from .models import (
     Product, MarketplaceEvent, EventTicket,
 )
 from .serializers import (
-    MealPlanSerializer, MealPlanFullSerializer, MealPlanReviewSerializer,
-    TrainingProgrammeSerializer, ProductSerializer,
-    CreateMealPlanSerializer, UpdateMealPlanSerializer,
-    CreateTrainingProgrammeSerializer, UpdateTrainingProgrammeSerializer,
-    CreateProductSerializer, UpdateProductSerializer,
-    TrainingProgrammeReviewSerializer,
-    MarketplaceEventSerializer, EventTicketSerializer, CreateEventSerializer,
+    MealPlanSerializer, MealPlanReviewSerializer,
+    TrainingProgrammeSerializer, TrainingProgrammeReviewSerializer,
+    ProductSerializer, MarketplaceEventSerializer,
+    EventTicketSerializer, CreateMealPlanSerializer, CreateTrainingProgrammeSerializer,
+    CreateEventSerializer, PersonaliseMealPlanSerializer, ReviewInputSerializer,
 )
-from apps.wallet.views import _deduct_artifacts, _credit_artifacts
+from apps.wallet.utils import deduct_artifacts, credit_artifacts
 from apps.wallet.models import ArtifactTransaction
 from apps.wallet.serializers import PLATFORM_CUTS, ARTIFACT_LABELS
 
@@ -130,7 +131,7 @@ class PurchaseMealPlanView(views.APIView):
             platform_cut_rate = PLATFORM_CUTS.get('marketplace', 0.15)
             with transaction.atomic():
                 for at, qty in plan.price_artifacts.items():
-                    if not _deduct_artifacts(buyer, at, qty):
+                    if not deduct_artifacts(buyer, at, qty):
                         purchase.delete()
                         return Response({
                             'success': False, 'data': None,
@@ -141,7 +142,7 @@ class PurchaseMealPlanView(views.APIView):
                     cut_qty = max(1, int(qty * platform_cut_rate))
                     creator_qty = qty - cut_qty
                     if creator_qty > 0:
-                        _credit_artifacts(plan.creator, at, creator_qty)
+                        credit_artifacts(plan.creator, at, creator_qty)
 
                     ArtifactTransaction.objects.create(
                         user=buyer, transaction_type='marketplace',
@@ -204,11 +205,13 @@ class MealPlanReviewView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        rating = min(5, max(1, int(request.data.get('rating', 5))))
+        serializer = ReviewInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         review = MealPlanReview.objects.create(
             purchase=purchase, buyer=request.user.profile,
-            meal_plan=purchase.meal_plan, rating=rating,
-            body=request.data.get('body', '')[:500],
+            meal_plan=purchase.meal_plan,
+            rating=serializer.validated_data['rating'],
+            body=serializer.validated_data.get('body', '')[:500],
         )
 
         plan = purchase.meal_plan
@@ -337,7 +340,7 @@ class PurchaseTrainingProgrammeView(views.APIView):
             platform_cut_rate = PLATFORM_CUTS.get('marketplace', 0.15)
             with transaction.atomic():
                 for at, qty in programme.price_artifacts.items():
-                    if not _deduct_artifacts(buyer, at, qty):
+                    if not deduct_artifacts(buyer, at, qty):
                         purchase.delete()
                         return Response({
                             'success': False, 'data': None,
@@ -348,7 +351,7 @@ class PurchaseTrainingProgrammeView(views.APIView):
                     cut_qty = max(1, int(qty * platform_cut_rate))
                     creator_qty = qty - cut_qty
                     if creator_qty > 0:
-                        _credit_artifacts(programme.creator, at, creator_qty)
+                        credit_artifacts(programme.creator, at, creator_qty)
 
                     ArtifactTransaction.objects.create(
                         user=buyer, transaction_type='marketplace',
@@ -411,11 +414,13 @@ class TrainingProgrammeReviewView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        rating = min(5, max(1, int(request.data.get('rating', 5))))
+        serializer = ReviewInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         review = TrainingProgrammeReview.objects.create(
             purchase=purchase, buyer=request.user.profile,
-            programme=purchase.programme, rating=rating,
-            body=request.data.get('body', '')[:500],
+            programme=purchase.programme,
+            rating=serializer.validated_data['rating'],
+            body=serializer.validated_data.get('body', '')[:500],
         )
 
         serializer = TrainingProgrammeReviewSerializer(review)
@@ -620,11 +625,20 @@ class PurchaseEventTicketView(views.APIView):
 
         price_artifacts = event.ticket_price_artifacts
         if price_artifacts and not event.is_free:
-            try:
-                _deduct_artifacts(profile, price_artifacts)
-                _credit_artifacts(event.creator, price_artifacts, platform_cut=0.15)
-            except Exception as e:
-                return Response({'success': False, 'message': str(e)}, status=400)
+            from apps.wallet.serializers import PLATFORM_CUTS
+            platform_cut_rate = PLATFORM_CUTS.get('marketplace', 0.15)
+            with transaction.atomic():
+                for at, qty in price_artifacts.items():
+                    if not deduct_artifacts(profile, at, qty):
+                        return Response({
+                            'success': False, 'data': None,
+                            'message': f'Insufficient {at} tokens.',
+                            'errors': None, 'pagination': None,
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                    cut_qty = max(1, int(qty * platform_cut_rate))
+                    creator_qty = qty - cut_qty
+                    if creator_qty > 0:
+                        credit_artifacts(event.creator, at, creator_qty)
 
         ticket = EventTicket.objects.create(
             event=event,
@@ -655,3 +669,44 @@ class EventTicketDetailView(views.APIView):
         except EventTicket.DoesNotExist:
             return Response({'success': False, 'message': 'Ticket not found.'}, status=404)
         return Response({'success': True, 'data': EventTicketSerializer(ticket, context={'request': request}).data})
+
+
+class FoodRecognizeView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No image file provided.',
+                'errors': 'file field is required.', 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not file.content_type.startswith('image/'):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'File must be an image.',
+                'errors': 'invalid content type.', 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        ai_url = f'{settings.AI_SERVICE_URL}/api/v1/food/recognize'
+        try:
+            resp = requests.post(
+                ai_url, files={'file': (file.name, file.read(), file.content_type)},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            return Response({
+                'success': True, 'data': data,
+                'message': 'Food recognition complete.',
+                'errors': None, 'pagination': None,
+            })
+        except requests.RequestException as e:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Food recognition service unavailable.',
+                'errors': str(e), 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)

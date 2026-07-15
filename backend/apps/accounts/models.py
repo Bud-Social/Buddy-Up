@@ -109,6 +109,18 @@ class AccountEvent(TimestampedModel):
         ('account_deactivated', 'Account Deactivated'),
         ('account_reactivated', 'Account Reactivated'),
         ('account_deleted', 'Account Deleted'),
+        ('post_created', 'Post Created'),
+        ('post_deleted', 'Post Deleted'),
+        ('buddy_request_sent', 'Buddy Request Sent'),
+        ('buddy_request_accepted', 'Buddy Request Accepted'),
+        ('profile_updated', 'Profile Updated'),
+        ('avatar_updated', 'Avatar Updated'),
+        ('comment_added', 'Comment Added'),
+        ('reaction_added', 'Reaction Added'),
+        ('live_started', 'Live Started'),
+        ('session_booked', 'Session Booked'),
+        ('marketplace_purchase', 'Marketplace Purchase'),
+        ('wallet_transaction', 'Wallet Transaction'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='events')

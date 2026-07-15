@@ -14,4 +14,9 @@ urlpatterns = [
     path('<uuid:post_id>/save/', views.SaveView.as_view(), name='save'),
     path('<uuid:post_id>/pin/', views.PostPinView.as_view(), name='pin'),
     path('<uuid:post_id>/poll/vote/', views.PollVoteView.as_view(), name='poll_vote'),
+    path('drafts/', views.DraftListCreateView.as_view(), name='draft_list_create'),
+    path('drafts/<uuid:draft_id>/', views.DraftDetailView.as_view(), name='draft_detail'),
+    path('workout/analyze/', views.WorkoutAnalysisView.as_view(), name='workout_analyze'),
+    path('health-insights/', views.HealthInsightsView.as_view(), name='health_insights'),
+    path('workout-form/', views.WorkoutFormAnalysisView.as_view(), name='workout_form'),
 ]

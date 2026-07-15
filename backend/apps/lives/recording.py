@@ -7,32 +7,9 @@ from pathlib import Path
 
 from django.conf import settings
 
-import cloudinary
-import cloudinary.uploader
-
 from .models import BuddyLive
 
 logger = logging.getLogger(__name__)
-
-
-def upload_to_cloudinary(file_path: str, public_id: str) -> str | None:
-    try:
-        result = cloudinary.uploader.upload(
-            file_path,
-            folder='replays',
-            public_id=public_id,
-            resource_type='video',
-            overwrite=True,
-        )
-        url = result.get('secure_url') or result.get('url', '')
-        if url:
-            logger.info('Uploaded replay %s to Cloudinary: %s', public_id, url)
-            return url
-        logger.warning('Cloudinary upload returned no URL for %s', public_id)
-        return None
-    except Exception as e:
-        logger.error('Cloudinary upload failed for %s: %s', public_id, e)
-        return None
 
 
 def _run_async(coro):
@@ -47,10 +24,11 @@ def _run_async(coro):
 def start_livekit_egress(live_id: str, room_name: str) -> str | None:
     api_key = getattr(settings, 'LIVEKIT_API_KEY', '')
     api_secret = getattr(settings, 'LIVEKIT_API_SECRET', '')
-    livekit_url = getattr(settings, 'LIVEKIT_URL', '')
+    livekit_url = getattr(settings, 'LIVEKIT_INTERNAL_URL', '')
 
-    if not api_key or not api_secret or not livekit_url:
-        logger.warning('LiveKit Egress not configured — skipping')
+    if not all((api_key, api_secret, livekit_url, settings.LIVE_RECORDING_S3_ENDPOINT,
+                settings.LIVE_RECORDING_S3_ACCESS_KEY, settings.LIVE_RECORDING_S3_SECRET_KEY)):
+        logger.warning('LiveKit Egress or self-hosted replay storage is not configured — skipping')
         return None
 
     http_url = livekit_url.replace('wss://', 'https://').replace('ws://', 'http://')
@@ -62,8 +40,17 @@ def start_livekit_egress(live_id: str, room_name: str) -> str | None:
             egress = await api.egress_service.start_room_composite_egress(
                 RoomCompositeEgressRequest(
                     room_name=room_name,
-                    file_outputs=[EncodedFileOutput(file_type=EncodedFileType.MP4)],
-                    file_prefix=live_id,
+                    file_outputs=[EncodedFileOutput(
+                        file_type=EncodedFileType.MP4,
+                        filepath=f'replays/{live_id}.mp4',
+                        s3=livekit_api.S3Upload(
+                            endpoint=settings.LIVE_RECORDING_S3_ENDPOINT,
+                            bucket=settings.LIVE_RECORDING_S3_BUCKET,
+                            access_key=settings.LIVE_RECORDING_S3_ACCESS_KEY,
+                            secret=settings.LIVE_RECORDING_S3_SECRET_KEY,
+                            force_path_style=True,
+                        ),
+                    )],
                 )
             )
             logger.info('Started LiveKit egress %s for room %s', egress.egress_id, room_name)
@@ -80,7 +67,7 @@ def start_livekit_egress(live_id: str, room_name: str) -> str | None:
 def stop_livekit_egress(egress_id: str, live_id: str) -> str | None:
     api_key = getattr(settings, 'LIVEKIT_API_KEY', '')
     api_secret = getattr(settings, 'LIVEKIT_API_SECRET', '')
-    livekit_url = getattr(settings, 'LIVEKIT_URL', '')
+    livekit_url = getattr(settings, 'LIVEKIT_INTERNAL_URL', '')
 
     if not api_key or not api_secret or not livekit_url:
         logger.warning('LiveKit not configured — cannot stop egress %s', egress_id)
@@ -95,12 +82,13 @@ def stop_livekit_egress(egress_id: str, live_id: str) -> str | None:
             info = await api.egress_service.stop_egress(StopEgressRequest(egress_id=egress_id))
             logger.info('Stopped LiveKit egress %s, status=%s', egress_id, info.status)
 
-            file_url = _extract_egress_url(info)
-            if file_url:
-                replay_url = _download_and_upload(file_url, live_id)
-                if replay_url:
-                    return replay_url
-            return None
+            from common.s3_utils import generate_presigned_url
+            presigned = generate_presigned_url(f'replays/{live_id}.mp4')
+            if presigned:
+                return presigned
+            if settings.LIVE_REPLAY_BASE_URL:
+                return f"{settings.LIVE_REPLAY_BASE_URL.rstrip('/')}/{live_id}.mp4"
+            return _extract_egress_url(info)
         except Exception as e:
             logger.error('Failed to stop LiveKit egress %s: %s', egress_id, e)
             return None
@@ -125,29 +113,6 @@ def _extract_egress_url(egress_info) -> str | None:
     except Exception:
         pass
     return None
-
-
-def _download_and_upload(file_url: str, live_id: str) -> str | None:
-    tmp = None
-    try:
-        import requests
-        resp = requests.get(file_url, timeout=300, stream=True)
-        resp.raise_for_status()
-
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4')
-        for chunk in resp.iter_content(chunk_size=8192):
-            if chunk:
-                tmp.write(chunk)
-        tmp.close()
-
-        replay_url = upload_to_cloudinary(tmp.name, live_id)
-        return replay_url
-    except Exception as e:
-        logger.error('Failed to download/upload recording for %s: %s', live_id, e)
-        return None
-    finally:
-        if tmp and os.path.exists(tmp.name):
-            os.unlink(tmp.name)
 
 
 def save_client_replay_chunk(live_id: str, chunk_index: int, chunk_data: bytes, recording_session_id: str) -> bool:
@@ -176,8 +141,8 @@ def stitch_and_upload_client_replay(live_id: str, recording_session_id: str) -> 
     output_path = os.path.join(tempfile.gettempdir(), f'{live_id}_stitched.mp4')
     try:
         _stitch_webm_chunks(chunks, output_path)
-        replay_url = upload_to_cloudinary(output_path, live_id)
-        return replay_url
+        logger.warning('Client replay fallback is disabled without object storage upload support')
+        return None
     except Exception as e:
         logger.error('Failed to stitch client replay for %s: %s', live_id, e)
         return None

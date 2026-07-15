@@ -82,11 +82,38 @@ interface PostComposerProps {
   onClose?: () => void;
 }
 
+const DRAFT_KEY = 'buddyup-post-draft';
+
+function saveDraft(data: Record<string, unknown>) {
+  try {
+    const existing = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}');
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...existing, ...data, savedAt: Date.now() }));
+  } catch {}
+}
+
+function loadDraft(): Record<string, unknown> | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (Date.now() - (data.savedAt || 0) > 86400000) {
+      localStorage.removeItem(DRAFT_KEY);
+      return null;
+    }
+    return data;
+  } catch { return null; }
+}
+
+function clearDraft() {
+  try { localStorage.removeItem(DRAFT_KEY); } catch {}
+}
+
 export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, hideVisibility, onClose }: PostComposerProps) {
   const profile = useAuthStore((s) => s.profile);
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mentionDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const draftDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiToggleRef = useRef<HTMLButtonElement>(null);
 
@@ -98,6 +125,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   const [locationLabel, setLocationLabel] = useState('');
   const [showLocation, setShowLocation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showDraftRestore, setShowDraftRestore] = useState(false);
 
   // Poll state
   const [showPoll, setShowPoll] = useState(false);
@@ -112,6 +140,57 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   const [mentionIndex, setMentionIndex] = useState(0);
   const [mentionStartPos, setMentionStartPos] = useState(-1);
   const [taggedUsers, setTaggedUsers] = useState<MentionUser[]>([]);
+
+  // Check for draft on mount and offer restore
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft && (draft.body || draft.pollQuestion)) {
+      setShowDraftRestore(true);
+    }
+  }, []);
+
+  // Auto-save draft with debounce
+  const debouncedSave = useCallback(() => {
+    if (draftDebounce.current) clearTimeout(draftDebounce.current);
+    draftDebounce.current = setTimeout(() => {
+      if (content || showPoll || mediaFiles.length > 0) {
+        saveDraft({
+          body: content,
+          visibility,
+          locationLabel,
+          pollQuestion: showPoll ? pollQuestion : '',
+          pollOptions: showPoll ? pollOptions : [],
+          pollAllowMultiple,
+          postType: showPoll ? 'poll' : mediaFiles.length > 0 ? 'photo' : 'text',
+        });
+      }
+    }, 2000);
+  }, [content, visibility, locationLabel, pollQuestion, pollOptions, pollAllowMultiple, showPoll, mediaFiles.length]);
+
+  useEffect(() => { debouncedSave(); return () => { if (draftDebounce.current) clearTimeout(draftDebounce.current); }; }, [debouncedSave]);
+
+  const restoreDraft = () => {
+    const draft = loadDraft();
+    if (!draft) return;
+    setShowDraftRestore(false);
+    if (draft.body) {
+      setContent(draft.body as string);
+      if (editorRef.current) editorRef.current.innerText = draft.body as string;
+    }
+    if (draft.visibility) setVisibility(draft.visibility as typeof visibility);
+    if (draft.locationLabel) setLocationLabel(draft.locationLabel as string);
+    if (draft.pollQuestion) {
+      setShowPoll(true);
+      setPollQuestion(draft.pollQuestion as string);
+    }
+    if (draft.pollOptions) setPollOptions(draft.pollOptions as PollOption[]);
+    if (typeof draft.pollAllowMultiple === 'boolean') setPollAllowMultiple(draft.pollAllowMultiple as boolean);
+  };
+
+  const discardDraft = () => {
+    setShowDraftRestore(false);
+    clearDraft();
+  };
 
   // Cleanup blob URLs
   useEffect(() => () => {
@@ -257,7 +336,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
       const res = await feedApi.createPost(formData);
       if (res.data) onPost?.(res.data);
 
-      // Reset
+      clearDraft();
       setContent('');
       if (editorRef.current) editorRef.current.innerText = '';
       setMediaFiles([]);
@@ -287,6 +366,14 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
 
   const composerContent = (
     <div className={`flex flex-col ${fullScreen ? 'h-full' : ''}`}>
+      {showDraftRestore && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-buddy-orange/10 border-b border-buddy-orange/20">
+          <p className="text-xs text-buddy-orange flex-1">You have an unsaved draft</p>
+          <button onClick={restoreDraft} className="text-xs font-medium text-buddy-green hover:underline">Restore</button>
+          <button onClick={discardDraft} className="text-xs text-buddy-text-secondary hover:underline">Discard</button>
+        </div>
+      )}
+
       {fullScreen && (
         <div className="flex items-center justify-between px-4 py-3 border-b border-buddy-surface">
           <button onClick={onClose} className="p-1 rounded-lg text-buddy-text-secondary hover:text-buddy-text-primary"><X size={22} /></button>

@@ -1,15 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Radio, Play, Clock, Users, Loader, Zap } from 'lucide-react';
+import { Radio, Play, Clock, Users, Loader, Zap, MessageCircle, Heart } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { BuddyButton } from '@/components/features/profiles/BuddyButton';
+import { useToast } from '@/components/ui/Toast';
 import { profilesApi } from '@/api';
 import { livesApi } from '@/api/lives';
 import ReplayPlayer from '@/components/live/ReplayPlayer';
-import type { Profile } from '@/types';
+import type { Profile, Post } from '@/types';
 import type { BuddyLive } from '@/types/live';
 
 type ProfileTab = 'posts' | 'lives';
@@ -17,6 +18,7 @@ type ProfileTab = 'posts' | 'lives';
 export default function UserProfile() {
   const { username } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -28,14 +30,19 @@ export default function UserProfile() {
   const [livesLoading, setLivesLoading] = useState(false);
   const [replayLive, setReplayLive] = useState<BuddyLive | null>(null);
 
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+
   const fetchProfile = useCallback(async () => {
     if (!username) return;
     setIsLoading(true);
     try {
       const res = await profilesApi.getProfile(username);
       setProfile(res.data);
-      setIsFollowing((res.data as { is_following?: boolean }).is_following || false);
-    } catch {} finally {
+      setIsFollowing(res.data.is_following || false);
+    } catch {
+      toast('error', 'Failed to load profile');
+    } finally {
       setIsLoading(false);
     }
   }, [username]);
@@ -49,11 +56,15 @@ export default function UserProfile() {
       if (isFollowing) {
         await profilesApi.unfollow(username);
         setIsFollowing(false);
+        toast('success', `Unfollowed ${profile?.display_name}`);
       } else {
         await profilesApi.follow(username);
         setIsFollowing(true);
+        toast('success', `Following ${profile?.display_name}`);
       }
-    } catch {} finally {
+    } catch {
+      toast('error', 'Failed to update follow status');
+    } finally {
       setFollowLoading(false);
     }
   };
@@ -63,7 +74,10 @@ export default function UserProfile() {
     setPingLoading(true);
     try {
       await profilesApi.ping(username, "How's your workout going? 💪");
-    } catch {} finally {
+      toast('success', 'Ping sent!');
+    } catch {
+      toast('error', 'Failed to send ping');
+    } finally {
       setPingLoading(false);
     }
   };
@@ -74,13 +88,29 @@ export default function UserProfile() {
     try {
       const res = await livesApi.getUserLives(profile.username);
       setLives(res.data || []);
-    } catch {} finally {
+    } catch {
+      toast('error', 'Failed to load lives');
+    } finally {
       setLivesLoading(false);
+    }
+  };
+
+  const fetchPosts = async () => {
+    if (!profile?.username) return;
+    setPostsLoading(true);
+    try {
+      const res = await profilesApi.getProfilePosts(profile.username);
+      setPosts(res.data || []);
+    } catch {
+      toast('error', 'Failed to load posts');
+    } finally {
+      setPostsLoading(false);
     }
   };
 
   useEffect(() => {
     if (activeTab === 'lives' && profile?.username) fetchLives();
+    if (activeTab === 'posts' && profile?.username) fetchPosts();
   }, [activeTab, profile?.username]);
 
   if (isLoading) return (
@@ -105,7 +135,7 @@ export default function UserProfile() {
     : profile.verification_status === 'practitioner' ? { variant: 'gold' as const, label: 'Health Practitioner', icon: '✓' }
     : null;
 
-  const isBuddy = (profile as { is_buddy?: boolean }).is_buddy;
+  const isBuddy = profile.is_buddy;
 
   return (
     <div className="max-w-lg mx-auto p-4">
@@ -236,11 +266,42 @@ export default function UserProfile() {
           </div>
         )
       ) : (
-        <div className="grid grid-cols-3 gap-1">
-          {Array.from({ length: 9 }).map((_, i) => (
-            <div key={i} className="aspect-square bg-buddy-surface rounded-lg" />
-          ))}
-        </div>
+        postsLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader size={24} className="animate-spin text-buddy-text-secondary" />
+          </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-20">
+            <MessageCircle size={40} className="mx-auto text-buddy-text-secondary/30 mb-3" />
+            <p className="text-buddy-text-secondary">No posts yet</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {posts.map((post) => (
+              <Card key={post.id} className="p-3">
+                <div className="flex items-start gap-2 mb-2">
+                  <Avatar src={post.author_data.avatar_url} alt={post.author_data.display_name} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{post.author_data.display_name}</p>
+                    <p className="text-[10px] text-buddy-text-secondary">{new Date(post.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+                <p className="text-sm mb-2">{post.body}</p>
+                {post.media_urls.length > 0 && (
+                  <div className={`grid gap-1 mb-2 ${post.media_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {post.media_urls.slice(0, 4).map((url, i) => (
+                      <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg" loading="lazy" />
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-4 text-xs text-buddy-text-secondary">
+                  <span className="flex items-center gap-1"><Heart size={12} /> {Object.values(post.reaction_counts).reduce((a, b) => a + b, 0)}</span>
+                  <span className="flex items-center gap-1"><MessageCircle size={12} /> {post.comment_count}</span>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
       )}
 
       {replayLive && (

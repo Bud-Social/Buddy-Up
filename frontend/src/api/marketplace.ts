@@ -92,6 +92,22 @@ export interface MarketplaceEvent {
   created_at: string;
 }
 
+export interface FoodItem {
+  item: string;
+  confidence: number;
+  nutrition: { calories: number; protein: number; carbs: number; fat: number; health_benefits?: string[] };
+}
+
+export interface FoodRecognitionResult {
+  items: FoodItem[];
+  total_calories: number;
+  total_protein: number;
+  total_carbs: number;
+  total_fat: number;
+  health_benefits: string[];
+  method: string;
+}
+
 export const marketplaceApi = {
   getMealPlans: (diet_type?: string) =>
     apiClient.get<ApiResponse<MealPlan[]>>('/marketplace/meal-plans/', { params: diet_type ? { diet_type } : {} }).then((r) => r.data),
@@ -177,6 +193,18 @@ export const marketplaceApi = {
   getMyTickets: () =>
     apiClient.get<ApiResponse<any[]>>('/marketplace/events/my-tickets/').then((r) => r.data),
 
+  buyEventTicket: (eventId: string) =>
+    apiClient.post<ApiResponse<any>>(`/marketplace/events/${eventId}/tickets/`).then((r) => r.data),
+
   getTicket: (ticketId: string) =>
     apiClient.get<ApiResponse<any>>(`/marketplace/events/tickets/${ticketId}/`).then((r) => r.data),
+
+  recognizeFood: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiClient.post<ApiResponse<FoodRecognitionResult>>('/marketplace/food-recognize/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000,
+    }).then((r) => r.data);
+  },
 };

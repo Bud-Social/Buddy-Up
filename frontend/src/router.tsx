@@ -49,15 +49,19 @@ const CreateProgramme = lazy(() => import('@/pages/app/CreateProgramme'));
 const ProductDetail = lazy(() => import('@/pages/app/ProductDetail'));
 const CreateProduct = lazy(() => import('@/pages/app/CreateProduct'));
 const Sessions = lazy(() => import('@/pages/app/Sessions'));
+const CreateSessionOffering = lazy(() => import('@/pages/app/CreateSessionOffering'));
 const Messages = lazy(() => import('@/pages/app/Messages'));
 const Wallet = lazy(() => import('@/pages/app/Wallet'));
 const Notifications = lazy(() => import('@/pages/app/Notifications'));
 const Profile = lazy(() => import('@/pages/app/Profile'));
+const EditProfile = lazy(() => import('@/pages/app/EditProfile'));
 const UserProfile = lazy(() => import('@/pages/app/UserProfile'));
 const Settings = lazy(() => import('@/pages/app/Settings'));
 const BuddiesPage = lazy(() => import('@/pages/app/BuddiesPage'));
 const CreateGymPage = lazy(() => import('@/pages/app/CreateGymPage'));
 const LiveRoom = lazy(() => import('@/pages/app/LiveRoom'));
+const HealthInsights = lazy(() => import('@/pages/app/HealthInsights'));
+const WorkoutForm = lazy(() => import('@/pages/app/WorkoutForm'));
 
 const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Privacy = lazy(() => import('@/pages/legal/Privacy'));
@@ -124,13 +128,16 @@ export const router = createBrowserRouter([
           { path: '/marketplace/products/create', element: <SWrapper><CreateProduct /></SWrapper> },
           { path: '/marketplace/products/:productId', element: <SWrapper><ProductDetail /></SWrapper> },
           { path: '/sessions', element: <SWrapper><Sessions /></SWrapper> },
+          { path: '/sessions/offering', element: <SWrapper><CreateSessionOffering /></SWrapper> },
           { path: '/messages', element: <SWrapper><Messages /></SWrapper> },
           { path: '/wallet', element: <SWrapper><Wallet /></SWrapper> },
           { path: '/notifications', element: <SWrapper><Notifications /></SWrapper> },
           { path: '/profile', element: <SWrapper><Profile /></SWrapper> },
-          { path: '/profile/edit', element: <SWrapper><Profile /></SWrapper> },
+          { path: '/profile/edit', element: <SWrapper><EditProfile /></SWrapper> },
           { path: '/buddies', element: <SWrapper><BuddiesPage /></SWrapper> },
           { path: '/settings', element: <SWrapper><Settings /></SWrapper> },
+          { path: '/health-insights', element: <SWrapper><HealthInsights /></SWrapper> },
+          { path: '/workout-form', element: <SWrapper><WorkoutForm /></SWrapper> },
         ],
       },
       { path: '/live/:liveId', element: <SWrapper><LiveRoom /></SWrapper> },

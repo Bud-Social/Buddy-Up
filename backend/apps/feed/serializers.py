@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, PollVote
+from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft
 from apps.gyms.models import Gym
 
 
@@ -180,6 +180,40 @@ class PostSerializer(serializers.ModelSerializer):
         ]
 
 
+class CommentCreateSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=500)
+    parent_id = serializers.CharField(required=False, allow_null=True)
+    is_anonymous = serializers.BooleanField(default=False)
+
+
+class ReactionInputSerializer(serializers.Serializer):
+    reaction_type = serializers.ChoiceField(
+        choices=['pump', 'fire', 'respect', 'grind', 'lets_go', 'haha', 'too_hard'],
+    )
+
+
+class RepostSerializer(serializers.Serializer):
+    quote_body = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
+
+
+class SavePostSerializer(serializers.Serializer):
+    collection = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
+
+
+class PollCreateSerializer(serializers.Serializer):
+    poll_question = serializers.CharField(max_length=300, required=False, allow_blank=True, default='')
+    poll_options_json = serializers.CharField(required=False, allow_blank=True, default='[]')
+    poll_closes_at = serializers.DateTimeField(required=False, allow_null=True)
+    poll_allow_multiple = serializers.BooleanField(default=False)
+
+
+class OptionVoteSerializer(serializers.Serializer):
+    option_id = serializers.CharField(required=False, allow_null=True)
+    option_ids = serializers.ListField(
+        child=serializers.CharField(), required=False, default=list,
+    )
+
+
 class PostCreateSerializer(serializers.ModelSerializer):
     gym_tag = serializers.PrimaryKeyRelatedField(
         queryset=Gym.objects.all(), required=False, allow_null=True
@@ -198,6 +232,18 @@ class PostCreateSerializer(serializers.ModelSerializer):
         if len(value) > max_length:
             raise serializers.ValidationError(f'Body must be {max_length} characters or fewer.')
         return value
+
+
+class DraftSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Draft
+        fields = [
+            'id', 'post_type', 'body', 'visibility', 'gym_tag',
+            'location_label', 'media_urls', 'tags', 'poll_question',
+            'poll_options', 'poll_allow_multiple', 'mentioned_user_ids',
+            'is_anonymous', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class ReactionSerializer(serializers.ModelSerializer):

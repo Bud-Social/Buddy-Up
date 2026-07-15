@@ -2,22 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --buddy-green: #00C896;
-    --buddy-green-deep: #009E78;
-    --buddy-electric: #7B61FF;
-    --buddy-orange: #FF6B35;
-    --buddy-black: #0A0A0A;
-    --buddy-surface: #141414;
-    --buddy-surface-raised: #1E1E1E;
-    --buddy-white: #F8F8F8;
-    --buddy-text-primary: #FFFFFF;
-    --buddy-text-secondary: #A0A0A0;
-    --buddy-red: #FF4757;
-    --buddy-gold: #FFD700;
-  }
+:root {
+  --buddy-green: #00C896;
+  --buddy-green-deep: #009E78;
+  --buddy-electric: #7B61FF;
+  --buddy-orange: #FF6B35;
+  --buddy-red: #FF4757;
+  --buddy-gold: #FFD700;
+}
 
+html.dark {
+  --buddy-black-rgb: 10 10 10;
+  --buddy-surface-rgb: 20 20 20;
+  --buddy-surface-raised-rgb: 30 30 30;
+  --buddy-white-rgb: 248 248 248;
+  --buddy-text-primary-rgb: 255 255 255;
+  --buddy-text-secondary-rgb: 160 160 160;
+  --buddy-border-rgb: 30 30 30;
+  color-scheme: dark;
+}
+
+html.light {
+  --buddy-black-rgb: 245 245 245;
+  --buddy-surface-rgb: 255 255 255;
+  --buddy-surface-raised-rgb: 238 238 238;
+  --buddy-white-rgb: 10 10 10;
+  --buddy-text-primary-rgb: 26 26 26;
+  --buddy-text-secondary-rgb: 102 102 102;
+  --buddy-border-rgb: 224 224 224;
+  color-scheme: light;
+}
+
+html.high-contrast {
+  --buddy-black-rgb: 0 0 0;
+  --buddy-surface-rgb: 10 10 10;
+  --buddy-surface-raised-rgb: 20 20 20;
+  --buddy-white-rgb: 255 255 255;
+  --buddy-text-primary-rgb: 255 255 255;
+  --buddy-text-secondary-rgb: 200 200 200;
+  --buddy-border-rgb: 255 255 255;
+  color-scheme: dark;
+}
+
+html.ambient {
+  --buddy-black-rgb: 8 12 26;
+  --buddy-surface-rgb: 15 22 40;
+  --buddy-surface-raised-rgb: 23 31 56;
+  --buddy-white-rgb: 220 232 255;
+  --buddy-text-primary-rgb: 208 222 255;
+  --buddy-text-secondary-rgb: 123 148 204;
+  --buddy-border-rgb: 30 45 82;
+  color-scheme: dark;
+}
+
+@layer base {
   * {
     -webkit-tap-highlight-color: transparent;
   }
@@ -47,6 +85,10 @@
     0%, 100% { box-shadow: 0 0 0 0 rgba(0, 200, 150, 0.4); }
     50% { box-shadow: 0 0 0 4px rgba(0, 200, 150, 0); }
   }
+}
+
+.bg-buddy-green.text-buddy-black {
+  color: #0A0A0A;
 }
 
 @layer utilities {

@@ -4,6 +4,7 @@ import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
 import { ThemeProvider } from './components/layout/ThemeProvider';
 import { ToastProvider } from './components/ui/Toast';
+import { PWAUpdateBanner } from './components/PWAUpdateBanner';
 import { useAuthStore } from './store/authStore';
 import { authApi } from './api';
 import { useNotificationListener } from './hooks/useNotificationListener';
@@ -55,6 +56,7 @@ export function App() {
         <ToastProvider>
           <AuthInitializer>
             <RouterProvider router={router} />
+            <PWAUpdateBanner />
           </AuthInitializer>
         </ToastProvider>
       </ThemeProvider>
