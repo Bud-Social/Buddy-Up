@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Shield, Bell, Lock, CreditCard, HelpCircle, User, Eye, Moon, Sun, Globe, Volume2, Trash2, UserX, Download, Smartphone, CheckCircle, XCircle, Camera, Loader, LogOut, Activity, Monitor, Contrast } from 'lucide-react';
+import { ChevronRight, Shield, Bell, Lock, CreditCard, HelpCircle, User, Eye, Moon, Sun, Globe, Trash2, UserX, Download, Smartphone, CheckCircle, XCircle, Camera, Loader, LogOut, Activity, Monitor, Contrast } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';

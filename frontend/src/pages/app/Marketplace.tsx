@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, User, BarChart2 } from 'lucide-react';
+import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';

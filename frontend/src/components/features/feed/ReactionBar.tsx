@@ -20,7 +20,7 @@ interface ReactionBarProps {
   totalReactions: number;
 }
 
-export function ReactionBar({ postId, reactionCounts, userReaction, topReactions, totalReactions }: ReactionBarProps) {
+export function ReactionBar({ postId, userReaction, totalReactions }: ReactionBarProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [currentReaction, setCurrentReaction] = useState<string | null>(userReaction || null);
   const [isLoading, setIsLoading] = useState(false);

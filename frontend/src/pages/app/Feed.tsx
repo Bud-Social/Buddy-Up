@@ -4,7 +4,7 @@ import { PostCard } from '@/components/features/feed/PostCard';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { feedApi } from '@/api';
-import type { Post, ApiResponse } from '@/types';
+import type { Post } from '@/types';
 
 type FeedTab = 'for_you' | 'following' | 'nearby';
 

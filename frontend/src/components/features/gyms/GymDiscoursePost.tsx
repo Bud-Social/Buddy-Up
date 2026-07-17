@@ -1,18 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Share2, Pin, MoreHorizontal, Dumbbell,
   MapPin, Smile, CornerDownRight, ArrowUp, CornerUpRight
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api/feed';
-import { useAuthStore } from '@/store/authStore';
 import { RichText } from '@/components/ui/RichText';
 import { EmojiImg } from '@/utils/emojiUtils';
 import { formatPostDate } from '@/utils/formatDate';
 import type { Post, Comment } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
-
-const REACTIONS = []; // Removed
 
 interface GymDiscoursePostProps {
   post: Post;
@@ -88,7 +85,6 @@ export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin }:
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
-  const [isSaved, setIsSaved] = useState(post.is_saved ?? false);
   const [heartPop, setHeartPop] = useState<{ show: boolean; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -101,11 +97,11 @@ export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin }:
   const userReaction = post.user_reaction; // this is now the emoji string itself
 
   const reactionsArr = Object.entries(post.reaction_counts || {})
-    .filter(([_, count]) => count > 0)
+    .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1]);
   const topReactions = reactionsArr.slice(0, 3);
   const remainingReactions = reactionsArr.slice(3);
-  const remainingCount = remainingReactions.reduce((sum, [_, count]) => sum + count, 0);
+  const remainingCount = remainingReactions.reduce((sum, [, count]) => sum + count, 0);
 
   const handleReact = async (emojiStr: string) => {
     setShowReactionPicker(false);
@@ -168,11 +164,6 @@ export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin }:
       setPost(prev => ({ ...prev, is_pinned: pinned }));
       onPin?.(post.id, pinned);
     } catch {}
-  };
-
-  const handleSave = async () => {
-    setIsSaved(s => !s);
-    try { await feedApi.save(post.id); } catch {}
   };
 
   const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {

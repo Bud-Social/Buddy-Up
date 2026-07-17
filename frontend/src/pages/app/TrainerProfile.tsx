@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Star, Award, Clock, MapPin, MessageCircle, Calendar, BookOpen, Shield, Languages } from 'lucide-react';
+import { Star, Award, MapPin, MessageCircle, Calendar, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
@@ -69,7 +69,6 @@ export default function TrainerProfilePage() {
   if (!trainer) return <div className="max-w-lg mx-auto p-4 text-center py-20"><p className="text-buddy-text-secondary">Trainer not found</p></div>;
 
   const { profile_data: p } = trainer;
-  const isPractitioner = p.verification_status === 'practitioner';
 
   return (
     <div className="max-w-lg mx-auto p-4">

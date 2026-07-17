@@ -10,11 +10,6 @@ const NAMES = [
   'Uma Thurman', 'Victor Hugo', 'Wade Wilson', 'Xena Warrior',
   'Yara Greyjoy', 'Zoe Barnes',
 ];
-
-function pick<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
 function makeSimAttendee(index: number): AttendeeInfo {
   const name = NAMES[index % NAMES.length];
   const hasMic = Math.random() > 0.3;

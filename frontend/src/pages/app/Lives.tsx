@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Radio, Calendar, Play, Clock, Users, Dumbbell, Flame,
-  Globe, UsersRound, Building2, Monitor, Search, X, Plus,
-  Repeat, Timer, Shuffle, CheckCircle, Loader, AlertCircle,
+  Globe, UsersRound, Building2, Monitor, Search, X,
+  Repeat, Shuffle, CheckCircle, AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
@@ -202,7 +202,7 @@ function StartLiveSheet({ onClose }: { onClose: () => void }) {
   const [coHostSearch, setCoHostSearch] = useState('');
   const [coHostResults, setCoHostResults] = useState<Profile[]>([]);
   const [coHosts, setCoHosts] = useState<Profile[]>([]);
-  const [gymId, setGymId] = useState('');
+  const [gymId] = useState('');
   const [feeDumbbell, setFeeDumbbell] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');

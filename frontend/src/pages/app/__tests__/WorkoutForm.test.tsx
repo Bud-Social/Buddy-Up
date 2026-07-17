@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WorkoutForm from '@/pages/app/WorkoutForm';
@@ -25,7 +25,7 @@ describe('WorkoutForm', () => {
 
   it('shows camera and upload buttons', () => {
     render(<WorkoutForm />, { wrapper: createWrapper() });
-    expect(screen.getByText(/Camera/i)).toBeDefined();
-    expect(screen.getByText(/Upload/i)).toBeDefined();
+    expect(screen.getByRole('button', { name: /Camera/i })).toBeDefined();
+    expect(screen.getByRole('button', { name: /Upload/i })).toBeDefined();
   });
 });

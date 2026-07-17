@@ -3,7 +3,6 @@ import { Bell, UserPlus, Users, Zap, Heart, MessageCircle, RefreshCcw } from 'lu
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { notificationsApi, profilesApi } from '@/api';
-import type { AppNotification } from '@/store/notificationStore';
 import { useNotificationStore } from '@/store/notificationStore';
 
 const iconMap: Record<string, typeof Bell> = {
@@ -21,7 +20,7 @@ const iconMap: Record<string, typeof Bell> = {
 };
 
 export default function Notifications() {
-  const { notifications, unreadCount, setNotifications, addNotification, markAllRead } = useNotificationStore();
+  const { notifications, unreadCount, setNotifications, markAllRead } = useNotificationStore();
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchNotifications = useCallback(async () => {

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, Upload, RotateCcw, Sparkles, BarChart3, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { marketplaceApi } from '@/api/marketplace';
 import type { FoodRecognitionResult, FoodItem } from '@/api/marketplace';

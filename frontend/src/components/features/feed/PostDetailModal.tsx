@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   X, Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
-  Send, MoreHorizontal, Dumbbell, MapPin, ChevronLeft, ChevronRight,
-  BarChart2, TrendingUp, Utensils,
+  Send, MoreHorizontal, ChevronLeft, ChevronRight,
+  BarChart2,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api';
@@ -94,7 +94,7 @@ function CommentRow({ comment, onReply }: { comment: Comment; onReply: (id: stri
   );
 }
 
-export function PostDetailModal({ post: initialPost, onClose, onUpdate }: PostDetailModalProps) {
+export function PostDetailModal({ post: initialPost, onClose }: PostDetailModalProps) {
   const navigate = useNavigate();
   const [post, setPost] = useState<Post>(initialPost);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -109,9 +109,9 @@ export function PostDetailModal({ post: initialPost, onClose, onUpdate }: PostDe
   const commentInputRef = useRef<HTMLInputElement>(null);
 
   const totalReactions = Object.values(reactionCounts).reduce((a, b) => a + b, 0);
-  const reactionsArr = Object.entries(reactionCounts).filter(([_, c]) => c > 0).sort((a, b) => b[1] - a[1]);
+  const reactionsArr = Object.entries(reactionCounts).filter(([, c]) => c > 0).sort((a, b) => b[1] - a[1]);
   const topReactions = reactionsArr.slice(0, 3);
-  const remainingCount = reactionsArr.slice(3).reduce((s, [_, c]) => s + c, 0);
+  const remainingCount = reactionsArr.slice(3).reduce((s, [, c]) => s + c, 0);
 
   const displayPost = (post.is_repost && post.original_post_data) ? post.original_post_data : post;
   const displayAuthor = displayPost.author_data;

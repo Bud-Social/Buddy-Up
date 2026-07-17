@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback, memo } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Image, Video, FileText, Music, MapPin, BarChart2,
+  Image, FileText, Music, MapPin, BarChart2,
   Smile, X, Send, Globe, Users, Lock, Dumbbell, AtSign, ChevronDown,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
@@ -17,19 +17,6 @@ function getCaretOffset(el: HTMLElement): number {
   range.selectNodeContents(el);
   range.setEnd(sel.getRangeAt(0).endContainer, sel.getRangeAt(0).endOffset);
   return range.toString().length;
-}
-
-function insertTextAtCursor(text: string) {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return;
-  const range = sel.getRangeAt(0);
-  range.deleteContents();
-  const node = document.createTextNode(text);
-  range.insertNode(node);
-  range.setStartAfter(node);
-  range.collapse(true);
-  sel.removeAllRanges();
-  sel.addRange(range);
 }
 
 function extractTextWithEmojis(el: HTMLElement): string {

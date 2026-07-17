@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Star, Sparkles, ShoppingCart, MessageCircle, Utensils } from 'lucide-react';
+import { ArrowLeft, Star, Sparkles, ShoppingCart, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -73,7 +73,6 @@ export default function MealPlanDetail() {
 
   if (!plan) return null;
 
-  const isOwner = plan.creator_data;
   return (
     <div className="max-w-lg mx-auto p-4">
       <div className="flex items-center gap-3 mb-6">

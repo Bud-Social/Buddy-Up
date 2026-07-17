@@ -14,7 +14,7 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical, Check, CheckCheck,
-  X, FileText, Plus, MapPin, BarChart2, Smile, Mic, Search, Camera,
+  X, FileText, Plus, MapPin, BarChart2, Smile, Mic, Search,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { messagingApi } from '@/api/messaging';

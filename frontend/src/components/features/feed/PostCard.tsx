@@ -206,11 +206,11 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
   const [heartPop, setHeartPop] = useState<{ show: boolean; x: number; y: number } | null>(null);
 
   const reactionsArr = Object.entries(reactionCounts)
-    .filter(([_, count]) => count > 0)
+    .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1]);
   const topReactions = reactionsArr.slice(0, 3);
   const remainingReactions = reactionsArr.slice(3);
-  const remainingCount = remainingReactions.reduce((sum, [_, count]) => sum + count, 0);
+  const remainingCount = remainingReactions.reduce((sum, [, count]) => sum + count, 0);
 
   const handleReact = async (emojiStr: string) => {
     setShowReactionPicker(false);

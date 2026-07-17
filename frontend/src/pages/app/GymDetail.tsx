@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Users, Radio, Info, MessageCircle, Settings, LogOut, Star, Calendar, StarHalf, Heart, Send, MapPin, Tag, Crown, BookOpen, Lock, Zap, AlertCircle, Search, X, Plus, CheckCircle } from 'lucide-react';
+import { Users, Radio, Info, MessageCircle, Settings, LogOut, Star, Calendar, StarHalf, Heart, Send, MapPin, Tag, Crown, BookOpen, Lock, Zap, AlertCircle, Search, X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { gymsApi, livesApi, feedApi, profilesApi, marketplaceApi } from '@/api';
+import { gymsApi, livesApi, profilesApi, marketplaceApi } from '@/api';
 import type { Gym, GymMembership, Profile } from '@/types';
 import type { BuddyLive } from '@/types/live';
 import type { GymSchedulePost, GymReview } from '@/types/gym';
@@ -45,8 +45,6 @@ export default function GymDetail() {
   const [scheduleMaxSlots, setScheduleMaxSlots] = useState('');
   
   const [feedPosts, setFeedPosts] = useState<any[]>([]);
-  const [postBody, setPostBody] = useState('');
-  const [postSubmitting, setPostSubmitting] = useState(false);
 
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -54,7 +52,6 @@ export default function GymDetail() {
 
   const [showReplyModal, setShowReplyModal] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   
   const [showDonateModal, setShowDonateModal] = useState(false);
   const [donateAmount, setDonateAmount] = useState('');
@@ -166,24 +163,6 @@ export default function GymDetail() {
       }
     }, 200);
   }, [inviteSelectedUsers]);
-
-  const handleFeedPost = async () => {
-    if (!slug || !postBody.trim()) return;
-    setPostSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append('post_type', 'text');
-      formData.append('body', postBody);
-      if (gym) formData.append('gym_tag_id', gym.id);
-      const res = await feedApi.createPost(formData);
-      setFeedPosts([res.data, ...feedPosts]);
-      setPostBody('');
-      setShowEmojiPicker(false);
-    } catch (e: any) {
-      console.error('Feed post error:', e?.response?.data || e);
-    }
-    setPostSubmitting(false);
-  };
 
   const handleReviewReply = async (reviewId: string) => {
     if (!slug || !replyText.trim()) return;

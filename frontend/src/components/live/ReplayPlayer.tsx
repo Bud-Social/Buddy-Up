@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
-import { X, Play, Loader } from 'lucide-react';
+import { X, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 const MuxPlayer = lazy(() => import('@mux/mux-player-react'));

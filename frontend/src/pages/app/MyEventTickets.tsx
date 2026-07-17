@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, MapPin, Tag, Download } from 'lucide-react';
 import { Card } from '@/components/ui/Card';

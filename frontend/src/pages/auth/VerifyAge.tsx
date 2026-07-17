@@ -17,7 +17,7 @@ export default function VerifyAge() {
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
 
   const currentYear = new Date().getFullYear();
 
@@ -55,8 +55,6 @@ export default function VerifyAge() {
       setIsLoading(false);
     }
   };
-
-  const years = Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-buddy-black">

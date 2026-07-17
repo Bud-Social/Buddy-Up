@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield, Upload, CheckCircle, XCircle, Clock, Loader, Plus } from 'lucide-react';
+
+import { Shield, CheckCircle, Clock, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -16,7 +16,6 @@ const VERIFICATION_TYPES = [
 ];
 
 export default function Verification() {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const [submissions, setSubmissions] = useState<VerificationSubmission[]>([]);
   const [isLoading, setIsLoading] = useState(true);

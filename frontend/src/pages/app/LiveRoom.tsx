@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Users, Copy, Check,
-  MessageCircle, MessageCircleOff, Send, Flame,
-  Star, Laugh, LogOut, Shield, Gift, X, Crown, Coins,
-  Monitor, ChevronLeft, ChevronRight, ChevronDown, PictureInPicture2,
+  MessageCircle, MessageCircleOff, Send,
+  LogOut, Shield, Gift, X, Crown, Coins,
+  Monitor, ChevronDown, PictureInPicture2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
@@ -83,14 +83,13 @@ export default function LiveRoom() {
   const [selectedGift, setSelectedGift] = useState<{ type: string; qty: number } | null>(null);
   const [showCoHostInput, setShowCoHostInput] = useState(false);
   const [coHostUsername, setCoHostUsername] = useState('');
-  const [coHosts, setCoHosts] = useState<CoHost[]>([]);
+  const [coHosts] = useState<CoHost[]>([]);
 
   const [attendees, setAttendees] = useState<AttendeeInfo[]>([]);
   const [isSharingScreen, setIsSharingScreen] = useState(false);
   const screenTrackRef = useRef<unknown>(null);
 
   const isDesktop = useMediaQuery('(min-width: 1024px)');
-  const isTablet = useMediaQuery('(min-width: 768px)');
 
   const [pipShape, setPipShape] = useState<PipShape>('circle');
   const [showPipMenu, setShowPipMenu] = useState(false);
@@ -123,7 +122,6 @@ export default function LiveRoom() {
     fill: 'w-24 h-24 rounded-xl object-cover',
   };
 
-  const isHostOrCoHost = isHost || roomData?.co_hosts?.some((ch) => ch.user_id === myUserId);
   const hostUserIds = new Set([
     roomData?.host_user_id,
     ...(roomData?.co_hosts?.map((ch) => ch.user_id) || []),
@@ -146,7 +144,6 @@ export default function LiveRoom() {
   const remoteContainerRef = useRef<HTMLDivElement>(null);
   const agoraClientRef = useRef<unknown>(null);
   const localTracksRef = useRef<unknown[]>([]);
-  const remoteUsersRef = useRef<Map<string | number, unknown>>(new Map());
   const livekitRoomRef = useRef<unknown>(null);
   const liveStreamEndRef = useRef<HTMLDivElement>(null);
   const connectAttemptRef = useRef(0);
@@ -268,61 +265,6 @@ export default function LiveRoom() {
   useEffect(() => {
     fetchRoomData();
   }, [fetchRoomData]);
-
-  const joinAgora = useCallback(async (creds: LiveCredentials['agora'], attempt: number) => {
-    const AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
-    const client = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
-    agoraClientRef.current = client;
-
-    client.on('user-published', async (user, mediaType) => {
-      await client.subscribe(user, mediaType);
-      remoteUsersRef.current.set(user.uid, user);
-      if (mediaType === 'video' && user.videoTrack) {
-        const container = document.createElement('div');
-        container.id = `remote-${user.uid}`;
-        container.className = 'relative rounded-xl overflow-hidden bg-buddy-surface';
-        remoteContainerRef.current?.appendChild(container);
-        user.videoTrack.play(container);
-      }
-      if (mediaType === 'audio' && user.audioTrack) {
-        user.audioTrack.play();
-      }
-    });
-
-    client.on('user-unpublished', (user) => {
-      remoteUsersRef.current.delete(user.uid);
-      const el = document.getElementById(`remote-${user.uid}`);
-      el?.remove();
-    });
-
-    client.on('user-left', (user) => {
-      remoteUsersRef.current.delete(user.uid);
-      const el = document.getElementById(`remote-${user.uid}`);
-      el?.remove();
-    });
-
-    try {
-      await client.setClientRole('host');
-      await client.join(creds.app_id, creds.channel, creds.token, null);
-      const tracks = await AgoraRTC.createMicrophoneAndCameraTracks(
-        {},
-        { encoderConfig: { width: 1280, height: 720, frameRate: 30, bitrateMin: 500, bitrateMax: 2000 } },
-      );
-      localTracksRef.current = tracks;
-      if (localVideoRef.current) tracks[1].play(localVideoRef.current);
-      await client.publish(tracks);
-      if (connectAttemptRef.current !== attempt) {
-        await client.leave();
-        return false;
-      }
-      setConnectionState('connected');
-      setProvider('agora');
-    } catch {
-      client.leave().catch(() => {});
-      return false;
-    }
-    return true;
-  }, []);
 
   const joinLiveKit = useCallback(async (creds: LiveCredentials['livekit'], attempt: number) => {
     if (!creds.url || !creds.token) {
@@ -1186,7 +1128,7 @@ export default function LiveRoom() {
                 {chatMessages.length === 0 && (
                   <p className="text-center text-buddy-text-secondary/50 text-sm mt-8">No messages yet. Say hi!</p>
                 )}
-                {[...chatMessages].sort((a, b) => (a.priority ? -1 : 1)).map((msg, i) => (
+                {[...chatMessages].sort((a) => (a.priority ? -1 : 1)).map((msg, i) => (
                   <div key={i} className={`flex gap-2 ${msg.user_id === myUserId ? 'flex-row-reverse' : ''} ${msg.priority ? 'bg-buddy-green/5 -mx-3 px-3 py-1.5 rounded-lg border border-buddy-green/20' : ''}`}>
                     <Avatar src={msg.avatar_url} alt={msg.display_name} size="sm" className="shrink-0" />
                     <div className={`max-w-[80%] ${msg.user_id === myUserId ? 'items-end' : ''}`}>

@@ -49,14 +49,6 @@ const themes: Record<string, ThemeColors> = {
     border: '#1E2D52',
   },
 };
-
-const colorScheme: Record<string, string> = {
-  dark: 'dark',
-  light: 'light',
-  'high-contrast': 'dark',
-  ambient: 'dark',
-};
-
 const metaColors: Record<string, string> = {
   dark: '#0A0A0A',
   light: '#F8F8F8',

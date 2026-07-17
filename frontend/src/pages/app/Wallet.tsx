@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { walletApi } from '@/api/wallet';
 import { profilesApi } from '@/api/profiles';
-import type { BalanceItem, BalanceResponse, BundleInfo } from '@/api/wallet';
+import type { BalanceResponse, BundleInfo } from '@/api/wallet';
 import type { ArtifactTransaction } from '@/types';
 import type { Profile } from '@/types';
 
@@ -60,9 +60,9 @@ export default function Wallet() {
         </div>
       ) : (
         <>
-          {activeTab === 'overview' && <OverviewTab balance={balance} refetch={fetchBalance} onBuyClick={() => setActiveTab('buy')} onSendClick={() => setActiveTab('send')} />}
-          {activeTab === 'buy' && <BuyTab balance={balance} refetch={fetchBalance} />}
-          {activeTab === 'send' && <SendTab balance={balance} refetch={fetchBalance} />}
+          {activeTab === 'overview' && <OverviewTab balance={balance} onBuyClick={() => setActiveTab('buy')} onSendClick={() => setActiveTab('send')} />}
+          {activeTab === 'buy' && <BuyTab refetch={fetchBalance} />}
+          {activeTab === 'send' && <SendTab refetch={fetchBalance} />}
           {activeTab === 'history' && <HistoryTab />}
           {activeTab === 'withdraw' && <WithdrawTab balance={balance} refetch={fetchBalance} />}
         </>
@@ -71,7 +71,7 @@ export default function Wallet() {
   );
 }
 
-function OverviewTab({ balance, refetch, onBuyClick, onSendClick }: { balance: BalanceResponse | null; refetch: () => void; onBuyClick?: () => void; onSendClick?: () => void; }) {
+function OverviewTab({ balance, onBuyClick, onSendClick }: { balance: BalanceResponse | null; onBuyClick?: () => void; onSendClick?: () => void; }) {
   const [rates, setRates] = useState<{ conversion_rate: number; base_currency: string; local_currency: string } | null>(null);
 
   useEffect(() => {
@@ -124,7 +124,7 @@ const ARTIFACT_UNIT_PRICES: Record<string, number> = {
   squat: 2.50, sprint: 5.00, pr: 10.00, champion: 25.00,
 };
 
-function BuyTab({ balance, refetch }: { balance: BalanceResponse | null; refetch: () => void }) {
+function BuyTab({ refetch }: { refetch: () => void }) {
   const [bundles, setBundles] = useState<BundleInfo[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [method, setMethod] = useState('card');
@@ -373,7 +373,7 @@ function BuyTab({ balance, refetch }: { balance: BalanceResponse | null; refetch
   );
 }
 
-function SendTab({ balance, refetch }: { balance: BalanceResponse | null; refetch: () => void }) {
+function SendTab({ refetch }: { refetch: () => void }) {
   const [mode, setMode] = useState<'tip' | 'gift'>('tip');
   const [username, setUsername] = useState('');
   const [searchResults, setSearchResults] = useState<Profile[]>([]);

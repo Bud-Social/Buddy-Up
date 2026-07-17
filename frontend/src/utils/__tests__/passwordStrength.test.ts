@@ -9,7 +9,7 @@ describe('getPasswordStrength', () => {
 
   it('rates strong password', () => {
     const result = getPasswordStrength('Str0ng!Pass');
-    expect(result.level).toBe('strong');
+    expect(result.level).toBe('very_strong');
   });
 
   it('rates very strong password', () => {

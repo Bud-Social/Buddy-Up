@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, Lock, EyeOff, GripVertical, Plus, X, ArrowUp, ArrowDown, Check, AlertCircle, Search } from 'lucide-react';
+import { Globe, Lock, EyeOff, X, ArrowUp, ArrowDown, Check, AlertCircle, Search } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { gymsApi } from '@/api/gyms';
