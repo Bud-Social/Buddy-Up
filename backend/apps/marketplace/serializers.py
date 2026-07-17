@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError
 from .models import (
     MealPlan, MealPlanPurchase, MealPlanReview,
     TrainingProgramme, TrainingProgrammePurchase, TrainingProgrammeReview,
-    Product, MarketplaceEvent, EventTicket,
+    Product, MarketplaceEvent, EventTicket, Cart, CartItem, DiscountCode
 )
 
 ARTIFACT_TYPES = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion']
@@ -27,8 +27,8 @@ class MealPlanSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MealPlan
-        fields = ['id', 'creator_id', 'title', 'description', 'diet_type',
-                   'duration_weeks', 'calorie_range', 'price_artifacts',
+        fields = ['id', 'creator_id', 'title', 'description', 'cover_image_url',
+                   'diet_type', 'duration_weeks', 'calorie_range', 'price_artifacts',
                    'preview_day', 'purchase_count', 'average_rating',
                    'review_count', 'creator_data', 'is_purchased', 'created_at']
 
@@ -73,8 +73,8 @@ class TrainingProgrammeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TrainingProgramme
-        fields = ['id', 'creator_id', 'title', 'description', 'category',
-                   'duration_weeks', 'price_artifacts', 'purchase_count',
+        fields = ['id', 'creator_id', 'title', 'description', 'cover_image_url',
+                   'category', 'duration_weeks', 'price_artifacts', 'purchase_count',
                    'is_published', 'creator_data', 'is_purchased', 'created_at']
         read_only_fields = ['is_purchased']
 
@@ -114,6 +114,7 @@ class ProductSerializer(serializers.ModelSerializer):
 class CreateMealPlanSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
     description = serializers.CharField(required=False, allow_blank=True)
+    cover_image_url = serializers.URLField(required=False, allow_blank=True)
     diet_type = serializers.ChoiceField(choices=[c[0] for c in MealPlan.DIET_TYPES])
     duration_weeks = serializers.IntegerField(default=4, validators=[MinValueValidator(1)])
     calorie_range = serializers.CharField(required=False, allow_blank=True, max_length=50)
@@ -127,6 +128,7 @@ class CreateMealPlanSerializer(serializers.Serializer):
 class UpdateMealPlanSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
+    cover_image_url = serializers.URLField(required=False, allow_blank=True)
     diet_type = serializers.ChoiceField(choices=[c[0] for c in MealPlan.DIET_TYPES], required=False)
     duration_weeks = serializers.IntegerField(validators=[MinValueValidator(1)], required=False)
     calorie_range = serializers.CharField(required=False, allow_blank=True, max_length=50)
@@ -140,6 +142,7 @@ class UpdateMealPlanSerializer(serializers.Serializer):
 class CreateTrainingProgrammeSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
     description = serializers.CharField(required=False, allow_blank=True)
+    cover_image_url = serializers.URLField(required=False, allow_blank=True)
     category = serializers.CharField(max_length=50)
     duration_weeks = serializers.IntegerField(default=8, validators=[MinValueValidator(1)])
     price_artifacts = serializers.JSONField(default=dict, validators=[validate_price_artifacts])
@@ -149,6 +152,7 @@ class CreateTrainingProgrammeSerializer(serializers.Serializer):
 class UpdateTrainingProgrammeSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200, required=False)
     description = serializers.CharField(required=False, allow_blank=True)
+    cover_image_url = serializers.URLField(required=False, allow_blank=True)
     category = serializers.CharField(max_length=50, required=False)
     duration_weeks = serializers.IntegerField(validators=[MinValueValidator(1)], required=False)
     price_artifacts = serializers.JSONField(required=False, validators=[validate_price_artifacts])
@@ -288,3 +292,25 @@ class CreateEventSerializer(serializers.Serializer):
 class ReviewInputSerializer(serializers.Serializer):
     rating = serializers.IntegerField(default=5, min_value=1, max_value=5)
     body = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CartItem
+        fields = ['id', 'item_type', 'meal_plan', 'programme', 'product', 'event', 'quantity']
+
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    discount_code = serializers.StringRelatedField()
+
+    class Meta:
+        model = Cart
+        fields = ['id', 'discount_code', 'items']
+
+
+class DiscountCodeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiscountCode
+        fields = ['code', 'discount_pct', 'discount_artifacts', 'usage_limit', 'times_used', 'is_active']
+

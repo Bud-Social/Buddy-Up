@@ -25,4 +25,5 @@ urlpatterns = [
     path('sessions/', views.DeviceSessionsListView.as_view(), name='device_sessions'),
     path('logout-all/', views.LogoutAllSessionsView.as_view(), name='logout_all'),
     path('activity-log/', views.ActivityLogView.as_view(), name='activity_log'),
+    path('verify-age/', views.VerifyAgeView.as_view(), name='verify_age'),
 ]

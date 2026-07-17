@@ -42,6 +42,8 @@ const Marketplace = lazy(() => import('@/pages/app/Marketplace'));
 const EventDetail = lazy(() => import('@/pages/app/EventDetail'));
 const CreateEvent = lazy(() => import('@/pages/app/CreateEvent'));
 const MyEventTickets = lazy(() => import('@/pages/app/MyEventTickets'));
+const CartPage = lazy(() => import('@/pages/app/CartPage'));
+const CreatorStudio = lazy(() => import('@/pages/app/CreatorStudio'));
 const MealPlanDetail = lazy(() => import('@/pages/app/MealPlanDetail'));
 const CreateMealPlan = lazy(() => import('@/pages/app/CreateMealPlan'));
 const ProgrammeDetail = lazy(() => import('@/pages/app/ProgrammeDetail'));
@@ -50,6 +52,7 @@ const ProductDetail = lazy(() => import('@/pages/app/ProductDetail'));
 const CreateProduct = lazy(() => import('@/pages/app/CreateProduct'));
 const Sessions = lazy(() => import('@/pages/app/Sessions'));
 const CreateSessionOffering = lazy(() => import('@/pages/app/CreateSessionOffering'));
+const SessionDetail = lazy(() => import('@/pages/app/SessionDetail'));
 const Messages = lazy(() => import('@/pages/app/Messages'));
 const Wallet = lazy(() => import('@/pages/app/Wallet'));
 const Notifications = lazy(() => import('@/pages/app/Notifications'));
@@ -62,6 +65,7 @@ const CreateGymPage = lazy(() => import('@/pages/app/CreateGymPage'));
 const LiveRoom = lazy(() => import('@/pages/app/LiveRoom'));
 const HealthInsights = lazy(() => import('@/pages/app/HealthInsights'));
 const WorkoutForm = lazy(() => import('@/pages/app/WorkoutForm'));
+const Verification = lazy(() => import('@/pages/app/Verification'));
 
 const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Privacy = lazy(() => import('@/pages/legal/Privacy'));
@@ -118,6 +122,8 @@ export const router = createBrowserRouter([
           { path: '/trainers', element: <SWrapper><Trainers /></SWrapper> },
           { path: '/trainers/:slug', element: <SWrapper><TrainerProfile /></SWrapper> },
           { path: '/marketplace', element: <SWrapper><Marketplace /></SWrapper> },
+          { path: '/marketplace/creator', element: <SWrapper><CreatorStudio /></SWrapper> },
+          { path: '/marketplace/cart', element: <SWrapper><CartPage /></SWrapper> },
           { path: '/marketplace/events/create', element: <SWrapper><CreateEvent /></SWrapper> },
           { path: '/marketplace/events/my-tickets', element: <SWrapper><MyEventTickets /></SWrapper> },
           { path: '/marketplace/events/:eventId', element: <SWrapper><EventDetail /></SWrapper> },
@@ -129,7 +135,9 @@ export const router = createBrowserRouter([
           { path: '/marketplace/products/:productId', element: <SWrapper><ProductDetail /></SWrapper> },
           { path: '/sessions', element: <SWrapper><Sessions /></SWrapper> },
           { path: '/sessions/offering', element: <SWrapper><CreateSessionOffering /></SWrapper> },
+          { path: '/sessions/:bookingId', element: <SWrapper><SessionDetail /></SWrapper> },
           { path: '/messages', element: <SWrapper><Messages /></SWrapper> },
+          { path: '/messages/:conversationId', element: <SWrapper><Messages /></SWrapper> },
           { path: '/wallet', element: <SWrapper><Wallet /></SWrapper> },
           { path: '/notifications', element: <SWrapper><Notifications /></SWrapper> },
           { path: '/profile', element: <SWrapper><Profile /></SWrapper> },
@@ -138,6 +146,7 @@ export const router = createBrowserRouter([
           { path: '/settings', element: <SWrapper><Settings /></SWrapper> },
           { path: '/health-insights', element: <SWrapper><HealthInsights /></SWrapper> },
           { path: '/workout-form', element: <SWrapper><WorkoutForm /></SWrapper> },
+          { path: '/verification', element: <SWrapper><Verification /></SWrapper> },
         ],
       },
       { path: '/live/:liveId', element: <SWrapper><LiveRoom /></SWrapper> },

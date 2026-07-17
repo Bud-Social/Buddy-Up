@@ -40,18 +40,21 @@ class BookingSerializer(serializers.ModelSerializer):
         model = BookingSession
         fields = ['id', 'client_id', 'trainer_id', 'session_type', 'status',
                    'scheduled_at', 'duration_minutes', 'artifact_fee', 'notes',
-                   'client_data', 'trainer_data', 'completed_at', 'cancelled_at',
-                   'created_at']
+                   'escrow_tx_id', 'client_data', 'trainer_data', 'completed_at',
+                   'cancelled_at', 'created_at', 'parent_series', 'recurrence_pattern']
 
     def get_client_data(self, obj):
         return {
+            'user_id': str(obj.client.user_id),
             'username': obj.client.username,
             'display_name': obj.client.display_name,
             'avatar_url': obj.client.avatar_url,
+            'verification_status': obj.client.verification_status,
         }
 
     def get_trainer_data(self, obj):
         return {
+            'user_id': str(obj.trainer.user_id),
             'username': obj.trainer.username,
             'display_name': obj.trainer.display_name,
             'avatar_url': obj.trainer.avatar_url,
@@ -64,6 +67,7 @@ class CreateBookingSerializer(serializers.Serializer):
     scheduled_at = serializers.DateTimeField()
     duration_minutes = serializers.IntegerField(min_value=15, max_value=180)
     notes = serializers.CharField(max_length=300, required=False, allow_blank=True)
+    recurrence_pattern = serializers.ChoiceField(choices=[('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly')], required=False, allow_null=True)
 
 
 class ReviewSerializer(serializers.ModelSerializer):

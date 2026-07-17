@@ -6,6 +6,7 @@ export interface MealPlan {
   creator_id: string;
   title: string;
   description: string;
+  cover_image_url: string;
   diet_type: string;
   duration_weeks: number;
   calorie_range: string;
@@ -34,6 +35,7 @@ export interface TrainingProgrammeMP {
   creator_id: string;
   title: string;
   description: string;
+  cover_image_url: string;
   category: string;
   duration_weeks: number;
   price_artifacts: Record<string, number>;
@@ -207,4 +209,22 @@ export const marketplaceApi = {
       timeout: 30000,
     }).then((r) => r.data);
   },
+
+  getMyServices: () =>
+    apiClient.get<ApiResponse<{ meal_plans: MealPlan[]; programmes: TrainingProgrammeMP[]; events: MarketplaceEvent[] }>>('/marketplace/my-services/').then((r) => r.data),
+
+  getCart: () =>
+    apiClient.get<ApiResponse<any>>('/marketplace/cart/').then((r) => r.data),
+
+  addToCart: (item_type: string, idData: Record<string, string>, quantity: number = 1) =>
+    apiClient.post<ApiResponse<any>>('/marketplace/cart/', { item_type, ...idData, quantity }).then((r) => r.data),
+
+  removeFromCart: (item_id?: string) =>
+    apiClient.delete<ApiResponse<any>>('/marketplace/cart/', { data: { item_id } }).then((r) => r.data),
+
+  checkoutCart: () =>
+    apiClient.post<ApiResponse<any>>('/marketplace/cart/checkout/').then((r) => r.data),
+
+  applyDiscount: (code: string) =>
+    apiClient.post<ApiResponse<any>>('/marketplace/cart/discount/', { code }).then((r) => r.data),
 };

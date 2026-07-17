@@ -65,6 +65,10 @@ class BookingSession(TimestampedModel):
     completed_at = models.DateTimeField(null=True, blank=True)
     cancelled_at = models.DateTimeField(null=True, blank=True)
     cancel_reason = models.TextField(blank=True)
+    
+    # Recurrence support
+    parent_series = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='recurring_sessions')
+    recurrence_pattern = models.CharField(max_length=20, choices=[('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly')], blank=True, null=True)
 
     class Meta:
         db_table = 'sessions_booking'

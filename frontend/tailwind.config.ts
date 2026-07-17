@@ -32,6 +32,9 @@ export default {
       minWidth: {
         'touch': '48px',
       },
+      spacing: {
+        '22': '5.5rem',
+      },
     },
   },
   plugins: [],

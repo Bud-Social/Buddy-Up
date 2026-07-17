@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { sessionsApi, profilesApi } from '@/api';
+import { sessionsApi, profilesApi, messagingApi } from '@/api';
+import { useToast } from '@/components/ui/Toast';
 import type { TrainerProfile, Review } from '@/api/sessions';
 
 export default function TrainerProfilePage() {
@@ -14,6 +15,10 @@ export default function TrainerProfilePage() {
   const [trainer, setTrainer] = useState<TrainerProfile | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [messageLoading, setMessageLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!slug) return;
@@ -26,6 +31,39 @@ export default function TrainerProfilePage() {
       setReviews(rRes.data || []);
     }).catch(() => {}).finally(() => setIsLoading(false));
   }, [slug]);
+
+  const handleFollowToggle = async () => {
+    if (!p?.username) return;
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await profilesApi.unfollow(p.username);
+        setIsFollowing(false);
+        toast('success', `Unfollowed ${p.display_name}`);
+      } else {
+        await profilesApi.follow(p.username);
+        setIsFollowing(true);
+        toast('success', `Following ${p.display_name}`);
+      }
+    } catch {
+      toast('error', 'Failed to update follow status');
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!p?.username) return;
+    setMessageLoading(true);
+    try {
+      await messagingApi.startConversation([p.username]);
+      navigate(`/messages?user=${p.username}`);
+    } catch {
+      toast('error', 'Failed to start conversation');
+    } finally {
+      setMessageLoading(false);
+    }
+  };
 
   if (isLoading) return <div className="max-w-lg mx-auto p-4"><div className="animate-pulse space-y-4"><div className="bg-buddy-surface rounded-2xl h-48" /><div className="bg-buddy-surface rounded-2xl h-64" /></div></div>;
   if (!trainer) return <div className="max-w-lg mx-auto p-4 text-center py-20"><p className="text-buddy-text-secondary">Trainer not found</p></div>;
@@ -69,9 +107,14 @@ export default function TrainerProfilePage() {
         <Button className="w-full" size="lg" onClick={() => navigate(`/sessions?book=${slug}`)}>
           <Calendar size={16} className="mr-2" /> Book a Session
         </Button>
-        <Button variant="outline" className="w-full mt-2" size="sm">
-          <MessageCircle size={14} className="mr-1" /> Message
-        </Button>
+        <div className="flex gap-2 mt-2">
+          <Button variant="outline" className="flex-1" size="sm" onClick={handleMessage} isLoading={messageLoading}>
+            <MessageCircle size={14} className="mr-1" /> Message
+          </Button>
+          <Button variant="outline" className="flex-1" size="sm" onClick={handleFollowToggle} isLoading={followLoading}>
+            {isFollowing ? 'Following ✓' : 'Follow'}
+          </Button>
+        </div>
       </Card>
 
       {trainer.specialties?.length > 0 && (

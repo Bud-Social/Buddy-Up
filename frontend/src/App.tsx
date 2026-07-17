@@ -9,6 +9,7 @@ import { useAuthStore } from './store/authStore';
 import { authApi } from './api';
 import { useNotificationListener } from './hooks/useNotificationListener';
 
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

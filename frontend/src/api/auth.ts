@@ -98,4 +98,7 @@ export const authApi = {
 
   logoutAllSessions: () =>
     apiClient.post<ApiResponse<null>>('/auth/logout-all/').then((r) => r.data),
+
+  verifyAge: (date_of_birth: string) =>
+    apiClient.post<ApiResponse<{ age: number; is_adult: boolean; is_16_plus: boolean; dob_hash: string }>>('/auth/verify-age/', { date_of_birth }).then((r) => r.data),
 };

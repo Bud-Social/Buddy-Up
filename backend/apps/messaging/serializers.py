@@ -1,22 +1,23 @@
 from rest_framework import serializers
-from .models import Conversation, Message, MessageReaction
+from .models import Conversation, Message, MessageReaction, CallLog
 
 
 class StartConversationInputSerializer(serializers.Serializer):
-    participants = serializers.ListField(
-        child=serializers.CharField(), allow_empty=False,
-    )
+    participants = serializers.ListField(child=serializers.CharField(), allow_empty=False)
     group_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
 
 class SendMessageInputSerializer(serializers.Serializer):
-    body = serializers.CharField(max_length=5000, allow_blank=True)
+    body = serializers.CharField(max_length=5000, allow_blank=True, default='')
     message_type = serializers.ChoiceField(
-        choices=['text', 'image', 'video', 'audio', 'file'],
+        choices=['text', 'photo', 'video', 'voice', 'document', 'location',
+                 'workout_log', 'meal_plan', 'artifact_tip', 'accountability_ping', 'call_log'],
         default='text',
     )
-    media_url = serializers.URLField(required=False, allow_blank=True)
-    reply_to_id = serializers.CharField(required=False, allow_null=True)
+    media_url = serializers.URLField(required=False, allow_blank=True, max_length=1000)
+    media_mime = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    file_name = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    reply_to_id = serializers.UUIDField(required=False, allow_null=True)
     metadata = serializers.JSONField(required=False, default=dict)
 
 
@@ -31,9 +32,12 @@ class MessageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Message
-        fields = ['id', 'conversation_id', 'sender_id', 'message_type', 'body',
-                   'media_url', 'reply_to_id', 'metadata', 'is_read',
-                   'sender_data', 'reply_data', 'reactions', 'created_at']
+        fields = [
+            'id', 'conversation_id', 'sender_id', 'message_type', 'body',
+            'media_url', 'media_mime', 'file_name',
+            'reply_to_id', 'metadata', 'is_read', 'deleted_for',
+            'sender_data', 'reply_data', 'reactions', 'created_at',
+        ]
         read_only_fields = ['id', 'sender_id', 'created_at']
 
     def get_sender_data(self, obj):
@@ -41,6 +45,7 @@ class MessageSerializer(serializers.ModelSerializer):
             'username': obj.sender.username,
             'display_name': obj.sender.display_name,
             'avatar_url': obj.sender.avatar_url,
+            'verification_status': obj.sender.verification_status,
         }
 
     def get_reply_data(self, obj):
@@ -49,6 +54,8 @@ class MessageSerializer(serializers.ModelSerializer):
                 'id': str(obj.reply_to.id),
                 'body': obj.reply_to.body[:100],
                 'sender_name': obj.reply_to.sender.display_name,
+                'message_type': obj.reply_to.message_type,
+                'media_url': obj.reply_to.media_url,
             }
         return None
 
@@ -64,24 +71,28 @@ class ConversationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Conversation
-        fields = ['id', 'is_group', 'group_name', 'group_gym_id',
-                   'sub_channel', 'participants_data', 'unread_count',
-                   'last_message', 'last_message_at', 'created_at']
+        fields = [
+            'id', 'is_group', 'group_name', 'group_avatar_url', 'group_gym_id',
+            'sub_channel', 'call_in_progress',
+            'participants_data', 'unread_count',
+            'last_message', 'last_message_at', 'created_at',
+        ]
 
     def get_participants_data(self, obj):
         return [{
+            'user_id': str(p.user_id),
             'username': p.username,
             'display_name': p.display_name,
             'avatar_url': p.avatar_url,
+            'verification_status': p.verification_status,
+            'role': p.role,
         } for p in obj.participants.all()]
 
     def get_unread_count(self, obj):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return 0
-        return obj.messages.filter(
-            is_read=False,
-        ).exclude(sender=request.user.profile).count()
+        return obj.messages.filter(is_read=False).exclude(sender=request.user.profile).count()
 
     def get_last_message(self, obj):
         last = obj.messages.last()
@@ -89,6 +100,34 @@ class ConversationSerializer(serializers.ModelSerializer):
             return {
                 'body': last.body[:100],
                 'message_type': last.message_type,
+                'media_url': last.media_url,
                 'sender_name': last.sender.display_name,
             }
         return None
+
+
+class CallLogSerializer(serializers.ModelSerializer):
+    caller_data = serializers.SerializerMethodField()
+    callee_data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CallLog
+        fields = [
+            'id', 'conversation_id', 'call_type', 'status',
+            'duration_seconds', 'caller_data', 'callee_data',
+            'created_at', 'ended_at',
+        ]
+
+    def get_caller_data(self, obj):
+        return {
+            'username': obj.caller.username,
+            'display_name': obj.caller.display_name,
+            'avatar_url': obj.caller.avatar_url,
+        }
+
+    def get_callee_data(self, obj):
+        return {
+            'username': obj.callee.username,
+            'display_name': obj.callee.display_name,
+            'avatar_url': obj.callee.avatar_url,
+        }

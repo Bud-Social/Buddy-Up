@@ -146,6 +146,15 @@ html.ambient {
       transform: translate(-50%, -80px) scale(0.8);
     }
   }
+
+  .animate-audio-bar {
+    animation: audio-bar 1.2s ease-in-out infinite alternate;
+  }
+
+  @keyframes audio-bar {
+    0% { height: 20%; opacity: 0.5; }
+    100% { height: 100%; opacity: 1; }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

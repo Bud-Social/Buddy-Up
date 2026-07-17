@@ -22,5 +22,7 @@ urlpatterns = [
     path('<str:username>/buddies/', views.BuddiesListView.as_view(), name='buddies'),
     path('<str:username>/followers/', views.FollowersListView.as_view(), name='followers'),
     path('<str:username>/following/', views.FollowingListView.as_view(), name='following'),
+    path('<str:username>/posts/', views.UserPostsView.as_view(), name='user_posts'),
     path('recommendations/', views.ProfileRecommendationsView.as_view(), name='recommendations'),
+    path('presence/', views.PresenceStatusView.as_view(), name='presence'),
 ]

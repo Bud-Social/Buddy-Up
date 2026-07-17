@@ -15,8 +15,9 @@ from .models import (
     Product, MarketplaceEvent, EventTicket,
 )
 from .serializers import (
-    MealPlanSerializer, MealPlanReviewSerializer,
+    MealPlanSerializer, MealPlanFullSerializer, MealPlanReviewSerializer,
     TrainingProgrammeSerializer, TrainingProgrammeReviewSerializer,
+    UpdateTrainingProgrammeSerializer,
     ProductSerializer, MarketplaceEventSerializer,
     EventTicketSerializer, CreateMealPlanSerializer, CreateTrainingProgrammeSerializer,
     CreateEventSerializer, PersonaliseMealPlanSerializer, ReviewInputSerializer,
@@ -704,9 +705,151 @@ class FoodRecognizeView(views.APIView):
                 'message': 'Food recognition complete.',
                 'errors': None, 'pagination': None,
             })
-        except requests.RequestException as e:
+        except Exception as e:
             return Response({
                 'success': False, 'data': None,
                 'message': 'Food recognition service unavailable.',
                 'errors': str(e), 'pagination': None,
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class MyMarketplaceServicesView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Count
+        profile = request.user.profile
+        meal_plans = MealPlan.objects.filter(creator=profile).annotate(abandoned_cart_count=Count('cartitem'))
+        programmes = TrainingProgramme.objects.filter(creator=profile).annotate(abandoned_cart_count=Count('cartitem'))
+        events = MarketplaceEvent.objects.filter(creator=profile).annotate(abandoned_cart_count=Count('cartitem'))
+
+        meal_plan_data = MealPlanSerializer(meal_plans, many=True, context={'request': request}).data
+        programme_data = TrainingProgrammeSerializer(programmes, many=True, context={'request': request}).data
+        event_data = MarketplaceEventSerializer(events, many=True, context={'request': request}).data
+
+        for i, obj in enumerate(meal_plans):
+            meal_plan_data[i]['abandoned_cart_count'] = obj.abandoned_cart_count
+        for i, obj in enumerate(programmes):
+            programme_data[i]['abandoned_cart_count'] = obj.abandoned_cart_count
+        for i, obj in enumerate(events):
+            event_data[i]['abandoned_cart_count'] = obj.abandoned_cart_count
+
+        return Response({
+            'success': True,
+            'data': {
+                'meal_plans': meal_plan_data,
+                'programmes': programme_data,
+                'events': event_data,
+            },
+            'message': 'Drafts and services fetched.',
+        })
+
+
+class CartView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
+        from .serializers import CartSerializer
+        return Response({
+            'success': True,
+            'data': CartSerializer(cart).data,
+            'message': 'Cart fetched.',
+        })
+
+    def post(self, request):
+        cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
+        item_type = request.data.get('item_type')
+        quantity = int(request.data.get('quantity', 1))
+        
+        # Determine the target ID key
+        target_id_map = {
+            'meal_plan': ('meal_plan_id', MealPlan),
+            'programme': ('programme_id', TrainingProgramme),
+            'product': ('product_id', Product),
+            'event_ticket': ('event_id', MarketplaceEvent),
+        }
+        
+        if item_type not in target_id_map:
+            return Response({'success': False, 'message': 'Invalid item type.'}, status=400)
+            
+        key_name, model_class = target_id_map[item_type]
+        target_id = request.data.get(key_name)
+        try:
+            target_obj = model_class.objects.get(id=target_id)
+        except model_class.DoesNotExist:
+            return Response({'success': False, 'message': 'Item not found.'}, status=404)
+            
+        # Add to cart
+        kwargs = {'cart': cart, 'item_type': item_type, key_name.replace('_id', ''): target_obj}
+        item, created = CartItem.objects.get_or_create(**kwargs)
+        if not created:
+            item.quantity += quantity
+            item.save(update_fields=['quantity'])
+        else:
+            item.quantity = quantity
+            item.save()
+            
+        from .serializers import CartSerializer
+        return Response({'success': True, 'data': CartSerializer(cart).data, 'message': 'Added to cart.'})
+
+    def delete(self, request):
+        cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
+        item_id = request.data.get('item_id')
+        if item_id:
+            CartItem.objects.filter(cart=cart, id=item_id).delete()
+        else:
+            cart.items.all().delete()
+        from .serializers import CartSerializer
+        return Response({'success': True, 'data': CartSerializer(cart).data, 'message': 'Cart updated.'})
+
+
+class CheckoutCartView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
+        items = cart.items.all()
+        if not items.exists():
+            return Response({'success': False, 'message': 'Cart is empty.'}, status=400)
+            
+        for item in items:
+            if item.item_type == 'meal_plan' and item.meal_plan:
+                MealPlanPurchase.objects.get_or_create(meal_plan=item.meal_plan, buyer=request.user.profile)
+                item.meal_plan.purchase_count += 1
+                item.meal_plan.save(update_fields=['purchase_count'])
+            elif item.item_type == 'programme' and item.programme:
+                TrainingProgrammePurchase.objects.get_or_create(programme=item.programme, buyer=request.user.profile)
+                item.programme.purchase_count += 1
+                item.programme.save(update_fields=['purchase_count'])
+            elif item.item_type == 'event_ticket' and item.event:
+                EventTicket.objects.get_or_create(event=item.event, attendee=request.user.profile)
+                item.event.attendee_count += 1
+                item.event.save(update_fields=['attendee_count'])
+            # for products, maybe redirect to affiliate URL or just add a click metric. No internal purchase object needed for affiliate products, but if they were physical products, we'd have a ProductOrder.
+            
+        cart.items.all().delete()
+        if cart.discount_code:
+            cart.discount_code.times_used += 1
+            cart.discount_code.save(update_fields=['times_used'])
+        cart.discount_code = None
+        cart.save()
+        return Response({'success': True, 'message': 'Cart checkout successful. Items have been purchased!'})
+
+
+class DiscountCodeView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        code = request.data.get('code')
+        try:
+            discount = DiscountCode.objects.get(code=code, is_active=True)
+            if discount.usage_limit > 0 and discount.times_used >= discount.usage_limit:
+                return Response({'success': False, 'message': 'Code limit reached.'}, status=400)
+            cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
+            cart.discount_code = discount
+            cart.save()
+            return Response({'success': True, 'message': f'Discount {discount.code} applied.'})
+        except DiscountCode.DoesNotExist:
+            return Response({'success': False, 'message': 'Invalid discount code.'}, status=400)

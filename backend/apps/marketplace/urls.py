@@ -21,4 +21,8 @@ urlpatterns = [
     path('events/<uuid:event_id>/tickets/', views.PurchaseEventTicketView.as_view(), name='purchase_ticket'),
     path('events/tickets/<uuid:ticket_id>/', views.EventTicketDetailView.as_view(), name='ticket_detail'),
     path('food-recognize/', views.FoodRecognizeView.as_view(), name='food_recognize'),
+    path('my-services/', views.MyMarketplaceServicesView.as_view(), name='my_services'),
+    path('cart/', views.CartView.as_view(), name='cart'),
+    path('cart/checkout/', views.CheckoutCartView.as_view(), name='cart_checkout'),
+    path('cart/discount/', views.DiscountCodeView.as_view(), name='cart_discount'),
 ]

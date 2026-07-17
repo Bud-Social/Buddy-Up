@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Utensils, Dumbbell, Pill, Star, ExternalLink, Plus, Calendar } from 'lucide-react';
+import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, User, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
+import { useToast } from '@/components/ui/Toast';
 import { marketplaceApi } from '@/api/marketplace';
 import type { MealPlan, TrainingProgrammeMP, ProductMP } from '@/api/marketplace';
 
@@ -13,33 +14,94 @@ type Tab = 'events' | 'meal_plans' | 'programmes' | 'products';
 export default function Marketplace() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('events');
+  const [cartCount, setCartCount] = useState(0);
+
+  const fetchCartCount = useCallback(() => {
+    marketplaceApi.getCart().then(res => {
+      setCartCount(res.data.items?.length || 0);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetchCartCount();
+    const handler = () => fetchCartCount();
+    window.addEventListener('cart-updated', handler);
+    return () => window.removeEventListener('cart-updated', handler);
+  }, [fetchCartCount]);
 
   return (
-    <div className="max-w-lg mx-auto p-4">
-      <h1 className="font-display text-2xl font-extrabold mb-4">Marketplace</h1>
+    <div className="max-w-lg mx-auto pb-20">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-20 bg-buddy-background/80 backdrop-blur-md p-4 pb-2 border-b border-buddy-surface">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="font-display text-2xl font-extrabold">Marketplace</h1>
+          <div className="flex items-center gap-2">
+            <Button variant="secondary" size="sm" onClick={() => navigate('/marketplace/creator')} className="flex items-center gap-1">
+              <BarChart2 size={14} />
+              <span className="hidden sm:inline">Creator</span>
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => navigate('/marketplace/cart')} className="relative flex items-center gap-1">
+              <ShoppingBag size={14} />
+              <span className="hidden sm:inline">Cart</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-buddy-green text-buddy-black text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                  {cartCount}
+                </span>
+              )}
+            </Button>
+          </div>
+        </div>
 
-      <div className="flex rounded-xl bg-buddy-surface p-1 mb-4">
-        {[
-          { key: 'events' as const, label: 'Events', icon: Calendar },
-          { key: 'meal_plans' as const, label: 'Meal Plans', icon: Utensils },
-          { key: 'programmes' as const, label: 'Programmes', icon: Dumbbell },
-          { key: 'products' as const, label: 'Products', icon: ShoppingBag },
-        ].map(({ key, label, icon: Icon }) => (
-          <button key={key} onClick={() => setTab(key)}
-            className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1 ${
-              tab === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
-            }`}>
-            <Icon size={14} className="flex-shrink-0" />
-            <span className="hidden sm:inline truncate">{label}</span>
-          </button>
-        ))}
+        <div className="flex rounded-xl bg-buddy-surface p-1">
+          {[
+            { key: 'events' as const, label: 'Events', icon: Calendar },
+            { key: 'meal_plans' as const, label: 'Meal Plans', icon: Utensils },
+            { key: 'programmes' as const, label: 'Programmes', icon: Dumbbell },
+            { key: 'products' as const, label: 'Products', icon: ShoppingBag },
+          ].map(({ key, label, icon: Icon }) => (
+            <button key={key} onClick={() => setTab(key)}
+              className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1 ${
+                tab === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
+              }`}>
+              <Icon size={14} className="flex-shrink-0" />
+              <span className="hidden sm:inline truncate">{label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {tab === 'events' && <EventsTab />}
-      {tab === 'meal_plans' && <MealPlansTab />}
-      {tab === 'programmes' && <ProgrammesTab />}
-      {tab === 'products' && <ProductsTab />}
+      <div className="p-4 pt-4">
+        {tab === 'events' && <EventsTab />}
+        {tab === 'meal_plans' && <MealPlansTab />}
+        {tab === 'programmes' && <ProgrammesTab />}
+        {tab === 'products' && <ProductsTab />}
+      </div>
     </div>
+  );
+}
+
+function AddToCartButton({ type, id }: { type: 'meal_plan' | 'programme' | 'event_ticket' | 'product', id: string }) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const handleAdd = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLoading(true);
+    try {
+      await marketplaceApi.addToCart(type, { [`${type}_id`]: id }, 1);
+      toast('success', 'Added to cart!');
+      window.dispatchEvent(new CustomEvent('cart-updated'));
+    } catch {
+      toast('error', 'Failed to add to cart');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button size="sm" variant="primary" className="w-full text-xs py-1 h-7 mt-2" onClick={handleAdd} disabled={loading}>
+      {loading ? 'Adding...' : 'Add to Cart'}
+    </Button>
   );
 }
 
@@ -75,37 +137,48 @@ function MealPlansTab() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="p-4 animate-pulse"><div className="h-20 bg-buddy-surface-raised rounded-xl" /></Card>
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-4 animate-pulse"><div className="h-32 bg-buddy-surface-raised rounded-xl" /></Card>
           ))}
         </div>
       ) : plans.length === 0 ? (
         <div className="text-center py-20 text-buddy-text-secondary">No meal plans found.</div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           {plans.map((plan) => (
-            <Card key={plan.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer" onClick={() => navigate(`/marketplace/meal-plans/${plan.id}`)}>
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <h3 className="font-heading font-semibold text-sm">{plan.title}</h3>
-                  <p className="text-xs text-buddy-text-secondary mt-0.5">by {plan.creator_data.display_name} · {plan.duration_weeks} weeks · {plan.diet_type.replace('_', ' ')}</p>
+            <Card key={plan.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/meal-plans/${plan.id}`)}>
+              <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center relative overflow-hidden">
+                {plan.cover_image_url ? (
+                  <img src={plan.cover_image_url} alt={plan.title} className="w-full h-full object-cover" />
+                ) : (
+                  <Utensils size={32} className="text-buddy-text-secondary/30" />
+                )}
+                <Badge variant="blue" label={plan.diet_type.replace('_', ' ')} size="sm" className="absolute top-2 left-2 shadow-sm capitalize" />
+                {plan.creator_data.verification_status === 'practitioner' && (
+                  <Badge variant="gold" label="Nutritionist" size="sm" className="absolute top-2 right-2 shadow-sm" />
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium truncate">{plan.title}</p>
+                <p className="text-xs text-buddy-text-secondary mt-0.5 truncate">by {plan.creator_data.display_name}</p>
+                <p className="text-[10px] text-buddy-text-secondary mt-0.5 flex items-center gap-1">
+                  <Clock size={10} className="text-buddy-green" /> {plan.duration_weeks} weeks
+                </p>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-buddy-surface-raised">
+                  <div className="flex gap-2">
+                    {plan.price_artifacts && Object.entries(plan.price_artifacts).map(([k, v]) => (
+                      <span key={k} className="flex items-center gap-1 text-xs font-bold text-buddy-green"><ArtifactIcon artifact={k} size={12} /> {v as any}</span>
+                    ))}
+                  </div>
+                  {plan.review_count > 0 && <span className="flex items-center gap-1 text-[10px] font-medium text-buddy-gold"><Star size={10} className="fill-buddy-gold" /> {plan.average_rating}</span>}
                 </div>
-                {plan.creator_data.verification_status === 'practitioner' && <Badge variant="gold" label="Nutritionist" size="sm" />}
               </div>
-              <div className="flex items-center gap-4 text-xs text-buddy-text-secondary">
-                {plan.review_count > 0 && <span className="flex items-center gap-1"><Star size={12} className="text-buddy-gold fill-buddy-gold" /> {plan.average_rating} ({plan.review_count})</span>}
-                <span>{plan.purchase_count} purchased</span>
-                {plan.price_artifacts && Object.entries(plan.price_artifacts).map(([k, v]) => (
-                  <span key={k} className="flex items-center gap-1"><ArtifactIcon artifact={k} size={14} /> {v}</span>
-                ))}
-              </div>
+              <AddToCartButton type="meal_plan" id={plan.id} />
             </Card>
           ))}
         </div>
       )}
-
-
     </>
   );
 }
@@ -132,25 +205,36 @@ function ProgrammesTab() {
       {programmes.length === 0 ? (
         <div className="text-center py-20 text-buddy-text-secondary">No training programmes available yet.</div>
       ) : (
-        programmes.map((p) => (
-          <Card key={p.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer" onClick={() => navigate(`/marketplace/programmes/${p.id}`)}>
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <h3 className="font-heading font-semibold text-sm">{p.title}</h3>
-                <p className="text-xs text-buddy-text-secondary mt-0.5">by {p.creator_data.display_name} · {p.duration_weeks} weeks · {p.category}</p>
+        <div className="grid grid-cols-2 gap-3">
+          {programmes.map((p) => (
+            <Card key={p.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/programmes/${p.id}`)}>
+              <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center relative overflow-hidden">
+                {p.cover_image_url ? (
+                  <img src={p.cover_image_url} alt={p.title} className="w-full h-full object-cover" />
+                ) : (
+                  <Dumbbell size={32} className="text-buddy-text-secondary/30" />
+                )}
+                <Badge variant="green" label={p.category} size="sm" className="absolute top-2 left-2 shadow-sm capitalize" />
               </div>
-              <Badge variant="green" label={p.category} size="sm" />
-            </div>
-            <p className="text-sm text-buddy-text-secondary mb-2">{p.description?.slice(0, 150)}</p>
-            <div className="flex items-center justify-between">
-              <span className="text-xs">{p.purchase_count} enrolled</span>
-              {p.price_artifacts && Object.entries(p.price_artifacts).map(([k, v]) => (
-                <span key={k} className="flex items-center gap-1 text-xs"><ArtifactIcon artifact={k} size={14} /> {v}</span>
-              ))}
-              <Button size="sm">Enroll</Button>
-            </div>
-          </Card>
-        ))
+              <div className="flex-1">
+                <p className="text-sm font-medium truncate">{p.title}</p>
+                <p className="text-xs text-buddy-text-secondary mt-0.5 truncate">by {p.creator_data.display_name}</p>
+                <p className="text-[10px] text-buddy-text-secondary mt-0.5 flex items-center gap-1">
+                  <Clock size={10} className="text-buddy-green" /> {p.duration_weeks} weeks
+                </p>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-buddy-surface-raised">
+                  <div className="flex gap-2">
+                    {p.price_artifacts && Object.entries(p.price_artifacts).map(([k, v]) => (
+                      <span key={k} className="flex items-center gap-1 text-xs font-bold text-buddy-green"><ArtifactIcon artifact={k} size={12} /> {v as any}</span>
+                    ))}
+                  </div>
+                  <span className="text-[10px] font-medium text-buddy-text-secondary flex items-center gap-1"><Users size={10} /> {p.purchase_count}</span>
+                </div>
+              </div>
+              <AddToCartButton type="programme" id={p.id} />
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );
@@ -194,19 +278,19 @@ function ProductsTab() {
       ) : (
         <div className="grid grid-cols-2 gap-3">
           {products.map((p) => (
-            <Card key={p.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer" onClick={() => navigate(`/marketplace/products/${p.id}`)}>
+            <Card key={p.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/products/${p.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center text-3xl">
                 {p.image_url ? <img src={p.image_url} alt={p.name} className="w-full h-full rounded-xl object-cover" /> : <Pill size={32} className="text-buddy-text-secondary/30" />}
               </div>
-              <p className="text-sm font-medium truncate">{p.name}</p>
-              <p className="text-xs text-buddy-text-secondary">{p.brand}</p>
-              {p.recommender_data && <p className="text-xs text-buddy-electric mt-0.5">Rec. by {p.recommender_data.display_name}</p>}
-              <div className="flex items-center justify-between mt-2">
-                {p.price_display && <span className="text-xs font-coin font-bold text-buddy-green">{p.price_display}</span>}
-                <a href={p.affiliate_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-buddy-electric hover:underline" onClick={(e) => e.stopPropagation()}>
-                  <ExternalLink size={12} /> View
-                </a>
+              <div className="flex-1">
+                <p className="text-sm font-medium truncate">{p.name}</p>
+                <p className="text-xs text-buddy-text-secondary">{p.brand}</p>
+                {p.recommender_data && <p className="text-xs text-buddy-electric mt-0.5">Rec. by {p.recommender_data.display_name}</p>}
+                <div className="flex items-center justify-between mt-2">
+                  {p.price_display && <span className="text-xs font-coin font-bold text-buddy-green">{p.price_display}</span>}
+                </div>
               </div>
+              <AddToCartButton type="product" id={p.id} />
             </Card>
           ))}
         </div>
@@ -231,55 +315,46 @@ function EventsTab() {
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-sm font-semibold">Upcoming Events</h2>
+        <h2 className="text-sm font-bold text-buddy-text-secondary uppercase">Upcoming Events</h2>
         <div className="flex gap-2">
-          <button onClick={() => navigate('/marketplace/events/my-tickets')} className="text-xs font-medium text-buddy-text-secondary hover:text-buddy-text-primary px-2">
-            My Tickets
-          </button>
-          <button onClick={() => navigate('/marketplace/events/create')} className="flex items-center gap-1 text-xs font-medium bg-buddy-green/10 text-buddy-green px-3 py-1.5 rounded-full hover:bg-buddy-green hover:text-buddy-black transition-colors">
-            <Plus size={14} /> Create
-          </button>
+          <button onClick={() => navigate('/marketplace/events/my-tickets')} className="text-xs font-medium text-buddy-electric hover:underline">My Tickets</button>
+          <button onClick={() => navigate('/marketplace/events/create')} className="text-xs font-medium text-buddy-green hover:underline">Host</button>
         </div>
       </div>
 
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="p-4 animate-pulse"><div className="h-24 bg-buddy-surface-raised rounded-xl" /></Card>
+            <Card key={i} className="p-4 animate-pulse"><div className="h-16 bg-buddy-surface-raised rounded-xl" /></Card>
           ))}
         </div>
       ) : events.length === 0 ? (
-        <div className="text-center py-20 text-buddy-text-secondary">No upcoming events found.</div>
+        <div className="text-center py-20 text-buddy-text-secondary">No upcoming events.</div>
       ) : (
         <div className="space-y-3">
-          {events.map((event) => (
-            <Card key={event.id} className="p-0 overflow-hidden hover:ring-2 ring-buddy-green transition-all cursor-pointer" onClick={() => navigate(`/marketplace/events/${event.id}`)}>
-              <div className="flex flex-col sm:flex-row h-full">
-                {event.cover_image_url && (
-                  <div className="w-full sm:w-1/3 h-32 sm:h-auto bg-buddy-surface-raised relative">
-                    <img src={event.cover_image_url} alt={event.title} className="w-full h-full object-cover" />
-                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-buddy-black/80 backdrop-blur-sm rounded text-[10px] font-bold uppercase tracking-wider text-buddy-gold">
-                      {event.event_type.replace('_', ' ')}
-                    </div>
-                  </div>
-                )}
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg leading-tight mb-1 truncate">{event.title}</h3>
-                    <p className="text-xs text-buddy-text-secondary line-clamp-2">{event.description || 'No description provided.'}</p>
-                  </div>
-                  
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-xs text-buddy-text-secondary">
-                      <Calendar size={14} className="text-buddy-green" />
-                      {new Date(event.start_datetime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </div>
-                    
-                    <div className="text-sm font-bold text-buddy-green">
-                      {event.is_free ? 'Free' : Object.entries(event.ticket_price_artifacts || {}).map(([k, v]) => `${v} ${k}s`).join(', ')}
-                    </div>
-                  </div>
+          {events.map((e) => (
+            <Card key={e.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer" onClick={() => navigate(`/marketplace/events/${e.id}`)}>
+              <div className="flex gap-4">
+                <div className="w-14 h-14 bg-buddy-surface rounded-xl flex flex-col items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-buddy-green uppercase">{new Date(e.start_time).toLocaleString('en-US', { month: 'short' })}</span>
+                  <span className="text-lg font-display font-extrabold">{new Date(e.start_time).getDate()}</span>
                 </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium truncate">{e.title}</p>
+                    <Badge variant={e.ticket_price_artifacts && Object.keys(e.ticket_price_artifacts).length > 0 ? 'gold' : 'green'} label={e.ticket_price_artifacts && Object.keys(e.ticket_price_artifacts).length > 0 ? 'Paid' : 'Free'} size="sm" />
+                  </div>
+                  <p className="text-xs text-buddy-text-secondary mt-1 flex items-center gap-1">
+                    <Clock size={12} /> {new Date(e.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <p className="text-xs text-buddy-text-secondary flex items-center gap-1 mt-0.5">
+                    {e.event_type === 'virtual' ? <Calendar size={12} /> : <Users size={12} />} 
+                    <span className="capitalize">{e.event_type}</span> • {e.attendee_count} attending
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3">
+                <AddToCartButton type="event_ticket" id={e.id} />
               </div>
             </Card>
           ))}

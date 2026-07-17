@@ -15,6 +15,7 @@ import type { ActivityEvent } from '@/api/activity';
 
 const sections = [
   { id: 'account', label: 'Account', icon: User, desc: 'Profile, email, phone, linked accounts' },
+  { id: 'verifications', label: 'Verifications', icon: Shield, desc: 'Age & professional verification' },
   { id: 'privacy', label: 'Privacy', icon: Eye, desc: 'Manage visibility, activity status, blocking' },
   { id: 'notifications', label: 'Notifications', icon: Bell, desc: 'Push, email, and in-app preferences' },
   { id: 'security', label: 'Security', icon: Lock, desc: '2FA, active sessions, login alerts' },
@@ -283,9 +284,9 @@ export default function Settings() {
             <div className="relative inline-block">
               <Avatar src={profile?.avatar_url} alt={profile?.display_name || 'You'} size="xl" showRepRing className="mx-auto mb-3" />
               <button onClick={() => avatarInputRef.current?.click()}
-                className="absolute bottom-2 right-0 p-1.5 rounded-full bg-buddy-green text-buddy-black hover:bg-buddy-green-deep transition-colors"
+                className="absolute bottom-2 right-0 p-1.5 rounded-full bg-buddy-green text-buddy-black hover:bg-buddy-green-deep transition-colors z-10"
                 disabled={uploadingAvatar}>
-                {uploadingAvatar ? <Loader size={12} className="animate-spin" /> : <Camera size={12} />}
+                {uploadingAvatar ? <Loader size={14} className="animate-spin" /> : <Camera size={14} />}
               </button>
               <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileSelected} />
             </div>
@@ -339,6 +340,24 @@ export default function Settings() {
             </div>
           </Card>
           <Button variant="outline" className="w-full" size="sm" onClick={handlePrivacySave} isLoading={privacySaving}>Save Privacy Settings</Button>
+        </div>
+      )}
+
+      {activeSection === 'verifications' && (
+        <div className="space-y-4">
+          <h2 className="font-heading text-xl font-semibold">Verifications</h2>
+          <Card className="p-4 space-y-4">
+            <div>
+              <p className="text-sm font-medium">Age Verification</p>
+              <p className="text-xs text-buddy-text-secondary mb-2">Required for accessing mature content and gyms.</p>
+              <Button size="sm" variant="outline" onClick={() => toast('info', 'Age verification coming soon.')}>Verify Age with ID</Button>
+            </div>
+            <div className="border-t border-buddy-surface pt-4">
+              <p className="text-sm font-medium">Professional Verification</p>
+              <p className="text-xs text-buddy-text-secondary mb-2">Apply for a Trainer or Practitioner badge. Required for hosting paid sessions.</p>
+              <Button size="sm" variant="outline" onClick={() => toast('info', 'Professional applications coming soon.')}>Apply for Badge</Button>
+            </div>
+          </Card>
         </div>
       )}
 

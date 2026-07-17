@@ -120,9 +120,9 @@ export default function EditProfile() {
           <div className="relative -mt-10 w-20 h-20 mb-3">
             <Avatar src={avatarUrl} alt={form.display_name} size="xl" className="ring-4 ring-buddy-black" />
             <button onClick={() => avatarInputRef.current?.click()}
-              className="absolute bottom-0 right-0 p-1.5 rounded-full bg-buddy-green text-buddy-black hover:bg-buddy-green-deep transition-colors"
+              className="absolute bottom-0 right-0 p-1.5 rounded-full bg-buddy-green text-buddy-black hover:bg-buddy-green-deep transition-colors z-10"
               disabled={uploadingAvatar}>
-              {uploadingAvatar ? <Loader size={12} className="animate-spin" /> : <Camera size={12} />}
+              {uploadingAvatar ? <Loader size={14} className="animate-spin" /> : <Camera size={14} />}
             </button>
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileSelected} />
           </div>

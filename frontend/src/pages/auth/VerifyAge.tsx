@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
+import { authApi } from '@/api/auth';
 import { calculateAge } from '@/utils/ageCheck';
 
 export default function VerifyAge() {
@@ -16,12 +17,14 @@ export default function VerifyAge() {
   const [month, setMonth] = useState('');
   const [year, setYear] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const currentYear = new Date().getFullYear();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
 
     const d = parseInt(day);
     const m = parseInt(month);
@@ -29,6 +32,7 @@ export default function VerifyAge() {
 
     if (!d || !m || !y || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > currentYear) {
       setError('Please enter a valid date of birth.');
+      setIsLoading(false);
       return;
     }
 
@@ -37,10 +41,19 @@ export default function VerifyAge() {
 
     if (age < 16) {
       setError('BuddyUp is for users aged 16 and over. You cannot create an account at this time.');
+      setIsLoading(false);
       return;
     }
 
-    navigate(redirectTo);
+    try {
+      const dobStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      await authApi.verifyAge(dobStr);
+      navigate(redirectTo);
+    } catch {
+      setError('Could not verify age. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const years = Array.from({ length: currentYear - 1899 }, (_, i) => currentYear - i);

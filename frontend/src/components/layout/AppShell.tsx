@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
+import { IncomingCallOverlay } from '@/components/chat/IncomingCallOverlay';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 export function AppShell() {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
@@ -9,6 +10,7 @@ export function AppShell() {
       {isDesktop && <Sidebar />}
       <main className="flex-1 pb-20 lg:pb-0 lg:ml-64"><Outlet /></main>
       {!isDesktop && <BottomNav />}
+      <IncomingCallOverlay />
     </div>
   );
 }

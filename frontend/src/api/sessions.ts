@@ -33,8 +33,9 @@ export interface BookingSession {
   duration_minutes: number;
   artifact_fee: Record<string, number>;
   notes: string;
-  client_data: { username: string; display_name: string; avatar_url: string };
-  trainer_data: { username: string; display_name: string; avatar_url: string; verification_status: string };
+  escrow_tx_id: string;
+  client_data: { user_id: string; username: string; display_name: string; avatar_url: string; verification_status: string };
+  trainer_data: { user_id: string; username: string; display_name: string; avatar_url: string; verification_status: string };
   completed_at: string | null;
   cancelled_at: string | null;
   created_at: string;
@@ -80,7 +81,7 @@ export const sessionsApi = {
   getTrainerReviews: (username: string) =>
     apiClient.get<ApiResponse<Review[]>>(`/sessions/trainers/${username}/reviews/`).then((r) => r.data),
 
-  bookSession: (username: string, data: { session_type: string; scheduled_at: string; duration_minutes: number; notes?: string }) =>
+  bookSession: (username: string, data: { session_type: string; scheduled_at: string; duration_minutes: number; notes?: string; recurrence_pattern?: string; recurring_weeks?: number }) =>
     apiClient.post<ApiResponse<BookingSession>>(`/sessions/book/${username}/`, data).then((r) => r.data),
 
   getMyBookings: (role?: string, status?: string) =>
@@ -97,4 +98,7 @@ export const sessionsApi = {
 
   submitReview: (bookingId: string, rating: number, body?: string) =>
     apiClient.post<ApiResponse<Review>>(`/sessions/bookings/${bookingId}/review/`, { rating, body }).then((r) => r.data),
+
+  bookingAction: (bookingId: string, action: 'start' | 'complete' | 'cancel') =>
+    apiClient.post<ApiResponse<null>>(`/sessions/bookings/${bookingId}/`, { action }).then((r) => r.data),
 };

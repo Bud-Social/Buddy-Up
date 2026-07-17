@@ -1014,6 +1014,45 @@ class ChangePasswordView(views.APIView):
         })
 
 
+class VerifyAgeView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        dob = request.data.get('date_of_birth', '')
+        if not dob:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Date of birth is required.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from datetime import datetime
+            dob_date = datetime.strptime(dob[:10], '%Y-%m-%d').date()
+        except (ValueError, IndexError):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid date format. Use YYYY-MM-DD.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        age = calculate_age(dob_date)
+        is_adult = age >= 18
+        hash_dob_val = hash_dob(dob)
+
+        return Response({
+            'success': True,
+            'data': {
+                'age': age,
+                'is_adult': is_adult,
+                'is_16_plus': age >= 16,
+                'dob_hash': hash_dob_val,
+            },
+            'message': 'Age verified.',
+            'errors': None, 'pagination': None,
+        })
+
+
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def health_check(request):

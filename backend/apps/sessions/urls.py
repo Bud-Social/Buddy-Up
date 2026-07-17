@@ -17,4 +17,5 @@ urlpatterns = [
     path('programmes/<int:programme_id>/weeks/', views.ProgrammeWeekListView.as_view(), name='programme_weeks'),
     path('programmes/<int:programme_id>/weeks/<int:week_number>/complete/', views.ProgrammeWeekCompleteView.as_view(), name='complete_week'),
     path('my-enrollments/', views.MyEnrolmentsView.as_view(), name='my_enrollments'),
+    path('bookings/<uuid:booking_id>/calendar.ics', views.CalendarSyncView.as_view(), name='booking_ics'),
 ]

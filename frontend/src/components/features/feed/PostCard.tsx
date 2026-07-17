@@ -279,7 +279,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           {(post as any).reposters && (post as any).reposters.length > 0 ? (
             <div className="flex items-center -space-x-2 flex-shrink-0">
               {(post as any).reposters.slice(0, 3).map((reposter: any, idx: number) => (
-                <Avatar key={reposter.user_id || idx} src={reposter.avatar_url} alt={reposter.display_name} size="xs" className="ring-2 ring-buddy-green/30" style={{ zIndex: 3 - idx }} />
+                <Avatar key={reposter.user_id || idx} src={reposter.avatar_url} alt={reposter.display_name} size="xs" className="ring-2 ring-buddy-green/30" style={{ zIndex: 3 - idx }} verificationStatus={reposter.verification_status} />
               ))}
               {(post as any).reposters.length > 3 && (
                 <div className="w-6 h-6 rounded-full bg-buddy-surface-raised text-[10px] font-bold flex items-center justify-center ring-2 ring-buddy-green/30">
@@ -289,7 +289,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
             </div>
           ) : (
             <button onClick={(e) => { e.stopPropagation(); navigate(`/${post.author_data?.username}`); }} className="flex-shrink-0">
-              <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name || 'User'} size="xs" className="ring-2 ring-buddy-green/30" />
+              <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name || 'User'} size="xs" className="ring-2 ring-buddy-green/30" verificationStatus={post.author_data?.verification_status} />
             </button>
           )}
           <div className="flex-1 min-w-0 flex items-center gap-1.5">
@@ -319,13 +319,21 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           {/* Header */}
           <div className="flex items-start gap-2.5">
             <button onClick={() => navigate(`/${displayAuthor?.username}`)} className="flex-shrink-0 mt-0.5">
-              <Avatar src={displayAuthor?.avatar_url} alt={displayAuthor?.display_name || 'User'} size="md" />
+              <Avatar src={displayAuthor?.avatar_url} alt={displayAuthor?.display_name || 'User'} size="md" verificationStatus={displayAuthor?.verification_status} />
             </button>
             <div className="flex-1 min-w-0">
-              <button onClick={() => navigate(`/${displayAuthor?.username}`)}
-                className="font-semibold text-sm hover:text-buddy-green transition-colors block truncate leading-tight">
-                {displayAuthor?.display_name}
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => navigate(`/${displayAuthor?.username}`)}
+                  className="font-semibold text-sm hover:text-buddy-green transition-colors truncate leading-tight">
+                  {displayAuthor?.display_name}
+                </button>
+                {displayAuthor?.verification_status === 'trainer' && (
+                  <span className="text-[10px] bg-buddy-green/20 text-buddy-green px-1.5 py-0.5 rounded-full font-medium leading-tight shrink-0">Trainer</span>
+                )}
+                {displayAuthor?.verification_status === 'practitioner' && (
+                  <span className="text-[10px] bg-buddy-gold/20 text-buddy-gold px-1.5 py-0.5 rounded-full font-medium leading-tight shrink-0">Practitioner</span>
+                )}
+              </div>
               <p className="text-xs text-buddy-text-secondary leading-tight">
                 @{displayAuthor?.username} · {formatPostDate(displayPost.created_at)}
               </p>

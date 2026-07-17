@@ -17,6 +17,7 @@ class MealPlan(TimestampedModel):
     creator = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='meal_plans')
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    cover_image_url = models.URLField(blank=True)
     diet_type = models.CharField(max_length=20, choices=DIET_TYPES)
     duration_weeks = models.IntegerField(default=4)
     calorie_range = models.CharField(max_length=50, blank=True)
@@ -67,6 +68,7 @@ class TrainingProgramme(TimestampedModel):
     creator = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='marketplace_programmes')
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    cover_image_url = models.URLField(blank=True)
     category = models.CharField(max_length=50)
     duration_weeks = models.IntegerField(default=8)
     price_artifacts = models.JSONField(default=dict)
@@ -203,3 +205,58 @@ class EventTicket(TimestampedModel):
 
     def __str__(self):
         return f'Ticket {self.ticket_code} for {self.event.title}'
+
+
+class DiscountCode(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    creator = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='discount_codes')
+    code = models.CharField(max_length=50, unique=True)
+    discount_pct = models.IntegerField(default=0)
+    discount_artifacts = models.IntegerField(default=0)
+    usage_limit = models.IntegerField(default=0)  # 0 = unlimited
+    times_used = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'marketplace_discount_code'
+        indexes = [
+            models.Index(fields=['code']),
+            models.Index(fields=['creator']),
+        ]
+
+    def __str__(self):
+        return self.code
+
+
+class Cart(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    buyer = models.OneToOneField('profiles.Profile', on_delete=models.CASCADE, related_name='marketplace_cart')
+    discount_code = models.ForeignKey(DiscountCode, null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        db_table = 'marketplace_cart'
+
+
+class CartItem(TimestampedModel):
+    ITEM_TYPES = [
+        ('meal_plan', 'Meal Plan'),
+        ('programme', 'Training Programme'),
+        ('product', 'Product'),
+        ('event_ticket', 'Event Ticket'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPES)
+    
+    # Target item foreign keys
+    meal_plan = models.ForeignKey(MealPlan, null=True, blank=True, on_delete=models.CASCADE)
+    programme = models.ForeignKey(TrainingProgramme, null=True, blank=True, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, null=True, blank=True, on_delete=models.CASCADE)
+    event = models.ForeignKey(MarketplaceEvent, null=True, blank=True, on_delete=models.CASCADE)
+    
+    quantity = models.IntegerField(default=1)
+
+    class Meta:
+        db_table = 'marketplace_cart_item'
+        unique_together = ('cart', 'item_type', 'meal_plan', 'programme', 'product', 'event')

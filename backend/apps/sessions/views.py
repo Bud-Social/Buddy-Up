@@ -119,6 +119,7 @@ class BookingCreateView(views.APIView):
             artifact_fee=fee,
             notes=data.get('notes', ''),
             status='pending',
+            recurrence_pattern=data.get('recurrence_pattern'),
         )
 
         tx_ids = []
@@ -144,6 +145,28 @@ class BookingCreateView(views.APIView):
         booking.escrow_tx_id = ','.join(tx_ids)
         booking.status = 'confirmed'
         booking.save(update_fields=['status', 'escrow_tx_id'])
+
+        # Handle recurring sessions
+        recurrence = data.get('recurrence_pattern')
+        recurring_weeks = int(request.data.get('recurring_weeks', 0))
+        if recurrence and recurring_weeks > 1:
+            delta_map = {'daily': timedelta(days=1), 'weekly': timedelta(weeks=1), 'monthly': timedelta(days=30)}
+            delta = delta_map.get(recurrence, timedelta(weeks=1))
+            for i in range(1, recurring_weeks):
+                child = BookingSession.objects.create(
+                    client=request.user.profile,
+                    trainer=trainer_profile,
+                    session_type=data['session_type'],
+                    scheduled_at=data['scheduled_at'] + delta * i,
+                    duration_minutes=data['duration_minutes'],
+                    artifact_fee=fee,
+                    notes=data.get('notes', ''),
+                    status='confirmed',
+                    recurrence_pattern=recurrence,
+                    parent_series=booking,
+                    escrow_tx_id='',
+                )
+                _ = child  # spawned but no separate escrow for child sessions in MVP
 
         from apps.notifications.tasks import create_notification
         create_notification.delay(
@@ -423,3 +446,52 @@ class MyEnrolmentsView(views.APIView):
             'success': True, 'data': serializer.data, 'message': 'OK',
             'errors': None, 'pagination': None,
         })
+
+
+class CalendarSyncView(views.APIView):
+    """Return an iCalendar (.ics) file for a booking so the user can add it to any calendar app."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, booking_id):
+        booking = get_object_or_404(
+            BookingSession,
+            id=booking_id,
+        )
+        # Only participants can download
+        profile = request.user.profile
+        if booking.client != profile and booking.trainer != profile:
+            return Response({'success': False, 'message': 'Forbidden.'}, status=403)
+
+        dt_start = booking.scheduled_at
+        dt_end = dt_start + timedelta(minutes=booking.duration_minutes) if dt_start else None
+
+        def fmt(dt):
+            return dt.strftime('%Y%m%dT%H%M%SZ') if dt else ''
+
+        uid = f'{booking.id}@buddyup'
+        summary = f'BuddyUp Session – {booking.get_session_type_display()}'
+        organizer_name = booking.trainer.display_name
+        attendee_name = booking.client.display_name
+
+        ics = (
+            'BEGIN:VCALENDAR\r\n'
+            'VERSION:2.0\r\n'
+            'PRODID:-//BuddyUp//Sessions//EN\r\n'
+            'CALSCALE:GREGORIAN\r\n'
+            'METHOD:PUBLISH\r\n'
+            'BEGIN:VEVENT\r\n'
+            f'UID:{uid}\r\n'
+            f'DTSTART:{fmt(dt_start)}\r\n'
+            f'DTEND:{fmt(dt_end)}\r\n'
+            f'SUMMARY:{summary}\r\n'
+            f'DESCRIPTION:Session with {organizer_name} and {attendee_name}. Notes: {booking.notes or "N/A"}\r\n'
+            f'STATUS:{"CONFIRMED" if booking.status == "confirmed" else "TENTATIVE"}\r\n'
+            'END:VEVENT\r\n'
+            'END:VCALENDAR\r\n'
+        )
+
+        from django.http import HttpResponse
+        response = HttpResponse(ics, content_type='text/calendar; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="buddyup-session-{booking_id}.ics"'
+        return response
+

@@ -7,11 +7,12 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { BuddyButton } from '@/components/features/profiles/BuddyButton';
 import { useToast } from '@/components/ui/Toast';
-import { profilesApi } from '@/api';
+import { profilesApi, messagingApi } from '@/api';
 import { livesApi } from '@/api/lives';
 import ReplayPlayer from '@/components/live/ReplayPlayer';
 import type { Profile, Post } from '@/types';
 import type { BuddyLive } from '@/types/live';
+import { PostCard } from '@/components/features/feed/PostCard';
 
 type ProfileTab = 'posts' | 'lives';
 
@@ -29,6 +30,7 @@ export default function UserProfile() {
   const [lives, setLives] = useState<BuddyLive[]>([]);
   const [livesLoading, setLivesLoading] = useState(false);
   const [replayLive, setReplayLive] = useState<BuddyLive | null>(null);
+  const [messageLoading, setMessageLoading] = useState(false);
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
@@ -79,6 +81,19 @@ export default function UserProfile() {
       toast('error', 'Failed to send ping');
     } finally {
       setPingLoading(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!username) return;
+    setMessageLoading(true);
+    try {
+      await messagingApi.startConversation([username]);
+      navigate(`/messages?user=${username}`);
+    } catch {
+      toast('error', 'Failed to start conversation');
+    } finally {
+      setMessageLoading(false);
     }
   };
 
@@ -213,6 +228,18 @@ export default function UserProfile() {
             </Button>
           )}
         </div>
+        <div className="flex gap-2 mt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex-1"
+            onClick={handleMessage}
+            isLoading={messageLoading}
+          >
+            <MessageCircle size={14} className="mr-1" />
+            Message
+          </Button>
+        </div>
       </Card>
 
       <div className="flex border-b border-buddy-surface mb-4">
@@ -278,27 +305,7 @@ export default function UserProfile() {
         ) : (
           <div className="space-y-3">
             {posts.map((post) => (
-              <Card key={post.id} className="p-3">
-                <div className="flex items-start gap-2 mb-2">
-                  <Avatar src={post.author_data.avatar_url} alt={post.author_data.display_name} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{post.author_data.display_name}</p>
-                    <p className="text-[10px] text-buddy-text-secondary">{new Date(post.created_at).toLocaleDateString()}</p>
-                  </div>
-                </div>
-                <p className="text-sm mb-2">{post.body}</p>
-                {post.media_urls.length > 0 && (
-                  <div className={`grid gap-1 mb-2 ${post.media_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                    {post.media_urls.slice(0, 4).map((url, i) => (
-                      <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg" loading="lazy" />
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-4 text-xs text-buddy-text-secondary">
-                  <span className="flex items-center gap-1"><Heart size={12} /> {Object.values(post.reaction_counts).reduce((a, b) => a + b, 0)}</span>
-                  <span className="flex items-center gap-1"><MessageCircle size={12} /> {post.comment_count}</span>
-                </div>
-              </Card>
+              <PostCard key={post.id} post={post} />
             ))}
           </div>
         )

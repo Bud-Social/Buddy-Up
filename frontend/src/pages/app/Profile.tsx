@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radio, Play, Clock, Users, Loader, Camera, Settings, Moon, Sun, Monitor, Contrast, MessageCircle, Heart } from 'lucide-react';
+import { Radio, Play, Clock, Users, Camera, Settings, Moon, Sun, Monitor, Contrast, Loader, MessageCircle, Shield } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -17,6 +17,7 @@ import ReplayPlayer from '@/components/live/ReplayPlayer';
 import type { BuddyLive } from '@/types/live';
 import type { Post } from '@/types';
 import type { Gym } from '@/types';
+import { PostCard } from '@/components/features/feed/PostCard';
 
 type ProfileTab = 'posts' | 'lives' | 'gyms' | 'achievements';
 
@@ -150,12 +151,12 @@ export default function Profile() {
     <div className="max-w-lg mx-auto p-4">
       <Card className="p-6 mb-6">
         <div className="flex items-start gap-4 mb-4">
-          <div className="relative flex-shrink-0">
-            <Avatar src={avatarUrl} alt={profile.display_name} size="xl" showRepRing streakProgress={profile.streak_days > 0 ? Math.min(profile.streak_days / 365 * 100, 100) : 0} />
+          <div className="relative inline-block flex-shrink-0">
+            <Avatar src={avatarUrl} alt={profile.display_name} size="xl" showRepRing streakProgress={profile.streak_days > 0 ? Math.min(profile.streak_days / 365 * 100, 100) : 0} verificationStatus={profile.verification_status} />
             <button onClick={() => avatarInputRef.current?.click()}
-              className="absolute bottom-0 right-0 p-1.5 rounded-full bg-buddy-green text-buddy-black hover:bg-buddy-green-deep transition-colors shadow-lg"
+              className="absolute bottom-0 right-0 p-1.5 rounded-full bg-buddy-green text-buddy-black hover:bg-buddy-green-deep transition-colors shadow-lg z-10"
               disabled={uploadingAvatar}>
-              {uploadingAvatar ? <Loader size={12} className="animate-spin" /> : <Camera size={12} />}
+              {uploadingAvatar ? <Loader size={14} className="animate-spin" /> : <Camera size={14} />}
             </button>
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileSelected} />
           </div>
@@ -207,7 +208,11 @@ export default function Profile() {
 
         {!isEditing && (
           <div className="flex gap-2 mb-2">
-            <Button variant="outline" className="flex-1" onClick={() => navigate('/profile/edit')}>Edit Profile</Button>
+            <Button variant="outline" className="flex-1" onClick={() => setIsEditing(true)}>Edit Profile</Button>
+            <Button variant="outline" onClick={() => navigate('/verification')} className="flex-1 gap-1.5" disabled={profile.verification_status !== 'none' && profile.verification_status !== 'email'}>
+              <Shield size={16} />
+              Verify
+            </Button>
             <Button variant="outline" onClick={() => navigate('/settings')}>
               <Settings size={16} />
             </Button>
@@ -246,27 +251,7 @@ export default function Profile() {
           ) : (
             <div className="col-span-3 space-y-2">
               {posts.map((post) => (
-                <Card key={post.id} className="p-3">
-                  <div className="flex items-start gap-2 mb-2">
-                    <Avatar src={post.author_data.avatar_url} alt={post.author_data.display_name} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{post.author_data.display_name}</p>
-                      <p className="text-[10px] text-buddy-text-secondary">{new Date(post.created_at).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm mb-2">{post.body}</p>
-                  {post.media_urls.length > 0 && (
-                    <div className={`grid gap-1 mb-2 ${post.media_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                      {post.media_urls.slice(0, 4).map((url, i) => (
-                        <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg" loading="lazy" />
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex gap-4 text-xs text-buddy-text-secondary">
-                    <span className="flex items-center gap-1"><Heart size={12} /> {Object.values(post.reaction_counts).reduce((a, b) => a + b, 0)}</span>
-                    <span className="flex items-center gap-1"><MessageCircle size={12} /> {post.comment_count}</span>
-                  </div>
-                </Card>
+                <PostCard key={post.id} post={post} />
               ))}
             </div>
           )

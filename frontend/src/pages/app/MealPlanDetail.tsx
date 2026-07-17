@@ -24,10 +24,10 @@ export default function MealPlanDetail() {
     setLoading(true);
     Promise.all([
       marketplaceApi.getMealPlan(planId),
-      marketplaceApi.getMealPlanReviews(planId).catch(() => [] as MealPlanReview[]),
+      marketplaceApi.getMealPlanReviews(planId).catch(() => ({ data: [] } as unknown as { data: MealPlanReview[] })),
     ]).then(([p, r]) => {
       setPlan(p.data);
-      setReviews(r as MealPlanReview[]);
+      setReviews(r.data || []);
     }).catch(() => navigate('/marketplace'))
     .finally(() => setLoading(false));
   }, [planId, navigate]);
@@ -56,7 +56,7 @@ export default function MealPlanDetail() {
     try {
       await marketplaceApi.reviewMealPlan(planId, reviewRating, reviewBody);
       const r = await marketplaceApi.getMealPlanReviews(planId);
-      setReviews(r.data);
+      setReviews(r.data || []);
       setReviewBody('');
     } catch { /* ignore */ }
     finally { setReviewing(false); }

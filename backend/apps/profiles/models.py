@@ -41,6 +41,7 @@ class Profile(TimestampedModel):
     external_link = models.URLField(blank=True)
     workout_schedule = models.JSONField(null=True, blank=True)
     saved_payment_methods = models.JSONField(default=list, blank=True)
+    last_seen = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'profiles_profile'

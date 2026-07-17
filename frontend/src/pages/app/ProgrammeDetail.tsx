@@ -24,10 +24,10 @@ export default function ProgrammeDetail() {
     setLoading(true);
     Promise.all([
       marketplaceApi.getProgramme(programmeId),
-      marketplaceApi.getProgrammeReviews(programmeId).catch(() => [] as TrainingProgrammeReview[]),
+      marketplaceApi.getProgrammeReviews(programmeId).catch(() => ({ data: [] } as unknown as { data: TrainingProgrammeReview[] })),
     ]).then(([p, r]) => {
       setProgramme(p.data);
-      setReviews(r as TrainingProgrammeReview[]);
+      setReviews(r.data || []);
     }).catch(() => navigate('/marketplace'))
     .finally(() => setLoading(false));
   }, [programmeId, navigate]);
@@ -51,7 +51,7 @@ export default function ProgrammeDetail() {
     try {
       await marketplaceApi.reviewProgramme(programmeId, reviewRating, reviewBody);
       const r = await marketplaceApi.getProgrammeReviews(programmeId);
-      setReviews(r.data);
+      setReviews(r.data || []);
       setReviewBody('');
     } catch { /* ignore */ }
     finally { setReviewing(false); }

@@ -55,7 +55,6 @@ class MyProfileView(generics.RetrieveUpdateAPIView):
             'pagination': None,
         })
 
-
 class UserProfileView(generics.RetrieveAPIView):
     permission_classes = [permissions.AllowAny]
     lookup_field = 'username'
@@ -737,3 +736,55 @@ class ProfileRecommendationsView(views.APIView):
             'errors': None,
             'pagination': None,
         })
+
+
+class UserPostsView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, username):
+        profile = get_object_or_404(Profile, username=username)
+        from apps.feed.models import Post
+        from apps.feed.serializers import PostSerializer
+
+        qs = Post.objects.filter(author=profile, is_deleted=False).order_by('-created_at')
+        page_size = int(request.query_params.get('limit', 20))
+        qs = qs[:page_size]
+
+        serializer = PostSerializer(qs, many=True, context={'request': request})
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+
+class PresenceStatusView(views.APIView):
+    """
+    POST /api/profiles/presence/
+    Body: { "user_ids": ["uuid1", "uuid2", ...] }
+    Returns online status and last_seen for each requested user.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['post', 'options', 'head']
+
+    def options(self, request, *args, **kwargs):
+        return Response(status=200)
+
+    def post(self, request):
+        from django.core.cache import cache
+        user_ids = request.data.get('user_ids', [])
+        if not isinstance(user_ids, list):
+            return Response({'success': False, 'data': None, 'message': 'user_ids must be a list.',
+                             'errors': None, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
+
+        profiles = Profile.objects.filter(user_id__in=user_ids).values('user_id', 'last_seen', 'show_active_status')
+        result = {}
+        for p in profiles:
+            uid = str(p['user_id'])
+            is_online = bool(cache.get(f'user_online_{uid}')) if p['show_active_status'] else False
+            last_seen = p['last_seen'].isoformat() if p['last_seen'] else None
+            result[uid] = {
+                'online': is_online,
+                'last_seen': last_seen if p['show_active_status'] else None,
+            }
+
+        return Response({'success': True, 'data': result, 'message': 'OK', 'errors': None, 'pagination': None})
