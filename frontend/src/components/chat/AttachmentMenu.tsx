@@ -2,7 +2,7 @@
  * AttachmentMenu – rich attachment picker sheet (WhatsApp/iMessage style).
  * Supports: Photos, Camera, Video, Document, Location, Poll, Events.
  */
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   Image as ImageIcon,
   Camera,
@@ -13,7 +13,12 @@ import {
   Calendar,
   X,
   Mic,
+  Clock,
+  MapPin as MapPinSmall,
+  Tag,
 } from 'lucide-react';
+import { livesApi } from '@/api/lives';
+import { sessionsApi } from '@/api/sessions';
 
 interface LocationResult {
   lat: number;
@@ -27,13 +32,33 @@ interface PollData {
   options: string[];
 }
 
+export interface EventData {
+  eventId: string;
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  eventType: string;
+}
+
 interface AttachmentMenuProps {
   onFile: (file: File) => void;
   onLocation: (loc: LocationResult) => void;
   onPoll: (poll: PollData) => void;
-  onEvent: () => void;
+  onEvent: (event: EventData) => void;
   onVoiceNote: () => void;
   onClose: () => void;
+}
+
+interface SelectableEvent {
+  id: string;
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  eventType: string;
 }
 
 const ITEMS = [
@@ -55,6 +80,46 @@ export function AttachmentMenu({ onFile, onLocation, onPoll, onEvent, onVoiceNot
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [locLoading, setLocLoading] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [events, setEvents] = useState<SelectableEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState('');
+
+  useEffect(() => {
+    if (!showEventModal) return;
+    setEventsLoading(true);
+    setEventsError('');
+    Promise.all([
+      livesApi.browse({ tab: 'upcoming' }).catch(() => []),
+      sessionsApi.getMyBookings('client', 'confirmed').catch(() => []),
+    ]).then(([lives, bookings]) => {
+      const mapped: SelectableEvent[] = [
+        ...((Array.isArray(lives) ? lives : []) as any[]).map((l: any) => ({
+          id: l.id,
+          title: l.title,
+          description: l.title,
+          startTime: l.scheduled_for || l.created_at,
+          endTime: l.ended_at || l.scheduled_for || l.created_at,
+          location: l.live_type,
+          eventType: l.live_type,
+        })),
+        ...((Array.isArray(bookings) ? bookings : []) as any[]).map((b: any) => ({
+          id: b.id,
+          title: `PT Session: ${b.session_type}`,
+          description: b.notes || `${b.session_type} session`,
+          startTime: b.scheduled_at,
+          endTime: b.scheduled_at,
+          location: 'Online / Studio',
+          eventType: b.session_type,
+        })),
+      ];
+      setEvents(mapped);
+      setEventsLoading(false);
+    }).catch(() => {
+      setEventsError('Could not load events');
+      setEventsLoading(false);
+    });
+  }, [showEventModal]);
 
   const handleItemClick = async (id: string, itemAccept: string | null) => {
     if (id === 'location') {
@@ -81,8 +146,7 @@ export function AttachmentMenu({ onFile, onLocation, onPoll, onEvent, onVoiceNot
       return;
     }
     if (id === 'event') {
-      onEvent();
-      onClose();
+      setShowEventModal(true);
       return;
     }
     if (id === 'voice') {
@@ -227,6 +291,71 @@ export function AttachmentMenu({ onFile, onLocation, onPoll, onEvent, onVoiceNot
             >
               Send Poll
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Event Modal */}
+      {showEventModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm p-4" onClick={(e) => e.target === e.currentTarget && setShowEventModal(false)}>
+          <div className="w-full max-w-md bg-buddy-surface-raised rounded-3xl p-6 space-y-4 shadow-2xl max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between shrink-0">
+              <h3 className="text-lg font-bold font-heading">Share Event</h3>
+              <button onClick={() => setShowEventModal(false)} className="p-1 text-buddy-text-secondary hover:text-white rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2 -mx-2 px-2">
+              {eventsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="w-6 h-6 border-2 border-buddy-green border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : eventsError ? (
+                <p className="text-center text-buddy-text-secondary text-sm py-8">{eventsError}</p>
+              ) : events.length === 0 ? (
+                <p className="text-center text-buddy-text-secondary text-sm py-8">No upcoming events found</p>
+              ) : (
+                events.map((ev) => (
+                  <button
+                    key={ev.id}
+                    onClick={() => {
+                      onEvent({
+                        eventId: ev.id,
+                        title: ev.title,
+                        description: ev.description,
+                        startTime: ev.startTime,
+                        endTime: ev.endTime,
+                        location: ev.location,
+                        eventType: ev.eventType,
+                      });
+                      setShowEventModal(false);
+                      onClose();
+                    }}
+                    className="w-full text-left flex items-start gap-3 p-3 rounded-2xl hover:bg-buddy-surface transition-colors border border-buddy-surface/50"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-buddy-green/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <Calendar size={18} className="text-buddy-green" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-buddy-text-primary truncate">{ev.title}</p>
+                      <div className="flex items-center gap-1.5 mt-1 text-xs text-buddy-text-secondary">
+                        <Clock size={11} />
+                        <span>{new Date(ev.startTime).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(ev.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-xs text-buddy-text-secondary">
+                        <MapPinSmall size={11} />
+                        <span className="truncate">{ev.location}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-xs text-buddy-text-secondary">
+                        <Tag size={11} />
+                        <span className="capitalize">{ev.eventType.replace(/_/g, ' ')}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

@@ -1,17 +1,22 @@
+import mimetypes
 import os
 import uuid
 
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
+from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.conf import settings
 
 from rest_framework import views, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 
 from common.pagination import CursorPagination
+from common.utils import validate_file_signature, validate_mime_from_bytes
 from .models import Conversation, Message, MessageReaction, CallLog
 from .serializers import (
     ConversationSerializer, MessageSerializer,
@@ -126,9 +131,26 @@ class MessageListView(views.APIView):
     def get(self, request, conversation_id):
         conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
         before = request.query_params.get('before')
+        attachment_type = request.query_params.get('attachment_type', '')
         messages = conv.messages.select_related('sender', 'reply_to__sender').prefetch_related('reactions')
         if before:
             messages = messages.filter(created_at__lt=before)
+        if attachment_type:
+            type_map = {
+                'photo': 'photo',
+                'video': 'video',
+                'audio': 'voice',
+                'document': 'document',
+                'link': 'text',
+                'location': 'location',
+                'poll': 'poll',
+                'event': 'event',
+            }
+            mapped = type_map.get(attachment_type)
+            if mapped == 'text':
+                messages = messages.filter(message_type='text', media_url='', body__regex=r'https?://')
+            elif mapped:
+                messages = messages.filter(message_type=mapped)
         messages = messages.order_by('-created_at')[:50]
 
         serializer = MessageSerializer(
@@ -212,8 +234,9 @@ class DeleteMessageView(views.APIView):
 class UploadAttachmentView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+    throttle_scope = 'upload_attachment'
+    throttle_classes = [ScopedRateThrottle]
 
-    ALLOWED_MIME_PREFIXES = ('image/', 'video/', 'audio/')
     ALLOWED_EXTENSIONS = {
         '.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic',
         '.mp4', '.mov', '.webm',
@@ -246,21 +269,77 @@ class UploadAttachmentView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # ── Magic byte validation ────────────────────────────────────────
+        chunk = file.read(512)
+        file.seek(0)
+        if ext in ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.mov', '.webm',
+                    '.mp3', '.ogg', '.m4a', '.wav', '.pdf'):
+            if not validate_file_signature(chunk, ext):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'File content does not match its extension.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # ── MIME type enforcement ────────────────────────────────────────
+        declared_mime = file.content_type or ''
+        guessed_mime, _ = mimetypes.guess_type(file.name)
+        if declared_mime and guessed_mime:
+            allowed_prefixes = ('image/', 'video/', 'audio/', 'application/pdf', 'text/plain')
+            if not declared_mime.startswith(allowed_prefixes):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Declared MIME type not allowed.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # ── Stream to storage (avoid full read into memory) ──────────────
         filename = f'messaging/{uuid.uuid4().hex}{ext}'
-        saved_name = default_storage.save(filename, ContentFile(file.read()))
+        saved_name = default_storage.save(filename, file)
         url = default_storage.url(saved_name)
 
         return Response({
             'success': True,
             'data': {
                 'url': url,
-                'mime': file.content_type or '',
+                'mime': declared_mime or guessed_mime or '',
                 'file_name': file.name,
                 'size': file.size,
             },
             'message': 'Uploaded.',
             'errors': None, 'pagination': None,
         }, status=status.HTTP_201_CREATED)
+
+
+class ServeMessageFileView(views.APIView):
+    """
+    Authenticated file proxy for message attachments.
+    Serves files with security headers instead of exposing raw storage URLs.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, message_id):
+        msg = get_object_or_404(Message, id=message_id)
+        get_object_or_404(Conversation, id=msg.conversation_id, participants=request.user.profile)
+
+        if not msg.media_url:
+            raise Http404('No attachment on this message.')
+
+        # Resolve filesystem path from the stored URL
+        relative_path = msg.media_url.replace(default_storage.url(''), '', 1)
+        file_path = os.path.join(settings.MEDIA_ROOT, relative_path.lstrip('/'))
+
+        if not os.path.isfile(file_path):
+            raise Http404('File not found on disk.')
+
+        content_type = msg.media_mime or 'application/octet-stream'
+        response = FileResponse(open(file_path, 'rb'), content_type=content_type)
+        response['Content-Disposition'] = 'inline'
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['X-Frame-Options'] = 'DENY'
+        response['Content-Security-Policy'] = "default-src 'none'; media-src 'self'; img-src 'self'"
+        response['Cache-Control'] = 'private, max-age=3600'
+        return response
 
 
 class MessageReactionView(views.APIView):
@@ -335,6 +414,112 @@ class CallLogView(views.APIView):
         serializer = CallLogSerializer(log)
         return Response({
             'success': True, 'data': serializer.data, 'message': 'Call log saved.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class LinkPreviewView(views.APIView):
+    """Fetch Open Graph metadata for a URL to generate link previews."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        url = request.data.get('url', '').strip()
+        if not url:
+            return Response({'success': False, 'message': 'URL required.'}, status=400)
+
+        import urllib.request
+        import urllib.parse
+        import urllib.error
+        import re as re_module
+
+        preview = {'url': url, 'title': '', 'description': '', 'image': '', 'domain': ''}
+        try:
+            parsed = urllib.parse.urlparse(url)
+            preview['domain'] = parsed.netloc or parsed.hostname or url
+
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'BuddyUp/1.0 (+https://buddyup.app)',
+                'Accept': 'text/html,application/xhtml+xml',
+            })
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                html = resp.read(8192).decode('utf-8', errors='ignore')
+
+            og_title = re_module.search(r'<meta\s+[^>]*property=["\']og:title["\'][^>]*content=["\']([^"\']+)["\']', html, re_module.I)
+            og_desc = re_module.search(r'<meta\s+[^>]*property=["\']og:description["\'][^>]*content=["\']([^"\']+)["\']', html, re_module.I)
+            og_img = re_module.search(r'<meta\s+[^>]*property=["\']og:image["\'][^>]*content=["\']([^"\']+)["\']', html, re_module.I)
+            html_title = re_module.search(r'<title>([^<]+)</title>', html, re_module.I)
+
+            if og_title:
+                preview['title'] = og_title.group(1)
+            elif html_title:
+                preview['title'] = html_title.group(1)
+            else:
+                preview['title'] = preview['domain']
+
+            if og_desc:
+                preview['description'] = og_desc.group(1)[:300]
+            if og_img:
+                preview['image'] = og_img.group(1)
+        except Exception:
+            preview['title'] = url
+
+        return Response({
+            'success': True, 'data': preview, 'message': 'OK',
+            'errors': None, 'pagination': None,
+        })
+
+
+class ForwardMessageView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, message_id):
+        original = get_object_or_404(Message, id=message_id)
+        get_object_or_404(Conversation, id=original.conversation_id, participants=request.user.profile)
+
+        target_conversation_id = request.data.get('conversation_id')
+        if not target_conversation_id:
+            return Response({'success': False, 'message': 'target conversation_id required.'}, status=400)
+        target_conv = get_object_or_404(
+            Conversation, id=target_conversation_id, participants=request.user.profile
+        )
+
+        msg = Message.objects.create(
+            conversation=target_conv,
+            sender=request.user.profile,
+            message_type=original.message_type,
+            body=original.body,
+            media_url=original.media_url,
+            media_mime=original.media_mime,
+            file_name=original.file_name,
+            metadata={
+                **(original.metadata or {}),
+                'forwarded_from': {
+                    'message_id': str(original.id),
+                    'sender_name': original.sender.display_name,
+                    'conversation_id': str(original.conversation_id),
+                },
+            },
+        )
+        target_conv.last_message_text = msg.body[:200] or msg.message_type
+        target_conv.last_message_at = timezone.now()
+        target_conv.save(update_fields=['last_message_text', 'last_message_at'])
+
+        serializer = MessageSerializer(msg, context={'request': request})
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'conversation_{target_conversation_id}',
+            {'type': 'chat_message', 'data': serializer.data},
+        )
+        for participant in target_conv.participants.exclude(user_id=request.user.profile.user_id):
+            async_to_sync(channel_layer.group_send)(
+                f'user_{participant.user_id}',
+                {'type': 'event_message', 'data': {'type': 'new_message', **serializer.data}},
+            )
+
+        return Response({
+            'success': True, 'data': serializer.data, 'message': 'Message forwarded.',
             'errors': None, 'pagination': None,
         }, status=status.HTTP_201_CREATED)
 

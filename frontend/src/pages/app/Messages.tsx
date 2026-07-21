@@ -14,11 +14,12 @@ import {
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical, Check, CheckCheck,
-  X, FileText, Plus, MapPin, BarChart2, Smile, Mic, Search,
+  X, FileText, Plus, MapPin, BarChart2, Smile, Mic, Search, Calendar, Clock, Download, Forward,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { messagingApi } from '@/api/messaging';
-import type { Conversation, Message as MsgType } from '@/api/messaging';
+import type { Conversation, Message as MsgType, LinkPreviewData } from '@/api/messaging';
 import { useAuthStore } from '@/store/authStore';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import type { ChatEvent } from '@/hooks/useChatSocket';
@@ -27,9 +28,139 @@ import { usePresence, formatLastSeen } from '@/hooks/usePresence';
 import { AttachmentMenu } from '@/components/chat/AttachmentMenu';
 import { VoiceNoteRecorder } from '@/components/chat/VoiceNoteRecorder';
 import { CallRoom } from '@/components/chat/CallRoom';
+import { CustomAudioPlayer } from '@/components/chat/CustomAudioPlayer';
 
 // Quick emoji picker options
 const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '👎', '🔥', '💪'];
+
+const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY as string | undefined;
+
+function LocationCard({ lat, lng, label, isMine }: { lat: number; lng: number; label: string; isMine: boolean }) {
+  const [showPopup, setShowPopup] = useState(false);
+  const staticUrl = GOOGLE_MAPS_KEY 
+    ? `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=400x200&maptype=roadmap&markers=color:red%7C${lat},${lng}&key=${GOOGLE_MAPS_KEY}`
+    : `https://www.mapquestapi.com/staticmap/v5/map?center=${lat},${lng}&zoom=15&size=400,200&type=map&locations=${lat},${lng}|marker-red`;
+  
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  const appleMapsUrl = `http://maps.apple.com/?q=${lat},${lng}`;
+
+  return (
+    <div className="relative inline-block w-56">
+      <button 
+        onClick={(e) => { e.stopPropagation(); setShowPopup(!showPopup); }} 
+        className="block w-full group/loc text-left"
+      >
+        <div className="h-28 bg-gradient-to-br from-gray-700 to-gray-800 relative overflow-hidden rounded-t-lg">
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${staticUrl})` }} />
+          <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/60 to-transparent" />
+          <div className="absolute bottom-1.5 right-2 text-[9px] text-white/90 font-medium">Tap to open map</div>
+        </div>
+        <div className={`flex items-center gap-2 px-3 py-2 ${isMine ? 'bg-buddy-black/5 text-buddy-black' : 'bg-buddy-surface-raised text-buddy-text-primary'}`}>
+          <MapPin size={14} className={isMine ? 'text-buddy-black/70' : 'text-buddy-green'} />
+          <span className="text-xs truncate">{label}</span>
+        </div>
+      </button>
+
+      {showPopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={(e) => { e.stopPropagation(); setShowPopup(false); }}>
+          <div className="bg-white dark:bg-buddy-surface shadow-2xl rounded-2xl overflow-hidden z-[110] border border-black/10 dark:border-white/10 text-sm w-64 flex flex-col animate-in fade-in zoom-in-95" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-black/5 dark:border-white/5 font-semibold text-center text-buddy-text-primary">
+              Open Map
+            </div>
+            <a 
+              href={googleMapsUrl} target="_blank" rel="noreferrer" 
+              className="block w-full px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 text-center text-buddy-black dark:text-white"
+              onClick={() => setShowPopup(false)}
+            >
+              Google Maps
+            </a>
+            <a 
+              href={appleMapsUrl} target="_blank" rel="noreferrer" 
+              className="block w-full px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 border-t border-black/5 dark:border-white/5 text-center text-buddy-black dark:text-white"
+              onClick={() => setShowPopup(false)}
+            >
+              Apple Maps
+            </a>
+            <button 
+              className="w-full px-4 py-3 hover:bg-black/5 dark:hover:bg-white/5 border-t border-black/5 dark:border-white/5 text-center text-buddy-text-secondary font-medium"
+              onClick={(e) => { e.stopPropagation(); setShowPopup(false); }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PollCard({ msg, isMine }: { msg: MsgType; isMine: boolean }) {
+  const [localVote, setLocalVote] = useState<number | null>(null);
+  const pollData = msg.metadata?.poll as { question: string; options: { text: string; votes: number }[] };
+  if (!pollData) return null;
+
+  const opts = pollData.options ?? [];
+  const totalVotes = opts.reduce((s, o, i) => s + o.votes + (localVote === i ? 1 : 0), 0);
+
+  return (
+    <div className="p-3 w-64">
+      <div className="flex items-center gap-1.5 mb-2">
+        <BarChart2 size={13} className={isMine ? 'text-buddy-black/60' : 'text-buddy-text-secondary'} />
+        <span className={`text-[10px] font-bold tracking-wider ${isMine ? 'text-buddy-black/60' : 'text-buddy-text-secondary'}`}>POLL</span>
+      </div>
+      <p className="font-semibold text-sm mb-3 leading-snug">{pollData.question}</p>
+      
+      {opts.map((opt, oi) => {
+        const votesForOption = opt.votes + (localVote === oi ? 1 : 0);
+        const pct = totalVotes > 0 ? Math.round((votesForOption / totalVotes) * 100) : 0;
+        const hasVotedThis = localVote === oi;
+        
+        return (
+          <button 
+            key={oi}
+            onClick={async (e) => {
+              e.stopPropagation();
+              if (localVote !== null) return; // Prevent double voting locally
+              setLocalVote(oi);
+              try {
+                await messagingApi.reactToMessage(msg.id, `poll:${oi}`);
+              } catch {
+                setLocalVote(null); // Revert on failure
+              }
+            }}
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all mb-2 relative overflow-hidden flex justify-between items-center ${
+              hasVotedThis 
+                ? isMine ? 'bg-buddy-black text-white border-buddy-black' : 'bg-buddy-green text-buddy-black border-buddy-green shadow-sm'
+                : isMine 
+                  ? 'bg-buddy-black/5 border-buddy-black/10 hover:border-buddy-black/20 text-buddy-black' 
+                  : 'bg-buddy-surface border-buddy-surface-raised hover:border-buddy-text-secondary/20 text-buddy-text-primary'
+            }`}
+          >
+            {/* Progress Bar Background */}
+            {totalVotes > 0 && (
+              <div
+                className={`absolute inset-y-0 left-0 transition-all duration-700 ease-out ${
+                  hasVotedThis ? (isMine ? 'bg-white/20' : 'bg-black/10') : isMine ? 'bg-buddy-black/10' : 'bg-buddy-green/20'
+                }`}
+                style={{ width: `${pct}%` }}
+              />
+            )}
+            <span className="relative z-10">{opt.text}</span>
+            {totalVotes > 0 && (
+              <span className={`relative z-10 text-xs ${hasVotedThis ? 'opacity-100' : 'opacity-70'}`}>
+                {pct}%
+              </span>
+            )}
+          </button>
+        );
+      })}
+      
+      {totalVotes > 0 && (
+        <p className="text-[10px] opacity-60 mt-2 text-right font-medium">{totalVotes} vote{totalVotes !== 1 ? 's' : ''}</p>
+      )}
+    </div>
+  );
+}
 
 export default function Messages() {
   const { conversationId: routeConvoId } = useParams<{ conversationId: string }>();
@@ -40,6 +171,12 @@ export default function Messages() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<MsgType[]>([]);
+  const [previewFileUrl, setPreviewFileUrl] = useState<{url: string, name: string} | null>(null);
+  const [conversationListCollapsed, setConversationListCollapsed] = useState(false);
+  const [attachmentFilter, setAttachmentFilter] = useState('');
+  const [forwardModalConvId, setForwardModalConvId] = useState<string | null>(null);
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [linkPreviews, setLinkPreviews] = useState<Record<string, LinkPreviewData>>({});
   const [body, setBody] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
@@ -58,6 +195,27 @@ export default function Messages() {
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupUsers, setNewGroupUsers] = useState<string>('');
+
+  const linkPreviewsRef = useRef(linkPreviews);
+  linkPreviewsRef.current = linkPreviews;
+
+  useEffect(() => {
+    const urlRegex = /https?:\/\/[^\s]+/g;
+    messages.forEach((msg) => {
+      if (msg.message_type === 'text' && msg.body) {
+        const matches = msg.body.match(urlRegex);
+        if (matches) {
+          matches.forEach(async (url) => {
+            if (linkPreviewsRef.current[url]) return;
+            try {
+              const data = await messagingApi.linkPreview(url);
+              setLinkPreviews((prev) => ({ ...prev, [url]: data }));
+            } catch {}
+          });
+        }
+      }
+    });
+  }, [messages]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +243,28 @@ export default function Messages() {
   const handleChatEvent = useCallback((event: ChatEvent) => {
     if (event.type === 'message') {
       const msg = event as unknown as MsgType & { type: string };
-      setMessages((prev) => (prev.find((m) => m.id === msg.id) ? prev : [...prev, msg]));
+      setMessages((prev) => {
+        // Already have this exact message (by real ID) — skip
+        if (prev.find((m) => m.id === msg.id)) return prev;
+
+        // If it's our own message echoed back, replace the matching optimistic temp entry
+        if (msg.sender_id === profile?.user_id) {
+          const tempIdx = prev.findIndex(
+            (m) =>
+              m.id.startsWith('temp_') &&
+              m.sender_id === msg.sender_id &&
+              m.message_type === msg.message_type &&
+              m.body === msg.body,
+          );
+          if (tempIdx !== -1) {
+            const next = [...prev];
+            next[tempIdx] = msg;
+            return next;
+          }
+        }
+
+        return [...prev, msg];
+      });
       if (
         activeConvoRef.current &&
         msg.conversation_id === activeConvoRef.current.id &&
@@ -352,6 +531,24 @@ export default function Messages() {
     });
   }, [sendTextOrMedia]);
 
+  const handleEventSend = useCallback((event: { eventId: string; title: string; description: string; startTime: string; endTime: string; location: string; eventType: string }) => {
+    sendTextOrMedia({
+      body: event.title,
+      message_type: 'event',
+      metadata: {
+        event: {
+          eventId: event.eventId,
+          title: event.title,
+          description: event.description,
+          startTime: event.startTime,
+          endTime: event.endTime,
+          location: event.location,
+          eventType: event.eventType,
+        },
+      },
+    });
+  }, [sendTextOrMedia]);
+
   const handleDelete = async (msgId: string, forEveryone = false) => {
     try {
       await messagingApi.deleteMessage(msgId, forEveryone);
@@ -418,7 +615,9 @@ export default function Messages() {
       )}
 
       {/* Sidebar */}
-      <div className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-buddy-surface shrink-0 ${activeConvo ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`relative flex flex-col border-r border-buddy-surface shrink-0 transition-all duration-300 ${
+        activeConvo ? 'hidden md:flex' : 'flex'
+      } ${conversationListCollapsed ? 'w-0 md:w-0 overflow-hidden' : 'w-full md:w-80 lg:w-96'}`}>
         <div className="p-4 border-b border-buddy-surface">
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-xl font-bold font-display">Messages</h1>
@@ -467,7 +666,6 @@ export default function Messages() {
                 >
                   <div className="relative shrink-0">
                     <Avatar src={avatarUrl} alt={name} size="md" verificationStatus={partner?.verification_status || ''} />
-                    {/* Online dot */}
                     {partner?.user_id && presence[partner.user_id]?.online && (
                       <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-buddy-green rounded-full border-2 border-buddy-black" />
                     )}
@@ -500,6 +698,15 @@ export default function Messages() {
           </div>
         )}
       </div>
+
+      {/* Conversation list toggle */}
+      <button
+        onClick={() => setConversationListCollapsed((prev) => !prev)}
+        className="hidden md:flex items-center justify-center w-6 bg-buddy-surface hover:bg-buddy-surface-raised border-r border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary transition-colors shrink-0 cursor-pointer"
+        title={conversationListCollapsed ? 'Show conversation list' : 'Hide conversation list'}
+      >
+        {conversationListCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+      </button>
 
       {/* Chat Area */}
       {!activeConvo ? (
@@ -568,6 +775,41 @@ export default function Messages() {
             </div>
           </div>
 
+          {/* Attachment filter chips */}
+          <div className="flex gap-2 overflow-x-auto px-4 py-2 shrink-0 scrollbar-none">
+            {[
+              { label: 'All', value: '' },
+              { label: 'Photos', value: 'photo' },
+              { label: 'Videos', value: 'video' },
+              { label: 'Audio', value: 'audio' },
+              { label: 'Documents', value: 'document' },
+              { label: 'Links', value: 'link' },
+              { label: 'Polls', value: 'poll' },
+              { label: 'Locations', value: 'location' },
+              { label: 'Events', value: 'event' },
+            ].map((chip) => (
+              <button
+                key={chip.value}
+                onClick={async () => {
+                  setAttachmentFilter(chip.value);
+                  if (activeConvo) {
+                    try {
+                      const res = await messagingApi.getMessages(activeConvo.id, undefined, chip.value || undefined);
+                      setMessages(res.data ?? []);
+                    } catch {}
+                  }
+                }}
+                className={`shrink-0 px-4 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  attachmentFilter === chip.value
+                    ? 'bg-buddy-green text-buddy-black'
+                    : 'bg-buddy-surface text-buddy-text-secondary hover:bg-buddy-surface-raised'
+                }`}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
           {/* Messages */}
           <div
             className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
@@ -593,6 +835,7 @@ export default function Messages() {
                 const isSeq = prevMsg?.sender_id === msg.sender_id;
                 const isPoll = msg.metadata?.poll != null;
                 const isLocation = msg.message_type === 'location';
+                const isEvent = msg.message_type === 'event';
 
                 return (
                   <div
@@ -622,13 +865,13 @@ export default function Messages() {
 
                       {/* Reply context */}
                       {msg.reply_data && (
-                        <div className={`text-[11px] px-3 py-1.5 mb-1 rounded-xl max-w-full border-l-4 ${
-                          isMine ? 'bg-buddy-green/10 border-buddy-green text-buddy-green/80' : 'bg-buddy-surface border-buddy-text-secondary/30 text-buddy-text-secondary'
+                        <div className={`text-[10px] px-2.5 py-1.5 mb-1 rounded-lg max-w-full border-l-2 ${
+                          isMine ? 'bg-buddy-black/10 border-buddy-black/30 text-buddy-black' : 'bg-buddy-surface-raised border-buddy-text-secondary/20 text-buddy-text-secondary'
                         }`}>
-                          <span className="font-semibold block truncate">
+                          <span className="font-bold block truncate">
                             {msg.reply_data.sender_name === profile?.display_name ? 'You' : msg.reply_data.sender_name}
                           </span>
-                          <span className="truncate block opacity-80">{msg.reply_data.body || '📎 Attachment'}</span>
+                          <span className="truncate block opacity-80 mt-0.5">{msg.reply_data.body || '📎 Attachment'}</span>
                         </div>
                       )}
 
@@ -638,6 +881,13 @@ export default function Messages() {
                         {isMine && !isTemp && (
                           <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
+                              onClick={(e) => { e.stopPropagation(); setForwardModalConvId(msg.id); setShowForwardModal(true); }}
+                              className="p-1 text-buddy-text-secondary hover:text-buddy-green rounded-full"
+                              title="Forward"
+                            >
+                              <Forward size={13} />
+                            </button>
+                            <button
                               onClick={(e) => { e.stopPropagation(); setShowOptionsId(showOptionsId === msg.id ? null : msg.id); }}
                               className="p-1 text-buddy-text-secondary hover:text-white rounded-full"
                             >
@@ -646,7 +896,7 @@ export default function Messages() {
                           </div>
                         )}
 
-                        <div className={`rounded-2xl overflow-hidden text-sm ${
+                        <div className={`rounded-[20px] overflow-hidden text-sm ${
                           isMine
                             ? 'bg-buddy-green text-buddy-black rounded-br-sm'
                             : 'bg-buddy-surface text-buddy-text-primary rounded-bl-sm'
@@ -654,128 +904,176 @@ export default function Messages() {
 
                           {/* Location */}
                           {isLocation && (
-                            <a
-                              href={`https://www.openstreetmap.org/?mlat=${msg.metadata?.lat}&mlon=${msg.metadata?.lng}#map=15/${msg.metadata?.lat}/${msg.metadata?.lng}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="block w-56 group/loc"
-                            >
-                              <div className="h-28 bg-gradient-to-br from-gray-700 to-gray-800 relative overflow-hidden">
-                                <div className="absolute inset-0 flex items-center justify-center flex-col gap-1">
-                                  <MapPin size={28} className={`drop-shadow-lg ${isMine ? 'text-buddy-black' : 'text-buddy-green'}`} />
-                                  <div className="w-3 h-1 rounded-full bg-black/30" />
-                                </div>
-                                <div className="absolute inset-0 bg-[url('https://tile.openstreetmap.org/14/8192/5460.png')] opacity-20 bg-cover" />
-                                <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/60 to-transparent" />
-                                <div className="absolute bottom-1.5 right-2 text-[9px] text-white/60">Tap to open map</div>
-                              </div>
-                              <div className="flex items-center gap-2 px-3 py-2">
-                                <MapPin size={14} className={isMine ? 'text-buddy-black/70' : 'text-buddy-green'} />
-                                <span className="text-xs truncate">{msg.body || `${Number(msg.metadata?.lat).toFixed(4)}, ${Number(msg.metadata?.lng).toFixed(4)}`}</span>
-                              </div>
-                            </a>
+                            <LocationCard
+                              lat={Number(msg.metadata?.lat)}
+                              lng={Number(msg.metadata?.lng)}
+                              label={msg.body || `${Number(msg.metadata?.lat).toFixed(4)}, ${Number(msg.metadata?.lng).toFixed(4)}`}
+                              isMine={isMine}
+                            />
                           )}
 
                           {/* Poll */}
                           {isPoll && !isLocation && (
+                            <PollCard msg={msg} isMine={isMine} />
+                          )}
+
+                          {/* Event */}
+                          {isEvent && !isLocation && !!msg.metadata?.event && (
                             <div className="p-3 w-64">
                               <div className="flex items-center gap-1.5 mb-2">
-                                <BarChart2 size={13} className={isMine ? 'text-buddy-black/60' : 'text-buddy-text-secondary'} />
-                                <span className={`text-[10px] font-semibold ${isMine ? 'text-buddy-black/60' : 'text-buddy-text-secondary'}`}>POLL</span>
+                                <Calendar size={13} className={isMine ? 'text-buddy-black/60' : 'text-buddy-text-secondary'} />
+                                <span className={`text-[10px] font-semibold ${isMine ? 'text-buddy-black/60' : 'text-buddy-text-secondary'}`}>EVENT</span>
                               </div>
-                              <p className="font-semibold text-sm mb-3">{(msg.metadata.poll as { question: string }).question}</p>
                               {(() => {
-                                const opts = (msg.metadata.poll as { options: { text: string; votes: number }[] }).options ?? [];
-                                const totalVotes = opts.reduce((s, o) => s + o.votes, 0);
-                                return opts.map((opt, oi) => {
-                                  const pct = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
-                                  return (
-                                    <button key={oi}
-                                      onClick={async (e) => {
-                                        e.stopPropagation();
-                                        try {
-                                          await messagingApi.reactToMessage(msg.id, `poll:${oi}`);
-                                        } catch {}
-                                      }}
-                                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium border transition-all hover:scale-[1.01] mb-1.5 relative overflow-hidden ${
-                                        isMine ? 'bg-buddy-black/20 border-buddy-black/30 hover:bg-buddy-black/30' : 'bg-buddy-surface-raised border-buddy-surface hover:bg-buddy-green/10'
-                                      }`}
+                                const ev = msg.metadata.event as { eventId: string; title: string; description: string; startTime: string; endTime: string; location: string; eventType: string };
+                                const startDate = new Date(ev.startTime);
+                                const dateStr = startDate.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                                const timeStr = startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                const googleCalUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(ev.title)}&dates=${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${new Date(ev.endTime).toISOString().replace(/[-:]/g, '').split('.')[0]}Z&details=${encodeURIComponent(ev.description)}&location=${encodeURIComponent(ev.location)}`;
+                                return (
+                                  <>
+                                    <p className="font-semibold text-sm mb-1">{ev.title}</p>
+                                    <div className="flex items-center gap-1.5 text-xs opacity-80 mb-0.5">
+                                      <Calendar size={11} />
+                                      <span>{dateStr}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs opacity-80 mb-0.5">
+                                      <Clock size={11} />
+                                      <span>{timeStr}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs opacity-80 mb-1">
+                                      <MapPin size={11} />
+                                      <span className="truncate">{ev.location}</span>
+                                    </div>
+                                    <a
+                                      href={googleCalUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className={`inline-flex items-center gap-1 text-[11px] font-medium mt-1 ${
+                                        isMine ? 'text-buddy-black/70' : 'text-buddy-green'
+                                      } hover:underline`}
+                                      onClick={(e) => e.stopPropagation()}
                                     >
-                                      {totalVotes > 0 && (
-                                        <div
-                                          className={`absolute inset-y-0 left-0 rounded-xl opacity-20 ${isMine ? 'bg-buddy-black' : 'bg-buddy-green'}`}
-                                          style={{ width: `${pct}%` }}
-                                        />
-                                      )}
-                                      <span className="relative z-10">{opt.text}</span>
-                                      {totalVotes > 0 && <span className="float-right relative z-10 opacity-70">{pct}%</span>}
-                                    </button>
-                                  );
-                                });
-                              })()}
-                              {(() => {
-                                const opts = (msg.metadata.poll as { options: { text: string; votes: number }[] }).options ?? [];
-                                const total = opts.reduce((s,o)=>s+o.votes,0);
-                                return total > 0 ? <p className="text-[10px] opacity-50 mt-1 text-right">{total} votes</p> : null;
+                                      <Calendar size={11} />
+                                      Add to Calendar
+                                    </a>
+                                  </>
+                                );
                               })()}
                             </div>
                           )}
 
                           {/* Media */}
-                          {!isLocation && !isPoll && msg.media_url && (
+                          {!isLocation && !isPoll && !isEvent && msg.media_url && (
                             <div className="max-w-full">
                               {msg.message_type === 'photo' ? (
-                                <img
-                                  src={msg.media_url}
-                                  alt="Photo"
-                                  className="max-w-xs w-full object-cover cursor-zoom-in"
-                                  style={{ borderRadius: msg.body ? '0' : undefined }}
-                                  onClick={() => window.open(msg.media_url, '_blank')}
-                                />
+                                <div className="relative group/media">
+                                  <img
+                                    src={msg.media_url}
+                                    alt="Photo"
+                                    className="max-w-xs w-full object-cover cursor-zoom-in"
+                                    style={{ borderRadius: msg.body ? '0' : undefined }}
+                                    onClick={() => window.open(msg.media_url, '_blank')}
+                                  />
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank'); }}
+                                    className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity text-white"
+                                    title="Download"
+                                  >
+                                    <Download size={14} />
+                                  </button>
+                                </div>
                               ) : msg.message_type === 'video' ? (
-                                <video
-                                  src={msg.media_url}
-                                  controls
-                                  playsInline
-                                  className="max-w-xs w-full rounded-t-2xl"
-                                  style={{ maxHeight: 300 }}
-                                />
+                                <div className="relative group/media overflow-hidden rounded-[18px]">
+                                  <video
+                                    src={msg.media_url}
+                                    controls
+                                    playsInline
+                                    className="max-w-xs w-full bg-black/10 object-cover"
+                                    style={{ maxHeight: 300, display: 'block' }}
+                                  />
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank'); }}
+                                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity text-white backdrop-blur-sm shadow-sm"
+                                    title="Download"
+                                  >
+                                    <Download size={14} />
+                                  </button>
+                                </div>
                               ) : msg.message_type === 'voice' ? (
-                                <div className="px-3 pt-3 pb-2 w-56">
-                                  <div className={`flex items-center gap-2 mb-1.5 ${isMine ? 'text-buddy-black/70' : 'text-buddy-text-secondary'}`}>
+                                <div className="px-3 pt-3 pb-3 w-64">
+                                  <div className={`flex items-center gap-2 mb-2 ${isMine ? 'text-buddy-black/70' : 'text-buddy-text-secondary'}`}>
                                     <Mic size={12} />
                                     <span className="text-[10px] font-semibold tracking-wide">VOICE NOTE</span>
                                     {msg.metadata?.duration_ms ? (
                                       <span className="text-[10px] ml-auto opacity-60">{Math.round((msg.metadata.duration_ms as number) / 1000)}s</span>
                                     ) : null}
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank'); }}
+                                      className="p-1 hover:text-buddy-green transition-colors ml-auto"
+                                      title="Download"
+                                    >
+                                      <Download size={12} />
+                                    </button>
                                   </div>
-                                  <audio
-                                    src={msg.media_url}
-                                    controls
-                                    className="w-full"
-                                    style={{ height: 36 }}
-                                    onLoadedMetadata={(e) => {
-                                      // Force small size
-                                      (e.target as HTMLAudioElement).style.width = '100%';
-                                    }}
-                                  />
+                                  <CustomAudioPlayer src={msg.media_url} isMine={isMine} />
                                 </div>
                               ) : (
-                                <a href={msg.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-3 py-2.5 hover:opacity-80">
-                                  <FileText size={18} />
-                                  <div className="min-w-0">
-                                    <p className="truncate text-xs font-medium">{msg.file_name || 'Document'}</p>
-                                    <p className="text-[10px] opacity-50">Tap to open</p>
+                                <div className="flex items-center gap-3 px-3 py-3 w-64">
+                                  <div className={`p-2.5 rounded-xl shrink-0 flex items-center justify-center ${isMine ? 'bg-buddy-black/10 text-buddy-black' : 'bg-buddy-surface-raised text-buddy-green'}`}>
+                                    <FileText size={20} strokeWidth={2.5} />
                                   </div>
-                                </a>
+                                  <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                    <p className="truncate text-sm font-semibold">{msg.file_name || 'Document'}</p>
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); setPreviewFileUrl({ url: msg.media_url!, name: msg.file_name || 'Document' }); }}
+                                      className="text-left text-[11px] font-medium opacity-70 hover:opacity-100 transition-opacity underline-offset-2 hover:underline mt-0.5"
+                                    >
+                                      Tap to view
+                                    </button>
+                                  </div>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank'); }}
+                                    className={`p-2 rounded-full transition-colors shrink-0 ${isMine ? 'hover:bg-buddy-black/10 text-buddy-black' : 'hover:bg-white/10 text-buddy-text-secondary hover:text-white'}`}
+                                    title="Download"
+                                  >
+                                    <Download size={16} />
+                                  </button>
+                                </div>
                               )}
                             </div>
                           )}
 
                           {/* Text body */}
-                          {!isLocation && msg.body && (
-                            <p className="px-3.5 py-2.5 whitespace-pre-wrap break-words leading-relaxed">{msg.body}</p>
+                          {!isLocation && !isPoll && msg.body && (
+                            <p className="px-3 py-2 whitespace-pre-wrap break-words leading-snug">{msg.body}</p>
                           )}
+
+                          {/* Link preview */}
+                          {!isLocation && msg.message_type === 'text' && msg.body && (() => {
+                            const urlMatch = msg.body.match(/https?:\/\/[^\s]+/);
+                            const previewUrl = urlMatch?.[0];
+                            const preview = previewUrl ? linkPreviews[previewUrl] : null;
+                            return preview ? (
+                              <a
+                                href={preview.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={`block mx-3 mb-2 rounded-xl overflow-hidden border ${isMine ? 'border-buddy-black/20' : 'border-buddy-surface-raised'} hover:opacity-90 transition-opacity`}
+                              >
+                                {preview.image && (
+                                  <img src={preview.image} alt="" className="w-full h-28 object-cover" />
+                                )}
+                                <div className="p-2.5">
+                                  <p className="text-xs font-semibold truncate">{preview.title}</p>
+                                  <p className="text-[10px] opacity-60 truncate">{preview.domain}</p>
+                                  {preview.description && (
+                                    <p className="text-[10px] opacity-70 mt-1 line-clamp-2">{preview.description}</p>
+                                  )}
+                                </div>
+                              </a>
+                            ) : null;
+                          })()}
 
                           {/* Timestamp + read receipt */}
                           <div className={`flex items-center justify-end gap-1 px-2.5 pb-1.5 -mt-1 ${isMine ? 'text-buddy-black/50' : 'text-buddy-text-secondary/50'}`}>
@@ -804,6 +1102,13 @@ export default function Messages() {
                               className="p-1 text-buddy-text-secondary hover:text-buddy-green rounded-full"
                             >
                               <Smile size={13} />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setForwardModalConvId(msg.id); setShowForwardModal(true); }}
+                              className="p-1 text-buddy-text-secondary hover:text-buddy-green rounded-full"
+                              title="Forward"
+                            >
+                              <Forward size={13} />
                             </button>
                           </div>
                         )}
@@ -844,19 +1149,23 @@ export default function Messages() {
                       </div>
 
                       {/* Reactions */}
-                      {Object.keys(msg.reactions ?? {}).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1 px-1">
-                          {Object.entries(msg.reactions).map(([emoji, count]) => (
-                            <button
-                              key={emoji}
-                              onClick={() => sendReact(msg.id, emoji)}
-                              className="flex items-center gap-1 bg-buddy-surface rounded-full px-2 py-0.5 text-xs hover:bg-buddy-surface-raised transition-colors"
-                            >
-                              {emoji} <span className="opacity-70">{count}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      {(() => {
+                        const displayReactions = Object.entries(msg.reactions ?? {}).filter(([emoji]) => !emoji.startsWith('poll:'));
+                        if (displayReactions.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1 mt-1 px-1">
+                            {displayReactions.map(([emoji, count]) => (
+                              <button
+                                key={emoji}
+                                onClick={() => sendReact(msg.id, emoji)}
+                                className="flex items-center gap-1 bg-buddy-surface rounded-full px-2 py-0.5 text-xs hover:bg-buddy-surface-raised transition-colors"
+                              >
+                                {emoji} <span className="opacity-70">{count}</span>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
@@ -936,7 +1245,7 @@ export default function Messages() {
                       onFile={stageFile}
                       onLocation={handleLocationShare}
                       onPoll={handlePollSend}
-                      onEvent={() => { setShowAttachMenu(false); }}
+                      onEvent={handleEventSend}
                       onVoiceNote={() => { setShowVoiceRecorder(true); setShowAttachMenu(false); }}
                       onClose={() => setShowAttachMenu(false)}
                     />
@@ -1032,6 +1341,74 @@ export default function Messages() {
               >
                 Create Group
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Forward Modal */}
+      {showForwardModal && forwardModalConvId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-buddy-black/80 backdrop-blur-sm" onClick={() => setShowForwardModal(false)}>
+          <div className="bg-buddy-surface-raised w-full max-w-md rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold font-display">Forward Message</h2>
+              <button onClick={() => setShowForwardModal(false)} className="text-buddy-text-secondary hover:text-buddy-text-primary"><X size={20} /></button>
+            </div>
+            <div className="max-h-80 overflow-y-auto space-y-1">
+              {conversations
+                .filter((c) => c.id !== activeConvo?.id)
+                .map((convo) => {
+                  const partner = convo.participants_data.find((p) => p.user_id !== profile?.user_id) ?? convo.participants_data[0];
+                  const name = partner?.display_name ?? convo.group_name ?? 'Conversation';
+                  return (
+                    <button
+                      key={convo.id}
+                      onClick={async () => {
+                        try {
+                          await messagingApi.forwardMessage(forwardModalConvId, convo.id);
+                          setShowForwardModal(false);
+                          setForwardModalConvId(null);
+                        } catch {}
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-buddy-surface transition-colors text-left"
+                    >
+                      <Avatar src={partner?.avatar_url} alt={name} size="sm" verificationStatus={partner?.verification_status} />
+                      <span className="text-sm font-medium truncate">{name}</span>
+                    </button>
+                  );
+                })}
+              {conversations.filter((c) => c.id !== activeConvo?.id).length === 0 && (
+                <p className="text-sm text-buddy-text-secondary text-center py-8">No other conversations to forward to.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Document Preview Modal */}
+      {previewFileUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewFileUrl(null)}>
+          <div className="bg-white dark:bg-buddy-surface w-full max-w-4xl h-[85vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b dark:border-white/10 bg-buddy-surface-raised">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileText size={18} className="text-buddy-green shrink-0" />
+                <span className="font-semibold text-sm truncate">{previewFileUrl.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a href={previewFileUrl.url} target="_blank" rel="noreferrer" className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors" title="Download">
+                  <Download size={18} />
+                </a>
+                <button onClick={() => setPreviewFileUrl(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 bg-white/5">
+              <iframe 
+                src={previewFileUrl.url.toLowerCase().endsWith('.pdf') ? previewFileUrl.url : `https://docs.google.com/viewer?url=${encodeURIComponent(previewFileUrl.url)}&embedded=true`} 
+                className="w-full h-full border-0"
+                title="Document Preview"
+              />
             </div>
           </div>
         </div>

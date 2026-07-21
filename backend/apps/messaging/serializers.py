@@ -11,6 +11,7 @@ class SendMessageInputSerializer(serializers.Serializer):
     body = serializers.CharField(max_length=5000, allow_blank=True, default='')
     message_type = serializers.ChoiceField(
         choices=['text', 'photo', 'video', 'voice', 'document', 'location',
+                 'poll', 'event',
                  'workout_log', 'meal_plan', 'artifact_tip', 'accountability_ping', 'call_log'],
         default='text',
     )

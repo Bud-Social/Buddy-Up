@@ -67,6 +67,14 @@ export interface CallLog {
   ended_at: string | null;
 }
 
+export interface LinkPreviewData {
+  url: string;
+  title: string;
+  description: string;
+  image: string;
+  domain: string;
+}
+
 export const messagingApi = {
   getConversations: () =>
     apiClient.get<ApiResponse<Conversation[]>>('/messaging/conversations/').then((r) => r.data),
@@ -77,10 +85,10 @@ export const messagingApi = {
   getConversation: (id: string) =>
     apiClient.get<ApiResponse<Conversation>>(`/messaging/conversations/${id}/`).then((r) => r.data),
 
-  getMessages: (conversationId: string, before?: string) =>
+  getMessages: (conversationId: string, before?: string, attachmentType?: string) =>
     apiClient
       .get<ApiResponse<Message[]>>(`/messaging/conversations/${conversationId}/messages/`, {
-        params: before ? { before } : {},
+        params: { ...(before ? { before } : {}), ...(attachmentType ? { attachment_type: attachmentType } : {}) },
       })
       .then((r) => r.data),
 
@@ -144,4 +152,16 @@ export const messagingApi = {
     apiClient
       .post<ApiResponse<CallLog>>(`/messaging/conversations/${conversationId}/calls/`, data)
       .then((r) => r.data),
+
+  forwardMessage: (messageId: string, targetConversationId: string) =>
+    apiClient
+      .post<ApiResponse<Message>>(`/messaging/messages/${messageId}/forward/`, { conversation_id: targetConversationId })
+      .then((r) => r.data),
+
+  getServeFileUrl: (messageId: string) => `/messaging/messages/${messageId}/serve/`,
+
+  linkPreview: (url: string) =>
+    apiClient
+      .post<ApiResponse<LinkPreviewData>>('/messaging/link-preview/', { url })
+      .then((r) => r.data.data),
 };

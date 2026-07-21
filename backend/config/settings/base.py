@@ -140,6 +140,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Messaging attachment storage (S3-compatible, falls back to FileSystemStorage)
+MESSAGING_S3_ENDPOINT = os.environ.get('MESSAGING_S3_ENDPOINT', '')
+MESSAGING_S3_BUCKET = os.environ.get('MESSAGING_S3_BUCKET', '')
+MESSAGING_S3_ACCESS_KEY = os.environ.get('MESSAGING_S3_ACCESS_KEY', '')
+MESSAGING_S3_SECRET_KEY = os.environ.get('MESSAGING_S3_SECRET_KEY', '')
+MESSAGING_S3_REGION = os.environ.get('MESSAGING_S3_REGION', 'us-east-1')
+MESSAGING_S3_PRESIGNED_EXPIRY = int(os.environ.get('MESSAGING_S3_PRESIGNED_EXPIRY', '3600'))
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # DRF
@@ -169,6 +177,7 @@ REST_FRAMEWORK = {
         'registration': '10/h',
         'login': '30/h',
         'otp': '3/h',
+        'upload_attachment': '20/h',
     },
 }
 

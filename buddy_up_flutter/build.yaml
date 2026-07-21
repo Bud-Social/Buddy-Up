@@ -1,0 +1,2 @@
+# All builders auto-register via their own build.yaml.
+# No explicit builder config needed.
