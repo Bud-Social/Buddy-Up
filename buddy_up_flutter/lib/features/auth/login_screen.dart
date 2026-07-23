@@ -128,8 +128,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _isLoading = false);
         return; // User canceled
       }
-      final GoogleSignInAuthentication auth = await account.authentication;
-      if (auth.idToken == null) throw Exception("Failed to get idToken");
+      final GoogleSignInAuthentication auth = account.authentication;
+      if (auth.idToken == null) throw Exception('Failed to get idToken');
 
       final repo = ref.read(apiClientProvider).getService<AuthRepository>();
       final res = await repo.googleLogin({'credential': auth.idToken});
