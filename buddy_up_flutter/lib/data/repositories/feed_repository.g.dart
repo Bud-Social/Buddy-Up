@@ -41,7 +41,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -71,7 +71,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -106,7 +106,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -155,7 +155,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -204,7 +204,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -237,7 +237,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -289,7 +289,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -319,7 +319,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -372,7 +372,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -402,7 +402,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -433,7 +433,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -463,7 +463,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -493,7 +493,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -542,7 +542,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -573,7 +573,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
@@ -610,7 +610,7 @@ class _FeedRepository implements FeedRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);

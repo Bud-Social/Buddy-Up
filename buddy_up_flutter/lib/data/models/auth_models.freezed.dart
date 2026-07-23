@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RegisterPayload {
 
- String get email; String? get phone; String get password; String get dob; String get username; String get displayName; String get role; bool get acceptedTerms; bool get acceptedPrivacy; bool get acceptedGuidelines; bool get is16Plus;
+ String get email; String? get phone; String get password; String get dob; String get username;@JsonKey(name: 'display_name') String get displayName; String get role;@JsonKey(name: 'accepted_terms') bool get acceptedTerms;@JsonKey(name: 'accepted_privacy') bool get acceptedPrivacy;@JsonKey(name: 'accepted_guidelines') bool get acceptedGuidelines;@JsonKey(name: 'is_16_plus') bool get is16Plus;
 /// Create a copy of RegisterPayload
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $RegisterPayloadCopyWith<$Res>  {
   factory $RegisterPayloadCopyWith(RegisterPayload value, $Res Function(RegisterPayload) _then) = _$RegisterPayloadCopyWithImpl;
 @useResult
 $Res call({
- String email, String? phone, String password, String dob, String username, String displayName, String role, bool acceptedTerms, bool acceptedPrivacy, bool acceptedGuidelines, bool is16Plus
+ String email, String? phone, String password, String dob, String username,@JsonKey(name: 'display_name') String displayName, String role,@JsonKey(name: 'accepted_terms') bool acceptedTerms,@JsonKey(name: 'accepted_privacy') bool acceptedPrivacy,@JsonKey(name: 'accepted_guidelines') bool acceptedGuidelines,@JsonKey(name: 'is_16_plus') bool is16Plus
 });
 
 
@@ -163,7 +163,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String? phone,  String password,  String dob,  String username,  String displayName,  String role,  bool acceptedTerms,  bool acceptedPrivacy,  bool acceptedGuidelines,  bool is16Plus)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String? phone,  String password,  String dob,  String username, @JsonKey(name: 'display_name')  String displayName,  String role, @JsonKey(name: 'accepted_terms')  bool acceptedTerms, @JsonKey(name: 'accepted_privacy')  bool acceptedPrivacy, @JsonKey(name: 'accepted_guidelines')  bool acceptedGuidelines, @JsonKey(name: 'is_16_plus')  bool is16Plus)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RegisterPayload() when $default != null:
 return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,_that.displayName,_that.role,_that.acceptedTerms,_that.acceptedPrivacy,_that.acceptedGuidelines,_that.is16Plus);case _:
@@ -184,7 +184,7 @@ return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String? phone,  String password,  String dob,  String username,  String displayName,  String role,  bool acceptedTerms,  bool acceptedPrivacy,  bool acceptedGuidelines,  bool is16Plus)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String? phone,  String password,  String dob,  String username, @JsonKey(name: 'display_name')  String displayName,  String role, @JsonKey(name: 'accepted_terms')  bool acceptedTerms, @JsonKey(name: 'accepted_privacy')  bool acceptedPrivacy, @JsonKey(name: 'accepted_guidelines')  bool acceptedGuidelines, @JsonKey(name: 'is_16_plus')  bool is16Plus)  $default,) {final _that = this;
 switch (_that) {
 case _RegisterPayload():
 return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,_that.displayName,_that.role,_that.acceptedTerms,_that.acceptedPrivacy,_that.acceptedGuidelines,_that.is16Plus);case _:
@@ -204,7 +204,7 @@ return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String? phone,  String password,  String dob,  String username,  String displayName,  String role,  bool acceptedTerms,  bool acceptedPrivacy,  bool acceptedGuidelines,  bool is16Plus)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String? phone,  String password,  String dob,  String username, @JsonKey(name: 'display_name')  String displayName,  String role, @JsonKey(name: 'accepted_terms')  bool acceptedTerms, @JsonKey(name: 'accepted_privacy')  bool acceptedPrivacy, @JsonKey(name: 'accepted_guidelines')  bool acceptedGuidelines, @JsonKey(name: 'is_16_plus')  bool is16Plus)?  $default,) {final _that = this;
 switch (_that) {
 case _RegisterPayload() when $default != null:
 return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,_that.displayName,_that.role,_that.acceptedTerms,_that.acceptedPrivacy,_that.acceptedGuidelines,_that.is16Plus);case _:
@@ -219,7 +219,7 @@ return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,
 @JsonSerializable()
 
 class _RegisterPayload implements RegisterPayload {
-  const _RegisterPayload({required this.email, this.phone, required this.password, required this.dob, required this.username, required this.displayName, required this.role, required this.acceptedTerms, required this.acceptedPrivacy, required this.acceptedGuidelines, required this.is16Plus});
+  const _RegisterPayload({required this.email, this.phone, required this.password, required this.dob, required this.username, @JsonKey(name: 'display_name') required this.displayName, required this.role, @JsonKey(name: 'accepted_terms') required this.acceptedTerms, @JsonKey(name: 'accepted_privacy') required this.acceptedPrivacy, @JsonKey(name: 'accepted_guidelines') required this.acceptedGuidelines, @JsonKey(name: 'is_16_plus') required this.is16Plus});
   factory _RegisterPayload.fromJson(Map<String, dynamic> json) => _$RegisterPayloadFromJson(json);
 
 @override final  String email;
@@ -227,12 +227,12 @@ class _RegisterPayload implements RegisterPayload {
 @override final  String password;
 @override final  String dob;
 @override final  String username;
-@override final  String displayName;
+@override@JsonKey(name: 'display_name') final  String displayName;
 @override final  String role;
-@override final  bool acceptedTerms;
-@override final  bool acceptedPrivacy;
-@override final  bool acceptedGuidelines;
-@override final  bool is16Plus;
+@override@JsonKey(name: 'accepted_terms') final  bool acceptedTerms;
+@override@JsonKey(name: 'accepted_privacy') final  bool acceptedPrivacy;
+@override@JsonKey(name: 'accepted_guidelines') final  bool acceptedGuidelines;
+@override@JsonKey(name: 'is_16_plus') final  bool is16Plus;
 
 /// Create a copy of RegisterPayload
 /// with the given fields replaced by the non-null parameter values.
@@ -267,7 +267,7 @@ abstract mixin class _$RegisterPayloadCopyWith<$Res> implements $RegisterPayload
   factory _$RegisterPayloadCopyWith(_RegisterPayload value, $Res Function(_RegisterPayload) _then) = __$RegisterPayloadCopyWithImpl;
 @override @useResult
 $Res call({
- String email, String? phone, String password, String dob, String username, String displayName, String role, bool acceptedTerms, bool acceptedPrivacy, bool acceptedGuidelines, bool is16Plus
+ String email, String? phone, String password, String dob, String username,@JsonKey(name: 'display_name') String displayName, String role,@JsonKey(name: 'accepted_terms') bool acceptedTerms,@JsonKey(name: 'accepted_privacy') bool acceptedPrivacy,@JsonKey(name: 'accepted_guidelines') bool acceptedGuidelines,@JsonKey(name: 'is_16_plus') bool is16Plus
 });
 
 
@@ -308,7 +308,7 @@ as bool,
 /// @nodoc
 mixin _$LoginPayload {
 
- String get email; String get password; bool get rememberMe;
+ String get email; String get password;@JsonKey(name: 'remember_me') bool get rememberMe;
 /// Create a copy of LoginPayload
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -341,7 +341,7 @@ abstract mixin class $LoginPayloadCopyWith<$Res>  {
   factory $LoginPayloadCopyWith(LoginPayload value, $Res Function(LoginPayload) _then) = _$LoginPayloadCopyWithImpl;
 @useResult
 $Res call({
- String email, String password, bool rememberMe
+ String email, String password,@JsonKey(name: 'remember_me') bool rememberMe
 });
 
 
@@ -448,7 +448,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String password,  bool rememberMe)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String password, @JsonKey(name: 'remember_me')  bool rememberMe)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LoginPayload() when $default != null:
 return $default(_that.email,_that.password,_that.rememberMe);case _:
@@ -469,7 +469,7 @@ return $default(_that.email,_that.password,_that.rememberMe);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String password,  bool rememberMe)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String password, @JsonKey(name: 'remember_me')  bool rememberMe)  $default,) {final _that = this;
 switch (_that) {
 case _LoginPayload():
 return $default(_that.email,_that.password,_that.rememberMe);case _:
@@ -489,7 +489,7 @@ return $default(_that.email,_that.password,_that.rememberMe);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String password,  bool rememberMe)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String password, @JsonKey(name: 'remember_me')  bool rememberMe)?  $default,) {final _that = this;
 switch (_that) {
 case _LoginPayload() when $default != null:
 return $default(_that.email,_that.password,_that.rememberMe);case _:
@@ -504,12 +504,12 @@ return $default(_that.email,_that.password,_that.rememberMe);case _:
 @JsonSerializable()
 
 class _LoginPayload implements LoginPayload {
-  const _LoginPayload({required this.email, required this.password, this.rememberMe = false});
+  const _LoginPayload({required this.email, required this.password, @JsonKey(name: 'remember_me') this.rememberMe = false});
   factory _LoginPayload.fromJson(Map<String, dynamic> json) => _$LoginPayloadFromJson(json);
 
 @override final  String email;
 @override final  String password;
-@override@JsonKey() final  bool rememberMe;
+@override@JsonKey(name: 'remember_me') final  bool rememberMe;
 
 /// Create a copy of LoginPayload
 /// with the given fields replaced by the non-null parameter values.
@@ -544,7 +544,7 @@ abstract mixin class _$LoginPayloadCopyWith<$Res> implements $LoginPayloadCopyWi
   factory _$LoginPayloadCopyWith(_LoginPayload value, $Res Function(_LoginPayload) _then) = __$LoginPayloadCopyWithImpl;
 @override @useResult
 $Res call({
- String email, String password, bool rememberMe
+ String email, String password,@JsonKey(name: 'remember_me') bool rememberMe
 });
 
 
@@ -577,7 +577,7 @@ as bool,
 /// @nodoc
 mixin _$LoginInitResponse {
 
- bool get requireOtp; String get loginToken; String get maskedEmail;
+@JsonKey(name: 'require_otp') bool get requireOtp;@JsonKey(name: 'login_token') String get loginToken;@JsonKey(name: 'masked_email') String get maskedEmail;
 /// Create a copy of LoginInitResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -610,7 +610,7 @@ abstract mixin class $LoginInitResponseCopyWith<$Res>  {
   factory $LoginInitResponseCopyWith(LoginInitResponse value, $Res Function(LoginInitResponse) _then) = _$LoginInitResponseCopyWithImpl;
 @useResult
 $Res call({
- bool requireOtp, String loginToken, String maskedEmail
+@JsonKey(name: 'require_otp') bool requireOtp,@JsonKey(name: 'login_token') String loginToken,@JsonKey(name: 'masked_email') String maskedEmail
 });
 
 
@@ -717,7 +717,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool requireOtp,  String loginToken,  String maskedEmail)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String loginToken, @JsonKey(name: 'masked_email')  String maskedEmail)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LoginInitResponse() when $default != null:
 return $default(_that.requireOtp,_that.loginToken,_that.maskedEmail);case _:
@@ -738,7 +738,7 @@ return $default(_that.requireOtp,_that.loginToken,_that.maskedEmail);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool requireOtp,  String loginToken,  String maskedEmail)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String loginToken, @JsonKey(name: 'masked_email')  String maskedEmail)  $default,) {final _that = this;
 switch (_that) {
 case _LoginInitResponse():
 return $default(_that.requireOtp,_that.loginToken,_that.maskedEmail);case _:
@@ -758,7 +758,7 @@ return $default(_that.requireOtp,_that.loginToken,_that.maskedEmail);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool requireOtp,  String loginToken,  String maskedEmail)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String loginToken, @JsonKey(name: 'masked_email')  String maskedEmail)?  $default,) {final _that = this;
 switch (_that) {
 case _LoginInitResponse() when $default != null:
 return $default(_that.requireOtp,_that.loginToken,_that.maskedEmail);case _:
@@ -773,12 +773,12 @@ return $default(_that.requireOtp,_that.loginToken,_that.maskedEmail);case _:
 @JsonSerializable()
 
 class _LoginInitResponse implements LoginInitResponse {
-  const _LoginInitResponse({required this.requireOtp, required this.loginToken, required this.maskedEmail});
+  const _LoginInitResponse({@JsonKey(name: 'require_otp') required this.requireOtp, @JsonKey(name: 'login_token') required this.loginToken, @JsonKey(name: 'masked_email') required this.maskedEmail});
   factory _LoginInitResponse.fromJson(Map<String, dynamic> json) => _$LoginInitResponseFromJson(json);
 
-@override final  bool requireOtp;
-@override final  String loginToken;
-@override final  String maskedEmail;
+@override@JsonKey(name: 'require_otp') final  bool requireOtp;
+@override@JsonKey(name: 'login_token') final  String loginToken;
+@override@JsonKey(name: 'masked_email') final  String maskedEmail;
 
 /// Create a copy of LoginInitResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -813,7 +813,7 @@ abstract mixin class _$LoginInitResponseCopyWith<$Res> implements $LoginInitResp
   factory _$LoginInitResponseCopyWith(_LoginInitResponse value, $Res Function(_LoginInitResponse) _then) = __$LoginInitResponseCopyWithImpl;
 @override @useResult
 $Res call({
- bool requireOtp, String loginToken, String maskedEmail
+@JsonKey(name: 'require_otp') bool requireOtp,@JsonKey(name: 'login_token') String loginToken,@JsonKey(name: 'masked_email') String maskedEmail
 });
 
 
@@ -846,7 +846,7 @@ as String,
 /// @nodoc
 mixin _$LoginOTPResponse {
 
- String get access; String get refresh; User get user; Profile get profile; bool get newDevice;
+ String get access; String get refresh; User get user; Profile get profile;@JsonKey(name: 'new_device') bool get newDevice;
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -879,7 +879,7 @@ abstract mixin class $LoginOTPResponseCopyWith<$Res>  {
   factory $LoginOTPResponseCopyWith(LoginOTPResponse value, $Res Function(LoginOTPResponse) _then) = _$LoginOTPResponseCopyWithImpl;
 @useResult
 $Res call({
- String access, String refresh, User user, Profile profile, bool newDevice
+ String access, String refresh, User user, Profile profile,@JsonKey(name: 'new_device') bool newDevice
 });
 
 
@@ -1006,7 +1006,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String access,  String refresh,  User user,  Profile profile,  bool newDevice)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String access,  String refresh,  User user,  Profile profile, @JsonKey(name: 'new_device')  bool newDevice)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LoginOTPResponse() when $default != null:
 return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice);case _:
@@ -1027,7 +1027,7 @@ return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDev
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String access,  String refresh,  User user,  Profile profile,  bool newDevice)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String access,  String refresh,  User user,  Profile profile, @JsonKey(name: 'new_device')  bool newDevice)  $default,) {final _that = this;
 switch (_that) {
 case _LoginOTPResponse():
 return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice);case _:
@@ -1047,7 +1047,7 @@ return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDev
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String access,  String refresh,  User user,  Profile profile,  bool newDevice)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String access,  String refresh,  User user,  Profile profile, @JsonKey(name: 'new_device')  bool newDevice)?  $default,) {final _that = this;
 switch (_that) {
 case _LoginOTPResponse() when $default != null:
 return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice);case _:
@@ -1062,14 +1062,14 @@ return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDev
 @JsonSerializable()
 
 class _LoginOTPResponse implements LoginOTPResponse {
-  const _LoginOTPResponse({required this.access, required this.refresh, required this.user, required this.profile, this.newDevice = false});
+  const _LoginOTPResponse({required this.access, required this.refresh, required this.user, required this.profile, @JsonKey(name: 'new_device') this.newDevice = false});
   factory _LoginOTPResponse.fromJson(Map<String, dynamic> json) => _$LoginOTPResponseFromJson(json);
 
 @override final  String access;
 @override final  String refresh;
 @override final  User user;
 @override final  Profile profile;
-@override@JsonKey() final  bool newDevice;
+@override@JsonKey(name: 'new_device') final  bool newDevice;
 
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -1104,7 +1104,7 @@ abstract mixin class _$LoginOTPResponseCopyWith<$Res> implements $LoginOTPRespon
   factory _$LoginOTPResponseCopyWith(_LoginOTPResponse value, $Res Function(_LoginOTPResponse) _then) = __$LoginOTPResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String access, String refresh, User user, Profile profile, bool newDevice
+ String access, String refresh, User user, Profile profile,@JsonKey(name: 'new_device') bool newDevice
 });
 
 
@@ -1157,7 +1157,7 @@ $ProfileCopyWith<$Res> get profile {
 /// @nodoc
 mixin _$RegisterResponse {
 
- String get registrationToken; String get email; String get userId; String get message;
+@JsonKey(name: 'registration_token') String get registrationToken; String get email;@JsonKey(name: 'user_id') String get userId; String get message;
 /// Create a copy of RegisterResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1190,7 +1190,7 @@ abstract mixin class $RegisterResponseCopyWith<$Res>  {
   factory $RegisterResponseCopyWith(RegisterResponse value, $Res Function(RegisterResponse) _then) = _$RegisterResponseCopyWithImpl;
 @useResult
 $Res call({
- String registrationToken, String email, String userId, String message
+@JsonKey(name: 'registration_token') String registrationToken, String email,@JsonKey(name: 'user_id') String userId, String message
 });
 
 
@@ -1298,7 +1298,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String registrationToken,  String email,  String userId,  String message)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'registration_token')  String registrationToken,  String email, @JsonKey(name: 'user_id')  String userId,  String message)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RegisterResponse() when $default != null:
 return $default(_that.registrationToken,_that.email,_that.userId,_that.message);case _:
@@ -1319,7 +1319,7 @@ return $default(_that.registrationToken,_that.email,_that.userId,_that.message);
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String registrationToken,  String email,  String userId,  String message)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'registration_token')  String registrationToken,  String email, @JsonKey(name: 'user_id')  String userId,  String message)  $default,) {final _that = this;
 switch (_that) {
 case _RegisterResponse():
 return $default(_that.registrationToken,_that.email,_that.userId,_that.message);case _:
@@ -1339,7 +1339,7 @@ return $default(_that.registrationToken,_that.email,_that.userId,_that.message);
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String registrationToken,  String email,  String userId,  String message)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'registration_token')  String registrationToken,  String email, @JsonKey(name: 'user_id')  String userId,  String message)?  $default,) {final _that = this;
 switch (_that) {
 case _RegisterResponse() when $default != null:
 return $default(_that.registrationToken,_that.email,_that.userId,_that.message);case _:
@@ -1354,12 +1354,12 @@ return $default(_that.registrationToken,_that.email,_that.userId,_that.message);
 @JsonSerializable()
 
 class _RegisterResponse implements RegisterResponse {
-  const _RegisterResponse({required this.registrationToken, required this.email, required this.userId, required this.message});
+  const _RegisterResponse({@JsonKey(name: 'registration_token') required this.registrationToken, required this.email, @JsonKey(name: 'user_id') required this.userId, required this.message});
   factory _RegisterResponse.fromJson(Map<String, dynamic> json) => _$RegisterResponseFromJson(json);
 
-@override final  String registrationToken;
+@override@JsonKey(name: 'registration_token') final  String registrationToken;
 @override final  String email;
-@override final  String userId;
+@override@JsonKey(name: 'user_id') final  String userId;
 @override final  String message;
 
 /// Create a copy of RegisterResponse
@@ -1395,7 +1395,7 @@ abstract mixin class _$RegisterResponseCopyWith<$Res> implements $RegisterRespon
   factory _$RegisterResponseCopyWith(_RegisterResponse value, $Res Function(_RegisterResponse) _then) = __$RegisterResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String registrationToken, String email, String userId, String message
+@JsonKey(name: 'registration_token') String registrationToken, String email,@JsonKey(name: 'user_id') String userId, String message
 });
 
 
@@ -1429,7 +1429,7 @@ as String,
 /// @nodoc
 mixin _$TOTPSetupResponse {
 
- String get secret; String get provisioningUri; String get qrCode;
+ String get secret;@JsonKey(name: 'provisioning_uri') String get provisioningUri;@JsonKey(name: 'qr_code') String get qrCode;
 /// Create a copy of TOTPSetupResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1462,7 +1462,7 @@ abstract mixin class $TOTPSetupResponseCopyWith<$Res>  {
   factory $TOTPSetupResponseCopyWith(TOTPSetupResponse value, $Res Function(TOTPSetupResponse) _then) = _$TOTPSetupResponseCopyWithImpl;
 @useResult
 $Res call({
- String secret, String provisioningUri, String qrCode
+ String secret,@JsonKey(name: 'provisioning_uri') String provisioningUri,@JsonKey(name: 'qr_code') String qrCode
 });
 
 
@@ -1569,7 +1569,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String secret,  String provisioningUri,  String qrCode)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String secret, @JsonKey(name: 'provisioning_uri')  String provisioningUri, @JsonKey(name: 'qr_code')  String qrCode)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TOTPSetupResponse() when $default != null:
 return $default(_that.secret,_that.provisioningUri,_that.qrCode);case _:
@@ -1590,7 +1590,7 @@ return $default(_that.secret,_that.provisioningUri,_that.qrCode);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String secret,  String provisioningUri,  String qrCode)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String secret, @JsonKey(name: 'provisioning_uri')  String provisioningUri, @JsonKey(name: 'qr_code')  String qrCode)  $default,) {final _that = this;
 switch (_that) {
 case _TOTPSetupResponse():
 return $default(_that.secret,_that.provisioningUri,_that.qrCode);case _:
@@ -1610,7 +1610,7 @@ return $default(_that.secret,_that.provisioningUri,_that.qrCode);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String secret,  String provisioningUri,  String qrCode)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String secret, @JsonKey(name: 'provisioning_uri')  String provisioningUri, @JsonKey(name: 'qr_code')  String qrCode)?  $default,) {final _that = this;
 switch (_that) {
 case _TOTPSetupResponse() when $default != null:
 return $default(_that.secret,_that.provisioningUri,_that.qrCode);case _:
@@ -1625,12 +1625,12 @@ return $default(_that.secret,_that.provisioningUri,_that.qrCode);case _:
 @JsonSerializable()
 
 class _TOTPSetupResponse implements TOTPSetupResponse {
-  const _TOTPSetupResponse({required this.secret, required this.provisioningUri, required this.qrCode});
+  const _TOTPSetupResponse({required this.secret, @JsonKey(name: 'provisioning_uri') required this.provisioningUri, @JsonKey(name: 'qr_code') required this.qrCode});
   factory _TOTPSetupResponse.fromJson(Map<String, dynamic> json) => _$TOTPSetupResponseFromJson(json);
 
 @override final  String secret;
-@override final  String provisioningUri;
-@override final  String qrCode;
+@override@JsonKey(name: 'provisioning_uri') final  String provisioningUri;
+@override@JsonKey(name: 'qr_code') final  String qrCode;
 
 /// Create a copy of TOTPSetupResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -1665,7 +1665,7 @@ abstract mixin class _$TOTPSetupResponseCopyWith<$Res> implements $TOTPSetupResp
   factory _$TOTPSetupResponseCopyWith(_TOTPSetupResponse value, $Res Function(_TOTPSetupResponse) _then) = __$TOTPSetupResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String secret, String provisioningUri, String qrCode
+ String secret,@JsonKey(name: 'provisioning_uri') String provisioningUri,@JsonKey(name: 'qr_code') String qrCode
 });
 
 
@@ -1698,7 +1698,7 @@ as String,
 /// @nodoc
 mixin _$TOTPChallengeInitResponse {
 
- bool get requireTotp; String get tempToken;
+@JsonKey(name: 'require_totp') bool get requireTotp;@JsonKey(name: 'temp_token') String get tempToken;
 /// Create a copy of TOTPChallengeInitResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1731,7 +1731,7 @@ abstract mixin class $TOTPChallengeInitResponseCopyWith<$Res>  {
   factory $TOTPChallengeInitResponseCopyWith(TOTPChallengeInitResponse value, $Res Function(TOTPChallengeInitResponse) _then) = _$TOTPChallengeInitResponseCopyWithImpl;
 @useResult
 $Res call({
- bool requireTotp, String tempToken
+@JsonKey(name: 'require_totp') bool requireTotp,@JsonKey(name: 'temp_token') String tempToken
 });
 
 
@@ -1837,7 +1837,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool requireTotp,  String tempToken)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String tempToken)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TOTPChallengeInitResponse() when $default != null:
 return $default(_that.requireTotp,_that.tempToken);case _:
@@ -1858,7 +1858,7 @@ return $default(_that.requireTotp,_that.tempToken);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool requireTotp,  String tempToken)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String tempToken)  $default,) {final _that = this;
 switch (_that) {
 case _TOTPChallengeInitResponse():
 return $default(_that.requireTotp,_that.tempToken);case _:
@@ -1878,7 +1878,7 @@ return $default(_that.requireTotp,_that.tempToken);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool requireTotp,  String tempToken)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String tempToken)?  $default,) {final _that = this;
 switch (_that) {
 case _TOTPChallengeInitResponse() when $default != null:
 return $default(_that.requireTotp,_that.tempToken);case _:
@@ -1893,11 +1893,11 @@ return $default(_that.requireTotp,_that.tempToken);case _:
 @JsonSerializable()
 
 class _TOTPChallengeInitResponse implements TOTPChallengeInitResponse {
-  const _TOTPChallengeInitResponse({required this.requireTotp, required this.tempToken});
+  const _TOTPChallengeInitResponse({@JsonKey(name: 'require_totp') required this.requireTotp, @JsonKey(name: 'temp_token') required this.tempToken});
   factory _TOTPChallengeInitResponse.fromJson(Map<String, dynamic> json) => _$TOTPChallengeInitResponseFromJson(json);
 
-@override final  bool requireTotp;
-@override final  String tempToken;
+@override@JsonKey(name: 'require_totp') final  bool requireTotp;
+@override@JsonKey(name: 'temp_token') final  String tempToken;
 
 /// Create a copy of TOTPChallengeInitResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -1932,7 +1932,7 @@ abstract mixin class _$TOTPChallengeInitResponseCopyWith<$Res> implements $TOTPC
   factory _$TOTPChallengeInitResponseCopyWith(_TOTPChallengeInitResponse value, $Res Function(_TOTPChallengeInitResponse) _then) = __$TOTPChallengeInitResponseCopyWithImpl;
 @override @useResult
 $Res call({
- bool requireTotp, String tempToken
+@JsonKey(name: 'require_totp') bool requireTotp,@JsonKey(name: 'temp_token') String tempToken
 });
 
 

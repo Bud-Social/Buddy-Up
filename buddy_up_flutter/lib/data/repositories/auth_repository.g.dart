@@ -103,6 +103,62 @@ class _AuthRepository implements AuthRepository {
   }
 
   @override
+  Future<LoginOTPResponse> googleLogin(Map<String, dynamic> payload) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(payload);
+    final _options = _setStreamType<LoginOTPResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/auth/google/',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late LoginOTPResponse _value;
+    try {
+      _value = LoginOTPResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
+  Future<LoginOTPResponse> appleLogin(Map<String, dynamic> payload) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = <String, dynamic>{};
+    _data.addAll(payload);
+    final _options = _setStreamType<LoginOTPResponse>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/auth/apple/',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    late LoginOTPResponse _value;
+    try {
+      _value = LoginOTPResponse.fromJson(_result.data!);
+    } on Object catch (e, s) {
+      errorLogger?.logError(e, s, _options, response: _result);
+      rethrow;
+    }
+    return _value;
+  }
+
+  @override
   Future<LoginOTPResponse> verifyLoginOtp(LoginOTPSerializer payload) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
@@ -151,7 +207,7 @@ class _AuthRepository implements AuthRepository {
     try {
       _value = _result.data!.map(
         (k, dynamic v) =>
-            MapEntry(k, v),
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
       );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);

@@ -13,12 +13,12 @@ _RegisterPayload _$RegisterPayloadFromJson(Map<String, dynamic> json) =>
       password: json['password'] as String,
       dob: json['dob'] as String,
       username: json['username'] as String,
-      displayName: json['displayName'] as String,
+      displayName: json['display_name'] as String,
       role: json['role'] as String,
-      acceptedTerms: json['acceptedTerms'] as bool,
-      acceptedPrivacy: json['acceptedPrivacy'] as bool,
-      acceptedGuidelines: json['acceptedGuidelines'] as bool,
-      is16Plus: json['is16Plus'] as bool,
+      acceptedTerms: json['accepted_terms'] as bool,
+      acceptedPrivacy: json['accepted_privacy'] as bool,
+      acceptedGuidelines: json['accepted_guidelines'] as bool,
+      is16Plus: json['is_16_plus'] as bool,
     );
 
 Map<String, dynamic> _$RegisterPayloadToJson(_RegisterPayload instance) =>
@@ -28,40 +28,40 @@ Map<String, dynamic> _$RegisterPayloadToJson(_RegisterPayload instance) =>
       'password': instance.password,
       'dob': instance.dob,
       'username': instance.username,
-      'displayName': instance.displayName,
+      'display_name': instance.displayName,
       'role': instance.role,
-      'acceptedTerms': instance.acceptedTerms,
-      'acceptedPrivacy': instance.acceptedPrivacy,
-      'acceptedGuidelines': instance.acceptedGuidelines,
-      'is16Plus': instance.is16Plus,
+      'accepted_terms': instance.acceptedTerms,
+      'accepted_privacy': instance.acceptedPrivacy,
+      'accepted_guidelines': instance.acceptedGuidelines,
+      'is_16_plus': instance.is16Plus,
     };
 
 _LoginPayload _$LoginPayloadFromJson(Map<String, dynamic> json) =>
     _LoginPayload(
       email: json['email'] as String,
       password: json['password'] as String,
-      rememberMe: json['rememberMe'] as bool? ?? false,
+      rememberMe: json['remember_me'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$LoginPayloadToJson(_LoginPayload instance) =>
     <String, dynamic>{
       'email': instance.email,
       'password': instance.password,
-      'rememberMe': instance.rememberMe,
+      'remember_me': instance.rememberMe,
     };
 
 _LoginInitResponse _$LoginInitResponseFromJson(Map<String, dynamic> json) =>
     _LoginInitResponse(
-      requireOtp: json['requireOtp'] as bool,
-      loginToken: json['loginToken'] as String,
-      maskedEmail: json['maskedEmail'] as String,
+      requireOtp: json['require_otp'] as bool,
+      loginToken: json['login_token'] as String,
+      maskedEmail: json['masked_email'] as String,
     );
 
 Map<String, dynamic> _$LoginInitResponseToJson(_LoginInitResponse instance) =>
     <String, dynamic>{
-      'requireOtp': instance.requireOtp,
-      'loginToken': instance.loginToken,
-      'maskedEmail': instance.maskedEmail,
+      'require_otp': instance.requireOtp,
+      'login_token': instance.loginToken,
+      'masked_email': instance.maskedEmail,
     };
 
 _LoginOTPResponse _$LoginOTPResponseFromJson(Map<String, dynamic> json) =>
@@ -70,7 +70,7 @@ _LoginOTPResponse _$LoginOTPResponseFromJson(Map<String, dynamic> json) =>
       refresh: json['refresh'] as String,
       user: User.fromJson(json['user'] as Map<String, dynamic>),
       profile: Profile.fromJson(json['profile'] as Map<String, dynamic>),
-      newDevice: json['newDevice'] as bool? ?? false,
+      newDevice: json['new_device'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$LoginOTPResponseToJson(_LoginOTPResponse instance) =>
@@ -79,51 +79,51 @@ Map<String, dynamic> _$LoginOTPResponseToJson(_LoginOTPResponse instance) =>
       'refresh': instance.refresh,
       'user': instance.user,
       'profile': instance.profile,
-      'newDevice': instance.newDevice,
+      'new_device': instance.newDevice,
     };
 
 _RegisterResponse _$RegisterResponseFromJson(Map<String, dynamic> json) =>
     _RegisterResponse(
-      registrationToken: json['registrationToken'] as String,
+      registrationToken: json['registration_token'] as String,
       email: json['email'] as String,
-      userId: json['userId'] as String,
+      userId: json['user_id'] as String,
       message: json['message'] as String,
     );
 
 Map<String, dynamic> _$RegisterResponseToJson(_RegisterResponse instance) =>
     <String, dynamic>{
-      'registrationToken': instance.registrationToken,
+      'registration_token': instance.registrationToken,
       'email': instance.email,
-      'userId': instance.userId,
+      'user_id': instance.userId,
       'message': instance.message,
     };
 
 _TOTPSetupResponse _$TOTPSetupResponseFromJson(Map<String, dynamic> json) =>
     _TOTPSetupResponse(
       secret: json['secret'] as String,
-      provisioningUri: json['provisioningUri'] as String,
-      qrCode: json['qrCode'] as String,
+      provisioningUri: json['provisioning_uri'] as String,
+      qrCode: json['qr_code'] as String,
     );
 
 Map<String, dynamic> _$TOTPSetupResponseToJson(_TOTPSetupResponse instance) =>
     <String, dynamic>{
       'secret': instance.secret,
-      'provisioningUri': instance.provisioningUri,
-      'qrCode': instance.qrCode,
+      'provisioning_uri': instance.provisioningUri,
+      'qr_code': instance.qrCode,
     };
 
 _TOTPChallengeInitResponse _$TOTPChallengeInitResponseFromJson(
   Map<String, dynamic> json,
 ) => _TOTPChallengeInitResponse(
-  requireTotp: json['requireTotp'] as bool,
-  tempToken: json['tempToken'] as String,
+  requireTotp: json['require_totp'] as bool,
+  tempToken: json['temp_token'] as String,
 );
 
 Map<String, dynamic> _$TOTPChallengeInitResponseToJson(
   _TOTPChallengeInitResponse instance,
 ) => <String, dynamic>{
-  'requireTotp': instance.requireTotp,
-  'tempToken': instance.tempToken,
+  'require_totp': instance.requireTotp,
+  'temp_token': instance.tempToken,
 };
 
 _TOTPChallengeResponse _$TOTPChallengeResponseFromJson(

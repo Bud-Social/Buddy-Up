@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/auth_models.dart';
@@ -84,7 +87,57 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         );
       }
     } catch (e) {
-      if (mounted) showToast(context, 'Registration failed. Try again.', type: ToastType.error);
+      if (mounted) {
+        showToast(
+          context, 
+          'Registration failed: ${e.toString().replaceAll('Exception: ', '')}', 
+          type: ToastType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+      final GoogleSignInAccount? account = await googleSignIn.signIn();
+      if (account == null) {
+        setState(() => _isLoading = false);
+        return; // User canceled
+      }
+      final GoogleSignInAuthentication auth = await account.authentication;
+      if (auth.idToken == null) throw Exception("Failed to get idToken");
+
+      final repo = ref.read(apiClientProvider).getService<AuthRepository>();
+      final res = await repo.googleLogin({'credential': auth.idToken});
+      await ref.read(authProvider.notifier).handleLoginSuccess(res);
+    } catch (e) {
+      if (mounted) showToast(context, 'Google Sign-In failed: $e', type: ToastType.error);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleAppleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName],
+      );
+
+      final repo = ref.read(apiClientProvider).getService<AuthRepository>();
+      final res = await repo.appleLogin({
+        'identity_token': credential.identityToken,
+        'authorization_code': credential.authorizationCode,
+        'first_name': credential.givenName,
+        'last_name': credential.familyName,
+      });
+      await ref.read(authProvider.notifier).handleLoginSuccess(res);
+    } catch (e) {
+      if (mounted) showToast(context, 'Apple Sign-In failed: $e', type: ToastType.error);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -183,23 +236,44 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 CheckboxListTile(
                   value: _acceptedTerms,
                   onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
-                  title: const Text('I accept the Terms of Service', style: TextStyle(fontSize: 14)),
+                  title: GestureDetector(
+                    onTap: () => launchUrl(Uri.parse('https://buddyup.app/terms')),
+                    child: const Text(
+                      'I accept the Terms of Service',
+                      style: TextStyle(fontSize: 14, decoration: TextDecoration.underline, color: BuddyColors.green),
+                    ),
+                  ),
                   controlAffinity: ListTileControlAffinity.leading,
                   dense: true,
+                  contentPadding: EdgeInsets.zero,
                 ),
                 CheckboxListTile(
                   value: _acceptedPrivacy,
                   onChanged: (v) => setState(() => _acceptedPrivacy = v ?? false),
-                  title: const Text('I accept the Privacy Policy', style: TextStyle(fontSize: 14)),
+                  title: GestureDetector(
+                    onTap: () => launchUrl(Uri.parse('https://buddyup.app/privacy')),
+                    child: const Text(
+                      'I accept the Privacy Policy',
+                      style: TextStyle(fontSize: 14, decoration: TextDecoration.underline, color: BuddyColors.green),
+                    ),
+                  ),
                   controlAffinity: ListTileControlAffinity.leading,
                   dense: true,
+                  contentPadding: EdgeInsets.zero,
                 ),
                 CheckboxListTile(
                   value: _acceptedGuidelines,
                   onChanged: (v) => setState(() => _acceptedGuidelines = v ?? false),
-                  title: const Text('I accept the Community Guidelines', style: TextStyle(fontSize: 14)),
+                  title: GestureDetector(
+                    onTap: () => launchUrl(Uri.parse('https://buddyup.app/guidelines')),
+                    child: const Text(
+                      'I accept the Community Guidelines',
+                      style: TextStyle(fontSize: 14, decoration: TextDecoration.underline, color: BuddyColors.green),
+                    ),
+                  ),
                   controlAffinity: ListTileControlAffinity.leading,
                   dense: true,
+                  contentPadding: EdgeInsets.zero,
                 ),
                 CheckboxListTile(
                   value: _is16Plus,
@@ -214,6 +288,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   onPressed: _handleRegister,
                   isLoading: _isLoading,
                   fullWidth: true,
+                ),
+                const SizedBox(height: 16),
+                const Row(
+                  children: [
+                    Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: Text('OR', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                    ),
+                    Expanded(child: Divider(color: BuddyColors.surfaceRaised)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                BuddyButton(
+                  label: 'Continue with Google',
+                  onPressed: _handleGoogleSignIn,
+                  isLoading: _isLoading,
+                  fullWidth: true,
+                  icon: Icons.g_mobiledata,
+                ),
+                const SizedBox(height: 8),
+                BuddyButton(
+                  label: 'Continue with Apple',
+                  onPressed: _handleAppleSignIn,
+                  isLoading: _isLoading,
+                  fullWidth: true,
+                  icon: Icons.apple,
                 ),
                 const SizedBox(height: 16),
                 Row(

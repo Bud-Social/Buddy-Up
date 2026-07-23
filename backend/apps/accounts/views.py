@@ -718,6 +718,115 @@ class GoogleLoginView(views.APIView):
             'pagination': None,
         })
 
+import jwt
+import requests
+from jwt.algorithms import RSAAlgorithm
+
+class AppleLoginView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'login'
+
+    def post(self, request):
+        from .serializers import AppleLoginSerializer
+        serializer = AppleLoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        identity_token = serializer.validated_data['identity_token']
+        first_name = serializer.validated_data.get('first_name', '')
+        last_name = serializer.validated_data.get('last_name', '')
+        name = f"{first_name} {last_name}".strip()
+
+        try:
+            # Fetch Apple's public keys
+            keys_url = 'https://appleid.apple.com/auth/keys'
+            apple_keys = requests.get(keys_url).json()['keys']
+            
+            # Get the key ID from the token header
+            header = jwt.get_unverified_header(identity_token)
+            kid = header['kid']
+            
+            # Find the matching public key
+            key_data = next((k for k in apple_keys if k['kid'] == kid), None)
+            if not key_data:
+                raise ValueError("Invalid kid")
+
+            # Construct the public key
+            public_key = RSAAlgorithm.from_jwk(key_data)
+
+            # Decode the token
+            decoded = jwt.decode(
+                identity_token, 
+                public_key, 
+                algorithms=['RS256'], 
+                audience=settings.SOCIAL_AUTH_APPLE_CLIENT_ID if hasattr(settings, 'SOCIAL_AUTH_APPLE_CLIENT_ID') else None,
+                options={"verify_aud": hasattr(settings, 'SOCIAL_AUTH_APPLE_CLIENT_ID')}
+            )
+            email = decoded.get('email', '').lower()
+            apple_id = decoded.get('sub', '')
+            
+            if not email:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Apple account has no email.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            user = None
+            try:
+                user = User.objects.get(email=email)
+                user.email_verified = True
+                user.save(update_fields=['email_verified'])
+            except User.DoesNotExist:
+                user = User.objects.create_user(
+                    email=email,
+                    password=None,
+                    email_verified=True,
+                    is_adult=True,
+                    last_login_ip=_get_client_ip(request),
+                )
+                from apps.profiles.models import Profile
+                Profile.objects.create(
+                    user=user,
+                    username=email.split('@')[0],
+                    display_name=name or email.split('@')[0],
+                    role='user',
+                    privacy_level='private',
+                )
+
+            tokens = _get_tokens_for_user(user)
+            _create_device_session(user, tokens['refresh'], request)
+            _log_event(user, 'login', request, metadata={'method': 'apple'})
+
+            from apps.profiles.serializers import ProfileSerializer
+            profile_data = ProfileSerializer(user.profile).data
+
+            return Response({
+                'success': True,
+                'data': {
+                    'access': tokens['access'],
+                    'refresh': tokens['refresh'],
+                    'user': {
+                        'id': str(user.id),
+                        'email': user.email,
+                        'email_verified': user.email_verified,
+                        'phone_verified': user.phone_verified,
+                        'is_adult': user.is_adult,
+                        'totp_enabled': user.totp_enabled,
+                        'created_at': user.created_at.isoformat(),
+                    },
+                    'profile': profile_data,
+                },
+                'message': 'Apple login successful.',
+                'errors': None,
+                'pagination': None,
+            })
+
+        except Exception as e:
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Invalid Apple token: {e}',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
 
 class LogoutView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]

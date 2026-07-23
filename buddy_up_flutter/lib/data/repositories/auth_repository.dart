@@ -19,6 +19,12 @@ abstract class AuthRepository {
   @POST('/auth/login/')
   Future<LoginInitResponse> login(@Body() LoginPayload payload);
 
+  @POST('/auth/google/')
+  Future<LoginOTPResponse> googleLogin(@Body() Map<String, dynamic> payload);
+
+  @POST('/auth/apple/')
+  Future<LoginOTPResponse> appleLogin(@Body() Map<String, dynamic> payload);
+
   @POST('/auth/verify-login-otp/')
   Future<LoginOTPResponse> verifyLoginOtp(@Body() LoginOTPSerializer payload);
 

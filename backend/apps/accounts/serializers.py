@@ -126,6 +126,13 @@ class GoogleLoginSerializer(serializers.Serializer):
     credential = serializers.CharField()
 
 
+class AppleLoginSerializer(serializers.Serializer):
+    identity_token = serializers.CharField()
+    authorization_code = serializers.CharField(required=False, allow_blank=True)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
+
+
 class DeviceSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

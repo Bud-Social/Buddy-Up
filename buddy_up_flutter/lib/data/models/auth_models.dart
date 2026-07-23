@@ -13,12 +13,12 @@ abstract class RegisterPayload with _$RegisterPayload {
     required String password,
     required String dob,
     required String username,
-    required String displayName,
+    @JsonKey(name: 'display_name') required String displayName,
     required String role,
-    required bool acceptedTerms,
-    required bool acceptedPrivacy,
-    required bool acceptedGuidelines,
-    required bool is16Plus,
+    @JsonKey(name: 'accepted_terms') required bool acceptedTerms,
+    @JsonKey(name: 'accepted_privacy') required bool acceptedPrivacy,
+    @JsonKey(name: 'accepted_guidelines') required bool acceptedGuidelines,
+    @JsonKey(name: 'is_16_plus') required bool is16Plus,
   }) = _RegisterPayload;
 
   factory RegisterPayload.fromJson(Map<String, dynamic> json) =>
@@ -30,7 +30,7 @@ abstract class LoginPayload with _$LoginPayload {
   const factory LoginPayload({
     required String email,
     required String password,
-    @Default(false) bool rememberMe,
+    @JsonKey(name: 'remember_me') @Default(false) bool rememberMe,
   }) = _LoginPayload;
 
   factory LoginPayload.fromJson(Map<String, dynamic> json) =>
@@ -40,9 +40,9 @@ abstract class LoginPayload with _$LoginPayload {
 @freezed
 abstract class LoginInitResponse with _$LoginInitResponse {
   const factory LoginInitResponse({
-    required bool requireOtp,
-    required String loginToken,
-    required String maskedEmail,
+    @JsonKey(name: 'require_otp') required bool requireOtp,
+    @JsonKey(name: 'login_token') required String loginToken,
+    @JsonKey(name: 'masked_email') required String maskedEmail,
   }) = _LoginInitResponse;
 
   factory LoginInitResponse.fromJson(Map<String, dynamic> json) =>
@@ -56,7 +56,7 @@ abstract class LoginOTPResponse with _$LoginOTPResponse {
     required String refresh,
     required User user,
     required Profile profile,
-    @Default(false) bool newDevice,
+    @JsonKey(name: 'new_device') @Default(false) bool newDevice,
   }) = _LoginOTPResponse;
 
   factory LoginOTPResponse.fromJson(Map<String, dynamic> json) =>
@@ -66,9 +66,9 @@ abstract class LoginOTPResponse with _$LoginOTPResponse {
 @freezed
 abstract class RegisterResponse with _$RegisterResponse {
   const factory RegisterResponse({
-    required String registrationToken,
+    @JsonKey(name: 'registration_token') required String registrationToken,
     required String email,
-    required String userId,
+    @JsonKey(name: 'user_id') required String userId,
     required String message,
   }) = _RegisterResponse;
 
@@ -80,8 +80,8 @@ abstract class RegisterResponse with _$RegisterResponse {
 abstract class TOTPSetupResponse with _$TOTPSetupResponse {
   const factory TOTPSetupResponse({
     required String secret,
-    required String provisioningUri,
-    required String qrCode,
+    @JsonKey(name: 'provisioning_uri') required String provisioningUri,
+    @JsonKey(name: 'qr_code') required String qrCode,
   }) = _TOTPSetupResponse;
 
   factory TOTPSetupResponse.fromJson(Map<String, dynamic> json) =>
@@ -91,8 +91,8 @@ abstract class TOTPSetupResponse with _$TOTPSetupResponse {
 @freezed
 abstract class TOTPChallengeInitResponse with _$TOTPChallengeInitResponse {
   const factory TOTPChallengeInitResponse({
-    required bool requireTotp,
-    required String tempToken,
+    @JsonKey(name: 'require_totp') required bool requireTotp,
+    @JsonKey(name: 'temp_token') required String tempToken,
   }) = _TOTPChallengeInitResponse;
 
   factory TOTPChallengeInitResponse.fromJson(Map<String, dynamic> json) =>
