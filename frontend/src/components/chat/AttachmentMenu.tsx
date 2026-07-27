@@ -48,6 +48,7 @@ interface AttachmentMenuProps {
   onPoll: (poll: PollData) => void;
   onEvent: (event: EventData) => void;
   onVoiceNote: () => void;
+  onCameraCapture?: () => void;
   onClose: () => void;
 }
 
@@ -73,7 +74,7 @@ const ITEMS = [
   { id: 'event', label: 'Event', icon: Calendar, color: '#DB2777', accept: null },
 ] as const;
 
-export function AttachmentMenu({ onFile, onLocation, onPoll, onEvent, onVoiceNote, onClose }: AttachmentMenuProps) {
+export function AttachmentMenu({ onFile, onLocation, onPoll, onEvent, onVoiceNote, onCameraCapture, onClose }: AttachmentMenuProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [accept, setAccept] = useState('*/*');
   const [showPollModal, setShowPollModal] = useState(false);
@@ -130,8 +131,7 @@ export function AttachmentMenu({ onFile, onLocation, onPoll, onEvent, onVoiceNot
         );
         const { latitude: lat, longitude: lng } = pos.coords;
         const label = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        // Use OpenStreetMap static map preview
-        const mapUrl = `https://static-maps.yandex.ru/1.x/?lang=en_US&ll=${lng},${lat}&z=15&l=map&size=450,200&pt=${lng},${lat},pm2rdm`;
+        const mapUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=15/${lat}/${lng}`;
         onLocation({ lat, lng, label, mapUrl });
         onClose();
       } catch {
@@ -151,6 +151,11 @@ export function AttachmentMenu({ onFile, onLocation, onPoll, onEvent, onVoiceNot
     }
     if (id === 'voice') {
       onVoiceNote();
+      onClose();
+      return;
+    }
+    if (id === 'camera' && onCameraCapture) {
+      onCameraCapture();
       onClose();
       return;
     }

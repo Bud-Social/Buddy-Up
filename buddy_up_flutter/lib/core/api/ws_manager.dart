@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'dart:io';
 
 typedef WsMessageHandler = void Function(Map<String, dynamic> data);
 
 class WsConnection {
   final String _path;
-  final String _token;
-  WebSocketChannel? _channel;
+  String _token;
+  WebSocket? _ws;
   final List<WsMessageHandler> _handlers = [];
   int _reconnectAttempts = 0;
   static const int _maxReconnectAttempts = 10;
@@ -17,6 +17,17 @@ class WsConnection {
   WsConnection(this._path, this._token);
 
   String get path => _path;
+  String get token => _token;
+
+  void updateToken(String newToken) {
+    if (_token == newToken) return;
+    _token = newToken;
+    if (!_intentionalClose) {
+      disconnect();
+      _reconnectAttempts = 0;
+      _doConnect();
+    }
+  }
 
   void connect() {
     _intentionalClose = false;
@@ -24,36 +35,41 @@ class WsConnection {
     _doConnect();
   }
 
-  void _doConnect() {
-    final uri = Uri.parse('$_path?token=$_token');
-    _channel = WebSocketChannel.connect(uri);
+  void _doConnect() async {
+    try {
+      final uri = Uri.parse('$_path?token=$_token');
+      _ws = await WebSocket.connect(uri.toString());
 
-    _channel!.stream.listen(
-      (data) {
-        final decoded = jsonDecode(data as String) as Map<String, dynamic>;
-        for (final handler in _handlers) {
-          handler(decoded);
-        }
-      },
-      onDone: () {
-        if (!_intentionalClose && _reconnectAttempts < _maxReconnectAttempts) {
-          final delay = Duration(seconds: (_reconnectAttempts * 2).clamp(1, 30));
-          _reconnectTimer = Timer(delay, () {
-            _reconnectAttempts++;
-            _doConnect();
-          });
-        }
-      },
-      onError: (_) {
-        if (!_intentionalClose) {
-          _channel?.sink.close();
-        }
-      },
-    );
+      _ws!.listen(
+        (data) {
+          final decoded = jsonDecode(data as String) as Map<String, dynamic>;
+          for (final handler in _handlers) {
+            handler(decoded);
+          }
+        },
+        onDone: () {
+          final closeCode = _ws?.closeCode ?? 1000;
+          if (!_intentionalClose && closeCode != 4001 && closeCode != 4003
+              && _reconnectAttempts < _maxReconnectAttempts) {
+            final delay = Duration(seconds: (_reconnectAttempts * 2).clamp(1, 30));
+            _reconnectTimer = Timer(delay, () {
+              _reconnectAttempts++;
+              _doConnect();
+            });
+          }
+        },
+        onError: (_) {
+          if (!_intentionalClose) {
+            _ws?.close();
+          }
+        },
+        cancelOnError: false,
+      );
+    } catch (_) {}
   }
 
   void send(Map<String, dynamic> data) {
-    _channel?.sink.add(jsonEncode(data));
+    _ws?.add(jsonEncode(data));
   }
 
   void addHandler(WsMessageHandler handler) {
@@ -67,7 +83,7 @@ class WsConnection {
   void disconnect() {
     _intentionalClose = true;
     _reconnectTimer?.cancel();
-    _channel?.sink.close();
+    _ws?.close();
     _handlers.clear();
   }
 }
@@ -84,6 +100,12 @@ class WsManager {
     _connections[path] = conn;
     conn.connect();
     return conn;
+  }
+
+  void updateToken(String newToken) {
+    for (final conn in _connections.values) {
+      conn.updateToken(newToken);
+    }
   }
 
   void disconnect(String path) {

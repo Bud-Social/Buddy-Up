@@ -13,6 +13,8 @@ class MessageBubble extends StatelessWidget {
   final void Function(String emoji)? onReact;
   final void Function()? onDelete;
   final void Function()? onForward;
+  final Color? senderBubbleColor;
+  final Color? receiverBubbleColor;
 
   const MessageBubble({
     super.key,
@@ -23,6 +25,8 @@ class MessageBubble extends StatelessWidget {
     this.onReact,
     this.onDelete,
     this.onForward,
+    this.senderBubbleColor,
+    this.receiverBubbleColor,
   });
 
   @override
@@ -57,7 +61,9 @@ class MessageBubble extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isMine ? BuddyColors.green.withValues(alpha: 0.15) : BuddyColors.surface,
+                      color: isMine
+                          ? (senderBubbleColor ?? BuddyColors.green.withValues(alpha: 0.15))
+                          : (receiverBubbleColor ?? BuddyColors.surface),
                       borderRadius: BorderRadius.only(
                         topLeft: const Radius.circular(16),
                         topRight: const Radius.circular(16),

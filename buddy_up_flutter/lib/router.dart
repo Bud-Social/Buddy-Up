@@ -49,6 +49,8 @@ import 'features/sessions/screens/booking_screen.dart';
 import 'features/sessions/screens/my_sessions_screen.dart';
 import 'features/sessions/screens/availability_screen.dart';
 import 'features/sessions/screens/programme_weeks_screen.dart';
+import 'features/messaging/screens/conversation_list_screen.dart';
+import 'features/messaging/screens/chat_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -332,7 +334,15 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           GoRoute(path: '/discover', builder: (_, _) => const DiscoverPeopleScreen()),
           GoRoute(path: '/lives', builder: (_, _) => const LiveBrowserScreen()),
           GoRoute(path: '/gyms', builder: (_, _) => const GymListScreen()),
-          GoRoute(path: '/messages', builder: (_, _) => _placeholder('Messages')),
+          GoRoute(path: '/messages', builder: (_, _) => const ConversationListScreen()),
+          GoRoute(
+            path: '/messages/:conversationId',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (_, state) {
+              final conversationId = state.pathParameters['conversationId'] ?? '';
+              return ChatScreen(conversationId: conversationId);
+            },
+          ),
           GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
           GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
           GoRoute(path: '/buddies', builder: (_, _) => const BuddyListScreen(username: 'me')),

@@ -1,4 +1,4 @@
-  # Flutter Conversion Plan — Buddy-Up
+# Flutter Conversion Plan — Buddy-Up
 
 ## Overview
 

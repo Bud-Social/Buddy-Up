@@ -15,9 +15,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical, Check, CheckCheck,
   X, FileText, Plus, MapPin, BarChart2, Smile, Mic, Search, Calendar, Clock, Download, Forward,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Palette,
 } from 'lucide-react';
+
 import { Avatar } from '@/components/ui/Avatar';
+import { apiClient } from '@/api/client';
 import { messagingApi } from '@/api/messaging';
 import type { Conversation, Message as MsgType, LinkPreviewData } from '@/api/messaging';
 import { useAuthStore } from '@/store/authStore';
@@ -29,17 +31,20 @@ import { AttachmentMenu } from '@/components/chat/AttachmentMenu';
 import { VoiceNoteRecorder } from '@/components/chat/VoiceNoteRecorder';
 import { CallRoom } from '@/components/chat/CallRoom';
 import { CustomAudioPlayer } from '@/components/chat/CustomAudioPlayer';
+import DocumentPreview from '@/components/chat/DocumentPreview';
+import CameraCapture from '@/components/chat/CameraCapture';
+import ChatThemePicker from '@/components/chat/ChatThemePicker';
+import { useChatPreferences } from '@/store/chatPreferencesStore';
 
 // Quick emoji picker options
 const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '👎', '🔥', '💪'];
 
-const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY as string | undefined;
+
 
 function LocationCard({ lat, lng, label, isMine }: { lat: number; lng: number; label: string; isMine: boolean }) {
   const [showPopup, setShowPopup] = useState(false);
-  const staticUrl = GOOGLE_MAPS_KEY 
-    ? `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=400x200&maptype=roadmap&markers=color:red%7C${lat},${lng}&key=${GOOGLE_MAPS_KEY}`
-    : `https://www.mapquestapi.com/staticmap/v5/map?center=${lat},${lng}&zoom=15&size=400,200&type=map&locations=${lat},${lng}|marker-red`;
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const staticUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=15&size=400x200&markers=${lat},${lng},red-pushpin`;
   
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
   const appleMapsUrl = `http://maps.apple.com/?q=${lat},${lng}`;
@@ -51,7 +56,12 @@ function LocationCard({ lat, lng, label, isMine }: { lat: number; lng: number; l
         className="block w-full group/loc text-left"
       >
         <div className="h-28 bg-gradient-to-br from-gray-700 to-gray-800 relative overflow-hidden rounded-t-lg">
-          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${staticUrl})` }} />
+          {!mapLoaded && <div className="absolute inset-0 flex items-center justify-center text-white/40 text-xs">Loading map...</div>}
+          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${staticUrl})` }} onLoad={() => setMapLoaded(true)} onError={(e) => { (e.target as HTMLDivElement).style.display = 'none'; setMapLoaded(true); }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <MapPin size={24} className="text-white/60" />
+            </div>
+          </div>
           <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/60 to-transparent" />
           <div className="absolute bottom-1.5 right-2 text-[9px] text-white/90 font-medium">Tap to open map</div>
         </div>
@@ -162,16 +172,93 @@ function PollCard({ msg, isMine }: { msg: MsgType; isMine: boolean }) {
   );
 }
 
+function ConversationSkeleton() {
+  return (
+    <div className="flex-1 overflow-y-hidden divide-y divide-buddy-surface/40 animate-pulse">
+      {Array.from({ length: 7 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+          <div className="w-10 h-10 rounded-full bg-buddy-surface shrink-0" />
+          <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="h-3.5 w-28 bg-buddy-surface rounded-full" />
+              <div className="h-2.5 w-10 bg-buddy-surface rounded-full" />
+            </div>
+            <div className="h-3 w-44 bg-buddy-surface rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MessageSkeleton() {
+  const isMine = Math.random() > 0.5;
+  return (
+    <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} animate-pulse px-4 py-2`}>
+      <div className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+        <div className={`rounded-2xl p-4 ${isMine ? 'rounded-br-sm' : 'rounded-bl-sm'} bg-buddy-surface/60`}
+          style={{ width: `${120 + Math.random() * 160}px` }}>
+          <div className="h-3 w-3/4 bg-buddy-surface rounded-full mb-2" />
+          <div className="h-3 w-1/2 bg-buddy-surface rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EmojiPicker({ onSelect, onClose }: { onSelect: (emoji: string) => void; onClose: () => void }) {
+  const categories = [
+    { label: 'Smileys', emojis: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '😉', '😌', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐', '😐', '😑', '😶', '🫥', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🥴', '😵', '🤯', '🥳', '🥺', '😢', '😭', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'] },
+    { label: 'Gestures', emojis: ['👋', '🤚', '✋', '🖖', '🫱', '🫲', '🫳', '🫴', '👌', '🤌', '🤏', '✌️', '🤞', '🫰', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '🫵', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '🫶', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄', '🫦'] },
+    { label: 'Hearts', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🩷', '🩵', '🩶', '🤍', '🤎', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '❣️', '💔', '❤️‍🔥', '❤️‍🩹', '💌'] },
+    { label: 'Objects', emojis: ['🎉', '🎊', '🎈', '🎁', '🎀', '🪄', '🎲', '🧩', '🎯', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🪪', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '💾', '💿', '📀', '🎮', '🕹️', '📸', '📹', '🎥', '📽️', '🎬', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏰', '⌚', '📡', '🔋', '🪫', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🧰', '🪛', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🪚', '🔩', '⚙️', '🧱', '🪃', '🪚', '🔫', '💣', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '🪬', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩻', '🩼', '🩺', '💉', '🩸', '💊', '🩹', '🩽', '🪥', '🪮', '🧴', '🧷', '🧹', '🧺', '🧻', '🪣', '🧼', '🫧', '🪒', '🧽', '🪞', '🪟', '🛎️', '🧳', '🪤', '🪜'] },
+  ];
+
+  const [catIdx, setCatIdx] = useState(0);
+
+  return (
+    <div className="absolute bottom-full mb-2 left-0 z-50 bg-buddy-surface-raised border border-buddy-surface rounded-2xl shadow-2xl w-72 overflow-hidden"
+      onClick={(e) => e.stopPropagation()}>
+      <div className="flex overflow-x-auto gap-1 p-2 border-b border-buddy-surface scrollbar-none shrink-0">
+        {categories.map((cat, ci) => (
+          <button key={cat.label}
+            onClick={() => setCatIdx(ci)}
+            className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+              ci === catIdx ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+      <div className="p-2 max-h-48 overflow-y-auto">
+        <div className="flex flex-wrap gap-0.5">
+          {categories[catIdx].emojis.map((emoji) => (
+            <button key={emoji}
+              onClick={() => { onSelect(emoji); onClose(); }}
+              className="w-8 h-8 flex items-center justify-center text-lg hover:bg-buddy-surface rounded-lg transition-colors"
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Messages() {
   const { conversationId: routeConvoId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
+  const chatPrefs = useChatPreferences();
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConvo, setActiveConvo] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<MsgType[]>([]);
-  const [previewFileUrl, setPreviewFileUrl] = useState<{url: string, name: string} | null>(null);
+  const [previewFileUrl, setPreviewFileUrl] = useState<{url: string, name: string, mime: string, blobUrl?: string} | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [conversationListCollapsed, setConversationListCollapsed] = useState(false);
   const [attachmentFilter, setAttachmentFilter] = useState('');
   const [forwardModalConvId, setForwardModalConvId] = useState<string | null>(null);
@@ -182,6 +269,7 @@ export default function Messages() {
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
   const [isTyping, setIsTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [messagesLoading, setMessagesLoading] = useState(false);
 
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null);
@@ -192,6 +280,12 @@ export default function Messages() {
   const [showEmojiPickerId, setShowEmojiPickerId] = useState<string | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showEmojiInput, setShowEmojiInput] = useState(false);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupUsers, setNewGroupUsers] = useState<string>('');
@@ -235,6 +329,12 @@ export default function Messages() {
   const presenceInfo = useMemo(() => (other?.user_id ? presence[other.user_id] ?? null : null), [other?.user_id, presence]);
 
   const typingNames = Object.values(typingUsers);
+
+  // Resolve effective chat theme
+  const convTheme = activeConvo ? chatPrefs.perConversationThemes[activeConvo.id] : null;
+  const effectiveBg = convTheme?.background || chatPrefs.background;
+  const effectiveSenderColor = convTheme?.senderBubbleColor || chatPrefs.senderBubbleColor;
+  const effectiveReceiverColor = convTheme?.receiverBubbleColor || chatPrefs.receiverBubbleColor;
 
   // ── WS Event handler ───────────────────────────────────────────────────────
   const sendReadRef = useRef<(id?: string) => void>(() => {});
@@ -349,6 +449,7 @@ export default function Messages() {
   const openConversation = useCallback(async (convo: Conversation, pushUrl = true) => {
     setActiveConvo(convo);
     setMessages([]);
+    setMessagesLoading(true);
     setTypingUsers({});
     setReplyTo(null);
     setMediaFile(null);
@@ -359,6 +460,7 @@ export default function Messages() {
       setMessages(res.data ?? []);
       messagingApi.markRead(convo.id).catch(() => {});
     } catch { /* silent */ }
+    finally { setMessagesLoading(false); }
   }, [navigate]);
 
   const closeConversation = useCallback(() => {
@@ -423,7 +525,8 @@ export default function Messages() {
 
     const currentFile = mediaFile;
     if (currentFile && !mediaUrl) {
-      setIsUploading(true); setUploadProgress(10);
+        setIsUploading(true); setUploadProgress(10);
+        setUploadError(null);
       try {
         setUploadProgress(40);
         const up = await messagingApi.uploadAttachment(currentFile);
@@ -432,9 +535,12 @@ export default function Messages() {
         mediaMime = up.data.mime;
         fileName = up.data.file_name;
         setUploadProgress(100);
-      } catch (err) {
-        console.error('[Messages] Upload failed', err);
+      } catch (err: any) {
+        const msg = err?.response?.data?.message || err?.message || 'Upload failed';
+        console.error('[Messages] Upload failed', msg, err);
+        setUploadError(msg);
         setIsUploading(false); setUploadProgress(0);
+        clearMediaFile();
         return;
       } finally {
         setIsUploading(false); setUploadProgress(0);
@@ -638,9 +744,7 @@ export default function Messages() {
         </div>
 
         {isLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="w-8 h-8 border-2 border-buddy-green border-t-transparent rounded-full animate-spin" />
-          </div>
+          <ConversationSkeleton />
         ) : filteredConvos.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 p-6 text-center">
             <div className="w-16 h-16 rounded-full bg-buddy-surface flex items-center justify-center">
@@ -757,6 +861,13 @@ export default function Messages() {
             </div>
             <div className="flex gap-1 shrink-0">
               <button
+                onClick={() => setShowThemePicker(true)}
+                className="p-2 rounded-xl hover:bg-buddy-surface text-buddy-text-secondary hover:text-buddy-green transition-colors"
+                title="Chat theme"
+              >
+                <Palette size={18} />
+              </button>
+              <button
                 onClick={() => startCall('audio')}
                 disabled={callState !== 'idle'}
                 className="p-2 rounded-xl hover:bg-buddy-surface text-buddy-text-secondary disabled:opacity-40 transition-colors"
@@ -813,9 +924,26 @@ export default function Messages() {
           {/* Messages */}
           <div
             className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+            style={{ backgroundColor: effectiveBg || undefined }}
             onClick={() => { setShowOptionsId(null); setShowEmojiPickerId(null); }}
           >
-            {messages.length === 0 && (
+            {messagesLoading ? (
+              <div className="py-4 space-y-1 animate-pulse">
+                {Array.from({ length: 6 }).map((_, i) => {
+                  const mine = i % 3 === 0;
+                  const w = 140 + (i * 37) % 160;
+                  return (
+                    <div key={i} className={`flex ${mine ? 'justify-end' : 'justify-start'} px-4 py-1`}>
+                      <div className={`rounded-2xl p-4 ${mine ? 'rounded-br-sm' : 'rounded-bl-sm'} bg-buddy-surface/50`}
+                        style={{ width: `${w}px` }}>
+                        <div className="h-3 w-3/4 bg-buddy-surface rounded-full mb-2" />
+                        <div className="h-3 w-1/2 bg-buddy-surface rounded-full" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-24 gap-4">
                 <Avatar src={other?.avatar_url} alt={other?.display_name ?? 'User'} size="xl" className="ring-2 ring-buddy-surface" verificationStatus={other?.verification_status} />
                 <div className="text-center">
@@ -840,7 +968,7 @@ export default function Messages() {
                 return (
                   <div
                     key={msg.id}
-                    className={`flex ${isMine ? 'justify-end' : 'justify-start'} group relative ${isTemp ? 'opacity-70' : ''}`}
+                    className={`flex ${isMine ? 'justify-end' : 'justify-start'} group relative animate-in fade-in duration-200 ${isTemp ? 'opacity-70' : ''}`}
                     onDoubleClick={() => setShowEmojiPickerId(showEmojiPickerId === msg.id ? null : msg.id)}
                   >
                     {/* Avatar for other person (non-sequential) */}
@@ -865,13 +993,13 @@ export default function Messages() {
 
                       {/* Reply context */}
                       {msg.reply_data && (
-                        <div className={`text-[10px] px-2.5 py-1.5 mb-1 rounded-lg max-w-full border-l-2 ${
+                        <div className={`text-[10px] px-2.5 py-1 mb-0.5 rounded-lg max-w-full border-l-2 ${
                           isMine ? 'bg-buddy-black/10 border-buddy-black/30 text-buddy-black' : 'bg-buddy-surface-raised border-buddy-text-secondary/20 text-buddy-text-secondary'
                         }`}>
-                          <span className="font-bold block truncate">
+                          <span className="font-bold block truncate leading-tight">
                             {msg.reply_data.sender_name === profile?.display_name ? 'You' : msg.reply_data.sender_name}
                           </span>
-                          <span className="truncate block opacity-80 mt-0.5">{msg.reply_data.body || '📎 Attachment'}</span>
+                          <span className="truncate block opacity-80 mt-px">{msg.reply_data.body || '📎 Attachment'}</span>
                         </div>
                       )}
 
@@ -898,9 +1026,14 @@ export default function Messages() {
 
                         <div className={`rounded-[20px] overflow-hidden text-sm ${
                           isMine
-                            ? 'bg-buddy-green text-buddy-black rounded-br-sm'
-                            : 'bg-buddy-surface text-buddy-text-primary rounded-bl-sm'
-                        }`} style={{ maxWidth: '100%' }}>
+                            ? `${effectiveSenderColor ? 'text-buddy-black' : 'bg-buddy-green text-buddy-black'} rounded-br-sm`
+                            : `${effectiveReceiverColor ? 'text-buddy-text-primary' : 'bg-buddy-surface text-buddy-text-primary'} rounded-bl-sm`
+                        }`} style={{
+                          backgroundColor: isMine
+                            ? (effectiveSenderColor || undefined)
+                            : (effectiveReceiverColor || undefined),
+                          maxWidth: '100%',
+                        }}>
 
                           {/* Location */}
                           {isLocation && (
@@ -968,17 +1101,31 @@ export default function Messages() {
                             <div className="max-w-full">
                               {msg.message_type === 'photo' ? (
                                 <div className="relative group/media">
+                                  <div className={`bg-buddy-surface/60 animate-pulse min-h-[160px] ${loadedImages.has(msg.id) ? 'hidden' : ''}`} />
                                   <img
                                     src={msg.media_url}
                                     alt="Photo"
-                                    className="max-w-xs w-full object-cover cursor-zoom-in"
+                                    loading="lazy"
+                                    className={`max-w-xs w-full object-cover cursor-zoom-in transition-opacity duration-300 hover:scale-[1.02] ${loadedImages.has(msg.id) ? 'opacity-100' : 'opacity-0 absolute inset-0'}`}
                                     style={{ borderRadius: msg.body ? '0' : undefined }}
-                                    onClick={() => window.open(msg.media_url, '_blank')}
+                                    onClick={() => setLightboxUrl(msg.media_url)}
+                                    onLoad={() => setLoadedImages((prev) => new Set(prev).add(msg.id))}
+                                    onError={(e) => {
+                                      setLoadedImages((prev) => new Set(prev).add(msg.id));
+                                      const el = e.currentTarget;
+                                      if (el.dataset.fallback !== 'true') {
+                                        el.dataset.fallback = 'true';
+                                        apiClient.get(msg.media_url, { responseType: 'blob' }).then(r => {
+                                          el.src = URL.createObjectURL(new Blob([r.data], { type: String(r.headers['content-type'] || 'image/jpeg') }));
+                                          el.classList.add('opacity-100');
+                                        }).catch(() => {});
+                                      }
+                                    }}
                                   />
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank'); }}
-                                    className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity text-white"
-                                    title="Download"
+                                    onClick={(e) => { e.stopPropagation(); setLightboxUrl(msg.media_url); }}
+                                    className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity text-white backdrop-blur-sm"
+                                    title="View"
                                   >
                                     <Download size={14} />
                                   </button>
@@ -989,8 +1136,18 @@ export default function Messages() {
                                     src={msg.media_url}
                                     controls
                                     playsInline
-                                    className="max-w-xs w-full bg-black/10 object-cover"
+                                    preload="metadata"
+                                    className="max-w-xs w-full bg-black/10 object-cover rounded-[18px]"
                                     style={{ maxHeight: 300, display: 'block' }}
+                                    onError={(e) => {
+                                      const el = e.currentTarget;
+                                      if (el.dataset.fallback !== 'true') {
+                                        el.dataset.fallback = 'true';
+                                        apiClient.get(msg.media_url, { responseType: 'blob' }).then(r => {
+                                          el.src = URL.createObjectURL(new Blob([r.data], { type: String(r.headers['content-type'] || 'video/mp4') }));
+                                        }).catch(() => {});
+                                      }
+                                    }}
                                   />
                                   <button
                                     onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank'); }}
@@ -1026,14 +1183,34 @@ export default function Messages() {
                                   <div className="flex-1 min-w-0 flex flex-col justify-center">
                                     <p className="truncate text-sm font-semibold">{msg.file_name || 'Document'}</p>
                                     <button 
-                                      onClick={(e) => { e.stopPropagation(); setPreviewFileUrl({ url: msg.media_url!, name: msg.file_name || 'Document' }); }}
+                                      onClick={async (e) => {
+                                        e.stopPropagation();
+                                        try {
+                                          const response = await apiClient.get(msg.media_url!, { responseType: 'blob' });
+                                          const blob = new Blob([response.data], { type: String(response.headers['content-type'] || 'application/octet-stream') });
+                                          const blobUrl = URL.createObjectURL(blob);
+                                          setPreviewFileUrl({ url: msg.media_url!, name: msg.file_name || 'Document', mime: msg.media_mime || 'application/octet-stream', blobUrl });
+                                        } catch {
+                                          window.open(msg.media_url!, '_blank');
+                                        }
+                                      }}
                                       className="text-left text-[11px] font-medium opacity-70 hover:opacity-100 transition-opacity underline-offset-2 hover:underline mt-0.5"
                                     >
                                       Tap to view
                                     </button>
                                   </div>
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank'); }}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      try {
+                                        const r = await apiClient.get(msg.media_url!, { responseType: 'blob' });
+                                        const url = URL.createObjectURL(new Blob([r.data], { type: String(r.headers['content-type'] || 'application/octet-stream') }));
+                                        const a = document.createElement('a'); a.href = url; a.download = msg.file_name || 'file'; a.click();
+                                        URL.revokeObjectURL(url);
+                                      } catch {
+                                        window.open(msg.media_url!, '_blank');
+                                      }
+                                    }}
                                     className={`p-2 rounded-full transition-colors shrink-0 ${isMine ? 'hover:bg-buddy-black/10 text-buddy-black' : 'hover:bg-white/10 text-buddy-text-secondary hover:text-white'}`}
                                     title="Download"
                                   >
@@ -1186,13 +1363,18 @@ export default function Messages() {
           </div>
 
           {/* Input Area */}
-          <div className="border-t border-buddy-surface bg-buddy-black px-3 py-3 shrink-0 relative">
+          <div
+            className={`border-t border-buddy-surface px-3 py-3 shrink-0 relative transition-colors ${isDragOver ? 'bg-buddy-green/10 border-buddy-green' : 'bg-buddy-black'}`}
+            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+            onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; setIsDragOver(false); }}
+            onDrop={(e) => { e.preventDefault(); setIsDragOver(false); const f = e.dataTransfer.files[0]; if (f) stageFile(f); }}
+          >
             {/* Reply preview */}
             {replyTo && (
-              <div className="flex items-center justify-between bg-buddy-surface rounded-xl px-3 py-2 mb-2 border-l-4 border-buddy-green">
+              <div className="flex items-center justify-between bg-buddy-surface rounded-xl px-3 py-1.5 mb-1.5 border-l-4 border-buddy-green">
                 <div className="min-w-0">
-                  <p className="text-[11px] text-buddy-green font-semibold">Replying to {replyTo.sender_data.display_name}</p>
-                  <p className="text-xs text-buddy-text-secondary truncate mt-0.5">{replyTo.body || '📎 Attachment'}</p>
+                  <p className="text-[11px] text-buddy-green font-semibold leading-tight">Replying to {replyTo.sender_data.display_name}</p>
+                  <p className="text-xs text-buddy-text-secondary truncate mt-px">{replyTo.body || '📎 Attachment'}</p>
                 </div>
                 <button onClick={() => setReplyTo(null)} className="p-1 text-buddy-text-secondary hover:text-white ml-2 shrink-0">
                   <X size={14} />
@@ -1221,6 +1403,20 @@ export default function Messages() {
             )}
 
             {/* Upload progress */}
+            {isDragOver && (
+              <div className="absolute inset-0 z-30 flex items-center justify-center bg-buddy-green/5 backdrop-blur-[1px] rounded-lg border-2 border-dashed border-buddy-green/50 pointer-events-none">
+                <div className="flex flex-col items-center gap-2 text-buddy-green">
+                  <FileText size={32} />
+                  <span className="text-sm font-semibold">Drop file to attach</span>
+                </div>
+              </div>
+            )}
+            {uploadError && (
+              <div className="mb-2 flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2">
+                <span className="text-xs text-red-400 flex-1">{uploadError}</span>
+                <button onClick={() => setUploadError(null)} className="text-red-400/70 hover:text-red-400 shrink-0"><X size={14} /></button>
+              </div>
+            )}
             {isUploading && uploadProgress > 0 && (
               <div className="mb-2 h-1 bg-buddy-surface rounded-full overflow-hidden">
                 <div className="h-full bg-buddy-green transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
@@ -1247,13 +1443,14 @@ export default function Messages() {
                       onPoll={handlePollSend}
                       onEvent={handleEventSend}
                       onVoiceNote={() => { setShowVoiceRecorder(true); setShowAttachMenu(false); }}
+                      onCameraCapture={() => setShowCamera(true)}
                       onClose={() => setShowAttachMenu(false)}
                     />
                   )}
                 </div>
 
                 {/* Text input */}
-                <div className="flex-1 flex items-end bg-buddy-surface rounded-3xl px-4 py-2.5">
+                <div className="flex-1 flex items-end bg-buddy-surface rounded-3xl px-4 py-2.5 relative">
                   <input
                     ref={inputRef}
                     type="text"
@@ -1268,10 +1465,25 @@ export default function Messages() {
                     placeholder="Message..."
                     className="flex-1 bg-transparent text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/40 focus:outline-none min-w-0"
                   />
-                  {!body.trim() && !mediaFile && (
-                    <button onClick={() => setShowVoiceRecorder(true)} className="ml-2 text-buddy-text-secondary hover:text-buddy-green transition-colors shrink-0">
-                      <Mic size={17} />
+                  <div className="flex items-center gap-0.5 ml-1 shrink-0">
+                    <button
+                      onClick={() => setShowEmojiInput((v) => !v)}
+                      className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-surface transition-colors relative"
+                      title="Emoji"
+                    >
+                      <Smile size={17} />
                     </button>
+                    {!body.trim() && !mediaFile && (
+                      <button onClick={() => setShowVoiceRecorder(true)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-surface transition-colors">
+                        <Mic size={17} />
+                      </button>
+                    )}
+                  </div>
+                  {showEmojiInput && (
+                    <EmojiPicker
+                      onSelect={(emoji) => setBody((prev) => prev + emoji)}
+                      onClose={() => setShowEmojiInput(false)}
+                    />
                   )}
                 </div>
 
@@ -1385,33 +1597,48 @@ export default function Messages() {
         </div>
       )}
 
+      {/* Photo Lightbox */}
+      {lightboxUrl && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm" onClick={() => setLightboxUrl(null)}>
+          <button onClick={() => setLightboxUrl(null)} className="absolute top-4 right-4 p-2 text-white/80 hover:text-white rounded-full bg-black/40 hover:bg-black/60 transition-all z-10">
+            <X size={24} />
+          </button>
+          <a href={lightboxUrl} target="_blank" rel="noreferrer" className="absolute top-4 left-4 p-2 text-white/80 hover:text-white rounded-full bg-black/40 hover:bg-black/60 transition-all z-10" title="Download">
+            <Download size={20} />
+          </a>
+          <img
+            src={lightboxUrl}
+            alt="Photo"
+            className="max-h-[90vh] max-w-[90vw] object-contain rounded-2xl shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
+      {/* Chat Theme Picker */}
+      {showThemePicker && (
+        <ChatThemePicker
+          conversationId={activeConvo?.id}
+          onClose={() => setShowThemePicker(false)}
+        />
+      )}
+
+      {/* Live Camera Capture */}
+      {showCamera && (
+        <CameraCapture
+          onCapture={(file) => { setShowCamera(false); stageFile(file); }}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
+
       {/* Document Preview Modal */}
       {previewFileUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewFileUrl(null)}>
-          <div className="bg-white dark:bg-buddy-surface w-full max-w-4xl h-[85vh] rounded-2xl overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-4 py-3 border-b dark:border-white/10 bg-buddy-surface-raised">
-              <div className="flex items-center gap-2 min-w-0">
-                <FileText size={18} className="text-buddy-green shrink-0" />
-                <span className="font-semibold text-sm truncate">{previewFileUrl.name}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <a href={previewFileUrl.url} target="_blank" rel="noreferrer" className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors" title="Download">
-                  <Download size={18} />
-                </a>
-                <button onClick={() => setPreviewFileUrl(null)} className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors">
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-1 bg-white/5">
-              <iframe 
-                src={previewFileUrl.url.toLowerCase().endsWith('.pdf') ? previewFileUrl.url : `https://docs.google.com/viewer?url=${encodeURIComponent(previewFileUrl.url)}&embedded=true`} 
-                className="w-full h-full border-0"
-                title="Document Preview"
-              />
-            </div>
-          </div>
-        </div>
+        <DocumentPreview
+          url={previewFileUrl.url}
+          name={previewFileUrl.name}
+          mime={previewFileUrl.mime}
+          onClose={() => { if (previewFileUrl.blobUrl) URL.revokeObjectURL(previewFileUrl.blobUrl); setPreviewFileUrl(null); }}
+        />
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/repositories/messaging_repository.dart';
 import '../../../data/models/messaging.dart';
 import '../../../core/api/api_client.dart';
+import '../../../core/auth/auth_provider.dart';
 import '../../../core/chat/chat_socket.dart';
 
 final messagingRepositoryProvider = Provider<MessagingRepository>((ref) {
@@ -203,6 +204,15 @@ class MessagesNotifier extends Notifier<MessagesState> {
   void setTyping(bool typing, String? userName) {
     state = state.copyWith(isTyping: typing, typingUserName: userName);
   }
+
+  void setRead(String readerId) {
+    state = state.copyWith(
+      messages: state.messages.map((m) {
+        if (m.senderId != readerId) return m;
+        return m.copyWith(isRead: true);
+      }).toList(),
+    );
+  }
 }
 
 final messagesProvider = NotifierProvider.family<MessagesNotifier, MessagesState, String>(
@@ -210,10 +220,15 @@ final messagesProvider = NotifierProvider.family<MessagesNotifier, MessagesState
 );
 
 final chatSocketProvider = Provider.family<ChatSocket?, String>((ref, conversationId) {
-  const token = '';
+  final token = ref.watch(accessTokenProvider);
   final socket = ChatSocket(conversationId: conversationId, token: token);
   ref.onDispose(() => socket.dispose());
   socket.connect();
+  ref.listen(accessTokenProvider, (prev, next) {
+    if (next != prev) {
+      socket.updateToken(next);
+    }
+  });
   return socket;
 });
 

@@ -85,7 +85,9 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
   // ── Connection management ─────────────────────────────────────────────────
 
   const connect = useCallback(() => {
-    if (!conversationId || !token || !enabled) return;
+    if (!conversationId || !enabled) return;
+    const currentToken = useAuthStore.getState().accessToken;
+    if (!currentToken) return;
 
     // Close any existing connection first
     if (wsRef.current) {
@@ -94,7 +96,7 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
       wsRef.current = null;
     }
 
-    const url = `${WS_BASE}/ws/conversation/${conversationId}/?token=${token}`;
+    const url = `${WS_BASE}/ws/conversation/${conversationId}/?token=${currentToken}`;
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
@@ -130,7 +132,7 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
       console.error('[ChatSocket] WebSocket error', err);
       ws.close();
     };
-  }, [conversationId, token, enabled]);
+  }, [conversationId, enabled]);
 
   useEffect(() => {
     connect();

@@ -15,17 +15,44 @@ class WsManager {
 
   static getInstance() { if (!WsManager.instance) WsManager.instance = new WsManager(); return WsManager.instance; }
 
-  setAccessToken(t: string | null) { this.accessToken = t; }
+  setAccessToken(t: string | null) {
+    const prev = this.accessToken;
+    this.accessToken = t;
+    if (prev !== t && t !== null) {
+      this.reconnectAll();
+    }
+  }
+
+  private reconnectAll() {
+    const paths = [...this.sockets.keys()];
+    for (const path of paths) {
+      const existing = this.sockets.get(path);
+      if (existing && !this.disconnecting.has(path)) {
+        this.disconnecting.add(path);
+        existing.close();
+        this.disconnecting.delete(path);
+        this.sockets.delete(path);
+        this.connect(path);
+      }
+    }
+  }
 
   connect(path: string): WebSocket {
-    if (this.sockets.has(path)) return this.sockets.get(path)!;
+    const existing = this.sockets.get(path);
+    if (existing && existing.readyState === WebSocket.OPEN) return existing;
+    if (existing) {
+      this.disconnecting.add(path);
+      existing.close();
+      this.disconnecting.delete(path);
+      this.sockets.delete(path);
+    }
     const url = `${this.baseUrl}/${path}${this.accessToken ? `?token=${this.accessToken}` : ''}`;
     const ws = new WebSocket(url);
     ws.onopen = () => { this.attempts.set(path, 0); };
     ws.onmessage = (e) => { try { const d = JSON.parse(e.data); this.handlers.get(path)?.forEach((h) => h(d)); } catch {} };
-    ws.onclose = () => {
+    ws.onclose = (evt) => {
       this.sockets.delete(path);
-      if (!this.disconnecting.has(path)) {
+      if (!this.disconnecting.has(path) && evt.code !== 4001 && evt.code !== 4003) {
         this.reconnect(path);
       }
       this.disconnecting.delete(path);

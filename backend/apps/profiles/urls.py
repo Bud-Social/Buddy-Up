@@ -12,6 +12,8 @@ urlpatterns = [
     path('pending-requests/', views.PendingBuddyRequestsView.as_view(), name='pending_requests'),
     path('buddies/search/', views.BuddySearchView.as_view(), name='buddy_search'),
 
+    path('presence/', views.PresenceStatusView.as_view(), name='presence'),
+    path('recommendations/', views.ProfileRecommendationsView.as_view(), name='recommendations'),
     path('<str:username>/', views.UserProfileView.as_view(), name='user_profile'),
     path('<str:username>/buddy/', views.SendBuddyRequestView.as_view(), name='buddy_request'),
     path('<str:username>/buddy/accept/', views.AcceptBuddyRequestView.as_view(), name='buddy_accept'),
@@ -23,6 +25,4 @@ urlpatterns = [
     path('<str:username>/followers/', views.FollowersListView.as_view(), name='followers'),
     path('<str:username>/following/', views.FollowingListView.as_view(), name='following'),
     path('<str:username>/posts/', views.UserPostsView.as_view(), name='user_posts'),
-    path('recommendations/', views.ProfileRecommendationsView.as_view(), name='recommendations'),
-    path('presence/', views.PresenceStatusView.as_view(), name='presence'),
 ]

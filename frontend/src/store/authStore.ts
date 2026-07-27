@@ -47,6 +47,11 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         profile: state.profile,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.accessToken) {
+          wsManager.setAccessToken(state.accessToken);
+        }
+      },
     }
   )
 );

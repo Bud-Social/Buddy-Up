@@ -6,7 +6,7 @@ import '../env/env.dart';
 
 class ChatSocket {
   final String conversationId;
-  final String token;
+  String _token;
   WebSocketChannel? _channel;
   final StreamController<ChatEvent> _eventController = StreamController<ChatEvent>.broadcast();
   Timer? _reconnectTimer;
@@ -15,8 +15,19 @@ class ChatSocket {
   bool _disposed = false;
 
   Stream<ChatEvent> get events => _eventController.stream;
+  String get token => _token;
 
-  ChatSocket({required this.conversationId, required this.token});
+  ChatSocket({required this.conversationId, required String token}) : _token = token;
+
+  void updateToken(String newToken) {
+    if (_token == newToken) return;
+    _token = newToken;
+    if (!_intentionalClose && !_disposed) {
+      disconnect();
+      _reconnectAttempts = 0;
+      _doConnect();
+    }
+  }
 
   void connect() {
     if (_disposed) return;
@@ -27,7 +38,7 @@ class ChatSocket {
 
   void _doConnect() {
     if (_disposed) return;
-    final url = '${Env.wsBaseUrl}/ws/conversation/$conversationId/?token=$token';
+    final url = '${Env.wsBaseUrl}/ws/conversation/$conversationId/?token=$_token';
     try {
       _channel = WebSocketChannel.connect(Uri.parse(url));
       _channel!.stream.listen(

@@ -1,6 +1,3 @@
-/**
- * usePresence – polls and manages online/last-seen status for a set of user IDs.
- */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '@/api/client';
 
@@ -12,7 +9,7 @@ export interface PresenceInfo {
 export function usePresence(userIds: string[], pollIntervalMs = 30_000) {
   const [presence, setPresence] = useState<Record<string, PresenceInfo>>({});
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const userIdsKey = userIds.join(',');
+  const mountedRef = useRef(true);
 
   const fetchPresence = useCallback(async () => {
     if (!userIds.length) return;
@@ -21,16 +18,20 @@ export function usePresence(userIds: string[], pollIntervalMs = 30_000) {
         '/profiles/presence/',
         { user_ids: userIds },
       );
-      setPresence(res.data.data || {});
+      if (mountedRef.current) {
+        setPresence(res.data.data || {});
+      }
     } catch {
       // silently ignore
     }
-  }, [userIdsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [userIds.join(',')]);
 
   useEffect(() => {
+    mountedRef.current = true;
     fetchPresence();
     timerRef.current = setInterval(fetchPresence, pollIntervalMs);
     return () => {
+      mountedRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [fetchPresence, pollIntervalMs]);
@@ -38,7 +39,6 @@ export function usePresence(userIds: string[], pollIntervalMs = 30_000) {
   return presence;
 }
 
-/** Formats last_seen timestamp into human-readable "Last seen X" string */
 export function formatLastSeen(lastSeen: string | null): string {
   if (!lastSeen) return '';
   const date = new Date(lastSeen);

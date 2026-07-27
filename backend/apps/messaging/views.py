@@ -1,6 +1,9 @@
+import logging
 import mimetypes
 import os
 import uuid
+
+logger = logging.getLogger(__name__)
 
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
@@ -248,6 +251,7 @@ class UploadAttachmentView(views.APIView):
     def post(self, request):
         file = request.FILES.get('file')
         if not file:
+            logger.warning('UploadAttachmentView: no file provided')
             return Response({
                 'success': False, 'data': None,
                 'message': 'No file provided.',
@@ -255,6 +259,7 @@ class UploadAttachmentView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         if file.size > self.MAX_SIZE_MB * 1024 * 1024:
+            logger.warning('UploadAttachmentView: file too large (%s bytes > %s MB)', file.size, self.MAX_SIZE_MB)
             return Response({
                 'success': False, 'data': None,
                 'message': f'File exceeds {self.MAX_SIZE_MB} MB limit.',
@@ -263,6 +268,7 @@ class UploadAttachmentView(views.APIView):
 
         ext = os.path.splitext(file.name)[1].lower()
         if ext not in self.ALLOWED_EXTENSIONS:
+            logger.warning('UploadAttachmentView: extension %s not allowed for file %s', ext, file.name)
             return Response({
                 'success': False, 'data': None,
                 'message': 'File type not allowed.',
@@ -275,6 +281,8 @@ class UploadAttachmentView(views.APIView):
         if ext in ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.mov', '.webm',
                     '.mp3', '.ogg', '.m4a', '.wav', '.pdf'):
             if not validate_file_signature(chunk, ext):
+                logger.warning('UploadAttachmentView: magic bytes mismatch for file %s (ext=%s, chunk[:8]=%s)',
+                               file.name, ext, chunk[:8].hex())
                 return Response({
                     'success': False, 'data': None,
                     'message': 'File content does not match its extension.',
@@ -283,10 +291,10 @@ class UploadAttachmentView(views.APIView):
 
         # ── MIME type enforcement ────────────────────────────────────────
         declared_mime = file.content_type or ''
-        guessed_mime, _ = mimetypes.guess_type(file.name)
-        if declared_mime and guessed_mime:
-            allowed_prefixes = ('image/', 'video/', 'audio/', 'application/pdf', 'text/plain')
+        if declared_mime:
+            allowed_prefixes = ('image/', 'video/', 'audio/', 'application/', 'text/')
             if not declared_mime.startswith(allowed_prefixes):
+                logger.warning('UploadAttachmentView: MIME %s not allowed for file %s', declared_mime, file.name)
                 return Response({
                     'success': False, 'data': None,
                     'message': 'Declared MIME type not allowed.',
@@ -302,7 +310,7 @@ class UploadAttachmentView(views.APIView):
             'success': True,
             'data': {
                 'url': url,
-                'mime': declared_mime or guessed_mime or '',
+                'mime': declared_mime or '',
                 'file_name': file.name,
                 'size': file.size,
             },
