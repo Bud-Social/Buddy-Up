@@ -20,6 +20,7 @@ from common.pagination import CursorPagination
 from .models import User, OTPToken, DeviceSession, AccountEvent
 from .serializers import (
     RegisterSerializer, LoginSerializer, OTPSerializer, ResendOTPSerializer,
+    ResendRegistrationOTPSerializer,
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
     ChangePasswordSerializer, SocialAuthSerializer,
     TOTPSetupSerializer, TOTPVerifySerializer,
@@ -307,9 +308,21 @@ class LoginView(views.APIView):
             }, status=status.HTTP_403_FORBIDDEN)
 
         if not user.email_verified:
+            otp = _generate_otp()
+            OTPToken.objects.create(
+                user=user,
+                code=otp,
+                channel='email',
+                expires_at=timezone.now() + timedelta(minutes=10),
+            )
+            send_otp_email.delay(str(user.id), otp, 'registration')
+            reg_token = _generate_temp_token(user, 'registration', expiry_minutes=10)
             return Response({
                 'success': False,
-                'data': None,
+                'data': {
+                    'registration_token': reg_token,
+                    'email': user.email,
+                },
                 'message': 'Please verify your email before logging in. Check your inbox for the OTP.',
                 'errors': None,
                 'pagination': None,
@@ -629,7 +642,7 @@ class GoogleLoginView(views.APIView):
         serializer.is_valid(raise_exception=True)
         credential = serializer.validated_data['credential']
 
-        if not GOOGLE_AUTH_AVAILABLE:
+        if not GOOGLE_AUTH_AVAILABLE and not settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY:
             return Response({
                 'success': False, 'data': None,
                 'message': 'Google authentication is not configured.',
@@ -644,14 +657,39 @@ class GoogleLoginView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-        try:
-            info = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id, clock_skew_in_seconds=60)
-        except ValueError as e:
-            return Response({
-                'success': False, 'data': None,
-                'message': f'Invalid Google token: {e}',
-                'errors': None, 'pagination': None,
-            }, status=status.HTTP_400_BAD_REQUEST)
+        info = None
+        # Detect if credential is an access token (not a JWT id_token)
+        if credential.count('.') == 2 and GOOGLE_AUTH_AVAILABLE:
+            # Looks like a JWT id_token — use existing verify flow
+            try:
+                info = id_token.verify_oauth2_token(credential, google_requests.Request(), client_id, clock_skew_in_seconds=60)
+            except ValueError as e:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'Invalid Google token: {e}',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # Treat as access token — validate via Google Token Info API
+            import json
+            import urllib.request
+            url = f'https://www.googleapis.com/oauth2/v3/tokeninfo?access_token={credential}'
+            try:
+                with urllib.request.urlopen(url, timeout=10) as resp:
+                    info = json.loads(resp.read().decode())
+            except Exception as e:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'Invalid Google access token: {e}',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            # Verify the token was issued for this client
+            if info.get('aud') != client_id:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Google token audience mismatch.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         email = info.get('email', '').lower()
         google_id = info.get('sub', '')
@@ -1008,6 +1046,55 @@ class ResendOTPView(views.APIView):
         )
         if data['channel'] == 'email':
             send_otp_email.delay(str(request.user.id), otp, 'registration')
+        # TODO: send OTP via SMS (Africa's Talking)
+
+        return Response({
+            'success': True,
+            'data': None,
+            'message': f'New OTP sent to your {data["channel"]}.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class ResendRegistrationOTPView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'otp'
+
+    def post(self, request):
+        serializer = ResendRegistrationOTPSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        user = _verify_temp_token(data['registration_token'], 'registration')
+        if not user:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid or expired registration token.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        recent = OTPToken.objects.filter(
+            user=user,
+            channel=data['channel'],
+            created_at__gte=timezone.now() - timedelta(seconds=60),
+        ).exists()
+        if recent:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Please wait 60 seconds before requesting a new OTP.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        otp = _generate_otp()
+        OTPToken.objects.create(
+            user=user,
+            code=otp,
+            channel=data['channel'],
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        if data['channel'] == 'email':
+            send_otp_email.delay(str(user.id), otp, 'registration')
         # TODO: send OTP via SMS (Africa's Talking)
 
         return Response({

@@ -285,6 +285,906 @@ as String,
 
 
 /// @nodoc
+mixin _$Shop {
+
+ String get id; String get handle; String get name; String get description;@JsonKey(name: 'logo_url') String? get logoUrl;@JsonKey(name: 'banner_url') String? get bannerUrl;@JsonKey(name: 'accent_color') String get accentColor;@JsonKey(name: 'contact_email') String get contactEmail;@JsonKey(name: 'contact_phone') String get contactPhone;@JsonKey(name: 'website_url') String get websiteUrl;@JsonKey(name: 'social_links') Map<String, String> get socialLinks; String get category;@JsonKey(name: 'verification_status') String get verificationStatus;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'created_at') String get createdAt;
+/// Create a copy of Shop
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ShopCopyWith<Shop> get copyWith => _$ShopCopyWithImpl<Shop>(this as Shop, _$identity);
+
+  /// Serializes this Shop to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Shop&&(identical(other.id, id) || other.id == id)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.accentColor, accentColor) || other.accentColor == accentColor)&&(identical(other.contactEmail, contactEmail) || other.contactEmail == contactEmail)&&(identical(other.contactPhone, contactPhone) || other.contactPhone == contactPhone)&&(identical(other.websiteUrl, websiteUrl) || other.websiteUrl == websiteUrl)&&const DeepCollectionEquality().equals(other.socialLinks, socialLinks)&&(identical(other.category, category) || other.category == category)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,handle,name,description,logoUrl,bannerUrl,accentColor,contactEmail,contactPhone,websiteUrl,const DeepCollectionEquality().hash(socialLinks),category,verificationStatus,isActive,createdAt);
+
+@override
+String toString() {
+  return 'Shop(id: $id, handle: $handle, name: $name, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, accentColor: $accentColor, contactEmail: $contactEmail, contactPhone: $contactPhone, websiteUrl: $websiteUrl, socialLinks: $socialLinks, category: $category, verificationStatus: $verificationStatus, isActive: $isActive, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ShopCopyWith<$Res>  {
+  factory $ShopCopyWith(Shop value, $Res Function(Shop) _then) = _$ShopCopyWithImpl;
+@useResult
+$Res call({
+ String id, String handle, String name, String description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'accent_color') String accentColor,@JsonKey(name: 'contact_email') String contactEmail,@JsonKey(name: 'contact_phone') String contactPhone,@JsonKey(name: 'website_url') String websiteUrl,@JsonKey(name: 'social_links') Map<String, String> socialLinks, String category,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$ShopCopyWithImpl<$Res>
+    implements $ShopCopyWith<$Res> {
+  _$ShopCopyWithImpl(this._self, this._then);
+
+  final Shop _self;
+  final $Res Function(Shop) _then;
+
+/// Create a copy of Shop
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? handle = null,Object? name = null,Object? description = null,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? accentColor = null,Object? contactEmail = null,Object? contactPhone = null,Object? websiteUrl = null,Object? socialLinks = null,Object? category = null,Object? verificationStatus = null,Object? isActive = null,Object? createdAt = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,handle: null == handle ? _self.handle : handle // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,logoUrl: freezed == logoUrl ? _self.logoUrl : logoUrl // ignore: cast_nullable_to_non_nullable
+as String?,bannerUrl: freezed == bannerUrl ? _self.bannerUrl : bannerUrl // ignore: cast_nullable_to_non_nullable
+as String?,accentColor: null == accentColor ? _self.accentColor : accentColor // ignore: cast_nullable_to_non_nullable
+as String,contactEmail: null == contactEmail ? _self.contactEmail : contactEmail // ignore: cast_nullable_to_non_nullable
+as String,contactPhone: null == contactPhone ? _self.contactPhone : contactPhone // ignore: cast_nullable_to_non_nullable
+as String,websiteUrl: null == websiteUrl ? _self.websiteUrl : websiteUrl // ignore: cast_nullable_to_non_nullable
+as String,socialLinks: null == socialLinks ? _self.socialLinks : socialLinks // ignore: cast_nullable_to_non_nullable
+as Map<String, String>,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [Shop].
+extension ShopPatterns on Shop {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _Shop value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _Shop() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _Shop value)  $default,){
+final _that = this;
+switch (_that) {
+case _Shop():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _Shop value)?  $default,){
+final _that = this;
+switch (_that) {
+case _Shop() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String handle,  String name,  String description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'accent_color')  String accentColor, @JsonKey(name: 'contact_email')  String contactEmail, @JsonKey(name: 'contact_phone')  String contactPhone, @JsonKey(name: 'website_url')  String websiteUrl, @JsonKey(name: 'social_links')  Map<String, String> socialLinks,  String category, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _Shop() when $default != null:
+return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl,_that.bannerUrl,_that.accentColor,_that.contactEmail,_that.contactPhone,_that.websiteUrl,_that.socialLinks,_that.category,_that.verificationStatus,_that.isActive,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String handle,  String name,  String description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'accent_color')  String accentColor, @JsonKey(name: 'contact_email')  String contactEmail, @JsonKey(name: 'contact_phone')  String contactPhone, @JsonKey(name: 'website_url')  String websiteUrl, @JsonKey(name: 'social_links')  Map<String, String> socialLinks,  String category, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _Shop():
+return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl,_that.bannerUrl,_that.accentColor,_that.contactEmail,_that.contactPhone,_that.websiteUrl,_that.socialLinks,_that.category,_that.verificationStatus,_that.isActive,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String handle,  String name,  String description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'accent_color')  String accentColor, @JsonKey(name: 'contact_email')  String contactEmail, @JsonKey(name: 'contact_phone')  String contactPhone, @JsonKey(name: 'website_url')  String websiteUrl, @JsonKey(name: 'social_links')  Map<String, String> socialLinks,  String category, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _Shop() when $default != null:
+return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl,_that.bannerUrl,_that.accentColor,_that.contactEmail,_that.contactPhone,_that.websiteUrl,_that.socialLinks,_that.category,_that.verificationStatus,_that.isActive,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _Shop implements Shop {
+  const _Shop({required this.id, required this.handle, required this.name, required this.description, @JsonKey(name: 'logo_url') this.logoUrl, @JsonKey(name: 'banner_url') this.bannerUrl, @JsonKey(name: 'accent_color') this.accentColor = '#6366f1', @JsonKey(name: 'contact_email') this.contactEmail = '', @JsonKey(name: 'contact_phone') this.contactPhone = '', @JsonKey(name: 'website_url') this.websiteUrl = '', @JsonKey(name: 'social_links') final  Map<String, String> socialLinks = const <String, String>{}, this.category = '', @JsonKey(name: 'verification_status') this.verificationStatus = 'unverified', @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'created_at') required this.createdAt}): _socialLinks = socialLinks;
+  factory _Shop.fromJson(Map<String, dynamic> json) => _$ShopFromJson(json);
+
+@override final  String id;
+@override final  String handle;
+@override final  String name;
+@override final  String description;
+@override@JsonKey(name: 'logo_url') final  String? logoUrl;
+@override@JsonKey(name: 'banner_url') final  String? bannerUrl;
+@override@JsonKey(name: 'accent_color') final  String accentColor;
+@override@JsonKey(name: 'contact_email') final  String contactEmail;
+@override@JsonKey(name: 'contact_phone') final  String contactPhone;
+@override@JsonKey(name: 'website_url') final  String websiteUrl;
+ final  Map<String, String> _socialLinks;
+@override@JsonKey(name: 'social_links') Map<String, String> get socialLinks {
+  if (_socialLinks is EqualUnmodifiableMapView) return _socialLinks;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_socialLinks);
+}
+
+@override@JsonKey() final  String category;
+@override@JsonKey(name: 'verification_status') final  String verificationStatus;
+@override@JsonKey(name: 'is_active') final  bool isActive;
+@override@JsonKey(name: 'created_at') final  String createdAt;
+
+/// Create a copy of Shop
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ShopCopyWith<_Shop> get copyWith => __$ShopCopyWithImpl<_Shop>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ShopToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Shop&&(identical(other.id, id) || other.id == id)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.accentColor, accentColor) || other.accentColor == accentColor)&&(identical(other.contactEmail, contactEmail) || other.contactEmail == contactEmail)&&(identical(other.contactPhone, contactPhone) || other.contactPhone == contactPhone)&&(identical(other.websiteUrl, websiteUrl) || other.websiteUrl == websiteUrl)&&const DeepCollectionEquality().equals(other._socialLinks, _socialLinks)&&(identical(other.category, category) || other.category == category)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,handle,name,description,logoUrl,bannerUrl,accentColor,contactEmail,contactPhone,websiteUrl,const DeepCollectionEquality().hash(_socialLinks),category,verificationStatus,isActive,createdAt);
+
+@override
+String toString() {
+  return 'Shop(id: $id, handle: $handle, name: $name, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, accentColor: $accentColor, contactEmail: $contactEmail, contactPhone: $contactPhone, websiteUrl: $websiteUrl, socialLinks: $socialLinks, category: $category, verificationStatus: $verificationStatus, isActive: $isActive, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ShopCopyWith<$Res> implements $ShopCopyWith<$Res> {
+  factory _$ShopCopyWith(_Shop value, $Res Function(_Shop) _then) = __$ShopCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String handle, String name, String description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'accent_color') String accentColor,@JsonKey(name: 'contact_email') String contactEmail,@JsonKey(name: 'contact_phone') String contactPhone,@JsonKey(name: 'website_url') String websiteUrl,@JsonKey(name: 'social_links') Map<String, String> socialLinks, String category,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$ShopCopyWithImpl<$Res>
+    implements _$ShopCopyWith<$Res> {
+  __$ShopCopyWithImpl(this._self, this._then);
+
+  final _Shop _self;
+  final $Res Function(_Shop) _then;
+
+/// Create a copy of Shop
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? handle = null,Object? name = null,Object? description = null,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? accentColor = null,Object? contactEmail = null,Object? contactPhone = null,Object? websiteUrl = null,Object? socialLinks = null,Object? category = null,Object? verificationStatus = null,Object? isActive = null,Object? createdAt = null,}) {
+  return _then(_Shop(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,handle: null == handle ? _self.handle : handle // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,logoUrl: freezed == logoUrl ? _self.logoUrl : logoUrl // ignore: cast_nullable_to_non_nullable
+as String?,bannerUrl: freezed == bannerUrl ? _self.bannerUrl : bannerUrl // ignore: cast_nullable_to_non_nullable
+as String?,accentColor: null == accentColor ? _self.accentColor : accentColor // ignore: cast_nullable_to_non_nullable
+as String,contactEmail: null == contactEmail ? _self.contactEmail : contactEmail // ignore: cast_nullable_to_non_nullable
+as String,contactPhone: null == contactPhone ? _self.contactPhone : contactPhone // ignore: cast_nullable_to_non_nullable
+as String,websiteUrl: null == websiteUrl ? _self.websiteUrl : websiteUrl // ignore: cast_nullable_to_non_nullable
+as String,socialLinks: null == socialLinks ? _self._socialLinks : socialLinks // ignore: cast_nullable_to_non_nullable
+as Map<String, String>,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$UserShopResponse {
+
+ Shop get shop;@JsonKey(name: 'meal_plans') List<MealPlan> get mealPlans; List<TrainingProgramme> get programmes; List<MarketplaceEvent> get events; List<MarketplaceProduct> get products;
+/// Create a copy of UserShopResponse
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$UserShopResponseCopyWith<UserShopResponse> get copyWith => _$UserShopResponseCopyWithImpl<UserShopResponse>(this as UserShopResponse, _$identity);
+
+  /// Serializes this UserShopResponse to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserShopResponse&&(identical(other.shop, shop) || other.shop == shop)&&const DeepCollectionEquality().equals(other.mealPlans, mealPlans)&&const DeepCollectionEquality().equals(other.programmes, programmes)&&const DeepCollectionEquality().equals(other.events, events)&&const DeepCollectionEquality().equals(other.products, products));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,shop,const DeepCollectionEquality().hash(mealPlans),const DeepCollectionEquality().hash(programmes),const DeepCollectionEquality().hash(events),const DeepCollectionEquality().hash(products));
+
+@override
+String toString() {
+  return 'UserShopResponse(shop: $shop, mealPlans: $mealPlans, programmes: $programmes, events: $events, products: $products)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $UserShopResponseCopyWith<$Res>  {
+  factory $UserShopResponseCopyWith(UserShopResponse value, $Res Function(UserShopResponse) _then) = _$UserShopResponseCopyWithImpl;
+@useResult
+$Res call({
+ Shop shop,@JsonKey(name: 'meal_plans') List<MealPlan> mealPlans, List<TrainingProgramme> programmes, List<MarketplaceEvent> events, List<MarketplaceProduct> products
+});
+
+
+$ShopCopyWith<$Res> get shop;
+
+}
+/// @nodoc
+class _$UserShopResponseCopyWithImpl<$Res>
+    implements $UserShopResponseCopyWith<$Res> {
+  _$UserShopResponseCopyWithImpl(this._self, this._then);
+
+  final UserShopResponse _self;
+  final $Res Function(UserShopResponse) _then;
+
+/// Create a copy of UserShopResponse
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? shop = null,Object? mealPlans = null,Object? programmes = null,Object? events = null,Object? products = null,}) {
+  return _then(_self.copyWith(
+shop: null == shop ? _self.shop : shop // ignore: cast_nullable_to_non_nullable
+as Shop,mealPlans: null == mealPlans ? _self.mealPlans : mealPlans // ignore: cast_nullable_to_non_nullable
+as List<MealPlan>,programmes: null == programmes ? _self.programmes : programmes // ignore: cast_nullable_to_non_nullable
+as List<TrainingProgramme>,events: null == events ? _self.events : events // ignore: cast_nullable_to_non_nullable
+as List<MarketplaceEvent>,products: null == products ? _self.products : products // ignore: cast_nullable_to_non_nullable
+as List<MarketplaceProduct>,
+  ));
+}
+/// Create a copy of UserShopResponse
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res> get shop {
+  
+  return $ShopCopyWith<$Res>(_self.shop, (value) {
+    return _then(_self.copyWith(shop: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [UserShopResponse].
+extension UserShopResponsePatterns on UserShopResponse {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _UserShopResponse value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _UserShopResponse() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _UserShopResponse value)  $default,){
+final _that = this;
+switch (_that) {
+case _UserShopResponse():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _UserShopResponse value)?  $default,){
+final _that = this;
+switch (_that) {
+case _UserShopResponse() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Shop shop, @JsonKey(name: 'meal_plans')  List<MealPlan> mealPlans,  List<TrainingProgramme> programmes,  List<MarketplaceEvent> events,  List<MarketplaceProduct> products)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _UserShopResponse() when $default != null:
+return $default(_that.shop,_that.mealPlans,_that.programmes,_that.events,_that.products);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Shop shop, @JsonKey(name: 'meal_plans')  List<MealPlan> mealPlans,  List<TrainingProgramme> programmes,  List<MarketplaceEvent> events,  List<MarketplaceProduct> products)  $default,) {final _that = this;
+switch (_that) {
+case _UserShopResponse():
+return $default(_that.shop,_that.mealPlans,_that.programmes,_that.events,_that.products);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Shop shop, @JsonKey(name: 'meal_plans')  List<MealPlan> mealPlans,  List<TrainingProgramme> programmes,  List<MarketplaceEvent> events,  List<MarketplaceProduct> products)?  $default,) {final _that = this;
+switch (_that) {
+case _UserShopResponse() when $default != null:
+return $default(_that.shop,_that.mealPlans,_that.programmes,_that.events,_that.products);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _UserShopResponse implements UserShopResponse {
+  const _UserShopResponse({required this.shop, @JsonKey(name: 'meal_plans') final  List<MealPlan> mealPlans = const <MealPlan>[], final  List<TrainingProgramme> programmes = const <TrainingProgramme>[], final  List<MarketplaceEvent> events = const <MarketplaceEvent>[], final  List<MarketplaceProduct> products = const <MarketplaceProduct>[]}): _mealPlans = mealPlans,_programmes = programmes,_events = events,_products = products;
+  factory _UserShopResponse.fromJson(Map<String, dynamic> json) => _$UserShopResponseFromJson(json);
+
+@override final  Shop shop;
+ final  List<MealPlan> _mealPlans;
+@override@JsonKey(name: 'meal_plans') List<MealPlan> get mealPlans {
+  if (_mealPlans is EqualUnmodifiableListView) return _mealPlans;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_mealPlans);
+}
+
+ final  List<TrainingProgramme> _programmes;
+@override@JsonKey() List<TrainingProgramme> get programmes {
+  if (_programmes is EqualUnmodifiableListView) return _programmes;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_programmes);
+}
+
+ final  List<MarketplaceEvent> _events;
+@override@JsonKey() List<MarketplaceEvent> get events {
+  if (_events is EqualUnmodifiableListView) return _events;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_events);
+}
+
+ final  List<MarketplaceProduct> _products;
+@override@JsonKey() List<MarketplaceProduct> get products {
+  if (_products is EqualUnmodifiableListView) return _products;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_products);
+}
+
+
+/// Create a copy of UserShopResponse
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$UserShopResponseCopyWith<_UserShopResponse> get copyWith => __$UserShopResponseCopyWithImpl<_UserShopResponse>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$UserShopResponseToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserShopResponse&&(identical(other.shop, shop) || other.shop == shop)&&const DeepCollectionEquality().equals(other._mealPlans, _mealPlans)&&const DeepCollectionEquality().equals(other._programmes, _programmes)&&const DeepCollectionEquality().equals(other._events, _events)&&const DeepCollectionEquality().equals(other._products, _products));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,shop,const DeepCollectionEquality().hash(_mealPlans),const DeepCollectionEquality().hash(_programmes),const DeepCollectionEquality().hash(_events),const DeepCollectionEquality().hash(_products));
+
+@override
+String toString() {
+  return 'UserShopResponse(shop: $shop, mealPlans: $mealPlans, programmes: $programmes, events: $events, products: $products)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$UserShopResponseCopyWith<$Res> implements $UserShopResponseCopyWith<$Res> {
+  factory _$UserShopResponseCopyWith(_UserShopResponse value, $Res Function(_UserShopResponse) _then) = __$UserShopResponseCopyWithImpl;
+@override @useResult
+$Res call({
+ Shop shop,@JsonKey(name: 'meal_plans') List<MealPlan> mealPlans, List<TrainingProgramme> programmes, List<MarketplaceEvent> events, List<MarketplaceProduct> products
+});
+
+
+@override $ShopCopyWith<$Res> get shop;
+
+}
+/// @nodoc
+class __$UserShopResponseCopyWithImpl<$Res>
+    implements _$UserShopResponseCopyWith<$Res> {
+  __$UserShopResponseCopyWithImpl(this._self, this._then);
+
+  final _UserShopResponse _self;
+  final $Res Function(_UserShopResponse) _then;
+
+/// Create a copy of UserShopResponse
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? shop = null,Object? mealPlans = null,Object? programmes = null,Object? events = null,Object? products = null,}) {
+  return _then(_UserShopResponse(
+shop: null == shop ? _self.shop : shop // ignore: cast_nullable_to_non_nullable
+as Shop,mealPlans: null == mealPlans ? _self._mealPlans : mealPlans // ignore: cast_nullable_to_non_nullable
+as List<MealPlan>,programmes: null == programmes ? _self._programmes : programmes // ignore: cast_nullable_to_non_nullable
+as List<TrainingProgramme>,events: null == events ? _self._events : events // ignore: cast_nullable_to_non_nullable
+as List<MarketplaceEvent>,products: null == products ? _self._products : products // ignore: cast_nullable_to_non_nullable
+as List<MarketplaceProduct>,
+  ));
+}
+
+/// Create a copy of UserShopResponse
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res> get shop {
+  
+  return $ShopCopyWith<$Res>(_self.shop, (value) {
+    return _then(_self.copyWith(shop: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$BuddyUpCertification {
+
+ String get id;@JsonKey(name: 'shop_id') String get shopId; String get status; String? get notes;
+/// Create a copy of BuddyUpCertification
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$BuddyUpCertificationCopyWith<BuddyUpCertification> get copyWith => _$BuddyUpCertificationCopyWithImpl<BuddyUpCertification>(this as BuddyUpCertification, _$identity);
+
+  /// Serializes this BuddyUpCertification to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BuddyUpCertification&&(identical(other.id, id) || other.id == id)&&(identical(other.shopId, shopId) || other.shopId == shopId)&&(identical(other.status, status) || other.status == status)&&(identical(other.notes, notes) || other.notes == notes));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,shopId,status,notes);
+
+@override
+String toString() {
+  return 'BuddyUpCertification(id: $id, shopId: $shopId, status: $status, notes: $notes)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $BuddyUpCertificationCopyWith<$Res>  {
+  factory $BuddyUpCertificationCopyWith(BuddyUpCertification value, $Res Function(BuddyUpCertification) _then) = _$BuddyUpCertificationCopyWithImpl;
+@useResult
+$Res call({
+ String id,@JsonKey(name: 'shop_id') String shopId, String status, String? notes
+});
+
+
+
+
+}
+/// @nodoc
+class _$BuddyUpCertificationCopyWithImpl<$Res>
+    implements $BuddyUpCertificationCopyWith<$Res> {
+  _$BuddyUpCertificationCopyWithImpl(this._self, this._then);
+
+  final BuddyUpCertification _self;
+  final $Res Function(BuddyUpCertification) _then;
+
+/// Create a copy of BuddyUpCertification
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? shopId = null,Object? status = null,Object? notes = freezed,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,shopId: null == shopId ? _self.shopId : shopId // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [BuddyUpCertification].
+extension BuddyUpCertificationPatterns on BuddyUpCertification {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _BuddyUpCertification value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _BuddyUpCertification() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _BuddyUpCertification value)  $default,){
+final _that = this;
+switch (_that) {
+case _BuddyUpCertification():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _BuddyUpCertification value)?  $default,){
+final _that = this;
+switch (_that) {
+case _BuddyUpCertification() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'shop_id')  String shopId,  String status,  String? notes)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _BuddyUpCertification() when $default != null:
+return $default(_that.id,_that.shopId,_that.status,_that.notes);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'shop_id')  String shopId,  String status,  String? notes)  $default,) {final _that = this;
+switch (_that) {
+case _BuddyUpCertification():
+return $default(_that.id,_that.shopId,_that.status,_that.notes);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'shop_id')  String shopId,  String status,  String? notes)?  $default,) {final _that = this;
+switch (_that) {
+case _BuddyUpCertification() when $default != null:
+return $default(_that.id,_that.shopId,_that.status,_that.notes);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _BuddyUpCertification implements BuddyUpCertification {
+  const _BuddyUpCertification({required this.id, @JsonKey(name: 'shop_id') required this.shopId, required this.status, this.notes});
+  factory _BuddyUpCertification.fromJson(Map<String, dynamic> json) => _$BuddyUpCertificationFromJson(json);
+
+@override final  String id;
+@override@JsonKey(name: 'shop_id') final  String shopId;
+@override final  String status;
+@override final  String? notes;
+
+/// Create a copy of BuddyUpCertification
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$BuddyUpCertificationCopyWith<_BuddyUpCertification> get copyWith => __$BuddyUpCertificationCopyWithImpl<_BuddyUpCertification>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$BuddyUpCertificationToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BuddyUpCertification&&(identical(other.id, id) || other.id == id)&&(identical(other.shopId, shopId) || other.shopId == shopId)&&(identical(other.status, status) || other.status == status)&&(identical(other.notes, notes) || other.notes == notes));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,shopId,status,notes);
+
+@override
+String toString() {
+  return 'BuddyUpCertification(id: $id, shopId: $shopId, status: $status, notes: $notes)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$BuddyUpCertificationCopyWith<$Res> implements $BuddyUpCertificationCopyWith<$Res> {
+  factory _$BuddyUpCertificationCopyWith(_BuddyUpCertification value, $Res Function(_BuddyUpCertification) _then) = __$BuddyUpCertificationCopyWithImpl;
+@override @useResult
+$Res call({
+ String id,@JsonKey(name: 'shop_id') String shopId, String status, String? notes
+});
+
+
+
+
+}
+/// @nodoc
+class __$BuddyUpCertificationCopyWithImpl<$Res>
+    implements _$BuddyUpCertificationCopyWith<$Res> {
+  __$BuddyUpCertificationCopyWithImpl(this._self, this._then);
+
+  final _BuddyUpCertification _self;
+  final $Res Function(_BuddyUpCertification) _then;
+
+/// Create a copy of BuddyUpCertification
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? shopId = null,Object? status = null,Object? notes = freezed,}) {
+  return _then(_BuddyUpCertification(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,shopId: null == shopId ? _self.shopId : shopId // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$BuyerData {
 
  String get username; String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;
@@ -556,7 +1456,7 @@ as String,
 /// @nodoc
 mixin _$MealPlan {
 
- String get id;@JsonKey(name: 'creator_id') String get creatorId; String get title; String get description;@JsonKey(name: 'cover_image_url') String get coverImageUrl;@JsonKey(name: 'diet_type') String get dietType;@JsonKey(name: 'duration_weeks') int get durationWeeks;@JsonKey(name: 'calorie_range') String get calorieRange;@JsonKey(name: 'price_artifacts') Map<String, int> get priceArtifacts;@JsonKey(name: 'preview_day') Map<String, dynamic> get previewDay;@JsonKey(name: 'full_plan') Map<String, dynamic>? get fullPlan;@JsonKey(name: 'shopping_list') List<String> get shoppingList;@JsonKey(name: 'purchase_count') int get purchaseCount;@JsonKey(name: 'average_rating') double get averageRating;@JsonKey(name: 'review_count') int get reviewCount;@JsonKey(name: 'creator_data') CreatorData get creatorData;@JsonKey(name: 'is_purchased') bool get isPurchased;@JsonKey(name: 'created_at') String get createdAt;
+ String get id;@JsonKey(name: 'creator_id') String get creatorId; String get title; String get description;@JsonKey(name: 'cover_image_url') String get coverImageUrl;@JsonKey(name: 'diet_type') String get dietType;@JsonKey(name: 'duration_weeks') int get durationWeeks;@JsonKey(name: 'calorie_range') String get calorieRange;@JsonKey(name: 'price_artifacts') Map<String, int> get priceArtifacts;@JsonKey(name: 'preview_day') Map<String, dynamic> get previewDay;@JsonKey(name: 'full_plan') Map<String, dynamic>? get fullPlan;@JsonKey(name: 'shopping_list') List<String> get shoppingList;@JsonKey(name: 'purchase_count') int get purchaseCount;@JsonKey(name: 'average_rating') double get averageRating;@JsonKey(name: 'review_count') int get reviewCount;@JsonKey(name: 'creator_data') CreatorData get creatorData;@JsonKey(name: 'is_purchased') bool get isPurchased;@JsonKey(name: 'is_published') bool get isPublished;@JsonKey(name: 'shop_data') Shop? get shopData;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of MealPlan
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -569,16 +1469,16 @@ $MealPlanCopyWith<MealPlan> get copyWith => _$MealPlanCopyWithImpl<MealPlan>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MealPlan&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorId, creatorId) || other.creatorId == creatorId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.dietType, dietType) || other.dietType == dietType)&&(identical(other.durationWeeks, durationWeeks) || other.durationWeeks == durationWeeks)&&(identical(other.calorieRange, calorieRange) || other.calorieRange == calorieRange)&&const DeepCollectionEquality().equals(other.priceArtifacts, priceArtifacts)&&const DeepCollectionEquality().equals(other.previewDay, previewDay)&&const DeepCollectionEquality().equals(other.fullPlan, fullPlan)&&const DeepCollectionEquality().equals(other.shoppingList, shoppingList)&&(identical(other.purchaseCount, purchaseCount) || other.purchaseCount == purchaseCount)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.isPurchased, isPurchased) || other.isPurchased == isPurchased)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MealPlan&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorId, creatorId) || other.creatorId == creatorId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.dietType, dietType) || other.dietType == dietType)&&(identical(other.durationWeeks, durationWeeks) || other.durationWeeks == durationWeeks)&&(identical(other.calorieRange, calorieRange) || other.calorieRange == calorieRange)&&const DeepCollectionEquality().equals(other.priceArtifacts, priceArtifacts)&&const DeepCollectionEquality().equals(other.previewDay, previewDay)&&const DeepCollectionEquality().equals(other.fullPlan, fullPlan)&&const DeepCollectionEquality().equals(other.shoppingList, shoppingList)&&(identical(other.purchaseCount, purchaseCount) || other.purchaseCount == purchaseCount)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.isPurchased, isPurchased) || other.isPurchased == isPurchased)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,creatorId,title,description,coverImageUrl,dietType,durationWeeks,calorieRange,const DeepCollectionEquality().hash(priceArtifacts),const DeepCollectionEquality().hash(previewDay),const DeepCollectionEquality().hash(fullPlan),const DeepCollectionEquality().hash(shoppingList),purchaseCount,averageRating,reviewCount,creatorData,isPurchased,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,creatorId,title,description,coverImageUrl,dietType,durationWeeks,calorieRange,const DeepCollectionEquality().hash(priceArtifacts),const DeepCollectionEquality().hash(previewDay),const DeepCollectionEquality().hash(fullPlan),const DeepCollectionEquality().hash(shoppingList),purchaseCount,averageRating,reviewCount,creatorData,isPurchased,isPublished,shopData,createdAt]);
 
 @override
 String toString() {
-  return 'MealPlan(id: $id, creatorId: $creatorId, title: $title, description: $description, coverImageUrl: $coverImageUrl, dietType: $dietType, durationWeeks: $durationWeeks, calorieRange: $calorieRange, priceArtifacts: $priceArtifacts, previewDay: $previewDay, fullPlan: $fullPlan, shoppingList: $shoppingList, purchaseCount: $purchaseCount, averageRating: $averageRating, reviewCount: $reviewCount, creatorData: $creatorData, isPurchased: $isPurchased, createdAt: $createdAt)';
+  return 'MealPlan(id: $id, creatorId: $creatorId, title: $title, description: $description, coverImageUrl: $coverImageUrl, dietType: $dietType, durationWeeks: $durationWeeks, calorieRange: $calorieRange, priceArtifacts: $priceArtifacts, previewDay: $previewDay, fullPlan: $fullPlan, shoppingList: $shoppingList, purchaseCount: $purchaseCount, averageRating: $averageRating, reviewCount: $reviewCount, creatorData: $creatorData, isPurchased: $isPurchased, isPublished: $isPublished, shopData: $shopData, createdAt: $createdAt)';
 }
 
 
@@ -589,11 +1489,11 @@ abstract mixin class $MealPlanCopyWith<$Res>  {
   factory $MealPlanCopyWith(MealPlan value, $Res Function(MealPlan) _then) = _$MealPlanCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'creator_id') String creatorId, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'diet_type') String dietType,@JsonKey(name: 'duration_weeks') int durationWeeks,@JsonKey(name: 'calorie_range') String calorieRange,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'preview_day') Map<String, dynamic> previewDay,@JsonKey(name: 'full_plan') Map<String, dynamic>? fullPlan,@JsonKey(name: 'shopping_list') List<String> shoppingList,@JsonKey(name: 'purchase_count') int purchaseCount,@JsonKey(name: 'average_rating') double averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'is_purchased') bool isPurchased,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'creator_id') String creatorId, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'diet_type') String dietType,@JsonKey(name: 'duration_weeks') int durationWeeks,@JsonKey(name: 'calorie_range') String calorieRange,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'preview_day') Map<String, dynamic> previewDay,@JsonKey(name: 'full_plan') Map<String, dynamic>? fullPlan,@JsonKey(name: 'shopping_list') List<String> shoppingList,@JsonKey(name: 'purchase_count') int purchaseCount,@JsonKey(name: 'average_rating') double averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'is_purchased') bool isPurchased,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-$CreatorDataCopyWith<$Res> get creatorData;
+$CreatorDataCopyWith<$Res> get creatorData;$ShopCopyWith<$Res>? get shopData;
 
 }
 /// @nodoc
@@ -606,7 +1506,7 @@ class _$MealPlanCopyWithImpl<$Res>
 
 /// Create a copy of MealPlan
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? creatorId = null,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? dietType = null,Object? durationWeeks = null,Object? calorieRange = null,Object? priceArtifacts = null,Object? previewDay = null,Object? fullPlan = freezed,Object? shoppingList = null,Object? purchaseCount = null,Object? averageRating = null,Object? reviewCount = null,Object? creatorData = null,Object? isPurchased = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? creatorId = null,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? dietType = null,Object? durationWeeks = null,Object? calorieRange = null,Object? priceArtifacts = null,Object? previewDay = null,Object? fullPlan = freezed,Object? shoppingList = null,Object? purchaseCount = null,Object? averageRating = null,Object? reviewCount = null,Object? creatorData = null,Object? isPurchased = null,Object? isPublished = null,Object? shopData = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,creatorId: null == creatorId ? _self.creatorId : creatorId // ignore: cast_nullable_to_non_nullable
@@ -625,7 +1525,9 @@ as int,averageRating: null == averageRating ? _self.averageRating : averageRatin
 as double,reviewCount: null == reviewCount ? _self.reviewCount : reviewCount // ignore: cast_nullable_to_non_nullable
 as int,creatorData: null == creatorData ? _self.creatorData : creatorData // ignore: cast_nullable_to_non_nullable
 as CreatorData,isPurchased: null == isPurchased ? _self.isPurchased : isPurchased // ignore: cast_nullable_to_non_nullable
-as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as bool,isPublished: null == isPublished ? _self.isPublished : isPublished // ignore: cast_nullable_to_non_nullable
+as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
+as Shop?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -637,6 +1539,18 @@ $CreatorDataCopyWith<$Res> get creatorData {
   
   return $CreatorDataCopyWith<$Res>(_self.creatorData, (value) {
     return _then(_self.copyWith(creatorData: value));
+  });
+}/// Create a copy of MealPlan
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res>? get shopData {
+    if (_self.shopData == null) {
+    return null;
+  }
+
+  return $ShopCopyWith<$Res>(_self.shopData!, (value) {
+    return _then(_self.copyWith(shopData: value));
   });
 }
 }
@@ -720,10 +1634,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'diet_type')  String dietType, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'calorie_range')  String calorieRange, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'preview_day')  Map<String, dynamic> previewDay, @JsonKey(name: 'full_plan')  Map<String, dynamic>? fullPlan, @JsonKey(name: 'shopping_list')  List<String> shoppingList, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'average_rating')  double averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'diet_type')  String dietType, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'calorie_range')  String calorieRange, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'preview_day')  Map<String, dynamic> previewDay, @JsonKey(name: 'full_plan')  Map<String, dynamic>? fullPlan, @JsonKey(name: 'shopping_list')  List<String> shoppingList, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'average_rating')  double averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MealPlan() when $default != null:
-return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.dietType,_that.durationWeeks,_that.calorieRange,_that.priceArtifacts,_that.previewDay,_that.fullPlan,_that.shoppingList,_that.purchaseCount,_that.averageRating,_that.reviewCount,_that.creatorData,_that.isPurchased,_that.createdAt);case _:
+return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.dietType,_that.durationWeeks,_that.calorieRange,_that.priceArtifacts,_that.previewDay,_that.fullPlan,_that.shoppingList,_that.purchaseCount,_that.averageRating,_that.reviewCount,_that.creatorData,_that.isPurchased,_that.isPublished,_that.shopData,_that.createdAt);case _:
   return orElse();
 
 }
@@ -741,10 +1655,10 @@ return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.cov
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'diet_type')  String dietType, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'calorie_range')  String calorieRange, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'preview_day')  Map<String, dynamic> previewDay, @JsonKey(name: 'full_plan')  Map<String, dynamic>? fullPlan, @JsonKey(name: 'shopping_list')  List<String> shoppingList, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'average_rating')  double averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'diet_type')  String dietType, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'calorie_range')  String calorieRange, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'preview_day')  Map<String, dynamic> previewDay, @JsonKey(name: 'full_plan')  Map<String, dynamic>? fullPlan, @JsonKey(name: 'shopping_list')  List<String> shoppingList, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'average_rating')  double averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _MealPlan():
-return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.dietType,_that.durationWeeks,_that.calorieRange,_that.priceArtifacts,_that.previewDay,_that.fullPlan,_that.shoppingList,_that.purchaseCount,_that.averageRating,_that.reviewCount,_that.creatorData,_that.isPurchased,_that.createdAt);case _:
+return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.dietType,_that.durationWeeks,_that.calorieRange,_that.priceArtifacts,_that.previewDay,_that.fullPlan,_that.shoppingList,_that.purchaseCount,_that.averageRating,_that.reviewCount,_that.creatorData,_that.isPurchased,_that.isPublished,_that.shopData,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -761,10 +1675,10 @@ return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.cov
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'diet_type')  String dietType, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'calorie_range')  String calorieRange, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'preview_day')  Map<String, dynamic> previewDay, @JsonKey(name: 'full_plan')  Map<String, dynamic>? fullPlan, @JsonKey(name: 'shopping_list')  List<String> shoppingList, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'average_rating')  double averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'diet_type')  String dietType, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'calorie_range')  String calorieRange, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'preview_day')  Map<String, dynamic> previewDay, @JsonKey(name: 'full_plan')  Map<String, dynamic>? fullPlan, @JsonKey(name: 'shopping_list')  List<String> shoppingList, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'average_rating')  double averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _MealPlan() when $default != null:
-return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.dietType,_that.durationWeeks,_that.calorieRange,_that.priceArtifacts,_that.previewDay,_that.fullPlan,_that.shoppingList,_that.purchaseCount,_that.averageRating,_that.reviewCount,_that.creatorData,_that.isPurchased,_that.createdAt);case _:
+return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.dietType,_that.durationWeeks,_that.calorieRange,_that.priceArtifacts,_that.previewDay,_that.fullPlan,_that.shoppingList,_that.purchaseCount,_that.averageRating,_that.reviewCount,_that.creatorData,_that.isPurchased,_that.isPublished,_that.shopData,_that.createdAt);case _:
   return null;
 
 }
@@ -776,7 +1690,7 @@ return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.cov
 @JsonSerializable()
 
 class _MealPlan implements MealPlan {
-  const _MealPlan({required this.id, @JsonKey(name: 'creator_id') required this.creatorId, required this.title, required this.description, @JsonKey(name: 'cover_image_url') required this.coverImageUrl, @JsonKey(name: 'diet_type') required this.dietType, @JsonKey(name: 'duration_weeks') required this.durationWeeks, @JsonKey(name: 'calorie_range') required this.calorieRange, @JsonKey(name: 'price_artifacts') required final  Map<String, int> priceArtifacts, @JsonKey(name: 'preview_day') required final  Map<String, dynamic> previewDay, @JsonKey(name: 'full_plan') final  Map<String, dynamic>? fullPlan, @JsonKey(name: 'shopping_list') final  List<String> shoppingList = const <String>[], @JsonKey(name: 'purchase_count') this.purchaseCount = 0, @JsonKey(name: 'average_rating') this.averageRating = 0.0, @JsonKey(name: 'review_count') this.reviewCount = 0, @JsonKey(name: 'creator_data') required this.creatorData, @JsonKey(name: 'is_purchased') this.isPurchased = false, @JsonKey(name: 'created_at') required this.createdAt}): _priceArtifacts = priceArtifacts,_previewDay = previewDay,_fullPlan = fullPlan,_shoppingList = shoppingList;
+  const _MealPlan({required this.id, @JsonKey(name: 'creator_id') required this.creatorId, required this.title, required this.description, @JsonKey(name: 'cover_image_url') required this.coverImageUrl, @JsonKey(name: 'diet_type') required this.dietType, @JsonKey(name: 'duration_weeks') required this.durationWeeks, @JsonKey(name: 'calorie_range') required this.calorieRange, @JsonKey(name: 'price_artifacts') required final  Map<String, int> priceArtifacts, @JsonKey(name: 'preview_day') required final  Map<String, dynamic> previewDay, @JsonKey(name: 'full_plan') final  Map<String, dynamic>? fullPlan, @JsonKey(name: 'shopping_list') final  List<String> shoppingList = const <String>[], @JsonKey(name: 'purchase_count') this.purchaseCount = 0, @JsonKey(name: 'average_rating') this.averageRating = 0.0, @JsonKey(name: 'review_count') this.reviewCount = 0, @JsonKey(name: 'creator_data') required this.creatorData, @JsonKey(name: 'is_purchased') this.isPurchased = false, @JsonKey(name: 'is_published') this.isPublished = true, @JsonKey(name: 'shop_data') this.shopData, @JsonKey(name: 'created_at') required this.createdAt}): _priceArtifacts = priceArtifacts,_previewDay = previewDay,_fullPlan = fullPlan,_shoppingList = shoppingList;
   factory _MealPlan.fromJson(Map<String, dynamic> json) => _$MealPlanFromJson(json);
 
 @override final  String id;
@@ -822,6 +1736,8 @@ class _MealPlan implements MealPlan {
 @override@JsonKey(name: 'review_count') final  int reviewCount;
 @override@JsonKey(name: 'creator_data') final  CreatorData creatorData;
 @override@JsonKey(name: 'is_purchased') final  bool isPurchased;
+@override@JsonKey(name: 'is_published') final  bool isPublished;
+@override@JsonKey(name: 'shop_data') final  Shop? shopData;
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of MealPlan
@@ -837,16 +1753,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MealPlan&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorId, creatorId) || other.creatorId == creatorId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.dietType, dietType) || other.dietType == dietType)&&(identical(other.durationWeeks, durationWeeks) || other.durationWeeks == durationWeeks)&&(identical(other.calorieRange, calorieRange) || other.calorieRange == calorieRange)&&const DeepCollectionEquality().equals(other._priceArtifacts, _priceArtifacts)&&const DeepCollectionEquality().equals(other._previewDay, _previewDay)&&const DeepCollectionEquality().equals(other._fullPlan, _fullPlan)&&const DeepCollectionEquality().equals(other._shoppingList, _shoppingList)&&(identical(other.purchaseCount, purchaseCount) || other.purchaseCount == purchaseCount)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.isPurchased, isPurchased) || other.isPurchased == isPurchased)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MealPlan&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorId, creatorId) || other.creatorId == creatorId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.dietType, dietType) || other.dietType == dietType)&&(identical(other.durationWeeks, durationWeeks) || other.durationWeeks == durationWeeks)&&(identical(other.calorieRange, calorieRange) || other.calorieRange == calorieRange)&&const DeepCollectionEquality().equals(other._priceArtifacts, _priceArtifacts)&&const DeepCollectionEquality().equals(other._previewDay, _previewDay)&&const DeepCollectionEquality().equals(other._fullPlan, _fullPlan)&&const DeepCollectionEquality().equals(other._shoppingList, _shoppingList)&&(identical(other.purchaseCount, purchaseCount) || other.purchaseCount == purchaseCount)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.isPurchased, isPurchased) || other.isPurchased == isPurchased)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,creatorId,title,description,coverImageUrl,dietType,durationWeeks,calorieRange,const DeepCollectionEquality().hash(_priceArtifacts),const DeepCollectionEquality().hash(_previewDay),const DeepCollectionEquality().hash(_fullPlan),const DeepCollectionEquality().hash(_shoppingList),purchaseCount,averageRating,reviewCount,creatorData,isPurchased,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,creatorId,title,description,coverImageUrl,dietType,durationWeeks,calorieRange,const DeepCollectionEquality().hash(_priceArtifacts),const DeepCollectionEquality().hash(_previewDay),const DeepCollectionEquality().hash(_fullPlan),const DeepCollectionEquality().hash(_shoppingList),purchaseCount,averageRating,reviewCount,creatorData,isPurchased,isPublished,shopData,createdAt]);
 
 @override
 String toString() {
-  return 'MealPlan(id: $id, creatorId: $creatorId, title: $title, description: $description, coverImageUrl: $coverImageUrl, dietType: $dietType, durationWeeks: $durationWeeks, calorieRange: $calorieRange, priceArtifacts: $priceArtifacts, previewDay: $previewDay, fullPlan: $fullPlan, shoppingList: $shoppingList, purchaseCount: $purchaseCount, averageRating: $averageRating, reviewCount: $reviewCount, creatorData: $creatorData, isPurchased: $isPurchased, createdAt: $createdAt)';
+  return 'MealPlan(id: $id, creatorId: $creatorId, title: $title, description: $description, coverImageUrl: $coverImageUrl, dietType: $dietType, durationWeeks: $durationWeeks, calorieRange: $calorieRange, priceArtifacts: $priceArtifacts, previewDay: $previewDay, fullPlan: $fullPlan, shoppingList: $shoppingList, purchaseCount: $purchaseCount, averageRating: $averageRating, reviewCount: $reviewCount, creatorData: $creatorData, isPurchased: $isPurchased, isPublished: $isPublished, shopData: $shopData, createdAt: $createdAt)';
 }
 
 
@@ -857,11 +1773,11 @@ abstract mixin class _$MealPlanCopyWith<$Res> implements $MealPlanCopyWith<$Res>
   factory _$MealPlanCopyWith(_MealPlan value, $Res Function(_MealPlan) _then) = __$MealPlanCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'creator_id') String creatorId, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'diet_type') String dietType,@JsonKey(name: 'duration_weeks') int durationWeeks,@JsonKey(name: 'calorie_range') String calorieRange,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'preview_day') Map<String, dynamic> previewDay,@JsonKey(name: 'full_plan') Map<String, dynamic>? fullPlan,@JsonKey(name: 'shopping_list') List<String> shoppingList,@JsonKey(name: 'purchase_count') int purchaseCount,@JsonKey(name: 'average_rating') double averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'is_purchased') bool isPurchased,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'creator_id') String creatorId, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'diet_type') String dietType,@JsonKey(name: 'duration_weeks') int durationWeeks,@JsonKey(name: 'calorie_range') String calorieRange,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'preview_day') Map<String, dynamic> previewDay,@JsonKey(name: 'full_plan') Map<String, dynamic>? fullPlan,@JsonKey(name: 'shopping_list') List<String> shoppingList,@JsonKey(name: 'purchase_count') int purchaseCount,@JsonKey(name: 'average_rating') double averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'is_purchased') bool isPurchased,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-@override $CreatorDataCopyWith<$Res> get creatorData;
+@override $CreatorDataCopyWith<$Res> get creatorData;@override $ShopCopyWith<$Res>? get shopData;
 
 }
 /// @nodoc
@@ -874,7 +1790,7 @@ class __$MealPlanCopyWithImpl<$Res>
 
 /// Create a copy of MealPlan
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? creatorId = null,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? dietType = null,Object? durationWeeks = null,Object? calorieRange = null,Object? priceArtifacts = null,Object? previewDay = null,Object? fullPlan = freezed,Object? shoppingList = null,Object? purchaseCount = null,Object? averageRating = null,Object? reviewCount = null,Object? creatorData = null,Object? isPurchased = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? creatorId = null,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? dietType = null,Object? durationWeeks = null,Object? calorieRange = null,Object? priceArtifacts = null,Object? previewDay = null,Object? fullPlan = freezed,Object? shoppingList = null,Object? purchaseCount = null,Object? averageRating = null,Object? reviewCount = null,Object? creatorData = null,Object? isPurchased = null,Object? isPublished = null,Object? shopData = freezed,Object? createdAt = null,}) {
   return _then(_MealPlan(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,creatorId: null == creatorId ? _self.creatorId : creatorId // ignore: cast_nullable_to_non_nullable
@@ -893,7 +1809,9 @@ as int,averageRating: null == averageRating ? _self.averageRating : averageRatin
 as double,reviewCount: null == reviewCount ? _self.reviewCount : reviewCount // ignore: cast_nullable_to_non_nullable
 as int,creatorData: null == creatorData ? _self.creatorData : creatorData // ignore: cast_nullable_to_non_nullable
 as CreatorData,isPurchased: null == isPurchased ? _self.isPurchased : isPurchased // ignore: cast_nullable_to_non_nullable
-as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as bool,isPublished: null == isPublished ? _self.isPublished : isPublished // ignore: cast_nullable_to_non_nullable
+as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
+as Shop?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -906,6 +1824,18 @@ $CreatorDataCopyWith<$Res> get creatorData {
   
   return $CreatorDataCopyWith<$Res>(_self.creatorData, (value) {
     return _then(_self.copyWith(creatorData: value));
+  });
+}/// Create a copy of MealPlan
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res>? get shopData {
+    if (_self.shopData == null) {
+    return null;
+  }
+
+  return $ShopCopyWith<$Res>(_self.shopData!, (value) {
+    return _then(_self.copyWith(shopData: value));
   });
 }
 }
@@ -1207,7 +2137,7 @@ $BuyerDataCopyWith<$Res> get buyerData {
 /// @nodoc
 mixin _$TrainingProgramme {
 
- String get id;@JsonKey(name: 'creator_id') String get creatorId; String get title; String get description;@JsonKey(name: 'cover_image_url') String get coverImageUrl; String get category;@JsonKey(name: 'duration_weeks') int get durationWeeks;@JsonKey(name: 'price_artifacts') Map<String, int> get priceArtifacts;@JsonKey(name: 'purchase_count') int get purchaseCount;@JsonKey(name: 'creator_data') CreatorData get creatorData;@JsonKey(name: 'is_purchased') bool get isPurchased;@JsonKey(name: 'created_at') String get createdAt;
+ String get id;@JsonKey(name: 'creator_id') String get creatorId; String get title; String get description;@JsonKey(name: 'cover_image_url') String get coverImageUrl; String get category;@JsonKey(name: 'duration_weeks') int get durationWeeks;@JsonKey(name: 'price_artifacts') Map<String, int> get priceArtifacts;@JsonKey(name: 'purchase_count') int get purchaseCount;@JsonKey(name: 'creator_data') CreatorData get creatorData;@JsonKey(name: 'is_purchased') bool get isPurchased;@JsonKey(name: 'is_published') bool get isPublished;@JsonKey(name: 'shop_data') Shop? get shopData;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of TrainingProgramme
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1220,16 +2150,16 @@ $TrainingProgrammeCopyWith<TrainingProgramme> get copyWith => _$TrainingProgramm
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TrainingProgramme&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorId, creatorId) || other.creatorId == creatorId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.durationWeeks, durationWeeks) || other.durationWeeks == durationWeeks)&&const DeepCollectionEquality().equals(other.priceArtifacts, priceArtifacts)&&(identical(other.purchaseCount, purchaseCount) || other.purchaseCount == purchaseCount)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.isPurchased, isPurchased) || other.isPurchased == isPurchased)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TrainingProgramme&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorId, creatorId) || other.creatorId == creatorId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.durationWeeks, durationWeeks) || other.durationWeeks == durationWeeks)&&const DeepCollectionEquality().equals(other.priceArtifacts, priceArtifacts)&&(identical(other.purchaseCount, purchaseCount) || other.purchaseCount == purchaseCount)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.isPurchased, isPurchased) || other.isPurchased == isPurchased)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,creatorId,title,description,coverImageUrl,category,durationWeeks,const DeepCollectionEquality().hash(priceArtifacts),purchaseCount,creatorData,isPurchased,createdAt);
+int get hashCode => Object.hash(runtimeType,id,creatorId,title,description,coverImageUrl,category,durationWeeks,const DeepCollectionEquality().hash(priceArtifacts),purchaseCount,creatorData,isPurchased,isPublished,shopData,createdAt);
 
 @override
 String toString() {
-  return 'TrainingProgramme(id: $id, creatorId: $creatorId, title: $title, description: $description, coverImageUrl: $coverImageUrl, category: $category, durationWeeks: $durationWeeks, priceArtifacts: $priceArtifacts, purchaseCount: $purchaseCount, creatorData: $creatorData, isPurchased: $isPurchased, createdAt: $createdAt)';
+  return 'TrainingProgramme(id: $id, creatorId: $creatorId, title: $title, description: $description, coverImageUrl: $coverImageUrl, category: $category, durationWeeks: $durationWeeks, priceArtifacts: $priceArtifacts, purchaseCount: $purchaseCount, creatorData: $creatorData, isPurchased: $isPurchased, isPublished: $isPublished, shopData: $shopData, createdAt: $createdAt)';
 }
 
 
@@ -1240,11 +2170,11 @@ abstract mixin class $TrainingProgrammeCopyWith<$Res>  {
   factory $TrainingProgrammeCopyWith(TrainingProgramme value, $Res Function(TrainingProgramme) _then) = _$TrainingProgrammeCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'creator_id') String creatorId, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl, String category,@JsonKey(name: 'duration_weeks') int durationWeeks,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'purchase_count') int purchaseCount,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'is_purchased') bool isPurchased,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'creator_id') String creatorId, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl, String category,@JsonKey(name: 'duration_weeks') int durationWeeks,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'purchase_count') int purchaseCount,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'is_purchased') bool isPurchased,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-$CreatorDataCopyWith<$Res> get creatorData;
+$CreatorDataCopyWith<$Res> get creatorData;$ShopCopyWith<$Res>? get shopData;
 
 }
 /// @nodoc
@@ -1257,7 +2187,7 @@ class _$TrainingProgrammeCopyWithImpl<$Res>
 
 /// Create a copy of TrainingProgramme
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? creatorId = null,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? category = null,Object? durationWeeks = null,Object? priceArtifacts = null,Object? purchaseCount = null,Object? creatorData = null,Object? isPurchased = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? creatorId = null,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? category = null,Object? durationWeeks = null,Object? priceArtifacts = null,Object? purchaseCount = null,Object? creatorData = null,Object? isPurchased = null,Object? isPublished = null,Object? shopData = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,creatorId: null == creatorId ? _self.creatorId : creatorId // ignore: cast_nullable_to_non_nullable
@@ -1270,7 +2200,9 @@ as int,priceArtifacts: null == priceArtifacts ? _self.priceArtifacts : priceArti
 as Map<String, int>,purchaseCount: null == purchaseCount ? _self.purchaseCount : purchaseCount // ignore: cast_nullable_to_non_nullable
 as int,creatorData: null == creatorData ? _self.creatorData : creatorData // ignore: cast_nullable_to_non_nullable
 as CreatorData,isPurchased: null == isPurchased ? _self.isPurchased : isPurchased // ignore: cast_nullable_to_non_nullable
-as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as bool,isPublished: null == isPublished ? _self.isPublished : isPublished // ignore: cast_nullable_to_non_nullable
+as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
+as Shop?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -1282,6 +2214,18 @@ $CreatorDataCopyWith<$Res> get creatorData {
   
   return $CreatorDataCopyWith<$Res>(_self.creatorData, (value) {
     return _then(_self.copyWith(creatorData: value));
+  });
+}/// Create a copy of TrainingProgramme
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res>? get shopData {
+    if (_self.shopData == null) {
+    return null;
+  }
+
+  return $ShopCopyWith<$Res>(_self.shopData!, (value) {
+    return _then(_self.copyWith(shopData: value));
   });
 }
 }
@@ -1365,10 +2309,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl,  String category, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl,  String category, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TrainingProgramme() when $default != null:
-return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.category,_that.durationWeeks,_that.priceArtifacts,_that.purchaseCount,_that.creatorData,_that.isPurchased,_that.createdAt);case _:
+return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.category,_that.durationWeeks,_that.priceArtifacts,_that.purchaseCount,_that.creatorData,_that.isPurchased,_that.isPublished,_that.shopData,_that.createdAt);case _:
   return orElse();
 
 }
@@ -1386,10 +2330,10 @@ return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.cov
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl,  String category, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl,  String category, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _TrainingProgramme():
-return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.category,_that.durationWeeks,_that.priceArtifacts,_that.purchaseCount,_that.creatorData,_that.isPurchased,_that.createdAt);case _:
+return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.category,_that.durationWeeks,_that.priceArtifacts,_that.purchaseCount,_that.creatorData,_that.isPurchased,_that.isPublished,_that.shopData,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1406,10 +2350,10 @@ return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.cov
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl,  String category, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'creator_id')  String creatorId,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl,  String category, @JsonKey(name: 'duration_weeks')  int durationWeeks, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'purchase_count')  int purchaseCount, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'is_purchased')  bool isPurchased, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _TrainingProgramme() when $default != null:
-return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.category,_that.durationWeeks,_that.priceArtifacts,_that.purchaseCount,_that.creatorData,_that.isPurchased,_that.createdAt);case _:
+return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.coverImageUrl,_that.category,_that.durationWeeks,_that.priceArtifacts,_that.purchaseCount,_that.creatorData,_that.isPurchased,_that.isPublished,_that.shopData,_that.createdAt);case _:
   return null;
 
 }
@@ -1421,7 +2365,7 @@ return $default(_that.id,_that.creatorId,_that.title,_that.description,_that.cov
 @JsonSerializable()
 
 class _TrainingProgramme implements TrainingProgramme {
-  const _TrainingProgramme({required this.id, @JsonKey(name: 'creator_id') required this.creatorId, required this.title, required this.description, @JsonKey(name: 'cover_image_url') required this.coverImageUrl, required this.category, @JsonKey(name: 'duration_weeks') required this.durationWeeks, @JsonKey(name: 'price_artifacts') required final  Map<String, int> priceArtifacts, @JsonKey(name: 'purchase_count') this.purchaseCount = 0, @JsonKey(name: 'creator_data') required this.creatorData, @JsonKey(name: 'is_purchased') this.isPurchased = false, @JsonKey(name: 'created_at') required this.createdAt}): _priceArtifacts = priceArtifacts;
+  const _TrainingProgramme({required this.id, @JsonKey(name: 'creator_id') required this.creatorId, required this.title, required this.description, @JsonKey(name: 'cover_image_url') required this.coverImageUrl, required this.category, @JsonKey(name: 'duration_weeks') required this.durationWeeks, @JsonKey(name: 'price_artifacts') required final  Map<String, int> priceArtifacts, @JsonKey(name: 'purchase_count') this.purchaseCount = 0, @JsonKey(name: 'creator_data') required this.creatorData, @JsonKey(name: 'is_purchased') this.isPurchased = false, @JsonKey(name: 'is_published') this.isPublished = true, @JsonKey(name: 'shop_data') this.shopData, @JsonKey(name: 'created_at') required this.createdAt}): _priceArtifacts = priceArtifacts;
   factory _TrainingProgramme.fromJson(Map<String, dynamic> json) => _$TrainingProgrammeFromJson(json);
 
 @override final  String id;
@@ -1441,6 +2385,8 @@ class _TrainingProgramme implements TrainingProgramme {
 @override@JsonKey(name: 'purchase_count') final  int purchaseCount;
 @override@JsonKey(name: 'creator_data') final  CreatorData creatorData;
 @override@JsonKey(name: 'is_purchased') final  bool isPurchased;
+@override@JsonKey(name: 'is_published') final  bool isPublished;
+@override@JsonKey(name: 'shop_data') final  Shop? shopData;
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of TrainingProgramme
@@ -1456,16 +2402,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TrainingProgramme&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorId, creatorId) || other.creatorId == creatorId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.durationWeeks, durationWeeks) || other.durationWeeks == durationWeeks)&&const DeepCollectionEquality().equals(other._priceArtifacts, _priceArtifacts)&&(identical(other.purchaseCount, purchaseCount) || other.purchaseCount == purchaseCount)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.isPurchased, isPurchased) || other.isPurchased == isPurchased)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TrainingProgramme&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorId, creatorId) || other.creatorId == creatorId)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.category, category) || other.category == category)&&(identical(other.durationWeeks, durationWeeks) || other.durationWeeks == durationWeeks)&&const DeepCollectionEquality().equals(other._priceArtifacts, _priceArtifacts)&&(identical(other.purchaseCount, purchaseCount) || other.purchaseCount == purchaseCount)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.isPurchased, isPurchased) || other.isPurchased == isPurchased)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,creatorId,title,description,coverImageUrl,category,durationWeeks,const DeepCollectionEquality().hash(_priceArtifacts),purchaseCount,creatorData,isPurchased,createdAt);
+int get hashCode => Object.hash(runtimeType,id,creatorId,title,description,coverImageUrl,category,durationWeeks,const DeepCollectionEquality().hash(_priceArtifacts),purchaseCount,creatorData,isPurchased,isPublished,shopData,createdAt);
 
 @override
 String toString() {
-  return 'TrainingProgramme(id: $id, creatorId: $creatorId, title: $title, description: $description, coverImageUrl: $coverImageUrl, category: $category, durationWeeks: $durationWeeks, priceArtifacts: $priceArtifacts, purchaseCount: $purchaseCount, creatorData: $creatorData, isPurchased: $isPurchased, createdAt: $createdAt)';
+  return 'TrainingProgramme(id: $id, creatorId: $creatorId, title: $title, description: $description, coverImageUrl: $coverImageUrl, category: $category, durationWeeks: $durationWeeks, priceArtifacts: $priceArtifacts, purchaseCount: $purchaseCount, creatorData: $creatorData, isPurchased: $isPurchased, isPublished: $isPublished, shopData: $shopData, createdAt: $createdAt)';
 }
 
 
@@ -1476,11 +2422,11 @@ abstract mixin class _$TrainingProgrammeCopyWith<$Res> implements $TrainingProgr
   factory _$TrainingProgrammeCopyWith(_TrainingProgramme value, $Res Function(_TrainingProgramme) _then) = __$TrainingProgrammeCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'creator_id') String creatorId, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl, String category,@JsonKey(name: 'duration_weeks') int durationWeeks,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'purchase_count') int purchaseCount,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'is_purchased') bool isPurchased,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'creator_id') String creatorId, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl, String category,@JsonKey(name: 'duration_weeks') int durationWeeks,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'purchase_count') int purchaseCount,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'is_purchased') bool isPurchased,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-@override $CreatorDataCopyWith<$Res> get creatorData;
+@override $CreatorDataCopyWith<$Res> get creatorData;@override $ShopCopyWith<$Res>? get shopData;
 
 }
 /// @nodoc
@@ -1493,7 +2439,7 @@ class __$TrainingProgrammeCopyWithImpl<$Res>
 
 /// Create a copy of TrainingProgramme
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? creatorId = null,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? category = null,Object? durationWeeks = null,Object? priceArtifacts = null,Object? purchaseCount = null,Object? creatorData = null,Object? isPurchased = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? creatorId = null,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? category = null,Object? durationWeeks = null,Object? priceArtifacts = null,Object? purchaseCount = null,Object? creatorData = null,Object? isPurchased = null,Object? isPublished = null,Object? shopData = freezed,Object? createdAt = null,}) {
   return _then(_TrainingProgramme(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,creatorId: null == creatorId ? _self.creatorId : creatorId // ignore: cast_nullable_to_non_nullable
@@ -1506,7 +2452,9 @@ as int,priceArtifacts: null == priceArtifacts ? _self._priceArtifacts : priceArt
 as Map<String, int>,purchaseCount: null == purchaseCount ? _self.purchaseCount : purchaseCount // ignore: cast_nullable_to_non_nullable
 as int,creatorData: null == creatorData ? _self.creatorData : creatorData // ignore: cast_nullable_to_non_nullable
 as CreatorData,isPurchased: null == isPurchased ? _self.isPurchased : isPurchased // ignore: cast_nullable_to_non_nullable
-as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as bool,isPublished: null == isPublished ? _self.isPublished : isPublished // ignore: cast_nullable_to_non_nullable
+as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
+as Shop?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -1519,6 +2467,18 @@ $CreatorDataCopyWith<$Res> get creatorData {
   
   return $CreatorDataCopyWith<$Res>(_self.creatorData, (value) {
     return _then(_self.copyWith(creatorData: value));
+  });
+}/// Create a copy of TrainingProgramme
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res>? get shopData {
+    if (_self.shopData == null) {
+    return null;
+  }
+
+  return $ShopCopyWith<$Res>(_self.shopData!, (value) {
+    return _then(_self.copyWith(shopData: value));
   });
 }
 }
@@ -1820,7 +2780,7 @@ $BuyerDataCopyWith<$Res> get buyerData {
 /// @nodoc
 mixin _$MarketplaceProduct {
 
- String get id; String get name; String get brand; String get description; String get category;@JsonKey(name: 'image_url') String get imageUrl;@JsonKey(name: 'affiliate_url') String get affiliateUrl;@JsonKey(name: 'price_display') String get priceDisplay;@JsonKey(name: 'recommended_by') String? get recommendedBy;@JsonKey(name: 'recommender_data') Map<String, dynamic>? get recommenderData;@JsonKey(name: 'click_count') int get clickCount;@JsonKey(name: 'created_at') String get createdAt;
+ String get id; String get name; String get brand; String get description; String get category;@JsonKey(name: 'image_url') String get imageUrl;@JsonKey(name: 'affiliate_url') String get affiliateUrl;@JsonKey(name: 'price_display') String get priceDisplay;@JsonKey(name: 'recommended_by') String? get recommendedBy;@JsonKey(name: 'recommender_data') Map<String, dynamic>? get recommenderData;@JsonKey(name: 'click_count') int get clickCount;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'shop_data') Shop? get shopData;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of MarketplaceProduct
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1833,16 +2793,16 @@ $MarketplaceProductCopyWith<MarketplaceProduct> get copyWith => _$MarketplacePro
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other.recommenderData, recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other.recommenderData, recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,recommendedBy,const DeepCollectionEquality().hash(recommenderData),clickCount,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,recommendedBy,const DeepCollectionEquality().hash(recommenderData),clickCount,isActive,shopData,createdAt);
 
 @override
 String toString() {
-  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, createdAt: $createdAt)';
+  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, isActive: $isActive, shopData: $shopData, createdAt: $createdAt)';
 }
 
 
@@ -1853,11 +2813,11 @@ abstract mixin class $MarketplaceProductCopyWith<$Res>  {
   factory $MarketplaceProductCopyWith(MarketplaceProduct value, $Res Function(MarketplaceProduct) _then) = _$MarketplaceProductCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'created_at') String createdAt
+ String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-
+$ShopCopyWith<$Res>? get shopData;
 
 }
 /// @nodoc
@@ -1870,7 +2830,7 @@ class _$MarketplaceProductCopyWithImpl<$Res>
 
 /// Create a copy of MarketplaceProduct
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? isActive = null,Object? shopData = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -1883,11 +2843,25 @@ as String,priceDisplay: null == priceDisplay ? _self.priceDisplay : priceDisplay
 as String,recommendedBy: freezed == recommendedBy ? _self.recommendedBy : recommendedBy // ignore: cast_nullable_to_non_nullable
 as String?,recommenderData: freezed == recommenderData ? _self.recommenderData : recommenderData // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,clickCount: null == clickCount ? _self.clickCount : clickCount // ignore: cast_nullable_to_non_nullable
-as int,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
+as Shop?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
+/// Create a copy of MarketplaceProduct
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res>? get shopData {
+    if (_self.shopData == null) {
+    return null;
+  }
 
+  return $ShopCopyWith<$Res>(_self.shopData!, (value) {
+    return _then(_self.copyWith(shopData: value));
+  });
+}
 }
 
 
@@ -1969,10 +2943,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MarketplaceProduct() when $default != null:
-return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.createdAt);case _:
   return orElse();
 
 }
@@ -1990,10 +2964,10 @@ return $default(_that.id,_that.name,_that.brand,_that.description,_that.category
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _MarketplaceProduct():
-return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2010,10 +2984,10 @@ return $default(_that.id,_that.name,_that.brand,_that.description,_that.category
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _MarketplaceProduct() when $default != null:
-return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.createdAt);case _:
   return null;
 
 }
@@ -2025,7 +2999,7 @@ return $default(_that.id,_that.name,_that.brand,_that.description,_that.category
 @JsonSerializable()
 
 class _MarketplaceProduct implements MarketplaceProduct {
-  const _MarketplaceProduct({required this.id, required this.name, required this.brand, required this.description, required this.category, @JsonKey(name: 'image_url') required this.imageUrl, @JsonKey(name: 'affiliate_url') required this.affiliateUrl, @JsonKey(name: 'price_display') required this.priceDisplay, @JsonKey(name: 'recommended_by') this.recommendedBy, @JsonKey(name: 'recommender_data') final  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count') this.clickCount = 0, @JsonKey(name: 'created_at') required this.createdAt}): _recommenderData = recommenderData;
+  const _MarketplaceProduct({required this.id, required this.name, required this.brand, required this.description, required this.category, @JsonKey(name: 'image_url') required this.imageUrl, @JsonKey(name: 'affiliate_url') required this.affiliateUrl, @JsonKey(name: 'price_display') required this.priceDisplay, @JsonKey(name: 'recommended_by') this.recommendedBy, @JsonKey(name: 'recommender_data') final  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count') this.clickCount = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'shop_data') this.shopData, @JsonKey(name: 'created_at') required this.createdAt}): _recommenderData = recommenderData;
   factory _MarketplaceProduct.fromJson(Map<String, dynamic> json) => _$MarketplaceProductFromJson(json);
 
 @override final  String id;
@@ -2047,6 +3021,8 @@ class _MarketplaceProduct implements MarketplaceProduct {
 }
 
 @override@JsonKey(name: 'click_count') final  int clickCount;
+@override@JsonKey(name: 'is_active') final  bool isActive;
+@override@JsonKey(name: 'shop_data') final  Shop? shopData;
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of MarketplaceProduct
@@ -2062,16 +3038,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other._recommenderData, _recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other._recommenderData, _recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,recommendedBy,const DeepCollectionEquality().hash(_recommenderData),clickCount,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,recommendedBy,const DeepCollectionEquality().hash(_recommenderData),clickCount,isActive,shopData,createdAt);
 
 @override
 String toString() {
-  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, createdAt: $createdAt)';
+  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, isActive: $isActive, shopData: $shopData, createdAt: $createdAt)';
 }
 
 
@@ -2082,11 +3058,11 @@ abstract mixin class _$MarketplaceProductCopyWith<$Res> implements $MarketplaceP
   factory _$MarketplaceProductCopyWith(_MarketplaceProduct value, $Res Function(_MarketplaceProduct) _then) = __$MarketplaceProductCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'created_at') String createdAt
+ String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-
+@override $ShopCopyWith<$Res>? get shopData;
 
 }
 /// @nodoc
@@ -2099,7 +3075,7 @@ class __$MarketplaceProductCopyWithImpl<$Res>
 
 /// Create a copy of MarketplaceProduct
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? isActive = null,Object? shopData = freezed,Object? createdAt = null,}) {
   return _then(_MarketplaceProduct(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -2112,12 +3088,26 @@ as String,priceDisplay: null == priceDisplay ? _self.priceDisplay : priceDisplay
 as String,recommendedBy: freezed == recommendedBy ? _self.recommendedBy : recommendedBy // ignore: cast_nullable_to_non_nullable
 as String?,recommenderData: freezed == recommenderData ? _self._recommenderData : recommenderData // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,clickCount: null == clickCount ? _self.clickCount : clickCount // ignore: cast_nullable_to_non_nullable
-as int,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
+as Shop?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
 
+/// Create a copy of MarketplaceProduct
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res>? get shopData {
+    if (_self.shopData == null) {
+    return null;
+  }
 
+  return $ShopCopyWith<$Res>(_self.shopData!, (value) {
+    return _then(_self.copyWith(shopData: value));
+  });
+}
 }
 
 
@@ -2394,9 +3384,287 @@ as String,
 
 
 /// @nodoc
+mixin _$EventMediaItem {
+
+ String get id;@JsonKey(name: 'media_type') String get mediaType; String get url;@JsonKey(name: 'thumbnail_url') String get thumbnailUrl;@JsonKey(name: 'alt_text') String get altText;@JsonKey(name: 'sort_order') int get sortOrder;
+/// Create a copy of EventMediaItem
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$EventMediaItemCopyWith<EventMediaItem> get copyWith => _$EventMediaItemCopyWithImpl<EventMediaItem>(this as EventMediaItem, _$identity);
+
+  /// Serializes this EventMediaItem to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventMediaItem&&(identical(other.id, id) || other.id == id)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.url, url) || other.url == url)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl)&&(identical(other.altText, altText) || other.altText == altText)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,mediaType,url,thumbnailUrl,altText,sortOrder);
+
+@override
+String toString() {
+  return 'EventMediaItem(id: $id, mediaType: $mediaType, url: $url, thumbnailUrl: $thumbnailUrl, altText: $altText, sortOrder: $sortOrder)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $EventMediaItemCopyWith<$Res>  {
+  factory $EventMediaItemCopyWith(EventMediaItem value, $Res Function(EventMediaItem) _then) = _$EventMediaItemCopyWithImpl;
+@useResult
+$Res call({
+ String id,@JsonKey(name: 'media_type') String mediaType, String url,@JsonKey(name: 'thumbnail_url') String thumbnailUrl,@JsonKey(name: 'alt_text') String altText,@JsonKey(name: 'sort_order') int sortOrder
+});
+
+
+
+
+}
+/// @nodoc
+class _$EventMediaItemCopyWithImpl<$Res>
+    implements $EventMediaItemCopyWith<$Res> {
+  _$EventMediaItemCopyWithImpl(this._self, this._then);
+
+  final EventMediaItem _self;
+  final $Res Function(EventMediaItem) _then;
+
+/// Create a copy of EventMediaItem
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? mediaType = null,Object? url = null,Object? thumbnailUrl = null,Object? altText = null,Object? sortOrder = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
+as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String,thumbnailUrl: null == thumbnailUrl ? _self.thumbnailUrl : thumbnailUrl // ignore: cast_nullable_to_non_nullable
+as String,altText: null == altText ? _self.altText : altText // ignore: cast_nullable_to_non_nullable
+as String,sortOrder: null == sortOrder ? _self.sortOrder : sortOrder // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [EventMediaItem].
+extension EventMediaItemPatterns on EventMediaItem {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _EventMediaItem value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _EventMediaItem() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _EventMediaItem value)  $default,){
+final _that = this;
+switch (_that) {
+case _EventMediaItem():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _EventMediaItem value)?  $default,){
+final _that = this;
+switch (_that) {
+case _EventMediaItem() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'media_type')  String mediaType,  String url, @JsonKey(name: 'thumbnail_url')  String thumbnailUrl, @JsonKey(name: 'alt_text')  String altText, @JsonKey(name: 'sort_order')  int sortOrder)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _EventMediaItem() when $default != null:
+return $default(_that.id,_that.mediaType,_that.url,_that.thumbnailUrl,_that.altText,_that.sortOrder);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'media_type')  String mediaType,  String url, @JsonKey(name: 'thumbnail_url')  String thumbnailUrl, @JsonKey(name: 'alt_text')  String altText, @JsonKey(name: 'sort_order')  int sortOrder)  $default,) {final _that = this;
+switch (_that) {
+case _EventMediaItem():
+return $default(_that.id,_that.mediaType,_that.url,_that.thumbnailUrl,_that.altText,_that.sortOrder);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'media_type')  String mediaType,  String url, @JsonKey(name: 'thumbnail_url')  String thumbnailUrl, @JsonKey(name: 'alt_text')  String altText, @JsonKey(name: 'sort_order')  int sortOrder)?  $default,) {final _that = this;
+switch (_that) {
+case _EventMediaItem() when $default != null:
+return $default(_that.id,_that.mediaType,_that.url,_that.thumbnailUrl,_that.altText,_that.sortOrder);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _EventMediaItem implements EventMediaItem {
+  const _EventMediaItem({required this.id, @JsonKey(name: 'media_type') this.mediaType = 'image', required this.url, @JsonKey(name: 'thumbnail_url') this.thumbnailUrl = '', @JsonKey(name: 'alt_text') this.altText = '', @JsonKey(name: 'sort_order') this.sortOrder = 0});
+  factory _EventMediaItem.fromJson(Map<String, dynamic> json) => _$EventMediaItemFromJson(json);
+
+@override final  String id;
+@override@JsonKey(name: 'media_type') final  String mediaType;
+@override final  String url;
+@override@JsonKey(name: 'thumbnail_url') final  String thumbnailUrl;
+@override@JsonKey(name: 'alt_text') final  String altText;
+@override@JsonKey(name: 'sort_order') final  int sortOrder;
+
+/// Create a copy of EventMediaItem
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$EventMediaItemCopyWith<_EventMediaItem> get copyWith => __$EventMediaItemCopyWithImpl<_EventMediaItem>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$EventMediaItemToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventMediaItem&&(identical(other.id, id) || other.id == id)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.url, url) || other.url == url)&&(identical(other.thumbnailUrl, thumbnailUrl) || other.thumbnailUrl == thumbnailUrl)&&(identical(other.altText, altText) || other.altText == altText)&&(identical(other.sortOrder, sortOrder) || other.sortOrder == sortOrder));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,mediaType,url,thumbnailUrl,altText,sortOrder);
+
+@override
+String toString() {
+  return 'EventMediaItem(id: $id, mediaType: $mediaType, url: $url, thumbnailUrl: $thumbnailUrl, altText: $altText, sortOrder: $sortOrder)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$EventMediaItemCopyWith<$Res> implements $EventMediaItemCopyWith<$Res> {
+  factory _$EventMediaItemCopyWith(_EventMediaItem value, $Res Function(_EventMediaItem) _then) = __$EventMediaItemCopyWithImpl;
+@override @useResult
+$Res call({
+ String id,@JsonKey(name: 'media_type') String mediaType, String url,@JsonKey(name: 'thumbnail_url') String thumbnailUrl,@JsonKey(name: 'alt_text') String altText,@JsonKey(name: 'sort_order') int sortOrder
+});
+
+
+
+
+}
+/// @nodoc
+class __$EventMediaItemCopyWithImpl<$Res>
+    implements _$EventMediaItemCopyWith<$Res> {
+  __$EventMediaItemCopyWithImpl(this._self, this._then);
+
+  final _EventMediaItem _self;
+  final $Res Function(_EventMediaItem) _then;
+
+/// Create a copy of EventMediaItem
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? mediaType = null,Object? url = null,Object? thumbnailUrl = null,Object? altText = null,Object? sortOrder = null,}) {
+  return _then(_EventMediaItem(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
+as String,url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
+as String,thumbnailUrl: null == thumbnailUrl ? _self.thumbnailUrl : thumbnailUrl // ignore: cast_nullable_to_non_nullable
+as String,altText: null == altText ? _self.altText : altText // ignore: cast_nullable_to_non_nullable
+as String,sortOrder: null == sortOrder ? _self.sortOrder : sortOrder // ignore: cast_nullable_to_non_nullable
+as int,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$MarketplaceEvent {
 
- String get id;@JsonKey(name: 'creator_data') CreatorData get creatorData;@JsonKey(name: 'gym_data') GymData? get gymData; String get title; String get description;@JsonKey(name: 'cover_image_url') String get coverImageUrl;@JsonKey(name: 'event_type') String get eventType; String get location;@JsonKey(name: 'online_url') String get onlineUrl;@JsonKey(name: 'start_datetime') String get startDatetime;@JsonKey(name: 'end_datetime') String get endDatetime; String get timezone; int get capacity;@JsonKey(name: 'ticket_price_artifacts') Map<String, int> get ticketPriceArtifacts;@JsonKey(name: 'is_free') bool get isFree;@JsonKey(name: 'is_published') bool get isPublished;@JsonKey(name: 'is_cancelled') bool get isCancelled;@JsonKey(name: 'attendee_count') int get attendeeCount; List<String> get tags; String get category;@JsonKey(name: 'is_registered') bool get isRegistered;@JsonKey(name: 'spots_remaining') int? get spotsRemaining;@JsonKey(name: 'created_at') String get createdAt;
+ String get id;@JsonKey(name: 'creator_data') CreatorData get creatorData;@JsonKey(name: 'gym_data') GymData? get gymData; String get title; String get description;@JsonKey(name: 'cover_image_url') String get coverImageUrl;@JsonKey(name: 'promo_video_url') String get promoVideoUrl;@JsonKey(name: 'gallery_urls') List<String> get galleryUrls;@JsonKey(name: 'event_type') String get eventType; String get location;@JsonKey(name: 'online_url') String get onlineUrl;@JsonKey(name: 'start_datetime') String get startDatetime;@JsonKey(name: 'end_datetime') String get endDatetime; String get timezone; String get recurrence;@JsonKey(name: 'ticket_tiers') List<Map<String, dynamic>> get ticketTiers; List<Map<String, dynamic>> get agenda; String get cancellationPolicy;@JsonKey(name: 'early_bird_enabled') bool get earlyBirdEnabled;@JsonKey(name: 'early_bird_deadline') String? get earlyBirdDeadline;@JsonKey(name: 'early_bird_price_artifacts') Map<String, int> get earlyBirdPriceArtifacts; int get capacity;@JsonKey(name: 'ticket_price_artifacts') Map<String, int> get ticketPriceArtifacts;@JsonKey(name: 'is_free') bool get isFree;@JsonKey(name: 'is_published') bool get isPublished;@JsonKey(name: 'is_cancelled') bool get isCancelled;@JsonKey(name: 'attendee_count') int get attendeeCount; List<String> get tags; String get category;@JsonKey(name: 'is_registered') bool get isRegistered;@JsonKey(name: 'spots_remaining') int? get spotsRemaining;@JsonKey(name: 'shop_data') Shop? get shopData; List<EventMediaItem> get media;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of MarketplaceEvent
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2409,16 +3677,16 @@ $MarketplaceEventCopyWith<MarketplaceEvent> get copyWith => _$MarketplaceEventCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MarketplaceEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.gymData, gymData) || other.gymData == gymData)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.location, location) || other.location == location)&&(identical(other.onlineUrl, onlineUrl) || other.onlineUrl == onlineUrl)&&(identical(other.startDatetime, startDatetime) || other.startDatetime == startDatetime)&&(identical(other.endDatetime, endDatetime) || other.endDatetime == endDatetime)&&(identical(other.timezone, timezone) || other.timezone == timezone)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&const DeepCollectionEquality().equals(other.ticketPriceArtifacts, ticketPriceArtifacts)&&(identical(other.isFree, isFree) || other.isFree == isFree)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.isCancelled, isCancelled) || other.isCancelled == isCancelled)&&(identical(other.attendeeCount, attendeeCount) || other.attendeeCount == attendeeCount)&&const DeepCollectionEquality().equals(other.tags, tags)&&(identical(other.category, category) || other.category == category)&&(identical(other.isRegistered, isRegistered) || other.isRegistered == isRegistered)&&(identical(other.spotsRemaining, spotsRemaining) || other.spotsRemaining == spotsRemaining)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MarketplaceEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.gymData, gymData) || other.gymData == gymData)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.promoVideoUrl, promoVideoUrl) || other.promoVideoUrl == promoVideoUrl)&&const DeepCollectionEquality().equals(other.galleryUrls, galleryUrls)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.location, location) || other.location == location)&&(identical(other.onlineUrl, onlineUrl) || other.onlineUrl == onlineUrl)&&(identical(other.startDatetime, startDatetime) || other.startDatetime == startDatetime)&&(identical(other.endDatetime, endDatetime) || other.endDatetime == endDatetime)&&(identical(other.timezone, timezone) || other.timezone == timezone)&&(identical(other.recurrence, recurrence) || other.recurrence == recurrence)&&const DeepCollectionEquality().equals(other.ticketTiers, ticketTiers)&&const DeepCollectionEquality().equals(other.agenda, agenda)&&(identical(other.cancellationPolicy, cancellationPolicy) || other.cancellationPolicy == cancellationPolicy)&&(identical(other.earlyBirdEnabled, earlyBirdEnabled) || other.earlyBirdEnabled == earlyBirdEnabled)&&(identical(other.earlyBirdDeadline, earlyBirdDeadline) || other.earlyBirdDeadline == earlyBirdDeadline)&&const DeepCollectionEquality().equals(other.earlyBirdPriceArtifacts, earlyBirdPriceArtifacts)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&const DeepCollectionEquality().equals(other.ticketPriceArtifacts, ticketPriceArtifacts)&&(identical(other.isFree, isFree) || other.isFree == isFree)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.isCancelled, isCancelled) || other.isCancelled == isCancelled)&&(identical(other.attendeeCount, attendeeCount) || other.attendeeCount == attendeeCount)&&const DeepCollectionEquality().equals(other.tags, tags)&&(identical(other.category, category) || other.category == category)&&(identical(other.isRegistered, isRegistered) || other.isRegistered == isRegistered)&&(identical(other.spotsRemaining, spotsRemaining) || other.spotsRemaining == spotsRemaining)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,creatorData,gymData,title,description,coverImageUrl,eventType,location,onlineUrl,startDatetime,endDatetime,timezone,capacity,const DeepCollectionEquality().hash(ticketPriceArtifacts),isFree,isPublished,isCancelled,attendeeCount,const DeepCollectionEquality().hash(tags),category,isRegistered,spotsRemaining,createdAt]);
+int get hashCode => Object.hashAll([runtimeType,id,creatorData,gymData,title,description,coverImageUrl,promoVideoUrl,const DeepCollectionEquality().hash(galleryUrls),eventType,location,onlineUrl,startDatetime,endDatetime,timezone,recurrence,const DeepCollectionEquality().hash(ticketTiers),const DeepCollectionEquality().hash(agenda),cancellationPolicy,earlyBirdEnabled,earlyBirdDeadline,const DeepCollectionEquality().hash(earlyBirdPriceArtifacts),capacity,const DeepCollectionEquality().hash(ticketPriceArtifacts),isFree,isPublished,isCancelled,attendeeCount,const DeepCollectionEquality().hash(tags),category,isRegistered,spotsRemaining,shopData,const DeepCollectionEquality().hash(media),createdAt]);
 
 @override
 String toString() {
-  return 'MarketplaceEvent(id: $id, creatorData: $creatorData, gymData: $gymData, title: $title, description: $description, coverImageUrl: $coverImageUrl, eventType: $eventType, location: $location, onlineUrl: $onlineUrl, startDatetime: $startDatetime, endDatetime: $endDatetime, timezone: $timezone, capacity: $capacity, ticketPriceArtifacts: $ticketPriceArtifacts, isFree: $isFree, isPublished: $isPublished, isCancelled: $isCancelled, attendeeCount: $attendeeCount, tags: $tags, category: $category, isRegistered: $isRegistered, spotsRemaining: $spotsRemaining, createdAt: $createdAt)';
+  return 'MarketplaceEvent(id: $id, creatorData: $creatorData, gymData: $gymData, title: $title, description: $description, coverImageUrl: $coverImageUrl, promoVideoUrl: $promoVideoUrl, galleryUrls: $galleryUrls, eventType: $eventType, location: $location, onlineUrl: $onlineUrl, startDatetime: $startDatetime, endDatetime: $endDatetime, timezone: $timezone, recurrence: $recurrence, ticketTiers: $ticketTiers, agenda: $agenda, cancellationPolicy: $cancellationPolicy, earlyBirdEnabled: $earlyBirdEnabled, earlyBirdDeadline: $earlyBirdDeadline, earlyBirdPriceArtifacts: $earlyBirdPriceArtifacts, capacity: $capacity, ticketPriceArtifacts: $ticketPriceArtifacts, isFree: $isFree, isPublished: $isPublished, isCancelled: $isCancelled, attendeeCount: $attendeeCount, tags: $tags, category: $category, isRegistered: $isRegistered, spotsRemaining: $spotsRemaining, shopData: $shopData, media: $media, createdAt: $createdAt)';
 }
 
 
@@ -2429,11 +3697,11 @@ abstract mixin class $MarketplaceEventCopyWith<$Res>  {
   factory $MarketplaceEventCopyWith(MarketplaceEvent value, $Res Function(MarketplaceEvent) _then) = _$MarketplaceEventCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'gym_data') GymData? gymData, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'event_type') String eventType, String location,@JsonKey(name: 'online_url') String onlineUrl,@JsonKey(name: 'start_datetime') String startDatetime,@JsonKey(name: 'end_datetime') String endDatetime, String timezone, int capacity,@JsonKey(name: 'ticket_price_artifacts') Map<String, int> ticketPriceArtifacts,@JsonKey(name: 'is_free') bool isFree,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'is_cancelled') bool isCancelled,@JsonKey(name: 'attendee_count') int attendeeCount, List<String> tags, String category,@JsonKey(name: 'is_registered') bool isRegistered,@JsonKey(name: 'spots_remaining') int? spotsRemaining,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'gym_data') GymData? gymData, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'promo_video_url') String promoVideoUrl,@JsonKey(name: 'gallery_urls') List<String> galleryUrls,@JsonKey(name: 'event_type') String eventType, String location,@JsonKey(name: 'online_url') String onlineUrl,@JsonKey(name: 'start_datetime') String startDatetime,@JsonKey(name: 'end_datetime') String endDatetime, String timezone, String recurrence,@JsonKey(name: 'ticket_tiers') List<Map<String, dynamic>> ticketTiers, List<Map<String, dynamic>> agenda, String cancellationPolicy,@JsonKey(name: 'early_bird_enabled') bool earlyBirdEnabled,@JsonKey(name: 'early_bird_deadline') String? earlyBirdDeadline,@JsonKey(name: 'early_bird_price_artifacts') Map<String, int> earlyBirdPriceArtifacts, int capacity,@JsonKey(name: 'ticket_price_artifacts') Map<String, int> ticketPriceArtifacts,@JsonKey(name: 'is_free') bool isFree,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'is_cancelled') bool isCancelled,@JsonKey(name: 'attendee_count') int attendeeCount, List<String> tags, String category,@JsonKey(name: 'is_registered') bool isRegistered,@JsonKey(name: 'spots_remaining') int? spotsRemaining,@JsonKey(name: 'shop_data') Shop? shopData, List<EventMediaItem> media,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-$CreatorDataCopyWith<$Res> get creatorData;$GymDataCopyWith<$Res>? get gymData;
+$CreatorDataCopyWith<$Res> get creatorData;$GymDataCopyWith<$Res>? get gymData;$ShopCopyWith<$Res>? get shopData;
 
 }
 /// @nodoc
@@ -2446,7 +3714,7 @@ class _$MarketplaceEventCopyWithImpl<$Res>
 
 /// Create a copy of MarketplaceEvent
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? creatorData = null,Object? gymData = freezed,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? eventType = null,Object? location = null,Object? onlineUrl = null,Object? startDatetime = null,Object? endDatetime = null,Object? timezone = null,Object? capacity = null,Object? ticketPriceArtifacts = null,Object? isFree = null,Object? isPublished = null,Object? isCancelled = null,Object? attendeeCount = null,Object? tags = null,Object? category = null,Object? isRegistered = null,Object? spotsRemaining = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? creatorData = null,Object? gymData = freezed,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? promoVideoUrl = null,Object? galleryUrls = null,Object? eventType = null,Object? location = null,Object? onlineUrl = null,Object? startDatetime = null,Object? endDatetime = null,Object? timezone = null,Object? recurrence = null,Object? ticketTiers = null,Object? agenda = null,Object? cancellationPolicy = null,Object? earlyBirdEnabled = null,Object? earlyBirdDeadline = freezed,Object? earlyBirdPriceArtifacts = null,Object? capacity = null,Object? ticketPriceArtifacts = null,Object? isFree = null,Object? isPublished = null,Object? isCancelled = null,Object? attendeeCount = null,Object? tags = null,Object? category = null,Object? isRegistered = null,Object? spotsRemaining = freezed,Object? shopData = freezed,Object? media = null,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,creatorData: null == creatorData ? _self.creatorData : creatorData // ignore: cast_nullable_to_non_nullable
@@ -2454,13 +3722,22 @@ as CreatorData,gymData: freezed == gymData ? _self.gymData : gymData // ignore: 
 as GymData?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,coverImageUrl: null == coverImageUrl ? _self.coverImageUrl : coverImageUrl // ignore: cast_nullable_to_non_nullable
-as String,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
+as String,promoVideoUrl: null == promoVideoUrl ? _self.promoVideoUrl : promoVideoUrl // ignore: cast_nullable_to_non_nullable
+as String,galleryUrls: null == galleryUrls ? _self.galleryUrls : galleryUrls // ignore: cast_nullable_to_non_nullable
+as List<String>,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
 as String,location: null == location ? _self.location : location // ignore: cast_nullable_to_non_nullable
 as String,onlineUrl: null == onlineUrl ? _self.onlineUrl : onlineUrl // ignore: cast_nullable_to_non_nullable
 as String,startDatetime: null == startDatetime ? _self.startDatetime : startDatetime // ignore: cast_nullable_to_non_nullable
 as String,endDatetime: null == endDatetime ? _self.endDatetime : endDatetime // ignore: cast_nullable_to_non_nullable
 as String,timezone: null == timezone ? _self.timezone : timezone // ignore: cast_nullable_to_non_nullable
-as String,capacity: null == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
+as String,recurrence: null == recurrence ? _self.recurrence : recurrence // ignore: cast_nullable_to_non_nullable
+as String,ticketTiers: null == ticketTiers ? _self.ticketTiers : ticketTiers // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,agenda: null == agenda ? _self.agenda : agenda // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,cancellationPolicy: null == cancellationPolicy ? _self.cancellationPolicy : cancellationPolicy // ignore: cast_nullable_to_non_nullable
+as String,earlyBirdEnabled: null == earlyBirdEnabled ? _self.earlyBirdEnabled : earlyBirdEnabled // ignore: cast_nullable_to_non_nullable
+as bool,earlyBirdDeadline: freezed == earlyBirdDeadline ? _self.earlyBirdDeadline : earlyBirdDeadline // ignore: cast_nullable_to_non_nullable
+as String?,earlyBirdPriceArtifacts: null == earlyBirdPriceArtifacts ? _self.earlyBirdPriceArtifacts : earlyBirdPriceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,capacity: null == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
 as int,ticketPriceArtifacts: null == ticketPriceArtifacts ? _self.ticketPriceArtifacts : ticketPriceArtifacts // ignore: cast_nullable_to_non_nullable
 as Map<String, int>,isFree: null == isFree ? _self.isFree : isFree // ignore: cast_nullable_to_non_nullable
 as bool,isPublished: null == isPublished ? _self.isPublished : isPublished // ignore: cast_nullable_to_non_nullable
@@ -2470,7 +3747,9 @@ as int,tags: null == tags ? _self.tags : tags // ignore: cast_nullable_to_non_nu
 as List<String>,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String,isRegistered: null == isRegistered ? _self.isRegistered : isRegistered // ignore: cast_nullable_to_non_nullable
 as bool,spotsRemaining: freezed == spotsRemaining ? _self.spotsRemaining : spotsRemaining // ignore: cast_nullable_to_non_nullable
-as int?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as int?,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
+as Shop?,media: null == media ? _self.media : media // ignore: cast_nullable_to_non_nullable
+as List<EventMediaItem>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -2494,6 +3773,18 @@ $GymDataCopyWith<$Res>? get gymData {
 
   return $GymDataCopyWith<$Res>(_self.gymData!, (value) {
     return _then(_self.copyWith(gymData: value));
+  });
+}/// Create a copy of MarketplaceEvent
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res>? get shopData {
+    if (_self.shopData == null) {
+    return null;
+  }
+
+  return $ShopCopyWith<$Res>(_self.shopData!, (value) {
+    return _then(_self.copyWith(shopData: value));
   });
 }
 }
@@ -2577,10 +3868,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'gym_data')  GymData? gymData,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'event_type')  String eventType,  String location, @JsonKey(name: 'online_url')  String onlineUrl, @JsonKey(name: 'start_datetime')  String startDatetime, @JsonKey(name: 'end_datetime')  String endDatetime,  String timezone,  int capacity, @JsonKey(name: 'ticket_price_artifacts')  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'is_free')  bool isFree, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'is_cancelled')  bool isCancelled, @JsonKey(name: 'attendee_count')  int attendeeCount,  List<String> tags,  String category, @JsonKey(name: 'is_registered')  bool isRegistered, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'gym_data')  GymData? gymData,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'promo_video_url')  String promoVideoUrl, @JsonKey(name: 'gallery_urls')  List<String> galleryUrls, @JsonKey(name: 'event_type')  String eventType,  String location, @JsonKey(name: 'online_url')  String onlineUrl, @JsonKey(name: 'start_datetime')  String startDatetime, @JsonKey(name: 'end_datetime')  String endDatetime,  String timezone,  String recurrence, @JsonKey(name: 'ticket_tiers')  List<Map<String, dynamic>> ticketTiers,  List<Map<String, dynamic>> agenda,  String cancellationPolicy, @JsonKey(name: 'early_bird_enabled')  bool earlyBirdEnabled, @JsonKey(name: 'early_bird_deadline')  String? earlyBirdDeadline, @JsonKey(name: 'early_bird_price_artifacts')  Map<String, int> earlyBirdPriceArtifacts,  int capacity, @JsonKey(name: 'ticket_price_artifacts')  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'is_free')  bool isFree, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'is_cancelled')  bool isCancelled, @JsonKey(name: 'attendee_count')  int attendeeCount,  List<String> tags,  String category, @JsonKey(name: 'is_registered')  bool isRegistered, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'shop_data')  Shop? shopData,  List<EventMediaItem> media, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MarketplaceEvent() when $default != null:
-return $default(_that.id,_that.creatorData,_that.gymData,_that.title,_that.description,_that.coverImageUrl,_that.eventType,_that.location,_that.onlineUrl,_that.startDatetime,_that.endDatetime,_that.timezone,_that.capacity,_that.ticketPriceArtifacts,_that.isFree,_that.isPublished,_that.isCancelled,_that.attendeeCount,_that.tags,_that.category,_that.isRegistered,_that.spotsRemaining,_that.createdAt);case _:
+return $default(_that.id,_that.creatorData,_that.gymData,_that.title,_that.description,_that.coverImageUrl,_that.promoVideoUrl,_that.galleryUrls,_that.eventType,_that.location,_that.onlineUrl,_that.startDatetime,_that.endDatetime,_that.timezone,_that.recurrence,_that.ticketTiers,_that.agenda,_that.cancellationPolicy,_that.earlyBirdEnabled,_that.earlyBirdDeadline,_that.earlyBirdPriceArtifacts,_that.capacity,_that.ticketPriceArtifacts,_that.isFree,_that.isPublished,_that.isCancelled,_that.attendeeCount,_that.tags,_that.category,_that.isRegistered,_that.spotsRemaining,_that.shopData,_that.media,_that.createdAt);case _:
   return orElse();
 
 }
@@ -2598,10 +3889,10 @@ return $default(_that.id,_that.creatorData,_that.gymData,_that.title,_that.descr
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'gym_data')  GymData? gymData,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'event_type')  String eventType,  String location, @JsonKey(name: 'online_url')  String onlineUrl, @JsonKey(name: 'start_datetime')  String startDatetime, @JsonKey(name: 'end_datetime')  String endDatetime,  String timezone,  int capacity, @JsonKey(name: 'ticket_price_artifacts')  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'is_free')  bool isFree, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'is_cancelled')  bool isCancelled, @JsonKey(name: 'attendee_count')  int attendeeCount,  List<String> tags,  String category, @JsonKey(name: 'is_registered')  bool isRegistered, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'gym_data')  GymData? gymData,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'promo_video_url')  String promoVideoUrl, @JsonKey(name: 'gallery_urls')  List<String> galleryUrls, @JsonKey(name: 'event_type')  String eventType,  String location, @JsonKey(name: 'online_url')  String onlineUrl, @JsonKey(name: 'start_datetime')  String startDatetime, @JsonKey(name: 'end_datetime')  String endDatetime,  String timezone,  String recurrence, @JsonKey(name: 'ticket_tiers')  List<Map<String, dynamic>> ticketTiers,  List<Map<String, dynamic>> agenda,  String cancellationPolicy, @JsonKey(name: 'early_bird_enabled')  bool earlyBirdEnabled, @JsonKey(name: 'early_bird_deadline')  String? earlyBirdDeadline, @JsonKey(name: 'early_bird_price_artifacts')  Map<String, int> earlyBirdPriceArtifacts,  int capacity, @JsonKey(name: 'ticket_price_artifacts')  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'is_free')  bool isFree, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'is_cancelled')  bool isCancelled, @JsonKey(name: 'attendee_count')  int attendeeCount,  List<String> tags,  String category, @JsonKey(name: 'is_registered')  bool isRegistered, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'shop_data')  Shop? shopData,  List<EventMediaItem> media, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _MarketplaceEvent():
-return $default(_that.id,_that.creatorData,_that.gymData,_that.title,_that.description,_that.coverImageUrl,_that.eventType,_that.location,_that.onlineUrl,_that.startDatetime,_that.endDatetime,_that.timezone,_that.capacity,_that.ticketPriceArtifacts,_that.isFree,_that.isPublished,_that.isCancelled,_that.attendeeCount,_that.tags,_that.category,_that.isRegistered,_that.spotsRemaining,_that.createdAt);case _:
+return $default(_that.id,_that.creatorData,_that.gymData,_that.title,_that.description,_that.coverImageUrl,_that.promoVideoUrl,_that.galleryUrls,_that.eventType,_that.location,_that.onlineUrl,_that.startDatetime,_that.endDatetime,_that.timezone,_that.recurrence,_that.ticketTiers,_that.agenda,_that.cancellationPolicy,_that.earlyBirdEnabled,_that.earlyBirdDeadline,_that.earlyBirdPriceArtifacts,_that.capacity,_that.ticketPriceArtifacts,_that.isFree,_that.isPublished,_that.isCancelled,_that.attendeeCount,_that.tags,_that.category,_that.isRegistered,_that.spotsRemaining,_that.shopData,_that.media,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2618,10 +3909,10 @@ return $default(_that.id,_that.creatorData,_that.gymData,_that.title,_that.descr
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'gym_data')  GymData? gymData,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'event_type')  String eventType,  String location, @JsonKey(name: 'online_url')  String onlineUrl, @JsonKey(name: 'start_datetime')  String startDatetime, @JsonKey(name: 'end_datetime')  String endDatetime,  String timezone,  int capacity, @JsonKey(name: 'ticket_price_artifacts')  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'is_free')  bool isFree, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'is_cancelled')  bool isCancelled, @JsonKey(name: 'attendee_count')  int attendeeCount,  List<String> tags,  String category, @JsonKey(name: 'is_registered')  bool isRegistered, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'creator_data')  CreatorData creatorData, @JsonKey(name: 'gym_data')  GymData? gymData,  String title,  String description, @JsonKey(name: 'cover_image_url')  String coverImageUrl, @JsonKey(name: 'promo_video_url')  String promoVideoUrl, @JsonKey(name: 'gallery_urls')  List<String> galleryUrls, @JsonKey(name: 'event_type')  String eventType,  String location, @JsonKey(name: 'online_url')  String onlineUrl, @JsonKey(name: 'start_datetime')  String startDatetime, @JsonKey(name: 'end_datetime')  String endDatetime,  String timezone,  String recurrence, @JsonKey(name: 'ticket_tiers')  List<Map<String, dynamic>> ticketTiers,  List<Map<String, dynamic>> agenda,  String cancellationPolicy, @JsonKey(name: 'early_bird_enabled')  bool earlyBirdEnabled, @JsonKey(name: 'early_bird_deadline')  String? earlyBirdDeadline, @JsonKey(name: 'early_bird_price_artifacts')  Map<String, int> earlyBirdPriceArtifacts,  int capacity, @JsonKey(name: 'ticket_price_artifacts')  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'is_free')  bool isFree, @JsonKey(name: 'is_published')  bool isPublished, @JsonKey(name: 'is_cancelled')  bool isCancelled, @JsonKey(name: 'attendee_count')  int attendeeCount,  List<String> tags,  String category, @JsonKey(name: 'is_registered')  bool isRegistered, @JsonKey(name: 'spots_remaining')  int? spotsRemaining, @JsonKey(name: 'shop_data')  Shop? shopData,  List<EventMediaItem> media, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _MarketplaceEvent() when $default != null:
-return $default(_that.id,_that.creatorData,_that.gymData,_that.title,_that.description,_that.coverImageUrl,_that.eventType,_that.location,_that.onlineUrl,_that.startDatetime,_that.endDatetime,_that.timezone,_that.capacity,_that.ticketPriceArtifacts,_that.isFree,_that.isPublished,_that.isCancelled,_that.attendeeCount,_that.tags,_that.category,_that.isRegistered,_that.spotsRemaining,_that.createdAt);case _:
+return $default(_that.id,_that.creatorData,_that.gymData,_that.title,_that.description,_that.coverImageUrl,_that.promoVideoUrl,_that.galleryUrls,_that.eventType,_that.location,_that.onlineUrl,_that.startDatetime,_that.endDatetime,_that.timezone,_that.recurrence,_that.ticketTiers,_that.agenda,_that.cancellationPolicy,_that.earlyBirdEnabled,_that.earlyBirdDeadline,_that.earlyBirdPriceArtifacts,_that.capacity,_that.ticketPriceArtifacts,_that.isFree,_that.isPublished,_that.isCancelled,_that.attendeeCount,_that.tags,_that.category,_that.isRegistered,_that.spotsRemaining,_that.shopData,_that.media,_that.createdAt);case _:
   return null;
 
 }
@@ -2633,7 +3924,7 @@ return $default(_that.id,_that.creatorData,_that.gymData,_that.title,_that.descr
 @JsonSerializable()
 
 class _MarketplaceEvent implements MarketplaceEvent {
-  const _MarketplaceEvent({required this.id, @JsonKey(name: 'creator_data') required this.creatorData, @JsonKey(name: 'gym_data') this.gymData, required this.title, required this.description, @JsonKey(name: 'cover_image_url') required this.coverImageUrl, @JsonKey(name: 'event_type') required this.eventType, required this.location, @JsonKey(name: 'online_url') required this.onlineUrl, @JsonKey(name: 'start_datetime') required this.startDatetime, @JsonKey(name: 'end_datetime') required this.endDatetime, required this.timezone, required this.capacity, @JsonKey(name: 'ticket_price_artifacts') required final  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'is_free') this.isFree = false, @JsonKey(name: 'is_published') this.isPublished = false, @JsonKey(name: 'is_cancelled') this.isCancelled = false, @JsonKey(name: 'attendee_count') this.attendeeCount = 0, final  List<String> tags = const <String>[], this.category = '', @JsonKey(name: 'is_registered') this.isRegistered = false, @JsonKey(name: 'spots_remaining') this.spotsRemaining, @JsonKey(name: 'created_at') required this.createdAt}): _ticketPriceArtifacts = ticketPriceArtifacts,_tags = tags;
+  const _MarketplaceEvent({required this.id, @JsonKey(name: 'creator_data') required this.creatorData, @JsonKey(name: 'gym_data') this.gymData, required this.title, required this.description, @JsonKey(name: 'cover_image_url') required this.coverImageUrl, @JsonKey(name: 'promo_video_url') this.promoVideoUrl = '', @JsonKey(name: 'gallery_urls') final  List<String> galleryUrls = const <String>[], @JsonKey(name: 'event_type') required this.eventType, required this.location, @JsonKey(name: 'online_url') required this.onlineUrl, @JsonKey(name: 'start_datetime') required this.startDatetime, @JsonKey(name: 'end_datetime') required this.endDatetime, required this.timezone, this.recurrence = 'none', @JsonKey(name: 'ticket_tiers') final  List<Map<String, dynamic>> ticketTiers = const <Map<String, dynamic>>[], final  List<Map<String, dynamic>> agenda = const <Map<String, dynamic>>[], this.cancellationPolicy = '', @JsonKey(name: 'early_bird_enabled') this.earlyBirdEnabled = false, @JsonKey(name: 'early_bird_deadline') this.earlyBirdDeadline, @JsonKey(name: 'early_bird_price_artifacts') final  Map<String, int> earlyBirdPriceArtifacts = const <String, int>{}, required this.capacity, @JsonKey(name: 'ticket_price_artifacts') required final  Map<String, int> ticketPriceArtifacts, @JsonKey(name: 'is_free') this.isFree = false, @JsonKey(name: 'is_published') this.isPublished = false, @JsonKey(name: 'is_cancelled') this.isCancelled = false, @JsonKey(name: 'attendee_count') this.attendeeCount = 0, final  List<String> tags = const <String>[], this.category = '', @JsonKey(name: 'is_registered') this.isRegistered = false, @JsonKey(name: 'spots_remaining') this.spotsRemaining, @JsonKey(name: 'shop_data') this.shopData, final  List<EventMediaItem> media = const <EventMediaItem>[], @JsonKey(name: 'created_at') required this.createdAt}): _galleryUrls = galleryUrls,_ticketTiers = ticketTiers,_agenda = agenda,_earlyBirdPriceArtifacts = earlyBirdPriceArtifacts,_ticketPriceArtifacts = ticketPriceArtifacts,_tags = tags,_media = media;
   factory _MarketplaceEvent.fromJson(Map<String, dynamic> json) => _$MarketplaceEventFromJson(json);
 
 @override final  String id;
@@ -2642,12 +3933,45 @@ class _MarketplaceEvent implements MarketplaceEvent {
 @override final  String title;
 @override final  String description;
 @override@JsonKey(name: 'cover_image_url') final  String coverImageUrl;
+@override@JsonKey(name: 'promo_video_url') final  String promoVideoUrl;
+ final  List<String> _galleryUrls;
+@override@JsonKey(name: 'gallery_urls') List<String> get galleryUrls {
+  if (_galleryUrls is EqualUnmodifiableListView) return _galleryUrls;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_galleryUrls);
+}
+
 @override@JsonKey(name: 'event_type') final  String eventType;
 @override final  String location;
 @override@JsonKey(name: 'online_url') final  String onlineUrl;
 @override@JsonKey(name: 'start_datetime') final  String startDatetime;
 @override@JsonKey(name: 'end_datetime') final  String endDatetime;
 @override final  String timezone;
+@override@JsonKey() final  String recurrence;
+ final  List<Map<String, dynamic>> _ticketTiers;
+@override@JsonKey(name: 'ticket_tiers') List<Map<String, dynamic>> get ticketTiers {
+  if (_ticketTiers is EqualUnmodifiableListView) return _ticketTiers;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_ticketTiers);
+}
+
+ final  List<Map<String, dynamic>> _agenda;
+@override@JsonKey() List<Map<String, dynamic>> get agenda {
+  if (_agenda is EqualUnmodifiableListView) return _agenda;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_agenda);
+}
+
+@override@JsonKey() final  String cancellationPolicy;
+@override@JsonKey(name: 'early_bird_enabled') final  bool earlyBirdEnabled;
+@override@JsonKey(name: 'early_bird_deadline') final  String? earlyBirdDeadline;
+ final  Map<String, int> _earlyBirdPriceArtifacts;
+@override@JsonKey(name: 'early_bird_price_artifacts') Map<String, int> get earlyBirdPriceArtifacts {
+  if (_earlyBirdPriceArtifacts is EqualUnmodifiableMapView) return _earlyBirdPriceArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_earlyBirdPriceArtifacts);
+}
+
 @override final  int capacity;
  final  Map<String, int> _ticketPriceArtifacts;
 @override@JsonKey(name: 'ticket_price_artifacts') Map<String, int> get ticketPriceArtifacts {
@@ -2670,6 +3994,14 @@ class _MarketplaceEvent implements MarketplaceEvent {
 @override@JsonKey() final  String category;
 @override@JsonKey(name: 'is_registered') final  bool isRegistered;
 @override@JsonKey(name: 'spots_remaining') final  int? spotsRemaining;
+@override@JsonKey(name: 'shop_data') final  Shop? shopData;
+ final  List<EventMediaItem> _media;
+@override@JsonKey() List<EventMediaItem> get media {
+  if (_media is EqualUnmodifiableListView) return _media;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_media);
+}
+
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of MarketplaceEvent
@@ -2685,16 +4017,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MarketplaceEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.gymData, gymData) || other.gymData == gymData)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.location, location) || other.location == location)&&(identical(other.onlineUrl, onlineUrl) || other.onlineUrl == onlineUrl)&&(identical(other.startDatetime, startDatetime) || other.startDatetime == startDatetime)&&(identical(other.endDatetime, endDatetime) || other.endDatetime == endDatetime)&&(identical(other.timezone, timezone) || other.timezone == timezone)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&const DeepCollectionEquality().equals(other._ticketPriceArtifacts, _ticketPriceArtifacts)&&(identical(other.isFree, isFree) || other.isFree == isFree)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.isCancelled, isCancelled) || other.isCancelled == isCancelled)&&(identical(other.attendeeCount, attendeeCount) || other.attendeeCount == attendeeCount)&&const DeepCollectionEquality().equals(other._tags, _tags)&&(identical(other.category, category) || other.category == category)&&(identical(other.isRegistered, isRegistered) || other.isRegistered == isRegistered)&&(identical(other.spotsRemaining, spotsRemaining) || other.spotsRemaining == spotsRemaining)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MarketplaceEvent&&(identical(other.id, id) || other.id == id)&&(identical(other.creatorData, creatorData) || other.creatorData == creatorData)&&(identical(other.gymData, gymData) || other.gymData == gymData)&&(identical(other.title, title) || other.title == title)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverImageUrl, coverImageUrl) || other.coverImageUrl == coverImageUrl)&&(identical(other.promoVideoUrl, promoVideoUrl) || other.promoVideoUrl == promoVideoUrl)&&const DeepCollectionEquality().equals(other._galleryUrls, _galleryUrls)&&(identical(other.eventType, eventType) || other.eventType == eventType)&&(identical(other.location, location) || other.location == location)&&(identical(other.onlineUrl, onlineUrl) || other.onlineUrl == onlineUrl)&&(identical(other.startDatetime, startDatetime) || other.startDatetime == startDatetime)&&(identical(other.endDatetime, endDatetime) || other.endDatetime == endDatetime)&&(identical(other.timezone, timezone) || other.timezone == timezone)&&(identical(other.recurrence, recurrence) || other.recurrence == recurrence)&&const DeepCollectionEquality().equals(other._ticketTiers, _ticketTiers)&&const DeepCollectionEquality().equals(other._agenda, _agenda)&&(identical(other.cancellationPolicy, cancellationPolicy) || other.cancellationPolicy == cancellationPolicy)&&(identical(other.earlyBirdEnabled, earlyBirdEnabled) || other.earlyBirdEnabled == earlyBirdEnabled)&&(identical(other.earlyBirdDeadline, earlyBirdDeadline) || other.earlyBirdDeadline == earlyBirdDeadline)&&const DeepCollectionEquality().equals(other._earlyBirdPriceArtifacts, _earlyBirdPriceArtifacts)&&(identical(other.capacity, capacity) || other.capacity == capacity)&&const DeepCollectionEquality().equals(other._ticketPriceArtifacts, _ticketPriceArtifacts)&&(identical(other.isFree, isFree) || other.isFree == isFree)&&(identical(other.isPublished, isPublished) || other.isPublished == isPublished)&&(identical(other.isCancelled, isCancelled) || other.isCancelled == isCancelled)&&(identical(other.attendeeCount, attendeeCount) || other.attendeeCount == attendeeCount)&&const DeepCollectionEquality().equals(other._tags, _tags)&&(identical(other.category, category) || other.category == category)&&(identical(other.isRegistered, isRegistered) || other.isRegistered == isRegistered)&&(identical(other.spotsRemaining, spotsRemaining) || other.spotsRemaining == spotsRemaining)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,creatorData,gymData,title,description,coverImageUrl,eventType,location,onlineUrl,startDatetime,endDatetime,timezone,capacity,const DeepCollectionEquality().hash(_ticketPriceArtifacts),isFree,isPublished,isCancelled,attendeeCount,const DeepCollectionEquality().hash(_tags),category,isRegistered,spotsRemaining,createdAt]);
+int get hashCode => Object.hashAll([runtimeType,id,creatorData,gymData,title,description,coverImageUrl,promoVideoUrl,const DeepCollectionEquality().hash(_galleryUrls),eventType,location,onlineUrl,startDatetime,endDatetime,timezone,recurrence,const DeepCollectionEquality().hash(_ticketTiers),const DeepCollectionEquality().hash(_agenda),cancellationPolicy,earlyBirdEnabled,earlyBirdDeadline,const DeepCollectionEquality().hash(_earlyBirdPriceArtifacts),capacity,const DeepCollectionEquality().hash(_ticketPriceArtifacts),isFree,isPublished,isCancelled,attendeeCount,const DeepCollectionEquality().hash(_tags),category,isRegistered,spotsRemaining,shopData,const DeepCollectionEquality().hash(_media),createdAt]);
 
 @override
 String toString() {
-  return 'MarketplaceEvent(id: $id, creatorData: $creatorData, gymData: $gymData, title: $title, description: $description, coverImageUrl: $coverImageUrl, eventType: $eventType, location: $location, onlineUrl: $onlineUrl, startDatetime: $startDatetime, endDatetime: $endDatetime, timezone: $timezone, capacity: $capacity, ticketPriceArtifacts: $ticketPriceArtifacts, isFree: $isFree, isPublished: $isPublished, isCancelled: $isCancelled, attendeeCount: $attendeeCount, tags: $tags, category: $category, isRegistered: $isRegistered, spotsRemaining: $spotsRemaining, createdAt: $createdAt)';
+  return 'MarketplaceEvent(id: $id, creatorData: $creatorData, gymData: $gymData, title: $title, description: $description, coverImageUrl: $coverImageUrl, promoVideoUrl: $promoVideoUrl, galleryUrls: $galleryUrls, eventType: $eventType, location: $location, onlineUrl: $onlineUrl, startDatetime: $startDatetime, endDatetime: $endDatetime, timezone: $timezone, recurrence: $recurrence, ticketTiers: $ticketTiers, agenda: $agenda, cancellationPolicy: $cancellationPolicy, earlyBirdEnabled: $earlyBirdEnabled, earlyBirdDeadline: $earlyBirdDeadline, earlyBirdPriceArtifacts: $earlyBirdPriceArtifacts, capacity: $capacity, ticketPriceArtifacts: $ticketPriceArtifacts, isFree: $isFree, isPublished: $isPublished, isCancelled: $isCancelled, attendeeCount: $attendeeCount, tags: $tags, category: $category, isRegistered: $isRegistered, spotsRemaining: $spotsRemaining, shopData: $shopData, media: $media, createdAt: $createdAt)';
 }
 
 
@@ -2705,11 +4037,11 @@ abstract mixin class _$MarketplaceEventCopyWith<$Res> implements $MarketplaceEve
   factory _$MarketplaceEventCopyWith(_MarketplaceEvent value, $Res Function(_MarketplaceEvent) _then) = __$MarketplaceEventCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'gym_data') GymData? gymData, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'event_type') String eventType, String location,@JsonKey(name: 'online_url') String onlineUrl,@JsonKey(name: 'start_datetime') String startDatetime,@JsonKey(name: 'end_datetime') String endDatetime, String timezone, int capacity,@JsonKey(name: 'ticket_price_artifacts') Map<String, int> ticketPriceArtifacts,@JsonKey(name: 'is_free') bool isFree,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'is_cancelled') bool isCancelled,@JsonKey(name: 'attendee_count') int attendeeCount, List<String> tags, String category,@JsonKey(name: 'is_registered') bool isRegistered,@JsonKey(name: 'spots_remaining') int? spotsRemaining,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'creator_data') CreatorData creatorData,@JsonKey(name: 'gym_data') GymData? gymData, String title, String description,@JsonKey(name: 'cover_image_url') String coverImageUrl,@JsonKey(name: 'promo_video_url') String promoVideoUrl,@JsonKey(name: 'gallery_urls') List<String> galleryUrls,@JsonKey(name: 'event_type') String eventType, String location,@JsonKey(name: 'online_url') String onlineUrl,@JsonKey(name: 'start_datetime') String startDatetime,@JsonKey(name: 'end_datetime') String endDatetime, String timezone, String recurrence,@JsonKey(name: 'ticket_tiers') List<Map<String, dynamic>> ticketTiers, List<Map<String, dynamic>> agenda, String cancellationPolicy,@JsonKey(name: 'early_bird_enabled') bool earlyBirdEnabled,@JsonKey(name: 'early_bird_deadline') String? earlyBirdDeadline,@JsonKey(name: 'early_bird_price_artifacts') Map<String, int> earlyBirdPriceArtifacts, int capacity,@JsonKey(name: 'ticket_price_artifacts') Map<String, int> ticketPriceArtifacts,@JsonKey(name: 'is_free') bool isFree,@JsonKey(name: 'is_published') bool isPublished,@JsonKey(name: 'is_cancelled') bool isCancelled,@JsonKey(name: 'attendee_count') int attendeeCount, List<String> tags, String category,@JsonKey(name: 'is_registered') bool isRegistered,@JsonKey(name: 'spots_remaining') int? spotsRemaining,@JsonKey(name: 'shop_data') Shop? shopData, List<EventMediaItem> media,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-@override $CreatorDataCopyWith<$Res> get creatorData;@override $GymDataCopyWith<$Res>? get gymData;
+@override $CreatorDataCopyWith<$Res> get creatorData;@override $GymDataCopyWith<$Res>? get gymData;@override $ShopCopyWith<$Res>? get shopData;
 
 }
 /// @nodoc
@@ -2722,7 +4054,7 @@ class __$MarketplaceEventCopyWithImpl<$Res>
 
 /// Create a copy of MarketplaceEvent
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? creatorData = null,Object? gymData = freezed,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? eventType = null,Object? location = null,Object? onlineUrl = null,Object? startDatetime = null,Object? endDatetime = null,Object? timezone = null,Object? capacity = null,Object? ticketPriceArtifacts = null,Object? isFree = null,Object? isPublished = null,Object? isCancelled = null,Object? attendeeCount = null,Object? tags = null,Object? category = null,Object? isRegistered = null,Object? spotsRemaining = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? creatorData = null,Object? gymData = freezed,Object? title = null,Object? description = null,Object? coverImageUrl = null,Object? promoVideoUrl = null,Object? galleryUrls = null,Object? eventType = null,Object? location = null,Object? onlineUrl = null,Object? startDatetime = null,Object? endDatetime = null,Object? timezone = null,Object? recurrence = null,Object? ticketTiers = null,Object? agenda = null,Object? cancellationPolicy = null,Object? earlyBirdEnabled = null,Object? earlyBirdDeadline = freezed,Object? earlyBirdPriceArtifacts = null,Object? capacity = null,Object? ticketPriceArtifacts = null,Object? isFree = null,Object? isPublished = null,Object? isCancelled = null,Object? attendeeCount = null,Object? tags = null,Object? category = null,Object? isRegistered = null,Object? spotsRemaining = freezed,Object? shopData = freezed,Object? media = null,Object? createdAt = null,}) {
   return _then(_MarketplaceEvent(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,creatorData: null == creatorData ? _self.creatorData : creatorData // ignore: cast_nullable_to_non_nullable
@@ -2730,13 +4062,22 @@ as CreatorData,gymData: freezed == gymData ? _self.gymData : gymData // ignore: 
 as GymData?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
 as String,coverImageUrl: null == coverImageUrl ? _self.coverImageUrl : coverImageUrl // ignore: cast_nullable_to_non_nullable
-as String,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
+as String,promoVideoUrl: null == promoVideoUrl ? _self.promoVideoUrl : promoVideoUrl // ignore: cast_nullable_to_non_nullable
+as String,galleryUrls: null == galleryUrls ? _self._galleryUrls : galleryUrls // ignore: cast_nullable_to_non_nullable
+as List<String>,eventType: null == eventType ? _self.eventType : eventType // ignore: cast_nullable_to_non_nullable
 as String,location: null == location ? _self.location : location // ignore: cast_nullable_to_non_nullable
 as String,onlineUrl: null == onlineUrl ? _self.onlineUrl : onlineUrl // ignore: cast_nullable_to_non_nullable
 as String,startDatetime: null == startDatetime ? _self.startDatetime : startDatetime // ignore: cast_nullable_to_non_nullable
 as String,endDatetime: null == endDatetime ? _self.endDatetime : endDatetime // ignore: cast_nullable_to_non_nullable
 as String,timezone: null == timezone ? _self.timezone : timezone // ignore: cast_nullable_to_non_nullable
-as String,capacity: null == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
+as String,recurrence: null == recurrence ? _self.recurrence : recurrence // ignore: cast_nullable_to_non_nullable
+as String,ticketTiers: null == ticketTiers ? _self._ticketTiers : ticketTiers // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,agenda: null == agenda ? _self._agenda : agenda // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,cancellationPolicy: null == cancellationPolicy ? _self.cancellationPolicy : cancellationPolicy // ignore: cast_nullable_to_non_nullable
+as String,earlyBirdEnabled: null == earlyBirdEnabled ? _self.earlyBirdEnabled : earlyBirdEnabled // ignore: cast_nullable_to_non_nullable
+as bool,earlyBirdDeadline: freezed == earlyBirdDeadline ? _self.earlyBirdDeadline : earlyBirdDeadline // ignore: cast_nullable_to_non_nullable
+as String?,earlyBirdPriceArtifacts: null == earlyBirdPriceArtifacts ? _self._earlyBirdPriceArtifacts : earlyBirdPriceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,capacity: null == capacity ? _self.capacity : capacity // ignore: cast_nullable_to_non_nullable
 as int,ticketPriceArtifacts: null == ticketPriceArtifacts ? _self._ticketPriceArtifacts : ticketPriceArtifacts // ignore: cast_nullable_to_non_nullable
 as Map<String, int>,isFree: null == isFree ? _self.isFree : isFree // ignore: cast_nullable_to_non_nullable
 as bool,isPublished: null == isPublished ? _self.isPublished : isPublished // ignore: cast_nullable_to_non_nullable
@@ -2746,7 +4087,9 @@ as int,tags: null == tags ? _self._tags : tags // ignore: cast_nullable_to_non_n
 as List<String>,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
 as String,isRegistered: null == isRegistered ? _self.isRegistered : isRegistered // ignore: cast_nullable_to_non_nullable
 as bool,spotsRemaining: freezed == spotsRemaining ? _self.spotsRemaining : spotsRemaining // ignore: cast_nullable_to_non_nullable
-as int?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as int?,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
+as Shop?,media: null == media ? _self._media : media // ignore: cast_nullable_to_non_nullable
+as List<EventMediaItem>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -2771,6 +4114,18 @@ $GymDataCopyWith<$Res>? get gymData {
 
   return $GymDataCopyWith<$Res>(_self.gymData!, (value) {
     return _then(_self.copyWith(gymData: value));
+  });
+}/// Create a copy of MarketplaceEvent
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ShopCopyWith<$Res>? get shopData {
+    if (_self.shopData == null) {
+    return null;
+  }
+
+  return $ShopCopyWith<$Res>(_self.shopData!, (value) {
+    return _then(_self.copyWith(shopData: value));
   });
 }
 }
@@ -3093,7 +4448,7 @@ as String,
 /// @nodoc
 mixin _$CartItem {
 
- String get id;@JsonKey(name: 'item_type') String get itemType;@JsonKey(name: 'meal_plan') MealPlan? get mealPlan; TrainingProgramme? get programme;@JsonKey(name: 'product') MarketplaceProduct? get product; MarketplaceEvent? get event; int get quantity;
+ String get id;@JsonKey(name: 'item_type') String get itemType;@JsonKey(name: 'meal_plan') MealPlan? get mealPlan; TrainingProgramme? get programme;@JsonKey(name: 'product') MarketplaceProduct? get product; MarketplaceEvent? get event; int get quantity;@JsonKey(name: 'item_total_artifacts') Map<String, int> get itemTotalArtifacts;@JsonKey(name: 'item_total_usd') double get itemTotalUsd;
 /// Create a copy of CartItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3106,16 +4461,16 @@ $CartItemCopyWith<CartItem> get copyWith => _$CartItemCopyWithImpl<CartItem>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CartItem&&(identical(other.id, id) || other.id == id)&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.mealPlan, mealPlan) || other.mealPlan == mealPlan)&&(identical(other.programme, programme) || other.programme == programme)&&(identical(other.product, product) || other.product == product)&&(identical(other.event, event) || other.event == event)&&(identical(other.quantity, quantity) || other.quantity == quantity));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CartItem&&(identical(other.id, id) || other.id == id)&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.mealPlan, mealPlan) || other.mealPlan == mealPlan)&&(identical(other.programme, programme) || other.programme == programme)&&(identical(other.product, product) || other.product == product)&&(identical(other.event, event) || other.event == event)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&const DeepCollectionEquality().equals(other.itemTotalArtifacts, itemTotalArtifacts)&&(identical(other.itemTotalUsd, itemTotalUsd) || other.itemTotalUsd == itemTotalUsd));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,itemType,mealPlan,programme,product,event,quantity);
+int get hashCode => Object.hash(runtimeType,id,itemType,mealPlan,programme,product,event,quantity,const DeepCollectionEquality().hash(itemTotalArtifacts),itemTotalUsd);
 
 @override
 String toString() {
-  return 'CartItem(id: $id, itemType: $itemType, mealPlan: $mealPlan, programme: $programme, product: $product, event: $event, quantity: $quantity)';
+  return 'CartItem(id: $id, itemType: $itemType, mealPlan: $mealPlan, programme: $programme, product: $product, event: $event, quantity: $quantity, itemTotalArtifacts: $itemTotalArtifacts, itemTotalUsd: $itemTotalUsd)';
 }
 
 
@@ -3126,7 +4481,7 @@ abstract mixin class $CartItemCopyWith<$Res>  {
   factory $CartItemCopyWith(CartItem value, $Res Function(CartItem) _then) = _$CartItemCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'item_type') String itemType,@JsonKey(name: 'meal_plan') MealPlan? mealPlan, TrainingProgramme? programme,@JsonKey(name: 'product') MarketplaceProduct? product, MarketplaceEvent? event, int quantity
+ String id,@JsonKey(name: 'item_type') String itemType,@JsonKey(name: 'meal_plan') MealPlan? mealPlan, TrainingProgramme? programme,@JsonKey(name: 'product') MarketplaceProduct? product, MarketplaceEvent? event, int quantity,@JsonKey(name: 'item_total_artifacts') Map<String, int> itemTotalArtifacts,@JsonKey(name: 'item_total_usd') double itemTotalUsd
 });
 
 
@@ -3143,7 +4498,7 @@ class _$CartItemCopyWithImpl<$Res>
 
 /// Create a copy of CartItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? itemType = null,Object? mealPlan = freezed,Object? programme = freezed,Object? product = freezed,Object? event = freezed,Object? quantity = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? itemType = null,Object? mealPlan = freezed,Object? programme = freezed,Object? product = freezed,Object? event = freezed,Object? quantity = null,Object? itemTotalArtifacts = null,Object? itemTotalUsd = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,itemType: null == itemType ? _self.itemType : itemType // ignore: cast_nullable_to_non_nullable
@@ -3152,7 +4507,9 @@ as MealPlan?,programme: freezed == programme ? _self.programme : programme // ig
 as TrainingProgramme?,product: freezed == product ? _self.product : product // ignore: cast_nullable_to_non_nullable
 as MarketplaceProduct?,event: freezed == event ? _self.event : event // ignore: cast_nullable_to_non_nullable
 as MarketplaceEvent?,quantity: null == quantity ? _self.quantity : quantity // ignore: cast_nullable_to_non_nullable
-as int,
+as int,itemTotalArtifacts: null == itemTotalArtifacts ? _self.itemTotalArtifacts : itemTotalArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,itemTotalUsd: null == itemTotalUsd ? _self.itemTotalUsd : itemTotalUsd // ignore: cast_nullable_to_non_nullable
+as double,
   ));
 }
 /// Create a copy of CartItem
@@ -3285,10 +4642,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'item_type')  String itemType, @JsonKey(name: 'meal_plan')  MealPlan? mealPlan,  TrainingProgramme? programme, @JsonKey(name: 'product')  MarketplaceProduct? product,  MarketplaceEvent? event,  int quantity)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'item_type')  String itemType, @JsonKey(name: 'meal_plan')  MealPlan? mealPlan,  TrainingProgramme? programme, @JsonKey(name: 'product')  MarketplaceProduct? product,  MarketplaceEvent? event,  int quantity, @JsonKey(name: 'item_total_artifacts')  Map<String, int> itemTotalArtifacts, @JsonKey(name: 'item_total_usd')  double itemTotalUsd)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CartItem() when $default != null:
-return $default(_that.id,_that.itemType,_that.mealPlan,_that.programme,_that.product,_that.event,_that.quantity);case _:
+return $default(_that.id,_that.itemType,_that.mealPlan,_that.programme,_that.product,_that.event,_that.quantity,_that.itemTotalArtifacts,_that.itemTotalUsd);case _:
   return orElse();
 
 }
@@ -3306,10 +4663,10 @@ return $default(_that.id,_that.itemType,_that.mealPlan,_that.programme,_that.pro
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'item_type')  String itemType, @JsonKey(name: 'meal_plan')  MealPlan? mealPlan,  TrainingProgramme? programme, @JsonKey(name: 'product')  MarketplaceProduct? product,  MarketplaceEvent? event,  int quantity)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'item_type')  String itemType, @JsonKey(name: 'meal_plan')  MealPlan? mealPlan,  TrainingProgramme? programme, @JsonKey(name: 'product')  MarketplaceProduct? product,  MarketplaceEvent? event,  int quantity, @JsonKey(name: 'item_total_artifacts')  Map<String, int> itemTotalArtifacts, @JsonKey(name: 'item_total_usd')  double itemTotalUsd)  $default,) {final _that = this;
 switch (_that) {
 case _CartItem():
-return $default(_that.id,_that.itemType,_that.mealPlan,_that.programme,_that.product,_that.event,_that.quantity);case _:
+return $default(_that.id,_that.itemType,_that.mealPlan,_that.programme,_that.product,_that.event,_that.quantity,_that.itemTotalArtifacts,_that.itemTotalUsd);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3326,10 +4683,10 @@ return $default(_that.id,_that.itemType,_that.mealPlan,_that.programme,_that.pro
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'item_type')  String itemType, @JsonKey(name: 'meal_plan')  MealPlan? mealPlan,  TrainingProgramme? programme, @JsonKey(name: 'product')  MarketplaceProduct? product,  MarketplaceEvent? event,  int quantity)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'item_type')  String itemType, @JsonKey(name: 'meal_plan')  MealPlan? mealPlan,  TrainingProgramme? programme, @JsonKey(name: 'product')  MarketplaceProduct? product,  MarketplaceEvent? event,  int quantity, @JsonKey(name: 'item_total_artifacts')  Map<String, int> itemTotalArtifacts, @JsonKey(name: 'item_total_usd')  double itemTotalUsd)?  $default,) {final _that = this;
 switch (_that) {
 case _CartItem() when $default != null:
-return $default(_that.id,_that.itemType,_that.mealPlan,_that.programme,_that.product,_that.event,_that.quantity);case _:
+return $default(_that.id,_that.itemType,_that.mealPlan,_that.programme,_that.product,_that.event,_that.quantity,_that.itemTotalArtifacts,_that.itemTotalUsd);case _:
   return null;
 
 }
@@ -3341,7 +4698,7 @@ return $default(_that.id,_that.itemType,_that.mealPlan,_that.programme,_that.pro
 @JsonSerializable()
 
 class _CartItem implements CartItem {
-  const _CartItem({required this.id, @JsonKey(name: 'item_type') required this.itemType, @JsonKey(name: 'meal_plan') this.mealPlan, this.programme, @JsonKey(name: 'product') this.product, this.event, this.quantity = 1});
+  const _CartItem({required this.id, @JsonKey(name: 'item_type') required this.itemType, @JsonKey(name: 'meal_plan') this.mealPlan, this.programme, @JsonKey(name: 'product') this.product, this.event, this.quantity = 1, @JsonKey(name: 'item_total_artifacts') final  Map<String, int> itemTotalArtifacts = const <String, int>{}, @JsonKey(name: 'item_total_usd') this.itemTotalUsd = 0.0}): _itemTotalArtifacts = itemTotalArtifacts;
   factory _CartItem.fromJson(Map<String, dynamic> json) => _$CartItemFromJson(json);
 
 @override final  String id;
@@ -3351,6 +4708,14 @@ class _CartItem implements CartItem {
 @override@JsonKey(name: 'product') final  MarketplaceProduct? product;
 @override final  MarketplaceEvent? event;
 @override@JsonKey() final  int quantity;
+ final  Map<String, int> _itemTotalArtifacts;
+@override@JsonKey(name: 'item_total_artifacts') Map<String, int> get itemTotalArtifacts {
+  if (_itemTotalArtifacts is EqualUnmodifiableMapView) return _itemTotalArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_itemTotalArtifacts);
+}
+
+@override@JsonKey(name: 'item_total_usd') final  double itemTotalUsd;
 
 /// Create a copy of CartItem
 /// with the given fields replaced by the non-null parameter values.
@@ -3365,16 +4730,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CartItem&&(identical(other.id, id) || other.id == id)&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.mealPlan, mealPlan) || other.mealPlan == mealPlan)&&(identical(other.programme, programme) || other.programme == programme)&&(identical(other.product, product) || other.product == product)&&(identical(other.event, event) || other.event == event)&&(identical(other.quantity, quantity) || other.quantity == quantity));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CartItem&&(identical(other.id, id) || other.id == id)&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.mealPlan, mealPlan) || other.mealPlan == mealPlan)&&(identical(other.programme, programme) || other.programme == programme)&&(identical(other.product, product) || other.product == product)&&(identical(other.event, event) || other.event == event)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&const DeepCollectionEquality().equals(other._itemTotalArtifacts, _itemTotalArtifacts)&&(identical(other.itemTotalUsd, itemTotalUsd) || other.itemTotalUsd == itemTotalUsd));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,itemType,mealPlan,programme,product,event,quantity);
+int get hashCode => Object.hash(runtimeType,id,itemType,mealPlan,programme,product,event,quantity,const DeepCollectionEquality().hash(_itemTotalArtifacts),itemTotalUsd);
 
 @override
 String toString() {
-  return 'CartItem(id: $id, itemType: $itemType, mealPlan: $mealPlan, programme: $programme, product: $product, event: $event, quantity: $quantity)';
+  return 'CartItem(id: $id, itemType: $itemType, mealPlan: $mealPlan, programme: $programme, product: $product, event: $event, quantity: $quantity, itemTotalArtifacts: $itemTotalArtifacts, itemTotalUsd: $itemTotalUsd)';
 }
 
 
@@ -3385,7 +4750,7 @@ abstract mixin class _$CartItemCopyWith<$Res> implements $CartItemCopyWith<$Res>
   factory _$CartItemCopyWith(_CartItem value, $Res Function(_CartItem) _then) = __$CartItemCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'item_type') String itemType,@JsonKey(name: 'meal_plan') MealPlan? mealPlan, TrainingProgramme? programme,@JsonKey(name: 'product') MarketplaceProduct? product, MarketplaceEvent? event, int quantity
+ String id,@JsonKey(name: 'item_type') String itemType,@JsonKey(name: 'meal_plan') MealPlan? mealPlan, TrainingProgramme? programme,@JsonKey(name: 'product') MarketplaceProduct? product, MarketplaceEvent? event, int quantity,@JsonKey(name: 'item_total_artifacts') Map<String, int> itemTotalArtifacts,@JsonKey(name: 'item_total_usd') double itemTotalUsd
 });
 
 
@@ -3402,7 +4767,7 @@ class __$CartItemCopyWithImpl<$Res>
 
 /// Create a copy of CartItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? itemType = null,Object? mealPlan = freezed,Object? programme = freezed,Object? product = freezed,Object? event = freezed,Object? quantity = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? itemType = null,Object? mealPlan = freezed,Object? programme = freezed,Object? product = freezed,Object? event = freezed,Object? quantity = null,Object? itemTotalArtifacts = null,Object? itemTotalUsd = null,}) {
   return _then(_CartItem(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,itemType: null == itemType ? _self.itemType : itemType // ignore: cast_nullable_to_non_nullable
@@ -3411,7 +4776,9 @@ as MealPlan?,programme: freezed == programme ? _self.programme : programme // ig
 as TrainingProgramme?,product: freezed == product ? _self.product : product // ignore: cast_nullable_to_non_nullable
 as MarketplaceProduct?,event: freezed == event ? _self.event : event // ignore: cast_nullable_to_non_nullable
 as MarketplaceEvent?,quantity: null == quantity ? _self.quantity : quantity // ignore: cast_nullable_to_non_nullable
-as int,
+as int,itemTotalArtifacts: null == itemTotalArtifacts ? _self._itemTotalArtifacts : itemTotalArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,itemTotalUsd: null == itemTotalUsd ? _self.itemTotalUsd : itemTotalUsd // ignore: cast_nullable_to_non_nullable
+as double,
   ));
 }
 
@@ -3470,7 +4837,7 @@ $MarketplaceEventCopyWith<$Res>? get event {
 /// @nodoc
 mixin _$Cart {
 
- String get id; List<CartItem> get items;@JsonKey(name: 'discount_code') DiscountCode? get discountCode;@JsonKey(name: 'created_at') String get createdAt;
+ String get id; List<CartItem> get items;@JsonKey(name: 'discount_code') DiscountCode? get discountCode;@JsonKey(name: 'total_artifacts') Map<String, int> get totalArtifacts;@JsonKey(name: 'total_usd') double get totalUsd;@JsonKey(name: 'total_local_currency') double get totalLocalCurrency;@JsonKey(name: 'base_currency') String get baseCurrency;@JsonKey(name: 'local_currency') String get localCurrency;@JsonKey(name: 'conversion_rate') double get conversionRate;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of Cart
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3483,16 +4850,16 @@ $CartCopyWith<Cart> get copyWith => _$CartCopyWithImpl<Cart>(this as Cart, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Cart&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Cart&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&const DeepCollectionEquality().equals(other.totalArtifacts, totalArtifacts)&&(identical(other.totalUsd, totalUsd) || other.totalUsd == totalUsd)&&(identical(other.totalLocalCurrency, totalLocalCurrency) || other.totalLocalCurrency == totalLocalCurrency)&&(identical(other.baseCurrency, baseCurrency) || other.baseCurrency == baseCurrency)&&(identical(other.localCurrency, localCurrency) || other.localCurrency == localCurrency)&&(identical(other.conversionRate, conversionRate) || other.conversionRate == conversionRate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(items),discountCode,createdAt);
+int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(items),discountCode,const DeepCollectionEquality().hash(totalArtifacts),totalUsd,totalLocalCurrency,baseCurrency,localCurrency,conversionRate,createdAt);
 
 @override
 String toString() {
-  return 'Cart(id: $id, items: $items, discountCode: $discountCode, createdAt: $createdAt)';
+  return 'Cart(id: $id, items: $items, discountCode: $discountCode, totalArtifacts: $totalArtifacts, totalUsd: $totalUsd, totalLocalCurrency: $totalLocalCurrency, baseCurrency: $baseCurrency, localCurrency: $localCurrency, conversionRate: $conversionRate, createdAt: $createdAt)';
 }
 
 
@@ -3503,7 +4870,7 @@ abstract mixin class $CartCopyWith<$Res>  {
   factory $CartCopyWith(Cart value, $Res Function(Cart) _then) = _$CartCopyWithImpl;
 @useResult
 $Res call({
- String id, List<CartItem> items,@JsonKey(name: 'discount_code') DiscountCode? discountCode,@JsonKey(name: 'created_at') String createdAt
+ String id, List<CartItem> items,@JsonKey(name: 'discount_code') DiscountCode? discountCode,@JsonKey(name: 'total_artifacts') Map<String, int> totalArtifacts,@JsonKey(name: 'total_usd') double totalUsd,@JsonKey(name: 'total_local_currency') double totalLocalCurrency,@JsonKey(name: 'base_currency') String baseCurrency,@JsonKey(name: 'local_currency') String localCurrency,@JsonKey(name: 'conversion_rate') double conversionRate,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -3520,12 +4887,18 @@ class _$CartCopyWithImpl<$Res>
 
 /// Create a copy of Cart
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? items = null,Object? discountCode = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? items = null,Object? discountCode = freezed,Object? totalArtifacts = null,Object? totalUsd = null,Object? totalLocalCurrency = null,Object? baseCurrency = null,Object? localCurrency = null,Object? conversionRate = null,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
 as List<CartItem>,discountCode: freezed == discountCode ? _self.discountCode : discountCode // ignore: cast_nullable_to_non_nullable
-as DiscountCode?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DiscountCode?,totalArtifacts: null == totalArtifacts ? _self.totalArtifacts : totalArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,totalUsd: null == totalUsd ? _self.totalUsd : totalUsd // ignore: cast_nullable_to_non_nullable
+as double,totalLocalCurrency: null == totalLocalCurrency ? _self.totalLocalCurrency : totalLocalCurrency // ignore: cast_nullable_to_non_nullable
+as double,baseCurrency: null == baseCurrency ? _self.baseCurrency : baseCurrency // ignore: cast_nullable_to_non_nullable
+as String,localCurrency: null == localCurrency ? _self.localCurrency : localCurrency // ignore: cast_nullable_to_non_nullable
+as String,conversionRate: null == conversionRate ? _self.conversionRate : conversionRate // ignore: cast_nullable_to_non_nullable
+as double,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -3623,10 +4996,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'total_usd')  double totalUsd, @JsonKey(name: 'total_local_currency')  double totalLocalCurrency, @JsonKey(name: 'base_currency')  String baseCurrency, @JsonKey(name: 'local_currency')  String localCurrency, @JsonKey(name: 'conversion_rate')  double conversionRate, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Cart() when $default != null:
-return $default(_that.id,_that.items,_that.discountCode,_that.createdAt);case _:
+return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_that.totalUsd,_that.totalLocalCurrency,_that.baseCurrency,_that.localCurrency,_that.conversionRate,_that.createdAt);case _:
   return orElse();
 
 }
@@ -3644,10 +5017,10 @@ return $default(_that.id,_that.items,_that.discountCode,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'total_usd')  double totalUsd, @JsonKey(name: 'total_local_currency')  double totalLocalCurrency, @JsonKey(name: 'base_currency')  String baseCurrency, @JsonKey(name: 'local_currency')  String localCurrency, @JsonKey(name: 'conversion_rate')  double conversionRate, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Cart():
-return $default(_that.id,_that.items,_that.discountCode,_that.createdAt);case _:
+return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_that.totalUsd,_that.totalLocalCurrency,_that.baseCurrency,_that.localCurrency,_that.conversionRate,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3664,10 +5037,10 @@ return $default(_that.id,_that.items,_that.discountCode,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'total_usd')  double totalUsd, @JsonKey(name: 'total_local_currency')  double totalLocalCurrency, @JsonKey(name: 'base_currency')  String baseCurrency, @JsonKey(name: 'local_currency')  String localCurrency, @JsonKey(name: 'conversion_rate')  double conversionRate, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Cart() when $default != null:
-return $default(_that.id,_that.items,_that.discountCode,_that.createdAt);case _:
+return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_that.totalUsd,_that.totalLocalCurrency,_that.baseCurrency,_that.localCurrency,_that.conversionRate,_that.createdAt);case _:
   return null;
 
 }
@@ -3679,7 +5052,7 @@ return $default(_that.id,_that.items,_that.discountCode,_that.createdAt);case _:
 @JsonSerializable()
 
 class _Cart implements Cart {
-  const _Cart({required this.id, required final  List<CartItem> items, @JsonKey(name: 'discount_code') this.discountCode, @JsonKey(name: 'created_at') required this.createdAt}): _items = items;
+  const _Cart({required this.id, required final  List<CartItem> items, @JsonKey(name: 'discount_code') this.discountCode, @JsonKey(name: 'total_artifacts') final  Map<String, int> totalArtifacts = const <String, int>{}, @JsonKey(name: 'total_usd') this.totalUsd = 0.0, @JsonKey(name: 'total_local_currency') this.totalLocalCurrency = 0.0, @JsonKey(name: 'base_currency') this.baseCurrency = 'USD', @JsonKey(name: 'local_currency') this.localCurrency = 'KES', @JsonKey(name: 'conversion_rate') this.conversionRate = 129.5, @JsonKey(name: 'created_at') required this.createdAt}): _items = items,_totalArtifacts = totalArtifacts;
   factory _Cart.fromJson(Map<String, dynamic> json) => _$CartFromJson(json);
 
 @override final  String id;
@@ -3691,6 +5064,18 @@ class _Cart implements Cart {
 }
 
 @override@JsonKey(name: 'discount_code') final  DiscountCode? discountCode;
+ final  Map<String, int> _totalArtifacts;
+@override@JsonKey(name: 'total_artifacts') Map<String, int> get totalArtifacts {
+  if (_totalArtifacts is EqualUnmodifiableMapView) return _totalArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_totalArtifacts);
+}
+
+@override@JsonKey(name: 'total_usd') final  double totalUsd;
+@override@JsonKey(name: 'total_local_currency') final  double totalLocalCurrency;
+@override@JsonKey(name: 'base_currency') final  String baseCurrency;
+@override@JsonKey(name: 'local_currency') final  String localCurrency;
+@override@JsonKey(name: 'conversion_rate') final  double conversionRate;
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of Cart
@@ -3706,16 +5091,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Cart&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Cart&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&const DeepCollectionEquality().equals(other._totalArtifacts, _totalArtifacts)&&(identical(other.totalUsd, totalUsd) || other.totalUsd == totalUsd)&&(identical(other.totalLocalCurrency, totalLocalCurrency) || other.totalLocalCurrency == totalLocalCurrency)&&(identical(other.baseCurrency, baseCurrency) || other.baseCurrency == baseCurrency)&&(identical(other.localCurrency, localCurrency) || other.localCurrency == localCurrency)&&(identical(other.conversionRate, conversionRate) || other.conversionRate == conversionRate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(_items),discountCode,createdAt);
+int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(_items),discountCode,const DeepCollectionEquality().hash(_totalArtifacts),totalUsd,totalLocalCurrency,baseCurrency,localCurrency,conversionRate,createdAt);
 
 @override
 String toString() {
-  return 'Cart(id: $id, items: $items, discountCode: $discountCode, createdAt: $createdAt)';
+  return 'Cart(id: $id, items: $items, discountCode: $discountCode, totalArtifacts: $totalArtifacts, totalUsd: $totalUsd, totalLocalCurrency: $totalLocalCurrency, baseCurrency: $baseCurrency, localCurrency: $localCurrency, conversionRate: $conversionRate, createdAt: $createdAt)';
 }
 
 
@@ -3726,7 +5111,7 @@ abstract mixin class _$CartCopyWith<$Res> implements $CartCopyWith<$Res> {
   factory _$CartCopyWith(_Cart value, $Res Function(_Cart) _then) = __$CartCopyWithImpl;
 @override @useResult
 $Res call({
- String id, List<CartItem> items,@JsonKey(name: 'discount_code') DiscountCode? discountCode,@JsonKey(name: 'created_at') String createdAt
+ String id, List<CartItem> items,@JsonKey(name: 'discount_code') DiscountCode? discountCode,@JsonKey(name: 'total_artifacts') Map<String, int> totalArtifacts,@JsonKey(name: 'total_usd') double totalUsd,@JsonKey(name: 'total_local_currency') double totalLocalCurrency,@JsonKey(name: 'base_currency') String baseCurrency,@JsonKey(name: 'local_currency') String localCurrency,@JsonKey(name: 'conversion_rate') double conversionRate,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -3743,12 +5128,18 @@ class __$CartCopyWithImpl<$Res>
 
 /// Create a copy of Cart
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? items = null,Object? discountCode = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? items = null,Object? discountCode = freezed,Object? totalArtifacts = null,Object? totalUsd = null,Object? totalLocalCurrency = null,Object? baseCurrency = null,Object? localCurrency = null,Object? conversionRate = null,Object? createdAt = null,}) {
   return _then(_Cart(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
 as List<CartItem>,discountCode: freezed == discountCode ? _self.discountCode : discountCode // ignore: cast_nullable_to_non_nullable
-as DiscountCode?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DiscountCode?,totalArtifacts: null == totalArtifacts ? _self._totalArtifacts : totalArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,totalUsd: null == totalUsd ? _self.totalUsd : totalUsd // ignore: cast_nullable_to_non_nullable
+as double,totalLocalCurrency: null == totalLocalCurrency ? _self.totalLocalCurrency : totalLocalCurrency // ignore: cast_nullable_to_non_nullable
+as double,baseCurrency: null == baseCurrency ? _self.baseCurrency : baseCurrency // ignore: cast_nullable_to_non_nullable
+as String,localCurrency: null == localCurrency ? _self.localCurrency : localCurrency // ignore: cast_nullable_to_non_nullable
+as String,conversionRate: null == conversionRate ? _self.conversionRate : conversionRate // ignore: cast_nullable_to_non_nullable
+as double,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -3772,7 +5163,7 @@ $DiscountCodeCopyWith<$Res>? get discountCode {
 /// @nodoc
 mixin _$DiscountCode {
 
- String get code;@JsonKey(name: 'discount_pct') int get discountPct;@JsonKey(name: 'discount_artifacts') Map<String, int>? get discountArtifacts;
+ String get id; String get creator; String get code;@JsonKey(name: 'discount_type') String get discountType;@JsonKey(name: 'discount_pct') int get discountPct;@JsonKey(name: 'discount_artifacts') Map<String, int> get discountArtifacts;@JsonKey(name: 'code_type') String get codeType;@JsonKey(name: 'qr_code') String? get qrCode; String get description; String get campaign;@JsonKey(name: 'valid_from') String? get validFrom;@JsonKey(name: 'valid_until') String? get validUntil;@JsonKey(name: 'usage_limit') int get usageLimit;@JsonKey(name: 'max_uses_per_user') int get maxUsesPerUser;@JsonKey(name: 'times_used') int get timesUsed;@JsonKey(name: 'min_purchase_artifacts') Map<String, int> get minPurchaseArtifacts;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'is_retired') bool get isRetired;@JsonKey(name: 'retired_at') String? get retiredAt;@JsonKey(name: 'retired_reason') String get retiredReason;@JsonKey(name: 'share_count') int get shareCount;@JsonKey(name: 'usage_count') int get usageCount;@JsonKey(name: 'is_expired') bool get isExpired;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'updated_at') String get updatedAt;
 /// Create a copy of DiscountCode
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3785,16 +5176,16 @@ $DiscountCodeCopyWith<DiscountCode> get copyWith => _$DiscountCodeCopyWithImpl<D
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiscountCode&&(identical(other.code, code) || other.code == code)&&(identical(other.discountPct, discountPct) || other.discountPct == discountPct)&&const DeepCollectionEquality().equals(other.discountArtifacts, discountArtifacts));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiscountCode&&(identical(other.id, id) || other.id == id)&&(identical(other.creator, creator) || other.creator == creator)&&(identical(other.code, code) || other.code == code)&&(identical(other.discountType, discountType) || other.discountType == discountType)&&(identical(other.discountPct, discountPct) || other.discountPct == discountPct)&&const DeepCollectionEquality().equals(other.discountArtifacts, discountArtifacts)&&(identical(other.codeType, codeType) || other.codeType == codeType)&&(identical(other.qrCode, qrCode) || other.qrCode == qrCode)&&(identical(other.description, description) || other.description == description)&&(identical(other.campaign, campaign) || other.campaign == campaign)&&(identical(other.validFrom, validFrom) || other.validFrom == validFrom)&&(identical(other.validUntil, validUntil) || other.validUntil == validUntil)&&(identical(other.usageLimit, usageLimit) || other.usageLimit == usageLimit)&&(identical(other.maxUsesPerUser, maxUsesPerUser) || other.maxUsesPerUser == maxUsesPerUser)&&(identical(other.timesUsed, timesUsed) || other.timesUsed == timesUsed)&&const DeepCollectionEquality().equals(other.minPurchaseArtifacts, minPurchaseArtifacts)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.isRetired, isRetired) || other.isRetired == isRetired)&&(identical(other.retiredAt, retiredAt) || other.retiredAt == retiredAt)&&(identical(other.retiredReason, retiredReason) || other.retiredReason == retiredReason)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.usageCount, usageCount) || other.usageCount == usageCount)&&(identical(other.isExpired, isExpired) || other.isExpired == isExpired)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,code,discountPct,const DeepCollectionEquality().hash(discountArtifacts));
+int get hashCode => Object.hashAll([runtimeType,id,creator,code,discountType,discountPct,const DeepCollectionEquality().hash(discountArtifacts),codeType,qrCode,description,campaign,validFrom,validUntil,usageLimit,maxUsesPerUser,timesUsed,const DeepCollectionEquality().hash(minPurchaseArtifacts),isActive,isRetired,retiredAt,retiredReason,shareCount,usageCount,isExpired,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'DiscountCode(code: $code, discountPct: $discountPct, discountArtifacts: $discountArtifacts)';
+  return 'DiscountCode(id: $id, creator: $creator, code: $code, discountType: $discountType, discountPct: $discountPct, discountArtifacts: $discountArtifacts, codeType: $codeType, qrCode: $qrCode, description: $description, campaign: $campaign, validFrom: $validFrom, validUntil: $validUntil, usageLimit: $usageLimit, maxUsesPerUser: $maxUsesPerUser, timesUsed: $timesUsed, minPurchaseArtifacts: $minPurchaseArtifacts, isActive: $isActive, isRetired: $isRetired, retiredAt: $retiredAt, retiredReason: $retiredReason, shareCount: $shareCount, usageCount: $usageCount, isExpired: $isExpired, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -3805,7 +5196,7 @@ abstract mixin class $DiscountCodeCopyWith<$Res>  {
   factory $DiscountCodeCopyWith(DiscountCode value, $Res Function(DiscountCode) _then) = _$DiscountCodeCopyWithImpl;
 @useResult
 $Res call({
- String code,@JsonKey(name: 'discount_pct') int discountPct,@JsonKey(name: 'discount_artifacts') Map<String, int>? discountArtifacts
+ String id, String creator, String code,@JsonKey(name: 'discount_type') String discountType,@JsonKey(name: 'discount_pct') int discountPct,@JsonKey(name: 'discount_artifacts') Map<String, int> discountArtifacts,@JsonKey(name: 'code_type') String codeType,@JsonKey(name: 'qr_code') String? qrCode, String description, String campaign,@JsonKey(name: 'valid_from') String? validFrom,@JsonKey(name: 'valid_until') String? validUntil,@JsonKey(name: 'usage_limit') int usageLimit,@JsonKey(name: 'max_uses_per_user') int maxUsesPerUser,@JsonKey(name: 'times_used') int timesUsed,@JsonKey(name: 'min_purchase_artifacts') Map<String, int> minPurchaseArtifacts,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'is_retired') bool isRetired,@JsonKey(name: 'retired_at') String? retiredAt,@JsonKey(name: 'retired_reason') String retiredReason,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'usage_count') int usageCount,@JsonKey(name: 'is_expired') bool isExpired,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String updatedAt
 });
 
 
@@ -3822,12 +5213,34 @@ class _$DiscountCodeCopyWithImpl<$Res>
 
 /// Create a copy of DiscountCode
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? discountPct = null,Object? discountArtifacts = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? creator = null,Object? code = null,Object? discountType = null,Object? discountPct = null,Object? discountArtifacts = null,Object? codeType = null,Object? qrCode = freezed,Object? description = null,Object? campaign = null,Object? validFrom = freezed,Object? validUntil = freezed,Object? usageLimit = null,Object? maxUsesPerUser = null,Object? timesUsed = null,Object? minPurchaseArtifacts = null,Object? isActive = null,Object? isRetired = null,Object? retiredAt = freezed,Object? retiredReason = null,Object? shareCount = null,Object? usageCount = null,Object? isExpired = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_self.copyWith(
-code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,creator: null == creator ? _self.creator : creator // ignore: cast_nullable_to_non_nullable
+as String,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String,discountType: null == discountType ? _self.discountType : discountType // ignore: cast_nullable_to_non_nullable
 as String,discountPct: null == discountPct ? _self.discountPct : discountPct // ignore: cast_nullable_to_non_nullable
-as int,discountArtifacts: freezed == discountArtifacts ? _self.discountArtifacts : discountArtifacts // ignore: cast_nullable_to_non_nullable
-as Map<String, int>?,
+as int,discountArtifacts: null == discountArtifacts ? _self.discountArtifacts : discountArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,codeType: null == codeType ? _self.codeType : codeType // ignore: cast_nullable_to_non_nullable
+as String,qrCode: freezed == qrCode ? _self.qrCode : qrCode // ignore: cast_nullable_to_non_nullable
+as String?,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,campaign: null == campaign ? _self.campaign : campaign // ignore: cast_nullable_to_non_nullable
+as String,validFrom: freezed == validFrom ? _self.validFrom : validFrom // ignore: cast_nullable_to_non_nullable
+as String?,validUntil: freezed == validUntil ? _self.validUntil : validUntil // ignore: cast_nullable_to_non_nullable
+as String?,usageLimit: null == usageLimit ? _self.usageLimit : usageLimit // ignore: cast_nullable_to_non_nullable
+as int,maxUsesPerUser: null == maxUsesPerUser ? _self.maxUsesPerUser : maxUsesPerUser // ignore: cast_nullable_to_non_nullable
+as int,timesUsed: null == timesUsed ? _self.timesUsed : timesUsed // ignore: cast_nullable_to_non_nullable
+as int,minPurchaseArtifacts: null == minPurchaseArtifacts ? _self.minPurchaseArtifacts : minPurchaseArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,isRetired: null == isRetired ? _self.isRetired : isRetired // ignore: cast_nullable_to_non_nullable
+as bool,retiredAt: freezed == retiredAt ? _self.retiredAt : retiredAt // ignore: cast_nullable_to_non_nullable
+as String?,retiredReason: null == retiredReason ? _self.retiredReason : retiredReason // ignore: cast_nullable_to_non_nullable
+as String,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
+as int,usageCount: null == usageCount ? _self.usageCount : usageCount // ignore: cast_nullable_to_non_nullable
+as int,isExpired: null == isExpired ? _self.isExpired : isExpired // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -3912,10 +5325,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String code, @JsonKey(name: 'discount_pct')  int discountPct, @JsonKey(name: 'discount_artifacts')  Map<String, int>? discountArtifacts)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String creator,  String code, @JsonKey(name: 'discount_type')  String discountType, @JsonKey(name: 'discount_pct')  int discountPct, @JsonKey(name: 'discount_artifacts')  Map<String, int> discountArtifacts, @JsonKey(name: 'code_type')  String codeType, @JsonKey(name: 'qr_code')  String? qrCode,  String description,  String campaign, @JsonKey(name: 'valid_from')  String? validFrom, @JsonKey(name: 'valid_until')  String? validUntil, @JsonKey(name: 'usage_limit')  int usageLimit, @JsonKey(name: 'max_uses_per_user')  int maxUsesPerUser, @JsonKey(name: 'times_used')  int timesUsed, @JsonKey(name: 'min_purchase_artifacts')  Map<String, int> minPurchaseArtifacts, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'is_retired')  bool isRetired, @JsonKey(name: 'retired_at')  String? retiredAt, @JsonKey(name: 'retired_reason')  String retiredReason, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'usage_count')  int usageCount, @JsonKey(name: 'is_expired')  bool isExpired, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DiscountCode() when $default != null:
-return $default(_that.code,_that.discountPct,_that.discountArtifacts);case _:
+return $default(_that.id,_that.creator,_that.code,_that.discountType,_that.discountPct,_that.discountArtifacts,_that.codeType,_that.qrCode,_that.description,_that.campaign,_that.validFrom,_that.validUntil,_that.usageLimit,_that.maxUsesPerUser,_that.timesUsed,_that.minPurchaseArtifacts,_that.isActive,_that.isRetired,_that.retiredAt,_that.retiredReason,_that.shareCount,_that.usageCount,_that.isExpired,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -3933,10 +5346,10 @@ return $default(_that.code,_that.discountPct,_that.discountArtifacts);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String code, @JsonKey(name: 'discount_pct')  int discountPct, @JsonKey(name: 'discount_artifacts')  Map<String, int>? discountArtifacts)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String creator,  String code, @JsonKey(name: 'discount_type')  String discountType, @JsonKey(name: 'discount_pct')  int discountPct, @JsonKey(name: 'discount_artifacts')  Map<String, int> discountArtifacts, @JsonKey(name: 'code_type')  String codeType, @JsonKey(name: 'qr_code')  String? qrCode,  String description,  String campaign, @JsonKey(name: 'valid_from')  String? validFrom, @JsonKey(name: 'valid_until')  String? validUntil, @JsonKey(name: 'usage_limit')  int usageLimit, @JsonKey(name: 'max_uses_per_user')  int maxUsesPerUser, @JsonKey(name: 'times_used')  int timesUsed, @JsonKey(name: 'min_purchase_artifacts')  Map<String, int> minPurchaseArtifacts, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'is_retired')  bool isRetired, @JsonKey(name: 'retired_at')  String? retiredAt, @JsonKey(name: 'retired_reason')  String retiredReason, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'usage_count')  int usageCount, @JsonKey(name: 'is_expired')  bool isExpired, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _DiscountCode():
-return $default(_that.code,_that.discountPct,_that.discountArtifacts);case _:
+return $default(_that.id,_that.creator,_that.code,_that.discountType,_that.discountPct,_that.discountArtifacts,_that.codeType,_that.qrCode,_that.description,_that.campaign,_that.validFrom,_that.validUntil,_that.usageLimit,_that.maxUsesPerUser,_that.timesUsed,_that.minPurchaseArtifacts,_that.isActive,_that.isRetired,_that.retiredAt,_that.retiredReason,_that.shareCount,_that.usageCount,_that.isExpired,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3953,10 +5366,10 @@ return $default(_that.code,_that.discountPct,_that.discountArtifacts);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String code, @JsonKey(name: 'discount_pct')  int discountPct, @JsonKey(name: 'discount_artifacts')  Map<String, int>? discountArtifacts)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String creator,  String code, @JsonKey(name: 'discount_type')  String discountType, @JsonKey(name: 'discount_pct')  int discountPct, @JsonKey(name: 'discount_artifacts')  Map<String, int> discountArtifacts, @JsonKey(name: 'code_type')  String codeType, @JsonKey(name: 'qr_code')  String? qrCode,  String description,  String campaign, @JsonKey(name: 'valid_from')  String? validFrom, @JsonKey(name: 'valid_until')  String? validUntil, @JsonKey(name: 'usage_limit')  int usageLimit, @JsonKey(name: 'max_uses_per_user')  int maxUsesPerUser, @JsonKey(name: 'times_used')  int timesUsed, @JsonKey(name: 'min_purchase_artifacts')  Map<String, int> minPurchaseArtifacts, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'is_retired')  bool isRetired, @JsonKey(name: 'retired_at')  String? retiredAt, @JsonKey(name: 'retired_reason')  String retiredReason, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'usage_count')  int usageCount, @JsonKey(name: 'is_expired')  bool isExpired, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _DiscountCode() when $default != null:
-return $default(_that.code,_that.discountPct,_that.discountArtifacts);case _:
+return $default(_that.id,_that.creator,_that.code,_that.discountType,_that.discountPct,_that.discountArtifacts,_that.codeType,_that.qrCode,_that.description,_that.campaign,_that.validFrom,_that.validUntil,_that.usageLimit,_that.maxUsesPerUser,_that.timesUsed,_that.minPurchaseArtifacts,_that.isActive,_that.isRetired,_that.retiredAt,_that.retiredReason,_that.shareCount,_that.usageCount,_that.isExpired,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -3968,20 +5381,46 @@ return $default(_that.code,_that.discountPct,_that.discountArtifacts);case _:
 @JsonSerializable()
 
 class _DiscountCode implements DiscountCode {
-  const _DiscountCode({required this.code, @JsonKey(name: 'discount_pct') this.discountPct = 0, @JsonKey(name: 'discount_artifacts') final  Map<String, int>? discountArtifacts}): _discountArtifacts = discountArtifacts;
+  const _DiscountCode({required this.id, required this.creator, required this.code, @JsonKey(name: 'discount_type') this.discountType = 'percentage', @JsonKey(name: 'discount_pct') this.discountPct = 0, @JsonKey(name: 'discount_artifacts') final  Map<String, int> discountArtifacts = const <String, int>{}, @JsonKey(name: 'code_type') this.codeType = 'text', @JsonKey(name: 'qr_code') this.qrCode, this.description = '', this.campaign = '', @JsonKey(name: 'valid_from') this.validFrom, @JsonKey(name: 'valid_until') this.validUntil, @JsonKey(name: 'usage_limit') this.usageLimit = 0, @JsonKey(name: 'max_uses_per_user') this.maxUsesPerUser = 0, @JsonKey(name: 'times_used') this.timesUsed = 0, @JsonKey(name: 'min_purchase_artifacts') final  Map<String, int> minPurchaseArtifacts = const <String, int>{}, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'is_retired') this.isRetired = false, @JsonKey(name: 'retired_at') this.retiredAt, @JsonKey(name: 'retired_reason') this.retiredReason = '', @JsonKey(name: 'share_count') this.shareCount = 0, @JsonKey(name: 'usage_count') this.usageCount = 0, @JsonKey(name: 'is_expired') this.isExpired = false, @JsonKey(name: 'created_at') this.createdAt = '', @JsonKey(name: 'updated_at') this.updatedAt = ''}): _discountArtifacts = discountArtifacts,_minPurchaseArtifacts = minPurchaseArtifacts;
   factory _DiscountCode.fromJson(Map<String, dynamic> json) => _$DiscountCodeFromJson(json);
 
+@override final  String id;
+@override final  String creator;
 @override final  String code;
+@override@JsonKey(name: 'discount_type') final  String discountType;
 @override@JsonKey(name: 'discount_pct') final  int discountPct;
- final  Map<String, int>? _discountArtifacts;
-@override@JsonKey(name: 'discount_artifacts') Map<String, int>? get discountArtifacts {
-  final value = _discountArtifacts;
-  if (value == null) return null;
+ final  Map<String, int> _discountArtifacts;
+@override@JsonKey(name: 'discount_artifacts') Map<String, int> get discountArtifacts {
   if (_discountArtifacts is EqualUnmodifiableMapView) return _discountArtifacts;
   // ignore: implicit_dynamic_type
-  return EqualUnmodifiableMapView(value);
+  return EqualUnmodifiableMapView(_discountArtifacts);
 }
 
+@override@JsonKey(name: 'code_type') final  String codeType;
+@override@JsonKey(name: 'qr_code') final  String? qrCode;
+@override@JsonKey() final  String description;
+@override@JsonKey() final  String campaign;
+@override@JsonKey(name: 'valid_from') final  String? validFrom;
+@override@JsonKey(name: 'valid_until') final  String? validUntil;
+@override@JsonKey(name: 'usage_limit') final  int usageLimit;
+@override@JsonKey(name: 'max_uses_per_user') final  int maxUsesPerUser;
+@override@JsonKey(name: 'times_used') final  int timesUsed;
+ final  Map<String, int> _minPurchaseArtifacts;
+@override@JsonKey(name: 'min_purchase_artifacts') Map<String, int> get minPurchaseArtifacts {
+  if (_minPurchaseArtifacts is EqualUnmodifiableMapView) return _minPurchaseArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_minPurchaseArtifacts);
+}
+
+@override@JsonKey(name: 'is_active') final  bool isActive;
+@override@JsonKey(name: 'is_retired') final  bool isRetired;
+@override@JsonKey(name: 'retired_at') final  String? retiredAt;
+@override@JsonKey(name: 'retired_reason') final  String retiredReason;
+@override@JsonKey(name: 'share_count') final  int shareCount;
+@override@JsonKey(name: 'usage_count') final  int usageCount;
+@override@JsonKey(name: 'is_expired') final  bool isExpired;
+@override@JsonKey(name: 'created_at') final  String createdAt;
+@override@JsonKey(name: 'updated_at') final  String updatedAt;
 
 /// Create a copy of DiscountCode
 /// with the given fields replaced by the non-null parameter values.
@@ -3996,16 +5435,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiscountCode&&(identical(other.code, code) || other.code == code)&&(identical(other.discountPct, discountPct) || other.discountPct == discountPct)&&const DeepCollectionEquality().equals(other._discountArtifacts, _discountArtifacts));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiscountCode&&(identical(other.id, id) || other.id == id)&&(identical(other.creator, creator) || other.creator == creator)&&(identical(other.code, code) || other.code == code)&&(identical(other.discountType, discountType) || other.discountType == discountType)&&(identical(other.discountPct, discountPct) || other.discountPct == discountPct)&&const DeepCollectionEquality().equals(other._discountArtifacts, _discountArtifacts)&&(identical(other.codeType, codeType) || other.codeType == codeType)&&(identical(other.qrCode, qrCode) || other.qrCode == qrCode)&&(identical(other.description, description) || other.description == description)&&(identical(other.campaign, campaign) || other.campaign == campaign)&&(identical(other.validFrom, validFrom) || other.validFrom == validFrom)&&(identical(other.validUntil, validUntil) || other.validUntil == validUntil)&&(identical(other.usageLimit, usageLimit) || other.usageLimit == usageLimit)&&(identical(other.maxUsesPerUser, maxUsesPerUser) || other.maxUsesPerUser == maxUsesPerUser)&&(identical(other.timesUsed, timesUsed) || other.timesUsed == timesUsed)&&const DeepCollectionEquality().equals(other._minPurchaseArtifacts, _minPurchaseArtifacts)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.isRetired, isRetired) || other.isRetired == isRetired)&&(identical(other.retiredAt, retiredAt) || other.retiredAt == retiredAt)&&(identical(other.retiredReason, retiredReason) || other.retiredReason == retiredReason)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.usageCount, usageCount) || other.usageCount == usageCount)&&(identical(other.isExpired, isExpired) || other.isExpired == isExpired)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,code,discountPct,const DeepCollectionEquality().hash(_discountArtifacts));
+int get hashCode => Object.hashAll([runtimeType,id,creator,code,discountType,discountPct,const DeepCollectionEquality().hash(_discountArtifacts),codeType,qrCode,description,campaign,validFrom,validUntil,usageLimit,maxUsesPerUser,timesUsed,const DeepCollectionEquality().hash(_minPurchaseArtifacts),isActive,isRetired,retiredAt,retiredReason,shareCount,usageCount,isExpired,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'DiscountCode(code: $code, discountPct: $discountPct, discountArtifacts: $discountArtifacts)';
+  return 'DiscountCode(id: $id, creator: $creator, code: $code, discountType: $discountType, discountPct: $discountPct, discountArtifacts: $discountArtifacts, codeType: $codeType, qrCode: $qrCode, description: $description, campaign: $campaign, validFrom: $validFrom, validUntil: $validUntil, usageLimit: $usageLimit, maxUsesPerUser: $maxUsesPerUser, timesUsed: $timesUsed, minPurchaseArtifacts: $minPurchaseArtifacts, isActive: $isActive, isRetired: $isRetired, retiredAt: $retiredAt, retiredReason: $retiredReason, shareCount: $shareCount, usageCount: $usageCount, isExpired: $isExpired, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -4016,7 +5455,7 @@ abstract mixin class _$DiscountCodeCopyWith<$Res> implements $DiscountCodeCopyWi
   factory _$DiscountCodeCopyWith(_DiscountCode value, $Res Function(_DiscountCode) _then) = __$DiscountCodeCopyWithImpl;
 @override @useResult
 $Res call({
- String code,@JsonKey(name: 'discount_pct') int discountPct,@JsonKey(name: 'discount_artifacts') Map<String, int>? discountArtifacts
+ String id, String creator, String code,@JsonKey(name: 'discount_type') String discountType,@JsonKey(name: 'discount_pct') int discountPct,@JsonKey(name: 'discount_artifacts') Map<String, int> discountArtifacts,@JsonKey(name: 'code_type') String codeType,@JsonKey(name: 'qr_code') String? qrCode, String description, String campaign,@JsonKey(name: 'valid_from') String? validFrom,@JsonKey(name: 'valid_until') String? validUntil,@JsonKey(name: 'usage_limit') int usageLimit,@JsonKey(name: 'max_uses_per_user') int maxUsesPerUser,@JsonKey(name: 'times_used') int timesUsed,@JsonKey(name: 'min_purchase_artifacts') Map<String, int> minPurchaseArtifacts,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'is_retired') bool isRetired,@JsonKey(name: 'retired_at') String? retiredAt,@JsonKey(name: 'retired_reason') String retiredReason,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'usage_count') int usageCount,@JsonKey(name: 'is_expired') bool isExpired,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String updatedAt
 });
 
 
@@ -4033,12 +5472,964 @@ class __$DiscountCodeCopyWithImpl<$Res>
 
 /// Create a copy of DiscountCode
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? discountPct = null,Object? discountArtifacts = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? creator = null,Object? code = null,Object? discountType = null,Object? discountPct = null,Object? discountArtifacts = null,Object? codeType = null,Object? qrCode = freezed,Object? description = null,Object? campaign = null,Object? validFrom = freezed,Object? validUntil = freezed,Object? usageLimit = null,Object? maxUsesPerUser = null,Object? timesUsed = null,Object? minPurchaseArtifacts = null,Object? isActive = null,Object? isRetired = null,Object? retiredAt = freezed,Object? retiredReason = null,Object? shareCount = null,Object? usageCount = null,Object? isExpired = null,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_DiscountCode(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,creator: null == creator ? _self.creator : creator // ignore: cast_nullable_to_non_nullable
+as String,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String,discountType: null == discountType ? _self.discountType : discountType // ignore: cast_nullable_to_non_nullable
+as String,discountPct: null == discountPct ? _self.discountPct : discountPct // ignore: cast_nullable_to_non_nullable
+as int,discountArtifacts: null == discountArtifacts ? _self._discountArtifacts : discountArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,codeType: null == codeType ? _self.codeType : codeType // ignore: cast_nullable_to_non_nullable
+as String,qrCode: freezed == qrCode ? _self.qrCode : qrCode // ignore: cast_nullable_to_non_nullable
+as String?,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,campaign: null == campaign ? _self.campaign : campaign // ignore: cast_nullable_to_non_nullable
+as String,validFrom: freezed == validFrom ? _self.validFrom : validFrom // ignore: cast_nullable_to_non_nullable
+as String?,validUntil: freezed == validUntil ? _self.validUntil : validUntil // ignore: cast_nullable_to_non_nullable
+as String?,usageLimit: null == usageLimit ? _self.usageLimit : usageLimit // ignore: cast_nullable_to_non_nullable
+as int,maxUsesPerUser: null == maxUsesPerUser ? _self.maxUsesPerUser : maxUsesPerUser // ignore: cast_nullable_to_non_nullable
+as int,timesUsed: null == timesUsed ? _self.timesUsed : timesUsed // ignore: cast_nullable_to_non_nullable
+as int,minPurchaseArtifacts: null == minPurchaseArtifacts ? _self._minPurchaseArtifacts : minPurchaseArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,isRetired: null == isRetired ? _self.isRetired : isRetired // ignore: cast_nullable_to_non_nullable
+as bool,retiredAt: freezed == retiredAt ? _self.retiredAt : retiredAt // ignore: cast_nullable_to_non_nullable
+as String?,retiredReason: null == retiredReason ? _self.retiredReason : retiredReason // ignore: cast_nullable_to_non_nullable
+as String,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
+as int,usageCount: null == usageCount ? _self.usageCount : usageCount // ignore: cast_nullable_to_non_nullable
+as int,isExpired: null == isExpired ? _self.isExpired : isExpired // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$DiscountUsageRecord {
+
+ String get id; String get code;@JsonKey(name: 'user_display') String get userDisplay; String get discount; String get user; String? get cart;@JsonKey(name: 'order_artifacts') Map<String, int> get orderArtifacts;@JsonKey(name: 'discount_pct_applied') int get discountPctApplied;@JsonKey(name: 'discount_artifacts_applied') Map<String, int> get discountArtifactsApplied;@JsonKey(name: 'savings_artifacts') Map<String, int> get savingsArtifacts;@JsonKey(name: 'savings_usd') double get savingsUsd;@JsonKey(name: 'was_successful') bool get wasSuccessful;@JsonKey(name: 'created_at') String get createdAt;
+/// Create a copy of DiscountUsageRecord
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DiscountUsageRecordCopyWith<DiscountUsageRecord> get copyWith => _$DiscountUsageRecordCopyWithImpl<DiscountUsageRecord>(this as DiscountUsageRecord, _$identity);
+
+  /// Serializes this DiscountUsageRecord to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiscountUsageRecord&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.userDisplay, userDisplay) || other.userDisplay == userDisplay)&&(identical(other.discount, discount) || other.discount == discount)&&(identical(other.user, user) || other.user == user)&&(identical(other.cart, cart) || other.cart == cart)&&const DeepCollectionEquality().equals(other.orderArtifacts, orderArtifacts)&&(identical(other.discountPctApplied, discountPctApplied) || other.discountPctApplied == discountPctApplied)&&const DeepCollectionEquality().equals(other.discountArtifactsApplied, discountArtifactsApplied)&&const DeepCollectionEquality().equals(other.savingsArtifacts, savingsArtifacts)&&(identical(other.savingsUsd, savingsUsd) || other.savingsUsd == savingsUsd)&&(identical(other.wasSuccessful, wasSuccessful) || other.wasSuccessful == wasSuccessful)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,code,userDisplay,discount,user,cart,const DeepCollectionEquality().hash(orderArtifacts),discountPctApplied,const DeepCollectionEquality().hash(discountArtifactsApplied),const DeepCollectionEquality().hash(savingsArtifacts),savingsUsd,wasSuccessful,createdAt);
+
+@override
+String toString() {
+  return 'DiscountUsageRecord(id: $id, code: $code, userDisplay: $userDisplay, discount: $discount, user: $user, cart: $cart, orderArtifacts: $orderArtifacts, discountPctApplied: $discountPctApplied, discountArtifactsApplied: $discountArtifactsApplied, savingsArtifacts: $savingsArtifacts, savingsUsd: $savingsUsd, wasSuccessful: $wasSuccessful, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DiscountUsageRecordCopyWith<$Res>  {
+  factory $DiscountUsageRecordCopyWith(DiscountUsageRecord value, $Res Function(DiscountUsageRecord) _then) = _$DiscountUsageRecordCopyWithImpl;
+@useResult
+$Res call({
+ String id, String code,@JsonKey(name: 'user_display') String userDisplay, String discount, String user, String? cart,@JsonKey(name: 'order_artifacts') Map<String, int> orderArtifacts,@JsonKey(name: 'discount_pct_applied') int discountPctApplied,@JsonKey(name: 'discount_artifacts_applied') Map<String, int> discountArtifactsApplied,@JsonKey(name: 'savings_artifacts') Map<String, int> savingsArtifacts,@JsonKey(name: 'savings_usd') double savingsUsd,@JsonKey(name: 'was_successful') bool wasSuccessful,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$DiscountUsageRecordCopyWithImpl<$Res>
+    implements $DiscountUsageRecordCopyWith<$Res> {
+  _$DiscountUsageRecordCopyWithImpl(this._self, this._then);
+
+  final DiscountUsageRecord _self;
+  final $Res Function(DiscountUsageRecord) _then;
+
+/// Create a copy of DiscountUsageRecord
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? code = null,Object? userDisplay = null,Object? discount = null,Object? user = null,Object? cart = freezed,Object? orderArtifacts = null,Object? discountPctApplied = null,Object? discountArtifactsApplied = null,Object? savingsArtifacts = null,Object? savingsUsd = null,Object? wasSuccessful = null,Object? createdAt = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String,userDisplay: null == userDisplay ? _self.userDisplay : userDisplay // ignore: cast_nullable_to_non_nullable
+as String,discount: null == discount ? _self.discount : discount // ignore: cast_nullable_to_non_nullable
+as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
+as String,cart: freezed == cart ? _self.cart : cart // ignore: cast_nullable_to_non_nullable
+as String?,orderArtifacts: null == orderArtifacts ? _self.orderArtifacts : orderArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,discountPctApplied: null == discountPctApplied ? _self.discountPctApplied : discountPctApplied // ignore: cast_nullable_to_non_nullable
+as int,discountArtifactsApplied: null == discountArtifactsApplied ? _self.discountArtifactsApplied : discountArtifactsApplied // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,savingsArtifacts: null == savingsArtifacts ? _self.savingsArtifacts : savingsArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,savingsUsd: null == savingsUsd ? _self.savingsUsd : savingsUsd // ignore: cast_nullable_to_non_nullable
+as double,wasSuccessful: null == wasSuccessful ? _self.wasSuccessful : wasSuccessful // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [DiscountUsageRecord].
+extension DiscountUsageRecordPatterns on DiscountUsageRecord {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _DiscountUsageRecord value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _DiscountUsageRecord() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _DiscountUsageRecord value)  $default,){
+final _that = this;
+switch (_that) {
+case _DiscountUsageRecord():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _DiscountUsageRecord value)?  $default,){
+final _that = this;
+switch (_that) {
+case _DiscountUsageRecord() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String code, @JsonKey(name: 'user_display')  String userDisplay,  String discount,  String user,  String? cart, @JsonKey(name: 'order_artifacts')  Map<String, int> orderArtifacts, @JsonKey(name: 'discount_pct_applied')  int discountPctApplied, @JsonKey(name: 'discount_artifacts_applied')  Map<String, int> discountArtifactsApplied, @JsonKey(name: 'savings_artifacts')  Map<String, int> savingsArtifacts, @JsonKey(name: 'savings_usd')  double savingsUsd, @JsonKey(name: 'was_successful')  bool wasSuccessful, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _DiscountUsageRecord() when $default != null:
+return $default(_that.id,_that.code,_that.userDisplay,_that.discount,_that.user,_that.cart,_that.orderArtifacts,_that.discountPctApplied,_that.discountArtifactsApplied,_that.savingsArtifacts,_that.savingsUsd,_that.wasSuccessful,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String code, @JsonKey(name: 'user_display')  String userDisplay,  String discount,  String user,  String? cart, @JsonKey(name: 'order_artifacts')  Map<String, int> orderArtifacts, @JsonKey(name: 'discount_pct_applied')  int discountPctApplied, @JsonKey(name: 'discount_artifacts_applied')  Map<String, int> discountArtifactsApplied, @JsonKey(name: 'savings_artifacts')  Map<String, int> savingsArtifacts, @JsonKey(name: 'savings_usd')  double savingsUsd, @JsonKey(name: 'was_successful')  bool wasSuccessful, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _DiscountUsageRecord():
+return $default(_that.id,_that.code,_that.userDisplay,_that.discount,_that.user,_that.cart,_that.orderArtifacts,_that.discountPctApplied,_that.discountArtifactsApplied,_that.savingsArtifacts,_that.savingsUsd,_that.wasSuccessful,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String code, @JsonKey(name: 'user_display')  String userDisplay,  String discount,  String user,  String? cart, @JsonKey(name: 'order_artifacts')  Map<String, int> orderArtifacts, @JsonKey(name: 'discount_pct_applied')  int discountPctApplied, @JsonKey(name: 'discount_artifacts_applied')  Map<String, int> discountArtifactsApplied, @JsonKey(name: 'savings_artifacts')  Map<String, int> savingsArtifacts, @JsonKey(name: 'savings_usd')  double savingsUsd, @JsonKey(name: 'was_successful')  bool wasSuccessful, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _DiscountUsageRecord() when $default != null:
+return $default(_that.id,_that.code,_that.userDisplay,_that.discount,_that.user,_that.cart,_that.orderArtifacts,_that.discountPctApplied,_that.discountArtifactsApplied,_that.savingsArtifacts,_that.savingsUsd,_that.wasSuccessful,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _DiscountUsageRecord implements DiscountUsageRecord {
+  const _DiscountUsageRecord({required this.id, required this.code, @JsonKey(name: 'user_display') required this.userDisplay, required this.discount, required this.user, this.cart, @JsonKey(name: 'order_artifacts') final  Map<String, int> orderArtifacts = const <String, int>{}, @JsonKey(name: 'discount_pct_applied') this.discountPctApplied = 0, @JsonKey(name: 'discount_artifacts_applied') final  Map<String, int> discountArtifactsApplied = const <String, int>{}, @JsonKey(name: 'savings_artifacts') final  Map<String, int> savingsArtifacts = const <String, int>{}, @JsonKey(name: 'savings_usd') this.savingsUsd = 0.0, @JsonKey(name: 'was_successful') this.wasSuccessful = true, @JsonKey(name: 'created_at') required this.createdAt}): _orderArtifacts = orderArtifacts,_discountArtifactsApplied = discountArtifactsApplied,_savingsArtifacts = savingsArtifacts;
+  factory _DiscountUsageRecord.fromJson(Map<String, dynamic> json) => _$DiscountUsageRecordFromJson(json);
+
+@override final  String id;
+@override final  String code;
+@override@JsonKey(name: 'user_display') final  String userDisplay;
+@override final  String discount;
+@override final  String user;
+@override final  String? cart;
+ final  Map<String, int> _orderArtifacts;
+@override@JsonKey(name: 'order_artifacts') Map<String, int> get orderArtifacts {
+  if (_orderArtifacts is EqualUnmodifiableMapView) return _orderArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_orderArtifacts);
+}
+
+@override@JsonKey(name: 'discount_pct_applied') final  int discountPctApplied;
+ final  Map<String, int> _discountArtifactsApplied;
+@override@JsonKey(name: 'discount_artifacts_applied') Map<String, int> get discountArtifactsApplied {
+  if (_discountArtifactsApplied is EqualUnmodifiableMapView) return _discountArtifactsApplied;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_discountArtifactsApplied);
+}
+
+ final  Map<String, int> _savingsArtifacts;
+@override@JsonKey(name: 'savings_artifacts') Map<String, int> get savingsArtifacts {
+  if (_savingsArtifacts is EqualUnmodifiableMapView) return _savingsArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_savingsArtifacts);
+}
+
+@override@JsonKey(name: 'savings_usd') final  double savingsUsd;
+@override@JsonKey(name: 'was_successful') final  bool wasSuccessful;
+@override@JsonKey(name: 'created_at') final  String createdAt;
+
+/// Create a copy of DiscountUsageRecord
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$DiscountUsageRecordCopyWith<_DiscountUsageRecord> get copyWith => __$DiscountUsageRecordCopyWithImpl<_DiscountUsageRecord>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$DiscountUsageRecordToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiscountUsageRecord&&(identical(other.id, id) || other.id == id)&&(identical(other.code, code) || other.code == code)&&(identical(other.userDisplay, userDisplay) || other.userDisplay == userDisplay)&&(identical(other.discount, discount) || other.discount == discount)&&(identical(other.user, user) || other.user == user)&&(identical(other.cart, cart) || other.cart == cart)&&const DeepCollectionEquality().equals(other._orderArtifacts, _orderArtifacts)&&(identical(other.discountPctApplied, discountPctApplied) || other.discountPctApplied == discountPctApplied)&&const DeepCollectionEquality().equals(other._discountArtifactsApplied, _discountArtifactsApplied)&&const DeepCollectionEquality().equals(other._savingsArtifacts, _savingsArtifacts)&&(identical(other.savingsUsd, savingsUsd) || other.savingsUsd == savingsUsd)&&(identical(other.wasSuccessful, wasSuccessful) || other.wasSuccessful == wasSuccessful)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,code,userDisplay,discount,user,cart,const DeepCollectionEquality().hash(_orderArtifacts),discountPctApplied,const DeepCollectionEquality().hash(_discountArtifactsApplied),const DeepCollectionEquality().hash(_savingsArtifacts),savingsUsd,wasSuccessful,createdAt);
+
+@override
+String toString() {
+  return 'DiscountUsageRecord(id: $id, code: $code, userDisplay: $userDisplay, discount: $discount, user: $user, cart: $cart, orderArtifacts: $orderArtifacts, discountPctApplied: $discountPctApplied, discountArtifactsApplied: $discountArtifactsApplied, savingsArtifacts: $savingsArtifacts, savingsUsd: $savingsUsd, wasSuccessful: $wasSuccessful, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$DiscountUsageRecordCopyWith<$Res> implements $DiscountUsageRecordCopyWith<$Res> {
+  factory _$DiscountUsageRecordCopyWith(_DiscountUsageRecord value, $Res Function(_DiscountUsageRecord) _then) = __$DiscountUsageRecordCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String code,@JsonKey(name: 'user_display') String userDisplay, String discount, String user, String? cart,@JsonKey(name: 'order_artifacts') Map<String, int> orderArtifacts,@JsonKey(name: 'discount_pct_applied') int discountPctApplied,@JsonKey(name: 'discount_artifacts_applied') Map<String, int> discountArtifactsApplied,@JsonKey(name: 'savings_artifacts') Map<String, int> savingsArtifacts,@JsonKey(name: 'savings_usd') double savingsUsd,@JsonKey(name: 'was_successful') bool wasSuccessful,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$DiscountUsageRecordCopyWithImpl<$Res>
+    implements _$DiscountUsageRecordCopyWith<$Res> {
+  __$DiscountUsageRecordCopyWithImpl(this._self, this._then);
+
+  final _DiscountUsageRecord _self;
+  final $Res Function(_DiscountUsageRecord) _then;
+
+/// Create a copy of DiscountUsageRecord
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? code = null,Object? userDisplay = null,Object? discount = null,Object? user = null,Object? cart = freezed,Object? orderArtifacts = null,Object? discountPctApplied = null,Object? discountArtifactsApplied = null,Object? savingsArtifacts = null,Object? savingsUsd = null,Object? wasSuccessful = null,Object? createdAt = null,}) {
+  return _then(_DiscountUsageRecord(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String,userDisplay: null == userDisplay ? _self.userDisplay : userDisplay // ignore: cast_nullable_to_non_nullable
+as String,discount: null == discount ? _self.discount : discount // ignore: cast_nullable_to_non_nullable
+as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
+as String,cart: freezed == cart ? _self.cart : cart // ignore: cast_nullable_to_non_nullable
+as String?,orderArtifacts: null == orderArtifacts ? _self._orderArtifacts : orderArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,discountPctApplied: null == discountPctApplied ? _self.discountPctApplied : discountPctApplied // ignore: cast_nullable_to_non_nullable
+as int,discountArtifactsApplied: null == discountArtifactsApplied ? _self._discountArtifactsApplied : discountArtifactsApplied // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,savingsArtifacts: null == savingsArtifacts ? _self._savingsArtifacts : savingsArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,savingsUsd: null == savingsUsd ? _self.savingsUsd : savingsUsd // ignore: cast_nullable_to_non_nullable
+as double,wasSuccessful: null == wasSuccessful ? _self.wasSuccessful : wasSuccessful // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$DiscountAnalytics {
+
+@JsonKey(name: 'total_uses') int get totalUses;@JsonKey(name: 'successful_uses') int get successfulUses;@JsonKey(name: 'total_savings_usd') double get totalSavingsUsd;@JsonKey(name: 'share_count') int get shareCount;@JsonKey(name: 'times_used') int get timesUsed;@JsonKey(name: 'unique_users') int get uniqueUsers;@JsonKey(name: 'returning_users') int get returningUsers;@JsonKey(name: 'retention_rate') double get retentionRate;@JsonKey(name: 'repeat_usage_distribution') List<Map<String, dynamic>> get repeatUsageDistribution;@JsonKey(name: 'avg_savings_per_user') double get avgSavingsPerUser;@JsonKey(name: 'total_order_value_usd') double get totalOrderValueUsd;@JsonKey(name: 'top_users') List<Map<String, dynamic>> get topUsers;@JsonKey(name: 'usage_over_time') List<Map<String, dynamic>> get usageOverTime; DiscountCode get code;
+/// Create a copy of DiscountAnalytics
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DiscountAnalyticsCopyWith<DiscountAnalytics> get copyWith => _$DiscountAnalyticsCopyWithImpl<DiscountAnalytics>(this as DiscountAnalytics, _$identity);
+
+  /// Serializes this DiscountAnalytics to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiscountAnalytics&&(identical(other.totalUses, totalUses) || other.totalUses == totalUses)&&(identical(other.successfulUses, successfulUses) || other.successfulUses == successfulUses)&&(identical(other.totalSavingsUsd, totalSavingsUsd) || other.totalSavingsUsd == totalSavingsUsd)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.timesUsed, timesUsed) || other.timesUsed == timesUsed)&&(identical(other.uniqueUsers, uniqueUsers) || other.uniqueUsers == uniqueUsers)&&(identical(other.returningUsers, returningUsers) || other.returningUsers == returningUsers)&&(identical(other.retentionRate, retentionRate) || other.retentionRate == retentionRate)&&const DeepCollectionEquality().equals(other.repeatUsageDistribution, repeatUsageDistribution)&&(identical(other.avgSavingsPerUser, avgSavingsPerUser) || other.avgSavingsPerUser == avgSavingsPerUser)&&(identical(other.totalOrderValueUsd, totalOrderValueUsd) || other.totalOrderValueUsd == totalOrderValueUsd)&&const DeepCollectionEquality().equals(other.topUsers, topUsers)&&const DeepCollectionEquality().equals(other.usageOverTime, usageOverTime)&&(identical(other.code, code) || other.code == code));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,totalUses,successfulUses,totalSavingsUsd,shareCount,timesUsed,uniqueUsers,returningUsers,retentionRate,const DeepCollectionEquality().hash(repeatUsageDistribution),avgSavingsPerUser,totalOrderValueUsd,const DeepCollectionEquality().hash(topUsers),const DeepCollectionEquality().hash(usageOverTime),code);
+
+@override
+String toString() {
+  return 'DiscountAnalytics(totalUses: $totalUses, successfulUses: $successfulUses, totalSavingsUsd: $totalSavingsUsd, shareCount: $shareCount, timesUsed: $timesUsed, uniqueUsers: $uniqueUsers, returningUsers: $returningUsers, retentionRate: $retentionRate, repeatUsageDistribution: $repeatUsageDistribution, avgSavingsPerUser: $avgSavingsPerUser, totalOrderValueUsd: $totalOrderValueUsd, topUsers: $topUsers, usageOverTime: $usageOverTime, code: $code)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DiscountAnalyticsCopyWith<$Res>  {
+  factory $DiscountAnalyticsCopyWith(DiscountAnalytics value, $Res Function(DiscountAnalytics) _then) = _$DiscountAnalyticsCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'total_uses') int totalUses,@JsonKey(name: 'successful_uses') int successfulUses,@JsonKey(name: 'total_savings_usd') double totalSavingsUsd,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'times_used') int timesUsed,@JsonKey(name: 'unique_users') int uniqueUsers,@JsonKey(name: 'returning_users') int returningUsers,@JsonKey(name: 'retention_rate') double retentionRate,@JsonKey(name: 'repeat_usage_distribution') List<Map<String, dynamic>> repeatUsageDistribution,@JsonKey(name: 'avg_savings_per_user') double avgSavingsPerUser,@JsonKey(name: 'total_order_value_usd') double totalOrderValueUsd,@JsonKey(name: 'top_users') List<Map<String, dynamic>> topUsers,@JsonKey(name: 'usage_over_time') List<Map<String, dynamic>> usageOverTime, DiscountCode code
+});
+
+
+$DiscountCodeCopyWith<$Res> get code;
+
+}
+/// @nodoc
+class _$DiscountAnalyticsCopyWithImpl<$Res>
+    implements $DiscountAnalyticsCopyWith<$Res> {
+  _$DiscountAnalyticsCopyWithImpl(this._self, this._then);
+
+  final DiscountAnalytics _self;
+  final $Res Function(DiscountAnalytics) _then;
+
+/// Create a copy of DiscountAnalytics
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? totalUses = null,Object? successfulUses = null,Object? totalSavingsUsd = null,Object? shareCount = null,Object? timesUsed = null,Object? uniqueUsers = null,Object? returningUsers = null,Object? retentionRate = null,Object? repeatUsageDistribution = null,Object? avgSavingsPerUser = null,Object? totalOrderValueUsd = null,Object? topUsers = null,Object? usageOverTime = null,Object? code = null,}) {
+  return _then(_self.copyWith(
+totalUses: null == totalUses ? _self.totalUses : totalUses // ignore: cast_nullable_to_non_nullable
+as int,successfulUses: null == successfulUses ? _self.successfulUses : successfulUses // ignore: cast_nullable_to_non_nullable
+as int,totalSavingsUsd: null == totalSavingsUsd ? _self.totalSavingsUsd : totalSavingsUsd // ignore: cast_nullable_to_non_nullable
+as double,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
+as int,timesUsed: null == timesUsed ? _self.timesUsed : timesUsed // ignore: cast_nullable_to_non_nullable
+as int,uniqueUsers: null == uniqueUsers ? _self.uniqueUsers : uniqueUsers // ignore: cast_nullable_to_non_nullable
+as int,returningUsers: null == returningUsers ? _self.returningUsers : returningUsers // ignore: cast_nullable_to_non_nullable
+as int,retentionRate: null == retentionRate ? _self.retentionRate : retentionRate // ignore: cast_nullable_to_non_nullable
+as double,repeatUsageDistribution: null == repeatUsageDistribution ? _self.repeatUsageDistribution : repeatUsageDistribution // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,avgSavingsPerUser: null == avgSavingsPerUser ? _self.avgSavingsPerUser : avgSavingsPerUser // ignore: cast_nullable_to_non_nullable
+as double,totalOrderValueUsd: null == totalOrderValueUsd ? _self.totalOrderValueUsd : totalOrderValueUsd // ignore: cast_nullable_to_non_nullable
+as double,topUsers: null == topUsers ? _self.topUsers : topUsers // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,usageOverTime: null == usageOverTime ? _self.usageOverTime : usageOverTime // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as DiscountCode,
+  ));
+}
+/// Create a copy of DiscountAnalytics
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$DiscountCodeCopyWith<$Res> get code {
+  
+  return $DiscountCodeCopyWith<$Res>(_self.code, (value) {
+    return _then(_self.copyWith(code: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [DiscountAnalytics].
+extension DiscountAnalyticsPatterns on DiscountAnalytics {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _DiscountAnalytics value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _DiscountAnalytics() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _DiscountAnalytics value)  $default,){
+final _that = this;
+switch (_that) {
+case _DiscountAnalytics():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _DiscountAnalytics value)?  $default,){
+final _that = this;
+switch (_that) {
+case _DiscountAnalytics() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'total_uses')  int totalUses, @JsonKey(name: 'successful_uses')  int successfulUses, @JsonKey(name: 'total_savings_usd')  double totalSavingsUsd, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'times_used')  int timesUsed, @JsonKey(name: 'unique_users')  int uniqueUsers, @JsonKey(name: 'returning_users')  int returningUsers, @JsonKey(name: 'retention_rate')  double retentionRate, @JsonKey(name: 'repeat_usage_distribution')  List<Map<String, dynamic>> repeatUsageDistribution, @JsonKey(name: 'avg_savings_per_user')  double avgSavingsPerUser, @JsonKey(name: 'total_order_value_usd')  double totalOrderValueUsd, @JsonKey(name: 'top_users')  List<Map<String, dynamic>> topUsers, @JsonKey(name: 'usage_over_time')  List<Map<String, dynamic>> usageOverTime,  DiscountCode code)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _DiscountAnalytics() when $default != null:
+return $default(_that.totalUses,_that.successfulUses,_that.totalSavingsUsd,_that.shareCount,_that.timesUsed,_that.uniqueUsers,_that.returningUsers,_that.retentionRate,_that.repeatUsageDistribution,_that.avgSavingsPerUser,_that.totalOrderValueUsd,_that.topUsers,_that.usageOverTime,_that.code);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'total_uses')  int totalUses, @JsonKey(name: 'successful_uses')  int successfulUses, @JsonKey(name: 'total_savings_usd')  double totalSavingsUsd, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'times_used')  int timesUsed, @JsonKey(name: 'unique_users')  int uniqueUsers, @JsonKey(name: 'returning_users')  int returningUsers, @JsonKey(name: 'retention_rate')  double retentionRate, @JsonKey(name: 'repeat_usage_distribution')  List<Map<String, dynamic>> repeatUsageDistribution, @JsonKey(name: 'avg_savings_per_user')  double avgSavingsPerUser, @JsonKey(name: 'total_order_value_usd')  double totalOrderValueUsd, @JsonKey(name: 'top_users')  List<Map<String, dynamic>> topUsers, @JsonKey(name: 'usage_over_time')  List<Map<String, dynamic>> usageOverTime,  DiscountCode code)  $default,) {final _that = this;
+switch (_that) {
+case _DiscountAnalytics():
+return $default(_that.totalUses,_that.successfulUses,_that.totalSavingsUsd,_that.shareCount,_that.timesUsed,_that.uniqueUsers,_that.returningUsers,_that.retentionRate,_that.repeatUsageDistribution,_that.avgSavingsPerUser,_that.totalOrderValueUsd,_that.topUsers,_that.usageOverTime,_that.code);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'total_uses')  int totalUses, @JsonKey(name: 'successful_uses')  int successfulUses, @JsonKey(name: 'total_savings_usd')  double totalSavingsUsd, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'times_used')  int timesUsed, @JsonKey(name: 'unique_users')  int uniqueUsers, @JsonKey(name: 'returning_users')  int returningUsers, @JsonKey(name: 'retention_rate')  double retentionRate, @JsonKey(name: 'repeat_usage_distribution')  List<Map<String, dynamic>> repeatUsageDistribution, @JsonKey(name: 'avg_savings_per_user')  double avgSavingsPerUser, @JsonKey(name: 'total_order_value_usd')  double totalOrderValueUsd, @JsonKey(name: 'top_users')  List<Map<String, dynamic>> topUsers, @JsonKey(name: 'usage_over_time')  List<Map<String, dynamic>> usageOverTime,  DiscountCode code)?  $default,) {final _that = this;
+switch (_that) {
+case _DiscountAnalytics() when $default != null:
+return $default(_that.totalUses,_that.successfulUses,_that.totalSavingsUsd,_that.shareCount,_that.timesUsed,_that.uniqueUsers,_that.returningUsers,_that.retentionRate,_that.repeatUsageDistribution,_that.avgSavingsPerUser,_that.totalOrderValueUsd,_that.topUsers,_that.usageOverTime,_that.code);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _DiscountAnalytics implements DiscountAnalytics {
+  const _DiscountAnalytics({@JsonKey(name: 'total_uses') this.totalUses = 0, @JsonKey(name: 'successful_uses') this.successfulUses = 0, @JsonKey(name: 'total_savings_usd') this.totalSavingsUsd = 0.0, @JsonKey(name: 'share_count') this.shareCount = 0, @JsonKey(name: 'times_used') this.timesUsed = 0, @JsonKey(name: 'unique_users') this.uniqueUsers = 0, @JsonKey(name: 'returning_users') this.returningUsers = 0, @JsonKey(name: 'retention_rate') this.retentionRate = 0.0, @JsonKey(name: 'repeat_usage_distribution') final  List<Map<String, dynamic>> repeatUsageDistribution = const <Map<String, dynamic>>[], @JsonKey(name: 'avg_savings_per_user') this.avgSavingsPerUser = 0.0, @JsonKey(name: 'total_order_value_usd') this.totalOrderValueUsd = 0.0, @JsonKey(name: 'top_users') final  List<Map<String, dynamic>> topUsers = const <Map<String, dynamic>>[], @JsonKey(name: 'usage_over_time') final  List<Map<String, dynamic>> usageOverTime = const <Map<String, dynamic>>[], required this.code}): _repeatUsageDistribution = repeatUsageDistribution,_topUsers = topUsers,_usageOverTime = usageOverTime;
+  factory _DiscountAnalytics.fromJson(Map<String, dynamic> json) => _$DiscountAnalyticsFromJson(json);
+
+@override@JsonKey(name: 'total_uses') final  int totalUses;
+@override@JsonKey(name: 'successful_uses') final  int successfulUses;
+@override@JsonKey(name: 'total_savings_usd') final  double totalSavingsUsd;
+@override@JsonKey(name: 'share_count') final  int shareCount;
+@override@JsonKey(name: 'times_used') final  int timesUsed;
+@override@JsonKey(name: 'unique_users') final  int uniqueUsers;
+@override@JsonKey(name: 'returning_users') final  int returningUsers;
+@override@JsonKey(name: 'retention_rate') final  double retentionRate;
+ final  List<Map<String, dynamic>> _repeatUsageDistribution;
+@override@JsonKey(name: 'repeat_usage_distribution') List<Map<String, dynamic>> get repeatUsageDistribution {
+  if (_repeatUsageDistribution is EqualUnmodifiableListView) return _repeatUsageDistribution;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_repeatUsageDistribution);
+}
+
+@override@JsonKey(name: 'avg_savings_per_user') final  double avgSavingsPerUser;
+@override@JsonKey(name: 'total_order_value_usd') final  double totalOrderValueUsd;
+ final  List<Map<String, dynamic>> _topUsers;
+@override@JsonKey(name: 'top_users') List<Map<String, dynamic>> get topUsers {
+  if (_topUsers is EqualUnmodifiableListView) return _topUsers;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_topUsers);
+}
+
+ final  List<Map<String, dynamic>> _usageOverTime;
+@override@JsonKey(name: 'usage_over_time') List<Map<String, dynamic>> get usageOverTime {
+  if (_usageOverTime is EqualUnmodifiableListView) return _usageOverTime;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_usageOverTime);
+}
+
+@override final  DiscountCode code;
+
+/// Create a copy of DiscountAnalytics
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$DiscountAnalyticsCopyWith<_DiscountAnalytics> get copyWith => __$DiscountAnalyticsCopyWithImpl<_DiscountAnalytics>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$DiscountAnalyticsToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiscountAnalytics&&(identical(other.totalUses, totalUses) || other.totalUses == totalUses)&&(identical(other.successfulUses, successfulUses) || other.successfulUses == successfulUses)&&(identical(other.totalSavingsUsd, totalSavingsUsd) || other.totalSavingsUsd == totalSavingsUsd)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.timesUsed, timesUsed) || other.timesUsed == timesUsed)&&(identical(other.uniqueUsers, uniqueUsers) || other.uniqueUsers == uniqueUsers)&&(identical(other.returningUsers, returningUsers) || other.returningUsers == returningUsers)&&(identical(other.retentionRate, retentionRate) || other.retentionRate == retentionRate)&&const DeepCollectionEquality().equals(other._repeatUsageDistribution, _repeatUsageDistribution)&&(identical(other.avgSavingsPerUser, avgSavingsPerUser) || other.avgSavingsPerUser == avgSavingsPerUser)&&(identical(other.totalOrderValueUsd, totalOrderValueUsd) || other.totalOrderValueUsd == totalOrderValueUsd)&&const DeepCollectionEquality().equals(other._topUsers, _topUsers)&&const DeepCollectionEquality().equals(other._usageOverTime, _usageOverTime)&&(identical(other.code, code) || other.code == code));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,totalUses,successfulUses,totalSavingsUsd,shareCount,timesUsed,uniqueUsers,returningUsers,retentionRate,const DeepCollectionEquality().hash(_repeatUsageDistribution),avgSavingsPerUser,totalOrderValueUsd,const DeepCollectionEquality().hash(_topUsers),const DeepCollectionEquality().hash(_usageOverTime),code);
+
+@override
+String toString() {
+  return 'DiscountAnalytics(totalUses: $totalUses, successfulUses: $successfulUses, totalSavingsUsd: $totalSavingsUsd, shareCount: $shareCount, timesUsed: $timesUsed, uniqueUsers: $uniqueUsers, returningUsers: $returningUsers, retentionRate: $retentionRate, repeatUsageDistribution: $repeatUsageDistribution, avgSavingsPerUser: $avgSavingsPerUser, totalOrderValueUsd: $totalOrderValueUsd, topUsers: $topUsers, usageOverTime: $usageOverTime, code: $code)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$DiscountAnalyticsCopyWith<$Res> implements $DiscountAnalyticsCopyWith<$Res> {
+  factory _$DiscountAnalyticsCopyWith(_DiscountAnalytics value, $Res Function(_DiscountAnalytics) _then) = __$DiscountAnalyticsCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'total_uses') int totalUses,@JsonKey(name: 'successful_uses') int successfulUses,@JsonKey(name: 'total_savings_usd') double totalSavingsUsd,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'times_used') int timesUsed,@JsonKey(name: 'unique_users') int uniqueUsers,@JsonKey(name: 'returning_users') int returningUsers,@JsonKey(name: 'retention_rate') double retentionRate,@JsonKey(name: 'repeat_usage_distribution') List<Map<String, dynamic>> repeatUsageDistribution,@JsonKey(name: 'avg_savings_per_user') double avgSavingsPerUser,@JsonKey(name: 'total_order_value_usd') double totalOrderValueUsd,@JsonKey(name: 'top_users') List<Map<String, dynamic>> topUsers,@JsonKey(name: 'usage_over_time') List<Map<String, dynamic>> usageOverTime, DiscountCode code
+});
+
+
+@override $DiscountCodeCopyWith<$Res> get code;
+
+}
+/// @nodoc
+class __$DiscountAnalyticsCopyWithImpl<$Res>
+    implements _$DiscountAnalyticsCopyWith<$Res> {
+  __$DiscountAnalyticsCopyWithImpl(this._self, this._then);
+
+  final _DiscountAnalytics _self;
+  final $Res Function(_DiscountAnalytics) _then;
+
+/// Create a copy of DiscountAnalytics
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? totalUses = null,Object? successfulUses = null,Object? totalSavingsUsd = null,Object? shareCount = null,Object? timesUsed = null,Object? uniqueUsers = null,Object? returningUsers = null,Object? retentionRate = null,Object? repeatUsageDistribution = null,Object? avgSavingsPerUser = null,Object? totalOrderValueUsd = null,Object? topUsers = null,Object? usageOverTime = null,Object? code = null,}) {
+  return _then(_DiscountAnalytics(
+totalUses: null == totalUses ? _self.totalUses : totalUses // ignore: cast_nullable_to_non_nullable
+as int,successfulUses: null == successfulUses ? _self.successfulUses : successfulUses // ignore: cast_nullable_to_non_nullable
+as int,totalSavingsUsd: null == totalSavingsUsd ? _self.totalSavingsUsd : totalSavingsUsd // ignore: cast_nullable_to_non_nullable
+as double,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
+as int,timesUsed: null == timesUsed ? _self.timesUsed : timesUsed // ignore: cast_nullable_to_non_nullable
+as int,uniqueUsers: null == uniqueUsers ? _self.uniqueUsers : uniqueUsers // ignore: cast_nullable_to_non_nullable
+as int,returningUsers: null == returningUsers ? _self.returningUsers : returningUsers // ignore: cast_nullable_to_non_nullable
+as int,retentionRate: null == retentionRate ? _self.retentionRate : retentionRate // ignore: cast_nullable_to_non_nullable
+as double,repeatUsageDistribution: null == repeatUsageDistribution ? _self._repeatUsageDistribution : repeatUsageDistribution // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,avgSavingsPerUser: null == avgSavingsPerUser ? _self.avgSavingsPerUser : avgSavingsPerUser // ignore: cast_nullable_to_non_nullable
+as double,totalOrderValueUsd: null == totalOrderValueUsd ? _self.totalOrderValueUsd : totalOrderValueUsd // ignore: cast_nullable_to_non_nullable
+as double,topUsers: null == topUsers ? _self._topUsers : topUsers // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,usageOverTime: null == usageOverTime ? _self._usageOverTime : usageOverTime // ignore: cast_nullable_to_non_nullable
+as List<Map<String, dynamic>>,code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as DiscountCode,
+  ));
+}
+
+/// Create a copy of DiscountAnalytics
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$DiscountCodeCopyWith<$Res> get code {
+  
+  return $DiscountCodeCopyWith<$Res>(_self.code, (value) {
+    return _then(_self.copyWith(code: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$DiscountShareResult {
+
+ String get code;@JsonKey(name: 'discount_pct') int get discountPct;@JsonKey(name: 'discount_type') String get discountType; String get description;@JsonKey(name: 'qr_code') String? get qrCode;
+/// Create a copy of DiscountShareResult
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$DiscountShareResultCopyWith<DiscountShareResult> get copyWith => _$DiscountShareResultCopyWithImpl<DiscountShareResult>(this as DiscountShareResult, _$identity);
+
+  /// Serializes this DiscountShareResult to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiscountShareResult&&(identical(other.code, code) || other.code == code)&&(identical(other.discountPct, discountPct) || other.discountPct == discountPct)&&(identical(other.discountType, discountType) || other.discountType == discountType)&&(identical(other.description, description) || other.description == description)&&(identical(other.qrCode, qrCode) || other.qrCode == qrCode));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,code,discountPct,discountType,description,qrCode);
+
+@override
+String toString() {
+  return 'DiscountShareResult(code: $code, discountPct: $discountPct, discountType: $discountType, description: $description, qrCode: $qrCode)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $DiscountShareResultCopyWith<$Res>  {
+  factory $DiscountShareResultCopyWith(DiscountShareResult value, $Res Function(DiscountShareResult) _then) = _$DiscountShareResultCopyWithImpl;
+@useResult
+$Res call({
+ String code,@JsonKey(name: 'discount_pct') int discountPct,@JsonKey(name: 'discount_type') String discountType, String description,@JsonKey(name: 'qr_code') String? qrCode
+});
+
+
+
+
+}
+/// @nodoc
+class _$DiscountShareResultCopyWithImpl<$Res>
+    implements $DiscountShareResultCopyWith<$Res> {
+  _$DiscountShareResultCopyWithImpl(this._self, this._then);
+
+  final DiscountShareResult _self;
+  final $Res Function(DiscountShareResult) _then;
+
+/// Create a copy of DiscountShareResult
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? discountPct = null,Object? discountType = null,Object? description = null,Object? qrCode = freezed,}) {
+  return _then(_self.copyWith(
 code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
 as String,discountPct: null == discountPct ? _self.discountPct : discountPct // ignore: cast_nullable_to_non_nullable
-as int,discountArtifacts: freezed == discountArtifacts ? _self._discountArtifacts : discountArtifacts // ignore: cast_nullable_to_non_nullable
-as Map<String, int>?,
+as int,discountType: null == discountType ? _self.discountType : discountType // ignore: cast_nullable_to_non_nullable
+as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,qrCode: freezed == qrCode ? _self.qrCode : qrCode // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [DiscountShareResult].
+extension DiscountShareResultPatterns on DiscountShareResult {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _DiscountShareResult value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _DiscountShareResult() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _DiscountShareResult value)  $default,){
+final _that = this;
+switch (_that) {
+case _DiscountShareResult():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _DiscountShareResult value)?  $default,){
+final _that = this;
+switch (_that) {
+case _DiscountShareResult() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String code, @JsonKey(name: 'discount_pct')  int discountPct, @JsonKey(name: 'discount_type')  String discountType,  String description, @JsonKey(name: 'qr_code')  String? qrCode)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _DiscountShareResult() when $default != null:
+return $default(_that.code,_that.discountPct,_that.discountType,_that.description,_that.qrCode);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String code, @JsonKey(name: 'discount_pct')  int discountPct, @JsonKey(name: 'discount_type')  String discountType,  String description, @JsonKey(name: 'qr_code')  String? qrCode)  $default,) {final _that = this;
+switch (_that) {
+case _DiscountShareResult():
+return $default(_that.code,_that.discountPct,_that.discountType,_that.description,_that.qrCode);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String code, @JsonKey(name: 'discount_pct')  int discountPct, @JsonKey(name: 'discount_type')  String discountType,  String description, @JsonKey(name: 'qr_code')  String? qrCode)?  $default,) {final _that = this;
+switch (_that) {
+case _DiscountShareResult() when $default != null:
+return $default(_that.code,_that.discountPct,_that.discountType,_that.description,_that.qrCode);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _DiscountShareResult implements DiscountShareResult {
+  const _DiscountShareResult({required this.code, @JsonKey(name: 'discount_pct') this.discountPct = 0, @JsonKey(name: 'discount_type') this.discountType = 'percentage', this.description = '', @JsonKey(name: 'qr_code') this.qrCode});
+  factory _DiscountShareResult.fromJson(Map<String, dynamic> json) => _$DiscountShareResultFromJson(json);
+
+@override final  String code;
+@override@JsonKey(name: 'discount_pct') final  int discountPct;
+@override@JsonKey(name: 'discount_type') final  String discountType;
+@override@JsonKey() final  String description;
+@override@JsonKey(name: 'qr_code') final  String? qrCode;
+
+/// Create a copy of DiscountShareResult
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$DiscountShareResultCopyWith<_DiscountShareResult> get copyWith => __$DiscountShareResultCopyWithImpl<_DiscountShareResult>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$DiscountShareResultToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiscountShareResult&&(identical(other.code, code) || other.code == code)&&(identical(other.discountPct, discountPct) || other.discountPct == discountPct)&&(identical(other.discountType, discountType) || other.discountType == discountType)&&(identical(other.description, description) || other.description == description)&&(identical(other.qrCode, qrCode) || other.qrCode == qrCode));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,code,discountPct,discountType,description,qrCode);
+
+@override
+String toString() {
+  return 'DiscountShareResult(code: $code, discountPct: $discountPct, discountType: $discountType, description: $description, qrCode: $qrCode)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$DiscountShareResultCopyWith<$Res> implements $DiscountShareResultCopyWith<$Res> {
+  factory _$DiscountShareResultCopyWith(_DiscountShareResult value, $Res Function(_DiscountShareResult) _then) = __$DiscountShareResultCopyWithImpl;
+@override @useResult
+$Res call({
+ String code,@JsonKey(name: 'discount_pct') int discountPct,@JsonKey(name: 'discount_type') String discountType, String description,@JsonKey(name: 'qr_code') String? qrCode
+});
+
+
+
+
+}
+/// @nodoc
+class __$DiscountShareResultCopyWithImpl<$Res>
+    implements _$DiscountShareResultCopyWith<$Res> {
+  __$DiscountShareResultCopyWithImpl(this._self, this._then);
+
+  final _DiscountShareResult _self;
+  final $Res Function(_DiscountShareResult) _then;
+
+/// Create a copy of DiscountShareResult
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? discountPct = null,Object? discountType = null,Object? description = null,Object? qrCode = freezed,}) {
+  return _then(_DiscountShareResult(
+code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String,discountPct: null == discountPct ? _self.discountPct : discountPct // ignore: cast_nullable_to_non_nullable
+as int,discountType: null == discountType ? _self.discountType : discountType // ignore: cast_nullable_to_non_nullable
+as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,qrCode: freezed == qrCode ? _self.qrCode : qrCode // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -4617,7 +7008,7 @@ as String,
 /// @nodoc
 mixin _$CreatorServices {
 
-@JsonKey(name: 'meal_plans') List<MealPlan> get mealPlans; List<TrainingProgramme> get programmes; List<MarketplaceEvent> get events;
+@JsonKey(name: 'meal_plans') List<MealPlan> get mealPlans; List<TrainingProgramme> get programmes; List<MarketplaceEvent> get events; List<MarketplaceProduct> get products;@JsonKey(name: 'discount_codes') List<DiscountCode> get discountCodes;
 /// Create a copy of CreatorServices
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4630,16 +7021,16 @@ $CreatorServicesCopyWith<CreatorServices> get copyWith => _$CreatorServicesCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CreatorServices&&const DeepCollectionEquality().equals(other.mealPlans, mealPlans)&&const DeepCollectionEquality().equals(other.programmes, programmes)&&const DeepCollectionEquality().equals(other.events, events));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CreatorServices&&const DeepCollectionEquality().equals(other.mealPlans, mealPlans)&&const DeepCollectionEquality().equals(other.programmes, programmes)&&const DeepCollectionEquality().equals(other.events, events)&&const DeepCollectionEquality().equals(other.products, products)&&const DeepCollectionEquality().equals(other.discountCodes, discountCodes));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(mealPlans),const DeepCollectionEquality().hash(programmes),const DeepCollectionEquality().hash(events));
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(mealPlans),const DeepCollectionEquality().hash(programmes),const DeepCollectionEquality().hash(events),const DeepCollectionEquality().hash(products),const DeepCollectionEquality().hash(discountCodes));
 
 @override
 String toString() {
-  return 'CreatorServices(mealPlans: $mealPlans, programmes: $programmes, events: $events)';
+  return 'CreatorServices(mealPlans: $mealPlans, programmes: $programmes, events: $events, products: $products, discountCodes: $discountCodes)';
 }
 
 
@@ -4650,7 +7041,7 @@ abstract mixin class $CreatorServicesCopyWith<$Res>  {
   factory $CreatorServicesCopyWith(CreatorServices value, $Res Function(CreatorServices) _then) = _$CreatorServicesCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'meal_plans') List<MealPlan> mealPlans, List<TrainingProgramme> programmes, List<MarketplaceEvent> events
+@JsonKey(name: 'meal_plans') List<MealPlan> mealPlans, List<TrainingProgramme> programmes, List<MarketplaceEvent> events, List<MarketplaceProduct> products,@JsonKey(name: 'discount_codes') List<DiscountCode> discountCodes
 });
 
 
@@ -4667,12 +7058,14 @@ class _$CreatorServicesCopyWithImpl<$Res>
 
 /// Create a copy of CreatorServices
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? mealPlans = null,Object? programmes = null,Object? events = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? mealPlans = null,Object? programmes = null,Object? events = null,Object? products = null,Object? discountCodes = null,}) {
   return _then(_self.copyWith(
 mealPlans: null == mealPlans ? _self.mealPlans : mealPlans // ignore: cast_nullable_to_non_nullable
 as List<MealPlan>,programmes: null == programmes ? _self.programmes : programmes // ignore: cast_nullable_to_non_nullable
 as List<TrainingProgramme>,events: null == events ? _self.events : events // ignore: cast_nullable_to_non_nullable
-as List<MarketplaceEvent>,
+as List<MarketplaceEvent>,products: null == products ? _self.products : products // ignore: cast_nullable_to_non_nullable
+as List<MarketplaceProduct>,discountCodes: null == discountCodes ? _self.discountCodes : discountCodes // ignore: cast_nullable_to_non_nullable
+as List<DiscountCode>,
   ));
 }
 
@@ -4757,10 +7150,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'meal_plans')  List<MealPlan> mealPlans,  List<TrainingProgramme> programmes,  List<MarketplaceEvent> events)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'meal_plans')  List<MealPlan> mealPlans,  List<TrainingProgramme> programmes,  List<MarketplaceEvent> events,  List<MarketplaceProduct> products, @JsonKey(name: 'discount_codes')  List<DiscountCode> discountCodes)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CreatorServices() when $default != null:
-return $default(_that.mealPlans,_that.programmes,_that.events);case _:
+return $default(_that.mealPlans,_that.programmes,_that.events,_that.products,_that.discountCodes);case _:
   return orElse();
 
 }
@@ -4778,10 +7171,10 @@ return $default(_that.mealPlans,_that.programmes,_that.events);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'meal_plans')  List<MealPlan> mealPlans,  List<TrainingProgramme> programmes,  List<MarketplaceEvent> events)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'meal_plans')  List<MealPlan> mealPlans,  List<TrainingProgramme> programmes,  List<MarketplaceEvent> events,  List<MarketplaceProduct> products, @JsonKey(name: 'discount_codes')  List<DiscountCode> discountCodes)  $default,) {final _that = this;
 switch (_that) {
 case _CreatorServices():
-return $default(_that.mealPlans,_that.programmes,_that.events);case _:
+return $default(_that.mealPlans,_that.programmes,_that.events,_that.products,_that.discountCodes);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4798,10 +7191,10 @@ return $default(_that.mealPlans,_that.programmes,_that.events);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'meal_plans')  List<MealPlan> mealPlans,  List<TrainingProgramme> programmes,  List<MarketplaceEvent> events)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'meal_plans')  List<MealPlan> mealPlans,  List<TrainingProgramme> programmes,  List<MarketplaceEvent> events,  List<MarketplaceProduct> products, @JsonKey(name: 'discount_codes')  List<DiscountCode> discountCodes)?  $default,) {final _that = this;
 switch (_that) {
 case _CreatorServices() when $default != null:
-return $default(_that.mealPlans,_that.programmes,_that.events);case _:
+return $default(_that.mealPlans,_that.programmes,_that.events,_that.products,_that.discountCodes);case _:
   return null;
 
 }
@@ -4813,7 +7206,7 @@ return $default(_that.mealPlans,_that.programmes,_that.events);case _:
 @JsonSerializable()
 
 class _CreatorServices implements CreatorServices {
-  const _CreatorServices({@JsonKey(name: 'meal_plans') final  List<MealPlan> mealPlans = const <MealPlan>[], final  List<TrainingProgramme> programmes = const <TrainingProgramme>[], final  List<MarketplaceEvent> events = const <MarketplaceEvent>[]}): _mealPlans = mealPlans,_programmes = programmes,_events = events;
+  const _CreatorServices({@JsonKey(name: 'meal_plans') final  List<MealPlan> mealPlans = const <MealPlan>[], final  List<TrainingProgramme> programmes = const <TrainingProgramme>[], final  List<MarketplaceEvent> events = const <MarketplaceEvent>[], final  List<MarketplaceProduct> products = const <MarketplaceProduct>[], @JsonKey(name: 'discount_codes') final  List<DiscountCode> discountCodes = const <DiscountCode>[]}): _mealPlans = mealPlans,_programmes = programmes,_events = events,_products = products,_discountCodes = discountCodes;
   factory _CreatorServices.fromJson(Map<String, dynamic> json) => _$CreatorServicesFromJson(json);
 
  final  List<MealPlan> _mealPlans;
@@ -4837,6 +7230,20 @@ class _CreatorServices implements CreatorServices {
   return EqualUnmodifiableListView(_events);
 }
 
+ final  List<MarketplaceProduct> _products;
+@override@JsonKey() List<MarketplaceProduct> get products {
+  if (_products is EqualUnmodifiableListView) return _products;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_products);
+}
+
+ final  List<DiscountCode> _discountCodes;
+@override@JsonKey(name: 'discount_codes') List<DiscountCode> get discountCodes {
+  if (_discountCodes is EqualUnmodifiableListView) return _discountCodes;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_discountCodes);
+}
+
 
 /// Create a copy of CreatorServices
 /// with the given fields replaced by the non-null parameter values.
@@ -4851,16 +7258,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CreatorServices&&const DeepCollectionEquality().equals(other._mealPlans, _mealPlans)&&const DeepCollectionEquality().equals(other._programmes, _programmes)&&const DeepCollectionEquality().equals(other._events, _events));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CreatorServices&&const DeepCollectionEquality().equals(other._mealPlans, _mealPlans)&&const DeepCollectionEquality().equals(other._programmes, _programmes)&&const DeepCollectionEquality().equals(other._events, _events)&&const DeepCollectionEquality().equals(other._products, _products)&&const DeepCollectionEquality().equals(other._discountCodes, _discountCodes));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_mealPlans),const DeepCollectionEquality().hash(_programmes),const DeepCollectionEquality().hash(_events));
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_mealPlans),const DeepCollectionEquality().hash(_programmes),const DeepCollectionEquality().hash(_events),const DeepCollectionEquality().hash(_products),const DeepCollectionEquality().hash(_discountCodes));
 
 @override
 String toString() {
-  return 'CreatorServices(mealPlans: $mealPlans, programmes: $programmes, events: $events)';
+  return 'CreatorServices(mealPlans: $mealPlans, programmes: $programmes, events: $events, products: $products, discountCodes: $discountCodes)';
 }
 
 
@@ -4871,7 +7278,7 @@ abstract mixin class _$CreatorServicesCopyWith<$Res> implements $CreatorServices
   factory _$CreatorServicesCopyWith(_CreatorServices value, $Res Function(_CreatorServices) _then) = __$CreatorServicesCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'meal_plans') List<MealPlan> mealPlans, List<TrainingProgramme> programmes, List<MarketplaceEvent> events
+@JsonKey(name: 'meal_plans') List<MealPlan> mealPlans, List<TrainingProgramme> programmes, List<MarketplaceEvent> events, List<MarketplaceProduct> products,@JsonKey(name: 'discount_codes') List<DiscountCode> discountCodes
 });
 
 
@@ -4888,12 +7295,14 @@ class __$CreatorServicesCopyWithImpl<$Res>
 
 /// Create a copy of CreatorServices
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? mealPlans = null,Object? programmes = null,Object? events = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? mealPlans = null,Object? programmes = null,Object? events = null,Object? products = null,Object? discountCodes = null,}) {
   return _then(_CreatorServices(
 mealPlans: null == mealPlans ? _self._mealPlans : mealPlans // ignore: cast_nullable_to_non_nullable
 as List<MealPlan>,programmes: null == programmes ? _self._programmes : programmes // ignore: cast_nullable_to_non_nullable
 as List<TrainingProgramme>,events: null == events ? _self._events : events // ignore: cast_nullable_to_non_nullable
-as List<MarketplaceEvent>,
+as List<MarketplaceEvent>,products: null == products ? _self._products : products // ignore: cast_nullable_to_non_nullable
+as List<MarketplaceProduct>,discountCodes: null == discountCodes ? _self._discountCodes : discountCodes // ignore: cast_nullable_to_non_nullable
+as List<DiscountCode>,
   ));
 }
 

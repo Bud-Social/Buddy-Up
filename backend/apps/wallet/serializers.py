@@ -25,6 +25,7 @@ class TipSerializer(serializers.Serializer):
     artifact_type = serializers.ChoiceField(choices=['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'])
     quantity = serializers.IntegerField(min_value=1, max_value=10000)
     message = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    source = serializers.ChoiceField(choices=['regular', 'creator'], default='regular')
 
 
 class InitializePurchaseSerializer(serializers.Serializer):
@@ -63,6 +64,7 @@ class GiftArtifactsSerializer(serializers.Serializer):
     artifact_type = serializers.ChoiceField(choices=['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'])
     quantity = serializers.IntegerField(min_value=1, max_value=10000)
     message = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    source = serializers.ChoiceField(choices=['regular', 'creator'], default='regular')
 
 
 ARTIFACT_VALUES = {

@@ -13,6 +13,7 @@ urlpatterns = [
     path('token/refresh/', views.TokenRefreshView.as_view(), name='token_refresh'),
     path('verify-otp/', views.VerifyOTPView.as_view(), name='verify_otp'),
     path('resend-otp/', views.ResendOTPView.as_view(), name='resend_otp'),
+    path('resend-registration-otp/', views.ResendRegistrationOTPView.as_view(), name='resend_registration_otp'),
     path('forgot-password/', views.PasswordResetRequestView.as_view(), name='forgot_password'),
     path('reset-password/', views.PasswordResetConfirmView.as_view(), name='reset_password'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),

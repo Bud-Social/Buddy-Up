@@ -23,6 +23,11 @@ abstract class BalanceResponse with _$BalanceResponse {
     @JsonKey(name: 'total_label') required String totalLabel,
     @JsonKey(name: 'total_fiat') required double totalFiat,
     @JsonKey(name: 'fiat_currency') required String fiatCurrency,
+    @JsonKey(name: 'regular_balance') @Default(<BalanceItem>[]) List<BalanceItem> regularBalance,
+    @JsonKey(name: 'regular_total_fiat') @Default(0.0) double regularTotalFiat,
+    @JsonKey(name: 'creator_balance') @Default(<BalanceItem>[]) List<BalanceItem> creatorBalance,
+    @JsonKey(name: 'creator_total_fiat') @Default(0.0) double creatorTotalFiat,
+    @JsonKey(name: 'creator_display_name') @Default('') String creatorDisplayName,
   }) = _BalanceResponse;
 
   factory BalanceResponse.fromJson(Map<String, dynamic> json) =>

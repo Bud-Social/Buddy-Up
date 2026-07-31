@@ -287,7 +287,7 @@ as double,
 /// @nodoc
 mixin _$BalanceResponse {
 
- List<BalanceItem> get balance;@JsonKey(name: 'total_label') String get totalLabel;@JsonKey(name: 'total_fiat') double get totalFiat;@JsonKey(name: 'fiat_currency') String get fiatCurrency;
+ List<BalanceItem> get balance;@JsonKey(name: 'total_label') String get totalLabel;@JsonKey(name: 'total_fiat') double get totalFiat;@JsonKey(name: 'fiat_currency') String get fiatCurrency;@JsonKey(name: 'regular_balance') List<BalanceItem> get regularBalance;@JsonKey(name: 'regular_total_fiat') double get regularTotalFiat;@JsonKey(name: 'creator_balance') List<BalanceItem> get creatorBalance;@JsonKey(name: 'creator_total_fiat') double get creatorTotalFiat;@JsonKey(name: 'creator_display_name') String get creatorDisplayName;
 /// Create a copy of BalanceResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -300,16 +300,16 @@ $BalanceResponseCopyWith<BalanceResponse> get copyWith => _$BalanceResponseCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BalanceResponse&&const DeepCollectionEquality().equals(other.balance, balance)&&(identical(other.totalLabel, totalLabel) || other.totalLabel == totalLabel)&&(identical(other.totalFiat, totalFiat) || other.totalFiat == totalFiat)&&(identical(other.fiatCurrency, fiatCurrency) || other.fiatCurrency == fiatCurrency));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BalanceResponse&&const DeepCollectionEquality().equals(other.balance, balance)&&(identical(other.totalLabel, totalLabel) || other.totalLabel == totalLabel)&&(identical(other.totalFiat, totalFiat) || other.totalFiat == totalFiat)&&(identical(other.fiatCurrency, fiatCurrency) || other.fiatCurrency == fiatCurrency)&&const DeepCollectionEquality().equals(other.regularBalance, regularBalance)&&(identical(other.regularTotalFiat, regularTotalFiat) || other.regularTotalFiat == regularTotalFiat)&&const DeepCollectionEquality().equals(other.creatorBalance, creatorBalance)&&(identical(other.creatorTotalFiat, creatorTotalFiat) || other.creatorTotalFiat == creatorTotalFiat)&&(identical(other.creatorDisplayName, creatorDisplayName) || other.creatorDisplayName == creatorDisplayName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(balance),totalLabel,totalFiat,fiatCurrency);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(balance),totalLabel,totalFiat,fiatCurrency,const DeepCollectionEquality().hash(regularBalance),regularTotalFiat,const DeepCollectionEquality().hash(creatorBalance),creatorTotalFiat,creatorDisplayName);
 
 @override
 String toString() {
-  return 'BalanceResponse(balance: $balance, totalLabel: $totalLabel, totalFiat: $totalFiat, fiatCurrency: $fiatCurrency)';
+  return 'BalanceResponse(balance: $balance, totalLabel: $totalLabel, totalFiat: $totalFiat, fiatCurrency: $fiatCurrency, regularBalance: $regularBalance, regularTotalFiat: $regularTotalFiat, creatorBalance: $creatorBalance, creatorTotalFiat: $creatorTotalFiat, creatorDisplayName: $creatorDisplayName)';
 }
 
 
@@ -320,7 +320,7 @@ abstract mixin class $BalanceResponseCopyWith<$Res>  {
   factory $BalanceResponseCopyWith(BalanceResponse value, $Res Function(BalanceResponse) _then) = _$BalanceResponseCopyWithImpl;
 @useResult
 $Res call({
- List<BalanceItem> balance,@JsonKey(name: 'total_label') String totalLabel,@JsonKey(name: 'total_fiat') double totalFiat,@JsonKey(name: 'fiat_currency') String fiatCurrency
+ List<BalanceItem> balance,@JsonKey(name: 'total_label') String totalLabel,@JsonKey(name: 'total_fiat') double totalFiat,@JsonKey(name: 'fiat_currency') String fiatCurrency,@JsonKey(name: 'regular_balance') List<BalanceItem> regularBalance,@JsonKey(name: 'regular_total_fiat') double regularTotalFiat,@JsonKey(name: 'creator_balance') List<BalanceItem> creatorBalance,@JsonKey(name: 'creator_total_fiat') double creatorTotalFiat,@JsonKey(name: 'creator_display_name') String creatorDisplayName
 });
 
 
@@ -337,12 +337,17 @@ class _$BalanceResponseCopyWithImpl<$Res>
 
 /// Create a copy of BalanceResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? balance = null,Object? totalLabel = null,Object? totalFiat = null,Object? fiatCurrency = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? balance = null,Object? totalLabel = null,Object? totalFiat = null,Object? fiatCurrency = null,Object? regularBalance = null,Object? regularTotalFiat = null,Object? creatorBalance = null,Object? creatorTotalFiat = null,Object? creatorDisplayName = null,}) {
   return _then(_self.copyWith(
 balance: null == balance ? _self.balance : balance // ignore: cast_nullable_to_non_nullable
 as List<BalanceItem>,totalLabel: null == totalLabel ? _self.totalLabel : totalLabel // ignore: cast_nullable_to_non_nullable
 as String,totalFiat: null == totalFiat ? _self.totalFiat : totalFiat // ignore: cast_nullable_to_non_nullable
 as double,fiatCurrency: null == fiatCurrency ? _self.fiatCurrency : fiatCurrency // ignore: cast_nullable_to_non_nullable
+as String,regularBalance: null == regularBalance ? _self.regularBalance : regularBalance // ignore: cast_nullable_to_non_nullable
+as List<BalanceItem>,regularTotalFiat: null == regularTotalFiat ? _self.regularTotalFiat : regularTotalFiat // ignore: cast_nullable_to_non_nullable
+as double,creatorBalance: null == creatorBalance ? _self.creatorBalance : creatorBalance // ignore: cast_nullable_to_non_nullable
+as List<BalanceItem>,creatorTotalFiat: null == creatorTotalFiat ? _self.creatorTotalFiat : creatorTotalFiat // ignore: cast_nullable_to_non_nullable
+as double,creatorDisplayName: null == creatorDisplayName ? _self.creatorDisplayName : creatorDisplayName // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -428,10 +433,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<BalanceItem> balance, @JsonKey(name: 'total_label')  String totalLabel, @JsonKey(name: 'total_fiat')  double totalFiat, @JsonKey(name: 'fiat_currency')  String fiatCurrency)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<BalanceItem> balance, @JsonKey(name: 'total_label')  String totalLabel, @JsonKey(name: 'total_fiat')  double totalFiat, @JsonKey(name: 'fiat_currency')  String fiatCurrency, @JsonKey(name: 'regular_balance')  List<BalanceItem> regularBalance, @JsonKey(name: 'regular_total_fiat')  double regularTotalFiat, @JsonKey(name: 'creator_balance')  List<BalanceItem> creatorBalance, @JsonKey(name: 'creator_total_fiat')  double creatorTotalFiat, @JsonKey(name: 'creator_display_name')  String creatorDisplayName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BalanceResponse() when $default != null:
-return $default(_that.balance,_that.totalLabel,_that.totalFiat,_that.fiatCurrency);case _:
+return $default(_that.balance,_that.totalLabel,_that.totalFiat,_that.fiatCurrency,_that.regularBalance,_that.regularTotalFiat,_that.creatorBalance,_that.creatorTotalFiat,_that.creatorDisplayName);case _:
   return orElse();
 
 }
@@ -449,10 +454,10 @@ return $default(_that.balance,_that.totalLabel,_that.totalFiat,_that.fiatCurrenc
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<BalanceItem> balance, @JsonKey(name: 'total_label')  String totalLabel, @JsonKey(name: 'total_fiat')  double totalFiat, @JsonKey(name: 'fiat_currency')  String fiatCurrency)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<BalanceItem> balance, @JsonKey(name: 'total_label')  String totalLabel, @JsonKey(name: 'total_fiat')  double totalFiat, @JsonKey(name: 'fiat_currency')  String fiatCurrency, @JsonKey(name: 'regular_balance')  List<BalanceItem> regularBalance, @JsonKey(name: 'regular_total_fiat')  double regularTotalFiat, @JsonKey(name: 'creator_balance')  List<BalanceItem> creatorBalance, @JsonKey(name: 'creator_total_fiat')  double creatorTotalFiat, @JsonKey(name: 'creator_display_name')  String creatorDisplayName)  $default,) {final _that = this;
 switch (_that) {
 case _BalanceResponse():
-return $default(_that.balance,_that.totalLabel,_that.totalFiat,_that.fiatCurrency);case _:
+return $default(_that.balance,_that.totalLabel,_that.totalFiat,_that.fiatCurrency,_that.regularBalance,_that.regularTotalFiat,_that.creatorBalance,_that.creatorTotalFiat,_that.creatorDisplayName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -469,10 +474,10 @@ return $default(_that.balance,_that.totalLabel,_that.totalFiat,_that.fiatCurrenc
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<BalanceItem> balance, @JsonKey(name: 'total_label')  String totalLabel, @JsonKey(name: 'total_fiat')  double totalFiat, @JsonKey(name: 'fiat_currency')  String fiatCurrency)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<BalanceItem> balance, @JsonKey(name: 'total_label')  String totalLabel, @JsonKey(name: 'total_fiat')  double totalFiat, @JsonKey(name: 'fiat_currency')  String fiatCurrency, @JsonKey(name: 'regular_balance')  List<BalanceItem> regularBalance, @JsonKey(name: 'regular_total_fiat')  double regularTotalFiat, @JsonKey(name: 'creator_balance')  List<BalanceItem> creatorBalance, @JsonKey(name: 'creator_total_fiat')  double creatorTotalFiat, @JsonKey(name: 'creator_display_name')  String creatorDisplayName)?  $default,) {final _that = this;
 switch (_that) {
 case _BalanceResponse() when $default != null:
-return $default(_that.balance,_that.totalLabel,_that.totalFiat,_that.fiatCurrency);case _:
+return $default(_that.balance,_that.totalLabel,_that.totalFiat,_that.fiatCurrency,_that.regularBalance,_that.regularTotalFiat,_that.creatorBalance,_that.creatorTotalFiat,_that.creatorDisplayName);case _:
   return null;
 
 }
@@ -484,7 +489,7 @@ return $default(_that.balance,_that.totalLabel,_that.totalFiat,_that.fiatCurrenc
 @JsonSerializable()
 
 class _BalanceResponse implements BalanceResponse {
-  const _BalanceResponse({required final  List<BalanceItem> balance, @JsonKey(name: 'total_label') required this.totalLabel, @JsonKey(name: 'total_fiat') required this.totalFiat, @JsonKey(name: 'fiat_currency') required this.fiatCurrency}): _balance = balance;
+  const _BalanceResponse({required final  List<BalanceItem> balance, @JsonKey(name: 'total_label') required this.totalLabel, @JsonKey(name: 'total_fiat') required this.totalFiat, @JsonKey(name: 'fiat_currency') required this.fiatCurrency, @JsonKey(name: 'regular_balance') final  List<BalanceItem> regularBalance = const <BalanceItem>[], @JsonKey(name: 'regular_total_fiat') this.regularTotalFiat = 0.0, @JsonKey(name: 'creator_balance') final  List<BalanceItem> creatorBalance = const <BalanceItem>[], @JsonKey(name: 'creator_total_fiat') this.creatorTotalFiat = 0.0, @JsonKey(name: 'creator_display_name') this.creatorDisplayName = ''}): _balance = balance,_regularBalance = regularBalance,_creatorBalance = creatorBalance;
   factory _BalanceResponse.fromJson(Map<String, dynamic> json) => _$BalanceResponseFromJson(json);
 
  final  List<BalanceItem> _balance;
@@ -497,6 +502,23 @@ class _BalanceResponse implements BalanceResponse {
 @override@JsonKey(name: 'total_label') final  String totalLabel;
 @override@JsonKey(name: 'total_fiat') final  double totalFiat;
 @override@JsonKey(name: 'fiat_currency') final  String fiatCurrency;
+ final  List<BalanceItem> _regularBalance;
+@override@JsonKey(name: 'regular_balance') List<BalanceItem> get regularBalance {
+  if (_regularBalance is EqualUnmodifiableListView) return _regularBalance;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_regularBalance);
+}
+
+@override@JsonKey(name: 'regular_total_fiat') final  double regularTotalFiat;
+ final  List<BalanceItem> _creatorBalance;
+@override@JsonKey(name: 'creator_balance') List<BalanceItem> get creatorBalance {
+  if (_creatorBalance is EqualUnmodifiableListView) return _creatorBalance;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_creatorBalance);
+}
+
+@override@JsonKey(name: 'creator_total_fiat') final  double creatorTotalFiat;
+@override@JsonKey(name: 'creator_display_name') final  String creatorDisplayName;
 
 /// Create a copy of BalanceResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -511,16 +533,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BalanceResponse&&const DeepCollectionEquality().equals(other._balance, _balance)&&(identical(other.totalLabel, totalLabel) || other.totalLabel == totalLabel)&&(identical(other.totalFiat, totalFiat) || other.totalFiat == totalFiat)&&(identical(other.fiatCurrency, fiatCurrency) || other.fiatCurrency == fiatCurrency));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BalanceResponse&&const DeepCollectionEquality().equals(other._balance, _balance)&&(identical(other.totalLabel, totalLabel) || other.totalLabel == totalLabel)&&(identical(other.totalFiat, totalFiat) || other.totalFiat == totalFiat)&&(identical(other.fiatCurrency, fiatCurrency) || other.fiatCurrency == fiatCurrency)&&const DeepCollectionEquality().equals(other._regularBalance, _regularBalance)&&(identical(other.regularTotalFiat, regularTotalFiat) || other.regularTotalFiat == regularTotalFiat)&&const DeepCollectionEquality().equals(other._creatorBalance, _creatorBalance)&&(identical(other.creatorTotalFiat, creatorTotalFiat) || other.creatorTotalFiat == creatorTotalFiat)&&(identical(other.creatorDisplayName, creatorDisplayName) || other.creatorDisplayName == creatorDisplayName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_balance),totalLabel,totalFiat,fiatCurrency);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_balance),totalLabel,totalFiat,fiatCurrency,const DeepCollectionEquality().hash(_regularBalance),regularTotalFiat,const DeepCollectionEquality().hash(_creatorBalance),creatorTotalFiat,creatorDisplayName);
 
 @override
 String toString() {
-  return 'BalanceResponse(balance: $balance, totalLabel: $totalLabel, totalFiat: $totalFiat, fiatCurrency: $fiatCurrency)';
+  return 'BalanceResponse(balance: $balance, totalLabel: $totalLabel, totalFiat: $totalFiat, fiatCurrency: $fiatCurrency, regularBalance: $regularBalance, regularTotalFiat: $regularTotalFiat, creatorBalance: $creatorBalance, creatorTotalFiat: $creatorTotalFiat, creatorDisplayName: $creatorDisplayName)';
 }
 
 
@@ -531,7 +553,7 @@ abstract mixin class _$BalanceResponseCopyWith<$Res> implements $BalanceResponse
   factory _$BalanceResponseCopyWith(_BalanceResponse value, $Res Function(_BalanceResponse) _then) = __$BalanceResponseCopyWithImpl;
 @override @useResult
 $Res call({
- List<BalanceItem> balance,@JsonKey(name: 'total_label') String totalLabel,@JsonKey(name: 'total_fiat') double totalFiat,@JsonKey(name: 'fiat_currency') String fiatCurrency
+ List<BalanceItem> balance,@JsonKey(name: 'total_label') String totalLabel,@JsonKey(name: 'total_fiat') double totalFiat,@JsonKey(name: 'fiat_currency') String fiatCurrency,@JsonKey(name: 'regular_balance') List<BalanceItem> regularBalance,@JsonKey(name: 'regular_total_fiat') double regularTotalFiat,@JsonKey(name: 'creator_balance') List<BalanceItem> creatorBalance,@JsonKey(name: 'creator_total_fiat') double creatorTotalFiat,@JsonKey(name: 'creator_display_name') String creatorDisplayName
 });
 
 
@@ -548,12 +570,17 @@ class __$BalanceResponseCopyWithImpl<$Res>
 
 /// Create a copy of BalanceResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? balance = null,Object? totalLabel = null,Object? totalFiat = null,Object? fiatCurrency = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? balance = null,Object? totalLabel = null,Object? totalFiat = null,Object? fiatCurrency = null,Object? regularBalance = null,Object? regularTotalFiat = null,Object? creatorBalance = null,Object? creatorTotalFiat = null,Object? creatorDisplayName = null,}) {
   return _then(_BalanceResponse(
 balance: null == balance ? _self._balance : balance // ignore: cast_nullable_to_non_nullable
 as List<BalanceItem>,totalLabel: null == totalLabel ? _self.totalLabel : totalLabel // ignore: cast_nullable_to_non_nullable
 as String,totalFiat: null == totalFiat ? _self.totalFiat : totalFiat // ignore: cast_nullable_to_non_nullable
 as double,fiatCurrency: null == fiatCurrency ? _self.fiatCurrency : fiatCurrency // ignore: cast_nullable_to_non_nullable
+as String,regularBalance: null == regularBalance ? _self._regularBalance : regularBalance // ignore: cast_nullable_to_non_nullable
+as List<BalanceItem>,regularTotalFiat: null == regularTotalFiat ? _self.regularTotalFiat : regularTotalFiat // ignore: cast_nullable_to_non_nullable
+as double,creatorBalance: null == creatorBalance ? _self._creatorBalance : creatorBalance // ignore: cast_nullable_to_non_nullable
+as List<BalanceItem>,creatorTotalFiat: null == creatorTotalFiat ? _self.creatorTotalFiat : creatorTotalFiat // ignore: cast_nullable_to_non_nullable
+as double,creatorDisplayName: null == creatorDisplayName ? _self.creatorDisplayName : creatorDisplayName // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

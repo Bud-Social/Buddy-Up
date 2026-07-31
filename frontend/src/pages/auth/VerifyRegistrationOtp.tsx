@@ -48,7 +48,7 @@ export default function VerifyRegistrationOtp() {
   const handleResend = async () => {
     setResending(true);
     try {
-      await authApi.resendOtp('email');
+      await authApi.resendRegistrationOtp(regToken, 'email');
       setCooldown(60);
     } catch {
       setError('Failed to resend OTP. Please try again.');

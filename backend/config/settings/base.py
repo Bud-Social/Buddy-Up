@@ -25,6 +25,8 @@ INSTALLED_APPS = [
     'social_django',
     'django_otp',
     'django_otp.plugins.otp_totp',
+    'cloudinary_storage',
+    'cloudinary',
 
     # BuddyUp apps
     'apps.accounts',
@@ -118,6 +120,16 @@ CELERY_TASK_ROUTES = {
     'apps.lives.tasks.*': {'queue': 'media'},
     'apps.ai.tasks.*': {'queue': 'ai'},
     'apps.feed.tasks.*': {'queue': 'high_priority'},
+    'apps.marketplace.tasks.send_meal_plan_daily_reminders': {'queue': 'high_priority'},
+    'apps.marketplace.tasks.send_programme_activity_reminder': {'queue': 'high_priority'},
+    'apps.notifications.tasks.*': {'queue': 'high_priority'},
+}
+
+CELERY_BEAT_SCHEDULE = {
+    'meal-plan-daily-reminders': {
+        'task': 'apps.marketplace.tasks.send_meal_plan_daily_reminders',
+        'schedule': 3600.0,  # Run every hour; task checks if current hour matches subscriber preference
+    },
 }
 
 # Password validation
@@ -270,3 +282,47 @@ AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://ai-service:8003')
 
 # Minimum age
 BUDDYUP_MINIMUM_AGE = 16
+
+# ---------------------------------------------------------------------------
+# Cloudinary (primary media storage) + Django media fallback
+# ---------------------------------------------------------------------------
+CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
+CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', '')
+CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', '')
+CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '')  # Overrides individual vars if set
+
+if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY:
+    import cloudinary
+    cloudinary.config(
+        cloud_name=CLOUDINARY_CLOUD_NAME,
+        api_key=CLOUDINARY_API_KEY,
+        api_secret=CLOUDINARY_API_SECRET,
+        secure=True,
+    )
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
+        'API_KEY': CLOUDINARY_API_KEY,
+        'API_SECRET': CLOUDINARY_API_SECRET,
+        'SECURE': True,
+        'MEDIA_TAG': 'buddyup-media',
+        'INVALID_VIDEO_ERROR_MESSAGE': 'Please upload a valid video file.',
+        'EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS': [],
+    }
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+else:
+    # Fall back to local Django media when no Cloudinary credentials are configured
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+# ---------------------------------------------------------------------------
+# FCM / Firebase push notifications
+# ---------------------------------------------------------------------------
+FCM_SERVER_KEY = os.environ.get('FCM_SERVER_KEY', '')
+FCM_PROJECT_ID = os.environ.get('FCM_PROJECT_ID', '')
+FCM_SERVICE_ACCOUNT_FILE = os.environ.get('FCM_SERVICE_ACCOUNT_FILE', '')
+
+# ---------------------------------------------------------------------------
+# Web Push (VAPID)
+# ---------------------------------------------------------------------------
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_CLAIM_EMAIL = os.environ.get('VAPID_CLAIM_EMAIL', 'admin@buddyup.app')

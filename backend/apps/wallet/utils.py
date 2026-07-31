@@ -12,6 +12,19 @@ def _get_profile_balance(profile):
     return _get_balance_dict(profile.artifact_balance)
 
 
+def _get_creator_balance(profile):
+    return _get_balance_dict(profile.creator_balance)
+
+
+def _get_total_balance(profile):
+    regular = _get_profile_balance(profile)
+    creator = _get_creator_balance(profile)
+    total = {}
+    for k in set(list(regular.keys()) + list(creator.keys())):
+        total[k] = regular.get(k, 0) + creator.get(k, 0)
+    return total
+
+
 def _get_locked_balance(profile):
     return _get_balance_dict(profile.locked_balance)
 
@@ -37,6 +50,29 @@ def credit_artifacts(profile, artifact_type, quantity):
         balance[artifact_type] = balance.get(artifact_type, 0) + quantity
         profile_ref.artifact_balance = balance
         profile_ref.save(update_fields=['artifact_balance'])
+
+
+def credit_creator_artifacts(profile, artifact_type, quantity):
+    from apps.profiles.models import Profile
+    with db_transaction.atomic():
+        profile_ref = Profile.objects.select_for_update().get(pk=profile.pk)
+        balance = _get_balance_dict(profile_ref.creator_balance)
+        balance[artifact_type] = balance.get(artifact_type, 0) + quantity
+        profile_ref.creator_balance = balance
+        profile_ref.save(update_fields=['creator_balance'])
+
+
+def deduct_creator_artifacts(profile, artifact_type, quantity):
+    from apps.profiles.models import Profile
+    with db_transaction.atomic():
+        profile_ref = Profile.objects.select_for_update().get(pk=profile.pk)
+        balance = _get_balance_dict(profile_ref.creator_balance)
+        if balance.get(artifact_type, 0) < quantity:
+            return False
+        balance[artifact_type] -= quantity
+        profile_ref.creator_balance = balance
+        profile_ref.save(update_fields=['creator_balance'])
+    return True
 
 
 def hold_artifacts(profile, artifact_type, quantity, counterparty=None, reference_id=''):

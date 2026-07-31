@@ -4,6 +4,8 @@ from . import views
 app_name = 'wallet'
 urlpatterns = [
     path('balance/', views.WalletBalanceView.as_view(), name='balance'),
+    path('creator/transfer/', views.CreatorWalletTransferView.as_view(), name='creator_transfer'),
+    path('creator/profile/', views.CreatorProfileView.as_view(), name='creator_profile'),
     path('transactions/', views.TransactionHistoryView.as_view(), name='transactions'),
     path('purchase/initialize/', views.InitializePurchaseView.as_view(), name='purchase_initialize'),
     path('purchase/confirm/', views.ConfirmPurchaseView.as_view(), name='purchase_confirm'),

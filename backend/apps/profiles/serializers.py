@@ -25,9 +25,10 @@ class ProfileSerializer(serializers.ModelSerializer):
             'show_active_status', 'is_anonymous_posting',
             'buddy_count', 'following_count', 'follower_count', 'gym_count', 'post_count',
             'is_buddy', 'is_following', 'buddy_status', 'is_blocked',
+            'creator_balance', 'creator_display_name',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['user_id', 'streak_days', 'artifact_balance', 'created_at', 'updated_at']
+        read_only_fields = ['user_id', 'streak_days', 'artifact_balance', 'creator_balance', 'created_at', 'updated_at']
 
     def get_buddy_count(self, obj):
         return BuddyRelationship.objects.filter(
@@ -101,7 +102,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             'display_name', 'bio', 'avatar_url', 'cover_url', 'pronouns',
             'location_city', 'location_country', 'external_link',
             'workout_schedule', 'show_active_status', 'is_anonymous_posting',
-            'privacy_level',
+            'privacy_level', 'creator_display_name',
         ]
 
 

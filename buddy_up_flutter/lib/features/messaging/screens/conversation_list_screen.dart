@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/messaging_provider.dart';
 import '../widgets/conversation_tile.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/messaging.dart';
 
 class ConversationListScreen extends ConsumerStatefulWidget {
   const ConversationListScreen({super.key});
@@ -174,7 +175,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                 Navigator.pop(context);
                 try {
                   final repo = ref.read(messagingRepositoryProvider);
-                  final result = await repo.startConversation([value.trim()]);
+                  final result = await repo.startConversation({'participant_usernames': [value.trim()]});
                   final data = result['data'] as Map<String, dynamic>;
                   final convo = Conversation.fromJson(data);
                   ref.read(conversationsProvider.notifier).updateConversation(convo);

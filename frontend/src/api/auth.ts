@@ -75,6 +75,8 @@ export const authApi = {
   refreshToken: (refresh: string) => apiClient.post<ApiResponse<{ access: string; refresh?: string }>>('/auth/token/refresh/', { refresh }).then((r) => r.data),
   verifyOtp: (otp: string, channel: 'email' | 'phone') => apiClient.post<ApiResponse<null>>('/auth/verify-otp/', { otp, channel }).then((r) => r.data),
   resendOtp: (channel: 'email' | 'phone') => apiClient.post<ApiResponse<null>>('/auth/resend-otp/', { channel }).then((r) => r.data),
+  resendRegistrationOtp: (registration_token: string, channel: 'email' | 'phone') =>
+    apiClient.post<ApiResponse<null>>('/auth/resend-registration-otp/', { registration_token, channel }).then((r) => r.data),
   completeOnboarding: (data: OnboardingPayload) => apiClient.post<ApiResponse<Profile>>('/auth/onboarding/', data).then((r) => r.data),
   forgotPassword: (email: string) => apiClient.post<ApiResponse<null>>('/auth/forgot-password/', { email }).then((r) => r.data),
   resetPassword: (token: string, new_password: string) => apiClient.post<ApiResponse<null>>('/auth/reset-password/', { token, new_password }).then((r) => r.data),

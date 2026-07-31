@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2 } from 'lucide-react';
+import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -9,12 +9,34 @@ import { useToast } from '@/components/ui/Toast';
 import { marketplaceApi } from '@/api/marketplace';
 import type { MealPlan, TrainingProgrammeMP, ProductMP } from '@/api/marketplace';
 
+const ARTIFACT_USD_VALUES: Record<string, number> = {
+  dumbbell: 0.10, barbell: 0.50, burpee: 1.00,
+  squat: 2.50, sprint: 5.00, pr: 10.00, champion: 25.00,
+};
+const USD_KES_RATE = 129.5;
+
+function artifactsToUsd(artifacts: Record<string, number> | null | undefined): number {
+  if (!artifacts) return 0;
+  return Object.entries(artifacts).reduce((sum, [k, v]) => sum + (ARTIFACT_USD_VALUES[k] || 0) * v, 0);
+}
+
+function CurrencyHint({ artifacts }: { artifacts: Record<string, number> | null | undefined }) {
+  const usd = artifactsToUsd(artifacts);
+  if (usd <= 0) return null;
+  return (
+    <span className="text-[10px] text-buddy-text-secondary ml-1">
+      ~${usd.toFixed(2)} (~KES {(usd * USD_KES_RATE).toFixed(2)})
+    </span>
+  );
+}
+
 type Tab = 'events' | 'meal_plans' | 'programmes' | 'products';
 
 export default function Marketplace() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('events');
   const [cartCount, setCartCount] = useState(0);
+  const [hasShop, setHasShop] = useState(false);
 
   const fetchCartCount = useCallback(() => {
     marketplaceApi.getCart().then(res => {
@@ -22,12 +44,19 @@ export default function Marketplace() {
     }).catch(() => {});
   }, []);
 
+  const fetchMyShops = useCallback(() => {
+    marketplaceApi.getMyShops().then(res => {
+      setHasShop((res.data || []).length > 0);
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     fetchCartCount();
+    fetchMyShops();
     const handler = () => fetchCartCount();
     window.addEventListener('cart-updated', handler);
     return () => window.removeEventListener('cart-updated', handler);
-  }, [fetchCartCount]);
+  }, [fetchCartCount, fetchMyShops]);
 
   return (
     <div className="max-w-lg mx-auto pb-20">
@@ -71,10 +100,10 @@ export default function Marketplace() {
       </div>
 
       <div className="p-4 pt-4">
-        {tab === 'events' && <EventsTab />}
-        {tab === 'meal_plans' && <MealPlansTab />}
-        {tab === 'programmes' && <ProgrammesTab />}
-        {tab === 'products' && <ProductsTab />}
+        {tab === 'events' && <EventsTab hasShop={hasShop} />}
+        {tab === 'meal_plans' && <MealPlansTab hasShop={hasShop} />}
+        {tab === 'programmes' && <ProgrammesTab hasShop={hasShop} />}
+        {tab === 'products' && <ProductsTab hasShop={hasShop} />}
       </div>
     </div>
   );
@@ -105,7 +134,7 @@ function AddToCartButton({ type, id }: { type: 'meal_plan' | 'programme' | 'even
   );
 }
 
-function MealPlansTab() {
+function MealPlansTab({ hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -132,9 +161,11 @@ function MealPlansTab() {
         ))}
       </div>
 
-      <div className="flex justify-end mb-2">
-        <button onClick={() => navigate('/marketplace/meal-plans/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
-      </div>
+      {hasShop && (
+        <div className="flex justify-end mb-2">
+          <button onClick={() => navigate('/marketplace/meal-plans/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-2 gap-3">
@@ -166,12 +197,13 @@ function MealPlansTab() {
                   <Clock size={10} className="text-buddy-green" /> {plan.duration_weeks} weeks
                 </p>
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-buddy-surface-raised">
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     {plan.price_artifacts && Object.entries(plan.price_artifacts).map(([k, v]) => (
                       <span key={k} className="flex items-center gap-1 text-xs font-bold text-buddy-green"><ArtifactIcon artifact={k} size={12} /> {v as any}</span>
                     ))}
+                    <CurrencyHint artifacts={plan.price_artifacts} />
                   </div>
-                  {plan.review_count > 0 && <span className="flex items-center gap-1 text-[10px] font-medium text-buddy-gold"><Star size={10} className="fill-buddy-gold" /> {plan.average_rating}</span>}
+                  {plan.review_count > 0 && <span className="flex items-center gap-1 text-[10px] font-medium text-buddy-gold flex-shrink-0"><Star size={10} className="fill-buddy-gold" /> {plan.average_rating}</span>}
                 </div>
               </div>
               <AddToCartButton type="meal_plan" id={plan.id} />
@@ -183,7 +215,7 @@ function MealPlansTab() {
   );
 }
 
-function ProgrammesTab() {
+function ProgrammesTab({ hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [programmes, setProgrammes] = useState<TrainingProgrammeMP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -199,9 +231,11 @@ function ProgrammesTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-end mb-2">
-        <button onClick={() => navigate('/marketplace/programmes/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
-      </div>
+      {hasShop && (
+        <div className="flex justify-end mb-2">
+          <button onClick={() => navigate('/marketplace/programmes/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
+        </div>
+      )}
       {programmes.length === 0 ? (
         <div className="text-center py-20 text-buddy-text-secondary">No training programmes available yet.</div>
       ) : (
@@ -223,12 +257,13 @@ function ProgrammesTab() {
                   <Clock size={10} className="text-buddy-green" /> {p.duration_weeks} weeks
                 </p>
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-buddy-surface-raised">
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     {p.price_artifacts && Object.entries(p.price_artifacts).map(([k, v]) => (
                       <span key={k} className="flex items-center gap-1 text-xs font-bold text-buddy-green"><ArtifactIcon artifact={k} size={12} /> {v as any}</span>
                     ))}
+                    <CurrencyHint artifacts={p.price_artifacts} />
                   </div>
-                  <span className="text-[10px] font-medium text-buddy-text-secondary flex items-center gap-1"><Users size={10} /> {p.purchase_count}</span>
+                  <span className="text-[10px] font-medium text-buddy-text-secondary flex items-center gap-1 flex-shrink-0"><Users size={10} /> {p.purchase_count}</span>
                 </div>
               </div>
               <AddToCartButton type="programme" id={p.id} />
@@ -240,7 +275,7 @@ function ProgrammesTab() {
   );
 }
 
-function ProductsTab() {
+function ProductsTab({ hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductMP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -265,9 +300,11 @@ function ProductsTab() {
         ))}
       </div>
 
-      <div className="flex justify-end mb-2">
-        <button onClick={() => navigate('/marketplace/products/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
-      </div>
+      {hasShop && (
+        <div className="flex justify-end mb-2">
+          <button onClick={() => navigate('/marketplace/products/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Recommend</button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-2 gap-3">
@@ -287,7 +324,9 @@ function ProductsTab() {
                 <p className="text-xs text-buddy-text-secondary">{p.brand}</p>
                 {p.recommender_data && <p className="text-xs text-buddy-electric mt-0.5">Rec. by {p.recommender_data.display_name}</p>}
                 <div className="flex items-center justify-between mt-2">
-                  {p.price_display && <span className="text-xs font-coin font-bold text-buddy-green">{p.price_display}</span>}
+                  <div>
+                    {p.price_display && <span className="text-xs font-coin font-bold text-buddy-green">{p.price_display}</span>}
+                  </div>
                 </div>
               </div>
               <AddToCartButton type="product" id={p.id} />
@@ -299,23 +338,49 @@ function ProductsTab() {
   );
 }
 
-function EventsTab() {
+function EventsTab({ hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
+  const [scope, setScope] = useState<'upcoming' | 'past' | 'all'>('upcoming');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setIsLoading(true);
-    marketplaceApi.getEvents(true)
+    marketplaceApi.getEvents(scope)
       .then((res) => setEvents(res.data || []))
       .catch(() => {})
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [scope]);
+
+  const SCOPE_OPTIONS: { key: 'upcoming' | 'past' | 'all'; label: string }[] = [
+    { key: 'upcoming', label: 'Upcoming' },
+    { key: 'past', label: 'Past' },
+    { key: 'all', label: 'All' },
+  ];
+  const headerTitle =
+    scope === 'past' ? 'Past Events' : scope === 'all' ? 'All Events' : 'Upcoming Events';
 
   return (
     <>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-sm font-bold text-buddy-text-secondary uppercase">Upcoming Events</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-bold text-buddy-text-secondary">{headerTitle}</h2>
+          <div className="flex items-center gap-1 bg-buddy-surface-raised rounded-lg p-0.5">
+            {SCOPE_OPTIONS.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setScope(opt.key)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                  scope === opt.key
+                    ? 'bg-buddy-electric text-white shadow-sm'
+                    : 'text-buddy-text-secondary hover:text-white'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex gap-2">
           <button onClick={() => navigate('/marketplace/events/my-tickets')} className="text-xs font-medium text-buddy-electric hover:underline">My Tickets</button>
           <button onClick={() => navigate('/marketplace/events/create')} className="text-xs font-medium text-buddy-green hover:underline">Host</button>
@@ -323,39 +388,67 @@ function EventsTab() {
       </div>
 
       {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="p-4 animate-pulse"><div className="h-16 bg-buddy-surface-raised rounded-xl" /></Card>
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-4 animate-pulse"><div className="h-32 bg-buddy-surface-raised rounded-xl" /></Card>
           ))}
         </div>
       ) : events.length === 0 ? (
-        <div className="text-center py-20 text-buddy-text-secondary">No upcoming events.</div>
+        <div className="text-center py-20 text-buddy-text-secondary">
+          {scope === 'past' ? 'No past events.' : scope === 'all' ? 'No events yet.' : 'No upcoming events.'}
+        </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           {events.map((e) => (
-            <Card key={e.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer" onClick={() => navigate(`/marketplace/events/${e.id}`)}>
-              <div className="flex gap-4">
-                <div className="w-14 h-14 bg-buddy-surface rounded-xl flex flex-col items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-buddy-green uppercase">{new Date(e.start_time).toLocaleString('en-US', { month: 'short' })}</span>
-                  <span className="text-lg font-display font-extrabold">{new Date(e.start_time).getDate()}</span>
+            <Card key={e.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/events/${e.id}`)}>
+              <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center relative overflow-hidden">
+                {e.cover_image_url ? (
+                  <img src={e.cover_image_url} alt={e.title} className="w-full h-full object-cover" />
+                ) : (
+                  <Calendar size={32} className="text-buddy-text-secondary/30" />
+                )}
+                <Badge
+                  variant={e.ticket_price_artifacts && Object.keys(e.ticket_price_artifacts).length > 0 ? 'gold' : 'green'}
+                  label={e.ticket_price_artifacts && Object.keys(e.ticket_price_artifacts).length > 0 ? 'Paid' : 'Free'}
+                  size="sm"
+                  className="absolute top-2 left-2 shadow-sm"
+                />
+                <div className="absolute top-2 right-2 px-2 py-0.5 bg-buddy-black/70 backdrop-blur-sm rounded text-[10px] font-bold text-white capitalize">
+                  {e.event_type === 'online' ? 'Online' : e.event_type.replace('_', ' ')}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium truncate">{e.title}</p>
-                    <Badge variant={e.ticket_price_artifacts && Object.keys(e.ticket_price_artifacts).length > 0 ? 'gold' : 'green'} label={e.ticket_price_artifacts && Object.keys(e.ticket_price_artifacts).length > 0 ? 'Paid' : 'Free'} size="sm" />
+                {new Date(e.start_datetime).getTime() < Date.now() && (
+                  <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-buddy-red/90 backdrop-blur-sm rounded text-[10px] font-bold text-white">
+                    Ended
                   </div>
-                  <p className="text-xs text-buddy-text-secondary mt-1 flex items-center gap-1">
-                    <Clock size={12} /> {new Date(e.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                  <p className="text-xs text-buddy-text-secondary flex items-center gap-1 mt-0.5">
-                    {e.event_type === 'virtual' ? <Calendar size={12} /> : <Users size={12} />} 
-                    <span className="capitalize">{e.event_type}</span> • {e.attendee_count} attending
-                  </p>
+                )}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium truncate">{e.title}</p>
+                <p className="text-xs text-buddy-text-secondary mt-0.5 truncate">by {e.creator_data.display_name}</p>
+                <p className="text-[10px] text-buddy-text-secondary mt-0.5 flex items-center gap-1">
+                  <Calendar size={10} className="text-buddy-green" /> {new Date(e.start_datetime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                </p>
+                <p className="text-[10px] text-buddy-text-secondary flex items-center gap-1">
+                  <Clock size={10} className="text-buddy-electric" /> {new Date(e.start_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                  {e.ticket_price_artifacts && Object.keys(e.ticket_price_artifacts).length > 0
+                    ? Object.entries(e.ticket_price_artifacts).map(([k, v]) => (
+                        <span key={k} className="flex items-center gap-1 text-xs font-bold text-buddy-green"><ArtifactIcon artifact={k} size={12} /> {v as any}</span>
+                      ))
+                    : <span className="text-xs font-bold text-buddy-green">Free</span>}
+                  {e.ticket_price_artifacts && <CurrencyHint artifacts={e.ticket_price_artifacts} />}
+                </div>
+                <div className="flex items-center justify-between mt-1 pt-2 border-t border-buddy-surface-raised">
+                  <span className="flex items-center gap-1 text-[10px] font-medium text-buddy-text-secondary">
+                    <Users size={10} /> {e.attendee_count}
+                  </span>
+                  {e.capacity > 0 && (
+                    <span className="text-[10px] text-buddy-text-secondary">{e.capacity - e.attendee_count} left</span>
+                  )}
                 </div>
               </div>
-              <div className="mt-3">
-                <AddToCartButton type="event_ticket" id={e.id} />
-              </div>
+              <AddToCartButton type="event_ticket" id={e.id} />
             </Card>
           ))}
         </div>

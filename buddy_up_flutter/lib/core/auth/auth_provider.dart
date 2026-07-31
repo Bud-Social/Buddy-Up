@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../data/models/user.dart';
 import '../../data/models/profile.dart';
+import '../../data/models/auth_models.dart';
 
 class AuthState {
   final bool isAuthenticated;
@@ -65,6 +66,11 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> updateProfile(Profile profile) async {
     state = state.copyWith(profile: profile);
+  }
+
+  Future<void> handleLoginSuccess(LoginOTPResponse res) async {
+    await setTokens(res.access, res.refresh);
+    await setUserAndProfile(res.user, res.profile);
   }
 
   Future<void> logout() async {

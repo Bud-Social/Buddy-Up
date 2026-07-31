@@ -252,7 +252,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final other = convo?.participantsData.where((p) => p.userId != _myUserId).firstOrNull;
     final title = convo?.isGroup == true
-        ? (convo.groupName.isNotEmpty ? convo.groupName : 'Group')
+        ? ((convo?.groupName ?? '').isNotEmpty ? convo!.groupName! : 'Group')
         : (other?.displayName ?? 'Chat');
 
     final displayMessages = messagesState.messages.reversed.toList();

@@ -1,6 +1,25 @@
 import { apiClient } from './client';
 import type { ApiResponse } from '@/types';
 
+export interface Shop {
+  id: string;
+  handle: string;
+  name: string;
+  description: string;
+  logo_url: string;
+  cover_url: string;
+  is_certified: boolean;
+  owner: string;
+  created_at: string;
+}
+
+export interface BuddyUpCertification {
+  id: string;
+  shop_id: string;
+  status: string;
+  notes: string;
+}
+
 export interface MealPlan {
   id: string;
   creator_id: string;
@@ -19,6 +38,10 @@ export interface MealPlan {
   review_count: number;
   creator_data: { username: string; display_name: string; avatar_url: string; verification_status: string };
   is_purchased: boolean;
+  is_draft?: boolean;
+  is_active?: boolean;
+  abandoned_cart_count?: number;
+  shop_data?: { id: string; name: string; handle: string };
   created_at: string;
 }
 
@@ -42,6 +65,10 @@ export interface TrainingProgrammeMP {
   purchase_count: number;
   creator_data: { username: string; display_name: string; avatar_url: string; verification_status: string };
   is_purchased: boolean;
+  is_draft?: boolean;
+  is_active?: boolean;
+  abandoned_cart_count?: number;
+  shop_data?: { id: string; name: string; handle: string };
   created_at: string;
 }
 
@@ -65,6 +92,10 @@ export interface ProductMP {
   recommended_by: string | null;
   recommender_data: { username: string; display_name: string } | null;
   click_count: number;
+  is_active?: boolean;
+  is_draft?: boolean;
+  abandoned_cart_count?: number;
+  shop_data?: { id: string; name: string; handle: string };
   created_at: string;
 }
 
@@ -72,9 +103,13 @@ export interface MarketplaceEvent {
   id: string;
   creator_data: { username: string; display_name: string; avatar_url: string };
   gym_data: { id: string; name: string; handle: string; logo_url: string } | null;
+  shop_data: { id: string; name: string; handle: string } | null;
+  shop_id: string | null;
   title: string;
   description: string;
   cover_image_url: string;
+  promo_video_url: string;
+  gallery_urls: string[];
   event_type: string;
   location: string;
   online_url: string;
@@ -91,7 +126,52 @@ export interface MarketplaceEvent {
   category: string;
   is_registered: boolean;
   spots_remaining: number | null;
+  media: EventMediaItem[];
+  agenda?: { title: string; time: string }[];
+  recurrence?: string;
+  ticket_tiers?: { name: string; price_artifacts?: Record<string, number>; price?: number; perks?: string[] }[];
+  early_bird_enabled?: boolean;
+  early_bird_deadline?: string | null;
+  early_bird_price_artifacts?: Record<string, number>;
+  cancellation_policy?: string;
+  is_draft?: boolean;
   created_at: string;
+}
+
+export interface EventMediaItem {
+  id: string;
+  media_type: 'image' | 'video';
+  url: string;
+  thumbnail_url: string;
+  alt_text: string;
+  sort_order: number;
+}
+
+export interface ShopDetail {
+  id: string;
+  handle: string;
+  name: string;
+  description: string;
+  logo_url: string;
+  banner_url: string;
+  is_certified: boolean;
+  accent_color: string;
+  contact_email: string;
+  contact_phone: string;
+  website_url: string;
+  social_links: Record<string, string>;
+  category: string;
+  verification_status: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserShopResponse {
+  shop: ShopDetail;
+  meal_plans: MealPlan[];
+  programmes: TrainingProgrammeMP[];
+  events: MarketplaceEvent[];
+  products: ProductMP[];
 }
 
 export interface FoodItem {
@@ -108,6 +188,77 @@ export interface FoodRecognitionResult {
   total_fat: number;
   health_benefits: string[];
   method: string;
+}
+
+export interface DiscountCode {
+  id: string;
+  creator: string;
+  code: string;
+  discount_type: 'percentage' | 'fixed_artifacts';
+  discount_pct: number;
+  discount_artifacts: Record<string, number>;
+  code_type: 'text' | 'qr';
+  qr_code: string | null;
+  description: string;
+  campaign: string;
+  valid_from: string | null;
+  valid_until: string | null;
+  usage_limit: number;
+  max_uses_per_user: number;
+  times_used: number;
+  min_purchase_artifacts: Record<string, number>;
+  is_active: boolean;
+  is_retired: boolean;
+  retired_at: string | null;
+  retired_reason: string;
+  share_count: number;
+  usage_count: number;
+  is_expired: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DiscountUsageRecord {
+  id: string;
+  code: string;
+  user_display: string;
+  discount: string;
+  user: string;
+  cart: string | null;
+  order_artifacts: Record<string, number>;
+  discount_pct_applied: number;
+  discount_artifacts_applied: Record<string, number>;
+  savings_artifacts: Record<string, number>;
+  savings_usd: number;
+  was_successful: boolean;
+  created_at: string;
+}
+
+export interface DiscountAnalytics {
+  total_uses: number;
+  successful_uses: number;
+  total_savings_usd: number;
+  share_count: number;
+  times_used: number;
+  usage_over_time: { date: string; count: number }[];
+  unique_users: number;
+  returning_users: number;
+  retention_rate: number;
+  repeat_usage_distribution: { uses: number; users: number }[];
+  avg_savings_per_user: number;
+  total_order_value_usd: number;
+  top_users: { user__username: string; user__display_name: string; uses: number; savings: number | null }[];
+  code: DiscountCode;
+}
+
+export interface CreatorAnalytics {
+  total_revenue_usd: number;
+  total_sales: number;
+  total_views: number;
+  category_sales: Record<string, number>;
+  category_revenue: Record<string, number>;
+  revenue_over_time: { month: string; total: number }[];
+  top_services: { id: string; title: string; type: string; sales: number }[];
 }
 
 export const marketplaceApi = {
@@ -183,8 +334,8 @@ export const marketplaceApi = {
   deleteProduct: (productId: string) =>
     apiClient.delete<ApiResponse<null>>(`/marketplace/products/${productId}/`).then((r) => r.data),
 
-  getEvents: (upcoming: boolean = true) =>
-    apiClient.get<ApiResponse<any[]>>('/marketplace/events/', { params: { upcoming } }).then((r) => r.data),
+  getEvents: (scope: 'upcoming' | 'past' | 'all' = 'upcoming') =>
+    apiClient.get<ApiResponse<any[]>>('/marketplace/events/', { params: { scope } }).then((r) => r.data),
 
   getEvent: (eventId: string) =>
     apiClient.get<ApiResponse<any>>(`/marketplace/events/${eventId}/`).then((r) => r.data),
@@ -210,8 +361,17 @@ export const marketplaceApi = {
     }).then((r) => r.data);
   },
 
+  getCreatorAnalytics: () =>
+    apiClient.get<ApiResponse<CreatorAnalytics>>('/marketplace/my-services/analytics/').then((r) => r.data),
+
   getMyServices: () =>
-    apiClient.get<ApiResponse<{ meal_plans: MealPlan[]; programmes: TrainingProgrammeMP[]; events: MarketplaceEvent[] }>>('/marketplace/my-services/').then((r) => r.data),
+    apiClient.get<ApiResponse<{ shop: ShopDetail | null; meal_plans: MealPlan[]; programmes: TrainingProgrammeMP[]; events: MarketplaceEvent[]; products: ProductMP[]; discount_codes: DiscountCode[] }>>('/marketplace/my-services/').then((r) => r.data),
+
+  updateEvent: (eventId: string, data: Record<string, unknown>) =>
+    apiClient.put<ApiResponse<MarketplaceEvent>>(`/marketplace/events/${eventId}/`, data).then((r) => r.data),
+
+  deleteEvent: (eventId: string) =>
+    apiClient.delete<ApiResponse<null>>(`/marketplace/events/${eventId}/`).then((r) => r.data),
 
   getCart: () =>
     apiClient.get<ApiResponse<any>>('/marketplace/cart/').then((r) => r.data),
@@ -227,4 +387,83 @@ export const marketplaceApi = {
 
   applyDiscount: (code: string) =>
     apiClient.post<ApiResponse<any>>('/marketplace/cart/discount/', { code }).then((r) => r.data),
+
+  removeDiscount: () =>
+    apiClient.delete<ApiResponse<any>>('/marketplace/cart/discount/').then((r) => r.data),
+
+  getDiscountCodes: () =>
+    apiClient.get<ApiResponse<DiscountCode[]>>('/marketplace/discount-codes/').then((r) => r.data),
+
+  getDiscountCode: (codeId: string) =>
+    apiClient.get<ApiResponse<DiscountCode>>(`/marketplace/discount-codes/${codeId}/`).then((r) => r.data),
+
+  createDiscountCode: (data: Record<string, unknown>) =>
+    apiClient.post<ApiResponse<DiscountCode>>('/marketplace/discount-codes/', data).then((r) => r.data),
+
+  updateDiscountCode: (codeId: string, data: Record<string, unknown>) =>
+    apiClient.put<ApiResponse<DiscountCode>>(`/marketplace/discount-codes/${codeId}/`, data).then((r) => r.data),
+
+  patchDiscountCode: (codeId: string, data: Record<string, unknown>) =>
+    apiClient.patch<ApiResponse<DiscountCode>>(`/marketplace/discount-codes/${codeId}/`, data).then((r) => r.data),
+
+  deleteDiscountCode: (codeId: string) =>
+    apiClient.delete<ApiResponse<null>>(`/marketplace/discount-codes/${codeId}/`).then((r) => r.data),
+
+  getDiscountCodeAnalytics: (codeId: string) =>
+    apiClient.get<ApiResponse<DiscountAnalytics>>(`/marketplace/discount-codes/${codeId}/analytics/`).then((r) => r.data),
+
+  shareDiscountCode: (codeId: string) =>
+    apiClient.post<ApiResponse<any>>(`/marketplace/discount-codes/${codeId}/share/`).then((r) => r.data),
+
+  uploadImage: (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return apiClient.post<ApiResponse<{ url: string }>>('/marketplace/upload-cover/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data);
+  },
+
+  getShops: () =>
+    apiClient.get<ApiResponse<Shop[]>>('/marketplace/shops/').then((r) => r.data),
+  
+  getMyShops: () =>
+    apiClient.get<ApiResponse<Shop[]>>('/marketplace/shops/my/').then((r) => r.data),
+
+  getShop: (handle: string) =>
+    apiClient.get<ApiResponse<Shop>>(`/marketplace/shops/${handle}/`).then((r) => r.data),
+
+  getUserShop: (handle: string) =>
+    apiClient.get<ApiResponse<UserShopResponse>>(`/marketplace/shops/${handle}/public/`).then((r) => r.data),
+
+  getEventMedia: (eventId: string) =>
+    apiClient.get<ApiResponse<EventMediaItem[]>>(`/marketplace/events/${eventId}/media/`).then((r) => r.data),
+
+  addEventMedia: (eventId: string, data: FormData) =>
+    apiClient.post<ApiResponse<EventMediaItem>>(`/marketplace/events/${eventId}/media/`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data),
+
+  deleteEventMedia: (eventId: string, mediaId: string) =>
+    apiClient.delete<ApiResponse<null>>(`/marketplace/events/${eventId}/media/${mediaId}/`).then((r) => r.data),
+
+  createShop: (data: Record<string, unknown>) =>
+    apiClient.post<ApiResponse<Shop>>('/marketplace/shops/', data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then((r) => r.data),
+
+  updateShop: (handle: string, data: Record<string, unknown>) =>
+    apiClient.patch<ApiResponse<Shop>>(`/marketplace/shops/${handle}/`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then((r) => r.data),
+
+  applyForCertification: (handle: string, data: Record<string, unknown>) =>
+    apiClient.post<ApiResponse<BuddyUpCertification>>(`/marketplace/shops/${handle}/certification/`, data, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then((r) => r.data),
+
+  updateActivityProgress: (programmeId: string, data: Record<string, unknown>) =>
+    apiClient.patch<ApiResponse<any>>(`/marketplace/programmes/${programmeId}/progress/`, data).then((r) => r.data),
+
+  registerPushToken: (token: string, platform: string = 'web', device_name: string = 'Browser') =>
+    apiClient.post<ApiResponse<any>>('/marketplace/push-devices/', { token, platform, device_name }).then((r) => r.data),
 };

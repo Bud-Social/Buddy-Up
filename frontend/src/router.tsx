@@ -44,10 +44,15 @@ const CreateEvent = lazy(() => import('@/pages/app/CreateEvent'));
 const MyEventTickets = lazy(() => import('@/pages/app/MyEventTickets'));
 const CartPage = lazy(() => import('@/pages/app/CartPage'));
 const CreatorStudio = lazy(() => import('@/pages/app/CreatorStudio'));
+const DiscountCodes = lazy(() => import('@/pages/app/DiscountCodes'));
+
+const DiscountCodeAnalyticsPage = lazy(() => import('@/pages/app/DiscountCodeAnalytics'));
+const ShopDetail = lazy(() => import('@/pages/app/ShopDetail'));
 const MealPlanDetail = lazy(() => import('@/pages/app/MealPlanDetail'));
 const CreateMealPlan = lazy(() => import('@/pages/app/CreateMealPlan'));
 const ProgrammeDetail = lazy(() => import('@/pages/app/ProgrammeDetail'));
 const CreateProgramme = lazy(() => import('@/pages/app/CreateProgramme'));
+const ProgrammeActivityFocus = lazy(() => import('@/pages/app/ProgrammeActivityFocus'));
 const ProductDetail = lazy(() => import('@/pages/app/ProductDetail'));
 const CreateProduct = lazy(() => import('@/pages/app/CreateProduct'));
 const Sessions = lazy(() => import('@/pages/app/Sessions'));
@@ -123,6 +128,9 @@ export const router = createBrowserRouter([
           { path: '/trainers/:slug', element: <SWrapper><TrainerProfile /></SWrapper> },
           { path: '/marketplace', element: <SWrapper><Marketplace /></SWrapper> },
           { path: '/marketplace/creator', element: <SWrapper><CreatorStudio /></SWrapper> },
+          { path: '/marketplace/creator/discount-codes', element: <SWrapper><DiscountCodes /></SWrapper> },
+
+          { path: '/marketplace/creator/discount-codes/:codeId/analytics', element: <SWrapper><DiscountCodeAnalyticsPage /></SWrapper> },
           { path: '/marketplace/cart', element: <SWrapper><CartPage /></SWrapper> },
           { path: '/marketplace/events/create', element: <SWrapper><CreateEvent /></SWrapper> },
           { path: '/marketplace/events/my-tickets', element: <SWrapper><MyEventTickets /></SWrapper> },
@@ -131,6 +139,7 @@ export const router = createBrowserRouter([
           { path: '/marketplace/meal-plans/:planId', element: <SWrapper><MealPlanDetail /></SWrapper> },
           { path: '/marketplace/programmes/create', element: <SWrapper><CreateProgramme /></SWrapper> },
           { path: '/marketplace/programmes/:programmeId', element: <SWrapper><ProgrammeDetail /></SWrapper> },
+          { path: '/marketplace/programmes/:programmeId/activity/:weekKey/:dayKey/:activityIndex', element: <SWrapper><ProgrammeActivityFocus /></SWrapper> },
           { path: '/marketplace/products/create', element: <SWrapper><CreateProduct /></SWrapper> },
           { path: '/marketplace/products/:productId', element: <SWrapper><ProductDetail /></SWrapper> },
           { path: '/sessions', element: <SWrapper><Sessions /></SWrapper> },
@@ -150,6 +159,7 @@ export const router = createBrowserRouter([
         ],
       },
       { path: '/live/:liveId', element: <SWrapper><LiveRoom /></SWrapper> },
+      { path: '/shops/:handle', element: <SWrapper><ShopDetail /></SWrapper> },
       { path: '/:username', element: <SWrapper><UserProfile /></SWrapper> },
     ],
   },

@@ -65,6 +65,11 @@ class ResendOTPSerializer(serializers.Serializer):
     channel = serializers.ChoiceField(choices=['email', 'phone'])
 
 
+class ResendRegistrationOTPSerializer(serializers.Serializer):
+    registration_token = serializers.CharField()
+    channel = serializers.ChoiceField(choices=['email', 'phone'])
+
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 

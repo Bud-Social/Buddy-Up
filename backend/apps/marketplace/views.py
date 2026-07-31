@@ -3,28 +3,537 @@ from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
 from django.utils import timezone
+from django.utils.text import slugify
 
 from rest_framework import views, permissions, status
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.response import Response
 
 from common.pagination import PageNumberPagination
 from .models import (
+    Shop, ShopMembership, ShopGymLink, ShopVerificationApplication, PushDevice,
     MealPlan, MealPlanPurchase, MealPlanReview,
     TrainingProgramme, TrainingProgrammePurchase, TrainingProgrammeReview,
-    Product, MarketplaceEvent, EventTicket,
+    ProgrammeActivityProgress,
+    Product, MarketplaceEvent, EventMedia, EventTicket,
+    Cart, CartItem, DiscountCode, DiscountUsage,
 )
 from .serializers import (
+    ShopSerializer, ShopDetailSerializer, ShopCreateSerializer,
+    ShopMembershipSerializer, ShopGymLinkSerializer,
+    ShopVerificationApplicationSerializer,
+    PushDeviceSerializer, ProgrammeActivityProgressSerializer,
     MealPlanSerializer, MealPlanFullSerializer, MealPlanReviewSerializer,
     TrainingProgrammeSerializer, TrainingProgrammeReviewSerializer,
-    UpdateTrainingProgrammeSerializer,
-    ProductSerializer, MarketplaceEventSerializer,
+    UpdateTrainingProgrammeSerializer, UpdateMealPlanSerializer,
+    ProductSerializer, UpdateProductSerializer, CreateProductSerializer,
+    MarketplaceEventSerializer, EventMediaSerializer,
     EventTicketSerializer, CreateMealPlanSerializer, CreateTrainingProgrammeSerializer,
     CreateEventSerializer, PersonaliseMealPlanSerializer, ReviewInputSerializer,
+    DiscountCodeSerializer, DiscountCodeWriteSerializer, DiscountUsageSerializer,
 )
-from apps.wallet.utils import deduct_artifacts, credit_artifacts
+from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator_artifacts, platform_cut
 from apps.wallet.models import ArtifactTransaction
-from apps.wallet.serializers import PLATFORM_CUTS, ARTIFACT_LABELS
+from apps.wallet.serializers import PLATFORM_CUTS, ARTIFACT_LABELS, ARTIFACT_VALUES
+
+
+# ===========================================================================
+# Shop Views
+# ===========================================================================
+
+class ShopListView(views.APIView):
+    """List all public shops or the current user's shops."""
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get(self, request):
+        mine = request.query_params.get('mine') == 'true'
+        if mine:
+            if not request.user.is_authenticated:
+                return Response({'success': False, 'data': [], 'message': 'Auth required', 'errors': None, 'pagination': None}, status=401)
+            profile_ids = ShopMembership.objects.filter(profile=request.user.profile).values_list('shop_id', flat=True)
+            qs = Shop.objects.filter(id__in=profile_ids, is_active=True)
+        else:
+            category = request.query_params.get('category', '')
+            q = request.query_params.get('q', '')
+            qs = Shop.objects.filter(is_active=True)
+            if category:
+                qs = qs.filter(category=category)
+            if q:
+                qs = qs.filter(name__icontains=q)
+
+        qs = qs.prefetch_related('memberships').order_by('-created_at')
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(qs, request)
+        serializer = ShopSerializer(page, many=True, context={'request': request})
+        return Response({
+            'success': True, 'data': serializer.data, 'message': 'OK',
+            'errors': None,
+            'pagination': {'count': paginator.page.paginator.count,
+                           'next': paginator.get_next_link(), 'previous': paginator.get_previous_link()},
+        })
+
+    def post(self, request):
+        """Create a new shop."""
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'data': None, 'message': 'Auth required', 'errors': None, 'pagination': None}, status=401)
+
+        serializer = ShopCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'success': False, 'data': None, 'message': 'Validation failed',
+                             'errors': serializer.errors, 'pagination': None}, status=400)
+
+        shop = serializer.save()
+
+        # Handle logo/banner file uploads
+        if 'logo' in request.FILES:
+            shop.logo = request.FILES['logo']
+        if 'banner' in request.FILES:
+            shop.banner = request.FILES['banner']
+        shop.save()
+
+        # Create membership: the creator is the owner
+        ShopMembership.objects.create(shop=shop, profile=request.user.profile, role='owner')
+
+        # Handle gym link if provided
+        gym_id = request.data.get('gym_id')
+        if gym_id:
+            from apps.gyms.models import Gym
+            try:
+                gym = Gym.objects.get(id=gym_id)
+                ShopGymLink.objects.create(shop=shop, gym=gym, is_primary=True)
+            except Exception:
+                pass
+
+        # Notify the creator
+        from apps.notifications.tasks import create_notification
+        create_notification.delay(
+            str(request.user.id),
+            'shop_created',
+            f'Your shop "{shop.name}" is live! 🛍️',
+            'Start adding your services to reach buyers on BuddyUp.',
+            {'shop_id': str(shop.id), 'shop_handle': shop.handle},
+        )
+
+        return Response({
+            'success': True,
+            'data': ShopDetailSerializer(shop, context={'request': request}).data,
+            'message': 'Shop created successfully.',
+            'errors': None, 'pagination': None,
+        }, status=201)
+
+
+class ShopDetailView(views.APIView):
+    """Get, update, or delete a shop by handle."""
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def _get_shop_and_check_role(self, handle, request, required_role='manager'):
+        shop = get_object_or_404(Shop, handle=handle, is_active=True)
+        if not request.user.is_authenticated:
+            return shop, None
+        membership = shop.memberships.filter(profile=request.user.profile).first()
+        role = membership.role if membership else None
+        return shop, role
+
+    def get(self, request, handle):
+        shop = get_object_or_404(Shop, handle=handle, is_active=True)
+        serializer = ShopDetailSerializer(shop, context={'request': request})
+        return Response({'success': True, 'data': serializer.data, 'message': 'OK', 'errors': None, 'pagination': None})
+
+    def patch(self, request, handle):
+        shop, role = self._get_shop_and_check_role(handle, request)
+        if role not in ('owner', 'manager'):
+            return Response({'success': False, 'data': None, 'message': 'Insufficient permissions.',
+                             'errors': None, 'pagination': None}, status=403)
+
+        # Handle image uploads
+        if 'logo' in request.FILES:
+            shop.logo = request.FILES['logo']
+        if 'banner' in request.FILES:
+            shop.banner = request.FILES['banner']
+
+        for field in ('name', 'description', 'category', 'accent_color', 'contact_email',
+                      'contact_phone', 'website_url', 'social_links', 'refund_policy'):
+            if field in request.data:
+                setattr(shop, field, request.data[field])
+        shop.save()
+        return Response({'success': True, 'data': ShopDetailSerializer(shop, context={'request': request}).data,
+                         'message': 'Shop updated.', 'errors': None, 'pagination': None})
+
+    def delete(self, request, handle):
+        shop, role = self._get_shop_and_check_role(handle, request)
+        if role != 'owner':
+            return Response({'success': False, 'data': None, 'message': 'Only owners can delete a shop.',
+                             'errors': None, 'pagination': None}, status=403)
+        shop.is_active = False
+        shop.save(update_fields=['is_active'])
+        return Response({'success': True, 'data': None, 'message': 'Shop deactivated.', 'errors': None, 'pagination': None})
+
+
+class ShopMembershipView(views.APIView):
+    """Add/remove shop members. Only owners can manage membership."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, handle):
+        shop = get_object_or_404(Shop, handle=handle)
+        caller_membership = shop.memberships.filter(profile=request.user.profile, role='owner').first()
+        if not caller_membership:
+            return Response({'success': False, 'data': None, 'message': 'Only owners can invite members.',
+                             'errors': None, 'pagination': None}, status=403)
+
+        from apps.profiles.models import Profile
+        username = request.data.get('username')
+        role = request.data.get('role', 'staff')
+        try:
+            profile = Profile.objects.get(username=username)
+        except Profile.DoesNotExist:
+            return Response({'success': False, 'data': None, 'message': 'User not found.',
+                             'errors': None, 'pagination': None}, status=404)
+
+        membership, created = ShopMembership.objects.get_or_create(shop=shop, profile=profile, defaults={'role': role})
+        if not created:
+            membership.role = role
+            membership.save(update_fields=['role'])
+
+        # Notify invited member
+        from apps.notifications.tasks import create_notification
+        create_notification.delay(
+            str(profile.user_id), 'shop_invite',
+            f'You\'ve been added to "{shop.name}" as {role}',
+            f'Visit the shop to start managing services.',
+            {'shop_id': str(shop.id), 'shop_handle': shop.handle, 'role': role},
+        )
+
+        return Response({'success': True, 'data': ShopMembershipSerializer(membership).data,
+                         'message': 'Member added.', 'errors': None, 'pagination': None})
+
+    def delete(self, request, handle):
+        shop = get_object_or_404(Shop, handle=handle)
+        caller_membership = shop.memberships.filter(profile=request.user.profile, role='owner').first()
+        if not caller_membership:
+            return Response({'success': False, 'data': None, 'message': 'Only owners can remove members.',
+                             'errors': None, 'pagination': None}, status=403)
+        from apps.profiles.models import Profile
+        username = request.data.get('username')
+        try:
+            profile = Profile.objects.get(username=username)
+        except Profile.DoesNotExist:
+            return Response({'success': False, 'data': None, 'message': 'User not found.',
+                             'errors': None, 'pagination': None}, status=404)
+        ShopMembership.objects.filter(shop=shop, profile=profile).delete()
+        return Response({'success': True, 'data': None, 'message': 'Member removed.', 'errors': None, 'pagination': None})
+
+
+class ShopGymLinkView(views.APIView):
+    """Link or unlink a gym from a shop."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, handle):
+        shop = get_object_or_404(Shop, handle=handle)
+        if not shop.memberships.filter(profile=request.user.profile, role='owner').exists():
+            return Response({'success': False, 'data': None, 'message': 'Only shop owners can link gyms.',
+                             'errors': None, 'pagination': None}, status=403)
+        from apps.gyms.models import Gym
+        gym_id = request.data.get('gym_id')
+        is_primary = request.data.get('is_primary', False)
+        try:
+            gym = Gym.objects.get(id=gym_id)
+        except Gym.DoesNotExist:
+            return Response({'success': False, 'data': None, 'message': 'Gym not found.',
+                             'errors': None, 'pagination': None}, status=404)
+        link, _ = ShopGymLink.objects.get_or_create(shop=shop, gym=gym, defaults={'is_primary': is_primary})
+        return Response({'success': True, 'data': ShopGymLinkSerializer(link).data,
+                         'message': 'Gym linked.', 'errors': None, 'pagination': None})
+
+    def delete(self, request, handle):
+        shop = get_object_or_404(Shop, handle=handle)
+        if not shop.memberships.filter(profile=request.user.profile, role='owner').exists():
+            return Response({'success': False, 'data': None, 'message': 'Only shop owners can unlink gyms.',
+                             'errors': None, 'pagination': None}, status=403)
+        gym_id = request.data.get('gym_id')
+        ShopGymLink.objects.filter(shop=shop, gym_id=gym_id).delete()
+        return Response({'success': True, 'data': None, 'message': 'Gym unlinked.', 'errors': None, 'pagination': None})
+
+
+class CoverImageUploadView(views.APIView):
+    """Upload a cover image to Cloudinary (falls back to Django media). Returns URL."""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        image_file = request.FILES.get('image')
+        if not image_file:
+            return Response({'success': False, 'data': None, 'message': 'No image provided.',
+                             'errors': None, 'pagination': None}, status=400)
+
+        # Try Cloudinary first
+        try:
+            import cloudinary.uploader
+            folder = request.data.get('folder', 'marketplace/covers')
+            result = cloudinary.uploader.upload(
+                image_file,
+                folder=folder,
+                resource_type='image',
+                transformation=[{'quality': 'auto', 'fetch_format': 'auto'}],
+            )
+            return Response({
+                'success': True,
+                'data': {'url': result['secure_url'], 'public_id': result['public_id'], 'provider': 'cloudinary'},
+                'message': 'Image uploaded.', 'errors': None, 'pagination': None,
+            })
+        except Exception:
+            pass
+
+        # Fallback: save to Django media
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        import os
+        ext = os.path.splitext(image_file.name)[1]
+        path = default_storage.save(f'marketplace/covers/{uuid4().hex}{ext}', ContentFile(image_file.read()))
+        url = request.build_absolute_uri(f'{settings.MEDIA_URL}{path}')
+        return Response({
+            'success': True,
+            'data': {'url': url, 'public_id': path, 'provider': 'django'},
+            'message': 'Image uploaded.', 'errors': None, 'pagination': None,
+        })
+
+
+class ShopVerificationApplicationView(views.APIView):
+    """CRUD for Buddy Up certification applications."""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request, handle):
+        shop = get_object_or_404(Shop, handle=handle)
+        if not shop.memberships.filter(profile=request.user.profile).exists():
+            return Response({'success': False, 'data': None, 'message': 'Not a shop member.',
+                             'errors': None, 'pagination': None}, status=403)
+        app = shop.verification_applications.order_by('-created_at').first()
+        if not app:
+            return Response({'success': True, 'data': None, 'message': 'No application found.',
+                             'errors': None, 'pagination': None})
+        return Response({'success': True, 'data': ShopVerificationApplicationSerializer(app).data,
+                         'message': 'OK', 'errors': None, 'pagination': None})
+
+    def post(self, request, handle):
+        """Create or update a certification application (upsert)."""
+        shop = get_object_or_404(Shop, handle=handle)
+        if not shop.memberships.filter(profile=request.user.profile, role__in=['owner', 'manager']).exists():
+            return Response({'success': False, 'data': None, 'message': 'Insufficient permissions.',
+                             'errors': None, 'pagination': None}, status=403)
+
+        # Get or create draft application
+        app, _ = ShopVerificationApplication.objects.get_or_create(
+            shop=shop, status='draft',
+            defaults={'submitted_by': request.user.profile},
+        )
+
+        serializer = ShopVerificationApplicationSerializer(app, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response({'success': False, 'data': None, 'message': 'Validation failed',
+                             'errors': serializer.errors, 'pagination': None}, status=400)
+        serializer.save()
+
+        # Handle document uploads
+        if 'id_document' in request.FILES:
+            try:
+                import cloudinary.uploader
+                result = cloudinary.uploader.upload(request.FILES['id_document'], folder='certs/id_docs', resource_type='raw')
+                app.id_document_url = result['secure_url']
+            except Exception:
+                from django.core.files.storage import default_storage
+                from django.core.files.base import ContentFile
+                f = request.FILES['id_document']
+                p = default_storage.save(f'certs/id_docs/{f.name}', ContentFile(f.read()))
+                app.id_document_url = request.build_absolute_uri(f'{settings.MEDIA_URL}{p}')
+
+        if 'professional_cert' in request.FILES:
+            try:
+                import cloudinary.uploader
+                result = cloudinary.uploader.upload(request.FILES['professional_cert'], folder='certs/prof_certs', resource_type='raw')
+                app.professional_cert_url = result['secure_url']
+            except Exception:
+                from django.core.files.storage import default_storage
+                from django.core.files.base import ContentFile
+                f = request.FILES['professional_cert']
+                p = default_storage.save(f'certs/prof_certs/{f.name}', ContentFile(f.read()))
+                app.professional_cert_url = request.build_absolute_uri(f'{settings.MEDIA_URL}{p}')
+
+        # If submission requested, move from draft → submitted
+        if request.data.get('submit') == 'true':
+            app.status = 'submitted'
+            shop.verification_status = 'pending'
+            shop.verification_applied_at = timezone.now()
+            shop.save(update_fields=['verification_status', 'verification_applied_at'])
+
+            # Notify all shop owners
+            from apps.notifications.tasks import create_notification
+            for m in shop.memberships.filter(role='owner').select_related('profile'):
+                create_notification.delay(
+                    str(m.profile.user_id), 'shop_cert_status',
+                    f'Certification application submitted for "{shop.name}" ✅',
+                    'Your application is under review. We\'ll update you soon.',
+                    {'shop_id': str(shop.id), 'application_id': str(app.id), 'status': 'submitted'},
+                )
+
+        app.save()
+        return Response({'success': True, 'data': ShopVerificationApplicationSerializer(app).data,
+                         'message': 'Application saved.', 'errors': None, 'pagination': None})
+
+    def patch(self, request, handle):
+        """Admin updates application status (approve / reject / request more info)."""
+        if not request.user.is_staff:
+            return Response({'success': False, 'data': None, 'message': 'Admin only.',
+                             'errors': None, 'pagination': None}, status=403)
+        shop = get_object_or_404(Shop, handle=handle)
+        app = shop.verification_applications.order_by('-created_at').first()
+        if not app:
+            return Response({'success': False, 'data': None, 'message': 'No application.',
+                             'errors': None, 'pagination': None}, status=404)
+
+        new_status = request.data.get('status')
+        valid = [c[0] for c in ShopVerificationApplication.STATUS_CHOICES]
+        if new_status not in valid:
+            return Response({'success': False, 'data': None,
+                             'message': f'Invalid status. Must be one of: {valid}',
+                             'errors': None, 'pagination': None}, status=400)
+
+        app.status = new_status
+        app.reviewer_notes = request.data.get('reviewer_notes', app.reviewer_notes)
+        app.rejection_reason = request.data.get('rejection_reason', app.rejection_reason)
+        app.reviewed_by = request.user.profile
+        app.reviewed_at = timezone.now()
+        app.save()
+
+        # Mirror status to the shop's verification_status
+        if new_status == 'approved':
+            shop.verification_status = 'verified'
+            shop.verified_at = timezone.now()
+        elif new_status == 'rejected':
+            shop.verification_status = 'rejected'
+            shop.rejection_reason = app.rejection_reason
+        elif new_status == 'more_info_needed':
+            shop.verification_status = 'pending'
+        shop.save()
+
+        # Notify ALL shop members of status change
+        from apps.notifications.tasks import create_notification
+        status_labels = {
+            'approved': ('🏅 Buddy Up Certified!', 'Your shop is now Buddy Up certified. Congrats!'),
+            'rejected': ('Application Rejected', f'Your application was not approved: {app.rejection_reason}'),
+            'more_info_needed': ('More Info Needed', app.reviewer_notes or 'Please provide additional information.'),
+            'under_review': ('Under Review', 'Your certification application is being reviewed.'),
+        }
+        notif_title, notif_body = status_labels.get(new_status, ('Certification Update', 'Your application status has changed.'))
+        for m in shop.memberships.select_related('profile'):
+            create_notification.delay(
+                str(m.profile.user_id), 'shop_cert_status',
+                notif_title, notif_body,
+                {'shop_id': str(shop.id), 'application_id': str(app.id), 'status': new_status},
+            )
+
+        # Also notify linked gyms
+        for gym_link in shop.gym_links.select_related('gym__admin'):
+            if hasattr(gym_link.gym, 'admin') and gym_link.gym.admin:
+                create_notification.delay(
+                    str(gym_link.gym.admin.user_id), 'shop_cert_status',
+                    notif_title, notif_body,
+                    {'shop_id': str(shop.id), 'application_id': str(app.id), 'status': new_status},
+                )
+
+        return Response({'success': True, 'data': ShopVerificationApplicationSerializer(app).data,
+                         'message': f'Application status updated to {new_status}.',
+                         'errors': None, 'pagination': None})
+
+
+class PushDeviceView(views.APIView):
+    """Register / update / delete push notification device tokens."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        token = request.data.get('token')
+        platform = request.data.get('platform', 'fcm')
+        device_name = request.data.get('device_name', '')
+
+        if not token:
+            return Response({'success': False, 'data': None, 'message': 'Token required.',
+                             'errors': None, 'pagination': None}, status=400)
+
+        device, _ = PushDevice.objects.update_or_create(
+            profile=request.user.profile,
+            token=token,
+            defaults={'platform': platform, 'device_name': device_name, 'is_active': True},
+        )
+        return Response({'success': True, 'data': PushDeviceSerializer(device).data,
+                         'message': 'Device registered.', 'errors': None, 'pagination': None})
+
+    def delete(self, request):
+        token = request.data.get('token')
+        PushDevice.objects.filter(profile=request.user.profile, token=token).update(is_active=False)
+        return Response({'success': True, 'data': None, 'message': 'Device deregistered.',
+                         'errors': None, 'pagination': None})
+
+
+class ProgrammeActivityProgressView(views.APIView):
+    """Get or update progress for a specific activity in a programme purchase."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, programme_id):
+        purchase = get_object_or_404(
+            TrainingProgrammePurchase, programme_id=programme_id, buyer=request.user.profile
+        )
+        progress = purchase.activity_progress.all()
+        return Response({
+            'success': True,
+            'data': ProgrammeActivityProgressSerializer(progress, many=True).data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    def patch(self, request, programme_id):
+        purchase = get_object_or_404(
+            TrainingProgrammePurchase, programme_id=programme_id, buyer=request.user.profile
+        )
+        activity_key = request.data.get('activity_key')
+        new_status = request.data.get('status', 'in_progress')
+        notes = request.data.get('notes', '')
+
+        progress, _ = ProgrammeActivityProgress.objects.get_or_create(
+            purchase=purchase, activity_key=activity_key
+        )
+        progress.status = new_status
+        if new_status == 'completed':
+            progress.completed_at = timezone.now()
+        progress.notes = notes
+        progress.save()
+
+        return Response({
+            'success': True,
+            'data': ProgrammeActivityProgressSerializer(progress).data,
+            'message': 'Progress updated.', 'errors': None, 'pagination': None,
+        })
+
+
+# ===========================================================================
+# My Shops (convenience endpoint)
+# ===========================================================================
+
+class MyShopsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        memberships = ShopMembership.objects.filter(
+            profile=request.user.profile
+        ).select_related('shop').prefetch_related('shop__memberships')
+
+        shops_data = []
+        for m in memberships:
+            s = ShopDetailSerializer(m.shop, context={'request': request}).data
+            s['my_role'] = m.role
+            shops_data.append(s)
+
+        return Response({'success': True, 'data': shops_data, 'message': 'OK',
+                         'errors': None, 'pagination': None})
+
 
 
 class MealPlanListView(views.APIView):
@@ -50,8 +559,19 @@ class MealPlanListView(views.APIView):
     def post(self, request):
         serializer = CreateMealPlanSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        shop_id = data.pop('shop_id', None)
+        shop = None
+        if shop_id:
+            try:
+                from apps.marketplace.models import Shop
+                shop = Shop.objects.get(id=shop_id)
+            except Exception:
+                pass
         plan = MealPlan.objects.create(
-            creator=request.user.profile, **serializer.validated_data,
+            creator=request.user.profile,
+            shop=shop,
+            **data,
         )
         output = MealPlanFullSerializer(plan, context={'request': request})
         return Response({
@@ -267,8 +787,19 @@ class TrainingProgrammeListView(views.APIView):
     def post(self, request):
         serializer = CreateTrainingProgrammeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        shop_id = data.pop('shop_id', None)
+        shop = None
+        if shop_id:
+            try:
+                from apps.marketplace.models import Shop
+                shop = Shop.objects.get(id=shop_id)
+            except Exception:
+                pass
         programme = TrainingProgramme.objects.create(
-            creator=request.user.profile, **serializer.validated_data,
+            creator=request.user.profile,
+            shop=shop,
+            **data,
         )
         output = TrainingProgrammeSerializer(programme, context={'request': request})
         return Response({
@@ -453,8 +984,19 @@ class ProductListView(views.APIView):
     def post(self, request):
         serializer = CreateProductSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        shop_id = data.pop('shop_id', None)
+        shop = None
+        if shop_id:
+            try:
+                from apps.marketplace.models import Shop
+                shop = Shop.objects.get(id=shop_id)
+            except Exception:
+                pass
         product = Product.objects.create(
-            recommended_by=request.user.profile, **serializer.validated_data,
+            recommended_by=request.user.profile,
+            shop=shop,
+            **data,
         )
         output = ProductSerializer(product)
         return Response({
@@ -521,14 +1063,19 @@ class EventListView(views.APIView):
         event_type = request.query_params.get('event_type')
         gym_id = request.query_params.get('gym_id')
         upcoming_only = request.query_params.get('upcoming', 'true').lower() == 'true'
+        scope = request.query_params.get('scope', '')
         if category:
             qs = qs.filter(category=category)
         if event_type:
             qs = qs.filter(event_type=event_type)
         if gym_id:
             qs = qs.filter(gym_id=gym_id)
-        if upcoming_only:
-            from django.utils import timezone as tz
+        from django.utils import timezone as tz
+        if scope == 'past':
+            qs = qs.filter(start_datetime__lt=tz.now())
+        elif scope == 'all':
+            pass
+        elif upcoming_only:
             qs = qs.filter(start_datetime__gte=tz.now())
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
@@ -556,9 +1103,20 @@ class EventListView(views.APIView):
                 gym = Gym.objects.get(id=gym_id)
             except Exception:
                 pass
+        
+        shop_id = data.pop('shop_id', None)
+        shop = None
+        if shop_id:
+            try:
+                from apps.marketplace.models import Shop
+                shop = Shop.objects.get(id=shop_id)
+            except Exception:
+                pass
+
         event = MarketplaceEvent.objects.create(
             creator=request.user.profile,
             gym=gym,
+            shop=shop,
             **data
         )
         return Response({'success': True, 'data': MarketplaceEventSerializer(event, context={'request': request}).data}, status=201)
@@ -585,9 +1143,12 @@ class EventDetailView(views.APIView):
             return Response({'success': False, 'message': 'Event not found.'}, status=404)
         if event.creator != request.user.profile:
             return Response({'success': False, 'message': 'Permission denied.'}, status=403)
-        updatable = ['title', 'description', 'cover_image_url', 'event_type', 'location',
-                     'online_url', 'start_datetime', 'end_datetime', 'timezone', 'capacity',
-                     'ticket_price_artifacts', 'is_free', 'is_published', 'tags', 'category']
+        updatable = ['title', 'description', 'cover_image_url', 'promo_video_url', 'gallery_urls',
+                     'event_type', 'location', 'online_url', 'start_datetime', 'end_datetime',
+                     'timezone', 'capacity', 'ticket_price_artifacts', 'is_free', 'is_published',
+                     'tags', 'category', 'agenda', 'recurrence', 'ticket_tiers',
+                     'early_bird_enabled', 'early_bird_deadline', 'early_bird_price_artifacts',
+                     'cancellation_policy', 'is_draft']
         for field in updatable:
             if field in request.data:
                 setattr(event, field, request.data[field])
@@ -672,6 +1233,57 @@ class EventTicketDetailView(views.APIView):
         return Response({'success': True, 'data': EventTicketSerializer(ticket, context={'request': request}).data})
 
 
+class EventMediaManageView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request, event_id):
+        try:
+            event = MarketplaceEvent.objects.get(id=event_id)
+        except MarketplaceEvent.DoesNotExist:
+            return Response({'success': False, 'message': 'Event not found.'}, status=404)
+        media = event.media.all()
+        return Response({'success': True, 'data': EventMediaSerializer(media, many=True).data})
+
+    def post(self, request, event_id):
+        try:
+            event = MarketplaceEvent.objects.get(id=event_id)
+        except MarketplaceEvent.DoesNotExist:
+            return Response({'success': False, 'message': 'Event not found.'}, status=404)
+        if event.creator != request.user.profile:
+            return Response({'success': False, 'message': 'Permission denied.'}, status=403)
+
+        media_type = request.data.get('media_type', 'image')
+        sort_order = int(request.data.get('sort_order', 0))
+        alt_text = request.data.get('alt_text', '')
+
+        em = EventMedia.objects.create(
+            event=event,
+            media_type=media_type,
+            sort_order=sort_order,
+            alt_text=alt_text,
+        )
+        if 'file' in request.FILES:
+            em.file = request.FILES['file']
+            em.save()
+        elif 'url' in request.data:
+            em.url = request.data['url']
+            em.save()
+
+        return Response({'success': True, 'data': EventMediaSerializer(em).data}, status=201)
+
+    def delete(self, request, event_id, **kwargs):
+        media_id = kwargs.get('media_id')
+        try:
+            em = EventMedia.objects.get(id=media_id, event_id=event_id)
+        except EventMedia.DoesNotExist:
+            return Response({'success': False, 'message': 'Media not found.'}, status=404)
+        if em.event.creator != request.user.profile:
+            return Response({'success': False, 'message': 'Permission denied.'}, status=403)
+        em.delete()
+        return Response({'success': True, 'message': 'Media removed.'})
+
+
 class FoodRecognizeView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -719,13 +1331,36 @@ class MyMarketplaceServicesView(views.APIView):
     def get(self, request):
         from django.db.models import Count
         profile = request.user.profile
+
+        # Auto-create shop for creators who have items but no shop
+        has_any_items = (
+            MealPlan.objects.filter(creator=profile).exists()
+            or TrainingProgramme.objects.filter(creator=profile).exists()
+            or MarketplaceEvent.objects.filter(creator=profile).exists()
+            or Product.objects.filter(shop__memberships__profile=profile).exists()
+        )
+        membership = ShopMembership.objects.filter(profile=profile).first()
+        if has_any_items and not membership:
+            shop = Shop.objects.create(
+                name=f"{profile.display_name or profile.username}'s Shop",
+                handle=f"{profile.username.lower().replace(' ', '-')}-shop",
+                description='',
+            )
+            ShopMembership.objects.create(shop=shop, profile=profile, role='owner')
+            membership = ShopMembership.objects.get(profile=profile)
+
         meal_plans = MealPlan.objects.filter(creator=profile).annotate(abandoned_cart_count=Count('cartitem'))
         programmes = TrainingProgramme.objects.filter(creator=profile).annotate(abandoned_cart_count=Count('cartitem'))
         events = MarketplaceEvent.objects.filter(creator=profile).annotate(abandoned_cart_count=Count('cartitem'))
+        products = Product.objects.filter(shop_id=membership.shop_id if membership else None).annotate(abandoned_cart_count=Count('cartitem'))
+        discount_codes = DiscountCode.objects.filter(creator=profile).order_by('-created_at')
 
         meal_plan_data = MealPlanSerializer(meal_plans, many=True, context={'request': request}).data
         programme_data = TrainingProgrammeSerializer(programmes, many=True, context={'request': request}).data
         event_data = MarketplaceEventSerializer(events, many=True, context={'request': request}).data
+        product_data = ProductSerializer(products, many=True, context={'request': request}).data
+        discount_data = DiscountCodeSerializer(discount_codes, many=True, context={'request': request}).data
+        shop_data = ShopDetailSerializer(membership.shop, context={'request': request}).data if membership else None
 
         for i, obj in enumerate(meal_plans):
             meal_plan_data[i]['abandoned_cart_count'] = obj.abandoned_cart_count
@@ -733,15 +1368,137 @@ class MyMarketplaceServicesView(views.APIView):
             programme_data[i]['abandoned_cart_count'] = obj.abandoned_cart_count
         for i, obj in enumerate(events):
             event_data[i]['abandoned_cart_count'] = obj.abandoned_cart_count
+        for i, obj in enumerate(products):
+            product_data[i]['abandoned_cart_count'] = obj.abandoned_cart_count
 
         return Response({
             'success': True,
             'data': {
+                'shop': shop_data,
                 'meal_plans': meal_plan_data,
                 'programmes': programme_data,
                 'events': event_data,
+                'products': product_data,
+                'discount_codes': discount_data,
             },
             'message': 'Drafts and services fetched.',
+        })
+
+
+class CreatorAnalyticsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models.functions import TruncMonth
+        from collections import defaultdict
+        profile = request.user.profile
+
+        meal_plans = MealPlan.objects.filter(creator=profile)
+        programmes = TrainingProgramme.objects.filter(creator=profile)
+        events = MarketplaceEvent.objects.filter(creator=profile)
+
+        total_sales = 0
+        total_revenue = 0.0
+        category_sales = defaultdict(int)
+        category_revenue = defaultdict(float)
+        monthly_revenue = defaultdict(float)
+
+        for mp in meal_plans:
+            cnt = mp.purchase_count
+            total_sales += cnt
+            if cnt > 0 and mp.price_artifacts:
+                rev = sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in mp.price_artifacts.items()) * cnt
+                total_revenue += rev
+                category_sales['meal_plan'] += cnt
+                category_revenue['meal_plan'] += rev
+
+        for p in programmes:
+            cnt = p.purchase_count
+            total_sales += cnt
+            if cnt > 0 and p.price_artifacts:
+                rev = sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in p.price_artifacts.items()) * cnt
+                total_revenue += rev
+                category_sales['programme'] += cnt
+                category_revenue['programme'] += rev
+
+        for e in events:
+            cnt = e.attendee_count
+            total_sales += cnt
+            if cnt > 0 and e.ticket_price_artifacts:
+                rev = sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in e.ticket_price_artifacts.items()) * cnt
+                total_revenue += rev
+                category_sales['event'] += cnt
+                category_revenue['event'] += rev
+
+        from apps.wallet.models import ArtifactTransaction
+        revenue_txs = ArtifactTransaction.objects.filter(
+            user=profile,
+            transaction_type='marketplace',
+            direction='credit',
+            status='completed',
+        )
+        monthly_qs = (
+            revenue_txs.annotate(month=TruncMonth('created_at'))
+            .values('month')
+            .annotate(total=db_models.Sum(db_models.F('quantity') * db_models.Value(1)))
+            .order_by('month')
+        )
+        revenue_over_time = [
+            {'month': m['month'].strftime('%Y-%m') if m['month'] else '', 'total': float(m['total'] or 0)}
+            for m in monthly_qs
+        ]
+
+        top_services = sorted(
+            [{'id': str(mp.id), 'title': mp.title, 'type': 'meal_plan', 'sales': mp.purchase_count}
+             for mp in meal_plans if mp.purchase_count > 0]
+            + [{'id': str(p.id), 'title': p.title, 'type': 'programme', 'sales': p.purchase_count}
+               for p in programmes if p.purchase_count > 0]
+            + [{'id': str(e.id), 'title': e.title, 'type': 'event', 'sales': e.attendee_count}
+               for e in events if e.attendee_count > 0],
+            key=lambda x: x['sales'], reverse=True
+        )[:10]
+
+        return Response({
+            'success': True,
+            'data': {
+                'total_revenue_usd': round(total_revenue, 2),
+                'total_sales': total_sales,
+                'category_sales': dict(category_sales),
+                'category_revenue': {k: round(v, 2) for k, v in category_revenue.items()},
+                'revenue_over_time': revenue_over_time,
+                'total_views': sum(mp.purchase_count for mp in meal_plans)
+                             + sum(p.purchase_count for p in programmes)
+                             + sum(e.attendee_count for e in events),
+                'top_services': top_services,
+            },
+            'message': 'Creator analytics fetched.',
+        })
+
+
+class UserShopView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, handle):
+        try:
+            shop = Shop.objects.get(handle=handle, is_active=True)
+        except Shop.DoesNotExist:
+            return Response({'success': False, 'message': 'Shop not found.'}, status=404)
+
+        profile_ids = ShopMembership.objects.filter(shop=shop).values_list('profile_id', flat=True)
+        meal_plans = MealPlan.objects.filter(creator_id__in=profile_ids, is_active=True).order_by('-created_at')
+        programmes = TrainingProgramme.objects.filter(creator_id__in=profile_ids, is_active=True).order_by('-created_at')
+        events = MarketplaceEvent.objects.filter(creator_id__in=profile_ids, is_published=True, is_cancelled=False).order_by('-created_at')
+        products = Product.objects.filter(shop_id=shop.id, is_active=True).order_by('-created_at')
+
+        return Response({
+            'success': True,
+            'data': {
+                'shop': ShopDetailSerializer(shop, context={'request': request}).data,
+                'meal_plans': MealPlanSerializer(meal_plans, many=True, context={'request': request}).data,
+                'programmes': TrainingProgrammeSerializer(programmes, many=True, context={'request': request}).data,
+                'events': MarketplaceEventSerializer(events, many=True, context={'request': request}).data,
+                'products': ProductSerializer(products, many=True, context={'request': request}).data,
+            },
         })
 
 
@@ -751,9 +1508,16 @@ class CartView(views.APIView):
     def get(self, request):
         cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
         from .serializers import CartSerializer
+        from apps.wallet.serializers import ARTIFACT_VALUES
+        rates = {
+            'rates': ARTIFACT_VALUES,
+            'base_currency': 'USD',
+            'local_currency': 'KES',
+            'conversion_rate': 129.5,
+        }
         return Response({
             'success': True,
-            'data': CartSerializer(cart).data,
+            'data': CartSerializer(cart, context={'request': request, 'rates': rates}).data,
             'message': 'Cart fetched.',
         })
 
@@ -791,7 +1555,7 @@ class CartView(views.APIView):
             item.save()
             
         from .serializers import CartSerializer
-        return Response({'success': True, 'data': CartSerializer(cart).data, 'message': 'Added to cart.'})
+        return Response({'success': True, 'data': CartSerializer(cart, context={'request': request}).data, 'message': 'Added to cart.'})
 
     def delete(self, request):
         cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
@@ -801,7 +1565,7 @@ class CartView(views.APIView):
         else:
             cart.items.all().delete()
         from .serializers import CartSerializer
-        return Response({'success': True, 'data': CartSerializer(cart).data, 'message': 'Cart updated.'})
+        return Response({'success': True, 'data': CartSerializer(cart, context={'request': request}).data, 'message': 'Cart updated.'})
 
 
 class CheckoutCartView(views.APIView):
@@ -810,46 +1574,507 @@ class CheckoutCartView(views.APIView):
     @transaction.atomic
     def post(self, request):
         cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
-        items = cart.items.all()
-        if not items.exists():
-            return Response({'success': False, 'message': 'Cart is empty.'}, status=400)
-            
-        for item in items:
+        items = list(cart.items.all())
+        if not items:
+            return Response({'success': False, 'data': None, 'message': 'Cart is empty.',
+                             'errors': None, 'pagination': None}, status=400)
+
+        def _item_price(item):
             if item.item_type == 'meal_plan' and item.meal_plan:
-                MealPlanPurchase.objects.get_or_create(meal_plan=item.meal_plan, buyer=request.user.profile)
-                item.meal_plan.purchase_count += 1
+                return item.meal_plan.price_artifacts, item.meal_plan.title, item.meal_plan.creator
+            if item.item_type == 'programme' and item.programme:
+                return item.programme.price_artifacts, item.programme.title, item.programme.creator
+            if item.item_type == 'event_ticket' and item.event:
+                return item.event.ticket_price_artifacts, item.event.title, item.event.creator
+            if item.item_type == 'product' and item.product:
+                return None, item.product.name, None
+            return None, None, None
+
+        # ---- Phase 1: validate every item before any deduction ----
+        event_qty = {}
+        for item in items:
+            price, title, creator = _item_price(item)
+            if item.item_type == 'event_ticket' and item.event:
+                ev = item.event
+                if ev.is_cancelled:
+                    return Response({'success': False, 'data': None,
+                                     'message': f'Event "{ev.title}" has been cancelled. Please remove it from your cart.',
+                                     'errors': None, 'pagination': None}, status=400)
+                if ev.creator == request.user.profile:
+                    return Response({'success': False, 'data': None,
+                                     'message': 'You cannot buy a ticket to your own event.',
+                                     'errors': None, 'pagination': None}, status=400)
+                if EventTicket.objects.filter(event=ev, holder=request.user.profile, status='active').exists():
+                    return Response({'success': False, 'data': None,
+                                     'message': f'You already have a ticket for "{ev.title}".',
+                                     'errors': None, 'pagination': None}, status=400)
+                event_qty[str(ev.id)] = event_qty.get(str(ev.id), 0) + item.quantity
+            if not price:
+                continue
+
+        # Capacity / sold-out check per event (aggregate across cart rows)
+        for event_id, qty in event_qty.items():
+            try:
+                ev = MarketplaceEvent.objects.get(id=event_id)
+            except MarketplaceEvent.DoesNotExist:
+                continue
+            if ev.capacity > 0 and (ev.attendee_count + qty) > ev.capacity:
+                return Response({'success': False, 'data': None,
+                                 'message': f'"{ev.title}" has insufficient remaining spots.',
+                                 'errors': None, 'pagination': None}, status=400)
+
+        # ---- Phase 2: compute totals ----
+        total_artifacts = {}
+        item_totals = []
+        for item in items:
+            price, title, creator = _item_price(item)
+            item_artifacts = {}
+            if price:
+                for k, v in price.items():
+                    subtotal = v * item.quantity
+                    item_artifacts[k] = subtotal
+                    total_artifacts[k] = total_artifacts.get(k, 0) + subtotal
+            item_totals.append({'item': item, 'price': price or {}, 'title': title,
+                                'creator': creator, 'artifacts': item_artifacts})
+
+        original_artifacts = dict(total_artifacts)
+
+        discount = cart.discount_code
+        pct_applied = 0
+        artifacts_applied = {}
+        savings_artifacts = {}
+        discounted_artifacts = dict(total_artifacts)
+        if discount and discount.is_active:
+            if discount.valid_from and discount.valid_from > timezone.now():
+                return Response({'success': False, 'data': None, 'message': 'Discount code is not yet valid.',
+                                 'errors': None, 'pagination': None}, status=400)
+            if discount.valid_until and discount.valid_until < timezone.now():
+                return Response({'success': False, 'data': None, 'message': 'Discount code has expired.',
+                                 'errors': None, 'pagination': None}, status=400)
+            if discount.usage_limit > 0 and discount.times_used >= discount.usage_limit:
+                return Response({'success': False, 'data': None, 'message': 'Discount code usage limit reached.',
+                                 'errors': None, 'pagination': None}, status=400)
+            if discount.creator == request.user.profile:
+                return Response({'success': False, 'data': None, 'message': 'Cannot use your own discount code.',
+                                 'errors': None, 'pagination': None}, status=400)
+            if discount.max_uses_per_user > 0:
+                user_uses = DiscountUsage.objects.filter(discount=discount, user=request.user.profile).count()
+                if user_uses >= discount.max_uses_per_user:
+                    return Response({'success': False, 'data': None,
+                                     'message': 'You have already used this code the maximum number of times.',
+                                     'errors': None, 'pagination': None}, status=400)
+            if discount.min_purchase_artifacts and any(v > 0 for v in discount.min_purchase_artifacts.values()):
+                for at, needed in discount.min_purchase_artifacts.items():
+                    if needed > 0 and total_artifacts.get(at, 0) < needed:
+                        return Response({'success': False, 'data': None,
+                                         'message': f'Minimum purchase of {needed} {at} required for this code.',
+                                         'errors': None, 'pagination': None}, status=400)
+
+            if discount.discount_type == 'percentage' and discount.discount_pct > 0:
+                pct_applied = discount.discount_pct
+                factor = pct_applied / 100.0
+                for k in total_artifacts:
+                    discounted = max(1, int(total_artifacts[k] * (1 - factor)))
+                    savings_artifacts[k] = total_artifacts[k] - discounted
+                    discounted_artifacts[k] = discounted
+            elif discount.discount_type == 'fixed_artifacts' and discount.discount_artifacts:
+                artifacts_applied = dict(discount.discount_artifacts)
+                for k, v in discount.discount_artifacts.items():
+                    if k in total_artifacts:
+                        discounted = max(1, total_artifacts[k] - v)
+                        savings_artifacts[k] = total_artifacts[k] - discounted
+                        discounted_artifacts[k] = discounted
+
+        # ---- Phase 3: deduct buyer + record debit transactions ----
+        for at, qty in discounted_artifacts.items():
+            if qty <= 0:
+                continue
+            if not deduct_artifacts(request.user.profile, at, qty):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'Insufficient {at} tokens.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_402_PAYMENT_REQUIRED)
+            ArtifactTransaction.objects.create(
+                user=request.user.profile,
+                transaction_type='purchase',
+                artifact_type=at,
+                quantity=qty,
+                direction='debit',
+                status='completed',
+                reference_id=f'co_{cart.id}',
+                description=f'Checkout: {len(items)} item(s) from marketplace',
+            )
+
+        # ---- Phase 4: allocate discounted amounts per item (proportional, remainder-adjusted) ----
+        for t in item_totals:
+            t['allocated'] = {}
+        for at in discounted_artifacts:
+            discounted_total = discounted_artifacts[at]
+            eligible = [t for t in item_totals if t['artifacts'].get(at, 0) > 0]
+            if not eligible:
+                continue
+            original_total = total_artifacts.get(at, 0) or 1
+            allocated = {}
+            for t in eligible:
+                share = (t['artifacts'][at] * discounted_total) // original_total
+                allocated[id(t)] = share
+            remainder = discounted_total - sum(allocated.values())
+            for t in sorted(eligible, key=lambda t: t['artifacts'][at], reverse=True):
+                if remainder <= 0:
+                    break
+                allocated[id(t)] += 1
+                remainder -= 1
+            for t in eligible:
+                t['allocated'][at] = allocated.get(id(t), 0)
+
+        # ---- Phase 5: create purchases, credit creators on post-discount price ----
+        purchase_rows = []
+        for t in item_totals:
+            item = t['item']
+            discounted_item = t.get('allocated', {})
+            if item.item_type == 'meal_plan' and item.meal_plan:
+                for _ in range(item.quantity):
+                    MealPlanPurchase.objects.get_or_create(meal_plan=item.meal_plan, buyer=request.user.profile)
+                item.meal_plan.purchase_count += item.quantity
                 item.meal_plan.save(update_fields=['purchase_count'])
             elif item.item_type == 'programme' and item.programme:
-                TrainingProgrammePurchase.objects.get_or_create(programme=item.programme, buyer=request.user.profile)
-                item.programme.purchase_count += 1
+                for _ in range(item.quantity):
+                    TrainingProgrammePurchase.objects.get_or_create(programme=item.programme, buyer=request.user.profile)
+                item.programme.purchase_count += item.quantity
                 item.programme.save(update_fields=['purchase_count'])
             elif item.item_type == 'event_ticket' and item.event:
-                EventTicket.objects.get_or_create(event=item.event, attendee=request.user.profile)
-                item.event.attendee_count += 1
+                for _ in range(item.quantity):
+                    EventTicket.objects.create(
+                        event=item.event,
+                        holder=request.user.profile,
+                        price_paid_artifacts={
+                            k: v // item.quantity for k, v in discounted_item.items() if v >= item.quantity
+                        } if discounted_item else {},
+                    )
+                item.event.attendee_count += item.quantity
                 item.event.save(update_fields=['attendee_count'])
-            # for products, maybe redirect to affiliate URL or just add a click metric. No internal purchase object needed for affiliate products, but if they were physical products, we'd have a ProductOrder.
-            
+            elif item.item_type == 'product' and item.product:
+                item.product.click_count += item.quantity
+                item.product.save(update_fields=['click_count'])
+
+            # Credit creator on the discounted amount
+            if t['creator'] and t['price']:
+                for at, item_total in t['artifacts'].items():
+                    paid_total = discounted_item.get(at, item_total)
+                    if paid_total <= 0:
+                        continue
+                    cut = platform_cut('marketplace', at, paid_total)
+                    creator_qty = paid_total - cut
+                    if creator_qty > 0:
+                        credit_creator_artifacts(t['creator'], at, creator_qty)
+                        ArtifactTransaction.objects.create(
+                            user=t['creator'],
+                            transaction_type='marketplace',
+                            artifact_type=at,
+                            quantity=creator_qty,
+                            direction='credit',
+                            counterparty=request.user.profile,
+                            status='completed',
+                            clearance_at=timezone.now(),
+                            reference_id=f'co_{cart.id}',
+                            description=f'Sale: {item.item_type} to @{request.user.profile.username}',
+                        )
+                    if cut > 0:
+                        ArtifactTransaction.objects.create(
+                            user=t['creator'],
+                            transaction_type='platform_cut',
+                            artifact_type=at,
+                            quantity=cut,
+                            direction='debit',
+                            status='completed',
+                            reference_id=f'co_{cart.id}',
+                            description=f'Platform fee (15%) on {item.item_type} sale',
+                        )
+            purchase_rows.append({
+                'item_type': item.item_type,
+                'title': t['title'],
+                'quantity': item.quantity,
+                'price_artifacts': t['price'],
+                'total_artifacts': t['artifacts'],
+                'paid_artifacts': discounted_item,
+                'creator_name': t['creator'].display_name if t['creator'] else None,
+            })
+
+        # ---- Phase 6: record discount usage ----
+        savings_usd = round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in savings_artifacts.items()), 2)
+        if discount:
+            DiscountUsage.objects.create(
+                discount=discount,
+                user=request.user.profile,
+                cart=cart,
+                order_artifacts=original_artifacts,
+                discount_pct_applied=pct_applied,
+                discount_artifacts_applied=artifacts_applied,
+                savings_artifacts=savings_artifacts,
+                savings_usd=savings_usd,
+                was_successful=True,
+            )
+            discount.times_used += 1
+            discount.save(update_fields=['times_used'])
+
         cart.items.all().delete()
-        if cart.discount_code:
-            cart.discount_code.times_used += 1
-            cart.discount_code.save(update_fields=['times_used'])
         cart.discount_code = None
         cart.save()
-        return Response({'success': True, 'message': 'Cart checkout successful. Items have been purchased!'})
+
+        return Response({
+            'success': True,
+            'message': 'Cart checkout successful. Items have been purchased!',
+            'data': {
+                'order_id': str(cart.id),
+                'items': purchase_rows,
+                'total_artifacts': discounted_artifacts,
+                'original_artifacts': original_artifacts,
+                'savings_artifacts': savings_artifacts,
+                'savings_usd': savings_usd,
+                'discount_code': discount.code if discount else None,
+                'spent_usd': round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in discounted_artifacts.items()), 2),
+            },
+        })
 
 
 class DiscountCodeView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    def _cart_total_artifacts(self, cart):
+        total = {}
+        for item in cart.items.all():
+            price = None
+            if item.item_type == 'meal_plan' and item.meal_plan:
+                price = item.meal_plan.price_artifacts
+            elif item.item_type == 'programme' and item.programme:
+                price = item.programme.price_artifacts
+            elif item.item_type == 'event_ticket' and item.event:
+                price = item.event.ticket_price_artifacts
+            if price:
+                for k, v in price.items():
+                    total[k] = total.get(k, 0) + (v * item.quantity)
+        return total
+
     def post(self, request):
         code = request.data.get('code')
         try:
-            discount = DiscountCode.objects.get(code=code, is_active=True)
+            discount = DiscountCode.objects.get(code=code, is_active=True, is_retired=False)
+            if discount.valid_until and discount.valid_until < timezone.now():
+                return Response({'success': False, 'message': 'Discount code has expired.'}, status=400)
             if discount.usage_limit > 0 and discount.times_used >= discount.usage_limit:
                 return Response({'success': False, 'message': 'Code limit reached.'}, status=400)
+            if discount.creator == request.user.profile:
+                return Response({'success': False, 'message': 'Cannot use your own discount code.'}, status=400)
+            if discount.max_uses_per_user > 0:
+                from_profile = request.user.profile
+                user_uses = DiscountUsage.objects.filter(discount=discount, user=from_profile).count()
+                if user_uses >= discount.max_uses_per_user:
+                    return Response({'success': False, 'message': 'You have already used this code the maximum number of times.'}, status=400)
             cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
+            if discount.min_purchase_artifacts and any(v > 0 for v in discount.min_purchase_artifacts.values()):
+                cart_total = self._cart_total_artifacts(cart)
+                for at, needed in discount.min_purchase_artifacts.items():
+                    if needed > 0 and cart_total.get(at, 0) < needed:
+                        return Response({'success': False, 'message': f'Minimum purchase of {needed} {at} required for this code.'}, status=400)
             cart.discount_code = discount
             cart.save()
             return Response({'success': True, 'message': f'Discount {discount.code} applied.'})
         except DiscountCode.DoesNotExist:
             return Response({'success': False, 'message': 'Invalid discount code.'}, status=400)
+
+    def delete(self, request):
+        cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
+        cart.discount_code = None
+        cart.save()
+        return Response({'success': True, 'message': 'Discount code removed.'})
+
+
+class DiscountCodeManageView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, code_id=None):
+        profile = request.user.profile
+        if code_id:
+            try:
+                code = DiscountCode.objects.get(id=code_id, creator=profile)
+            except DiscountCode.DoesNotExist:
+                return Response({'success': False, 'message': 'Discount code not found.'}, status=404)
+            return Response({
+                'success': True,
+                'data': DiscountCodeSerializer(code, context={'request': request}).data,
+            })
+        codes = DiscountCode.objects.filter(creator=profile).order_by('-created_at')
+        page = self._paginate(codes, request)
+        return Response({
+            'success': True,
+            'data': DiscountCodeSerializer(page, many=True, context={'request': request}).data,
+            'pagination': page.pagination if hasattr(page, 'pagination') else None,
+        })
+
+    def post(self, request):
+        profile = request.user.profile
+        serializer = DiscountCodeWriteSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'success': False, 'message': 'Validation failed.', 'errors': serializer.errors}, status=400)
+        discount = serializer.save(creator=profile)
+        return Response({
+            'success': True,
+            'data': DiscountCodeSerializer(discount, context={'request': request}).data,
+            'message': 'Discount code created.',
+        }, status=201)
+
+    def put(self, request, code_id):
+        profile = request.user.profile
+        try:
+            discount = DiscountCode.objects.get(id=code_id, creator=profile)
+        except DiscountCode.DoesNotExist:
+            return Response({'success': False, 'message': 'Discount code not found.'}, status=404)
+        serializer = DiscountCodeWriteSerializer(discount, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response({'success': False, 'message': 'Validation failed.', 'errors': serializer.errors}, status=400)
+        serializer.save()
+        return Response({
+            'success': True,
+            'data': DiscountCodeSerializer(discount, context={'request': request}).data,
+            'message': 'Discount code updated.',
+        })
+
+    def patch(self, request, code_id):
+        profile = request.user.profile
+        try:
+            discount = DiscountCode.objects.get(id=code_id, creator=profile)
+        except DiscountCode.DoesNotExist:
+            return Response({'success': False, 'message': 'Discount code not found.'}, status=404)
+        action = request.data.get('action', 'reactivate')
+        if action == 'reactivate':
+            discount.is_active = True
+            discount.is_retired = False
+            discount.retired_at = None
+            discount.retired_reason = ''
+            discount.save(update_fields=['is_active', 'is_retired', 'retired_at', 'retired_reason'])
+            return Response({'success': True, 'message': 'Discount code reactivated.'})
+        elif action == 'suspend':
+            discount.is_active = False
+            discount.save(update_fields=['is_active'])
+            return Response({'success': True, 'message': 'Discount code suspended.'})
+        return Response({'success': False, 'message': 'Invalid action.'}, status=400)
+
+    def delete(self, request, code_id):
+        profile = request.user.profile
+        try:
+            discount = DiscountCode.objects.get(id=code_id, creator=profile)
+        except DiscountCode.DoesNotExist:
+            return Response({'success': False, 'message': 'Discount code not found.'}, status=404)
+        discount.is_active = False
+        discount.is_retired = True
+        discount.retired_at = timezone.now()
+        discount.retired_reason = 'Deleted by creator'
+        discount.save(update_fields=['is_active', 'is_retired', 'retired_at', 'retired_reason'])
+        return Response({'success': True, 'message': 'Discount code retired.'})
+
+    def _paginate(self, qs, request):
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(qs, request)
+        if page is not None:
+            page.pagination = {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            }
+            return page
+        return qs
+
+
+class DiscountCodeAnalyticsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, code_id):
+        profile = request.user.profile
+        try:
+            discount = DiscountCode.objects.get(id=code_id, creator=profile)
+        except DiscountCode.DoesNotExist:
+            return Response({'success': False, 'message': 'Discount code not found.'}, status=404)
+
+        usages = DiscountUsage.objects.filter(discount=discount)
+        total_uses = usages.count()
+        successful_uses = usages.filter(was_successful=True).count()
+        total_savings_usd = sum(u.savings_usd for u in usages)
+
+        from django.db.models.functions import TruncDate
+        usage_over_time = (
+            usages.annotate(date=TruncDate('created_at'))
+            .values('date')
+            .annotate(count=db_models.Count('id'))
+            .order_by('date')
+        )
+
+        # ---- Retention analytics ----
+        user_usage_counts = (
+            usages.filter(was_successful=True)
+            .values('user_id')
+            .annotate(count=db_models.Count('id'))
+        )
+        unique_users = user_usage_counts.count()
+        returning_users = sum(1 for row in user_usage_counts if row['count'] >= 2)
+        retention_rate = round((returning_users / unique_users * 100), 1) if unique_users else 0.0
+        repeat_usage_distribution = [
+            {'uses': n, 'users': sum(1 for row in user_usage_counts if row['count'] == n)}
+            for n in range(1, max([row['count'] for row in user_usage_counts], default=0) + 1)
+        ]
+        top_users = (
+            usages.filter(was_successful=True)
+            .values('user__username', 'user__display_name')
+            .annotate(uses=db_models.Count('id'), savings=db_models.Sum('savings_usd'))
+            .order_by('-uses')[:5]
+        )
+        avg_savings_per_user = round(total_savings_usd / unique_users, 2) if unique_users else 0.0
+        total_order_value_usd = sum(
+            sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in (u.order_artifacts or {}).items())
+            for u in usages.filter(was_successful=True)
+        )
+
+        return Response({
+            'success': True,
+            'data': {
+                'total_uses': total_uses,
+                'successful_uses': successful_uses,
+                'total_savings_usd': total_savings_usd,
+                'share_count': discount.share_count,
+                'times_used': discount.times_used,
+                'usage_over_time': list(usage_over_time),
+                'unique_users': unique_users,
+                'returning_users': returning_users,
+                'retention_rate': retention_rate,
+                'repeat_usage_distribution': repeat_usage_distribution,
+                'avg_savings_per_user': avg_savings_per_user,
+                'total_order_value_usd': round(total_order_value_usd, 2),
+                'top_users': list(top_users),
+                'code': DiscountCodeSerializer(discount, context={'request': request}).data,
+            },
+        })
+
+
+class DiscountCodeShareView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, code_id):
+        profile = request.user.profile
+        try:
+            discount = DiscountCode.objects.get(id=code_id, creator=profile)
+        except DiscountCode.DoesNotExist:
+            return Response({'success': False, 'message': 'Discount code not found.'}, status=404)
+        discount.share_count += 1
+        discount.save(update_fields=['share_count'])
+        share_data = {
+            'code': discount.code,
+            'discount_pct': discount.discount_pct,
+            'discount_type': discount.discount_type,
+            'description': discount.description,
+            'qr_code': discount.qr_code if discount.code_type == 'qr' else None,
+        }
+        return Response({
+            'success': True,
+            'data': share_data,
+            'message': 'Share count incremented.',
+        })

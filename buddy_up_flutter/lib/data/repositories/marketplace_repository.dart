@@ -92,7 +92,7 @@ abstract class MarketplaceRepository {
   Future<void> clickProduct(@Path('id') String productId);
 
   @GET('/marketplace/events/')
-  Future<Map<String, dynamic>> getEvents({@Query('upcoming') bool? upcoming});
+  Future<Map<String, dynamic>> getEvents({@Query('upcoming') bool? upcoming, @Query('scope') String? scope});
 
   @POST('/marketplace/events/')
   Future<Map<String, dynamic>> createEvent(@Body() Map<String, dynamic> data);
@@ -124,6 +124,9 @@ abstract class MarketplaceRepository {
   @GET('/marketplace/my-services/')
   Future<Map<String, dynamic>> getMyServices();
 
+  @GET('/marketplace/my-services/analytics/')
+  Future<Map<String, dynamic>> getCreatorAnalytics();
+
   @GET('/marketplace/cart/')
   Future<Map<String, dynamic>> getCart();
 
@@ -138,4 +141,64 @@ abstract class MarketplaceRepository {
 
   @POST('/marketplace/cart/discount/')
   Future<Map<String, dynamic>> applyDiscount(@Body() Map<String, dynamic> data);
+
+  @DELETE('/marketplace/cart/discount/')
+  Future<void> removeDiscount();
+
+  @GET('/marketplace/discount-codes/')
+  Future<Map<String, dynamic>> getDiscountCodes();
+
+  @GET('/marketplace/discount-codes/{id}/')
+  Future<Map<String, dynamic>> getDiscountCode(@Path('id') String codeId);
+
+  @POST('/marketplace/discount-codes/')
+  Future<Map<String, dynamic>> createDiscountCode(@Body() Map<String, dynamic> data);
+
+  @PUT('/marketplace/discount-codes/{id}/')
+  Future<Map<String, dynamic>> updateDiscountCode(
+    @Path('id') String codeId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  @DELETE('/marketplace/discount-codes/{id}/')
+  Future<void> deleteDiscountCode(@Path('id') String codeId);
+
+  @PATCH('/marketplace/discount-codes/{id}/')
+  Future<Map<String, dynamic>> patchDiscountCode(
+    @Path('id') String codeId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  @GET('/marketplace/discount-codes/{id}/analytics/')
+  Future<Map<String, dynamic>> getDiscountCodeAnalytics(@Path('id') String codeId);
+
+  @POST('/marketplace/discount-codes/{id}/share/')
+  Future<Map<String, dynamic>> shareDiscountCode(@Path('id') String codeId);
+
+  @GET('/marketplace/shops/my-shops/')
+  Future<Map<String, dynamic>> getMyShops();
+
+  @POST('/marketplace/shops/')
+  Future<Map<String, dynamic>> createShop(@Body() Map<String, dynamic> data);
+
+  @GET('/marketplace/shops/{handle}/')
+  Future<Map<String, dynamic>> getShop(@Path('handle') String handle);
+
+  @GET('/marketplace/shops/{handle}/public/')
+  Future<Map<String, dynamic>> getUserShop(@Path('handle') String handle);
+
+  @PUT('/marketplace/shops/{handle}/')
+  Future<Map<String, dynamic>> updateShop(
+    @Path('handle') String handle,
+    @Body() Map<String, dynamic> data,
+  );
+
+  @POST('/marketplace/shops/{handle}/verify/')
+  Future<Map<String, dynamic>> submitShopVerification(
+    @Path('handle') String handle,
+    @Body() Map<String, dynamic> data,
+  );
+
+  @POST('/marketplace/upload-image/')
+  Future<Map<String, dynamic>> uploadImage(@Body() FormData data);
 }

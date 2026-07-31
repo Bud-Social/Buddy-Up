@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ShoppingBag, Send, Clock, ArrowDownLeft, ArrowUpRight, DollarSign, CreditCard, Smartphone, Search, X, Plus, Minus, Building2 } from 'lucide-react';
+import { ShoppingBag, Send, Clock, ArrowDownLeft, ArrowUpRight, DollarSign, CreditCard, Smartphone, Search, X, Plus, Minus, Building2, Edit2, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
@@ -60,7 +60,7 @@ export default function Wallet() {
         </div>
       ) : (
         <>
-          {activeTab === 'overview' && <OverviewTab balance={balance} onBuyClick={() => setActiveTab('buy')} onSendClick={() => setActiveTab('send')} />}
+          {activeTab === 'overview' && <OverviewTab balance={balance} onBuyClick={() => setActiveTab('buy')} onSendClick={() => setActiveTab('send')} refetchBalance={fetchBalance} />}
           {activeTab === 'buy' && <BuyTab refetch={fetchBalance} />}
           {activeTab === 'send' && <SendTab refetch={fetchBalance} />}
           {activeTab === 'history' && <HistoryTab />}
@@ -71,8 +71,17 @@ export default function Wallet() {
   );
 }
 
-function OverviewTab({ balance, onBuyClick, onSendClick }: { balance: BalanceResponse | null; onBuyClick?: () => void; onSendClick?: () => void; }) {
+function OverviewTab({ balance, onBuyClick, onSendClick, refetchBalance }: { balance: BalanceResponse | null; onBuyClick?: () => void; onSendClick?: () => void; refetchBalance: () => void; }) {
   const [rates, setRates] = useState<{ conversion_rate: number; base_currency: string; local_currency: string } | null>(null);
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferTarget, setTransferTarget] = useState<{ artifact: string; available: number } | null>(null);
+  const [showCreatorNameEdit, setShowCreatorNameEdit] = useState(false);
+  const hasCreatorBalance = (balance?.creator_balance || []).some((i) => i.quantity > 0);
+
+  const openTransfer = (artifact: string, available: number) => {
+    setTransferTarget({ artifact, available });
+    setShowTransfer(true);
+  };
 
   useEffect(() => {
     walletApi.getExchangeRates().then((res) => {
@@ -97,6 +106,74 @@ function OverviewTab({ balance, onBuyClick, onSendClick }: { balance: BalanceRes
           </Card>
         ))}
       </div>
+
+      {/* Regular Wallet Section */}
+      <Card className="p-4">
+        <p className="text-xs font-bold text-buddy-text-secondary uppercase mb-2">Wallet Balance</p>
+        <div className="flex flex-wrap gap-2">
+          {(balance?.regular_balance || []).filter((i) => i.quantity > 0).map((item) => (
+            <Card key={item.artifact_type} className="p-2.5 text-center flex-1 min-w-[70px] bg-buddy-surface-raised">
+              <ArtifactIcon artifact={item.artifact_type} size={20} quantity={item.quantity} />
+              <p className="font-mono text-[11px] mt-1 font-bold">{item.quantity}</p>
+            </Card>
+          ))}
+          {(balance?.regular_balance || []).filter((i) => i.quantity > 0).length === 0 && (
+            <p className="text-xs text-buddy-text-secondary">No tokens in regular wallet.</p>
+          )}
+        </div>
+        <p className="text-right text-xs text-buddy-text-secondary mt-2">USD ${balance?.regular_total_fiat.toFixed(2) || '0.00'}</p>
+      </Card>
+
+      {(hasCreatorBalance || (balance?.creator_display_name)) && (
+        <Card className="p-4 border-l-2 border-buddy-gold/60">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-bold text-buddy-gold uppercase">
+              {balance?.creator_display_name ? `${balance.creator_display_name}'s Creator Wallet` : 'Creator Wallet'}
+            </p>
+            <button
+              onClick={() => setShowCreatorNameEdit(true)}
+              className="text-buddy-text-secondary hover:text-buddy-gold transition-colors"
+              title="Edit creator display name"
+            >
+              <Edit2 size={12} />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(balance?.creator_balance || []).filter((i) => i.quantity > 0).map((item) => (
+              <button
+                key={item.artifact_type}
+                onClick={() => openTransfer(item.artifact_type, item.quantity)}
+                className="p-2.5 text-center flex-1 min-w-[70px] bg-buddy-gold/5 hover:bg-buddy-gold/15 rounded-xl transition-colors"
+                title="Transfer to wallet"
+              >
+                <ArtifactIcon artifact={item.artifact_type} size={20} quantity={item.quantity} />
+                <p className="font-mono text-[11px] mt-1 font-bold">{item.quantity}</p>
+              </button>
+            ))}
+            {(balance?.creator_balance || []).filter((i) => i.quantity > 0).length === 0 && (
+              <p className="text-xs text-buddy-text-secondary">No marketplace earnings yet.</p>
+            )}
+          </div>
+          <p className="text-right text-xs text-buddy-text-secondary mt-2">USD ${balance?.creator_total_fiat.toFixed(2) || '0.00'}</p>
+        </Card>
+      )}
+
+      {showTransfer && transferTarget && (
+        <TransferModal
+          artifact={transferTarget.artifact}
+          available={transferTarget.available}
+          onClose={() => setShowTransfer(false)}
+          onTransferred={() => { setShowTransfer(false); refetchBalance(); }}
+        />
+      )}
+
+      {showCreatorNameEdit && (
+        <CreatorNameEditModal
+          current={balance?.creator_display_name || ''}
+          onClose={() => setShowCreatorNameEdit(false)}
+          onSaved={() => { setShowCreatorNameEdit(false); refetchBalance(); }}
+        />
+      )}
 
       {rates && (
         <Card className="p-3 flex items-center justify-between text-xs text-buddy-text-secondary">
@@ -607,7 +684,7 @@ function HistoryTab() {
     setLoadingMore(false);
   };
 
-  const types = ['', 'purchase', 'tip_sent', 'tip_received', 'live_fee', 'gym_subscription', 'session_fee', 'marketplace', 'withdrawal', 'gift_sent', 'gift_received', 'platform_cut'];
+  const types = ['', 'purchase', 'tip_sent', 'tip_received', 'live_fee', 'gym_subscription', 'session_fee', 'marketplace', 'creator_transfer', 'withdrawal', 'gift_sent', 'gift_received', 'platform_cut'];
 
   return (
     <div className="space-y-4">
@@ -677,6 +754,7 @@ function WithdrawTab({ balance, refetch }: { balance: BalanceResponse | null; re
   const [quantity, setQuantity] = useState(10);
   const [method, setMethod] = useState('mpesa');
   const [phone, setPhone] = useState('');
+  const [source, setSource] = useState<'regular' | 'creator'>('regular');
 
   const [banks, setBanks] = useState<{ code: string; name: string }[]>([]);
   const [loadingBanks, setLoadingBanks] = useState(false);
@@ -690,7 +768,8 @@ function WithdrawTab({ balance, refetch }: { balance: BalanceResponse | null; re
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
 
-  const balanceItem = balance?.balance?.find((b) => b.artifact_type === artifactType);
+  const sourceList = source === 'creator' ? (balance?.creator_balance || []) : (balance?.regular_balance || []);
+  const balanceItem = sourceList.find((b) => b.artifact_type === artifactType);
   const available = balanceItem?.quantity || 0;
   const fiatPerUnit = balanceItem ? balanceItem.usd_value / (balanceItem.quantity || 1) : 0;
   const fiatEquivalent = quantity * fiatPerUnit;
@@ -728,7 +807,7 @@ function WithdrawTab({ balance, refetch }: { balance: BalanceResponse | null; re
       const opts = method === 'mpesa'
         ? { phone_number: phone }
         : { bank_account: bankAccount, bank_code: bankCode, account_name: accountName };
-      await walletApi.withdraw(artifactType, quantity, method, opts);
+      await walletApi.withdraw(artifactType, quantity, method, { ...opts, source });
       setSuccess(`Withdrawal of ${quantity} ${artifactType}(s) processed!`);
       refetch();
     } catch (err: unknown) {
@@ -758,14 +837,35 @@ function WithdrawTab({ balance, refetch }: { balance: BalanceResponse | null; re
       </div>
 
       <div>
+        <label className="block text-sm font-medium text-buddy-text-secondary mb-2">Withdraw From</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => { setSource('regular'); setArtifactType('dumbbell'); }}
+            className={`p-3 rounded-xl border text-sm transition-colors text-left ${
+              source === 'regular' ? 'border-buddy-green bg-buddy-green/5' : 'border-buddy-surface hover:border-buddy-text-secondary/30'
+            }`}>
+            <p className="font-semibold">Regular Wallet</p>
+            <p className="text-[10px] text-buddy-text-secondary mt-0.5">${balance?.regular_total_fiat.toFixed(2) || '0.00'}</p>
+          </button>
+          <button onClick={() => { setSource('creator'); setArtifactType('dumbbell'); }}
+            disabled={(balance?.creator_balance || []).every((i) => i.quantity === 0)}
+            className={`p-3 rounded-xl border text-sm transition-colors text-left ${
+              source === 'creator' ? 'border-buddy-gold bg-buddy-gold/5' : 'border-buddy-surface hover:border-buddy-text-secondary/30'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}>
+            <p className="font-semibold">Creator Wallet</p>
+            <p className="text-[10px] text-buddy-text-secondary mt-0.5">${balance?.creator_total_fiat.toFixed(2) || '0.00'}</p>
+          </button>
+        </div>
+      </div>
+
+      <div>
         <label className="block text-sm font-medium text-buddy-text-secondary mb-2">Select Artifact</label>
         <div className="flex gap-1.5 flex-wrap">
           {ALL_ARTIFACTS.map((a) => {
-            const bal = balance?.balance?.find((b) => b.artifact_type === a);
+            const bal = sourceList.find((b) => b.artifact_type === a);
             return (
-              <button key={a} onClick={() => setArtifactType(a)}
-                className={`flex items-center gap-1 px-3 py-2 rounded-xl border text-sm transition-colors ${
-                  artifactType === a ? 'border-buddy-green bg-buddy-green/5' : 'border-buddy-surface hover:border-buddy-text-secondary/30'
+              <button key={a} onClick={() => setArtifactType(a)} disabled={!bal || bal.quantity === 0}
+                className={`flex items-center gap-1 px-3 py-2 rounded-xl border text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                  artifactType === a ? (source === 'creator' ? 'border-buddy-gold bg-buddy-gold/5' : 'border-buddy-green bg-buddy-green/5') : 'border-buddy-surface hover:border-buddy-text-secondary/30'
                 }`}>
                 <ArtifactIcon artifact={a} size={18} /> {a}
                 {bal && <span className="text-[10px] text-buddy-text-secondary ml-0.5">({bal.quantity})</span>}
@@ -859,4 +959,91 @@ function extractCursor(url: string): string | null {
   } catch {
     return null;
   }
+}
+
+function TransferModal({ artifact, available, onClose, onTransferred }: { artifact: string; available: number; onClose: () => void; onTransferred: () => void; }) {
+  const [quantity, setQuantity] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleTransfer = async () => {
+    if (quantity <= 0 || quantity > available) { setError(`Enter 1-${available}.`); return; }
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await walletApi.transferFromCreator(artifact, quantity);
+      onTransferred();
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      setError(data?.message || 'Transfer failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+      <Card className="p-6 max-w-sm w-full space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-heading text-lg font-semibold flex items-center gap-2"><ArrowRightLeft size={18} className="text-buddy-gold" /> Transfer to Wallet</h3>
+          <button onClick={onClose} className="p-1 hover:bg-buddy-surface-raised rounded-lg"><X size={18} /></button>
+        </div>
+        <p className="text-xs text-buddy-text-secondary">Move {artifact} tokens from your creator wallet to your regular wallet so you can withdraw them.</p>
+        <div>
+          <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">Quantity (available: {available})</label>
+          <Input type="number" min={1} max={available} value={quantity} onChange={(e) => setQuantity(Math.max(1, Math.min(available, Number(e.target.value) || 1)))} />
+        </div>
+        {error && <p className="text-xs text-buddy-red">{error}</p>}
+        <div className="flex gap-2">
+          <Button variant="ghost" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button className="flex-1" isLoading={isSubmitting} onClick={handleTransfer}>Transfer</Button>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function CreatorNameEditModal({ current, onClose, onSaved }: { current: string; onClose: () => void; onSaved: () => void; }) {
+  const [name, setName] = useState(current);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (trimmed && (trimmed.length < 3 || trimmed.length > 50)) {
+      setError('Display name must be 3-50 characters.');
+      return;
+    }
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await walletApi.updateCreatorProfile({ creator_display_name: trimmed });
+      onSaved();
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      setError(data?.message || 'Save failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+      <Card className="p-6 max-w-sm w-full space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-heading text-lg font-semibold">Creator Display Name</h3>
+          <button onClick={onClose} className="p-1 hover:bg-buddy-surface-raised rounded-lg"><X size={18} /></button>
+        </div>
+        <p className="text-xs text-buddy-text-secondary">Shown to buyers alongside your marketplace services. Leave empty to clear.</p>
+        <div>
+          <Input placeholder="e.g. Coach Imani" value={name} onChange={(e) => setName(e.target.value)} maxLength={50} />
+        </div>
+        {error && <p className="text-xs text-buddy-red">{error}</p>}
+        <div className="flex gap-2">
+          <Button variant="ghost" className="flex-1" onClick={onClose}>Cancel</Button>
+          <Button className="flex-1" isLoading={isSubmitting} onClick={handleSave}>Save</Button>
+        </div>
+      </Card>
+    </div>
+  );
 }

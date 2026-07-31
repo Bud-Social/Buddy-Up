@@ -13,6 +13,11 @@ export interface BalanceResponse {
   total_label: string;
   total_fiat: number;
   fiat_currency: string;
+  regular_balance: BalanceItem[];
+  regular_total_fiat: number;
+  creator_balance: BalanceItem[];
+  creator_total_fiat: number;
+  creator_display_name: string;
 }
 
 export interface BundleInfo {
@@ -64,7 +69,7 @@ export const walletApi = {
   gift: (username: string, artifact_type: string, quantity: number, message?: string) =>
     apiClient.post<ApiResponse<null>>('/wallet/gift/', { username, artifact_type, quantity, message }).then((r) => r.data),
 
-  withdraw: (artifact_type: string, quantity: number, method: string, options?: { phone_number?: string; bank_account?: string; bank_code?: string; account_name?: string }) =>
+  withdraw: (artifact_type: string, quantity: number, method: string, options?: { phone_number?: string; bank_account?: string; bank_code?: string; account_name?: string; source?: 'regular' | 'creator' }) =>
     apiClient.post<ApiResponse<ArtifactTransaction>>('/wallet/withdraw/', {
       artifact_type, quantity, method, ...options,
     }).then((r) => r.data),
@@ -82,4 +87,12 @@ export const walletApi = {
 
   getExchangeRates: () =>
     apiClient.get<ApiResponse<{ rates: Record<string, number>; base_currency: string; local_currency: string; conversion_rate: number; labels: Record<string, string> }>>('/wallet/exchange-rates/').then((r) => r.data),
+
+  transferFromCreator: (artifact_type: string, quantity: number) =>
+    apiClient.post<ApiResponse<{ regular_balance: Record<string, number>; creator_balance: Record<string, number> }>>('/wallet/creator/transfer/', {
+      artifact_type, quantity,
+    }).then((r) => r.data),
+
+  updateCreatorProfile: (data: { creator_display_name?: string }) =>
+    apiClient.patch<ApiResponse<{ creator_display_name: string; creator_balance: Record<string, number> }>>('/wallet/creator/profile/', data).then((r) => r.data),
 };

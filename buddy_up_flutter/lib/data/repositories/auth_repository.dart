@@ -43,6 +43,12 @@ abstract class AuthRepository {
   @POST('/auth/change-password/')
   Future<void> changePassword(@Body() ChangePasswordPayload payload);
 
+  @POST('/auth/resend-otp/')
+  Future<void> resendOtp(@Body() Map<String, dynamic> body);
+
+  @POST('/auth/resend-registration-otp/')
+  Future<void> resendRegistrationOtp(@Body() Map<String, dynamic> body);
+
   @POST('/auth/totp/setup/')
   Future<TOTPSetupResponse> totpSetup();
 

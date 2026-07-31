@@ -47,4 +47,10 @@ abstract class WalletRepository {
 
   @GET('/wallet/exchange-rates/')
   Future<Map<String, dynamic>> getExchangeRates();
+
+  @POST('/wallet/creator/transfer/')
+  Future<Map<String, dynamic>> transferFromCreator(@Body() Map<String, dynamic> data);
+
+  @PATCH('/wallet/creator/profile/')
+  Future<Map<String, dynamic>> updateCreatorProfile(@Body() Map<String, dynamic> data);
 }

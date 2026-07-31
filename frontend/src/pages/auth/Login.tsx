@@ -12,7 +12,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undef
 function GoogleSignInButton({ onSuccess, onError }: { onSuccess: (token: string) => void; onError: (msg: string) => void }) {
   const handleClick = useCallback(() => {
     if (!window.google?.accounts?.oauth2) {
-      onError('Google Sign-In is not available. Please try again later.');
+      onError('Google Sign-In is not available. Check that the Google Identity Services script is loaded.');
       return;
     }
     const client = window.google.accounts.oauth2.initTokenClient({
@@ -21,6 +21,8 @@ function GoogleSignInButton({ onSuccess, onError }: { onSuccess: (token: string)
       callback: (response) => {
         if (response.id_token) {
           onSuccess(response.id_token);
+        } else if (response.access_token) {
+          onSuccess(response.access_token);
         } else {
           onError('Google sign-in failed: no ID token received.');
         }
@@ -80,7 +82,11 @@ export default function Login() {
       setMaskedEmail(res.data.masked_email);
       setStep('otp');
     } catch (err: unknown) {
-      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string } } } })?.response?.data;
+      if (data?.message?.toLowerCase().includes('verify your email') && data?.data?.registration_token) {
+        navigate(`/verify-registration-otp?token=${encodeURIComponent(data.data.registration_token)}&email=${encodeURIComponent(data.data.email || email)}`);
+        return;
+      }
       setError(data?.message || 'Invalid email or password.');
     } finally {
       setIsLoading(false);
@@ -136,7 +142,11 @@ export default function Login() {
       setUser(res.data.user, res.data.profile);
       navigate('/feed');
     } catch (err: unknown) {
-      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string } } } })?.response?.data;
+      if (data?.message?.toLowerCase().includes('verify your email') && data?.data?.registration_token) {
+        navigate(`/verify-registration-otp?token=${encodeURIComponent(data.data.registration_token)}&email=${encodeURIComponent(data.data.email || email)}`);
+        return;
+      }
       setError(data?.message || 'Google login failed. Please try again.');
     } finally {
       setIsLoading(false);

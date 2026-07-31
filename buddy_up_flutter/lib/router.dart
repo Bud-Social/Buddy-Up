@@ -36,9 +36,14 @@ import 'features/marketplace/screens/event_detail_screen.dart';
 import 'features/marketplace/screens/event_tickets_screen.dart';
 import 'features/marketplace/screens/cart_screen.dart';
 import 'features/marketplace/screens/creator_studio_screen.dart';
+import 'features/marketplace/screens/discount_codes_screen.dart';
 import 'features/marketplace/screens/create_meal_plan_screen.dart';
 import 'features/marketplace/screens/create_programme_screen.dart';
 import 'features/marketplace/screens/create_event_screen.dart';
+import 'features/marketplace/screens/my_shops_screen.dart';
+import 'features/marketplace/screens/shop_detail_screen.dart';
+import 'features/marketplace/screens/create_shop_screen.dart';
+import 'features/marketplace/screens/programme_activity_focus_screen.dart';
 import 'features/wallet/screens/wallet_screen.dart';
 import 'features/notifications/screens/notifications_screen.dart';
 import 'features/verification/screens/verification_screen.dart';
@@ -225,19 +230,69 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, _) => const CreatorStudioScreen(),
       ),
       GoRoute(
+        path: '/marketplace/creator/discount-codes',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const DiscountCodesScreen(),
+      ),
+      GoRoute(
         path: '/marketplace/meal-plans/create',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CreateMealPlanScreen(),
+        builder: (_, state) {
+          final shopHandle = state.uri.queryParameters['shop'];
+          return CreateMealPlanScreen(shopHandle: shopHandle);
+        },
       ),
       GoRoute(
         path: '/marketplace/programmes/create',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CreateProgrammeScreen(),
+        builder: (_, state) {
+          final shopHandle = state.uri.queryParameters['shop'];
+          return CreateProgrammeScreen(shopHandle: shopHandle);
+        },
       ),
       GoRoute(
         path: '/marketplace/events/create',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const CreateEventScreen(),
+        builder: (_, state) {
+          final shopHandle = state.uri.queryParameters['shop'];
+          return CreateEventScreen(shopHandle: shopHandle);
+        },
+      ),
+      // Shop routes
+      GoRoute(
+        path: '/marketplace/shops',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const MyShopsScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/shops/create',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const CreateShopScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/shops/:handle',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) {
+          final handle = state.pathParameters['handle'] ?? '';
+          return ShopDetailScreen(handle: handle);
+        },
+      ),
+      // Programme activity focus
+      GoRoute(
+        path: '/marketplace/programmes/:programmeId/activity',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) {
+          final programmeId = state.pathParameters['programmeId'] ?? '';
+          final weekIndex = int.tryParse(state.uri.queryParameters['week'] ?? '0') ?? 0;
+          final day = state.uri.queryParameters['day'] ?? 'Monday';
+          final activityIndex = int.tryParse(state.uri.queryParameters['activity'] ?? '0') ?? 0;
+          return ProgrammeActivityFocusScreen(
+            programmeId: programmeId,
+            weekIndex: weekIndex,
+            day: day,
+            activityIndex: activityIndex,
+          );
+        },
       ),
       // Wallet routes
       GoRoute(

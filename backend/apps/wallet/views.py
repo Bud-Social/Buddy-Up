@@ -23,7 +23,9 @@ from .serializers import (
 from apps.profiles.models import Profile
 from .flutterwave import FlutterwaveClient
 from .utils import (
-    _get_profile_balance, deduct_artifacts, credit_artifacts,
+    _get_profile_balance, _get_creator_balance, _get_total_balance,
+    deduct_artifacts, credit_artifacts,
+    deduct_creator_artifacts, credit_creator_artifacts,
     platform_cut, calculate_fiat,
 )
 
@@ -32,26 +34,141 @@ class WalletBalanceView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        balance = _get_profile_balance(request.user.profile)
+        profile = request.user.profile
+        regular_balance = _get_profile_balance(profile)
+        creator_balance = _get_creator_balance(profile)
+        total_balance = _get_total_balance(profile)
 
-        balance_list = [{
-            'artifact_type': k,
-            'label': ARTIFACT_LABELS.get(k, k),
-            'quantity': v,
-            'usd_value': round(ARTIFACT_VALUES.get(k, 0) * v, 2),
-        } for k, v in balance.items()]
+        def to_list(bal):
+            return [{
+                'artifact_type': k,
+                'label': ARTIFACT_LABELS.get(k, k),
+                'quantity': v,
+                'usd_value': round(ARTIFACT_VALUES.get(k, 0) * v, 2),
+            } for k, v in bal.items() if v > 0]
 
-        fiat = calculate_fiat(balance)
+        regular_list = to_list(regular_balance)
+        creator_list = to_list(creator_balance)
+        total_list = to_list(total_balance)
+
+        regular_fiat = calculate_fiat(regular_balance)
+        creator_fiat = calculate_fiat(creator_balance)
+        total_fiat = calculate_fiat(total_balance)
+
+        result = {
+            'balance': total_list,
+            'total_label': total_fiat['display'],
+            'total_fiat': total_fiat['amount'],
+            'fiat_currency': total_fiat['currency'],
+            'regular_balance': regular_list,
+            'regular_total_fiat': regular_fiat['amount'],
+            'creator_balance': creator_list,
+            'creator_total_fiat': creator_fiat['amount'],
+            'creator_display_name': profile.creator_display_name or '',
+        }
+        return Response({
+            'success': True,
+            'data': result,
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class CreatorWalletTransferView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+        artifact_type = request.data.get('artifact_type')
+        quantity = request.data.get('quantity')
+
+        if not artifact_type or artifact_type not in ARTIFACT_VALUES:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid artifact type.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            quantity = int(quantity)
+            if quantity <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Quantity must be a positive integer.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not deduct_creator_artifacts(profile, artifact_type, quantity):
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens in creator wallet.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        credit_artifacts(profile, artifact_type, quantity)
+
+        transfer_ref = f'ct_{uuid.uuid4().hex[:12]}'
+        ArtifactTransaction.objects.create(
+            user=profile,
+            transaction_type='creator_transfer',
+            artifact_type=artifact_type,
+            quantity=quantity,
+            direction='debit',
+            status='completed',
+            reference_id=transfer_ref,
+            description='Transfer from creator wallet to regular wallet',
+        )
+        ArtifactTransaction.objects.create(
+            user=profile,
+            transaction_type='creator_transfer',
+            artifact_type=artifact_type,
+            quantity=quantity,
+            direction='credit',
+            status='completed',
+            reference_id=transfer_ref,
+            description='Transfer received in regular wallet from creator wallet',
+        )
 
         return Response({
             'success': True,
             'data': {
-                'balance': balance_list,
-                'total_label': fiat['display'],
-                'total_fiat': fiat['amount'],
-                'fiat_currency': fiat['currency'],
+                'regular_balance': _get_profile_balance(profile),
+                'creator_balance': _get_creator_balance(profile),
+                'reference_id': transfer_ref,
             },
-            'message': 'OK',
+            'message': f'Transferred {quantity} {ARTIFACT_LABELS[artifact_type]}(s) to regular wallet.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class CreatorProfileView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        profile = request.user.profile
+        display_name = request.data.get('creator_display_name', None)
+
+        if display_name is not None:
+            display_name = (display_name or '').strip()
+            if display_name and (len(display_name) < 3 or len(display_name) > 50):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Creator display name must be between 3 and 50 characters.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            profile.creator_display_name = display_name
+            profile.save(update_fields=['creator_display_name'])
+
+        return Response({
+            'success': True,
+            'data': {
+                'creator_display_name': profile.creator_display_name or '',
+                'creator_balance': _get_creator_balance(profile),
+            },
+            'message': 'Creator profile updated.',
             'errors': None,
             'pagination': None,
         })
@@ -74,6 +191,7 @@ class TransactionHistoryView(views.APIView):
             qs = qs.filter(direction=direction)
 
         paginator = CursorPagination()
+        count = qs.count()
         page = paginator.paginate_queryset(qs, request)
         serializer = ArtifactTransactionSerializer(page, many=True)
 
@@ -83,7 +201,7 @@ class TransactionHistoryView(views.APIView):
             'message': 'OK',
             'errors': None,
             'pagination': {
-                'count': paginator.page.paginator.count,
+                'count': count,
                 'next': paginator.get_next_link(),
                 'previous': paginator.get_previous_link(),
             },
@@ -363,8 +481,16 @@ class TipUserView(views.APIView):
 
         artifact_type = data['artifact_type']
         quantity = data['quantity']
+        source = data.get('source', 'regular')
 
-        if not deduct_artifacts(request.user.profile, artifact_type, quantity):
+        if source == 'creator':
+            if not deduct_creator_artifacts(request.user.profile, artifact_type, quantity):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens in creator wallet.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+        elif not deduct_artifacts(request.user.profile, artifact_type, quantity):
             return Response({
                 'success': False, 'data': None,
                 'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
@@ -384,7 +510,7 @@ class TipUserView(views.APIView):
             direction='debit',
             counterparty=target,
             status='completed',
-            description=f'Tipped {ARTIFACT_LABELS[artifact_type]} to @{target.username}',
+            description=f'Tipped {ARTIFACT_LABELS[artifact_type]} to @{target.username} from {source} wallet',
         )
 
         ArtifactTransaction.objects.create(
@@ -436,8 +562,16 @@ class GiftArtifactsView(views.APIView):
 
         artifact_type = data['artifact_type']
         quantity = data['quantity']
+        source = data.get('source', 'regular')
 
-        if not deduct_artifacts(request.user.profile, artifact_type, quantity):
+        if source == 'creator':
+            if not deduct_creator_artifacts(request.user.profile, artifact_type, quantity):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens in creator wallet.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+        elif not deduct_artifacts(request.user.profile, artifact_type, quantity):
             return Response({
                 'success': False, 'data': None,
                 'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
@@ -454,7 +588,7 @@ class GiftArtifactsView(views.APIView):
             direction='debit',
             counterparty=target,
             status='completed',
-            description=f'Gifted {quantity} {ARTIFACT_LABELS[artifact_type]}(s) to @{target.username}',
+            description=f'Gifted {quantity} {ARTIFACT_LABELS[artifact_type]}(s) to @{target.username} from {source} wallet',
         )
 
         ArtifactTransaction.objects.create(
@@ -505,14 +639,33 @@ class WithdrawView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if not deduct_artifacts(profile, artifact_type, quantity):
-            return Response({
-                'success': False, 'data': None,
-                'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
-                'errors': None, 'pagination': None,
-            }, status=status.HTTP_400_BAD_REQUEST)
-
+        source = request.data.get('source', 'regular')
         method = data['method']
+
+        # Validate destination details BEFORE deducting so a failed withdrawal can never strand funds.
+        if method == 'bank_transfer':
+            if not data.get('bank_account') or not data.get('bank_code'):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Bank account and bank code required for bank transfer.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        if source == 'creator':
+            if not deduct_creator_artifacts(profile, artifact_type, quantity):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens in creator wallet.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            if not deduct_artifacts(profile, artifact_type, quantity):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
         tx_ref = f'bw-{uuid.uuid4().hex[:12]}'
         tx = ArtifactTransaction.objects.create(
             user=profile,
@@ -526,20 +679,13 @@ class WithdrawView(views.APIView):
             phone_number=data.get('phone_number', ''),
             bank_account=data.get('bank_account', ''),
             tx_ref=tx_ref,
-            description=f'Withdrawal via {method}',
+            description=f'Withdrawal from {source} wallet via {method}',
         )
 
         if method == 'bank_transfer':
             bank_account = data.get('bank_account', '')
             bank_code = data.get('bank_code', '')
             account_name = data.get('account_name', '')
-
-            if not bank_account or not bank_code:
-                return Response({
-                    'success': False, 'data': None,
-                    'message': 'Bank account and bank code required for bank transfer.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_400_BAD_REQUEST)
 
             fw = FlutterwaveClient()
             recipient_resp = fw.create_transfer_recipient(
@@ -566,7 +712,10 @@ class WithdrawView(views.APIView):
                 else:
                     tx.status = 'failed'
                     tx.save(update_fields=['status', 'flutterwave_id', 'flutterwave_response'])
-                    credit_artifacts(profile, artifact_type, quantity)
+                    if source == 'creator':
+                        credit_creator_artifacts(profile, artifact_type, quantity)
+                    else:
+                        credit_artifacts(profile, artifact_type, quantity)
                     return Response({
                         'success': False, 'data': None,
                         'message': transfer_resp.message or 'Transfer failed. Funds returned to balance.',
@@ -576,7 +725,10 @@ class WithdrawView(views.APIView):
                 tx.status = 'failed'
                 tx.flutterwave_response = recipient_resp.data
                 tx.save(update_fields=['status', 'flutterwave_response'])
-                credit_artifacts(profile, artifact_type, quantity)
+                if source == 'creator':
+                    credit_creator_artifacts(profile, artifact_type, quantity)
+                else:
+                    credit_artifacts(profile, artifact_type, quantity)
                 return Response({
                     'success': False, 'data': None,
                     'message': recipient_resp.message or 'Could not create recipient.',

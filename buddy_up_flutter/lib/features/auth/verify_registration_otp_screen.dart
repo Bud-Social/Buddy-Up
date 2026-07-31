@@ -26,6 +26,7 @@ class VerifyRegistrationOtpScreen extends ConsumerStatefulWidget {
 class _VerifyRegistrationOtpScreenState
     extends ConsumerState<VerifyRegistrationOtpScreen> {
   bool _isLoading = false;
+  bool _resending = false;
   late AuthRepository _authRepo;
 
   @override
@@ -52,6 +53,21 @@ class _VerifyRegistrationOtpScreenState
       if (mounted) showToast(context, 'Invalid code. Try again.', type: ToastType.error);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleResend() async {
+    setState(() => _resending = true);
+    try {
+      await _authRepo.resendRegistrationOtp({
+        'registration_token': widget.registrationToken,
+        'channel': 'email',
+      });
+      if (mounted) showToast(context, 'New OTP sent to your email.', type: ToastType.success);
+    } catch (e) {
+      if (mounted) showToast(context, 'Failed to resend OTP. Please try again.', type: ToastType.error);
+    } finally {
+      if (mounted) setState(() => _resending = false);
     }
   }
 
@@ -83,8 +99,8 @@ class _VerifyRegistrationOtpScreenState
               OtpInput(length: 6, enabled: !_isLoading, onCompleted: _handleOtp),
               const SizedBox(height: 24),
               TextButton(
-                onPressed: () {},
-                child: const Text('Resend code'),
+                onPressed: _resending ? null : _handleResend,
+                child: Text(_resending ? 'Sending...' : 'Resend code'),
               ),
             ],
           ),

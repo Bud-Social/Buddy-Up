@@ -27,6 +27,14 @@ class Notification(TimestampedModel):
         ('verification_update', 'Verification Update'),
         ('accountability_ping', 'Accountability Ping'),
         ('new_device_login', 'New Device Login'),
+        # Marketplace / Shop
+        ('shop_created', 'Shop Created'),
+        ('shop_verified', 'Shop Verified'),
+        ('shop_cert_status', 'Shop Certification Status Update'),
+        ('programme_reminder', 'Programme Activity Reminder'),
+        ('meal_reminder', 'Meal Plan Daily Reminder'),
+        ('new_purchase', 'New Purchase'),
+        ('shop_invite', 'Shop Invite'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -67,6 +75,11 @@ class NotificationPreference(TimestampedModel):
     session_reminder_push = models.BooleanField(default=True)
     streak_milestone_push = models.BooleanField(default=True)
     accountability_ping_push = models.BooleanField(default=True)
+    # Marketplace push preferences
+    programme_reminder_push = models.BooleanField(default=True)
+    meal_reminder_push = models.BooleanField(default=True)
+    shop_cert_push = models.BooleanField(default=True)
+    new_purchase_push = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'notifications_preference'

@@ -70,11 +70,36 @@ final productDetailProvider = FutureProvider.family<MarketplaceProduct, String>(
 });
 
 // -- Event Providers --
-final eventsProvider = FutureProvider<List<MarketplaceEvent>>((ref) async {
-  final repo = ref.watch(marketplaceRepositoryProvider);
-  final raw = await repo.getEvents(upcoming: true);
-  return _parseEventList(raw['data']);
-});
+class EventsScopeNotifier extends Notifier<String> {
+  @override
+  String build() => 'upcoming';
+
+  void set(String value) => state = value;
+}
+
+final eventsScopeProvider =
+    NotifierProvider<EventsScopeNotifier, String>(EventsScopeNotifier.new);
+
+class EventsNotifier extends AsyncNotifier<List<MarketplaceEvent>> {
+  @override
+  Future<List<MarketplaceEvent>> build() => _load(ref.read(eventsScopeProvider));
+
+  Future<List<MarketplaceEvent>> _load(String scope) async {
+    final repo = ref.read(marketplaceRepositoryProvider);
+    final raw = await repo.getEvents(scope: scope);
+    return _parseEventList(raw['data']);
+  }
+
+  Future<void> setScope(String scope) async {
+    if (scope == ref.read(eventsScopeProvider)) return;
+    ref.read(eventsScopeProvider.notifier).set(scope);
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _load(scope));
+  }
+}
+
+final eventsProvider =
+    AsyncNotifierProvider<EventsNotifier, List<MarketplaceEvent>>(EventsNotifier.new);
 
 final eventDetailProvider = FutureProvider.family<MarketplaceEvent, String>((ref, eventId) async {
   final repo = ref.watch(marketplaceRepositoryProvider);
@@ -137,9 +162,43 @@ class CartNotifier extends Notifier<AsyncValue<Cart?>> {
 
 final cartProvider = NotifierProvider<CartNotifier, AsyncValue<Cart?>>(CartNotifier.new);
 
+// -- Discount Code Providers --
+final discountCodesProvider = FutureProvider<List<DiscountCode>>((ref) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getDiscountCodes();
+  return (raw['data'] as List)
+      .map((e) => DiscountCode.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
+
 // -- Creator Services --
 final creatorServicesProvider = FutureProvider<CreatorServices>((ref) async {
   final repo = ref.watch(marketplaceRepositoryProvider);
   final raw = await repo.getMyServices();
   return CreatorServices.fromJson(raw['data'] as Map<String, dynamic>);
+});
+
+final creatorAnalyticsProvider = FutureProvider<CreatorAnalytics>((ref) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getCreatorAnalytics();
+  return CreatorAnalytics.fromJson(raw['data'] as Map<String, dynamic>);
+});
+
+// -- Shop Providers --
+final myShopsProvider = FutureProvider<List<Shop>>((ref) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getMyShops();
+  return (raw['data'] as List).map((e) => Shop.fromJson(e as Map<String, dynamic>)).toList();
+});
+
+final shopDetailProvider = FutureProvider.family<Shop, String>((ref, handle) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getShop(handle);
+  return Shop.fromJson(raw['data'] as Map<String, dynamic>);
+});
+
+final userShopProvider = FutureProvider.family<UserShopResponse, String>((ref, handle) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getUserShop(handle);
+  return UserShopResponse.fromJson(raw['data'] as Map<String, dynamic>);
 });

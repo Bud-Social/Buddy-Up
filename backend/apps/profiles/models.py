@@ -36,6 +36,8 @@ class Profile(TimestampedModel):
     streak_last_activity = models.DateField(null=True, blank=True)
     artifact_balance = models.JSONField(default=dict)
     locked_balance = models.JSONField(default=dict)
+    creator_balance = models.JSONField(default=dict)
+    creator_display_name = models.CharField(max_length=50, blank=True)
     verification_status = models.CharField(max_length=20, choices=VERIFICATION_CHOICES, default='none')
     privacy_level = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='public')
     external_link = models.URLField(blank=True)

@@ -18,6 +18,7 @@ class ArtifactTransaction(TimestampedModel):
         ('platform_cut', 'Platform Cut'),
         ('refund', 'Refund'),
         ('bonus', 'Bonus'),
+        ('creator_transfer', 'Creator Wallet Transfer'),
     ]
     DIRECTION_CHOICES = [
         ('credit', 'Credit'),

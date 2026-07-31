@@ -50,7 +50,38 @@ class MealPlanDetailScreen extends ConsumerWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundImage: NetworkImage(plan.creatorData.avatarUrl),
+                    backgroundColor: BuddyColors.surfaceRaised,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(plan.creatorData.displayName,
+                                style: const TextStyle(fontWeight: FontWeight.w600)),
+                            if (plan.creatorData.verificationStatus == 'verified') ...[
+                              const SizedBox(width: 4),
+                              const Icon(Icons.verified, size: 14, color: Colors.blue),
+                            ],
+                          ],
+                        ),
+                        if (plan.shopData != null)
+                          Text('by ${plan.shopData!.name}',
+                              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               Row(
                 children: [
                   const Icon(Icons.restaurant_menu, size: 16, color: BuddyColors.textSecondary),

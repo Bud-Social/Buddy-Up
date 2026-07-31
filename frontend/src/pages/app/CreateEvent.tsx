@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, AlertCircle, Plus, X } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
-import { gymsApi, marketplaceApi } from '@/api';
-import type { Gym } from '@/types';
+import { ImageUploadField } from '@/components/ui/ImageUploadField';
+import { marketplaceApi } from '@/api';
+import type { MarketplaceEvent } from '@/api/marketplace';
 
 const EVENT_CATEGORIES = [
   'fitness', 'wellness', 'nutrition', 'mindfulness', 'challenge', 'community', 'other',
@@ -14,13 +15,27 @@ const EVENT_CATEGORIES = [
 
 const PRICE_ARTIFACTS = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'] as const;
 
+function computeEarlyBirdPct(base: Record<string, number> | undefined, early: Record<string, number> | undefined): number {
+  if (!base || !early) return 0;
+  for (const [at, qty] of Object.entries(base)) {
+    if (qty > 0 && early[at]) return Math.round((1 - early[at] / qty) * 100);
+  }
+  return 0;
+}
+
 export default function CreateEvent() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+  const isEditing = Boolean(editId);
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(isEditing);
   const [error, setError] = useState('');
-  const [myGyms, setMyGyms] = useState<Gym[]>([]);
-  const [selectedGym, setSelectedGym] = useState('');
+  const [myShops, setMyShops] = useState<any[]>([]);
+  const [selectedShop, setSelectedShop] = useState('');
+  const [agenda, setAgenda] = useState<{ title: string; time: string }[]>([]);
+  const [tierRows, setTierRows] = useState<{ name: string; price: string; perks: string }[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -36,17 +51,68 @@ export default function CreateEvent() {
     capacity: '0',
     is_free: true,
     cover_image_url: '',
+    gallery_urls: '',
+    promo_video_url: '',
+    recurrence: 'none',
+    early_bird_until: '',
+    early_bird_pct: '0',
+    cancellation_policy: '',
+    is_draft: false,
     price_artifacts: PRICE_ARTIFACTS.reduce((acc, type) => ({ ...acc, [type]: 0 }), {} as Record<string, number>),
   });
 
   useEffect(() => {
-    gymsApi.list({ my: true })
+    marketplaceApi.getMyShops()
       .then((res) => {
-        const adminGyms = (res.data || []).filter((g) => ['owner', 'co_owner', 'moderator'].includes(g.membership_role || ''));
-        setMyGyms(adminGyms);
+        const shops = res.data || [];
+        setMyShops(shops);
+        if (shops.length > 0) setSelectedShop(shops[0].id);
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!editId) return;
+    marketplaceApi.getEvent(editId)
+      .then((res) => {
+        const ev: MarketplaceEvent = res.data;
+        const start = new Date(ev.start_datetime);
+        const end = new Date(ev.end_datetime);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        setFormData({
+          title: ev.title,
+          description: ev.description || '',
+          category: ev.category || 'fitness',
+          event_type: ev.event_type,
+          location: ev.location || '',
+          online_url: ev.online_url || '',
+          timezone: ev.timezone || 'UTC',
+          start_date: `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`,
+          start_time: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+          end_date: `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}`,
+          end_time: `${pad(end.getHours())}:${pad(end.getMinutes())}`,
+          capacity: String(ev.capacity || 0),
+          is_free: ev.is_free,
+          cover_image_url: ev.cover_image_url || '',
+          gallery_urls: (ev.gallery_urls || []).join('\n'),
+          promo_video_url: ev.promo_video_url || '',
+          recurrence: ev.recurrence || 'none',
+          early_bird_until: ev.early_bird_deadline ? ev.early_bird_deadline.slice(0, 16) : '',
+          early_bird_pct: String(computeEarlyBirdPct(ev.ticket_price_artifacts, ev.early_bird_price_artifacts) || 0),
+          cancellation_policy: ev.cancellation_policy || '',
+          is_draft: ev.is_draft || false,
+          price_artifacts: {
+            ...PRICE_ARTIFACTS.reduce((acc, type) => ({ ...acc, [type]: 0 }), {} as Record<string, number>),
+            ...(ev.ticket_price_artifacts || {}),
+          },
+        });
+        setAgenda((ev.agenda || []).map((a: any) => ({ title: a.title || '', time: a.time || a.start_time || '' })));
+        setTierRows((ev.ticket_tiers || []).map((t: any) => ({ name: t.name || '', price: String(t.price_artifacts?.sprint ?? t.price ?? ''), perks: (t.perks || []).join('\n') })));
+        if (ev.shop_data?.id) setSelectedShop(ev.shop_data.id);
+        setIsLoading(false);
+      })
+      .catch(() => { setIsLoading(false); navigate('/marketplace/creator'); });
+  }, [editId]);
 
   const canProceedToStep2 = formData.title.trim().length > 0 && formData.description.trim().length > 0;
   const canProceedToStep3 = Boolean(formData.start_date && formData.start_time && formData.end_date && formData.end_time);
@@ -70,12 +136,13 @@ export default function CreateEvent() {
         capacity: parseInt(formData.capacity, 10) || 0,
         is_free: formData.is_free,
         cover_image_url: formData.cover_image_url || undefined,
-        is_published: true,
+        agenda,
+        gallery_urls: formData.gallery_urls.split('\n').map((s) => s.trim()).filter(Boolean),
+        promo_video_url: formData.promo_video_url || '',
+        cancellation_policy: formData.cancellation_policy,
+        is_draft: formData.is_draft,
+        recurrence: formData.recurrence,
       };
-
-      if (selectedGym) payload.gym_id = selectedGym;
-      if (formData.event_type !== 'online') payload.location = formData.location;
-      if (formData.event_type !== 'in_person') payload.online_url = formData.online_url;
 
       if (!formData.is_free) {
         const artifacts: Record<string, number> = {};
@@ -86,14 +153,44 @@ export default function CreateEvent() {
         payload.ticket_price_artifacts = artifacts;
       }
 
-      const res = await marketplaceApi.createEvent(payload);
+      const earlyBirdEnabled = Boolean(formData.early_bird_until) && Number(formData.early_bird_pct) > 0;
+      payload.early_bird_enabled = earlyBirdEnabled;
+      payload.early_bird_deadline = earlyBirdEnabled ? new Date(formData.early_bird_until).toISOString() : null;
+      if (earlyBirdEnabled) {
+        const pct = Number(formData.early_bird_pct);
+        const discounted: Record<string, number> = {};
+        Object.entries((payload.ticket_price_artifacts as Record<string, number>) || {}).forEach(([at, qty]) => {
+          discounted[at] = Math.max(1, Math.round(qty * ((100 - pct) / 100)));
+        });
+        payload.early_bird_price_artifacts = discounted;
+      } else {
+        payload.early_bird_price_artifacts = {};
+      }
+
+      if (!formData.is_free) {
+        payload.ticket_tiers = tierRows
+          .filter((t) => t.name.trim())
+          .map((t) => ({ name: t.name.trim(), price_artifacts: { sprint: Number(t.price) || 0 }, perks: t.perks.split('\n').map((s) => s.trim()).filter(Boolean) }));
+      } else {
+        payload.ticket_tiers = [];
+      }
+
+      if (selectedShop) payload.shop_id = selectedShop;
+      if (formData.event_type !== 'online') payload.location = formData.location;
+      if (formData.event_type !== 'in_person') payload.online_url = formData.online_url;
+
+      const res = isEditing && editId
+        ? await marketplaceApi.updateEvent(editId, payload)
+        : await marketplaceApi.createEvent(payload);
       navigate(`/marketplace/events/${res.data.id}`);
     } catch (err: any) {
-      setError(err?.message || 'Failed to create event.');
+      setError(err?.response?.data?.message || err?.message || 'Failed to save event.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) return <div className="p-4 text-center">Loading event...</div>;
 
   return (
     <div className="max-w-lg mx-auto p-4 pb-20">
@@ -101,7 +198,7 @@ export default function CreateEvent() {
         <button onClick={() => navigate(-1)} className="text-buddy-text-secondary hover:text-buddy-text-primary transition-colors">
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-2xl font-bold">Create Event</h1>
+        <h1 className="text-2xl font-bold">{isEditing ? 'Edit Event' : 'Create Event'}</h1>
       </div>
 
       <div className="flex gap-2 mb-6">
@@ -190,6 +287,20 @@ export default function CreateEvent() {
               <Input value={formData.timezone} onChange={(e) => setFormData({ ...formData, timezone: e.target.value })} />
             </div>
 
+            <div>
+              <label className="text-sm font-semibold mb-1 block">Recurrence</label>
+              <select
+                className="w-full rounded-xl bg-buddy-surface border border-buddy-surface-raised px-3 py-2 text-sm focus:outline-none focus:border-buddy-green"
+                value={formData.recurrence}
+                onChange={(e) => setFormData({ ...formData, recurrence: e.target.value })}
+              >
+                <option value="none">One-time</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+
             {formData.event_type !== 'online' && (
               <div>
                 <label className="text-sm font-semibold mb-1 block">Location</label>
@@ -218,13 +329,27 @@ export default function CreateEvent() {
         {step === 3 && (
           <Card className="p-5 space-y-4">
             <div>
-              <label className="text-sm font-semibold mb-1 block">Cover Photo URL</label>
-              <Input type="url" placeholder="https://..." value={formData.cover_image_url} onChange={(e) => setFormData({ ...formData, cover_image_url: e.target.value })} />
-              {formData.cover_image_url && (
-                <div className="mt-4 overflow-hidden rounded-xl border border-buddy-surface">
-                  <img src={formData.cover_image_url} alt="Cover preview" className="w-full h-48 object-cover" />
-                </div>
-              )}
+              <label className="text-sm font-semibold mb-1 block">Cover Photo</label>
+              <ImageUploadField
+                value={formData.cover_image_url}
+                onChange={(url) => setFormData({ ...formData, cover_image_url: url })}
+                label="Event Cover Image"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold mb-1 block">Gallery Media (one URL per line)</label>
+              <textarea
+                className="w-full bg-buddy-surface-raised rounded-xl p-3 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-buddy-green min-h-[80px] resize-y"
+                placeholder={'https://res.cloudinary.com/.../photo.jpg\nhttps://res.cloudinary.com/.../video.mp4'}
+                value={formData.gallery_urls}
+                onChange={(e) => setFormData({ ...formData, gallery_urls: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold mb-1 block">Promo Video URL</label>
+              <Input type="url" placeholder="https://..." value={formData.promo_video_url} onChange={(e) => setFormData({ ...formData, promo_video_url: e.target.value })} />
             </div>
 
             <div>
@@ -244,32 +369,64 @@ export default function CreateEvent() {
             </div>
 
             {!formData.is_free && (
-              <div className="grid grid-cols-2 gap-4">
-                {PRICE_ARTIFACTS.map((artifact) => (
-                  <div key={artifact}>
-                    <label className="text-xs text-buddy-text-secondary mb-1 block capitalize">{artifact}</label>
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2">
-                        <ArtifactIcon artifact={artifact.toUpperCase() as any} size={16} />
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-buddy-text-secondary">Base Ticket Price</p>
+                <div className="grid grid-cols-2 gap-4">
+                  {PRICE_ARTIFACTS.map((artifact) => (
+                    <div key={artifact}>
+                      <label className="text-xs text-buddy-text-secondary mb-1 block capitalize">{artifact}</label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                          <ArtifactIcon artifact={artifact.toUpperCase() as any} size={16} />
+                        </div>
+                        <Input type="number" min={0} className="pl-9" value={formData.price_artifacts[artifact] ?? 0} onChange={(e) => setFormData({ ...formData, price_artifacts: { ...formData.price_artifacts, [artifact]: parseInt(e.target.value, 10) || 0 } })} />
                       </div>
-                      <Input type="number" min={0} className="pl-9" value={formData.price_artifacts[artifact] ?? 0} onChange={(e) => setFormData({ ...formData, price_artifacts: { ...formData.price_artifacts, [artifact]: parseInt(e.target.value, 10) || 0 } })} />
                     </div>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-buddy-surface-raised">
+                  <p className="text-xs font-semibold text-buddy-text-secondary mb-2">Ticket Tiers (optional)</p>
+                  <div className="space-y-2">
+                    {tierRows.map((tier, i) => (
+                      <div key={i} className="rounded-xl bg-buddy-surface p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Input placeholder="Tier name (e.g. VIP)" value={tier.name} onChange={(e) => setTierRows(tierRows.map((t, j) => j === i ? { ...t, name: e.target.value } : t))} />
+                          <Input type="number" placeholder="sprint price" value={tier.price} onChange={(e) => setTierRows(tierRows.map((t, j) => j === i ? { ...t, price: e.target.value } : t))} />
+                          <button type="button" onClick={() => setTierRows(tierRows.filter((_, j) => j !== i))} className="p-2 text-buddy-red shrink-0"><X size={16} /></button>
+                        </div>
+                        <Input placeholder="Perks (one per line)" value={tier.perks} onChange={(e) => setTierRows(tierRows.map((t, j) => j === i ? { ...t, perks: e.target.value } : t))} />
+                      </div>
+                    ))}
+                    <Button size="sm" variant="secondary" onClick={() => setTierRows([...tierRows, { name: '', price: '', perks: '' }])} className="w-full">
+                      <Plus size={14} className="mr-1" /> Add Tier
+                    </Button>
                   </div>
-                ))}
+                </div>
               </div>
             )}
 
-            {myGyms.length > 0 && (
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-semibold mb-1 block">Host as Gym (Optional)</label>
+                <label className="text-sm font-semibold mb-1 block">Early Bird Until</label>
+                <Input type="datetime-local" value={formData.early_bird_until} onChange={(e) => setFormData({ ...formData, early_bird_until: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-sm font-semibold mb-1 block">Early Bird %</label>
+                <Input type="number" min="0" max="100" value={formData.early_bird_pct} onChange={(e) => setFormData({ ...formData, early_bird_pct: e.target.value })} />
+              </div>
+            </div>
+
+            {myShops.length > 0 && (
+              <div>
+                <label className="text-sm font-semibold mb-1 block">Host as Shop</label>
                 <select
                   className="w-full rounded-xl bg-buddy-surface border border-buddy-surface-raised px-3 py-2 text-sm focus:outline-none focus:border-buddy-green"
-                  value={selectedGym}
-                  onChange={(e) => setSelectedGym(e.target.value)}
+                  value={selectedShop}
+                  onChange={(e) => setSelectedShop(e.target.value)}
                 >
-                  <option value="">Personal Event</option>
-                  {myGyms.map((gym) => (
-                    <option key={gym.id} value={gym.id}>{gym.name}</option>
+                  {myShops.map((shop) => (
+                    <option key={shop.id} value={shop.id}>{shop.name}</option>
                   ))}
                 </select>
               </div>
@@ -317,6 +474,9 @@ export default function CreateEvent() {
                     <span className="font-semibold">Capacity:</span> {formData.capacity || 'Unlimited'}
                   </div>
                 </div>
+                {formData.recurrence !== 'none' && (
+                  <p className="text-xs text-buddy-electric"><span className="font-semibold">Repeats:</span> {formData.recurrence}</p>
+                )}
                 {!formData.is_free && (
                   <div className="space-y-2">
                     <div className="text-xs text-buddy-text-secondary font-semibold">Ticket Pricing</div>
@@ -327,7 +487,24 @@ export default function CreateEvent() {
                         </div>
                       ))}
                     </div>
+                    {tierRows.filter((t) => t.name.trim()).length > 0 && (
+                      <div>
+                        <p className="text-xs text-buddy-text-secondary font-semibold mb-1">Tiers</p>
+                        {tierRows.filter((t) => t.name.trim()).map((t, i) => (
+                          <p key={i} className="text-xs"><span className="font-semibold">{t.name}</span> — {t.price} sprint {t.perks.trim() && `· ${t.perks.trim().split('\n').join(', ')}`}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
+                )}
+                {formData.early_bird_until && formData.early_bird_pct !== '0' && (
+                  <p className="text-xs text-buddy-green"><span className="font-semibold">Early bird:</span> {formData.early_bird_pct}% off until {formData.early_bird_until}</p>
+                )}
+                {agenda.length > 0 && (
+                  <p className="text-xs text-buddy-text-secondary"><span className="font-semibold">Agenda:</span> {agenda.length} session{agenda.length > 1 ? 's' : ''}</p>
+                )}
+                {formData.is_draft && (
+                  <p className="text-xs text-buddy-orange font-semibold">Saved as draft — not published yet</p>
                 )}
               </div>
             </div>
@@ -339,12 +516,33 @@ export default function CreateEvent() {
               </div>
             )}
 
+            <div>
+              <label className="text-sm font-semibold mb-1 block">Cancellation Policy</label>
+              <textarea
+                className="w-full bg-buddy-surface-raised rounded-xl p-3 text-sm focus:outline-none focus:ring-1 focus:ring-buddy-green min-h-[80px] resize-y"
+                placeholder="e.g. Full refund up to 48 hours before start..."
+                value={formData.cancellation_policy}
+                onChange={(e) => setFormData({ ...formData, cancellation_policy: e.target.value })}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="is_draft"
+                checked={formData.is_draft}
+                onChange={(e) => setFormData({ ...formData, is_draft: e.target.checked })}
+                className="accent-buddy-green"
+              />
+              <label htmlFor="is_draft" className="text-sm text-buddy-text-secondary">Save as draft (don't publish yet)</label>
+            </div>
+
             <div className="flex gap-3">
               <Button variant="ghost" className="flex-1" onClick={() => setStep(3)}>
                 Back
               </Button>
               <Button className="flex-1" onClick={handleSubmit} isLoading={isSubmitting} disabled={isSubmitting || !formData.title || !canProceedToStep4}>
-                Publish Event
+                {isEditing ? 'Save Changes' : 'Publish Event'}
               </Button>
             </div>
           </Card>

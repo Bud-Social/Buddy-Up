@@ -10,21 +10,28 @@ import { authApi } from '@/api';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
-function GoogleSignUpButton() {
+function GoogleSignUpButton({ onError }: { onError: (msg: string) => void }) {
   const handleClick = useCallback(() => {
-    if (!window.google?.accounts?.oauth2) return;
+    if (!window.google?.accounts?.oauth2) {
+      onError('Google Sign-In is not available. Please try again later.');
+      return;
+    }
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: GOOGLE_CLIENT_ID!,
       scope: 'openid profile email',
       callback: (response) => {
         if (response.id_token) {
-          // TODO: handle Google registration
           window.location.href = `/signup?google_token=${encodeURIComponent(response.id_token)}`;
+        } else if (response.access_token) {
+          window.location.href = `/signup?google_token=${encodeURIComponent(response.access_token)}`;
+        } else {
+          onError('Google sign-in failed: no ID token received.');
         }
       },
+      error_callback: () => onError('Google sign-in failed.'),
     });
     client.requestAccessToken();
-  }, []);
+  }, [onError]);
 
   return (
     <button type="button" onClick={handleClick}
@@ -113,7 +120,7 @@ export default function Register() {
         {ageError && <div className="bg-buddy-red/10 border border-buddy-red/30 text-buddy-red rounded-xl p-3 text-sm mb-4">{ageError}</div>}
 
         <div className="space-y-3 mb-6">
-          {GOOGLE_CLIENT_ID && <GoogleSignUpButton />}
+          {GOOGLE_CLIENT_ID && <GoogleSignUpButton onError={setError} />}
           <div className="relative flex items-center gap-3">
             <div className="flex-1 border-t border-buddy-surface-raised" />
             <span className="text-xs text-buddy-text-secondary">or</span>
