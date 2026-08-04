@@ -1,0 +1,16 @@
+# DVC pipeline for Buddy-Up datasets.
+# Stages are no-op until datasets are added under data/raw.
+
+stages:
+  process-food:
+    cmd: python training/process_food_data.py
+    deps:
+      - data/raw
+    outs:
+      - data/processed/food
+  process-forms:
+    cmd: python training/process_form_data.py
+    deps:
+      - data/raw
+    outs:
+      - data/processed/forms

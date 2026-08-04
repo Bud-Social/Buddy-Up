@@ -1,6 +1,8 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
+from ..meal_plan_engine import personalise_meal_plan
+
 router = APIRouter()
 
 
@@ -22,11 +24,6 @@ class PersonaliseResponse(BaseModel):
 
 
 @router.post('/personalise', response_model=PersonaliseResponse)
-async def personalise_meal_plan(req: PersonaliseRequest):
-    return PersonaliseResponse(
-        adjusted_portions=True,
-        substitutions=[],
-        macro_summary={},
-        shopping_list=[],
-        notes='Personalisation will be available once the LLM integration is configured.',
-    )
+async def personalise_meal_plan_endpoint(req: PersonaliseRequest):
+    result = await personalise_meal_plan(req.model_dump())
+    return PersonaliseResponse(**result)

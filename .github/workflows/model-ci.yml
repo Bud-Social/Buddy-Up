@@ -1,0 +1,57 @@
+name: AI Service — Model CI
+
+# Validates the AI service code and gates model artifacts before promotion.
+# Model training itself runs on Colab/Kaggle (see backend/ai_service/notebooks).
+
+on:
+  push:
+    paths: ['backend/ai_service/**']
+  pull_request:
+    paths: ['backend/ai_service/**']
+  workflow_dispatch:
+
+jobs:
+  ai-service-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: backend/ai_service/requirements.txt
+      - name: Install core deps (CPU)
+        run: |
+          pip install --upgrade pip
+          # Light install for static checks + import graph without heavy ML deps.
+          pip install fastapi uvicorn pydantic pydantic-settings httpx
+          pip install onnxruntime numpy
+      - name: Compile all modules
+        run: python -m compileall -q backend/ai_service/app backend/ai_service/training
+      - name: Import routers/engines
+        run: |
+          cd backend/ai_service
+          python -c "from app.monitoring import get_metrics; print('monitoring OK')"
+          python -c "from app.feed_ranking_engine import rank_feed, record_feedback; print('feed OK')"
+          python -c "from app.meal_plan_engine import personalise_meal_plan; print('meal OK')"
+      - name: Validate model card schema
+        run: |
+          python - <<'PY'
+          import json, glob
+          for card in glob.glob('backend/ai_service/model_cards/*.json'):
+              data = json.load(open(card))
+              for k in ('name','version','artifact_path'):
+                  assert k in data, f'{card} missing {k}'
+          print('model cards OK')
+          PY
+
+  model-training-gate:
+    runs-on: ubuntu-latest
+    # Fires on tags like model-v* to promote a trained artifact.
+    if: startsWith(github.ref, 'refs/tags/model-')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Artifact present
+        run: |
+          echo "Promoting model tag $GITHUB_REF"
+          echo "TODO: verify artifact in MinIO bucket buddyup-models and flip ModelMetadata.is_active"

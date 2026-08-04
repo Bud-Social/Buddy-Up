@@ -82,7 +82,7 @@ TIME_MAP = {
     'morning': 'Morning workouts boost metabolism and mood for the day.',
     'afternoon': 'Afternoon is ideal for peak strength and performance.',
     'evening': 'Evening workouts can relieve stress and improve sleep.',
-    'night': 'Late workouts are fine if they don't disrupt sleep quality.',
+    'night': "Late workouts are fine if they don't disrupt sleep quality.",
     'flexible': 'Varying workout times keeps your body adapting.',
 }
 

@@ -7,12 +7,107 @@ from PIL import Image
 
 from .config import settings
 from .model_registry import ModelRegistry, DEVICE
+from .ml.serving import load_preferred, OnnxModel
 
 logger = logging.getLogger(__name__)
 
-FOOD101_CLASSES: list[str] = []
 NUTRITION_DB: dict[str, dict] = {}
 TOP_K = 5
+
+# Maps normalized ImageNet-1k category names (ViT outputs 1000 ImageNet logits,
+# NOT Food-101 indices) to keys in NUTRITION_DB.
+FOOD_IMAGENET_MAP: dict[str, str] = {
+    'hamburger': 'burger',
+    'cheeseburger': 'burger',
+    'hotdog': 'hotdog',
+    'hot dog': 'hotdog',
+    'pizza': 'pizza',
+    'burrito': 'burrito',
+    'taco': 'burrito',
+    'guacamole': 'salad',
+    'mashed potato': 'mashed potato',
+    'ice cream': 'ice cream',
+    'icecream': 'ice cream',
+    'chocolate sauce': 'chocolate cake',
+    'chocolate cake': 'chocolate cake',
+    'bagel': 'bagel',
+    'pretzel': 'pretzel',
+    'popcorn': 'popcorn',
+    'fried rice': 'fried rice',
+    'pancake': 'pancake',
+    'pancakes': 'pancake',
+    'waffle': 'waffle',
+    'waffles': 'waffle',
+    'carbonara': 'pasta',
+    'spaghetti': 'pasta',
+    'beef stroganoff': 'beef stroganoff',
+    'meat loaf': 'meat loaf',
+    'meatloaf': 'meat loaf',
+    'grilled salmon': 'fish',
+    'salmon': 'fish',
+    'baklava': 'chocolate cake',
+    'corn': 'corn',
+    'cauliflower': 'broccoli',
+    'broccoli': 'broccoli',
+    'mushroom': 'mushroom',
+    'strawberry': 'strawberry',
+    'orange': 'orange',
+    'lemon': 'fruit',
+    'fig': 'fruit',
+    'pineapple': 'fruit',
+    'banana': 'banana',
+    'jackfruit': 'fruit',
+    'custard apple': 'fruit',
+    'pomegranate': 'fruit',
+    'apple': 'apple',
+    'green salad': 'salad',
+    'grocery store': 'fruit',
+    'espresso': 'smoothie',
+    'potpie': 'soup',
+    'chocolate milk': 'smoothie',
+    'eggnog': 'smoothie',
+    'dough': 'bread',
+    'muffin': 'muffin',
+    'croissant': 'muffin',
+    'baguette': 'bread',
+    'french loaf': 'bread',
+    'pretzel': 'pretzel',
+    'sandwich': 'sandwich',
+    'submarine sandwich': 'sandwich',
+    'club sandwich': 'sandwich',
+    'cheese': 'cheese',
+    'cheddar': 'cheese',
+    'eggs': 'omelette',
+    'fried egg': 'omelette',
+    'omelet': 'omelette',
+    'egg': 'omelette',
+}
+
+
+def _normalise_category(category: str) -> str:
+    return category.strip().lower().replace('-', ' ').replace('_', ' ')
+
+
+def _imagenet_to_food(category: str) -> str | None:
+    return FOOD_IMAGENET_MAP.get(_normalise_category(category))
+
+
+def _load_imagenet_categories(model: Any) -> list[str] | None:
+    """Extract the 1000 ImageNet-1k category names for the loaded model."""
+    weights = getattr(model, 'weights', None)
+    meta = getattr(weights, 'meta', None) or {}
+    categories = meta.get('categories')
+    if isinstance(categories, list) and len(categories) == 1000:
+        return categories
+    try:
+        from torchvision.models import ViT_B_16_Weights
+        meta = ViT_B_16_Weights.IMAGENET1K_V1.meta
+        categories = meta.get('categories')
+        if isinstance(categories, list) and len(categories) == 1000:
+            return categories
+    except Exception:
+        pass
+    return None
 
 
 def _load_food_model() -> Any:
@@ -20,8 +115,7 @@ def _load_food_model() -> Any:
     if model is not None:
         return model
 
-    logger.info('Loading food classification model...')
-    try:
+    def _torch_factory():
         import torch
         import torchvision.transforms as T
         from torchvision.models import vit_b_16, ViT_B_16_Weights
@@ -37,10 +131,14 @@ def _load_food_model() -> Any:
             T.ToTensor(),
             T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
-
-        ModelRegistry.register('food_classifier', model)
         ModelRegistry.register('food_transform', transform)
         logger.info('Food classifier loaded on %s', DEVICE)
+        return model
+
+    logger.info('Loading food classification model...')
+    try:
+        model = load_preferred('food_classifier', _torch_factory)
+        ModelRegistry.register('food_classifier', model)
         return model
     except Exception as exc:
         logger.warning('Failed to load food model: %s — using keyword fallback', exc)
@@ -114,6 +212,98 @@ def _load_nutrition_db() -> dict:
             'calories': 150, 'protein': 12, 'carbs': 18, 'fat': 4,
             'health_benefits': ['High protein', 'Probiotics', 'Good calcium source'],
         },
+        'hotdog': {
+            'calories': 290, 'protein': 11, 'carbs': 24, 'fat': 17,
+            'health_benefits': ['Quick energy', 'Moderate protein'],
+        },
+        'burrito': {
+            'calories': 450, 'protein': 18, 'carbs': 55, 'fat': 17,
+            'health_benefits': ['High fiber', 'Good energy source'],
+        },
+        'mashed potato': {
+            'calories': 210, 'protein': 4, 'carbs': 35, 'fat': 8,
+            'health_benefits': ['Good carbohydrate source', 'Potassium rich'],
+        },
+        'ice cream': {
+            'calories': 270, 'protein': 4, 'carbs': 32, 'fat': 14,
+            'health_benefits': ['Calcium source', 'Good energy source'],
+        },
+        'chocolate cake': {
+            'calories': 420, 'protein': 5, 'carbs': 60, 'fat': 19,
+            'health_benefits': ['Good energy source', 'Antioxidants'],
+        },
+        'bagel': {
+            'calories': 280, 'protein': 11, 'carbs': 56, 'fat': 2,
+            'health_benefits': ['Good carbohydrate source', 'Low fat'],
+        },
+        'pretzel': {
+            'calories': 380, 'protein': 10, 'carbs': 79, 'fat': 3,
+            'health_benefits': ['Low fat', 'Good energy source'],
+        },
+        'popcorn': {
+            'calories': 380, 'protein': 12, 'carbs': 77, 'fat': 4,
+            'health_benefits': ['High fiber', 'Low fat', 'Whole grain'],
+        },
+        'fried rice': {
+            'calories': 330, 'protein': 9, 'carbs': 55, 'fat': 9,
+            'health_benefits': ['Good energy source', 'Moderate protein'],
+        },
+        'pancake': {
+            'calories': 310, 'protein': 8, 'carbs': 55, 'fat': 8,
+            'health_benefits': ['Good energy source', 'Calcium source'],
+        },
+        'waffle': {
+            'calories': 290, 'protein': 8, 'carbs': 45, 'fat': 11,
+            'health_benefits': ['Good energy source', 'Calcium source'],
+        },
+        'beef stroganoff': {
+            'calories': 380, 'protein': 28, 'carbs': 30, 'fat': 16,
+            'health_benefits': ['High protein', 'Good iron source'],
+        },
+        'meat loaf': {
+            'calories': 260, 'protein': 22, 'carbs': 12, 'fat': 14,
+            'health_benefits': ['High protein', 'Good iron source'],
+        },
+        'corn': {
+            'calories': 90, 'protein': 3, 'carbs': 20, 'fat': 1,
+            'health_benefits': ['High fiber', 'Vitamins', 'Low fat'],
+        },
+        'broccoli': {
+            'calories': 35, 'protein': 2, 'carbs': 7, 'fat': 0.5,
+            'health_benefits': ['High fiber', 'Rich in vitamins', 'Low calorie'],
+        },
+        'mushroom': {
+            'calories': 22, 'protein': 3, 'carbs': 3, 'fat': 0.5,
+            'health_benefits': ['Low calorie', 'Rich in minerals', 'Low fat'],
+        },
+        'strawberry': {
+            'calories': 32, 'protein': 1, 'carbs': 8, 'fat': 0.5,
+            'health_benefits': ['Rich in vitamin C', 'Low calorie', 'Antioxidants'],
+        },
+        'orange': {
+            'calories': 47, 'protein': 1, 'carbs': 12, 'fat': 0.2,
+            'health_benefits': ['Rich in vitamin C', 'Hydrating', 'Low calorie'],
+        },
+        'banana': {
+            'calories': 89, 'protein': 1, 'carbs': 23, 'fat': 0.5,
+            'health_benefits': ['Rich in potassium', 'Quick energy'],
+        },
+        'apple': {
+            'calories': 52, 'protein': 0.5, 'carbs': 14, 'fat': 0.2,
+            'health_benefits': ['High fiber', 'Rich in vitamins', 'Low calorie'],
+        },
+        'muffin': {
+            'calories': 320, 'protein': 5, 'carbs': 55, 'fat': 11,
+            'health_benefits': ['Good energy source', 'Quick breakfast option'],
+        },
+        'cheese': {
+            'calories': 400, 'protein': 25, 'carbs': 3, 'fat': 33,
+            'health_benefits': ['High protein', 'Good calcium source'],
+        },
+        'bread': {
+            'calories': 265, 'protein': 9, 'carbs': 49, 'fat': 3,
+            'health_benefits': ['Good carbohydrate source', 'Low fat'],
+        },
     }
 
     return NUTRITION_DB
@@ -126,6 +316,16 @@ def _lookup_nutrition_by_keywords(keywords: list[str]) -> dict:
             if any(word in food_name for word in kw.lower().split()):
                 return nutrition
     return db.get('salad', {'calories': 150, 'protein': 5, 'carbs': 20, 'fat': 7, 'health_benefits': []})
+
+
+def _match_food_by_text(text: str) -> tuple[str | None, dict]:
+    """Return (food_name, nutrition) for text, searching NUTRITION_DB keys."""
+    db = _load_nutrition_db()
+    words = [w for w in text.lower().split() if w]
+    for food_name, nutrition in db.items():
+        if any(word in food_name for word in words):
+            return food_name, nutrition
+    return None, {}
 
 
 def _keyword_food_match(image_bytes: bytes) -> list[dict]:
@@ -186,25 +386,45 @@ async def recognize_food(image_bytes: bytes) -> list[dict]:
         import torch
         transform = ModelRegistry.get('food_transform')
         img = Image.open(BytesIO(image_bytes))
-        input_tensor = transform(img).unsqueeze(0).to(DEVICE)
 
-        with torch.no_grad():
-            output = model(input_tensor)
-        probs = torch.softmax(output, dim=1)
+        if isinstance(model, OnnxModel):
+            input_tensor = transform(img).unsqueeze(0)
+            logits = model.predict(input_tensor.detach().numpy())
+            output = torch.from_numpy(logits)
+            device_out = output
+        else:
+            input_tensor = transform(img).unsqueeze(0).to(DEVICE)
+            with torch.no_grad():
+                output = model(input_tensor)
+            device_out = output
+
+        probs = torch.softmax(device_out, dim=1)
         top_probs, top_indices = torch.topk(probs, TOP_K, dim=1)
 
+        categories = _load_imagenet_categories(model) or []
         results = []
         for i in range(TOP_K):
             idx = top_indices[0, i].item()
             conf = round(float(top_probs[0, i].item()), 4)
-            food_name = FOOD101_CLASSES[idx] if idx < len(FOOD101_CLASSES) else f'food_{idx}'
+            category = categories[idx] if idx < len(categories) else ''
 
-            nutrition = _lookup_nutrition_by_keywords([food_name])
+            food_name = _imagenet_to_food(category) if category else None
+            if food_name is None and category:
+                food_name, _ = _match_food_by_text(category)
+
+            display_name = food_name.replace('_', ' ').title() if food_name else (
+                category.replace('_', ' ').title() if category else 'Unknown Food'
+            )
+            nutrition = _load_nutrition_db().get(food_name) if food_name else {}
             results.append({
-                'item': food_name.replace('_', ' ').title(),
+                'item': display_name,
                 'confidence': conf,
-                'nutrition': nutrition,
+                'nutrition': nutrition or {'calories': 0, 'protein': 0, 'carbs': 0, 'fat': 0, 'health_benefits': []},
             })
+
+        if results and all(not r['nutrition'].get('calories') for r in results):
+            logger.info('No food categories matched — using keyword fallback')
+            return _keyword_food_match(image_bytes)
 
         return results
     except Exception as exc:

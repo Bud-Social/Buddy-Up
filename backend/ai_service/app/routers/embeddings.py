@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from ..config import settings
-from ..embedding_engine import embed_text, find_top_matches
+from ..embedding_engine import embed_text, find_top_matches, build_index, search_index, FaissIndex
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,37 @@ class MatchResult(BaseModel):
 
 class MatchResponse(BaseModel):
     matches: list[MatchResult]
+
+
+class IndexRequest(BaseModel):
+    index_name: str
+    vectors: list[dict]
+
+
+class IndexResponse(BaseModel):
+    index_name: str
+    vectors: int
+    dimension: int | None = None
+    method: str = 'faiss'
+
+
+class IndexSearchRequest(BaseModel):
+    index_name: str
+    query: list[float]
+    top_k: int = 20
+
+
+class IndexSearchResult(BaseModel):
+    id: str
+    score: float
+
+
+class IndexSearchResponse(BaseModel):
+    matches: list[IndexSearchResult]
+
+
+class IndexListResponse(BaseModel):
+    indexes: list[str]
 
 
 async def _get_redis():
@@ -90,3 +121,25 @@ async def match_profiles(req: MatchRequest):
 
     top = await find_top_matches(query_vec, candidates, top_k=req.top_k)
     return MatchResponse(matches=[MatchResult(**m) for m in top])
+
+
+@router.post('/index/build', response_model=IndexResponse)
+async def build_index_endpoint(req: IndexRequest):
+    result = await build_index(req.index_name, req.vectors)
+    return IndexResponse(
+        index_name=result.get('index_name', req.index_name),
+        vectors=result.get('vectors', 0),
+        dimension=result.get('dimension'),
+        method=result.get('method', 'faiss'),
+    )
+
+
+@router.post('/index/search', response_model=IndexSearchResponse)
+async def search_index_endpoint(req: IndexSearchRequest):
+    matches = await search_index(req.index_name, req.query, top_k=req.top_k)
+    return IndexSearchResponse(matches=[IndexSearchResult(**m) for m in matches])
+
+
+@router.get('/index', response_model=IndexListResponse)
+async def list_indexes():
+    return IndexListResponse(indexes=FaissIndex.list_indexes())

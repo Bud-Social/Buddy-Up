@@ -1,0 +1,6 @@
+# Datasets in this directory are large and DVC-managed.
+# They are excluded from git (see repo .gitignore). Use `dvc add` to track.
+# See README.md for data contracts and download sources.
+*
+!.gitignore
+!README.md

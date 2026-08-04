@@ -1,72 +1,70 @@
 import logging
+import os
+import tempfile
 from io import BytesIO
-from typing import Any
 
 from PIL import Image
 
 from .config import settings
-from .model_registry import ModelRegistry, DEVICE
+from .model_registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
-NSFW_LABELS = ['clean', 'nsfw']
 TOXICITY_THRESHOLD = 0.5
-NSFW_THRESHOLD = 0.6
+
+# NudeNet categories that warrant flagging, grouped by sensitivity.
+HIGH_SENSITIVITY = {
+    'EXPOSED_GENITALIA_F', 'EXPOSED_GENITALIA_M',
+    'FEMALE_GENITALIA_EXPOSED', 'MALE_GENITALIA_EXPOSED',
+    'EXPOSED_ANUS', 'SEXUAL_ACTIVITY',
+}
+MEDIUM_SENSITIVITY = {
+    'EXPOSED_BREAST_F', 'EXPOSED_BUTTOCKS',
+    'FEMALE_BREAST_EXPOSED', 'BUTTOCKS_EXPOSED',
+}
+HIGH_THRESHOLD = 0.5
+MEDIUM_THRESHOLD = 0.65
 
 
-def _load_nsfw_model() -> Any:
+def _load_nudenet():
+    """Load the NudeNet ONNX detector (purpose-built NSFW model)."""
     model = ModelRegistry.get('nsfw_classifier')
     if model is not None:
-        return model
+        return model or None
 
-    logger.info('Loading NSFW classifier model...')
     try:
-        import torch
-        import torchvision.transforms as T
-        from torchvision.models import resnet18, ResNet18_Weights
-
-        model = resnet18(weights=ResNet18_Weights.IMAGENET1K_V1)
-        model.eval()
-        model.to(DEVICE)
-
-        transform = T.Compose([
-            T.Resize(224),
-            T.CenterCrop(224),
-            T.ToTensor(),
-            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-
-        ModelRegistry.register('nsfw_classifier', model)
-        ModelRegistry.register('nsfw_transform', transform)
-        logger.info('NSFW classifier loaded on %s', DEVICE)
-        return model
+        from nudenet import NudeDetector
+        detector = NudeDetector()
+        ModelRegistry.register('nsfw_classifier', detector)
+        logger.info('NudeNet NSFW detector loaded')
+        return detector
     except Exception as exc:
-        logger.warning('Failed to load NSFW model: %s — using fallback', exc)
+        logger.warning('NudeNet unavailable (%s) — falling back to pixel analysis', exc)
         ModelRegistry.register('nsfw_classifier', None)
         return None
 
 
-def _load_toxicity_model() -> Any:
-    model = ModelRegistry.get('toxicity_classifier')
-    if model is not None:
-        return model
+def _classify_detections(detections: list[dict]) -> dict:
+    if not detections:
+        return {'is_nsfw': False, 'confidence': 0.0, 'labels': ['clean'], 'method': 'nudenet'}
 
-    logger.info('Loading toxicity classifier...')
-    try:
-        from transformers import pipeline
+    high = [d for d in detections if d.get('class', '').upper() in HIGH_SENSITIVITY]
+    med = [d for d in detections if d.get('class', '').upper() in MEDIUM_SENSITIVITY]
 
-        classifier = pipeline(
-            'text-classification',
-            model='unitary/toxic-bert',
-            device=0 if str(DEVICE) == 'cuda' else -1,
-        )
-        ModelRegistry.register('toxicity_classifier', classifier)
-        logger.info('Toxicity classifier loaded')
-        return classifier
-    except Exception as exc:
-        logger.warning('Failed to load toxicity model: %s — using fallback', exc)
-        ModelRegistry.register('toxicity_classifier', None)
-        return None
+    high_max = max((float(d.get('score', 0)) for d in high), default=0.0)
+    med_max = max((float(d.get('score', 0)) for d in med), default=0.0)
+
+    is_nsfw = high_max >= HIGH_THRESHOLD or med_max >= MEDIUM_THRESHOLD
+    labels = [d['class'].replace('_', ' ').title() for d in (high + med) if float(d.get('score', 0)) > 0.3]
+    confidence = max(high_max, med_max)
+
+    return {
+        'is_nsfw': is_nsfw,
+        'confidence': round(confidence, 4),
+        'labels': labels or (['nsfw'] if is_nsfw else ['clean']),
+        'action': 'flag' if is_nsfw else 'approve',
+        'method': 'nudenet',
+    }
 
 
 def _pixel_analysis(image: Image.Image) -> dict:
@@ -94,36 +92,36 @@ def _pixel_analysis(image: Image.Image) -> dict:
     }
 
 
+def _nudenet_analyze(image_bytes: bytes) -> dict | None:
+    detector = _load_nudenet()
+    if detector is None:
+        return None
+
+    fd, path = tempfile.mkstemp(suffix='.jpg')
+    try:
+        with os.fdopen(fd, 'wb') as fh:
+            fh.write(image_bytes)
+        detections = detector.detect(path)
+        return _classify_detections(detections)
+    except Exception as exc:
+        logger.warning('NudeNet inference failed: %s — falling back to pixel analysis', exc)
+        return None
+    finally:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+
 async def analyze_image(image_bytes: bytes) -> dict:
     try:
         img = Image.open(BytesIO(image_bytes))
     except Exception:
-        return {'is_nsfw': False, 'confidence': 0.0, 'labels': ['error'], 'action': 'approve'}
+        return {'is_nsfw': False, 'confidence': 0.0, 'labels': ['error'], 'action': 'approve', 'method': 'error'}
 
-    model = _load_nsfw_model()
-
-    if model is not None:
-        try:
-            import torch
-
-            transform = ModelRegistry.get('nsfw_transform')
-            input_tensor = transform(img).unsqueeze(0).to(DEVICE)
-            with torch.no_grad():
-                output = model(input_tensor)
-            probs = torch.softmax(output, dim=1)
-            confidence, pred_idx = probs.max(1)
-            confidence = float(confidence.item())
-            label = NSFW_LABELS[pred_idx.item()] if pred_idx.item() < len(NSFW_LABELS) else 'clean'
-
-            is_nsfw = label == 'nsfw' and confidence > NSFW_THRESHOLD
-            return {
-                'is_nsfw': is_nsfw,
-                'confidence': round(confidence, 4),
-                'labels': [label],
-                'action': 'flag' if is_nsfw else 'approve',
-            }
-        except Exception as exc:
-            logger.warning('NSFW model inference failed: %s — falling back to pixel analysis', exc)
+    result = _nudenet_analyze(image_bytes)
+    if result is not None:
+        return result
 
     pixel_result = _pixel_analysis(img)
     is_nsfw = pixel_result['is_likely_nude']
@@ -136,8 +134,71 @@ async def analyze_image(image_bytes: bytes) -> dict:
     }
 
 
+async def _openai_moderate(text: str) -> dict | None:
+    """LLM-as-judge via the OpenAI moderation endpoint (returns None if not configured)."""
+    if not settings.openai_api_key:
+        return None
+    import httpx
+
+    url = f'{settings.openai_base_url.rstrip("/")}/moderations'
+    headers = {
+        'Authorization': f'Bearer {settings.openai_api_key}',
+        'Content-Type': 'application/json',
+    }
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.post(url, headers=headers, json={'input': text[:4000]})
+            resp.raise_for_status()
+            data = resp.json()
+        result = data['results'][0]
+        categories = result.get('categories', {})
+        scores = result.get('category_scores', {})
+        flagged = result.get('flagged', False)
+        category_names = [k.replace('_', ' ').title() for k, v in categories.items() if v]
+        max_score = max(scores.values(), default=0.0)
+        return {
+            'is_toxic': bool(flagged),
+            'toxicity_score': round(float(max_score), 4),
+            'categories': {k: round(float(v), 4) for k, v in scores.items()},
+            'label': 'toxic' if flagged else 'not_toxic',
+            'action': 'flag' if flagged else 'approve',
+            'method': 'openai_moderation',
+        }
+    except Exception as exc:
+        logger.warning('OpenAI moderation failed: %s', exc)
+        return None
+
+
 async def analyze_text(text: str) -> dict:
-    classifier = _load_toxicity_model()
+    if not text or not text.strip():
+        return {
+            'is_toxic': False,
+            'toxicity_score': 0.0,
+            'categories': {},
+            'label': 'not_toxic',
+            'action': 'approve',
+            'method': 'empty',
+        }
+
+    openai_result = await _openai_moderate(text)
+    if openai_result is not None:
+        return openai_result
+
+    classifier = ModelRegistry.get('toxicity_classifier')
+    if classifier is None:
+        try:
+            from transformers import pipeline
+            import torch
+            device = 0 if torch.cuda.is_available() else -1
+            classifier = pipeline(
+                'text-classification',
+                model='unitary/toxic-bert',
+                device=device,
+            )
+            ModelRegistry.register('toxicity_classifier', classifier)
+            logger.info('Toxicity classifier loaded')
+        except Exception as exc:
+            logger.warning('Failed to load toxicity model: %s — using keyword fallback', exc)
 
     if classifier is not None:
         try:
@@ -151,6 +212,7 @@ async def analyze_text(text: str) -> dict:
                 'categories': {label.lower(): score},
                 'label': label,
                 'action': 'flag' if is_toxic else 'approve',
+                'method': 'model',
             }
         except Exception as exc:
             logger.warning('Toxicity inference failed: %s — using keyword fallback', exc)

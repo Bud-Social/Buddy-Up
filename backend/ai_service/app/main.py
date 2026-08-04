@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import health, food, moderation, embeddings, meal_plans, workout, onboarding, health_insights, form_analyzer
+from .monitoring import LatencyMiddleware
+from .routers import (
+    health, food, moderation, embeddings, meal_plans, workout, onboarding,
+    health_insights, form_analyzer, feed, metrics,
+)
 
 app = FastAPI(
     title='BuddyUp AI Service',
@@ -16,6 +20,7 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+app.add_middleware(LatencyMiddleware)
 
 app.include_router(health.router, tags=['health'])
 app.include_router(food.router, prefix='/api/v1/food', tags=['food'])
@@ -26,3 +31,5 @@ app.include_router(workout.router, prefix='/api/v1/workout', tags=['workout'])
 app.include_router(onboarding.router, prefix='/api/v1/onboarding', tags=['onboarding'])
 app.include_router(health_insights.router, prefix='/api/v1/health-insights', tags=['health-insights'])
 app.include_router(form_analyzer.router, prefix='/api/v1/form-analyzer', tags=['form-analyzer'])
+app.include_router(feed.router, prefix='/api/v1/feed', tags=['feed'])
+app.include_router(metrics.router, prefix='/api/v1', tags=['metrics'])

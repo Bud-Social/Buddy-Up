@@ -29,6 +29,11 @@ frontend/dist-node/
 .env.local
 .env.*.local
 
+# ── AI Service datasets (DVC-managed, not committed to git) ─────────
+backend/ai_service/data/*
+!backend/ai_service/data/README.md
+!backend/ai_service/data/.gitignore
+
 # ── IDE ─────────────────────────────────────────────────────────────
 .vscode/
 .idea/
