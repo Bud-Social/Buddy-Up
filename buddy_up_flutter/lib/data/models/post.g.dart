@@ -139,6 +139,7 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   isPinned: json['isPinned'] as bool? ?? false,
   visibility: json['visibility'] as String? ?? 'public',
   moderationStatus: json['moderationStatus'] as String? ?? 'clean',
+  aiAnalysis: _readAiAnalysis(json, 'aiAnalysis') as Map<String, dynamic>?,
   gymTagId: json['gymTagId'] as String?,
   gymTagName: json['gymTagName'] as String?,
   poll: json['poll'] == null
@@ -177,6 +178,7 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'isPinned': instance.isPinned,
   'visibility': instance.visibility,
   'moderationStatus': instance.moderationStatus,
+  'aiAnalysis': instance.aiAnalysis,
   'gymTagId': instance.gymTagId,
   'gymTagName': instance.gymTagName,
   'poll': instance.poll,

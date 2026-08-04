@@ -3,6 +3,13 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'post.freezed.dart';
 part 'post.g.dart';
 
+Map<String, dynamic>? _readAiAnalysis(Map<dynamic, dynamic> json, String? key) {
+  final value = json['ai_analysis'] ?? json['aiAnalysis'];
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) return value.cast<String, dynamic>();
+  return null;
+}
+
 @freezed
 abstract class AuthorData with _$AuthorData {
   const factory AuthorData({
@@ -95,6 +102,7 @@ abstract class Post with _$Post {
     @Default(false) bool isPinned,
     @Default('public') String visibility,
     @Default('clean') String moderationStatus,
+    @JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis,
     String? gymTagId,
     String? gymTagName,
     Poll? poll,

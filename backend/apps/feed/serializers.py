@@ -126,8 +126,9 @@ class PostSerializer(serializers.ModelSerializer):
         'author_data', 'reaction_counts', 'user_reaction',
         'comment_count', 'repost_count', 'is_saved', 'is_pinned',
         'poll', 'original_post_data', 'reposters', 'created_at', 'updated_at',
+        'ai_analysis',
         ]
-        read_only_fields = ['id', 'view_count', 'moderation_status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'view_count', 'moderation_status', 'ai_analysis', 'created_at', 'updated_at']
 
     def get_author_data(self, obj):
         if obj.is_anonymous:

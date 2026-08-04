@@ -7,6 +7,7 @@ import '../../../shared/widgets/reaction_bar.dart';
 import '../../../core/theme/app_theme.dart';
 import 'repost_indicator.dart';
 import 'poll_widget.dart';
+import 'ai_analysis_card.dart';
 
 class PostCard extends StatelessWidget {
   final Post post;
@@ -84,6 +85,7 @@ class PostCard extends StatelessWidget {
             const SizedBox(height: 8),
             _buildProgressData(context),
           ],
+          AiAnalysisCard(analysis: post.aiAnalysis),
           const SizedBox(height: 10),
           _buildActionBar(context),
           const SizedBox(height: 8),

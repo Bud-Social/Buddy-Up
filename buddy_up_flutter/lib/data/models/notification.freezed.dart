@@ -28,12 +28,12 @@ $BuddyNotificationCopyWith<BuddyNotification> get copyWith => _$BuddyNotificatio
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BuddyNotification&&(identical(other.id, id) || other.id == id)&&(identical(other.notificationType, notificationType) || other.notificationType == notificationType)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.senderUsername, senderUsername) || other.senderUsername == senderUsername)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.actionLink, actionLink) || other.actionLink == actionLink)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BuddyNotification&&(identical(other.id, id) || other.id == id)&&(identical(other.notificationType, notificationType) || other.notificationType == notificationType)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.senderUsername, senderUsername) || other.senderUsername == senderUsername)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.actionLink, actionLink) || other.actionLink == actionLink)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&const DeepCollectionEquality().equals(other.metadata, metadata)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,notificationType,title,body,isRead,senderUsername,senderAvatar,actionLink,imageUrl,metadata,createdAt);
+int get hashCode => Object.hash(runtimeType,id,notificationType,title,body,isRead,senderUsername,senderAvatar,actionLink,imageUrl,const DeepCollectionEquality().hash(metadata),createdAt);
 
 @override
 String toString() {
@@ -76,8 +76,8 @@ as bool,senderUsername: freezed == senderUsername ? _self.senderUsername : sende
 as String?,senderAvatar: freezed == senderAvatar ? _self.senderAvatar : senderAvatar // ignore: cast_nullable_to_non_nullable
 as String?,actionLink: freezed == actionLink ? _self.actionLink : actionLink // ignore: cast_nullable_to_non_nullable
 as String?,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -219,7 +219,7 @@ return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isR
 @JsonSerializable()
 
 class _BuddyNotification implements BuddyNotification {
-  const _BuddyNotification({required this.id, @JsonKey(name: 'notification_type') required this.notificationType, required this.title, required this.body, @JsonKey(name: 'is_read') this.isRead = false, @JsonKey(name: 'sender_username') this.senderUsername, @JsonKey(name: 'sender_avatar') this.senderAvatar, @JsonKey(name: 'action_link') this.actionLink, @JsonKey(name: 'image_url') this.imageUrl, @JsonKey(name: 'metadata') this.metadata, @JsonKey(name: 'created_at') required this.createdAt});
+  const _BuddyNotification({required this.id, @JsonKey(name: 'notification_type') required this.notificationType, required this.title, required this.body, @JsonKey(name: 'is_read') this.isRead = false, @JsonKey(name: 'sender_username') this.senderUsername, @JsonKey(name: 'sender_avatar') this.senderAvatar, @JsonKey(name: 'action_link') this.actionLink, @JsonKey(name: 'image_url') this.imageUrl, @JsonKey(name: 'metadata') final  Map<String, dynamic>? metadata, @JsonKey(name: 'created_at') required this.createdAt}): _metadata = metadata;
   factory _BuddyNotification.fromJson(Map<String, dynamic> json) => _$BuddyNotificationFromJson(json);
 
 @override final  String id;
@@ -231,7 +231,15 @@ class _BuddyNotification implements BuddyNotification {
 @override@JsonKey(name: 'sender_avatar') final  String? senderAvatar;
 @override@JsonKey(name: 'action_link') final  String? actionLink;
 @override@JsonKey(name: 'image_url') final  String? imageUrl;
-@override@JsonKey(name: 'metadata') final  Map<String, dynamic>? metadata;
+ final  Map<String, dynamic>? _metadata;
+@override@JsonKey(name: 'metadata') Map<String, dynamic>? get metadata {
+  final value = _metadata;
+  if (value == null) return null;
+  if (_metadata is EqualUnmodifiableMapView) return _metadata;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of BuddyNotification
@@ -247,12 +255,12 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BuddyNotification&&(identical(other.id, id) || other.id == id)&&(identical(other.notificationType, notificationType) || other.notificationType == notificationType)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.senderUsername, senderUsername) || other.senderUsername == senderUsername)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.actionLink, actionLink) || other.actionLink == actionLink)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BuddyNotification&&(identical(other.id, id) || other.id == id)&&(identical(other.notificationType, notificationType) || other.notificationType == notificationType)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.senderUsername, senderUsername) || other.senderUsername == senderUsername)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.actionLink, actionLink) || other.actionLink == actionLink)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&const DeepCollectionEquality().equals(other._metadata, _metadata)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,notificationType,title,body,isRead,senderUsername,senderAvatar,actionLink,imageUrl,metadata,createdAt);
+int get hashCode => Object.hash(runtimeType,id,notificationType,title,body,isRead,senderUsername,senderAvatar,actionLink,imageUrl,const DeepCollectionEquality().hash(_metadata),createdAt);
 
 @override
 String toString() {
@@ -295,8 +303,8 @@ as bool,senderUsername: freezed == senderUsername ? _self.senderUsername : sende
 as String?,senderAvatar: freezed == senderAvatar ? _self.senderAvatar : senderAvatar // ignore: cast_nullable_to_non_nullable
 as String?,actionLink: freezed == actionLink ? _self.actionLink : actionLink // ignore: cast_nullable_to_non_nullable
 as String?,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>?,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
-as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,metadata: freezed == metadata ? _self._metadata : metadata // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

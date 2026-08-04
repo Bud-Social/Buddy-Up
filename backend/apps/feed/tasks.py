@@ -78,8 +78,40 @@ def moderate_content(self, post_id: str):
     if post.moderation_status != 'clean':
         return
 
+    analysis = dict(post.ai_analysis or {})
     is_flagged = False
 
+    # Text moderation — persist positive results so the UI can surface them.
+    if post.body and post.body.strip():
+        try:
+            ai_resp = requests.post(
+                f'{settings.AI_SERVICE_URL}/api/v1/moderation/text',
+                data={'text': post.body},
+                timeout=20,
+            )
+            if ai_resp.status_code == 200:
+                result = ai_resp.json()
+                audit_ai_call(
+                    'text_moderation',
+                    input_data={'post_id': str(post.id), 'text_preview': post.body[:200]},
+                    output_data=result,
+                )
+                if result.get('is_toxic'):
+                    post.moderation_status = 'flagged'
+                    is_flagged = True
+                else:
+                    analysis['text'] = {
+                        'toxicity_score': result.get('toxicity_score', 0.0),
+                        'label': result.get('label', 'not_toxic'),
+                        'method': result.get('method', 'model'),
+                    }
+            else:
+                logger.warning('AI text moderation returned %s for %s', ai_resp.status_code, post.id)
+        except requests.RequestException as exc:
+            logger.warning('AI text moderation call failed for %s: %s', post.id, exc)
+            audit_ai_call('text_moderation', input_data={'post_id': str(post.id)}, error_message=str(exc))
+
+    image_results = []
     for url in post.media_urls or []:
         try:
             resp = requests.get(url, timeout=10)
@@ -100,9 +132,15 @@ def moderate_content(self, post_id: str):
                 )
                 if result.get('is_nsfw'):
                     post.moderation_status = 'flagged'
-                    post.save(update_fields=['moderation_status'])
                     is_flagged = True
                     break
+                image_results.append({
+                    'url': url,
+                    'is_nsfw': False,
+                    'confidence': result.get('confidence', 0.0),
+                    'labels': result.get('labels', ['clean']),
+                    'method': result.get('method', 'model'),
+                })
             else:
                 logger.warning('AI moderation returned %s for %s', ai_resp.status_code, url)
 
@@ -115,6 +153,7 @@ def moderate_content(self, post_id: str):
                 continue
 
     if is_flagged:
+        post.save(update_fields=['moderation_status'])
         from apps.moderation.models import ContentFlag
         ContentFlag.objects.create(
             flag_reason='nsfw',
@@ -135,6 +174,11 @@ def moderate_content(self, post_id: str):
             body='Your post has been flagged for review. It may contain sensitive content.',
             metadata={'post_id': str(post.id)},
         )
+    else:
+        if image_results:
+            analysis['images'] = image_results
+        post.ai_analysis = analysis
+        post.save(update_fields=['ai_analysis'])
 
 
 @shared_task

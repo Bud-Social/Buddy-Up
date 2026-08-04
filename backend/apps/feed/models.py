@@ -50,6 +50,7 @@ class Post(TimestampedModel, SoftDeleteModel):
     moderation_status = models.CharField(max_length=15, choices=MODERATION_CHOICES, default='clean')
     pinned_comment = models.ForeignKey('Comment', null=True, blank=True, on_delete=models.SET_NULL, related_name='pinned_on')
     mentioned_profiles = models.ManyToManyField('profiles.Profile', blank=True, related_name='mention_posts')
+    ai_analysis = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'feed_post'
