@@ -11,6 +11,37 @@ One notebook per model, following the shared template:
 artifacts the AI service lazy-loads. PyTorch is used only in the JEPA research
 lane. Run in Colab or Kaggle (GPU).
 
+## Running locally
+
+The cell-1 bootstrap of every notebook is kernel-location independent: it walks
+up from the current working directory to find `ai_service/`, puts `training/` on
+`sys.path`, and `os.chdir()`s into `notebooks/` so the legacy `../data`,
+`../models` relative paths keep working. The leading `%pip install` is guarded —
+it only installs a dependency when it isn't already importable, so it's a no-op
+inside the shared ML environment and still auto-installs on Colab/Kaggle.
+
+This machine uses one shared Python 3.13 environment for all ML work, registered
+as a Jupyter kernel so VS Code sees it in every project:
+
+```bash
+bash scripts/setup_ml_env.sh     # idempotent: creates ~/Desktop/ml-env +
+                                  # installs backend/ai_service/requirements-training.txt
+                                  # (CPU torch from the PyTorch CPU index) +
+                                  # registers the "buddyup-ml" kernel
+```
+
+Then in VS Code open any notebook and pick the **Python 3.13 (ML)** kernel from
+the kernel picker. GPU training still happens in Colab/Kaggle; this machine is
+CPU-only (4 cores / 23 GB RAM), good for data work and small runs.
+
+Notes:
+- `../data/` is DVC-tracked (see `../data/README.md`); `ml-env` itself lives in
+  `~/Desktop/ml-env` and is not part of the repo. Rebuild it anytime with the
+  same script (pins live in `backend/ai_service/requirements-training.txt`).
+- MLflow is available offline; `tf_utils.mlflow_log()` prints model-card JSON
+  when no tracking URI is set. HF datasets + `food_recognition`'s HF fallback
+  need network access.
+
 ## Getting data
 
 - **Local DVC data** (`../data/`, see `../data/README.md`): Food.com Recipe1M-proxy
