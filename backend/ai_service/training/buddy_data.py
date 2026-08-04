@@ -142,10 +142,32 @@ CATALOG: list[Dataset] = [
         size='2.9 GB',
         marker='the-reddit-irl-dataset-comments.csv',
     ),
+    # ── Workout videos (pose form analysis) ────────────────────────────
+    Dataset(
+        key='workout_videos',
+        description='Local exercise-class video corpora (Work out vids dataset '
+                    '1-6) — 22 exercise classes, ~6.9k mp4s; processed by '
+                    'training/process_workout_videos.py into pose keypoints',
+        source='Internal / Kaggle exercise-video datasets',
+        license='Various (research use)',
+        size='~27 GB',
+        marker='squat',
+        local_dir='Work out vids dataset 2',
+    ),
+    Dataset(
+        key='form_sequences',
+        description='Pose-keypoint sequences derived from workout_videos '
+                    '(data/processed/forms/normalised.json) — the form_analyzer '
+                    'training input',
+        source='Derived (process_workout_videos.py)',
+        license='Derived',
+        size='varies',
+        marker='normalised.json',
+        local_dir='processed/forms',
+    ),
     # ── Recipe1M+ (im2recipe lineage) ───────────────────────────────────
     Dataset(
-        key='recipe1m_layer1',
-        description='Recipe1M layer1.json (id, ingredients, instructions, partitions) — '
+        key='recipe1m_layer1',        description='Recipe1M layer1.json (id, ingredients, instructions, partitions) — '
                     'requires form access via https://forms.gle/EzYSu8j3D1LJzVbR8',
         source='https://github.com/torralba-lab/im2recipe (MIT)',
         license='Research-only',
@@ -273,6 +295,33 @@ def genz_slang():
     import pandas as pd
 
     return pd.read_csv(DATA / 'genz_slang_usage_2020_2025.csv')
+
+
+# --- Workout videos / form keypoints ------------------------------------
+
+
+def workout_videos():
+    """Root dirs containing exercise-class video folders (Work out vids dataset N)."""
+    dirs = sorted(DATA.glob('Work out vids dataset *'))
+    dirs = [d for d in dirs if list(d.rglob('*.mp4'))]
+    if not dirs:
+        raise FileNotFoundError(
+            'No workout-video datasets under data/Work out vids dataset */'
+            ' (look for <exercise>/*.mp4 folders).'
+        )
+    return dirs
+
+
+def form_sequences():
+    """Processed pose-keypoint sequences from process_workout_videos.py."""
+    path = DATA / 'processed' / 'forms' / 'normalised.json'
+    if not path.exists():
+        raise FileNotFoundError(
+            f'Missing {path} — run: python training/process_workout_videos.py'
+        )
+    import json
+
+    return json.loads(path.read_text())
 
 
 def reddit_jokes():

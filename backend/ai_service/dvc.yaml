@@ -9,8 +9,12 @@ stages:
     outs:
       - data/processed/food
   process-forms:
-    cmd: python training/process_form_data.py
+    cmd: python training/process_workout_videos.py
     deps:
-      - data/raw
+      - data/Work out vids dataset 2
+      - data/Work out vids dataset 3
+      - data/Work out vids dataset 4
+      - data/Work out vids dataset 5
+      - data/Work out vids dataset 6
     outs:
       - data/processed/forms
