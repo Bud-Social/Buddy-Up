@@ -23,14 +23,14 @@ export default function DiscountCodeAnalyticsPage() {
   }, [codeId]);
 
   if (isLoading) return (
-    <div className="max-w-lg mx-auto p-4 space-y-3 animate-pulse">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 space-y-3 animate-pulse">
       <div className="h-8 w-48 bg-buddy-surface rounded" />
       {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-24 bg-buddy-surface rounded-xl" />)}
     </div>
   );
 
   if (!analytics) return (
-    <div className="max-w-lg mx-auto p-4 text-center">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 text-center">
       <p className="text-buddy-text-secondary mb-4">Analytics not found.</p>
       <Button onClick={() => navigate('/marketplace/creator')}>Back to Studio</Button>
     </div>
@@ -42,7 +42,7 @@ export default function DiscountCodeAnalyticsPage() {
   const maxDist = Math.max(...distData.map(d => d.users), 1);
 
   return (
-    <div className="max-w-lg mx-auto p-4 pb-24 space-y-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 pb-24 space-y-4">
       <div className="flex items-center gap-3">
         <button onClick={() => navigate('/marketplace/creator')} className="p-2 rounded-xl bg-buddy-surface hover:bg-buddy-surface-raised transition-colors">
           <ArrowLeft size={20} />

@@ -674,33 +674,7 @@ class SendPingView(views.APIView):
 class ProfileRecommendationsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):
-        import requests as http_requests
-        profile = request.user.profile
-        ai_url = f'{settings.AI_SERVICE_URL}/api/v1/embeddings/match'
-        try:
-            resp = http_requests.post(
-                ai_url,
-                json={'profile_id': str(profile.user_id), 'top_k': 20},
-                timeout=15,
-            )
-            resp.raise_for_status()
-            matches = resp.json().get('matches', [])
-        except Exception:
-            return Response({
-                'success': True, 'data': [],
-                'message': 'Recommendations unavailable at this time.',
-                'errors': None, 'pagination': None,
-            })
-
-        matched_ids = [m['profile_id'] for m in matches]
-        if not matched_ids:
-            return Response({
-                'success': True, 'data': [],
-                'message': 'No recommendations found.',
-                'errors': None, 'pagination': None,
-            })
-
+    def _base_qs(self, profile):
         exclude_ids = {str(profile.user_id)}
         exclude_ids.update(
             str(pid) for pid in BuddyRelationship.objects.filter(
@@ -712,26 +686,165 @@ class ProfileRecommendationsView(views.APIView):
                 db_models.Q(blocker=profile) | db_models.Q(blocked=profile),
             ).values_list('blocker_id', 'blocked_id')
         )
+        return Profile.objects.filter(privacy_level='public').exclude(pk__in=list(exclude_ids))
 
-        profiles_qs = Profile.objects.filter(
-            pk__in=matched_ids
-        ).exclude(
-            pk__in=list(exclude_ids)
-        ).select_related('user')
+    def get(self, request):
+        import requests as http_requests
+        profile = request.user.profile
+        ai_url = f'{settings.AI_SERVICE_URL}/api/v1/embeddings/match'
+        matches = []
+        try:
+            resp = http_requests.post(
+                ai_url,
+                json={'profile_id': str(profile.user_id), 'top_k': 20},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            matches = resp.json().get('matches', [])
+        except Exception:
+            matches = []
+
+        base_qs = self._base_qs(profile)
+
+        def _interleave(profiles):
+            groups = {'trainer': [], 'practitioner': [], 'regular': []}
+            for p in profiles:
+                key = p.verification_status if p.verification_status in groups else 'regular'
+                groups[key].append(p)
+            result = []
+            while any(groups.values()):
+                for key in ('trainer', 'practitioner', 'regular'):
+                    if groups[key]:
+                        result.append(groups[key].pop(0))
+            return result
+
+        if not matches:
+            # AI unavailable — fall back to a popularity-ranked browse so the
+            # Discover page can still surface recommended users automatically.
+            # Interleave regular users with practitioners and trainers for a mix.
+            from django.db.models import Count
+            popular = list(
+                base_qs.annotate(
+                    follower_total=Count('followers', distinct=True),
+                    post_total=Count('posts', distinct=True),
+                ).order_by('-follower_total', '-post_total')[:60]
+            )
+            popular = _interleave(popular)[:20]
+            return Response({
+                'success': True,
+                'data': [
+                    {'profile': ProfileSerializer(p, context={'request': request}).data, 'match_score': None}
+                    for p in popular
+                ],
+                'message': 'OK',
+                'errors': None,
+                'pagination': None,
+            })
+
+        matched_ids = [m['profile_id'] for m in matches]
+
+        profiles_qs = base_qs.filter(pk__in=matched_ids).select_related('user')
 
         profile_map = {str(p.user_id): p for p in profiles_qs}
-        ordered = []
-        for m in matches:
-            p = profile_map.get(m['profile_id'])
-            if p:
-                ordered.append({
-                    'profile': ProfileSerializer(p, context={'request': request}).data,
-                    'match_score': m['score'],
-                })
+        ordered_profiles = [
+            profile_map[m['profile_id']]
+            for m in matches
+            if m['profile_id'] in profile_map
+        ]
+        ordered_profiles = _interleave(ordered_profiles)
 
         return Response({
             'success': True,
-            'data': ordered,
+            'data': [
+                {'profile': ProfileSerializer(p, context={'request': request}).data, 'match_score': None}
+                for p in ordered_profiles
+            ],
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class DiscoverTrendingView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Count
+        from apps.feed.models import FeedPost
+        from apps.feed.serializers import FeedPostSerializer
+        from apps.marketplace.models import DiscountCode, MarketplaceEvent
+        from apps.marketplace.serializers import DiscountCodeSerializer, MarketplaceEventSerializer
+
+        now = timezone.now()
+        since = now - timezone.timedelta(days=7)
+
+        # Trending hashtags aggregated from recent posts' tags.
+        tag_counts = {}
+        recent_tags = FeedPost.objects.filter(
+            created_at__gte=since,
+            moderation_status='clean',
+        ).exclude(
+            db_models.Q(tags=[]) | db_models.Q(tags__isnull=True),
+        ).values_list('tags', flat=True)[:1000]
+        for tags in recent_tags:
+            for tag in (tags or []):
+                t = str(tag).lower().lstrip('#')
+                if t:
+                    tag_counts[t] = tag_counts.get(t, 0) + 1
+        trending_hashtags = [
+            {'tag': tag, 'count': count}
+            for tag, count in sorted(tag_counts.items(), key=lambda kv: kv[1], reverse=True)[:10]
+        ]
+
+        # Trending posts ranked by engagement.
+        trending_posts_qs = FeedPost.objects.filter(
+            created_at__gte=since,
+            moderation_status='clean',
+            visibility='public',
+        ).select_related('author', 'gym_tag').annotate(
+            engagement=(
+                Count('reactions', distinct=True)
+                + Count('comments', distinct=True)
+                + Count('reposts', distinct=True)
+                + db_models.F('view_count')
+            ),
+        ).order_by('-engagement', '-created_at')[:10]
+        trending_posts = FeedPostSerializer(trending_posts_qs, many=True, context={'request': request}).data
+
+        # Trending offers: most-used active discount codes + free upcoming events.
+        trending_offers = []
+        active_codes = DiscountCode.objects.filter(
+            is_active=True,
+            is_retired=False,
+        ).filter(
+            db_models.Q(valid_until__isnull=True) | db_models.Q(valid_until__gte=now),
+        ).select_related('creator').order_by('-times_used', '-share_count')[:5]
+        for code in active_codes:
+            trending_offers.append({
+                'type': 'discount_code',
+                'data': DiscountCodeSerializer(code, context={'request': request}).data,
+            })
+
+        free_events = MarketplaceEvent.objects.filter(
+            is_free=True,
+            is_published=True,
+            is_draft=False,
+            is_cancelled=False,
+            start_datetime__gte=now,
+        ).select_related('creator').order_by('-attendee_count', 'start_datetime')[:5]
+        for event in free_events:
+            trending_offers.append({
+                'type': 'free_event',
+                'data': MarketplaceEventSerializer(event, context={'request': request}).data,
+            })
+
+        return Response({
+            'success': True,
+            'data': {
+                'hashtags': trending_hashtags,
+                'posts': trending_posts,
+                'offers': trending_offers,
+            },
             'message': 'OK',
             'errors': None,
             'pagination': None,

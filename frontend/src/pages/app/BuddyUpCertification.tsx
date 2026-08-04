@@ -91,7 +91,7 @@ export default function BuddyUpCertification({ shopId, shopName, onClose }: Cert
   }
 
   return (
-    <div className="max-w-xl mx-auto pb-8">
+    <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto pb-8">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={onClose} className="p-2 rounded-xl bg-buddy-surface hover:bg-buddy-surface-raised transition-colors"><ArrowLeft size={20} /></button>
         <div>

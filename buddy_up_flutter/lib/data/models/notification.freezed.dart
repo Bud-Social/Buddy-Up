@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$BuddyNotification {
 
- String get id;@JsonKey(name: 'notification_type') String get notificationType; String get title; String get body;@JsonKey(name: 'is_read') bool get isRead;@JsonKey(name: 'sender_username') String? get senderUsername;@JsonKey(name: 'sender_avatar') String? get senderAvatar;@JsonKey(name: 'action_link') String? get actionLink;@JsonKey(name: 'image_url') String? get imageUrl;@JsonKey(name: 'created_at') String get createdAt;
+ String get id;@JsonKey(name: 'notification_type') String get notificationType; String get title; String get body;@JsonKey(name: 'is_read') bool get isRead;@JsonKey(name: 'sender_username') String? get senderUsername;@JsonKey(name: 'sender_avatar') String? get senderAvatar;@JsonKey(name: 'action_link') String? get actionLink;@JsonKey(name: 'image_url') String? get imageUrl;@JsonKey(name: 'metadata') Map<String, dynamic>? get metadata;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of BuddyNotification
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $BuddyNotificationCopyWith<BuddyNotification> get copyWith => _$BuddyNotificatio
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BuddyNotification&&(identical(other.id, id) || other.id == id)&&(identical(other.notificationType, notificationType) || other.notificationType == notificationType)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.senderUsername, senderUsername) || other.senderUsername == senderUsername)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.actionLink, actionLink) || other.actionLink == actionLink)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BuddyNotification&&(identical(other.id, id) || other.id == id)&&(identical(other.notificationType, notificationType) || other.notificationType == notificationType)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.senderUsername, senderUsername) || other.senderUsername == senderUsername)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.actionLink, actionLink) || other.actionLink == actionLink)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,notificationType,title,body,isRead,senderUsername,senderAvatar,actionLink,imageUrl,createdAt);
+int get hashCode => Object.hash(runtimeType,id,notificationType,title,body,isRead,senderUsername,senderAvatar,actionLink,imageUrl,metadata,createdAt);
 
 @override
 String toString() {
-  return 'BuddyNotification(id: $id, notificationType: $notificationType, title: $title, body: $body, isRead: $isRead, senderUsername: $senderUsername, senderAvatar: $senderAvatar, actionLink: $actionLink, imageUrl: $imageUrl, createdAt: $createdAt)';
+  return 'BuddyNotification(id: $id, notificationType: $notificationType, title: $title, body: $body, isRead: $isRead, senderUsername: $senderUsername, senderAvatar: $senderAvatar, actionLink: $actionLink, imageUrl: $imageUrl, metadata: $metadata, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $BuddyNotificationCopyWith<$Res>  {
   factory $BuddyNotificationCopyWith(BuddyNotification value, $Res Function(BuddyNotification) _then) = _$BuddyNotificationCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'notification_type') String notificationType, String title, String body,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'sender_username') String? senderUsername,@JsonKey(name: 'sender_avatar') String? senderAvatar,@JsonKey(name: 'action_link') String? actionLink,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'notification_type') String notificationType, String title, String body,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'sender_username') String? senderUsername,@JsonKey(name: 'sender_avatar') String? senderAvatar,@JsonKey(name: 'action_link') String? actionLink,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'metadata') Map<String, dynamic>? metadata,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -65,7 +65,7 @@ class _$BuddyNotificationCopyWithImpl<$Res>
 
 /// Create a copy of BuddyNotification
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? notificationType = null,Object? title = null,Object? body = null,Object? isRead = null,Object? senderUsername = freezed,Object? senderAvatar = freezed,Object? actionLink = freezed,Object? imageUrl = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? notificationType = null,Object? title = null,Object? body = null,Object? isRead = null,Object? senderUsername = freezed,Object? senderAvatar = freezed,Object? actionLink = freezed,Object? imageUrl = freezed,Object? metadata = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,notificationType: null == notificationType ? _self.notificationType : notificationType // ignore: cast_nullable_to_non_nullable
@@ -76,6 +76,7 @@ as bool,senderUsername: freezed == senderUsername ? _self.senderUsername : sende
 as String?,senderAvatar: freezed == senderAvatar ? _self.senderAvatar : senderAvatar // ignore: cast_nullable_to_non_nullable
 as String?,actionLink: freezed == actionLink ? _self.actionLink : actionLink // ignore: cast_nullable_to_non_nullable
 as String?,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -162,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'notification_type')  String notificationType,  String title,  String body, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'sender_username')  String? senderUsername, @JsonKey(name: 'sender_avatar')  String? senderAvatar, @JsonKey(name: 'action_link')  String? actionLink, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'notification_type')  String notificationType,  String title,  String body, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'sender_username')  String? senderUsername, @JsonKey(name: 'sender_avatar')  String? senderAvatar, @JsonKey(name: 'action_link')  String? actionLink, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'metadata')  Map<String, dynamic>? metadata, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BuddyNotification() when $default != null:
-return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isRead,_that.senderUsername,_that.senderAvatar,_that.actionLink,_that.imageUrl,_that.createdAt);case _:
+return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isRead,_that.senderUsername,_that.senderAvatar,_that.actionLink,_that.imageUrl,_that.metadata,_that.createdAt);case _:
   return orElse();
 
 }
@@ -183,10 +184,10 @@ return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isR
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'notification_type')  String notificationType,  String title,  String body, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'sender_username')  String? senderUsername, @JsonKey(name: 'sender_avatar')  String? senderAvatar, @JsonKey(name: 'action_link')  String? actionLink, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'notification_type')  String notificationType,  String title,  String body, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'sender_username')  String? senderUsername, @JsonKey(name: 'sender_avatar')  String? senderAvatar, @JsonKey(name: 'action_link')  String? actionLink, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'metadata')  Map<String, dynamic>? metadata, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _BuddyNotification():
-return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isRead,_that.senderUsername,_that.senderAvatar,_that.actionLink,_that.imageUrl,_that.createdAt);case _:
+return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isRead,_that.senderUsername,_that.senderAvatar,_that.actionLink,_that.imageUrl,_that.metadata,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +204,10 @@ return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isR
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'notification_type')  String notificationType,  String title,  String body, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'sender_username')  String? senderUsername, @JsonKey(name: 'sender_avatar')  String? senderAvatar, @JsonKey(name: 'action_link')  String? actionLink, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'notification_type')  String notificationType,  String title,  String body, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'sender_username')  String? senderUsername, @JsonKey(name: 'sender_avatar')  String? senderAvatar, @JsonKey(name: 'action_link')  String? actionLink, @JsonKey(name: 'image_url')  String? imageUrl, @JsonKey(name: 'metadata')  Map<String, dynamic>? metadata, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _BuddyNotification() when $default != null:
-return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isRead,_that.senderUsername,_that.senderAvatar,_that.actionLink,_that.imageUrl,_that.createdAt);case _:
+return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isRead,_that.senderUsername,_that.senderAvatar,_that.actionLink,_that.imageUrl,_that.metadata,_that.createdAt);case _:
   return null;
 
 }
@@ -218,7 +219,7 @@ return $default(_that.id,_that.notificationType,_that.title,_that.body,_that.isR
 @JsonSerializable()
 
 class _BuddyNotification implements BuddyNotification {
-  const _BuddyNotification({required this.id, @JsonKey(name: 'notification_type') required this.notificationType, required this.title, required this.body, @JsonKey(name: 'is_read') this.isRead = false, @JsonKey(name: 'sender_username') this.senderUsername, @JsonKey(name: 'sender_avatar') this.senderAvatar, @JsonKey(name: 'action_link') this.actionLink, @JsonKey(name: 'image_url') this.imageUrl, @JsonKey(name: 'created_at') required this.createdAt});
+  const _BuddyNotification({required this.id, @JsonKey(name: 'notification_type') required this.notificationType, required this.title, required this.body, @JsonKey(name: 'is_read') this.isRead = false, @JsonKey(name: 'sender_username') this.senderUsername, @JsonKey(name: 'sender_avatar') this.senderAvatar, @JsonKey(name: 'action_link') this.actionLink, @JsonKey(name: 'image_url') this.imageUrl, @JsonKey(name: 'metadata') this.metadata, @JsonKey(name: 'created_at') required this.createdAt});
   factory _BuddyNotification.fromJson(Map<String, dynamic> json) => _$BuddyNotificationFromJson(json);
 
 @override final  String id;
@@ -230,6 +231,7 @@ class _BuddyNotification implements BuddyNotification {
 @override@JsonKey(name: 'sender_avatar') final  String? senderAvatar;
 @override@JsonKey(name: 'action_link') final  String? actionLink;
 @override@JsonKey(name: 'image_url') final  String? imageUrl;
+@override@JsonKey(name: 'metadata') final  Map<String, dynamic>? metadata;
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of BuddyNotification
@@ -245,16 +247,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BuddyNotification&&(identical(other.id, id) || other.id == id)&&(identical(other.notificationType, notificationType) || other.notificationType == notificationType)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.senderUsername, senderUsername) || other.senderUsername == senderUsername)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.actionLink, actionLink) || other.actionLink == actionLink)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BuddyNotification&&(identical(other.id, id) || other.id == id)&&(identical(other.notificationType, notificationType) || other.notificationType == notificationType)&&(identical(other.title, title) || other.title == title)&&(identical(other.body, body) || other.body == body)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.senderUsername, senderUsername) || other.senderUsername == senderUsername)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.actionLink, actionLink) || other.actionLink == actionLink)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.metadata, metadata) || other.metadata == metadata)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,notificationType,title,body,isRead,senderUsername,senderAvatar,actionLink,imageUrl,createdAt);
+int get hashCode => Object.hash(runtimeType,id,notificationType,title,body,isRead,senderUsername,senderAvatar,actionLink,imageUrl,metadata,createdAt);
 
 @override
 String toString() {
-  return 'BuddyNotification(id: $id, notificationType: $notificationType, title: $title, body: $body, isRead: $isRead, senderUsername: $senderUsername, senderAvatar: $senderAvatar, actionLink: $actionLink, imageUrl: $imageUrl, createdAt: $createdAt)';
+  return 'BuddyNotification(id: $id, notificationType: $notificationType, title: $title, body: $body, isRead: $isRead, senderUsername: $senderUsername, senderAvatar: $senderAvatar, actionLink: $actionLink, imageUrl: $imageUrl, metadata: $metadata, createdAt: $createdAt)';
 }
 
 
@@ -265,7 +267,7 @@ abstract mixin class _$BuddyNotificationCopyWith<$Res> implements $BuddyNotifica
   factory _$BuddyNotificationCopyWith(_BuddyNotification value, $Res Function(_BuddyNotification) _then) = __$BuddyNotificationCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'notification_type') String notificationType, String title, String body,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'sender_username') String? senderUsername,@JsonKey(name: 'sender_avatar') String? senderAvatar,@JsonKey(name: 'action_link') String? actionLink,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'notification_type') String notificationType, String title, String body,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'sender_username') String? senderUsername,@JsonKey(name: 'sender_avatar') String? senderAvatar,@JsonKey(name: 'action_link') String? actionLink,@JsonKey(name: 'image_url') String? imageUrl,@JsonKey(name: 'metadata') Map<String, dynamic>? metadata,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -282,7 +284,7 @@ class __$BuddyNotificationCopyWithImpl<$Res>
 
 /// Create a copy of BuddyNotification
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? notificationType = null,Object? title = null,Object? body = null,Object? isRead = null,Object? senderUsername = freezed,Object? senderAvatar = freezed,Object? actionLink = freezed,Object? imageUrl = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? notificationType = null,Object? title = null,Object? body = null,Object? isRead = null,Object? senderUsername = freezed,Object? senderAvatar = freezed,Object? actionLink = freezed,Object? imageUrl = freezed,Object? metadata = freezed,Object? createdAt = null,}) {
   return _then(_BuddyNotification(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,notificationType: null == notificationType ? _self.notificationType : notificationType // ignore: cast_nullable_to_non_nullable
@@ -293,6 +295,7 @@ as bool,senderUsername: freezed == senderUsername ? _self.senderUsername : sende
 as String?,senderAvatar: freezed == senderAvatar ? _self.senderAvatar : senderAvatar // ignore: cast_nullable_to_non_nullable
 as String?,actionLink: freezed == actionLink ? _self.actionLink : actionLink // ignore: cast_nullable_to_non_nullable
 as String?,imageUrl: freezed == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,metadata: freezed == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));

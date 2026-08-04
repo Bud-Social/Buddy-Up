@@ -28,7 +28,7 @@ class NotificationListView(views.APIView):
             'message': 'OK',
             'errors': None,
             'pagination': {
-                'count': paginator.page.paginator.count,
+                'count': notifications.count(),
                 'next': paginator.get_next_link(),
                 'previous': paginator.get_previous_link(),
             },

@@ -7,8 +7,16 @@ import '../../../core/theme/app_theme.dart';
 class LiveCard extends StatelessWidget {
   final BuddyLive live;
   final VoidCallback? onTap;
+  final Future<void> Function(String liveId)? onRsvp;
 
-  const LiveCard({super.key, required this.live, this.onTap});
+  const LiveCard({super.key, required this.live, this.onTap, this.onRsvp});
+
+  bool get _hasFee => (live.artifactFee?.isNotEmpty ?? false) && live.artifactFee != null;
+
+  String get _feeLabel {
+    final fee = live.artifactFee ?? const <String, dynamic>{};
+    return fee.entries.map((e) => '${e.value} ${e.key}').join(' + ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,28 +93,74 @@ class LiveCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          live.title,
-                          style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                live.title,
+                                style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (_hasFee) ...[
+                              const SizedBox(width: 6),
+                              const Text(
+                                '💰 Paid',
+                                style: TextStyle(color: BuddyColors.gold, fontSize: 11, fontWeight: FontWeight.w600),
+                              ),
+                            ],
+                          ],
                         ),
                         Text(
                           live.host.displayName,
                           style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
                         ),
+                        if (isScheduled && live.scheduledFor != null)
+                          Text(
+                            DateFormat.MMMd().add_jm().format(DateTime.parse(live.scheduledFor!)),
+                            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                          ),
                       ],
                     ),
                   ),
-                  if (isScheduled && live.scheduledFor != null)
-                    Text(
-                      DateFormat.MMMd().add_jm().format(DateTime.parse(live.scheduledFor!)),
-                      style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
-                    ),
+                  if (isScheduled)
+                    _buildRsvpButton(context),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRsvpButton(BuildContext context) {
+    final label = live.hasRsvped
+        ? 'RSVPed'
+        : _hasFee
+            ? 'Commit $_feeLabel'
+            : 'RSVP';
+    return GestureDetector(
+      onTap: () {
+        if (live.hasRsvped) return;
+        onRsvp?.call(live.id);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(left: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: live.hasRsvped ? BuddyColors.green.withValues(alpha: 0.15) : BuddyColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: live.hasRsvped ? BuddyColors.green : BuddyColors.surfaceRaised),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: live.hasRsvped ? BuddyColors.green : BuddyColors.textPrimary,
+          ),
         ),
       ),
     );

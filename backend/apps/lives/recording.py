@@ -128,6 +128,41 @@ def save_client_replay_chunk(live_id: str, chunk_index: int, chunk_data: bytes, 
         return False
 
 
+def _upload_replay_file(live_id: str, file_path: str) -> str | None:
+    """Upload a stitched replay to Cloudinary when configured; otherwise return None."""
+    cloudinary_config = getattr(settings, 'CLOUDINARY_STORAGE', {})
+    cloud_name = cloudinary_config.get('CLOUD_NAME')
+    api_key = cloudinary_config.get('API_KEY')
+    api_secret = cloudinary_config.get('API_SECRET')
+    if not (cloud_name and api_key and api_secret):
+        return None
+
+    try:
+        import cloudinary
+        import cloudinary.uploader
+        if not getattr(cloudinary.config, 'cloud_name', None):
+            cloudinary.config(
+                cloud_name=cloud_name,
+                api_key=api_key,
+                api_secret=api_secret,
+                secure=True,
+            )
+        result = cloudinary.uploader.upload(
+            file_path,
+            resource_type='video',
+            folder='lives/replays',
+            public_id=live_id,
+            overwrite=True,
+        )
+        url = result.get('secure_url') or result.get('url')
+        if url:
+            logger.info('Uploaded client replay for live %s to Cloudinary', live_id)
+            return url
+    except Exception as e:
+        logger.error('Cloudinary upload failed for live %s: %s', live_id, e)
+    return None
+
+
 def stitch_and_upload_client_replay(live_id: str, recording_session_id: str) -> str | None:
     chunk_dir = Path(tempfile.gettempdir()) / f'replay_chunks_{recording_session_id}'
     if not chunk_dir.exists():
@@ -141,8 +176,10 @@ def stitch_and_upload_client_replay(live_id: str, recording_session_id: str) -> 
     output_path = os.path.join(tempfile.gettempdir(), f'{live_id}_stitched.mp4')
     try:
         _stitch_webm_chunks(chunks, output_path)
-        logger.warning('Client replay fallback is disabled without object storage upload support')
-        return None
+        if not os.path.exists(output_path):
+            return None
+        replay_url = _upload_replay_file(live_id, output_path)
+        return replay_url
     except Exception as e:
         logger.error('Failed to stitch client replay for %s: %s', live_id, e)
         return None

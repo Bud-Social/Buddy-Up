@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ),
                 ("code", models.CharField(max_length=50, unique=True)),
                 ("discount_pct", models.IntegerField(default=0)),
-                ("discount_artifacts", models.IntegerField(default=0)),
+                ("discount_artifacts", models.JSONField(default=dict)),
                 ("usage_limit", models.IntegerField(default=0)),
                 ("times_used", models.IntegerField(default=0)),
                 ("is_active", models.BooleanField(default=True)),

@@ -1,6 +1,12 @@
 import { apiClient } from './client';
 import type { ApiResponse, Profile, Post } from '@/types';
 
+export interface DiscoverTrending {
+  hashtags: { tag: string; count: number }[];
+  posts: Post[];
+  offers: { type: 'discount_code' | 'free_event'; data: any }[];
+}
+
 export const profilesApi = {
   getProfile: (username: string) =>
     apiClient.get<ApiResponse<Profile>>(`/profiles/${username}/`).then((r) => r.data),
@@ -55,6 +61,13 @@ export const profilesApi = {
 
   searchProfiles: (params: { q: string; limit?: number }) =>
     apiClient.get<ApiResponse<Profile[]>>('/profiles/search/', { params }).then((r) => r.data),
+
+  getRecommendations: () =>
+    apiClient.get<ApiResponse<{ profile: Profile; match_score: number | null }[]>>('/profiles/recommendations/')
+      .then((r) => r.data),
+
+  getDiscoverTrending: () =>
+    apiClient.get<ApiResponse<DiscoverTrending>>('/profiles/discover/trending/').then((r) => r.data),
 
   getProfilePosts: (username: string) =>
     apiClient.get<ApiResponse<Post[]>>(`/profiles/${username}/posts/`).then((r) => r.data),

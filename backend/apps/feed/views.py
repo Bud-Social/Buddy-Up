@@ -21,6 +21,17 @@ from .serializers import (
     SavePostSerializer, PollCreateSerializer, OptionVoteSerializer,
 )
 from apps.profiles.models import BuddyRelationship
+from apps.ai.audit import audit_ai_call
+from . import ai_ranking
+
+
+def _looks_like_video(url: str) -> bool:
+    if not url:
+        return False
+    lower = url.split('?')[0].lower()
+    if lower.rsplit('.', 1)[-1] in ('mp4', 'mov', 'webm', 'm4v', 'mpeg', 'mkv'):
+        return True
+    return 'video/' in lower or 'videos' in lower
 
 
 def _handle_media_uploads(request_files):
@@ -35,6 +46,75 @@ def _handle_media_uploads(request_files):
     return urls
 
 
+def _next_link(request, cursor):
+    """Build a pagination URL for the ranked feed, preserving other query params."""
+    from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+    params = [(k, v) for k, v in parse_qsl(urlparse(request.get_full_path()).query) if k != 'cursor']
+    params.append(('cursor', cursor))
+    query = urlencode(params)
+    return urlunparse(urlparse(request.build_absolute_uri())._replace(query=query))
+
+
+def _rank_for_you(request, user_profile, queryset, buddy_ids, followed_ids, gym_ids):
+    """Sprint B1: personalised ML ranking of the `for_you` tab.
+
+    Returns a Response, or None so the caller falls back to DB ranking if the
+    AI service is unavailable or the pool is empty.
+    """
+    pool = list(queryset[:ai_ranking.POOL_SIZE].annotate(
+        reaction_count=db_models.Subquery(
+            Reaction.objects.filter(post=db_models.OuterRef('pk'))
+            .values('post').annotate(c=db_models.Count('pk')).values('c'),
+            output_field=db_models.IntegerField(),
+        ),
+        comment_count=db_models.Subquery(
+            Comment.objects.filter(post=db_models.OuterRef('pk'))
+            .values('post').annotate(c=db_models.Count('pk')).values('c'),
+            output_field=db_models.IntegerField(),
+        ),
+        save_count=db_models.Subquery(
+            Save.objects.filter(post=db_models.OuterRef('pk'))
+            .values('post').annotate(c=db_models.Count('pk')).values('c'),
+            output_field=db_models.IntegerField(),
+        ),
+    ))
+    if not pool:
+        return None
+
+    candidates = ai_ranking.build_candidates(pool, user_profile, buddy_ids, followed_ids, gym_ids)
+    ranked = ai_ranking.rank_candidates(str(user_profile.user_id), candidates)
+    if ranked is None:
+        return None
+
+    score_by_id = {c['post_id']: c for c in ranked}
+    ordered = sorted(
+        pool,
+        key=lambda p: (-int(p.is_pinned), -score_by_id.get(str(p.id), {}).get('ml_score', 0.0)),
+    )
+
+    reposted_original_ids = {p.original_post_id for p in ordered if p.is_repost and p.original_post_id}
+    deduped = [p for p in ordered if not (not p.is_repost and p.id in reposted_original_ids)]
+
+    paginator = CursorPagination()
+    page_size = paginator.get_page_size(request)
+    cursor = request.query_params.get('cursor')
+    page_posts = ai_ranking.paginate_ranked(deduped, cursor, page_size)
+
+    serializer = FeedPostSerializer(page_posts, many=True, context={'request': request})
+    next_cursor = str(page_posts[-1].id) if page_posts else None
+    return Response({
+        'success': True,
+        'data': serializer.data,
+        'message': 'OK',
+        'errors': None,
+        'pagination': {
+            'count': len(page_posts),
+            'next': _next_link(request, next_cursor) if next_cursor else None,
+            'previous': None,
+        },
+    })
+
+
 class FeedView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -43,6 +123,27 @@ class FeedView(views.APIView):
         cursor = request.query_params.get('cursor')
 
         user_profile = request.user.profile
+
+        if tab == 'videos':
+            # TikTok-style video feed — recent public posts carrying video media.
+            queryset = FeedPost.objects.filter(
+                moderation_status='clean',
+                visibility='public',
+            ).exclude(
+                db_models.Q(media_urls=[]) | db_models.Q(media_urls__isnull=True),
+            ).select_related('author', 'gym_tag').order_by('-created_at')
+            videos = []
+            for post in queryset[:150]:
+                if any(_looks_like_video(u) for u in (post.media_urls or [])):
+                    videos.append(post)
+            serializer = FeedPostSerializer(videos, many=True, context={'request': request})
+            return Response({
+                'success': True,
+                'data': serializer.data,
+                'message': 'OK',
+                'errors': None,
+                'pagination': {'count': len(videos), 'next': None, 'previous': None},
+            })
 
         if tab == 'following':
             followed_ids = user_profile.following.values_list('followee_id', flat=True)
@@ -83,6 +184,13 @@ class FeedView(views.APIView):
                     default=db_models.Value(10),
                 ),
             ).order_by('-is_pinned', '-rank', '-created_at')
+
+            # Sprint B1: personalised ML ranking (additive; falls back to DB ranking)
+            ranked_response = _rank_for_you(
+                request, user_profile, queryset, buddy_ids, followed_ids, gym_ids,
+            )
+            if ranked_response is not None:
+                return ranked_response
 
         count = queryset.count()
         paginator = CursorPagination()
@@ -239,6 +347,13 @@ class CreatePostView(views.APIView):
         except Exception:
             pass
 
+        # Notify buddies + followers about the new public post
+        try:
+            from apps.notifications.tasks import send_post_notification
+            send_post_notification.delay(str(post.id), str(request.user.profile.user_id))
+        except Exception:
+            pass
+
         output = PostSerializer(post, context={'request': request})
         return Response({
             'success': True,
@@ -334,6 +449,7 @@ class CommentsView(views.APIView):
             parent=parent,
             is_anonymous=data.get('is_anonymous', False),
         )
+        ai_ranking.send_feedback(str(request.user.profile.user_id), post, 1.0)
 
         serializer = CommentSerializer(comment, context={'request': request})
         return Response({
@@ -368,17 +484,16 @@ class ReactionView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
         serializer = ReactionInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         reaction_type = serializer.validated_data['reaction_type']
 
-        Reaction.objects.update_or_create(
-            post_id=post_id,
-            author=request.user.profile,
-            defaults={'reaction_type': reaction_type, 'comment': None},
-        )
+        profile = request.user.profile
+        Reaction.objects.filter(post=post, author=profile).delete()
+        Reaction.objects.create(post=post, author=profile, reaction_type=reaction_type)
+        ai_ranking.send_feedback(str(profile.user_id), post, 1.0)
 
-        post = get_object_or_404(Post, id=post_id)
         serializer = PostSerializer(post, context={'request': request})
         return Response({
             'success': True,
@@ -389,16 +504,51 @@ class ReactionView(views.APIView):
         })
 
     def delete(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
         Reaction.objects.filter(
-            post_id=post_id,
+            post=post,
             author=request.user.profile,
         ).delete()
 
-        post = get_object_or_404(Post, id=post_id)
         serializer = PostSerializer(post, context={'request': request})
         return Response({
             'success': True,
-            'data': {},
+            'data': serializer.data.get('reaction_counts', {}),
+            'message': 'Reaction removed.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class CommentReactionView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, post_id, comment_id):
+        comment = get_object_or_404(Comment, id=comment_id, post_id=post_id)
+        serializer = ReactionInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        reaction_type = serializer.validated_data['reaction_type']
+
+        profile = request.user.profile
+        Reaction.objects.filter(comment=comment, author=profile).delete()
+        Reaction.objects.create(comment=comment, author=profile, reaction_type=reaction_type)
+
+        serializer = CommentSerializer(comment, context={'request': request})
+        return Response({
+            'success': True,
+            'data': serializer.data.get('reaction_counts', {}),
+            'message': 'Reaction saved.',
+            'errors': None,
+            'pagination': None,
+        })
+
+    def delete(self, request, post_id, comment_id):
+        comment = get_object_or_404(Comment, id=comment_id, post_id=post_id)
+        Reaction.objects.filter(comment=comment, author=request.user.profile).delete()
+        serializer = CommentSerializer(comment, context={'request': request})
+        return Response({
+            'success': True,
+            'data': serializer.data.get('reaction_counts', {}),
             'message': 'Reaction removed.',
             'errors': None,
             'pagination': None,
@@ -424,6 +574,15 @@ class RepostView(views.APIView):
             visibility='public',
         )
 
+        # Notify the original author their post was reposted
+        try:
+            from apps.notifications.tasks import send_repost_notification
+            send_repost_notification.delay(str(request.user.profile.user_id), str(original.id))
+        except Exception:
+            pass
+
+        ai_ranking.send_feedback(str(request.user.profile.user_id), original, 1.0)
+
         serializer = PostSerializer(repost, context={'request': request})
         return Response({
             'success': True,
@@ -446,6 +605,9 @@ class SaveView(views.APIView):
             post_id=post_id,
             defaults={'collection': collection},
         )
+        post = Post.objects.filter(id=post_id).first()
+        if post:
+            ai_ranking.send_feedback(str(request.user.profile.user_id), post, 1.0)
         return Response({
             'success': True, 'data': None,
             'message': 'Post saved.',
@@ -597,12 +759,14 @@ class WorkoutAnalysisView(views.APIView):
         try:
             resp = http_requests.post(ai_url, json={'history': history}, timeout=30)
             resp.raise_for_status()
+            audit_ai_call('workout_analysis', input_data={'history': history}, output_data=resp.json())
             return Response({
                 'success': True, 'data': resp.json(),
                 'message': 'Workout analysis complete.',
                 'errors': None, 'pagination': None,
             })
         except http_requests.RequestException as e:
+            audit_ai_call('workout_analysis', input_data={'history': history}, error_message=str(e))
             return Response({
                 'success': False, 'data': None,
                 'message': 'Workout analysis service unavailable.',
@@ -653,12 +817,14 @@ class HealthInsightsView(views.APIView):
         try:
             resp = http_requests.post(ai_url, json=payload, timeout=30)
             resp.raise_for_status()
+            audit_ai_call('health_insights', input_data=payload, output_data=resp.json())
             return Response({
                 'success': True, 'data': resp.json(),
                 'message': 'Health insights generated.',
                 'errors': None, 'pagination': None,
             })
         except http_requests.RequestException as e:
+            audit_ai_call('health_insights', input_data=payload, error_message=str(e))
             return Response({
                 'success': False, 'data': None,
                 'message': 'Health insights service unavailable.',
@@ -691,12 +857,14 @@ class WorkoutFormAnalysisView(views.APIView):
                 timeout=30,
             )
             resp.raise_for_status()
+            audit_ai_call('form_analyzer', input_data={'exercise': exercise}, output_data=resp.json())
             return Response({
                 'success': True, 'data': resp.json(),
                 'message': 'Form analysis complete.',
                 'errors': None, 'pagination': None,
             })
         except http_requests.RequestException as e:
+            audit_ai_call('form_analyzer', input_data={'exercise': exercise}, error_message=str(e))
             return Response({
                 'success': False, 'data': None,
                 'message': 'Form analysis service unavailable.',

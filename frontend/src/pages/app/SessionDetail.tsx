@@ -113,7 +113,7 @@ export default function SessionDetail() {
 
   if (isLoading) {
     return (
-      <div className="max-w-lg mx-auto p-4 space-y-4 animate-pulse">
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 space-y-4 animate-pulse">
         <div className="h-8 w-40 bg-buddy-surface rounded-xl" />
         <div className="h-48 bg-buddy-surface rounded-2xl" />
         <div className="h-32 bg-buddy-surface rounded-2xl" />
@@ -123,7 +123,7 @@ export default function SessionDetail() {
 
   if (!booking) {
     return (
-      <div className="max-w-lg mx-auto p-4 text-center py-24">
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 text-center py-24">
         <AlertTriangle size={48} className="mx-auto text-buddy-text-secondary/30 mb-4" />
         <p className="text-buddy-text-secondary">Session not found.</p>
         <Button variant="ghost" className="mt-4" onClick={() => navigate('/sessions')}>← Back to Sessions</Button>
@@ -135,7 +135,7 @@ export default function SessionDetail() {
   const scheduledDate = new Date(booking.scheduled_at);
 
   return (
-    <div className="max-w-lg mx-auto p-4 pb-12">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 pb-12">
       {/* Back */}
       <button
         onClick={() => navigate('/sessions')}

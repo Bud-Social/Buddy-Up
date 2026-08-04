@@ -40,7 +40,7 @@ export default function Wallet() {
   ];
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <h1 className="font-display text-2xl font-extrabold mb-4">Wallet</h1>
 
       <div className="flex overflow-x-auto gap-2 mb-4 scrollbar-hide">

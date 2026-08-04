@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Share2, Pin, MoreHorizontal, Dumbbell,
   MapPin, Smile, CornerDownRight, ArrowUp, CornerUpRight
@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api/feed';
 import { RichText } from '@/components/ui/RichText';
 import { EmojiImg } from '@/utils/emojiUtils';
+import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
 import { formatPostDate } from '@/utils/formatDate';
 import type { Post, Comment } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
@@ -20,6 +21,8 @@ interface GymDiscoursePostProps {
 
 function MediaGallery({ urls }: { urls: string[] }) {
   const [idx, setIdx] = useState(0);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  useInViewAutoplay(videoRef);
   if (!urls.length) return null;
   const currentUrl = urls[idx];
   const isVideo = /\.(mp4|mov|webm)/i.test(currentUrl);
@@ -27,7 +30,7 @@ function MediaGallery({ urls }: { urls: string[] }) {
   return (
     <div className="mt-3 rounded-xl overflow-hidden bg-buddy-surface relative">
       {isVideo ? (
-        <video src={currentUrl} controls autoPlay muted loop className="w-full max-h-80 object-cover" />
+        <video ref={videoRef} src={currentUrl} controls muted loop playsInline preload="metadata" className="w-full max-h-80 object-cover" />
       ) : isAudio ? (
         <div className="p-4 bg-buddy-surface-raised w-full">
           <audio src={currentUrl} controls className="w-full" />
@@ -48,8 +51,8 @@ function MediaGallery({ urls }: { urls: string[] }) {
 }
 
 function ReplyCard({ reply, onReact }: { reply: Comment; onReact: (id: string) => void }) {
-  const upvotes = reply.reaction_counts?.pump || 0;
-  const isUpvoted = reply.user_reaction === 'pump';
+  const upvotes = reply.reaction_counts?.['💪'] ?? reply.reaction_counts?.pump ?? 0;
+  const isUpvoted = reply.user_reaction === '💪' || reply.user_reaction === 'pump';
   return (
     <div className="flex gap-1 pl-2 border-l-2 border-buddy-green/30">
       <div className="flex-1 py-1">
@@ -137,8 +140,8 @@ export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin }:
     }));
     try {
       const r = replies.find(x => x.id === commentId);
-      if (r?.user_reaction === emojiStr) await feedApi.unreact(commentId);
-      else await feedApi.react(commentId, emojiStr);
+      if (r?.user_reaction === emojiStr) await feedApi.unreactComment(post.id, commentId);
+      else await feedApi.reactComment(post.id, commentId, emojiStr);
 
     } catch {}
   };
@@ -267,7 +270,7 @@ export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin }:
                   <div className="flex items-center gap-1 ml-1">
                     <div className="flex -space-x-1">
                       {topReactions.map(([emojiChar]) => (
-                        <EmojiImg key={emojiChar} emoji={emojiChar} size={18} className="z-10 ring-1 ring-buddy-black rounded-full" />
+                        <EmojiImg key={emojiChar} emoji={emojiChar} size={18} className="z-10 rounded-full" />
                       ))}
                     </div>
                     {remainingCount > 0 && <span className="text-[10px] ml-1">+{remainingCount}</span>}

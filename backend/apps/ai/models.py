@@ -18,6 +18,11 @@ class AIPredictionJob(TimestampedModel):
         ('image_moderation', 'Image Moderation'),
         ('embedding', 'Embedding'),
         ('meal_plan_personalisation', 'Meal Plan Personalisation'),
+        ('meal_plan_personalise', 'Meal Plan Personalise'),
+        ('workout_analysis', 'Workout Analysis'),
+        ('health_insights', 'Health Insights'),
+        ('form_analyzer', 'Form Analyzer'),
+        ('feed_ranking', 'Feed Ranking'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)

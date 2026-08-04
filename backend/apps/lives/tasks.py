@@ -144,8 +144,12 @@ def process_live_replay(live_id: str):
         if presigned:
             live.replay_url = presigned
         else:
-            base_url = settings.LIVE_REPLAY_BASE_URL.rstrip('/')
-            live.replay_url = f"{base_url}/{live_id}.mp4"
+            base_url = (settings.LIVE_REPLAY_BASE_URL or '').rstrip('/')
+            if base_url:
+                live.replay_url = f"{base_url}/{live_id}.mp4"
+            else:
+                logger.warning('No replay storage configured for live %s', live_id)
+                return
         live.replay_saved = True
         live.save(update_fields=['replay_url', 'replay_saved'])
 
@@ -206,3 +210,66 @@ def send_live_starting_notifications(live_id: str):
                 body=f'Your gym live session starts in 15 minutes.',
                 metadata={'live_id': str(live.id), 'gym_id': str(live.gym_id), 'agora_channel': live.agora_channel},
             )
+
+
+@shared_task
+def send_live_reminders():
+    from django.db import models as db_models
+    from apps.notifications.models import Notification
+    from apps.notifications.tasks import _deliver_notification
+    from apps.profiles.models import Profile, BuddyRelationship
+    from apps.lives.models import LiveRSVP
+
+    now = timezone.now()
+    upcoming = BuddyLive.objects.filter(
+        status='scheduled',
+        scheduled_for__gte=now,
+        scheduled_for__lte=now + timezone.timedelta(hours=1),
+    ).select_related('host')
+
+    thresholds = (60, 30, 15, 5)
+
+    for live in upcoming:
+        minutes_until = (live.scheduled_for - now).total_seconds() / 60.0
+        sent = set(live.reminders_sent or [])
+
+        for threshold in thresholds:
+            if str(threshold) in sent:
+                continue
+            lower_bound = max(threshold - 6, 0)
+            if lower_bound < minutes_until <= threshold:
+                recipients = set(
+                    LiveRSVP.objects.filter(live=live).values_list('user_id', flat=True)
+                )
+                buddy_q = db_models.Q(buddy_sent__to_user=live.host, buddy_sent__status='confirmed') | \
+                          db_models.Q(buddy_received__from_user=live.host, buddy_received__status='confirmed')
+                followers = Profile.objects.filter(following__followee=live.host).values_list('user_id', flat=True)
+                recipients.update(Profile.objects.filter(buddy_q).distinct().values_list('user_id', flat=True))
+                recipients.update(followers)
+
+                co_host_ids = live.co_hosts.values_list('user_id', flat=True)
+                for co_host_id in co_host_ids:
+                    recipients.update(
+                        Profile.objects.filter(following__followee_id=co_host_id).values_list('user_id', flat=True)
+                    )
+                recipients.discard(live.host_id)
+
+                countdown_label = (
+                    'starting now' if threshold <= 5 else f'starting in about {threshold} minutes'
+                )
+                title = f'{live.host.display_name}: "{live.title}" {countdown_label}'
+                body = f'Don\'t miss it — {live.title} goes live soon.'
+                metadata = {
+                    'live_id': str(live.id),
+                    'scheduled_for': live.scheduled_for.isoformat() if live.scheduled_for else None,
+                    'countdown_minutes': threshold,
+                    'host_display_name': live.host.display_name,
+                    'host_username': live.host.username,
+                    'host_avatar_url': live.host.avatar_url,
+                }
+
+                for recipient_id in recipients:
+                    _deliver_notification(recipient_id, 'live_reminder', title, body, metadata)
+
+                live.reminders_sent = live.reminders_sent + [str(threshold)]
+                live.save(update_fields=['reminders_sent'])

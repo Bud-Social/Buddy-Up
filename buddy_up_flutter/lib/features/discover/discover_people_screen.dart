@@ -20,6 +20,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
   bool _isLoading = false;
   bool _hasSearched = false;
   String _roleFilter = '';
+  Map<String, dynamic>? _trending;
   late ProfileRepository _profileRepo;
 
   final _roles = ['', 'user', 'trainer', 'practitioner'];
@@ -29,6 +30,17 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
   void initState() {
     super.initState();
     _profileRepo = ProfileRepository(ApiClient().dio);
+    _loadTrending();
+  }
+
+  Future<void> _loadTrending() async {
+    try {
+      final raw = await _profileRepo.getDiscoverTrending();
+      final data = raw['data'];
+      if (data is Map<String, dynamic>) {
+        if (mounted) setState(() => _trending = data);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -112,16 +124,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
             child: _isLoading
                 ? const PageLoader(fullScreen: false)
                 : !_hasSearched
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.search, size: 48, color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
-                            const SizedBox(height: 8),
-                            const Text('Search for people to connect with', style: TextStyle(color: BuddyColors.textSecondary)),
-                          ],
-                        ),
-                      )
+                    ? _buildTrending()
                     : _results.isEmpty
                         ? const Center(child: Text('No results found', style: TextStyle(color: BuddyColors.textSecondary)))
                         : ListView.separated(
@@ -148,6 +151,158 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTrending() {
+    final t = _trending;
+    final hashtags = (t?['hashtags'] as List? ?? []).cast<Map<String, dynamic>>();
+    final posts = (t?['posts'] as List? ?? []).cast<Map<String, dynamic>>();
+    final offers = (t?['offers'] as List? ?? []).cast<Map<String, dynamic>>();
+
+    if (hashtags.isEmpty && posts.isEmpty && offers.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.search, size: 48, color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
+            const SizedBox(height: 8),
+            const Text('Search for people to connect with', style: TextStyle(color: BuddyColors.textSecondary)),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      children: [
+        if (hashtags.isNotEmpty) ...[
+          const _SectionHeader(icon: Icons.local_fire_department, title: 'Trending Challenges'),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: hashtags.take(8).map((h) {
+              final tag = (h['tag'] as String? ?? '').replaceAll('#', '');
+              final count = (h['count'] as num?)?.toInt() ?? 0;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: BuddyColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text.rich(
+                  TextSpan(
+                    text: '#$tag ',
+                    style: const TextStyle(color: BuddyColors.green, fontWeight: FontWeight.w600, fontSize: 13),
+                    children: [
+                      TextSpan(
+                        text: '$count',
+                        style: const TextStyle(color: BuddyColors.textSecondary, fontWeight: FontWeight.normal),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+        ],
+        if (posts.isNotEmpty) ...[
+          const _SectionHeader(icon: Icons.trending_up, title: 'Trending Posts'),
+          const SizedBox(height: 4),
+          ...posts.take(3).map((p) => _trendingPostTile(p)),
+          const SizedBox(height: 20),
+        ],
+        if (offers.isNotEmpty) ...[
+          const _SectionHeader(icon: Icons.local_offer, title: 'Trending Giveaways & Offers'),
+          const SizedBox(height: 4),
+          ...offers.map((o) => _offerTile(o)),
+        ],
+      ],
+    );
+  }
+
+  Widget _trendingPostTile(Map<String, dynamic> p) {
+    final author = p['author_data'] as Map<String, dynamic>? ?? const {};
+    final reactions = (p['reaction_counts'] as Map<String, dynamic>? ?? const {})
+        .values
+        .fold<int>(0, (sum, v) => sum + ((v as num?)?.toInt() ?? 0));
+    final body = p['body'] as String? ?? '';
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Avatar(
+        src: author['avatar_url'] as String?,
+        alt: author['display_name'] as String? ?? '',
+        size: AvatarSize.sm,
+      ),
+      title: Text(
+        author['display_name'] as String? ?? '',
+        style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (body.isNotEmpty)
+            Text(body, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+          const SizedBox(height: 2),
+          Text('$reactions reactions', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _offerTile(Map<String, dynamic> offer) {
+    final type = offer['type'] as String? ?? '';
+    final d = offer['data'] as Map<String, dynamic>? ?? const {};
+    if (type == 'discount_code') {
+      final discount = d['discount_type'] == 'percentage' ? '${d['discount_pct']}% off' : 'Discount';
+      final code = d['code'] as String? ?? '';
+      final desc = d['description'] as String? ?? '';
+      return Card(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        color: BuddyColors.surface,
+        child: ListTile(
+          leading: const Icon(Icons.confirmation_number, color: BuddyColors.gold),
+          title: Text(
+            '$discount  "$code"',
+            style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+          ),
+          subtitle: desc.isNotEmpty
+              ? Text(desc, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13))
+              : null,
+          trailing: const Text('Use offer', style: TextStyle(color: BuddyColors.green, fontSize: 12)),
+        ),
+      );
+    }
+    final title = d['title'] as String? ?? '';
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      color: BuddyColors.surface,
+      child: ListTile(
+        leading: const Icon(Icons.event_available, color: BuddyColors.green),
+        title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+        subtitle: const Text('Free event', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+        trailing: const Text('View', style: TextStyle(color: BuddyColors.green, fontSize: 12)),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String title;
+
+  const _SectionHeader({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: BuddyColors.green),
+        const SizedBox(width: 6),
+        Text(title, style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+      ],
     );
   }
 }

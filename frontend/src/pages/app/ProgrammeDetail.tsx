@@ -59,7 +59,7 @@ export default function ProgrammeDetail() {
 
   if (loading) {
     return (
-      <div className="max-w-xl mx-auto p-4 pb-24 animate-pulse">
+      <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 pb-24 animate-pulse">
         <div className="flex items-center gap-3 mb-6"><div className="w-10 h-10 bg-buddy-surface rounded-xl" /><div className="h-8 w-48 bg-buddy-surface rounded" /></div>
         <Card className="p-0 overflow-hidden"><div className="h-64 bg-buddy-surface-raised w-full" /><div className="p-5 space-y-4"><div className="h-6 w-3/4 bg-buddy-surface rounded" /><div className="h-4 w-full bg-buddy-surface rounded" /><div className="h-20 w-full bg-buddy-surface rounded" /></div></Card>
       </div>
@@ -69,7 +69,7 @@ export default function ProgrammeDetail() {
   if (!programme) return null;
 
   return (
-    <div className="max-w-xl mx-auto p-4 pb-24">
+    <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 pb-24">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/marketplace')} className="p-2 rounded-xl bg-buddy-surface hover:bg-buddy-surface-raised transition-colors"><ArrowLeft size={20} /></button>
         <h1 className="font-display text-2xl font-extrabold truncate tracking-tight">{programme.title}</h1>

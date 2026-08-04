@@ -22,7 +22,20 @@ const List<String> postTypes = [
   'poll',
 ];
 
-const List<String> feedTabs = ['for_you', 'following', 'nearby'];
+const List<String> feedTabs = ['for_you', 'following', 'videos'];
+
+const List<String> liveCategories = [
+  'strength',
+  'cardio',
+  'hiit',
+  'yoga',
+  'pilates',
+  'stretching',
+  'nutrition_talk',
+  'q&a',
+  'challenge',
+  'other',
+];
 
 const List<String> visibilityOptions = [
   'public',

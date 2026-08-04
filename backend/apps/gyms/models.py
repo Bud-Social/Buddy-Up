@@ -252,3 +252,25 @@ class GymDonation(TimestampedModel):
 
     def __str__(self):
         return f'Donation of {self.amount} by {self.donor.username} to {self.gym.name}'
+
+
+class GymMembershipException(TimestampedModel):
+    """Owner-granted exception overriding subscription fees for a specific member."""
+
+    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='membership_exceptions')
+    member = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='gym_membership_exceptions')
+    discount_pct = models.IntegerField(default=100)  # 100 = full discount (free), 0 = no discount
+    reason = models.CharField(max_length=200, blank=True, default='')
+    created_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='created_gym_membership_exceptions',
+    )
+    expires_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'gyms_membership_exception'
+        unique_together = ('gym', 'member')
+
+    def __str__(self):
+        return f'{self.member.username} exception on {self.gym.name} ({self.discount_pct}%)'

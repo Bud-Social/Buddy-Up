@@ -281,7 +281,7 @@ export default function CreateGymPage() {
 
   return (
     <div className="min-h-screen bg-buddy-black">
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => navigate(-1)} className="p-1 rounded-lg hover:bg-buddy-surface text-buddy-text-secondary">←</button>
           <h1 className="font-display text-2xl font-extrabold">Create Gym</h1>

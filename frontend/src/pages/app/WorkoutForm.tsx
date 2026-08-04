@@ -96,7 +96,7 @@ export default function WorkoutForm() {
   };
 
   return (
-    <div className="p-4 max-w-xl mx-auto space-y-4">
+    <div className="p-4 max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto space-y-4">
       <h1 className="font-display text-2xl font-bold">Form Analyzer</h1>
       <p className="text-buddy-text-secondary text-sm">Capture or upload a video frame to get real-time form feedback.</p>
 

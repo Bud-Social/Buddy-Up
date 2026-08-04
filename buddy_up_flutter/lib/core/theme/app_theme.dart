@@ -8,6 +8,7 @@ class BuddyColors {
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFFA0A0A0);
   static const Color red = Color(0xFFEF4444);
+  static const Color gold = Color(0xFFEAB308);
   static const Color border = Color(0xFF333333);
 }
 

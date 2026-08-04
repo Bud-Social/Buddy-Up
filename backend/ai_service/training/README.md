@@ -9,10 +9,22 @@ This is the packaging layer for Buddy-Up's ML models. It follows the plan's
 ai_service/
 ├── app/                  # FastAPI serving code (engines + routers)
 ├── training/             # Reproducible training scripts (run on Colab/Kaggle GPUs)
-├── notebooks/            # One Colab/Kaggle notebook per model
+│   ├── buddy_data.py     # dataset catalog + loaders (local data/ + HF hub)
+│   ├── tf_utils.py       # shared TensorFlow helpers (models, ONNX export, MLflow)
+│   ├── food101_labels.py # Food-101 → nutrition-key label patch (Phase A)
+│   ├── process_food_data.py
+│   ├── process_form_data.py
+│   └── train_template.py
+├── notebooks/            # One Colab/Kaggle notebook per model (TF-first)
 ├── model_cards/          # Model card templates (versioned alongside artifacts)
 └── data/                 # Data contracts; artifacts versioned via DVC
 ```
+
+## Framework
+
+TensorFlow/Keras is the primary training framework (`tf_utils.py`). PyTorch is
+reserved for the JEPA research lane. All training ends in ONNX (INT8 CPU)
+artifacts that `app/ml/serving.py` consumes via `ModelRegistry`.
 
 ## Model lifecycle
 

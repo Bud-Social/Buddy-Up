@@ -252,7 +252,7 @@ export default function Settings() {
 
   if (!activeSection) {
     return (
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
         <h1 className="font-display text-2xl font-extrabold mb-6">Settings</h1>
         <div className="space-y-2">
           {sections.map(({ id, label, icon: Icon, desc }) => (
@@ -274,7 +274,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="max-w-lg mx-auto p-4 pb-24">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 pb-24">
       <Button variant="ghost" onClick={() => setActiveSection(null)} className="mb-4">← Settings</Button>
 
       {activeSection === 'account' && (

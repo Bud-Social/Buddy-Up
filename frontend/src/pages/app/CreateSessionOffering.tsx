@@ -105,7 +105,7 @@ export default function CreateSessionOffering() {
 
   if (!profile) {
     return (
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
         <p className="text-buddy-text-secondary">Please sign in to manage your session offerings.</p>
       </div>
     );
@@ -113,7 +113,7 @@ export default function CreateSessionOffering() {
 
   if (isLoading) {
     return (
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
         <p className="text-buddy-text-secondary">Loading session offering details…</p>
       </div>
     );
@@ -121,14 +121,14 @@ export default function CreateSessionOffering() {
 
   if (profile.role !== 'trainer' && profile.role !== 'practitioner') {
     return (
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
         <p className="text-buddy-text-secondary">Only verified trainers and practitioners can publish session offerings.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate(-1)} className="p-1 rounded-lg hover:bg-buddy-surface text-buddy-text-secondary">←</button>
         <h1 className="font-display text-2xl font-extrabold">Create Session Offering</h1>

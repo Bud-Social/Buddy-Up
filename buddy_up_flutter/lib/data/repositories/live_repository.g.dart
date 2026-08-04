@@ -200,12 +200,12 @@ class _LiveRepository implements LiveRepository {
   }
 
   @override
-  Future<void> rsvp(String liveId) async {
+  Future<Map<String, dynamic>> rsvp(String liveId) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<void>(
+    final _options = _setStreamType<Map<String, dynamic>>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -215,7 +215,8 @@ class _LiveRepository implements LiveRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    await _dio.fetch<void>(_options);
+    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
+    return _result.data ?? <String, dynamic>{};
   }
 
   @override

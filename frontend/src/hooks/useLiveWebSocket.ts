@@ -15,6 +15,11 @@ export interface ChatMessage {
     sender_name: string;
     total: number;
   };
+  reply_data?: {
+    message: string;
+    sender_name: string;
+    user_id: string;
+  };
   priority?: boolean;
 }
 
@@ -25,11 +30,20 @@ export interface Reaction {
   timestamp: number;
 }
 
+export interface CohostEvent {
+  user_id: string;
+  username?: string;
+  display_name?: string;
+  avatar_url?: string;
+  action?: string;
+}
+
 export type GiftTotals = Record<string, number>;
 
 export interface LiveWebSocketEvent {
-  type: 'live_chat' | 'live_reaction' | 'live_viewer_count' | 'live_gift' | 'connected';
-  data: ChatMessage | Reaction | { count: number } | { user_id: string; live_id: string; viewer_count: number } | { type: string; gift: { tx_id: string; artifact_type: string; quantity: number; sender_id: string; sender_name: string; total: number }; totals: GiftTotals };
+  type: 'live_chat' | 'live_reaction' | 'live_viewer_count' | 'live_gift' | 'connected'
+    | 'live_cohost_invite' | 'live_cohost_request' | 'live_cohost_response' | 'live_cohost_removed';
+  data: any;
 }
 
 const WS_BASE = import.meta.env.VITE_WS_BASE_URL || 'ws://localhost:8002';
@@ -45,6 +59,7 @@ export function useLiveWebSocket(liveId: string | undefined) {
   const [reactions, setReactions] = useState<Reaction[]>([]);
   const [viewerCount, setViewerCount] = useState(0);
   const [giftTotals, setGiftTotals] = useState<GiftTotals>({});
+  const [cohostEvents, setCohostEvents] = useState<CohostEvent[]>([]);
 
   const connect = useCallback(() => {
     if (!liveId || !accessToken) return;
@@ -93,6 +108,13 @@ export function useLiveWebSocket(liveId: string | undefined) {
               setGiftTotals((msg.data as { totals: GiftTotals }).totals);
             }
             break;
+
+          case 'live_cohost_invite':
+          case 'live_cohost_request':
+          case 'live_cohost_response':
+          case 'live_cohost_removed':
+            setCohostEvents((prev) => [...prev.slice(-19), { ...(msg.data as CohostEvent), action: msg.type.replace('live_cohost_', '') }]);
+            break;
         }
       } catch {}
     };
@@ -121,10 +143,17 @@ export function useLiveWebSocket(liveId: string | undefined) {
     };
   }, [connect]);
 
-  const sendChat = useCallback((message: string, gift?: { artifact_type: string; quantity: number }) => {
+  const sendChat = useCallback((message: string, gift?: { artifact_type: string; quantity: number }, replyTo?: ChatMessage | null) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       const data: Record<string, unknown> = { message };
       if (gift) data.gift = gift;
+      if (replyTo) {
+        data.reply_to = {
+          message: replyTo.message,
+          sender_name: replyTo.display_name,
+          user_id: replyTo.user_id,
+        };
+      }
       wsRef.current.send(JSON.stringify({ type: 'chat', data }));
     }
   }, []);
@@ -147,14 +176,22 @@ export function useLiveWebSocket(liveId: string | undefined) {
     }
   }, []);
 
+  const sendCohostEvent = useCallback((type: 'cohost_invite' | 'cohost_request' | 'cohost_response' | 'cohost_removed', data: Record<string, unknown>) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type, data }));
+    }
+  }, []);
+
   return {
     isConnected,
     chatMessages,
     reactions,
     viewerCount,
     giftTotals,
+    cohostEvents,
     sendChat,
     sendReaction,
     sendGift,
+    sendCohostEvent,
   };
 }

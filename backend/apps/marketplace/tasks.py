@@ -6,6 +6,8 @@ from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
 
+from apps.ai.audit import audit_ai_call
+
 logger = logging.getLogger(__name__)
 
 
@@ -108,6 +110,7 @@ def personalise_meal_plan(self, purchase_id: str, profile_id: str):
         )
         resp.raise_for_status()
         ai_result = resp.json()
+        audit_ai_call('meal_plan_personalise', input_data=payload, output_data=ai_result)
         personalised = {
             'adjusted_portions': ai_result.get('adjusted_portions', True),
             'substitutions': ai_result.get('substitutions', []),
@@ -365,6 +368,7 @@ def send_meal_plan_daily_reminders():
         )
         resp.raise_for_status()
         ai_result = resp.json()
+        audit_ai_call('meal_plan_personalise', input_data=payload, output_data=ai_result)
         personalised = {
             'adjusted_portions': ai_result.get('adjusted_portions', True),
             'substitutions': ai_result.get('substitutions', []),

@@ -39,10 +39,25 @@ LOGGING = {
 
 # ── Local Development Overrides (no Docker) ──────────────────────────
 
-DATABASES['default'] = {
-    'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': BASE_DIR / 'db.sqlite3',
-}
+# Docker Compose passes DATABASE_URL (Postgres). Local dev without Docker
+# falls back to a SQLite file.
+from urllib.parse import urlparse
+
+if os.environ.get('DATABASE_URL'):
+    _db_url = urlparse(os.environ['DATABASE_URL'])
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': _db_url.path[1:],
+        'USER': _db_url.username,
+        'PASSWORD': _db_url.password,
+        'HOST': _db_url.hostname,
+        'PORT': _db_url.port or '5432',
+    }
+else:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 
 CHANNEL_LAYERS = {
     'default': {

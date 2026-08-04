@@ -65,13 +65,13 @@ export default function TrainerProfilePage() {
     }
   };
 
-  if (isLoading) return <div className="max-w-lg mx-auto p-4"><div className="animate-pulse space-y-4"><div className="bg-buddy-surface rounded-2xl h-48" /><div className="bg-buddy-surface rounded-2xl h-64" /></div></div>;
-  if (!trainer) return <div className="max-w-lg mx-auto p-4 text-center py-20"><p className="text-buddy-text-secondary">Trainer not found</p></div>;
+  if (isLoading) return <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4"><div className="animate-pulse space-y-4"><div className="bg-buddy-surface rounded-2xl h-48" /><div className="bg-buddy-surface rounded-2xl h-64" /></div></div>;
+  if (!trainer) return <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 text-center py-20"><p className="text-buddy-text-secondary">Trainer not found</p></div>;
 
   const { profile_data: p } = trainer;
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <Card className="p-6 mb-4">
         <div className="text-center mb-4">
           <Avatar src={p.avatar_url} alt={p.display_name} size="xl" className="mx-auto mb-3" />

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users, Dumbbell, Radio, TrendingUp } from 'lucide-react';
+import { Search, Users, Dumbbell, Radio, TrendingUp, X, Hash, Ticket, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { profilesApi } from '@/api';
 import { gymsApi } from '@/api';
 import { livesApi } from '@/api';
+import type { DiscoverTrending } from '@/api/profiles';
 import type { Profile } from '@/types';
 import type { Gym } from '@/types';
 import type { BuddyLive } from '@/types/live';
@@ -19,6 +20,7 @@ export default function Discover() {
   const [activeTab, setActiveTab] = useState<DiscoverTab>('people');
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [trending, setTrending] = useState<DiscoverTrending | null>(null);
 
   const [people, setPeople] = useState<Profile[]>([]);
   const [gyms, setGyms] = useState<Gym[]>([]);
@@ -52,24 +54,38 @@ export default function Discover() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (query.length < 2) {
-      setPeople([]);
-      setGyms([]);
-      setLives([]);
-      return;
+    if (query.length >= 2) {
+      const timer = setTimeout(() => doSearch(query), 300);
+      return () => clearTimeout(timer);
     }
-    const timer = setTimeout(() => doSearch(query), 300);
-    return () => clearTimeout(timer);
   }, [query, doSearch]);
 
   useEffect(() => {
-    if (activeTab === 'lives' && query.length < 2) {
+    if (query.length >= 2) return;
+    profilesApi.getDiscoverTrending().then((res) => setTrending(res.data)).catch(() => {});
+  }, [query.length]);
+
+  useEffect(() => {
+    if (query.length >= 2) return;
+    if (activeTab === 'people') {
+      setIsSearching(true);
+      profilesApi.getRecommendations()
+        .then((res) => setPeople((res.data || []).map((r) => r.profile)))
+        .catch(() => setPeople([]))
+        .finally(() => setIsSearching(false));
+    } else if (activeTab === 'gyms') {
+      setIsSearching(true);
+      gymsApi.list({})
+        .then((res) => setGyms(res.data || []))
+        .catch(() => setGyms([]))
+        .finally(() => setIsSearching(false));
+    } else if (activeTab === 'lives') {
       livesApi.browse({ tab: 'live' }).then((res) => setLives(res.data || [])).catch(() => {});
     }
   }, [activeTab, query.length]);
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-6">
+    <div className="max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 space-y-6">
       <h1 className="font-display text-2xl font-extrabold">Discover</h1>
 
       <div className="relative">
@@ -79,9 +95,29 @@ export default function Discover() {
           placeholder="Search users, trainers, gyms..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full bg-buddy-surface border border-transparent rounded-2xl pl-12 pr-4 py-3 text-buddy-text-primary placeholder:text-buddy-text-secondary/50 font-body transition-colors focus:outline-none focus:ring-2 focus:ring-buddy-green/30 focus:border-transparent"
+          className="w-full bg-buddy-surface border border-transparent rounded-2xl pl-12 pr-12 py-3 text-buddy-text-primary placeholder:text-buddy-text-secondary/50 font-body transition-colors focus:outline-none focus:ring-2 focus:ring-buddy-green/30 focus:border-transparent"
         />
+        {query.length > 0 && (
+          <button
+            onClick={() => setQuery('')}
+            aria-label="Clear search"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-buddy-surface-raised text-buddy-text-secondary hover:text-buddy-text-primary"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
+
+      {query.length < 2 && !isSearching && (
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-buddy-green" />
+          <p className="text-sm font-medium text-buddy-text-primary">
+            {activeTab === 'people' && 'Recommended for you'}
+            {activeTab === 'gyms' && 'Browse gyms'}
+            {activeTab === 'lives' && 'Trending live sessions'}
+          </p>
+        </div>
+      )}
 
       <div className="flex gap-2">
         {tabs.map((tab) => {
@@ -110,10 +146,99 @@ export default function Discover() {
         </div>
       )}
 
-      {!isSearching && query.length < 2 && activeTab !== 'lives' && (
+      {!isSearching && query.length < 2 && trending && (
+        <div className="space-y-6">
+          {trending.hashtags.length > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <Hash className="w-4 h-4 text-buddy-green" /> Trending Challenges
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {trending.hashtags.map((h) => (
+                  <button key={h.tag} onClick={() => setQuery(`#${h.tag}`)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-buddy-surface text-sm hover:bg-buddy-surface-raised transition-colors">
+                    <span className="text-buddy-green font-medium">#{h.tag}</span>
+                    <span className="text-xs text-buddy-text-secondary">{h.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {trending.posts.length > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <TrendingUp className="w-4 h-4 text-buddy-green" /> Trending Posts
+              </p>
+              <div className="space-y-2">
+                {trending.posts.slice(0, 3).map((post) => (
+                  <Card key={post.id} className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name || ''} size="sm" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{post.author_data?.display_name}</p>
+                        {post.body && <p className="text-sm text-buddy-text-secondary line-clamp-2 mt-0.5">{post.body}</p>}
+                        <p className="text-xs text-buddy-text-secondary/60 mt-1">
+                          {Object.values(post.reaction_counts || {}).reduce((s, n) => s + (n as number), 0)} reactions
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {trending.offers.length > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <Tag className="w-4 h-4 text-buddy-green" /> Trending Giveaways & Offers
+              </p>
+              <div className="space-y-2">
+                {trending.offers.map((offer, i) => {
+                  if (offer.type === 'discount_code') {
+                    const d = offer.data;
+                    const discount = d.discount_type === 'percentage' ? `${d.discount_pct}% off` : 'Discount';
+                    return (
+                      <Card key={`${offer.type}-${i}`} className="p-4 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-buddy-gold/15 text-buddy-gold flex items-center justify-center shrink-0"><Ticket size={18} /></div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold">{discount} <span className="text-buddy-gold font-mono">"{d.code}"</span></p>
+                          {d.description && <p className="text-xs text-buddy-text-secondary truncate mt-0.5">{d.description}</p>}
+                        </div>
+                        <Button size="sm" variant="outline" onClick={() => navigate('/marketplace')}>Use offer</Button>
+                      </Card>
+                    );
+                  }
+                  const e = offer.data;
+                  return (
+                    <Card key={`${offer.type}-${i}`} className="p-4 flex items-center gap-3 cursor-pointer hover:bg-buddy-surface-raised transition-colors" onClick={() => navigate(`/marketplace/events/${e.id}`)}>
+                      <div className="w-10 h-10 rounded-xl bg-buddy-green/15 text-buddy-green flex items-center justify-center shrink-0"><Ticket size={18} /></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate">{e.title}</p>
+                        <p className="text-xs text-buddy-text-secondary mt-0.5">Free event · {new Date(e.start_datetime).toLocaleDateString()}</p>
+                      </div>
+                      <Button size="sm" variant="outline">View</Button>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isSearching && query.length < 2 && activeTab === 'people' && people.length === 0 && (
         <div className="bg-buddy-surface rounded-2xl p-8 text-center">
           <TrendingUp className="w-10 h-10 text-buddy-text-secondary mx-auto mb-3" />
-          <p className="text-buddy-text-secondary">Enter at least 2 characters to search.</p>
+          <p className="text-buddy-text-secondary">No recommended users right now. Try searching instead.</p>
+        </div>
+      )}
+
+      {!isSearching && query.length < 2 && activeTab === 'gyms' && gyms.length === 0 && (
+        <div className="bg-buddy-surface rounded-2xl p-8 text-center">
+          <TrendingUp className="w-10 h-10 text-buddy-text-secondary mx-auto mb-3" />
+          <p className="text-buddy-text-secondary">No gyms to browse right now. Try searching instead.</p>
         </div>
       )}
 

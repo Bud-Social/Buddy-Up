@@ -1,6 +1,30 @@
 from rest_framework import serializers
+from collections import Counter
 from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft
 from apps.gyms.models import Gym
+
+LEGACY_REACTION_EMOJI_MAP = {
+    'pump': '💪',
+    'fire': '🔥',
+    'respect': '🤝',
+    'grind': '😤',
+    'lets_go': '🏋️',
+    'haha': '😂',
+    'too_hard': '💀',
+    'heart': '❤️',
+    'love': '❤️',
+    'clap': '👏',
+    'applause': '👏',
+    'muscle': '💪',
+    'strength': '💪',
+}
+
+
+def normalize_reaction(key):
+    """Map legacy short-name reactions to emoji glyphs; pass through actual emoji."""
+    if not key:
+        return key
+    return LEGACY_REACTION_EMOJI_MAP.get(key, key)
 
 
 class PollOptionSerializer(serializers.ModelSerializer):
@@ -66,16 +90,18 @@ class CommentSerializer(serializers.ModelSerializer):
         return obj.replies.count()
 
     def get_reaction_counts(self, obj):
-        from collections import Counter
         counts = Counter(obj.reactions.values_list('reaction_type', flat=True))
-        return dict(counts)
+        normalized = {}
+        for key, value in counts.items():
+            normalized[normalize_reaction(key)] = normalized.get(normalize_reaction(key), 0) + value
+        return normalized
 
     def get_user_reaction(self, obj):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return None
         reaction = obj.reactions.filter(author=request.user.profile).first()
-        return reaction.reaction_type if reaction else None
+        return normalize_reaction(reaction.reaction_type) if reaction else None
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -115,16 +141,18 @@ class PostSerializer(serializers.ModelSerializer):
         }
 
     def get_reaction_counts(self, obj):
-        from collections import Counter
         counts = Counter(obj.reactions.values_list('reaction_type', flat=True))
-        return dict(counts)
+        normalized = {}
+        for key, value in counts.items():
+            normalized[normalize_reaction(key)] = normalized.get(normalize_reaction(key), 0) + value
+        return normalized
 
     def get_user_reaction(self, obj):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return None
         reaction = obj.reactions.filter(author=request.user.profile).first()
-        return reaction.reaction_type if reaction else None
+        return normalize_reaction(reaction.reaction_type) if reaction else None
 
     def get_comment_count(self, obj):
         return obj.comments.count()
@@ -187,9 +215,7 @@ class CommentCreateSerializer(serializers.Serializer):
 
 
 class ReactionInputSerializer(serializers.Serializer):
-    reaction_type = serializers.ChoiceField(
-        choices=['pump', 'fire', 'respect', 'grind', 'lets_go', 'haha', 'too_hard'],
-    )
+    reaction_type = serializers.CharField(max_length=20, min_length=1)
 
 
 class RepostSerializer(serializers.Serializer):

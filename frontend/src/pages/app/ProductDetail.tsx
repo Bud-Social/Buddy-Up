@@ -49,7 +49,7 @@ export default function ProductDetail() {
 
   if (loading) {
     return (
-      <div className="max-w-xl mx-auto p-4 pb-24 animate-pulse">
+      <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 pb-24 animate-pulse">
         <div className="flex items-center gap-3 mb-6"><div className="w-10 h-10 bg-buddy-surface rounded-xl" /><div className="h-8 w-48 bg-buddy-surface rounded" /></div>
         <Card className="p-4"><div className="aspect-square bg-buddy-surface-raised rounded-xl mb-4" /><div className="h-6 w-2/3 bg-buddy-surface-raised rounded mb-3" /><div className="h-4 w-1/2 bg-buddy-surface-raised rounded" /></Card>
       </div>
@@ -59,7 +59,7 @@ export default function ProductDetail() {
   if (!product) return null;
 
   return (
-    <div className="max-w-xl mx-auto p-4 pb-24">
+    <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 pb-24">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/marketplace')} className="p-2 rounded-xl bg-buddy-surface hover:bg-buddy-surface-raised transition-colors"><ArrowLeft size={20} /></button>
         <h1 className="font-display text-2xl font-extrabold truncate tracking-tight">{product.name}</h1>

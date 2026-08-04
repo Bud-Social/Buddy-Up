@@ -386,6 +386,8 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, _, child) => _AppShell(child: child),
         routes: [
           GoRoute(path: '/feed', builder: (_, _) => const FeedScreen()),
+          GoRoute(path: '/feed/following', builder: (_, _) => const FeedScreen(initialTab: 'following')),
+          GoRoute(path: '/feed/bud-press', builder: (_, _) => const FeedScreen(initialTab: 'videos')),
           GoRoute(path: '/discover', builder: (_, _) => const DiscoverPeopleScreen()),
           GoRoute(path: '/lives', builder: (_, _) => const LiveBrowserScreen()),
           GoRoute(path: '/gyms', builder: (_, _) => const GymListScreen()),
@@ -443,39 +445,112 @@ class _AppShell extends StatelessWidget {
   final Widget child;
   const _AppShell({required this.child});
 
+  static const _tabletBreakpoint = 600.0;
+
+  static const _railDestinations = <_NavDestination>[
+    _NavDestination('/feed', Icons.home_outlined, Icons.home, 'Home'),
+    _NavDestination('/discover', Icons.explore_outlined, Icons.explore, 'Discover'),
+    _NavDestination('/lives', Icons.videocam_outlined, Icons.videocam, 'Lives'),
+    _NavDestination('/gyms', Icons.fitness_center_outlined, Icons.fitness_center, 'Gyms'),
+    _NavDestination('/messages', Icons.chat_bubble_outline, Icons.chat_bubble, 'Messages'),
+    _NavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
+    _NavDestination('/settings', Icons.settings_outlined, Icons.settings, 'Settings'),
+  ];
+
+  static const _phoneDestinations = <_NavDestination>[
+    _NavDestination('/feed', Icons.home_outlined, Icons.home, 'Home'),
+    _NavDestination('/discover', Icons.explore_outlined, Icons.explore, 'Discover'),
+    _NavDestination('/lives', Icons.videocam_outlined, Icons.videocam, 'Lives'),
+    _NavDestination('/gyms', Icons.fitness_center_outlined, Icons.fitness_center, 'Gyms'),
+    _NavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    final isTablet = width >= _tabletBreakpoint;
+
+    if (isTablet) {
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _calculateIndex(context, _railDestinations),
+              onDestinationSelected: (i) => context.go(_railDestinations[i].route),
+              extended: width >= 1000,
+              leading: const Padding(
+                padding: EdgeInsets.only(top: 16, bottom: 8),
+                child: Icon(
+                  Icons.fitness_center,
+                  color: BuddyColors.green,
+                  size: 28,
+                ),
+              ),
+              backgroundColor: BuddyColors.black,
+              indicatorColor: BuddyColors.green.withValues(alpha: 0.2),
+              selectedIconTheme: const IconThemeData(color: BuddyColors.green),
+              selectedLabelTextStyle: const TextStyle(
+                color: BuddyColors.green,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelTextStyle: const TextStyle(
+                color: BuddyColors.textSecondary,
+              ),
+              destinations: _railDestinations
+                  .map(
+                    (d) => NavigationRailDestination(
+                      icon: Icon(d.icon),
+                      selectedIcon: Icon(d.selectedIcon),
+                      label: Text(d.label),
+                    ),
+                  )
+                  .toList(),
+            ),
+            Expanded(child: child),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       body: child,
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _calculateIndex(context),
-        onTap: (i) {
-          final routes = ['/feed', '/discover', '/lives', '/gyms', '/messages'];
-          if (i < routes.length) {
-            context.go(routes[i]);
-          } else if (i == 4) {
-            context.go('/profile');
-          }
-        },
+        currentIndex: _calculateIndex(context, _phoneDestinations),
+        onTap: (i) => context.go(_phoneDestinations[i].route),
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), activeIcon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'Discover'),
-          BottomNavigationBarItem(icon: Icon(Icons.videocam_outlined), activeIcon: Icon(Icons.videocam), label: 'Lives'),
-          BottomNavigationBarItem(icon: Icon(Icons.fitness_center_outlined), activeIcon: Icon(Icons.fitness_center), label: 'Gyms'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
-        ],
+        items: _phoneDestinations
+            .map(
+              (d) => BottomNavigationBarItem(
+                icon: Icon(d.icon),
+                activeIcon: Icon(d.selectedIcon),
+                label: d.label,
+              ),
+            )
+            .toList(),
       ),
     );
   }
 
-  int _calculateIndex(BuildContext context) {
+  int _calculateIndex(BuildContext context, List<_NavDestination> destinations) {
     final location = GoRouterState.of(context).matchedLocation;
-    if (location.startsWith('/feed')) return 0;
-    if (location.startsWith('/discover')) return 1;
-    if (location.startsWith('/lives')) return 2;
-    if (location.startsWith('/gyms')) return 3;
-    if (location.startsWith('/profile') || location.startsWith('/settings')) return 4;
+    for (var i = 0; i < destinations.length; i++) {
+      if (location.startsWith(destinations[i].route)) return i;
+    }
+    final profileIndex = destinations.indexWhere((d) => d.route == '/profile');
+    if (location.startsWith('/buddies') ||
+        location.startsWith('/settings') ||
+        location.startsWith('/:username')) {
+      if (profileIndex >= 0) return profileIndex;
+    }
     return 0;
   }
+}
+
+class _NavDestination {
+  final String route;
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+
+  const _NavDestination(this.route, this.icon, this.selectedIcon, this.label);
 }

@@ -117,11 +117,6 @@ class Migration(migrations.Migration):
             name="valid_until",
             field=models.DateTimeField(blank=True, null=True),
         ),
-        migrations.AlterField(
-            model_name="discountcode",
-            name="discount_artifacts",
-            field=models.JSONField(default=dict),
-        ),
         migrations.AddIndex(
             model_name="discountcode",
             index=models.Index(

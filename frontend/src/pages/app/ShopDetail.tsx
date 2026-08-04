@@ -25,7 +25,7 @@ export default function ShopDetail() {
   }, [handle]);
 
   if (isLoading) return (
-    <div className="max-w-xl mx-auto p-4 animate-pulse">
+    <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 animate-pulse">
       <div className="h-48 bg-buddy-surface rounded-2xl mb-4" />
       <div className="flex items-center gap-4 px-4 -mt-12 mb-6">
         <div className="w-24 h-24 rounded-full bg-buddy-surface border-4 border-buddy-background" />
@@ -35,7 +35,7 @@ export default function ShopDetail() {
   );
 
   if (!data) return (
-    <div className="max-w-xl mx-auto p-4 text-center">
+    <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 text-center">
       <p className="text-buddy-text-secondary mb-4">Shop not found.</p>
       <Button onClick={() => navigate('/marketplace')}>Back to Marketplace</Button>
     </div>
@@ -93,7 +93,7 @@ export default function ShopDetail() {
   };
 
   return (
-    <div className="max-w-xl mx-auto pb-24">
+    <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto pb-24">
       {/* Banner */}
       <div className="relative h-48 w-full bg-gradient-to-br from-buddy-electric/30 to-buddy-surface">
         {shop.banner_url && <img src={shop.banner_url} alt="" className="w-full h-full object-cover" />}
@@ -173,7 +173,7 @@ export default function ShopDetail() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
             {activeTab === 'meal_plans' && meal_plans.map(mp => renderItem(mp, 'meal_plan'))}
             {activeTab === 'programmes' && programmes.map(p => renderItem(p, 'programme'))}
             {activeTab === 'events' && events.map(e => renderItem(e, 'event'))}

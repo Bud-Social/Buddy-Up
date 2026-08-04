@@ -51,7 +51,7 @@ export default function BuddiesPage() {
   if (!myProfile) return null;
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <h1 className="font-display text-2xl font-extrabold mb-2">Buddies</h1>
 
       <div className="flex rounded-xl bg-buddy-surface p-1 mb-4">

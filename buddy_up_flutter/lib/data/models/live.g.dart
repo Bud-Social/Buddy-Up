@@ -87,6 +87,8 @@ _BuddyLive _$BuddyLiveFromJson(Map<String, dynamic> json) => _BuddyLive(
       const <String>[],
   hasRsvped: json['hasRsvped'] as bool? ?? false,
   rsvpCount: (json['rsvpCount'] as num?)?.toInt() ?? 0,
+  artifactFee: json['artifact_fee'] as Map<String, dynamic>?,
+  recordingConsent: json['recording_consent'] as String?,
   gymId: json['gymId'] as String?,
   createdAt: json['createdAt'] as String,
 );
@@ -112,6 +114,8 @@ Map<String, dynamic> _$BuddyLiveToJson(_BuddyLive instance) =>
       'equipmentList': instance.equipmentList,
       'hasRsvped': instance.hasRsvped,
       'rsvpCount': instance.rsvpCount,
+      'artifact_fee': instance.artifactFee,
+      'recording_consent': instance.recordingConsent,
       'gymId': instance.gymId,
       'createdAt': instance.createdAt,
     };

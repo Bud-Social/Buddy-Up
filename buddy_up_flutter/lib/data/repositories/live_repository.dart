@@ -33,7 +33,7 @@ abstract class LiveRepository {
   Future<Map<String, dynamic>> getCredentials(@Path('id') String liveId);
 
   @POST('/lives/{id}/rsvp/')
-  Future<void> rsvp(@Path('id') String liveId);
+  Future<Map<String, dynamic>> rsvp(@Path('id') String liveId);
 
   @POST('/lives/random-drop/start/')
   Future<Map<String, dynamic>> startRandomDrop(

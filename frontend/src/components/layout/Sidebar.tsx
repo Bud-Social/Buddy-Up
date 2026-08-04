@@ -5,7 +5,8 @@ import { useSidebarStore } from '@/store/sidebarStore';
 import { Logo } from '@/components/ui/Logo';
 
 const main = [
-  { to: '/feed', icon: Home, label: 'Home' }, { to: '/discover', icon: Search, label: 'Discover' },
+  { to: '/feed', icon: Home, label: 'Home' },
+  { to: '/discover', icon: Search, label: 'Discover' },
   { to: '/lives', icon: Radio, label: 'Lives' }, { to: '/gyms', icon: Dumbbell, label: 'Gyms' },
   { to: '/trainers', icon: Users, label: 'Trainers' }, { to: '/marketplace', icon: ShoppingBag, label: 'Marketplace' },
   { to: '/sessions', icon: Calendar, label: 'Sessions' }, { to: '/messages', icon: MessageCircle, label: 'Messages' },

@@ -9,6 +9,8 @@ from django.db.models import Count, Q, OuterRef, Subquery
 from django.utils import timezone
 from datetime import timedelta
 
+from apps.ai.audit import audit_ai_call
+
 logger = logging.getLogger(__name__)
 
 
@@ -91,6 +93,11 @@ def moderate_content(self, post_id: str):
             )
             if ai_resp.status_code == 200:
                 result = ai_resp.json()
+                audit_ai_call(
+                    'image_moderation',
+                    input_data={'url': url},
+                    output_data=result,
+                )
                 if result.get('is_nsfw'):
                     post.moderation_status = 'flagged'
                     post.save(update_fields=['moderation_status'])
@@ -101,6 +108,7 @@ def moderate_content(self, post_id: str):
 
         except requests.RequestException as exc:
             logger.warning('AI moderation call failed for %s: %s', url, exc)
+            audit_ai_call('image_moderation', input_data={'url': url}, error_message=str(exc))
             try:
                 self.retry(exc=exc)
             except self.MaxRetriesExceededError:

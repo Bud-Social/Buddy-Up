@@ -53,7 +53,7 @@ export default function FoodRecognition() {
   };
 
   return (
-    <div className="max-w-lg mx-auto p-4 space-y-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 space-y-4">
       <h1 className="font-display text-2xl font-extrabold">Food Scanner</h1>
       <p className="text-buddy-text-secondary">Take a photo of your meal to get nutritional insights.</p>
 

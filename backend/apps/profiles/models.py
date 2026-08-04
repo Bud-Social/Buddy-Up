@@ -111,13 +111,6 @@ class AccountabilityPing(TimestampedModel):
         indexes = [
             models.Index(fields=['to_user', '-created_at']),
         ]
-        constraints = [
-            models.UniqueConstraint(
-                fields=['from_user', 'to_user'],
-                condition=models.Q(created_at__date=models.functions.Now()),
-                name='one_ping_per_buddy_per_day',
-            ),
-        ]
 
 
 class SharedGoal(TimestampedModel):

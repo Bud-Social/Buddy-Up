@@ -15,7 +15,7 @@ class FeedTabBar extends StatelessWidget {
   static const _tabLabels = {
     'for_you': 'For You',
     'following': 'Following',
-    'nearby': 'Nearby',
+    'videos': 'Bud Press',
   };
 
   @override

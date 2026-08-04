@@ -53,7 +53,7 @@ export default function MyEventTickets() {
   if (isLoading) return <div className="p-4 text-center">Loading tickets...</div>;
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate(-1)} className="text-buddy-text-secondary hover:text-buddy-text-primary transition-colors">
           <ArrowLeft size={20} />
@@ -73,6 +73,12 @@ export default function MyEventTickets() {
         <div className="space-y-6">
           {tickets.map(ticket => (
             <Card key={ticket.id} className="overflow-hidden border-none bg-buddy-surface">
+              {ticket.event_data?.cover_image_url && (
+                <div className="w-full h-40 sm:h-48 relative">
+                  <img src={ticket.event_data.cover_image_url} alt={ticket.event_data.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-buddy-black/60 to-transparent" />
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row">
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div>

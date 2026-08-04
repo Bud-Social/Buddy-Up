@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 import '../providers/live_provider.dart';
 import '../widgets/live_card.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/constants.dart';
 
 class LiveBrowserScreen extends ConsumerStatefulWidget {
   const LiveBrowserScreen({super.key});
@@ -60,9 +62,51 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
       body: Column(
         children: [
           _buildTabBar(state, notifier),
+          _buildCategoryChips(state, notifier),
           Expanded(child: _buildBody(state)),
         ],
       ),
+    );
+  }
+
+  Widget _buildCategoryChips(LiveBrowserState state, LiveBrowserNotifier notifier) {
+    final selected = state.category;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _categoryChip('All', null, selected == null, () => notifier.setCategory(null)),
+          ...liveCategories.map((c) => _categoryChip(
+                c.replaceAll('_', ' '),
+                c,
+                selected == c,
+                () => notifier.setCategory(c),
+              )),
+        ],
+      ),
+    );
+  }
+
+  Widget _categoryChip(String label, String? value, bool isActive, VoidCallback onTap) {
+    return ChoiceChip(
+      label: Text(
+        label[0].toUpperCase() + label.substring(1),
+        style: TextStyle(
+          fontSize: 12,
+          color: isActive ? BuddyColors.black : BuddyColors.textSecondary,
+          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      selected: isActive,
+      onSelected: (_) => onTap(),
+      selectedColor: BuddyColors.green,
+      backgroundColor: BuddyColors.surface,
+      side: BorderSide(color: isActive ? BuddyColors.green : BuddyColors.surfaceRaised),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
@@ -131,9 +175,34 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
           return LiveCard(
             live: state.lives[i],
             onTap: () => context.push('/lives/${state.lives[i].id}'),
+            onRsvp: _handleRsvp,
           );
         },
       ),
     );
+  }
+
+  Future<void> _handleRsvp(String liveId) async {
+    final repo = ref.read(liveRepositoryProvider);
+    try {
+      await repo.rsvp(liveId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('RSVP confirmed!')),
+      );
+      ref.read(liveBrowserProvider.notifier).browse();
+    } on DioException catch (e) {
+      final message = (e.response?.data as Map<String, dynamic>?)?['message'] as String? ??
+          (e.response?.statusMessage ?? 'Failed to RSVP.');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$message')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to RSVP.')),
+      );
+    }
   }
 }

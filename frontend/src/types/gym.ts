@@ -154,3 +154,23 @@ export interface GymDonation {
   message: string;
   created_at: string;
 }
+
+export interface GymMembershipException {
+  id: string;
+  gym_id: string;
+  member: string;
+  member_data: MemberData;
+  discount_pct: number;
+  reason: string;
+  expires_at: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface MembershipCheckoutResult {
+  role: GymRole;
+  charged_artifacts: Record<string, number>;
+  savings_artifacts: Record<string, number>;
+  discount_code: string | null;
+  subscription_expires_at: string;
+}

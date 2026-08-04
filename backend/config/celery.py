@@ -41,6 +41,10 @@ app.conf.beat_schedule = {
         'task': 'apps.lives.tasks.scan_random_drop_pool',
         'schedule': 30.0,
     },
+    'send-live-reminders': {
+        'task': 'apps.lives.tasks.send_live_reminders',
+        'schedule': 60.0,
+    },
     'retry-failed-replays': {
         'task': 'apps.lives.tasks.retry_failed_replays',
         'schedule': crontab(minute='*/30'),

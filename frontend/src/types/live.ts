@@ -1,4 +1,4 @@
-export type LiveType = 'open_sweat' | 'buddy_circle' | 'gym_live' | 'pt_session_live' | 'random_drop' | 'practitioner_live';
+export type LiveType = 'open_sweat' | 'buddy_circle' | 'gym_live' | 'pt_session_live' | 'random_drop' | 'practitioner_live' | 'audio';
 export type PipShape = 'circle' | 'rounded' | 'square' | 'rectangle' | 'fit' | 'fill';
 export type LiveStatus = 'scheduled' | 'live' | 'ended';
 
@@ -46,6 +46,7 @@ export interface BuddyLive {
   equipment_list: string[];
   has_rsvped?: boolean;
   rsvp_count?: number;
+  recording_consent?: 'auto_record' | 'opt_out';
   created_at: string;
 }
 

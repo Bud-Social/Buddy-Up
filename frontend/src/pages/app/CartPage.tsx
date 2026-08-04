@@ -129,7 +129,7 @@ export default function CartPage() {
   const conversionRate = cart?.conversion_rate || 0;
 
   return (
-    <div className="max-w-lg mx-auto p-4 space-y-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 space-y-4">
       <div className="flex items-center gap-3 mb-2">
         <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-buddy-surface">
           <ChevronLeft size={20} />

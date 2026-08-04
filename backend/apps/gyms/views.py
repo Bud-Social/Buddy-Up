@@ -13,17 +13,19 @@ from rest_framework.response import Response
 import requests
 
 from common.pagination import PageNumberPagination
-from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite
-from     .serializers import (
+from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite, GymMembershipException
+from .serializers import (
     GymSerializer, CreateGymSerializer, GymMembershipSerializer,
     GymCategorySerializer, JoinRequestSerializer, CreateJoinRequestSerializer,
     ApproveRejectSerializer, GymInviteSerializer, CreateInviteSerializer,
     DonationInputSerializer, ReviewReplyInputSerializer, ManageMemberRoleSerializer,
     HandleCheckSerializer, GymSchedulePostSerializer, GymReviewSerializer, GymDonationSerializer,
+    GymMembershipExceptionSerializer, CreateMembershipExceptionSerializer, MembershipCheckoutSerializer,
 )
 from .models import GymSchedulePost, GymReview, GymDonation
 from apps.wallet.utils import deduct_artifacts
 from apps.wallet.serializers import ARTIFACT_VALUES, ARTIFACT_LABELS
+from apps.marketplace.models import DiscountCode, DiscountUsage
 
 
 class GymListView(views.APIView):
@@ -321,6 +323,15 @@ class JoinGymView(views.APIView):
             })
 
         if gym.access_type == 'public':
+            if gym.subscription_type in ('paid', 'tiered') and any(
+                int(v or 0) > 0 for v in (gym.monthly_fee_artifacts or {}).values()
+            ):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'This gym requires a paid subscription. Complete membership checkout to join.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_402_PAYMENT_REQUIRED)
+
             role = 'member'
             if gym.join_fee_artifacts:
                 gym_wallet = dict(gym.wallet_balance) if gym.wallet_balance else {}
@@ -404,6 +415,275 @@ class LeaveGymView(views.APIView):
         return Response({
             'success': True, 'data': None,
             'message': 'You have left the gym.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class GymMembershipCheckoutView(views.APIView):
+    """Charge the member (wallet artifacts) for joining a subscription gym.
+
+    Combines join fee + first-month subscription fee, applying any owner
+    exception first, then an optional discount code owned by the gym's owner.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+
+        if gym.access_type == 'secret':
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        existing = GymMembership.objects.filter(gym=gym, member=request.user.profile).first()
+        if existing and existing.subscription_active:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You are already a member of this gym.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = MembershipCheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        discount_code = (serializer.validated_data.get('discount_code') or '').strip() or None
+
+        # ---- Phase 1: base fee (join fee + monthly subscription fee) ----
+        base_artifacts = {}
+        for fee_map in (gym.join_fee_artifacts, gym.monthly_fee_artifacts):
+            if not fee_map:
+                continue
+            for k, v in fee_map.items():
+                qty = int(v or 0)
+                if qty > 0:
+                    base_artifacts[k] = base_artifacts.get(k, 0) + qty
+
+        # ---- Phase 2: owner exception (full/partial discount for this member) ----
+        exception = GymMembershipException.objects.filter(
+            gym=gym, member=request.user.profile, is_active=True,
+        ).filter(
+            db_models.Q(expires_at__isnull=True) | db_models.Q(expires_at__gt=timezone.now())
+        ).first()
+        if exception:
+            if exception.discount_pct >= 100:
+                base_artifacts = {}
+            elif exception.discount_pct > 0:
+                factor = exception.discount_pct / 100.0
+                for k in list(base_artifacts):
+                    base_artifacts[k] = max(1, int(base_artifacts[k] * (1 - factor)))
+
+        # ---- Phase 3: discount code (must belong to an owner of this gym) ----
+        discount = None
+        pct_applied = 0
+        savings_artifacts = {}
+        discounted_artifacts = dict(base_artifacts)
+        if discount_code:
+            discount = DiscountCode.objects.filter(code__iexact=discount_code, is_active=True).first()
+            if not discount:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Invalid discount code.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            owner_ids = set(
+                GymMembership.objects.filter(gym=gym, role__in=['owner', 'co_owner'])
+                .values_list('member_id', flat=True)
+            )
+            if discount.creator_id not in owner_ids:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'This discount code does not apply to this gym.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            if discount.creator == request.user.profile:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Cannot use your own discount code.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            if discount.valid_from and discount.valid_from > timezone.now():
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Discount code is not yet valid.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            if discount.valid_until and discount.valid_until < timezone.now():
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Discount code has expired.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            if discount.usage_limit > 0 and discount.times_used >= discount.usage_limit:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Discount code usage limit reached.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            if discount.max_uses_per_user > 0:
+                user_uses = DiscountUsage.objects.filter(discount=discount, user=request.user.profile).count()
+                if user_uses >= discount.max_uses_per_user:
+                    return Response({
+                        'success': False, 'data': None,
+                        'message': 'You have already used this code the maximum number of times.',
+                        'errors': None, 'pagination': None,
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            if discount.min_purchase_artifacts and any(int(v or 0) > 0 for v in discount.min_purchase_artifacts.values()):
+                for at, needed in discount.min_purchase_artifacts.items():
+                    needed = int(needed or 0)
+                    if needed > 0 and base_artifacts.get(at, 0) < needed:
+                        return Response({
+                            'success': False, 'data': None,
+                            'message': f'Minimum purchase of {needed} {at} required for this code.',
+                            'errors': None, 'pagination': None,
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
+            if discount.discount_type == 'percentage' and discount.discount_pct > 0:
+                pct_applied = discount.discount_pct
+                factor = pct_applied / 100.0
+                for k in base_artifacts:
+                    discounted = max(1, int(base_artifacts[k] * (1 - factor)))
+                    savings_artifacts[k] = base_artifacts[k] - discounted
+                    discounted_artifacts[k] = discounted
+            elif discount.discount_type == 'fixed_artifacts' and discount.discount_artifacts:
+                for k, v in discount.discount_artifacts.items():
+                    if k in base_artifacts:
+                        discounted = max(1, base_artifacts[k] - int(v or 0))
+                        savings_artifacts[k] = base_artifacts[k] - discounted
+                        discounted_artifacts[k] = discounted
+
+        # ---- Phase 4: charge the member ----
+        gym_wallet = dict(gym.wallet_balance) if gym.wallet_balance else {}
+        for at, qty in discounted_artifacts.items():
+            if qty <= 0:
+                continue
+            if not deduct_artifacts(request.user.profile, at, qty):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'Insufficient {at} balance to pay the subscription fee.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_402_PAYMENT_REQUIRED)
+            fee_key = f'monthly_fee_{at}'
+            gym_wallet[fee_key] = gym_wallet.get(fee_key, 0) + qty
+        Gym.objects.filter(id=gym.id).update(wallet_balance=gym_wallet)
+
+        if discount and savings_artifacts:
+            DiscountUsage.objects.create(
+                discount=discount,
+                user=request.user.profile,
+                order_artifacts=dict(base_artifacts),
+                discount_pct_applied=pct_applied,
+                discount_artifacts_applied={},
+                savings_artifacts=savings_artifacts,
+            )
+            DiscountCode.objects.filter(id=discount.id).update(
+                times_used=db_models.F('times_used') + 1
+            )
+
+        # ---- Phase 5: activate membership ----
+        expires_at = timezone.now() + timedelta(days=30)
+        if existing:
+            existing.subscription_active = True
+            existing.subscription_expires_at = expires_at
+            existing.save(update_fields=['subscription_active', 'subscription_expires_at'])
+        else:
+            GymMembership.objects.create(
+                gym=gym, member=request.user.profile, role='member',
+                subscription_active=True, subscription_expires_at=expires_at,
+            )
+            Gym.objects.filter(id=gym.id).update(
+                member_count=db_models.F('member_count') + 1
+            )
+
+        return Response({
+            'success': True,
+            'data': {
+                'role': 'member',
+                'charged_artifacts': discounted_artifacts,
+                'savings_artifacts': savings_artifacts,
+                'discount_code': discount.code if discount else None,
+                'subscription_expires_at': expires_at.isoformat(),
+            },
+            'message': 'Welcome to the gym! Your membership is active.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class GymMembershipExceptionsListView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _require_staff(self, gym, request):
+        get_object_or_404(
+            GymMembership, gym=gym, member=request.user.profile,
+            role__in=['owner', 'co_owner'],
+        )
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        self._require_staff(gym, request)
+        qs = GymMembershipException.objects.filter(gym=gym).select_related('member').order_by('-created_at')
+        serializer = GymMembershipExceptionSerializer(qs, many=True)
+        return Response({
+            'success': True, 'data': serializer.data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    def post(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        self._require_staff(gym, request)
+
+        serializer = CreateMembershipExceptionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        member_id = serializer.validated_data.get('member_id')
+        username = serializer.validated_data.get('username', '').strip()
+        target = None
+        if member_id:
+            from apps.profiles.models import Profile
+            target = Profile.objects.filter(user_id=member_id).first()
+        elif username:
+            from apps.profiles.models import Profile
+            target = Profile.objects.filter(username__iexact=username).first()
+        if not target:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Member not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        exception, created = GymMembershipException.objects.update_or_create(
+            gym=gym, member=target,
+            defaults={
+                'discount_pct': serializer.validated_data.get('discount_pct', 100),
+                'reason': serializer.validated_data.get('reason', ''),
+                'expires_at': serializer.validated_data.get('expires_at'),
+                'is_active': serializer.validated_data.get('is_active', True),
+                'created_by': request.user.profile,
+            },
+        )
+
+        return Response({
+            'success': True,
+            'data': GymMembershipExceptionSerializer(exception).data,
+            'message': 'Created exception.' if created else 'Updated exception.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class GymMembershipExceptionDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, gym_slug, exception_id):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        get_object_or_404(
+            GymMembership, gym=gym, member=request.user.profile,
+            role__in=['owner', 'co_owner'],
+        )
+        exception = get_object_or_404(GymMembershipException, id=exception_id, gym=gym)
+        exception.delete()
+        return Response({
+            'success': True, 'data': None,
+            'message': 'Exception removed.',
             'errors': None, 'pagination': None,
         })
 

@@ -7,10 +7,12 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { gymsApi, livesApi, profilesApi, marketplaceApi } from '@/api';
 import type { Gym, GymMembership, Profile } from '@/types';
+import type { GymMembershipException } from '@/types/gym';
 import type { BuddyLive } from '@/types/live';
 import type { GymSchedulePost, GymReview } from '@/types/gym';
 import { GymDiscoursePost } from '@/components/features/gyms/GymDiscoursePost';
 import { PostComposer } from '@/components/features/feed/PostComposer';
+import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 
 type GymTab = 'feed' | 'schedule' | 'lives' | 'members' | 'reviews' | 'about' | 'events';
 
@@ -68,6 +70,28 @@ export default function GymDetail() {
   const [actionSubmitting, setActionSubmitting] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
 
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [checkoutCode, setCheckoutCode] = useState('');
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const [showExceptionsModal, setShowExceptionsModal] = useState(false);
+  const [exceptions, setExceptions] = useState<GymMembershipException[]>([]);
+  const [exceptionUsername, setExceptionUsername] = useState('');
+  const [exceptionPct, setExceptionPct] = useState(100);
+  const [exceptionReason, setExceptionReason] = useState('');
+  const [exceptionLoading, setExceptionLoading] = useState(false);
+  const [exceptionsError, setExceptionsError] = useState<string | null>(null);
+
+  const openExceptionsModal = useCallback(() => {
+    setExceptionsError(null);
+    setExceptions([]);
+    setShowExceptionsModal(true);
+    if (slug) {
+      gymsApi.getMembershipExceptions(slug).then(res => setExceptions(res.data || [])).catch(() => {});
+    }
+  }, [slug]);
+
   useEffect(() => {
     if (!slug) return;
     setIsLoading(true);
@@ -97,7 +121,15 @@ export default function GymDetail() {
   }, [slug]);
 
   const handleJoin = async () => {
-    if (!slug) return;
+    if (!slug || !gym) return;
+    const isPaid = gym.subscription_type === 'paid' || gym.subscription_type === 'tiered';
+    const hasMonthlyFee = Object.values(gym.monthly_fee_artifacts || {}).some((v) => Number(v || 0) > 0);
+    if (isPaid && hasMonthlyFee) {
+      setCheckoutError(null);
+      setCheckoutCode('');
+      setShowCheckoutModal(true);
+      return;
+    }
     try {
       await gymsApi.join(slug);
       const res = await gymsApi.detail(slug);
@@ -219,8 +251,8 @@ export default function GymDetail() {
     setActionSubmitting(false);
   };
 
-  if (isLoading) return <div className="max-w-lg mx-auto p-4"><div className="animate-pulse space-y-4"><div className="bg-buddy-surface rounded-2xl h-48" /><div className="bg-buddy-surface rounded-2xl h-64" /></div></div>;
-  if (!gym) return <div className="max-w-lg mx-auto p-4 text-center py-20"><p className="text-buddy-text-secondary">Gym not found</p></div>;
+  if (isLoading) return <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4"><div className="animate-pulse space-y-4"><div className="bg-buddy-surface rounded-2xl h-48" /><div className="bg-buddy-surface rounded-2xl h-64" /></div></div>;
+  if (!gym) return <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 text-center py-20"><p className="text-buddy-text-secondary">Gym not found</p></div>;
 
   const isOwner = gym.membership_role === 'owner' || gym.membership_role === 'co_owner';
   const isAdmin = isOwner || gym.membership_role === 'moderator';
@@ -236,7 +268,7 @@ export default function GymDetail() {
   ];
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto">
       {/* Header */}
       <div className="relative h-40 bg-gradient-to-b from-buddy-surface to-buddy-black">
         {gym.cover_url && <img src={gym.cover_url} alt="" className="w-full h-full object-cover" />}
@@ -272,9 +304,16 @@ export default function GymDetail() {
             <>
               {!isOwner && <Button variant="outline" size="sm" onClick={handleLeave}><LogOut size={14} className="mr-1" /> Leave</Button>}
               {isAdmin && <Button variant="outline" size="sm" onClick={() => navigate(`/gyms/${slug}/manage`)}><Settings size={14} className="mr-1" /> Manage</Button>}
+              {isOwner && <Button variant="outline" size="sm" onClick={openExceptionsModal}><Tag size={14} className="mr-1" /> Exceptions</Button>}
             </>
           ) : (
-            <Button size="sm" className="flex-1" onClick={handleJoin}>{gym.access_type === 'public' ? 'Join Gym' : 'Request to Join'}</Button>
+            <Button size="sm" className="flex-1" onClick={handleJoin}>
+              {gym.access_type === 'public'
+                ? ((gym.subscription_type === 'paid' || gym.subscription_type === 'tiered') && Object.values(gym.monthly_fee_artifacts || {}).some((v) => Number(v || 0) > 0))
+                  ? 'Join · Subscribe'
+                  : 'Join Gym'
+                : 'Request to Join'}
+            </Button>
           )}
           {gym.is_donations_enabled && (
             <Button size="sm" variant="outline" onClick={() => setShowDonateModal(true)} className="text-buddy-pink border-buddy-pink/30 hover:bg-buddy-pink/10">
@@ -1002,6 +1041,189 @@ export default function GymDetail() {
                 {inviteSelectedUsers.length > 0 ? `Send ${inviteSelectedUsers.length} Invite(s)` : 'Send Invite'}
               </Button>
               <Button variant="ghost" onClick={() => { setShowInviteModal(false); setInviteInput(''); setInviteSelectedUsers([]); setInviteSearchResults([]); }}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Membership Checkout Modal — paid gyms */}
+      {showCheckoutModal && (
+        <div className="fixed inset-0 z-50 bg-buddy-black/80 flex items-center justify-center p-4" onClick={() => !checkoutLoading && setShowCheckoutModal(false)}>
+          <div className="bg-buddy-surface rounded-2xl p-6 max-w-sm w-full space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Crown className="text-buddy-green" size={20} /> Join {gym.name}
+              </h2>
+              <button onClick={() => setShowCheckoutModal(false)} className="text-buddy-text-secondary p-1"><X size={18} /></button>
+            </div>
+
+            <p className="text-sm text-buddy-text-secondary">
+              This gym has a paid subscription. Your first month is charged on joining and renews monthly.
+            </p>
+
+            <div className="bg-buddy-black rounded-xl p-4 space-y-2">
+              <p className="text-xs font-medium text-buddy-text-secondary uppercase tracking-wide">First-month charges</p>
+              {[
+                ...Object.entries(gym.monthly_fee_artifacts || {}).map(([k, v]) => ({ key: k, qty: Number(v || 0) })),
+                ...Object.entries(gym.join_fee_artifacts || {}).map(([k, v]) => ({ key: k, qty: Number(v || 0) })),
+              ].filter((e) => e.qty > 0).map((e) => (
+                <div key={e.key} className="flex items-center justify-between">
+                  <span className="text-sm capitalize">{e.key}</span>
+                  <ArtifactIcon artifact={e.key} quantity={e.qty} />
+                </div>
+              ))}
+              {(Object.keys(gym.monthly_fee_artifacts || {}).filter((k) => Number((gym.monthly_fee_artifacts || {})[k] || 0) > 0).length === 0 &&
+                Object.keys(gym.join_fee_artifacts || {}).filter((k) => Number((gym.join_fee_artifacts || {})[k] || 0) > 0).length === 0) && (
+                <p className="text-sm text-buddy-text-secondary">Free — no charge.</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs text-buddy-text-secondary mb-1 block">Discount code (optional)</label>
+              <input
+                value={checkoutCode}
+                onChange={(e) => setCheckoutCode(e.target.value)}
+                placeholder="e.g. SUMMER50"
+                className="w-full bg-buddy-black rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30 uppercase"
+              />
+            </div>
+
+            {checkoutError && (
+              <p className="text-sm text-buddy-red bg-buddy-red/10 rounded-lg px-3 py-2">{checkoutError}</p>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                className="flex-1"
+                isLoading={checkoutLoading}
+                disabled={checkoutLoading}
+                onClick={async () => {
+                  if (!slug) return;
+                  setCheckoutLoading(true);
+                  setCheckoutError(null);
+                  try {
+                    const res = await gymsApi.membershipCheckout(slug, { discount_code: checkoutCode.trim() || undefined });
+                    setShowCheckoutModal(false);
+                    const fresh = await gymsApi.detail(slug);
+                    setGym(fresh.data);
+                    setMemberCount((c) => c + 1);
+                    const charged = res.data?.charged_artifacts || {};
+                    const total = Object.values(charged).reduce((a, b) => a + b, 0);
+                    alert(total > 0 ? 'Welcome to the gym! Your membership is active.' : 'Welcome to the gym! Your membership is active (free).');
+                  } catch (e: any) {
+                    const msg = e?.response?.data?.message || 'Unable to process payment. Please try again.';
+                    setCheckoutError(msg);
+                  } finally { setCheckoutLoading(false); }
+                }}
+              >
+                Pay & Join
+              </Button>
+              <Button variant="ghost" disabled={checkoutLoading} onClick={() => setShowCheckoutModal(false)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Membership Exceptions Modal — owner management */}
+      {showExceptionsModal && (
+        <div className="fixed inset-0 z-50 bg-buddy-black/80 flex items-center justify-center p-4" onClick={() => setShowExceptionsModal(false)}>
+          <div className="bg-buddy-surface rounded-2xl p-6 max-w-md w-full space-y-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Tag className="text-buddy-green" size={20} /> Membership Exceptions
+              </h2>
+              <button onClick={() => setShowExceptionsModal(false)} className="text-buddy-text-secondary p-1"><X size={18} /></button>
+            </div>
+            <p className="text-sm text-buddy-text-secondary">Grant individual members a fee discount or full exemption.</p>
+
+            {exceptionsError && (
+              <p className="text-sm text-buddy-red bg-buddy-red/10 rounded-lg px-3 py-2">{exceptionsError}</p>
+            )}
+
+            <div className="bg-buddy-black rounded-xl p-4 space-y-3">
+              <p className="text-xs font-medium text-buddy-text-secondary uppercase tracking-wide">Add exception</p>
+              <input
+                value={exceptionUsername}
+                onChange={(e) => setExceptionUsername(e.target.value)}
+                placeholder="Username"
+                className="w-full bg-buddy-surface rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
+              />
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-buddy-text-secondary">Discount</label>
+                <select
+                  value={exceptionPct}
+                  onChange={(e) => setExceptionPct(Number(e.target.value))}
+                  className="flex-1 bg-buddy-surface rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
+                >
+                  <option value={100}>100% — Free</option>
+                  <option value={75}>75% off</option>
+                  <option value={50}>50% off</option>
+                  <option value={25}>25% off</option>
+                  <option value={0}>No discount</option>
+                </select>
+              </div>
+              <input
+                value={exceptionReason}
+                onChange={(e) => setExceptionReason(e.target.value)}
+                placeholder="Reason (optional)"
+                className="w-full bg-buddy-surface rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
+              />
+              <Button
+                className="w-full"
+                isLoading={exceptionLoading}
+                disabled={!exceptionUsername.trim() || exceptionLoading}
+                onClick={async () => {
+                  if (!slug) return;
+                  setExceptionLoading(true);
+                  setExceptionsError(null);
+                  try {
+                    const res = await gymsApi.createMembershipException(slug, {
+                      username: exceptionUsername.trim(),
+                      discount_pct: exceptionPct,
+                      reason: exceptionReason.trim(),
+                    });
+                    setExceptions((prev) => {
+                      const next = prev.filter((e) => e.member !== res.data?.member);
+                      return [res.data, ...next];
+                    });
+                    setExceptionUsername('');
+                    setExceptionReason('');
+                    setExceptionPct(100);
+                  } catch (e: any) {
+                    setExceptionsError(e?.response?.data?.message || 'Failed to add exception.');
+                  } finally { setExceptionLoading(false); }
+                }}
+              >
+                Add Exception
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {exceptions.length === 0 && (
+                <p className="text-center text-sm text-buddy-text-secondary/60 py-4">No exceptions yet.</p>
+              )}
+              {exceptions.map((ex) => (
+                <div key={ex.id} className="flex items-center gap-3 bg-buddy-black rounded-xl px-4 py-3">
+                  <Avatar src={ex.member_data?.avatar_url} alt={ex.member_data?.display_name || ''} size="sm" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{ex.member_data?.display_name} <span className="text-buddy-text-secondary">@{ex.member_data?.username}</span></p>
+                    <p className="text-xs text-buddy-text-secondary truncate">
+                      {ex.discount_pct >= 100 ? 'Free membership' : `${ex.discount_pct}% off`}
+                      {ex.reason ? ` · ${ex.reason}` : ''}
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await gymsApi.deleteMembershipException(slug!, ex.id);
+                        setExceptions((prev) => prev.filter((e) => e.id !== ex.id));
+                      } catch {}
+                    }}
+                    className="text-buddy-text-secondary hover:text-buddy-red transition-colors p-1"
+                    title="Remove exception"
+                  ><X size={16} /></button>
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -31,7 +31,7 @@ export default function Trainers() {
     : trainers;
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <h1 className="font-display text-2xl font-extrabold mb-4">Trainers & Practitioners</h1>
 
       <div className="relative mb-3">

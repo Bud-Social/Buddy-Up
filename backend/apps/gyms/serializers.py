@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite, GymSchedulePost, GymReview, GymDonation
+from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite, GymSchedulePost, GymReview, GymDonation, GymMembershipException
 
 
 class GymCategorySerializer(serializers.ModelSerializer):
@@ -397,3 +397,40 @@ class CreateEnrollmentSerializer(serializers.Serializer):
     recurrence = serializers.ChoiceField(choices=['none', 'weekly', 'monthly', 'yearly'], default='none')
     recurrence_end_date = serializers.DateField(required=False, allow_null=True)
     reminder_minutes = serializers.ListField(child=serializers.IntegerField(min_value=1), default=list)
+
+
+class GymMembershipExceptionSerializer(serializers.ModelSerializer):
+    member_data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GymMembershipException
+        fields = ['id', 'gym_id', 'member', 'member_data', 'discount_pct', 'reason',
+                  'expires_at', 'is_active', 'created_at']
+        read_only_fields = ['id', 'gym_id', 'member', 'created_at']
+
+    def get_member_data(self, obj):
+        return {
+            'user_id': str(obj.member.user_id),
+            'username': obj.member.username,
+            'display_name': obj.member.display_name,
+            'avatar_url': obj.member.avatar_url,
+            'verification_status': obj.member.verification_status,
+        }
+
+
+class CreateMembershipExceptionSerializer(serializers.Serializer):
+    member_id = serializers.UUIDField(required=False)
+    username = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    discount_pct = serializers.IntegerField(min_value=0, max_value=100, default=100)
+    reason = serializers.CharField(max_length=200, required=False, allow_blank=True, default='')
+    expires_at = serializers.DateTimeField(required=False, allow_null=True)
+    is_active = serializers.BooleanField(default=True)
+
+    def validate(self, data):
+        if not data.get('member_id') and not data.get('username'):
+            raise serializers.ValidationError('Either member_id or username must be provided.')
+        return data
+
+
+class MembershipCheckoutSerializer(serializers.Serializer):
+    discount_code = serializers.CharField(max_length=50, required=False, allow_blank=True)

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation, NavLink } from 'react-router-dom';
 import {
   Radio, Calendar, Play, Clock, Users, Dumbbell, Flame,
   Globe, UsersRound, Building2, Monitor, Search, X,
-  Repeat, Shuffle, CheckCircle, AlertCircle,
+  Repeat, Shuffle, CheckCircle, AlertCircle, Zap, Headphones,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
@@ -17,9 +17,14 @@ import type { Profile } from '@/types';
 
 type Tab = 'live' | 'upcoming' | 'replays';
 
+const CATEGORIES = ['strength', 'cardio', 'hiit', 'yoga', 'pilates', 'stretching', 'nutrition_talk', 'q&a', 'challenge', 'other'];
+
 export default function Lives() {
   const navigate = useNavigate();
+  const { category } = useParams<{ category?: string }>();
+  const location = useLocation();
   const [tab, setTab] = useState<Tab>('live');
+  const [replayScope, setReplayScope] = useState<'all' | 'mine'>('all');
   const [lives, setLives] = useState<BuddyLive[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showStartLive, setShowStartLive] = useState(false);
@@ -27,20 +32,38 @@ export default function Lives() {
   const [replayLive, setReplayLive] = useState<BuddyLive | null>(null);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    setTab('live');
+    setReplayScope('all');
+  }, [location.pathname]);
+
   const fetchLives = useCallback(async (t: Tab) => {
     setIsLoading(true);
     setError('');
     try {
-      const res = await livesApi.browse({ tab: t === 'upcoming' ? 'scheduled' : t });
+      const res = await livesApi.browse({
+        tab: t === 'upcoming' ? 'scheduled' : t,
+        category,
+        mine: t === 'replays' && replayScope === 'mine' ? true : undefined,
+      });
       setLives(res.data || []);
     } catch {
       setError('Failed to load lives. Check your connection.');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [replayScope, category]);
 
   useEffect(() => { fetchLives(tab); }, [tab, fetchLives]);
+
+  const handleInstantLive = async () => {
+    try {
+      const res = await livesApi.startLive({ title: '', live_type: 'open_sweat', category: 'other', access: 'public' });
+      navigate(`/live/${res.data.live.id}`);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to start live. Check your connection.');
+    }
+  };
 
   const tabs: { key: Tab; label: string; icon: typeof Radio }[] = [
     { key: 'live', label: 'Live Now', icon: Radio },
@@ -62,12 +85,15 @@ export default function Lives() {
   };
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-2xl font-extrabold">Buddy Lives</h1>
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" className="gap-1.5" onClick={() => setShowRandomDrop(true)}>
             <Flame size={14} /> Drop In
+          </Button>
+          <Button size="sm" variant="secondary" className="gap-1.5" onClick={handleInstantLive} title="Go live instantly — no setup">
+            <Zap size={14} /> Instant
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setShowStartLive(true)}>
             <Radio size={14} /> Go Live
@@ -87,6 +113,36 @@ export default function Lives() {
         ))}
       </div>
 
+      {tab === 'replays' && (
+        <div className="flex gap-1 rounded-xl bg-buddy-surface p-1 mb-4">
+          {([
+            { value: 'all', label: 'All Replays' },
+            { value: 'mine', label: 'My Replays' },
+          ] as const).map(({ value, label }) => (
+            <button key={value} onClick={() => setReplayScope(value)}
+              className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                replayScope === value ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
+              }`}
+            >{label}</button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap justify-center gap-2 mb-4">
+        <NavLink to="/lives" end
+          className={({ isActive }) => `px-3 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-colors ${
+            isActive ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+          }`}
+        >All</NavLink>
+        {CATEGORIES.map((c) => (
+          <NavLink key={c} to={`/lives/${c}`} end
+            className={({ isActive }) => `px-3 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-colors ${
+              isActive ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+            }`}
+          >{c.replace('_', ' ')}</NavLink>
+        ))}
+      </div>
+
       {error && (
         <div className="flex items-center gap-2 bg-buddy-red/10 border border-buddy-red/20 rounded-xl px-4 py-3 mb-4 text-sm text-buddy-red">
           <AlertCircle size={16} /> {error}
@@ -103,10 +159,10 @@ export default function Lives() {
         <div className="text-center py-20">
           <Radio size={48} className="mx-auto text-buddy-text-secondary/30 mb-4" />
           <p className="text-buddy-text-secondary text-lg">
-            {tab === 'live' ? 'No live sessions right now' : tab === 'upcoming' ? 'No upcoming lives' : 'No replays yet'}
+            {tab === 'live' ? 'No live sessions right now' : tab === 'upcoming' ? 'No upcoming lives' : replayScope === 'mine' ? 'No replays saved by you yet' : 'No replays yet'}
           </p>
           <p className="text-buddy-text-secondary/50 text-sm mt-1">
-            {tab === 'live' ? 'Be the first to start a Buddy Live!' : 'Schedule a live session for your community.'}
+            {tab === 'live' ? 'Be the first to start a Buddy Live!' : tab === 'upcoming' ? 'Schedule a live session for your community.' : 'End a live with "Save Replay" to create one.'}
           </p>
         </div>
       ) : (
@@ -150,8 +206,18 @@ export default function Lives() {
                     )}
                     {live.status === 'scheduled' && (
                       <Button size="sm" variant={live.has_rsvped ? 'primary' : 'outline'} className="ml-auto gap-1"
-                        onClick={(e) => { e.stopPropagation(); livesApi.rsvpLive(live.id).then(() => fetchLives(tab)); }}>
-                        {live.has_rsvped ? 'RSVPed' : 'RSVP'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setError('');
+                          livesApi.rsvpLive(live.id)
+                            .then(() => { setError(''); fetchLives(tab); })
+                            .catch((err: any) => setError(err?.response?.data?.message || 'Failed to RSVP.'));
+                        }}>
+                        {live.has_rsvped
+                          ? 'RSVPed'
+                          : live.artifact_fee && Object.keys(live.artifact_fee).length > 0
+                            ? `Commit ${Object.entries(live.artifact_fee).map(([k, v]) => `${v} ${k}`).join(' + ')}`
+                            : 'RSVP'}
                       </Button>
                     )}
                     {live.status === 'ended' && live.replay_url && (
@@ -204,6 +270,7 @@ function StartLiveSheet({ onClose }: { onClose: () => void }) {
   const [coHosts, setCoHosts] = useState<Profile[]>([]);
   const [gymId] = useState('');
   const [feeDumbbell, setFeeDumbbell] = useState(0);
+  const [recordingConsent, setRecordingConsent] = useState<'auto_record' | 'opt_out'>('auto_record');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -215,6 +282,7 @@ function StartLiveSheet({ onClose }: { onClose: () => void }) {
     { value: 'gym_live', label: 'Gym Live', icon: Building2, desc: 'For gym members, scheduled' },
     { value: 'pt_session_live', label: 'PT Session', icon: Dumbbell, desc: 'Personal trainer led session' },
     { value: 'practitioner_live', label: 'Practitioner', icon: Monitor, desc: 'Health & wellness session' },
+    { value: 'audio', label: 'Audio Live', icon: Headphones, desc: 'Voice-only — no camera needed' },
   ];
 
   const toggleEquipment = (item: string) => {
@@ -243,12 +311,12 @@ function StartLiveSheet({ onClose }: { onClose: () => void }) {
   };
 
   const handleStart = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() && liveType !== 'audio') return;
     setIsSubmitting(true);
     setSubmitError('');
     try {
       const payload: import('@/api/lives').StartLivePayload = {
-        title: title.trim(),
+        title: title.trim() || (liveType === 'audio' ? 'Audio Live' : ''),
         live_type: liveType,
         category,
         access,
@@ -259,8 +327,26 @@ function StartLiveSheet({ onClose }: { onClose: () => void }) {
         recurrence_rule: isRecurring ? recurrenceRule : '',
         gym_id: gymId || undefined,
         artifact_fee: feeDumbbell > 0 ? { dumbbell: feeDumbbell } : undefined,
+        recording_consent: recordingConsent,
       };
       const res = await livesApi.startLive(payload);
+      onClose();
+      navigate(`/live/${res.data.live.id}`);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      if (err?.response?.status === 409) {
+        setSubmitError(msg || 'You already have an active live session. End it first.');
+      } else {
+        setSubmitError('Failed to start live. Please try again.');
+      }
+    } finally { setIsSubmitting(false); }
+  };
+
+  const handleInstantStart = async () => {
+    setIsSubmitting(true);
+    setSubmitError('');
+    try {
+      const res = await livesApi.startLive({ title: '', live_type: 'open_sweat', category: 'other', access: 'public' });
       onClose();
       navigate(`/live/${res.data.live.id}`);
     } catch (err: any) {
@@ -278,7 +364,9 @@ function StartLiveSheet({ onClose }: { onClose: () => void }) {
       <div className="flex items-center justify-between p-4 border-b border-buddy-surface">
         <button onClick={onClose} className="p-1 rounded-lg hover:bg-buddy-surface text-buddy-text-secondary">Cancel</button>
         <h2 className="font-heading font-semibold">Start a Buddy Live</h2>
-        <Button size="sm" onClick={handleStart} isLoading={isSubmitting} disabled={!title.trim()}>Go Live</Button>
+        <Button size="sm" variant="secondary" onClick={handleInstantStart} isLoading={isSubmitting} title="Go live instantly — no setup">
+          <Zap size={14} /> Instant
+        </Button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-5 pb-24">
         <div>
@@ -408,11 +496,31 @@ function StartLiveSheet({ onClose }: { onClose: () => void }) {
             <span className="text-sm text-buddy-text-secondary"><Dumbbell size={14} className="inline mr-1" />Dumbbells</span>
           </div>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-buddy-text-secondary mb-2">Recording Consent</label>
+          <div className="space-y-2">
+            <button type="button" onClick={() => setRecordingConsent('auto_record')}
+              className={`w-full p-3 rounded-xl border-2 text-left transition-colors ${recordingConsent === 'auto_record' ? 'border-buddy-green bg-buddy-green/5' : 'border-buddy-surface'}`}>
+              <p className="text-sm font-medium">Auto-record for replays</p>
+              <p className="text-xs text-buddy-text-secondary">This live is automatically recorded and saved as a replay.</p>
+            </button>
+            <button type="button" onClick={() => setRecordingConsent('opt_out')}
+              className={`w-full p-3 rounded-xl border-2 text-left transition-colors ${recordingConsent === 'opt_out' ? 'border-buddy-green bg-buddy-green/5' : 'border-buddy-surface'}`}>
+              <p className="text-sm font-medium">Opt out of auto-recording</p>
+              <p className="text-xs text-buddy-text-secondary">Nothing is recorded automatically. You can still capture short snippets during the live.</p>
+            </button>
+          </div>
+        </div>
         {submitError && (
           <div className="flex items-center gap-2 bg-buddy-red/10 border border-buddy-red/20 rounded-xl px-4 py-3 text-sm text-buddy-red">
             <AlertCircle size={16} /> {submitError}
           </div>
         )}
+      </div>
+      <div className="p-4 border-t border-buddy-surface shrink-0">
+        <Button className="w-full" size="lg" onClick={handleStart} isLoading={isSubmitting} disabled={!title.trim() && liveType !== 'audio'}>
+          <Radio size={18} className="mr-2" /> Go Live
+        </Button>
       </div>
     </div>
   );

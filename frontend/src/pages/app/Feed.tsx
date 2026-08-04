@@ -1,15 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { feedApi } from '@/api';
+import type { FeedTab } from '@/api/feed';
 import type { Post } from '@/types';
 
-type FeedTab = 'for_you' | 'following' | 'nearby';
+const TAB_ROUTES: Record<string, FeedTab> = {
+  '/feed': 'for_you',
+  '/feed/following': 'following',
+  '/feed/bud-press': 'videos',
+};
 
 export default function Feed() {
-  const [activeTab, setActiveTab] = useState<FeedTab>('for_you');
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState<FeedTab>(TAB_ROUTES[location.pathname] || 'for_you');
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
@@ -17,10 +25,10 @@ export default function Feed() {
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef<HTMLDivElement | null>(null);
 
-  const tabs: { key: FeedTab; label: string }[] = [
-    { key: 'for_you', label: 'For You' },
-    { key: 'following', label: 'Following' },
-    { key: 'nearby', label: 'Nearby' },
+  const tabs: { key: FeedTab; label: string; to: string }[] = [
+    { key: 'for_you', label: 'For You', to: '/feed' },
+    { key: 'following', label: 'Following', to: '/feed/following' },
+    { key: 'videos', label: 'Bud Press', to: '/feed/bud-press' },
   ];
 
   const fetchPosts = useCallback(async (tab: FeedTab, reset = false) => {
@@ -42,6 +50,10 @@ export default function Feed() {
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    setActiveTab(TAB_ROUTES[location.pathname] || 'for_you');
+  }, [location.pathname]);
 
   useEffect(() => {
     cursorRef.current = undefined;
@@ -66,14 +78,14 @@ export default function Feed() {
   };
 
   return (
-    <div className="max-w-lg mx-auto">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto">
       {/* Tab bar */}
       <div className="sticky top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3">
         <div className="flex gap-1 bg-buddy-surface rounded-xl p-1">
-          {tabs.map(({ key, label }) => (
+          {tabs.map(({ key, label, to }) => (
             <button
               key={key}
-              onClick={() => setActiveTab(key)}
+              onClick={() => navigate(to)}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
                 activeTab === key
                   ? 'bg-buddy-green text-buddy-black'

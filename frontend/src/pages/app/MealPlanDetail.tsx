@@ -64,7 +64,7 @@ export default function MealPlanDetail() {
 
   if (loading) {
     return (
-      <div className="max-w-lg mx-auto p-4">
+      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
         <div className="flex items-center gap-3 mb-6"><button className="p-2"><ArrowLeft size={20} /></button><div className="h-7 w-40 bg-buddy-surface rounded animate-pulse" /></div>
         <Card className="p-4 animate-pulse space-y-3"><div className="h-6 w-3/4 bg-buddy-surface-raised rounded" /><div className="h-4 w-full bg-buddy-surface-raised rounded" /><div className="h-20 w-full bg-buddy-surface-raised rounded" /></Card>
       </div>
@@ -74,7 +74,7 @@ export default function MealPlanDetail() {
   if (!plan) return null;
 
   return (
-    <div className="max-w-xl mx-auto p-4 pb-24">
+    <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 pb-24">
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/marketplace')} className="p-2 rounded-xl bg-buddy-surface hover:bg-buddy-surface-raised transition-colors"><ArrowLeft size={20} /></button>
         <h1 className="font-display text-2xl font-extrabold truncate tracking-tight">{plan.title}</h1>

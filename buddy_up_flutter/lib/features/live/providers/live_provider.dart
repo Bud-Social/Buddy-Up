@@ -16,6 +16,7 @@ List<BuddyLive> _parseLiveList(dynamic data) =>
 class LiveBrowserState {
   final List<BuddyLive> lives;
   final String activeTab;
+  final String? category;
   final bool isLoading;
   final String? cursor;
   final bool hasMore;
@@ -24,6 +25,7 @@ class LiveBrowserState {
   const LiveBrowserState({
     this.lives = const [],
     this.activeTab = 'live',
+    this.category,
     this.isLoading = false,
     this.cursor,
     this.hasMore = true,
@@ -33,6 +35,7 @@ class LiveBrowserState {
   LiveBrowserState copyWith({
     List<BuddyLive>? lives,
     String? activeTab,
+    String? category,
     bool? isLoading,
     String? cursor,
     bool? hasMore,
@@ -41,6 +44,7 @@ class LiveBrowserState {
     return LiveBrowserState(
       lives: lives ?? this.lives,
       activeTab: activeTab ?? this.activeTab,
+      category: category ?? this.category,
       isLoading: isLoading ?? this.isLoading,
       cursor: cursor ?? this.cursor,
       hasMore: hasMore ?? this.hasMore,
@@ -55,11 +59,12 @@ class LiveBrowserNotifier extends Notifier<LiveBrowserState> {
 
   LiveRepository get _repository => ref.read(liveRepositoryProvider);
 
-  Future<void> browse({String? tab}) async {
+  Future<void> browse({String? tab, String? category}) async {
     final t = tab ?? state.activeTab;
-    state = state.copyWith(isLoading: true, error: null, activeTab: t);
+    final c = category ?? state.category;
+    state = state.copyWith(isLoading: true, error: null, activeTab: t, category: c);
     try {
-      final raw = await _repository.browse(tab: t);
+      final raw = await _repository.browse(tab: t, category: c);
       final pagination = raw['pagination'] as Map<String, dynamic>?;
       state = state.copyWith(
         lives: _parseLiveList(raw['data']),
@@ -75,7 +80,11 @@ class LiveBrowserNotifier extends Notifier<LiveBrowserState> {
   Future<void> loadMore() async {
     if (state.isLoading || !state.hasMore) return;
     try {
-      final raw = await _repository.browse(tab: state.activeTab, cursor: state.cursor);
+      final raw = await _repository.browse(
+        tab: state.activeTab,
+        category: state.category,
+        cursor: state.cursor,
+      );
       final pagination = raw['pagination'] as Map<String, dynamic>?;
       state = state.copyWith(
         lives: [...state.lives, ..._parseLiveList(raw['data'])],
@@ -89,6 +98,13 @@ class LiveBrowserNotifier extends Notifier<LiveBrowserState> {
     if (tab != state.activeTab) {
       state = state.copyWith(lives: [], cursor: null, hasMore: true);
       browse(tab: tab);
+    }
+  }
+
+  void setCategory(String? category) {
+    if (category != state.category) {
+      state = state.copyWith(lives: [], cursor: null, hasMore: true);
+      browse(category: category);
     }
   }
 

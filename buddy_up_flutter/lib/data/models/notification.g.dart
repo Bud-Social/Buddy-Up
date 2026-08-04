@@ -17,6 +17,7 @@ _BuddyNotification _$BuddyNotificationFromJson(Map<String, dynamic> json) =>
       senderAvatar: json['sender_avatar'] as String?,
       actionLink: json['action_link'] as String?,
       imageUrl: json['image_url'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
       createdAt: json['created_at'] as String,
     );
 
@@ -31,6 +32,7 @@ Map<String, dynamic> _$BuddyNotificationToJson(_BuddyNotification instance) =>
       'sender_avatar': instance.senderAvatar,
       'action_link': instance.actionLink,
       'image_url': instance.imageUrl,
+      'metadata': instance.metadata,
       'created_at': instance.createdAt,
     };
 

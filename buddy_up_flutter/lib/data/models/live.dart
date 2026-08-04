@@ -74,6 +74,8 @@ abstract class BuddyLive with _$BuddyLive {
     @Default(<String>[]) List<String> equipmentList,
     @Default(false) bool hasRsvped,
     @Default(0) int rsvpCount,
+    @JsonKey(name: 'artifact_fee') Map<String, dynamic>? artifactFee,
+    @JsonKey(name: 'recording_consent') String? recordingConsent,
     String? gymId,
     required String createdAt,
   }) = _BuddyLive;

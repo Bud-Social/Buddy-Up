@@ -1423,7 +1423,7 @@ class ActivityLogView(views.APIView):
             'success': True, 'data': data,
             'message': 'OK', 'errors': None,
             'pagination': {
-                'count': paginator.page.paginator.count if hasattr(paginator, 'page') else len(data),
+                'count': len(data),
                 'next': paginator.get_next_link(),
                 'previous': paginator.get_previous_link(),
             },

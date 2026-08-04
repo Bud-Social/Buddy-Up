@@ -32,6 +32,7 @@ const TotpSetup = lazy(() => import('@/pages/auth/TotpSetup'));
 const TotpChallenge = lazy(() => import('@/pages/auth/TotpChallenge'));
 
 const Feed = lazy(() => import('@/pages/app/Feed'));
+const FullScreenVideoFeed = lazy(() => import('@/pages/app/FullScreenVideoFeed'));
 const Discover = lazy(() => import('@/pages/app/Discover'));
 const Lives = lazy(() => import('@/pages/app/Lives'));
 const Gyms = lazy(() => import('@/pages/app/Gyms'));
@@ -119,8 +120,12 @@ export const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           { path: '/feed', element: <SWrapper><Feed /></SWrapper> },
+          { path: '/feed/following', element: <SWrapper><Feed /></SWrapper> },
+          { path: '/feed/bud-press', element: <SWrapper><Feed /></SWrapper> },
+          { path: '/videos', element: <SWrapper><FullScreenVideoFeed /></SWrapper> },
           { path: '/discover', element: <SWrapper><Discover /></SWrapper> },
           { path: '/lives', element: <SWrapper><Lives /></SWrapper> },
+          { path: '/lives/:category', element: <SWrapper><Lives /></SWrapper> },
           { path: '/gyms', element: <SWrapper><Gyms /></SWrapper> },
           { path: '/gyms/create', element: <SWrapper><CreateGymPage /></SWrapper> },
           { path: '/gyms/:slug', element: <SWrapper><GymDetail /></SWrapper> },

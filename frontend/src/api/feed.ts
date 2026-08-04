@@ -1,11 +1,14 @@
 import { apiClient } from './client';
 import type { ApiResponse, Post, Comment } from '@/types';
 
-export type FeedTab = 'for_you' | 'following' | 'nearby';
+export type FeedTab = 'for_you' | 'following' | 'videos';
 
 export const feedApi = {
   getFeed: (tab: FeedTab = 'for_you', cursor?: string) =>
     apiClient.get<ApiResponse<Post[]>>('/feed/', { params: { tab, cursor } }).then((r) => r.data),
+
+  getVideoFeed: () =>
+    apiClient.get<ApiResponse<Post[]>>('/feed/', { params: { tab: 'videos' } }).then((r) => r.data),
 
   getPost: (postId: string) =>
     apiClient.get<ApiResponse<Post>>(`/feed/${postId}/`).then((r) => r.data),
@@ -23,6 +26,12 @@ export const feedApi = {
 
   unreact: (postId: string) =>
     apiClient.delete(`/feed/${postId}/react/`).then((r) => r.data),
+
+  reactComment: (postId: string, commentId: string, reaction_type: string) =>
+    apiClient.post<ApiResponse<Record<string, number>>>(`/feed/${postId}/comments/${commentId}/react/`, { reaction_type }).then((r) => r.data),
+
+  unreactComment: (postId: string, commentId: string) =>
+    apiClient.delete(`/feed/${postId}/comments/${commentId}/react/`).then((r) => r.data),
 
   getComments: (postId: string) =>
     apiClient.get<ApiResponse<Comment[]>>(`/feed/${postId}/comments/`).then((r) => r.data),

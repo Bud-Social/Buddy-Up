@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Bell, UserPlus, Users, Zap, Heart, MessageCircle, RefreshCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Bell, UserPlus, Users, Zap, Heart, MessageCircle, RefreshCcw, Radio } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { notificationsApi, profilesApi } from '@/api';
@@ -16,12 +17,30 @@ const iconMap: Record<string, typeof Bell> = {
   post_reaction: Heart,
   post_repost: RefreshCcw,
   streak_milestone: Zap,
+  live_starting: Radio,
+  live_reminder: Radio,
   default: Bell,
 };
+
+function LiveCountdown({ scheduledFor }: { scheduledFor?: string | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  if (!scheduledFor) return null;
+  const start = new Date(scheduledFor).getTime();
+  const diff = start - now;
+  if (diff <= 0) return <span className="text-buddy-red font-medium">Live now — join!</span>;
+  const mins = Math.max(1, Math.ceil(diff / 60000));
+  const label = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+  return <span className="text-buddy-green font-medium">Starts in {label}</span>;
+}
 
 export default function Notifications() {
   const { notifications, unreadCount, setNotifications, markAllRead } = useNotificationStore();
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   const fetchNotifications = useCallback(async () => {
     try {
@@ -56,7 +75,7 @@ export default function Notifications() {
   };
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-2xl font-extrabold">Notifications</h1>
         {unreadCount > 0 && (
@@ -81,7 +100,10 @@ export default function Notifications() {
           {notifications.map((n) => {
             const Icon = iconMap[n.notification_type] || iconMap.default;
             const isBuddyRequest = n.notification_type === 'buddy_request';
+            const isLive = n.notification_type === 'live_starting' || n.notification_type === 'live_reminder';
             const username = (n.metadata as { from_username?: string })?.from_username;
+            const liveId = (n.metadata as { live_id?: string })?.live_id;
+            const scheduledFor = (n.metadata as { scheduled_for?: string | null })?.scheduled_for;
 
             return (
               <Card
@@ -105,6 +127,14 @@ export default function Notifications() {
                       </Button>
                       <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}>
                         Ignore
+                      </Button>
+                    </div>
+                  )}
+                  {isLive && liveId && (
+                    <div className="flex items-center gap-3 mt-2">
+                      <LiveCountdown scheduledFor={scheduledFor} />
+                      <Button size="sm" onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); navigate(`/live/${liveId}`); }}>
+                        <Radio size={12} className="mr-1" /> Open Live
                       </Button>
                     </div>
                   )}

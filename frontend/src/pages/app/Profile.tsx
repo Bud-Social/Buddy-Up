@@ -148,7 +148,7 @@ export default function Profile() {
     : null;
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <Card className="p-6 mb-6">
         <div className="flex items-start gap-4 mb-4">
           <div className="relative inline-block flex-shrink-0">

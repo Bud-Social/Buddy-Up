@@ -12,6 +12,7 @@ class BuddyLive(TimestampedModel):
         ('pt_session_live', 'PT Session Live'),
         ('random_drop', 'Random Drop'),
         ('practitioner_live', 'Practitioner Live'),
+        ('audio', 'Audio Live'),
     ]
     ACCESS_CHOICES = [
         ('public', 'Public'),
@@ -22,6 +23,10 @@ class BuddyLive(TimestampedModel):
         ('scheduled', 'Scheduled'),
         ('live', 'Live'),
         ('ended', 'Ended'),
+    ]
+    RECORDING_CONSENT_CHOICES = [
+        ('auto_record', 'Auto-record for replays'),
+        ('opt_out', 'Opt out of auto-recording'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -48,6 +53,10 @@ class BuddyLive(TimestampedModel):
     is_recurring = models.BooleanField(default=False)
     recurrence_rule = models.CharField(max_length=200, blank=True)
     equipment_list = models.JSONField(default=list)
+    recording_consent = models.CharField(
+        max_length=20, choices=RECORDING_CONSENT_CHOICES, default='auto_record',
+    )
+    reminders_sent = models.JSONField(default=list)
 
     class Meta:
         db_table = 'lives_buddy_live'
@@ -63,6 +72,7 @@ class LiveRSVP(TimestampedModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     live = models.ForeignKey(BuddyLive, on_delete=models.CASCADE, related_name='rsvps')
     user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='live_rsvps')
+    fee_paid = models.JSONField(default=dict)
 
     class Meta:
         db_table = 'lives_rsvp'

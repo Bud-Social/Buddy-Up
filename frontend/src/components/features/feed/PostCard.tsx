@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
   MoreHorizontal, Dumbbell, Utensils, TrendingUp, MapPin, BarChart2,
+  Maximize2, FileText,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api';
 import { formatPostDate } from '@/utils/formatDate';
 import { EmojiImg } from '@/utils/emojiUtils';
+import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
 import type { Post } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
 import { RichText } from '@/components/ui/RichText';
@@ -135,21 +137,55 @@ function PollCard({ poll, postId }: { poll: NonNullable<Post['poll']>; postId: s
   );
 }
 
-function MediaGallery({ urls, blurred }: { urls: string[]; blurred?: boolean }) {
+function MediaGallery({ urls, blurred, postId }: { urls: string[]; blurred?: boolean; postId?: string }) {
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  const navigate = useNavigate();
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canAutoplay = !(blurred && !revealed);
+  useInViewAutoplay(videoRef, canAutoplay);
   if (!urls.length) return null;
   const currentUrl = urls[idx];
-  const isVideo = /\.(mp4|mov|webm)/i.test(currentUrl);
-  const isAudio = /\.(mp3|wav|ogg|m4a)/i.test(currentUrl);
+  const isVideo = /\.(mp4|mov|webm|m4v|mpeg|mkv)/i.test(currentUrl);
+  const isAudio = /\.(mp3|wav|ogg|m4a|aac)/i.test(currentUrl);
+  const isDocument = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|md|csv)/i.test(currentUrl.split('?')[0]);
+  const fileName = currentUrl.split('?')[0].split('/').pop() || 'document';
   return (
     <div className="mt-3 relative rounded-xl overflow-hidden bg-buddy-surface">
       {isVideo ? (
-        <video src={currentUrl} controls autoPlay muted loop className={`w-full max-h-96 object-cover ${blurred && !revealed ? 'blur-xl' : ''}`} />
+        <div className="relative group">
+          <video
+            ref={videoRef}
+            src={currentUrl}
+            controls
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            className={`w-full max-h-96 object-cover ${blurred && !revealed ? 'blur-xl' : ''}`}
+          />
+          <button
+            onClick={(e) => { e.stopPropagation(); navigate(postId ? `/videos?start=${postId}` : '/videos'); }}
+            className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Open full-screen video feed"
+          ><Maximize2 size={16} /></button>
+        </div>
       ) : isAudio ? (
         <div className="p-4 bg-buddy-surface-raised w-full">
           <audio src={currentUrl} controls className="w-full" />
         </div>
+      ) : isDocument ? (
+        <a href={currentUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-3 p-4 bg-buddy-surface-raised hover:bg-buddy-surface transition-colors">
+          <div className="w-11 h-11 rounded-xl bg-buddy-green/15 text-buddy-green flex items-center justify-center shrink-0">
+            <FileText size={22} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{fileName}</p>
+            <p className="text-xs text-buddy-text-secondary">Tap to open document</p>
+          </div>
+          <Maximize2 size={16} className="text-buddy-text-secondary shrink-0" />
+        </a>
       ) : (
         <img src={currentUrl} alt="" className={`w-full max-h-96 object-cover ${blurred && !revealed ? 'blur-xl' : ''}`} loading="lazy" />
       )}
@@ -369,7 +405,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           {displayPost.post_type === 'poll' && (displayPost as any).poll && <PollCard poll={(displayPost as any).poll} postId={displayPost.id} />}
 
           {/* Media */}
-          <MediaGallery urls={displayPost.media_urls || []} blurred={post.moderation_status === 'flagged'} />
+          <MediaGallery urls={displayPost.media_urls || []} blurred={post.moderation_status === 'flagged'} postId={displayPost.id} />
 
           {/* Heart pop overlay */}
           {heartPop?.show && (
@@ -397,10 +433,12 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
                 <div className="flex flex-col items-center mt-1">
                   <div className="flex -space-x-1">
                     {topReactions.map(([emojiChar]) => (
-                      <EmojiImg key={emojiChar} emoji={emojiChar} size={18} className="z-10 ring-1 ring-buddy-black rounded-full" />
+                      <EmojiImg key={emojiChar} emoji={emojiChar} size={18} className="z-10 rounded-full" />
                     ))}
                   </div>
-                  {remainingCount > 0 && <span className="text-[10px] mt-0.5">+{remainingCount}</span>}
+                  <span className="text-[10px] mt-0.5">
+                    {reactionsArr.reduce((sum, [, count]) => sum + count, 0)}
+                  </span>
                 </div>
               )}
             </button>

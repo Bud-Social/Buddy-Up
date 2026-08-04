@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/notification_provider.dart';
 import '../../../data/models/notification.dart';
 import '../../../core/theme/app_theme.dart';
@@ -28,13 +32,43 @@ class NotificationsScreen extends ConsumerWidget {
             separatorBuilder: (_, _) => const Divider(height: 1),
             itemBuilder: (_, i) {
               final n = notifications[i];
+              final isLive = n.notificationType == 'live_starting' || n.notificationType == 'live_reminder';
+              final liveId = n.metadata?['live_id']?.toString();
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: n.isRead ? BuddyColors.surfaceRaised : BuddyColors.green.withValues(alpha: 0.2),
                   child: Icon(_notificationIcon(n.notificationType), color: n.isRead ? BuddyColors.textSecondary : BuddyColors.green, size: 20),
                 ),
                 title: Text(n.title, style: TextStyle(fontWeight: n.isRead ? FontWeight.normal : FontWeight.w600)),
-                subtitle: Text(n.body, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(n.body, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
+                    if (isLive && liveId != null) ...[
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          _LiveCountdown(scheduledFor: n.metadata?['scheduled_for'] as String?),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => _openLive(context, ref, n),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.videocam, size: 14, color: BuddyColors.green),
+                                SizedBox(width: 4),
+                                Text(
+                                  'Open Live',
+                                  style: TextStyle(color: BuddyColors.green, fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
                 trailing: Text(_timeAgo(n.createdAt), style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
                 onTap: () async {
                   await ref.read(notificationRepositoryProvider).markRead(n.id);
@@ -51,6 +85,16 @@ class NotificationsScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _openLive(BuildContext context, WidgetRef ref, BuddyNotification n) async {
+    final liveId = n.metadata?['live_id']?.toString() ?? '';
+    await ref.read(notificationRepositoryProvider).markRead(n.id);
+    ref.invalidate(notificationsProvider);
+    ref.invalidate(unreadCountProvider);
+    if (liveId.isNotEmpty && context.mounted) {
+      context.push('/lives/$liveId');
+    }
+  }
+
   IconData _notificationIcon(String type) {
     switch (type) {
       case 'like': return Icons.favorite;
@@ -58,7 +102,9 @@ class NotificationsScreen extends ConsumerWidget {
       case 'follow': return Icons.person_add;
       case 'buddy_request': return Icons.handshake;
       case 'message': return Icons.message;
-      case 'live_start': return Icons.videocam;
+      case 'live_start':
+      case 'live_starting':
+      case 'live_reminder': return Icons.videocam;
       case 'gym_update': return Icons.fitness_center;
       case 'tip': return Icons.card_giftcard;
       case 'marketing': return Icons.campaign;
@@ -75,6 +121,53 @@ class NotificationsScreen extends ConsumerWidget {
     if (diff.inHours < 24) return '${diff.inHours}h';
     if (diff.inDays < 7) return '${diff.inDays}d';
     return '${dt.month}/${dt.day}';
+  }
+}
+
+class _LiveCountdown extends StatefulWidget {
+  final String? scheduledFor;
+
+  const _LiveCountdown({this.scheduledFor});
+
+  @override
+  State<_LiveCountdown> createState() => _LiveCountdownState();
+}
+
+class _LiveCountdownState extends State<_LiveCountdown> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheduled = widget.scheduledFor;
+    final start = DateTime.tryParse(scheduled ?? '');
+    if (start == null) return const SizedBox.shrink();
+    final diff = start.difference(DateTime.now());
+    if (diff.isNegative) {
+      return const Text(
+        'Live now — join!',
+        style: TextStyle(color: BuddyColors.red, fontSize: 12, fontWeight: FontWeight.w600),
+      );
+    }
+    final mins = math.max(1, (diff.inSeconds / 60).ceil());
+    final label = mins >= 60 ? '${mins ~/ 60}h ${mins % 60}m' : '${mins}m';
+    return Text(
+      'Starts in $label',
+      style: const TextStyle(color: BuddyColors.green, fontSize: 12, fontWeight: FontWeight.w600),
+    );
   }
 }
 

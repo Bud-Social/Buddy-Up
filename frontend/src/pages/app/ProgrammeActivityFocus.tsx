@@ -67,7 +67,7 @@ export default function ProgrammeActivityFocus() {
 
   if (loading) {
     return (
-      <div className="max-w-xl mx-auto p-4 animate-pulse">
+      <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 animate-pulse">
         <div className="h-10 w-10 bg-buddy-surface rounded-xl mb-6" />
         <div className="h-8 w-3/4 bg-buddy-surface rounded mb-4" />
         <div className="h-64 bg-buddy-surface rounded-xl mb-6" />
@@ -83,7 +83,7 @@ export default function ProgrammeActivityFocus() {
   if (!activity || !programme) return null;
 
   return (
-    <div className="max-w-xl mx-auto p-4 pb-24">
+    <div className="max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto p-4 pb-24">
       <div className="flex items-center justify-between mb-6">
         <button onClick={() => navigate(-1)} className="p-2 rounded-xl bg-buddy-surface hover:bg-buddy-surface-raised transition-colors">
           <ArrowLeft size={20} />

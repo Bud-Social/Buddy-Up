@@ -32,6 +32,7 @@ class LiveBrowserView(views.APIView):
     def get(self, request):
         tab = request.query_params.get('tab', 'live')
         category = request.query_params.get('category', '')
+        mine = request.query_params.get('mine') == '1'
 
         if tab == 'live':
             queryset = BuddyLive.objects.filter(status='live').order_by('-viewer_peak')
@@ -39,6 +40,10 @@ class LiveBrowserView(views.APIView):
             queryset = BuddyLive.objects.filter(status='scheduled', scheduled_for__gte=timezone.now()).order_by('scheduled_for')
         elif tab == 'replays':
             queryset = BuddyLive.objects.filter(status='ended', replay_saved=True).order_by('-ended_at')
+            if mine:
+                queryset = queryset.filter(
+                    db_models.Q(host=request.user.profile) | db_models.Q(co_hosts=request.user.profile)
+                ).distinct()
         elif tab == 'upcoming':
             queryset = BuddyLive.objects.filter(status='scheduled', scheduled_for__gte=timezone.now()).order_by('scheduled_for')
         else:
@@ -107,9 +112,13 @@ class StartLiveView(views.APIView):
 
         channel_id = generate_live_channel_id()
 
+        title = (data.get('title') or '').strip() or 'Instant Live'
+        if data.get('live_type') == 'audio':
+            title = (data.get('title') or '').strip() or 'Audio Live'
+
         live = BuddyLive.objects.create(
             host=request.user.profile,
-            title=data.get('title', 'Untitled Live'),
+            title=title,
             live_type=data.get('live_type', 'open_sweat'),
             category=data.get('category', 'other'),
             access=data.get('access', 'public'),
@@ -119,6 +128,7 @@ class StartLiveView(views.APIView):
             is_recurring=data.get('is_recurring', False),
             recurrence_rule=data.get('recurrence_rule', ''),
             equipment_list=data.get('equipment_list', []),
+            recording_consent=data.get('recording_consent', 'auto_record'),
             status='live' if not data.get('scheduled_for') else 'scheduled',
             started_at=timezone.now() if not data.get('scheduled_for') else None,
             agora_channel=channel_id,
@@ -135,7 +145,7 @@ class StartLiveView(views.APIView):
             from apps.notifications.tasks import send_live_started_notification
             send_live_started_notification.delay(str(live.id), str(request.user.profile.user_id))
 
-        if live.status == 'live':
+        if live.status == 'live' and live.recording_consent == 'auto_record':
             from .tasks import start_livekit_recording
             start_livekit_recording.delay(str(live.id))
 
@@ -380,11 +390,24 @@ class RSVPLiveView(views.APIView):
     def post(self, request, live_id):
         live = get_object_or_404(BuddyLive, id=live_id, status='scheduled')
         from .models import LiveRSVP
+        from apps.wallet.utils import deduct_artifacts, credit_artifacts
 
         rsvp, created = LiveRSVP.objects.get_or_create(
             live=live, user=request.user.profile,
         )
         if not created:
+            # Cancel RSVP — refund any committed fee.
+            fee_paid = rsvp.fee_paid or {}
+            for artifact_type, quantity in fee_paid.items():
+                if quantity and int(quantity) > 0:
+                    credit_artifacts(request.user.profile, artifact_type, int(quantity))
+                    ArtifactTransaction.objects.create(
+                        user=request.user.profile, transaction_type='refund',
+                        artifact_type=artifact_type, quantity=int(quantity),
+                        direction='credit', counterparty=live.host,
+                        status='completed', reference_id=f'live_rsvp_refund_{live_id}',
+                        description=f'Refunded {quantity} {artifact_type} from RSVP cancellation for "{live.title}"',
+                    )
             rsvp.delete()
             return Response({
                 'success': True,
@@ -392,6 +415,29 @@ class RSVPLiveView(views.APIView):
                 'message': 'RSVP cancelled.',
                 'errors': None, 'pagination': None,
             })
+
+        # Paid lives require committing the entry fee before RSVP.
+        fee = live.artifact_fee or {}
+        fee = {k: v for k, v in fee.items() if v}
+        if fee:
+            for artifact_type, quantity in fee.items():
+                if not deduct_artifacts(request.user.profile, artifact_type, int(quantity)):
+                    rsvp.delete()
+                    return Response({
+                        'success': False, 'data': None,
+                        'message': f'Insufficient {artifact_type} artifacts to RSVP. Commit the entry fee first.',
+                        'errors': None, 'pagination': None,
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            rsvp.fee_paid = {k: int(v) for k, v in fee.items()}
+            rsvp.save(update_fields=['fee_paid'])
+            for artifact_type, quantity in fee.items():
+                ArtifactTransaction.objects.create(
+                    user=request.user.profile, transaction_type='live_rsvp',
+                    artifact_type=artifact_type, quantity=int(quantity),
+                    direction='debit', counterparty=live.host,
+                    status='completed', reference_id=f'live_rsvp_{live_id}',
+                    description=f'Entry fee to join "{live.title}"',
+                )
 
         return Response({
             'success': True,
@@ -506,6 +552,245 @@ class AddCoHostView(views.APIView):
         return Response({
             'success': True, 'data': None,
             'message': f'@{profile.username} is no longer a co-host.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CohostInviteView(views.APIView):
+    """Host invites a user to co-host. The invite is delivered via notification and can be accepted/declined."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host can invite co-hosts.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = CoHostInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        profile = get_object_or_404(Profile, username=serializer.validated_data['username'])
+
+        if profile == live.host:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You are already the host.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if live.co_hosts.filter(id=profile.id).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': f'@{profile.username} is already a co-host.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Track the pending invite so accept/decline can be validated later.
+        try:
+            cache.sadd(f'live_cohost_invites:{live_id}', str(profile.user_id))
+            cache.expire(f'live_cohost_invites:{live_id}', 60 * 60 * 6)
+        except (AttributeError, TypeError):
+            pass
+
+        from apps.notifications.tasks import send_cohost_invite_notification
+        send_cohost_invite_notification.delay(
+            str(request.user.profile.user_id), str(profile.user_id), str(live.id),
+        )
+
+        return Response({
+            'success': True, 'data': None,
+            'message': f'Invited @{profile.username} to co-host.',
+            'errors': None, 'pagination': None,
+        })
+
+    def delete(self, request, live_id):
+        """Cancel a pending invite (host only)."""
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host can cancel invites.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        serializer = CoHostInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        profile = get_object_or_404(Profile, username=serializer.validated_data['username'])
+        try:
+            cache.srem(f'live_cohost_invites:{live_id}', str(profile.user_id))
+        except (AttributeError, TypeError):
+            pass
+        return Response({
+            'success': True, 'data': None,
+            'message': f'Invite to @{profile.username} cancelled.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class RespondCohostInviteView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = request.user.profile
+
+        action = request.data.get('action', '')
+        if action not in ('accept', 'decline'):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'action must be "accept" or "decline".',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        pending = False
+        try:
+            pending = cache.sismember(f'live_cohost_invites:{live_id}', str(profile.user_id))
+        except (AttributeError, TypeError):
+            pending = False
+
+        if not pending:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You have no pending co-host invite for this live.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cache.srem(f'live_cohost_invites:{live_id}', str(profile.user_id))
+        except (AttributeError, TypeError):
+            pass
+
+        if action == 'accept':
+            live.co_hosts.add(profile)
+            live.attendees.filter(user=profile).update(role='co_host')
+
+        return Response({
+            'success': True, 'data': None,
+            'message': f'You accepted the co-host invite for "{live.title}".' if action == 'accept'
+                       else f'You declined the co-host invite for "{live.title}".',
+            'errors': None, 'pagination': None,
+        })
+
+
+class RequestToSpeakView(views.APIView):
+    """Attendee raises their hand to become a co-host / speaker."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        profile = request.user.profile
+
+        if live.host == profile:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You are already the host.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if live.co_hosts.filter(id=profile.id).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You are already a co-host.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if cache.sismember(f'live_cohost_requests:{live_id}', str(profile.user_id)):
+                return Response({
+                    'success': True, 'data': None,
+                    'message': 'Request already sent.',
+                    'errors': None, 'pagination': None,
+                })
+            cache.sadd(f'live_cohost_requests:{live_id}', str(profile.user_id))
+            cache.expire(f'live_cohost_requests:{live_id}', 60 * 60 * 6)
+        except (AttributeError, TypeError):
+            pass
+
+        from apps.notifications.tasks import send_cohost_request_notification
+        send_cohost_request_notification.delay(str(profile.user_id), str(live.id))
+
+        return Response({
+            'success': True, 'data': None,
+            'message': 'Request sent to the host.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CohostRequestsView(views.APIView):
+    """Host views pending speaker requests."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile:
+            return Response({
+                'success': False, 'data': [],
+                'message': 'Only the host can view speaker requests.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        user_ids = []
+        try:
+            raw = cache.smembers(f'live_cohost_requests:{live_id}')
+            user_ids = [u.decode() if isinstance(u, bytes) else u for u in raw]
+        except (AttributeError, TypeError):
+            user_ids = []
+
+        profiles = Profile.objects.filter(user_id__in=user_ids)
+        profile_map = {str(p.user_id): p for p in profiles}
+        ordered = []
+        for uid in user_ids:
+            p = profile_map.get(uid)
+            if p:
+                ordered.append({
+                    'user_id': p.user_id,
+                    'username': p.username,
+                    'display_name': p.display_name,
+                    'avatar_url': p.avatar_url,
+                })
+
+        return Response({
+            'success': True, 'data': ordered,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+
+class RespondToSpeakRequestView(views.APIView):
+    """Host approves or denies an attendee's request to speak."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.host != request.user.profile:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the host can respond to speaker requests.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = CoHostInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        profile = get_object_or_404(Profile, username=serializer.validated_data['username'])
+        action = request.data.get('action', 'approve')
+        if action not in ('approve', 'deny'):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'action must be "approve" or "deny".',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cache.srem(f'live_cohost_requests:{live_id}', str(profile.user_id))
+        except (AttributeError, TypeError):
+            pass
+
+        if action == 'approve':
+            live.co_hosts.add(profile)
+            live.attendees.filter(user=profile).update(role='co_host')
+
+        return Response({
+            'success': True, 'data': None,
+            'message': f'@{profile.username} can now speak.' if action == 'approve'
+                       else f'@{profile.username}\'s request was denied.',
             'errors': None, 'pagination': None,
         })
 

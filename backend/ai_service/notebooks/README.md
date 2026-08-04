@@ -6,7 +6,28 @@ One notebook per model, following the shared template:
 > safetensors) → MLflow log → upload to `buddyup-models` bucket → register a
 > `ModelMetadata` row (name, version, artifact_path, metrics, is_active).
 
-Run in Colab or Kaggle (GPU). Import `../training/train_template.py` helpers.
+**Framework: TensorFlow/Keras preferred.** The training harness
+(`../training/tf_utils.py`) builds TF models and exports to the ONNX (INT8 CPU)
+artifacts the AI service lazy-loads. PyTorch is used only in the JEPA research
+lane. Run in Colab or Kaggle (GPU).
+
+## Getting data
+
+- **Local DVC data** (`../data/`, see `../data/README.md`): Food.com Recipe1M-proxy
+  recipes with calories (`RAW_recipes.csv`, 231k rows), USDA-style nutrient table,
+  fast-food menus, NSFW image corpus + Reddit NSFW titles, Reddit IRL text corpus,
+  profanity + Gen-Z slang lexicons. Load via `../training/buddy_data.py`.
+- **Hugging Face**: `ethz/food101` (images), `mbien/recipe_nlg` (Recipe1M+ lineage,
+  ingredients/directions), Jigsaw toxicity. Load via `datasets.load_dataset(...)`
+  helpers in `../training/buddy_data.py`.
+- **Recipe1M+** (torralba-lab im2recipe): `layer1.json` + images require the
+  access form (https://forms.gle/EzYSu8j3D1LJzVbR8). The Food.com recipes are the
+  calorie-rich proxy used by the food notebook.
+- **First-party data**: Django command `export_ai_training_data` writes
+  de-identified `engagement.csv` + `workouts.csv` into `../data/user/`.
+- **Patching scripts**: `../training/process_food_data.py` (Food-101 label patch)
+  and `../training/process_form_data.py` (keypoint normalisation). These are the
+  DVC stages declared in `../dvc.yaml`.
 
 ## Planned notebooks
 

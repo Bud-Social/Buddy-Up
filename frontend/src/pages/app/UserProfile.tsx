@@ -129,7 +129,7 @@ export default function UserProfile() {
   }, [activeTab, profile?.username]);
 
   if (isLoading) return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <div className="animate-pulse space-y-4">
         <div className="bg-buddy-surface rounded-2xl h-72" />
         <div className="bg-buddy-surface rounded-2xl h-32" />
@@ -138,7 +138,7 @@ export default function UserProfile() {
   );
 
   if (!profile) return (
-    <div className="max-w-lg mx-auto p-4 text-center py-20">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 text-center py-20">
       <p className="text-buddy-text-secondary text-lg">User not found</p>
       <p className="text-buddy-text-secondary/50 text-sm mt-1">The profile you're looking for doesn't exist or was removed.</p>
     </div>
@@ -153,7 +153,7 @@ export default function UserProfile() {
   const isBuddy = profile.is_buddy;
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <Card className="p-6 mb-6">
         <div className="text-center mb-4">
           <Avatar

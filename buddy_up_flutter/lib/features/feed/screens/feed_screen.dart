@@ -10,7 +10,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
 
 class FeedScreen extends ConsumerStatefulWidget {
-  const FeedScreen({super.key});
+  final String initialTab;
+
+  const FeedScreen({super.key, this.initialTab = 'for_you'});
 
   @override
   ConsumerState<FeedScreen> createState() => _FeedScreenState();
@@ -23,7 +25,22 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    Future.microtask(() => ref.read(feedProvider.notifier).loadFeed());
+    Future.microtask(() => ref.read(feedProvider.notifier).loadFeed(tab: widget.initialTab));
+  }
+
+  String _pathForTab(String tab) {
+    switch (tab) {
+      case 'videos':
+        return '/feed/bud-press';
+      case 'following':
+        return '/feed/following';
+      default:
+        return '/feed';
+    }
+  }
+
+  void _onTabChanged(String tab) {
+    context.go(_pathForTab(tab));
   }
 
   @override
@@ -62,7 +79,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         children: [
           FeedTabBar(
             activeTab: state.activeTab,
-            onTabChanged: (tab) => notifier.setTab(tab),
+            onTabChanged: _onTabChanged,
           ),
           Expanded(
             child: _buildBody(state, notifier),

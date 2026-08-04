@@ -15,6 +15,7 @@ abstract class BuddyNotification with _$BuddyNotification {
     @JsonKey(name: 'sender_avatar') String? senderAvatar,
     @JsonKey(name: 'action_link') String? actionLink,
     @JsonKey(name: 'image_url') String? imageUrl,
+    @JsonKey(name: 'metadata') Map<String, dynamic>? metadata,
     @JsonKey(name: 'created_at') required String createdAt,
   }) = _BuddyNotification;
 

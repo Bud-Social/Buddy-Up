@@ -2,7 +2,7 @@ import { apiClient } from './client';
 import type {
   ApiResponse, Gym, GymMembership, GymCategory,
   JoinRequest, GymInvite, CityResult, GymCategoryPricing,
-  GymSchedulePost, GymReview, GymDonation,
+  GymSchedulePost, GymReview, GymDonation, GymMembershipException, MembershipCheckoutResult,
 } from '@/types';
 
 export interface CreateGymPayload {
@@ -38,6 +38,18 @@ export const gymsApi = {
 
   join: (slug: string, message?: string) =>
     apiClient.post<ApiResponse<{ role: string }>>(`/gyms/${slug}/join/`, { message }).then((r) => r.data),
+
+  membershipCheckout: (slug: string, data: { discount_code?: string } = {}) =>
+    apiClient.post<ApiResponse<MembershipCheckoutResult>>(`/gyms/${slug}/membership/checkout/`, data).then((r) => r.data),
+
+  getMembershipExceptions: (slug: string) =>
+    apiClient.get<ApiResponse<GymMembershipException[]>>(`/gyms/${slug}/membership-exceptions/`).then((r) => r.data),
+
+  createMembershipException: (slug: string, data: { member_id?: string; username?: string; discount_pct?: number; reason?: string; expires_at?: string | null; is_active?: boolean }) =>
+    apiClient.post<ApiResponse<GymMembershipException>>(`/gyms/${slug}/membership-exceptions/`, data).then((r) => r.data),
+
+  deleteMembershipException: (slug: string, exceptionId: string) =>
+    apiClient.delete(`/gyms/${slug}/membership-exceptions/${exceptionId}/`).then((r) => r.data),
 
   leave: (slug: string) =>
     apiClient.post<ApiResponse<null>>(`/gyms/${slug}/leave/`).then((r) => r.data),

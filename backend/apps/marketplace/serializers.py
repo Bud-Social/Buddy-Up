@@ -444,6 +444,7 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
     shop_data = serializers.SerializerMethodField()
     is_registered = serializers.SerializerMethodField()
     spots_remaining = serializers.SerializerMethodField()
+    cover_image_url = serializers.SerializerMethodField()
     media = EventMediaSerializer(many=True, read_only=True)
 
     class Meta:
@@ -485,6 +486,14 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
             return False
         return EventTicket.objects.filter(event=obj, holder=request.user.profile, status='active').exists()
 
+    def get_cover_image_url(self, obj):
+        if obj.cover_image:
+            try:
+                return obj.cover_image.url
+            except Exception:
+                pass
+        return obj.cover_image_url or ''
+
     def get_spots_remaining(self, obj):
         if obj.capacity == 0:
             return None  # unlimited
@@ -504,13 +513,19 @@ class EventTicketSerializer(serializers.ModelSerializer):
         ]
 
     def get_event_data(self, obj):
+        cover_url = ''
+        if obj.event.cover_image:
+            try:
+                cover_url = obj.event.cover_image.url
+            except Exception:
+                pass
         return {
             'id': str(obj.event.id),
             'title': obj.event.title,
             'start_datetime': obj.event.start_datetime.isoformat(),
             'end_datetime': obj.event.end_datetime.isoformat(),
             'location': obj.event.location,
-            'cover_image_url': obj.event.cover_image_url,
+            'cover_image_url': cover_url or obj.event.cover_image_url or '',
         }
 
     def get_holder_data(self, obj):

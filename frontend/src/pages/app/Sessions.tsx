@@ -112,7 +112,7 @@ export default function Sessions() {
   };
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h1 className="font-display text-2xl font-extrabold">Sessions</h1>
         {profile?.role !== 'user' && (

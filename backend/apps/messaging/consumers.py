@@ -555,6 +555,14 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
                     'timestamp': time.time(),
                 },
             }
+            # Reply-to support: attach the quoted message so UIs can render a reply thread
+            reply_to = chat_data.get('reply_to')
+            if reply_to and isinstance(reply_to, dict):
+                enriched['data']['reply_data'] = {
+                    'message': reply_to.get('message', ''),
+                    'sender_name': reply_to.get('sender_name', ''),
+                    'user_id': reply_to.get('user_id', ''),
+                }
             gift = chat_data.get('gift')
             if gift and isinstance(gift, dict):
                 gift_result = await self._process_gift(gift.get('artifact_type', ''), gift.get('quantity', 0))
@@ -587,6 +595,15 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
                         'type': 'live_gift',
                         'data': {'type': 'live_gift', 'gift': gift_result, 'totals': totals},
                     })
+        elif event_type in ('cohost_invite', 'cohost_request', 'cohost_response', 'cohost_removed'):
+            # Relay live cohost management events to everyone in the room so the
+            # host panel and attendee UI stay in sync in real time.
+            data = content.get('data', {})
+            data.setdefault('user_id', self.user_id)
+            await self.channel_layer.group_send(self.group_name, {
+                'type': f'live_{event_type}',
+                'data': {'type': f'live_{event_type}', **data},
+            })
         else:
             await self.channel_layer.group_send(self.group_name, {
                 'type': f'live_{event_type}', 'data': content,
@@ -597,6 +614,10 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
     async def live_viewer_count(self, event): await self.send_json(event)
     async def live_gift(self, event): await self.send_json(event)
     async def live_rep_counter(self, event): await self.send_json(event)
+    async def live_cohost_invite(self, event): await self.send_json(event)
+    async def live_cohost_request(self, event): await self.send_json(event)
+    async def live_cohost_response(self, event): await self.send_json(event)
+    async def live_cohost_removed(self, event): await self.send_json(event)
 
 
 # ─── Gym group chat consumer ─────────────────────────────────────────────────

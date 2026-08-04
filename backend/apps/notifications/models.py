@@ -16,6 +16,7 @@ class Notification(TimestampedModel):
         ('post_repost', 'Post Repost'),
         ('post_quote', 'Post Quote'),
         ('live_starting', 'Live Starting'),
+        ('live_reminder', 'Live Reminder'),
         ('gym_invite', 'Gym Invite'),
         ('session_booked', 'Session Booked'),
         ('session_reminder', 'Session Reminder'),

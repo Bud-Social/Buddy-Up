@@ -9,6 +9,7 @@ import { feedApi } from '@/api';
 import { formatPostDate } from '@/utils/formatDate';
 import type { Post, Comment } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
+import { EmojiImg } from '@/utils/emojiUtils';
 import { useNavigate } from 'react-router-dom';
 
 interface PostDetailModalProps {
@@ -345,7 +346,7 @@ export function PostDetailModal({ post: initialPost, onClose }: PostDetailModalP
               <div className="px-4 pb-2 flex items-center gap-1.5">
                 <div className="flex -space-x-1">
                   {topReactions.map(([emoji]) => (
-                    <span key={emoji} className="text-base leading-none">{emoji}</span>
+                    <EmojiImg key={emoji} emoji={emoji} size={18} className="z-10 rounded-full" />
                   ))}
                 </div>
                 <span className="text-xs font-medium text-buddy-text-secondary">

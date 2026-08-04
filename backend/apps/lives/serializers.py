@@ -28,6 +28,7 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
             'gym_id', 'status', 'started_at', 'ended_at', 'viewer_peak',
             'replay_url', 'replay_saved', 'co_hosts', 'scheduled_for',
             'is_recurring', 'recurrence_rule', 'equipment_list',
+            'recording_consent',
             'host', 'viewer_count', 'is_joined', 'has_rsvped', 'rsvp_count',
             'created_at', 'updated_at',
         ]
@@ -66,15 +67,18 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
 
 
 class CreateLiveSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(required=False, allow_blank=True, max_length=80)
+
     class Meta:
         model = BuddyLive
         fields = [
             'title', 'live_type', 'category', 'access', 'artifact_fee',
             'gym_id', 'co_hosts', 'scheduled_for', 'is_recurring',
-            'recurrence_rule', 'equipment_list',
+            'recurrence_rule', 'equipment_list', 'recording_consent',
         ]
 
     def validate_title(self, value):
+        value = (value or '').strip()
         if len(value) > 80:
             raise serializers.ValidationError('Title must be 80 characters or fewer.')
         return value

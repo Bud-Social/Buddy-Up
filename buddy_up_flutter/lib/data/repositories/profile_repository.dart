@@ -88,4 +88,7 @@ abstract class ProfileRepository {
 
   @GET('/profiles/recommendations/')
   Future<Map<String, dynamic>> getBuddyRecommendations();
+
+  @GET('/profiles/discover/trending/')
+  Future<Map<String, dynamic>> getDiscoverTrending();
 }

@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Users, Copy, Check,
   MessageCircle, MessageCircleOff, Send,
-  LogOut, Shield, Gift, X, Crown, Coins,
-  Monitor, ChevronDown, PictureInPicture2,
+  LogOut, Shield, Gift, X, Crown, Coins, Headphones,
+  Monitor, ChevronDown, PictureInPicture2, UserPlus, Reply,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
@@ -17,6 +17,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import useSimulatedAttendees from '@/hooks/useSimulatedAttendees';
 import VoiceIndicator from '@/components/live/VoiceIndicator';
 import type { LiveCredentials, LiveRoomData, CoHost, AttendeeInfo, PipShape } from '@/types/live';
+import type { ChatMessage } from '@/hooks/useLiveWebSocket';
 
 type Provider = 'agora' | 'livekit' | null;
 type ConnectionState = 'connecting' | 'connected' | 'failed' | 'disconnected';
@@ -52,6 +53,7 @@ export default function LiveRoom() {
   const [copied, setCopied] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [chatInput, setChatInput] = useState('');
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [showGiftTotals, setShowGiftTotals] = useState(false);
   const [showRechargePrompt, setShowRechargePrompt] = useState(false);
   const [floatingGifts, setFloatingGifts] = useState<FloatingGift[]>([]);
@@ -63,9 +65,11 @@ export default function LiveRoom() {
     reactions,
     viewerCount,
     giftTotals,
+    cohostEvents,
     sendChat,
     sendReaction,
     sendGift,
+    sendCohostEvent,
   } = useLiveWebSocket(liveId);
 
   const artifactBalance = useArtifactStore((s) => s.balance);
@@ -84,6 +88,16 @@ export default function LiveRoom() {
   const [showCoHostInput, setShowCoHostInput] = useState(false);
   const [coHostUsername, setCoHostUsername] = useState('');
   const [coHosts] = useState<CoHost[]>([]);
+
+  const isAudioLive = roomData?.live_type === 'audio';
+  const [speakerRequests, setSpeakerRequests] = useState<{ user_id: string; username: string; display_name: string; avatar_url: string }[]>([]);
+  const [hasRequestedToSpeak, setHasRequestedToSpeak] = useState(false);
+  const [cohostToast, setCohostToast] = useState('');
+
+  const showCohostToast = useCallback((message: string) => {
+    setCohostToast(message);
+    setTimeout(() => setCohostToast(''), 2500);
+  }, []);
 
   const [attendees, setAttendees] = useState<AttendeeInfo[]>([]);
   const [isSharingScreen, setIsSharingScreen] = useState(false);
@@ -145,13 +159,15 @@ export default function LiveRoom() {
   const agoraClientRef = useRef<unknown>(null);
   const localTracksRef = useRef<unknown[]>([]);
   const livekitRoomRef = useRef<unknown>(null);
-  const liveStreamEndRef = useRef<HTMLDivElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
   const connectAttemptRef = useRef(0);
   const pipCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    liveStreamEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
+    if (showChat) {
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, showChat]);
 
   const addFloatingGift = useCallback((artifactType: string) => {
     const id = Date.now() + Math.random();
@@ -266,6 +282,34 @@ export default function LiveRoom() {
     fetchRoomData();
   }, [fetchRoomData]);
 
+  // Refresh pending speaker requests whenever the cohost panel opens
+  useEffect(() => {
+    if (showCoHostInput && isHost && liveId) {
+      livesApi.getCohostRequests(liveId).then((res) => setSpeakerRequests(res.data || [])).catch(() => {});
+    }
+  }, [showCoHostInput, isHost, liveId]);
+
+  // React to realtime cohost events broadcast through the room socket
+  useEffect(() => {
+    if (cohostEvents.length === 0) return;
+    const last = cohostEvents[cohostEvents.length - 1];
+    if (!last?.display_name) return;
+    if (last.action === 'request') {
+      if (isHost) {
+        showCohostToast(`${last.display_name} requested to speak`);
+        livesApi.getCohostRequests(liveId!).then((res) => setSpeakerRequests(res.data || [])).catch(() => {});
+      }
+    } else if (last.action === 'invite') {
+      if (myUserId && last.user_id === myUserId) {
+        showCohostToast(`${last.display_name} invited you to co-host`);
+      }
+    } else if (last.action === 'response') {
+      if (last.user_id === myUserId) {
+        showCohostToast(last.action === 'response' && last.username ? `You're a co-host now!` : 'Cohost update');
+      }
+    }
+  }, [cohostEvents, isHost, myUserId, liveId, showCohostToast]);
+
   const joinLiveKit = useCallback(async (creds: LiveCredentials['livekit'], attempt: number) => {
     if (!creds.url || !creds.token) {
       setConnectionState('failed');
@@ -329,9 +373,16 @@ export default function LiveRoom() {
       let camOk = false;
       let micOk = false;
       if (creds.can_publish) try {
-        await room.localParticipant.enableCameraAndMicrophone();
-        camOk = true;
-        micOk = true;
+        if (isAudioLive) {
+          // Audio-only live — publish just the microphone
+          await room.localParticipant.setMicrophoneEnabled(true);
+          camOk = false;
+          micOk = true;
+        } else {
+          await room.localParticipant.enableCameraAndMicrophone();
+          camOk = true;
+          micOk = true;
+        }
       } catch {
         try {
           await room.localParticipant.setMicrophoneEnabled(true);
@@ -419,7 +470,7 @@ export default function LiveRoom() {
       setError('Could not connect to live session.');
       return false;
     }
-  }, [sortAttendees, handleSpeakerChange, profile]);
+  }, [sortAttendees, handleSpeakerChange, profile, isAudioLive]);
 
   const connect = useCallback(async () => {
     if (!roomData) return;
@@ -669,9 +720,10 @@ export default function LiveRoom() {
       payload.gift = { artifact_type: selectedGift.type, quantity: selectedGift.qty };
       addFloatingGift(selectedGift.type);
     }
-    sendChat(payload.message, payload.gift);
+    sendChat(payload.message, payload.gift, replyTo);
     setChatInput('');
     setSelectedGift(null);
+    setReplyTo(null);
   };
 
   const liveMessages = chatMessages.slice(-15);
@@ -765,18 +817,60 @@ export default function LiveRoom() {
       {showCoHostInput && isHost && (
         <div className="bg-buddy-surface px-4 py-2 flex items-center gap-2 border-b border-buddy-surface-raised shrink-0">
           <input type="text" value={coHostUsername} onChange={(e) => setCoHostUsername(e.target.value)}
-            placeholder="Enter username to promote..."
+            placeholder="Enter username to invite..."
             className="flex-1 bg-buddy-black rounded-lg px-3 py-1.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-buddy-green/30"
           />
           <button onClick={async () => {
             if (!coHostUsername.trim() || !liveId) return;
             try {
-              await livesApi.addCoHost(liveId, coHostUsername.trim());
+              await livesApi.inviteCohost(liveId, coHostUsername.trim());
+              sendCohostEvent('cohost_invite', { username: coHostUsername.trim(), display_name: coHostUsername.trim() });
+              showCohostToast(`Invited @${coHostUsername.trim()} to co-host`);
               setCoHostUsername('');
-              setShowCoHostInput(false);
             } catch {}
-          }} className="text-xs bg-buddy-green text-buddy-black px-3 py-1.5 rounded-lg font-semibold">Promote</button>
+          }} className="text-xs bg-buddy-green text-buddy-black px-3 py-1.5 rounded-lg font-semibold">Invite</button>
           <button onClick={() => setShowCoHostInput(false)} className="text-buddy-text-secondary p-1"><X size={16} /></button>
+        </div>
+      )}
+
+      {/* SPEAKER REQUESTS — host panel */}
+      {showCoHostInput && isHost && speakerRequests.length > 0 && (
+        <div className="bg-buddy-surface/60 px-4 py-2 border-b border-buddy-surface-raised shrink-0 space-y-1.5">
+          <p className="text-xs font-semibold text-buddy-text-secondary flex items-center gap-1.5">
+            <Headphones size={12} /> Speaker requests ({speakerRequests.length})
+          </p>
+          {speakerRequests.map((req) => (
+            <div key={req.user_id} className="flex items-center gap-2 bg-buddy-black/40 rounded-lg px-2.5 py-1.5">
+              <Avatar src={req.avatar_url} alt={req.display_name} size="sm" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium truncate">{req.display_name}</p>
+                <p className="text-[10px] text-buddy-text-secondary">@{req.username}</p>
+              </div>
+              <button onClick={async () => {
+                try {
+                  await livesApi.respondToSpeakRequest(liveId!, req.username, 'approve');
+                  setSpeakerRequests((prev) => prev.filter((r) => r.user_id !== req.user_id));
+                  sendCohostEvent('cohost_response', { username: req.username, display_name: req.display_name, action: 'approve' });
+                  showCohostToast(`@${req.username} can now speak`);
+                } catch {}
+              }} className="text-[11px] bg-buddy-green text-buddy-black px-2.5 py-1 rounded-lg font-semibold">Approve</button>
+              <button onClick={async () => {
+                try {
+                  await livesApi.respondToSpeakRequest(liveId!, req.username, 'deny');
+                  setSpeakerRequests((prev) => prev.filter((r) => r.user_id !== req.user_id));
+                } catch {}
+              }} className="text-[11px] bg-buddy-surface text-buddy-text-secondary px-2.5 py-1 rounded-lg">Deny</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* COHOST TOAST */}
+      {cohostToast && (
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 animate-slide-in-down">
+          <div className="bg-buddy-green/90 backdrop-blur text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-xl">
+            <Crown size={14} /> {cohostToast}
+          </div>
         </div>
       )}
       {coHosts.length > 0 && (
@@ -847,7 +941,7 @@ export default function LiveRoom() {
           </div>
 
           {/* PIP — customizable shape/size, draggable, auto-repositions when screen sharing */}
-          {!isPipActive && (
+          {!isPipActive && !isAudioLive && (
           <div ref={pipRef}
             className="absolute z-30"
             style={
@@ -955,7 +1049,7 @@ export default function LiveRoom() {
           )}
 
           {/* GALLERY GRID — scrollable vertically, below host row */}
-          {connectionState === 'connected' && (
+          {connectionState === 'connected' && !isAudioLive && (
             <div className={`absolute inset-0 z-10 overflow-y-auto scrollbar-hide ${hostRowPinned && allAttendees.length > 3 ? 'pt-14' : 'pt-0'} pb-36`}>
               <div className="grid grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-1.5 p-1.5 pl-12 auto-rows-[minmax(80px,1fr)]">
                 {/* Screen share block (2×2, pinned top-left) */}
@@ -1022,6 +1116,27 @@ export default function LiveRoom() {
             </div>
           )}
 
+          {/* AUDIO-ONLY PANEL */}
+          {connectionState === 'connected' && isAudioLive && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center px-6 pb-24">
+              <div className="flex items-end gap-2 h-24 mb-6">
+                {[0.6, 1, 0.75, 1.2, 0.5, 0.9, 1.1, 0.65, 1, 0.8, 1.15, 0.55].map((h, i) => (
+                  <span key={i}
+                    className={`w-1.5 rounded-full bg-gradient-to-t from-buddy-green to-buddy-electric transition-all ${isMicOn ? 'animate-pulse' : 'opacity-30'}`}
+                    style={{ height: `${h * 100}%`, animationDelay: `${i * 0.08}s`, animationDuration: '0.9s' }}
+                  />
+                ))}
+              </div>
+              <Avatar src={roomData?.host_avatar} alt={roomData?.host_name} size="xl" className="ring-4 ring-buddy-green/30" />
+              <p className="mt-4 text-lg font-bold text-white">{roomData?.title}</p>
+              <p className="text-sm text-buddy-text-secondary">{roomData?.host_name} • Audio Live</p>
+              <p className="mt-2 flex items-center gap-1.5 text-xs text-buddy-green">
+                <span className="w-2 h-2 bg-buddy-red rounded-full animate-pulse" /> LIVE
+                <span className="text-buddy-text-secondary ml-1">{viewerCount} listening</span>
+              </p>
+            </div>
+          )}
+
           {/* LIVE CHAT STREAM */}
           {connectionState === 'connected' && (
             <div className="absolute bottom-0 left-0 right-0 z-10 pointer-events-none">
@@ -1031,6 +1146,11 @@ export default function LiveRoom() {
                     <div key={`${msg.timestamp}-${i}`} className="flex items-start gap-2 text-sm">
                       <Avatar src={msg.avatar_url} alt={msg.display_name} size="sm" className="shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
+                        {msg.reply_data && (
+                          <div className="mb-0.5 text-[10px] text-buddy-text-secondary bg-buddy-black/30 rounded px-1.5 py-0.5 truncate max-w-[260px]">
+                            ↪ @{msg.reply_data.sender_name}: {msg.reply_data.message}
+                          </div>
+                        )}
                         <span className="text-xs font-semibold text-white/90 mr-1.5">{msg.display_name}</span>
                         <span className="text-white/80 text-xs break-words">{msg.message}</span>
                         {msg.gift && (
@@ -1098,9 +1218,27 @@ export default function LiveRoom() {
               ><LogOut size={16} /></button>
             )}
 
+            {/* Request to speak (attendees) */}
+            {!isHost && !roomData?.co_hosts?.some((ch) => ch.user_id === myUserId) && (
+              <button onClick={async () => {
+                if (!liveId || hasRequestedToSpeak) return;
+                try {
+                  await livesApi.requestToSpeak(liveId);
+                  setHasRequestedToSpeak(true);
+                  sendCohostEvent('cohost_request', { display_name: profile?.display_name || myUserId });
+                  showCohostToast('Request sent to host');
+                } catch {}
+              }}
+                className={`p-2.5 rounded-full transition-colors ${hasRequestedToSpeak ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-surface text-buddy-text-primary'}`}
+                title={hasRequestedToSpeak ? 'Request sent — waiting for host' : 'Request to speak'}
+              >{hasRequestedToSpeak ? <Check size={16} /> : <UserPlus size={16} />}</button>
+            )}
+
+            {!isAudioLive && (
             <button onClick={toggleCam}
               className={`p-2.5 rounded-full transition-colors ${isCamOn ? 'bg-buddy-surface text-buddy-text-primary' : 'bg-buddy-red text-white'}`}
             >{isCamOn ? <Video size={16} /> : <VideoOff size={16} />}</button>
+            )}
           </div>
         )}
 
@@ -1111,11 +1249,11 @@ export default function LiveRoom() {
           ))}
         </div>
 
-        {/* CHAT OVERLAY (right side, toggled) */}
+        {/* CHAT OVERLAY (right panel on desktop, bottom sheet on tablet/phone) */}
         {showChat && (
-          <div className="absolute inset-0 z-40 flex justify-end">
+          <div className={`absolute inset-0 z-40 flex ${isDesktop ? 'justify-end' : 'flex-col justify-end'}`}>
             <div className="flex-1 bg-buddy-black/50" onClick={() => setShowChat(false)} />
-            <div className={`flex flex-col bg-buddy-black/95 border-l border-buddy-surface ${isDesktop ? 'w-80' : 'w-[85vw] max-w-sm'}`}>
+            <div className={`flex flex-col bg-buddy-black/95 ${isDesktop ? 'w-80 border-l border-buddy-surface' : 'w-full h-[55vh] border-t border-buddy-surface rounded-t-2xl'}`}>
               <div className="flex items-center justify-between px-4 py-3 border-b border-buddy-surface shrink-0">
                 <h3 className="text-sm font-semibold">Live Chat</h3>
                 <div className="flex items-center gap-2">
@@ -1139,6 +1277,11 @@ export default function LiveRoom() {
                       <div className={`rounded-xl px-3 py-1.5 text-sm ${
                         msg.user_id === myUserId ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-surface text-buddy-text-primary'
                       }`}>
+                        {msg.reply_data && (
+                          <div className="mb-1 text-[10px] opacity-70 bg-buddy-black/20 rounded px-1.5 py-0.5 truncate">
+                            ↪ @{msg.reply_data.sender_name}: {msg.reply_data.message}
+                          </div>
+                        )}
                         {msg.message}
                         {msg.gift && (
                           <div className="mt-1 pt-1 border-t border-white/10 text-xs flex items-center gap-1">
@@ -1147,19 +1290,36 @@ export default function LiveRoom() {
                           </div>
                         )}
                       </div>
-                      {msg.gift && isHost && (
-                        <button onClick={async () => {
-                          try {
-                            await livesApi.refundGift(liveId!, msg.gift!.tx_id);
-                          } catch {}
-                        }} className="text-[10px] text-buddy-red/60 hover:text-buddy-red mt-0.5 flex items-center gap-0.5">
-                          <X size={10} /> Refund
-                        </button>
-                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <button onClick={() => { setReplyTo(msg); setShowChat(true); }}
+                          className="text-[10px] text-buddy-text-secondary hover:text-buddy-green flex items-center gap-0.5 transition-colors"
+                        ><Reply size={10} /> Reply</button>
+                        {msg.gift && isHost && (
+                          <button onClick={async () => {
+                            try {
+                              await livesApi.refundGift(liveId!, msg.gift!.tx_id);
+                            } catch {}
+                          }} className="text-[10px] text-buddy-red/60 hover:text-buddy-red flex items-center gap-0.5">
+                            <X size={10} /> Refund
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
+                <div ref={chatEndRef} className="h-px" />
               </div>
+
+              {replyTo && (
+                <div className="px-3 pt-2 flex items-center gap-2 bg-buddy-surface/40 border-t border-buddy-surface">
+                  <Reply size={12} className="text-buddy-green shrink-0" />
+                  <div className="flex-1 min-w-0 text-xs text-buddy-text-secondary truncate">
+                    Replying to <span className="text-buddy-text-primary font-medium">{replyTo.display_name}</span>
+                    {replyTo.message && <span className="truncate block text-[11px] opacity-70">{replyTo.message}</span>}
+                  </div>
+                  <button onClick={() => setReplyTo(null)} className="text-buddy-text-secondary p-0.5"><X size={14} /></button>
+                </div>
+              )}
 
               <form onSubmit={handleSendChat} className="p-3 border-t border-buddy-surface flex gap-2 shrink-0">
                 {selectedGift ? (

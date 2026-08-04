@@ -59,7 +59,7 @@ export default function Marketplace() {
   }, [fetchCartCount, fetchMyShops]);
 
   return (
-    <div className="max-w-lg mx-auto pb-20">
+    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto pb-20">
       {/* Sticky Header */}
       <div className="sticky top-0 z-20 bg-buddy-background/80 backdrop-blur-md p-4 pb-2 border-b border-buddy-surface">
         <div className="flex items-center justify-between mb-4">
@@ -168,7 +168,7 @@ function MealPlansTab({ hasShop }: { hasShop: boolean }) {
       )}
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="p-4 animate-pulse"><div className="h-32 bg-buddy-surface-raised rounded-xl" /></Card>
           ))}
@@ -176,7 +176,7 @@ function MealPlansTab({ hasShop }: { hasShop: boolean }) {
       ) : plans.length === 0 ? (
         <div className="text-center py-20 text-buddy-text-secondary">No meal plans found.</div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {plans.map((plan) => (
             <Card key={plan.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/meal-plans/${plan.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center relative overflow-hidden">
@@ -239,7 +239,7 @@ function ProgrammesTab({ hasShop }: { hasShop: boolean }) {
       {programmes.length === 0 ? (
         <div className="text-center py-20 text-buddy-text-secondary">No training programmes available yet.</div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {programmes.map((p) => (
             <Card key={p.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/programmes/${p.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center relative overflow-hidden">
@@ -307,13 +307,13 @@ function ProductsTab({ hasShop }: { hasShop: boolean }) {
       )}
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="p-4 animate-pulse"><div className="h-32 bg-buddy-surface-raised rounded-xl" /></Card>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {products.map((p) => (
             <Card key={p.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/products/${p.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center text-3xl">
@@ -388,7 +388,7 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="p-4 animate-pulse"><div className="h-32 bg-buddy-surface-raised rounded-xl" /></Card>
           ))}
@@ -398,7 +398,7 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
           {scope === 'past' ? 'No past events.' : scope === 'all' ? 'No events yet.' : 'No upcoming events.'}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {events.map((e) => (
             <Card key={e.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/events/${e.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center relative overflow-hidden">

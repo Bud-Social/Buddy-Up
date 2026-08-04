@@ -1130,7 +1130,7 @@ as String,
 /// @nodoc
 mixin _$BuddyLive {
 
- String get id; BuddyLiveHost get host; String get title; String get liveType; String get category; String get access; String get status; String? get startedAt; String? get endedAt; int get viewerPeak; int get viewerCount; String get replayUrl; bool get replaySaved; String? get muxPlaybackId; String? get scheduledFor; bool get isRecurring; List<String> get equipmentList; bool get hasRsvped; int get rsvpCount; String? get gymId; String get createdAt;
+ String get id; BuddyLiveHost get host; String get title; String get liveType; String get category; String get access; String get status; String? get startedAt; String? get endedAt; int get viewerPeak; int get viewerCount; String get replayUrl; bool get replaySaved; String? get muxPlaybackId; String? get scheduledFor; bool get isRecurring; List<String> get equipmentList; bool get hasRsvped; int get rsvpCount;@JsonKey(name: 'artifact_fee') Map<String, dynamic>? get artifactFee;@JsonKey(name: 'recording_consent') String? get recordingConsent; String? get gymId; String get createdAt;
 /// Create a copy of BuddyLive
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1143,16 +1143,16 @@ $BuddyLiveCopyWith<BuddyLive> get copyWith => _$BuddyLiveCopyWithImpl<BuddyLive>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BuddyLive&&(identical(other.id, id) || other.id == id)&&(identical(other.host, host) || other.host == host)&&(identical(other.title, title) || other.title == title)&&(identical(other.liveType, liveType) || other.liveType == liveType)&&(identical(other.category, category) || other.category == category)&&(identical(other.access, access) || other.access == access)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.endedAt, endedAt) || other.endedAt == endedAt)&&(identical(other.viewerPeak, viewerPeak) || other.viewerPeak == viewerPeak)&&(identical(other.viewerCount, viewerCount) || other.viewerCount == viewerCount)&&(identical(other.replayUrl, replayUrl) || other.replayUrl == replayUrl)&&(identical(other.replaySaved, replaySaved) || other.replaySaved == replaySaved)&&(identical(other.muxPlaybackId, muxPlaybackId) || other.muxPlaybackId == muxPlaybackId)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.isRecurring, isRecurring) || other.isRecurring == isRecurring)&&const DeepCollectionEquality().equals(other.equipmentList, equipmentList)&&(identical(other.hasRsvped, hasRsvped) || other.hasRsvped == hasRsvped)&&(identical(other.rsvpCount, rsvpCount) || other.rsvpCount == rsvpCount)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BuddyLive&&(identical(other.id, id) || other.id == id)&&(identical(other.host, host) || other.host == host)&&(identical(other.title, title) || other.title == title)&&(identical(other.liveType, liveType) || other.liveType == liveType)&&(identical(other.category, category) || other.category == category)&&(identical(other.access, access) || other.access == access)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.endedAt, endedAt) || other.endedAt == endedAt)&&(identical(other.viewerPeak, viewerPeak) || other.viewerPeak == viewerPeak)&&(identical(other.viewerCount, viewerCount) || other.viewerCount == viewerCount)&&(identical(other.replayUrl, replayUrl) || other.replayUrl == replayUrl)&&(identical(other.replaySaved, replaySaved) || other.replaySaved == replaySaved)&&(identical(other.muxPlaybackId, muxPlaybackId) || other.muxPlaybackId == muxPlaybackId)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.isRecurring, isRecurring) || other.isRecurring == isRecurring)&&const DeepCollectionEquality().equals(other.equipmentList, equipmentList)&&(identical(other.hasRsvped, hasRsvped) || other.hasRsvped == hasRsvped)&&(identical(other.rsvpCount, rsvpCount) || other.rsvpCount == rsvpCount)&&(identical(other.artifactFee, artifactFee) || other.artifactFee == artifactFee)&&(identical(other.recordingConsent, recordingConsent) || other.recordingConsent == recordingConsent)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,host,title,liveType,category,access,status,startedAt,endedAt,viewerPeak,viewerCount,replayUrl,replaySaved,muxPlaybackId,scheduledFor,isRecurring,const DeepCollectionEquality().hash(equipmentList),hasRsvped,rsvpCount,gymId,createdAt]);
+int get hashCode => Object.hashAll([runtimeType,id,host,title,liveType,category,access,status,startedAt,endedAt,viewerPeak,viewerCount,replayUrl,replaySaved,muxPlaybackId,scheduledFor,isRecurring,const DeepCollectionEquality().hash(equipmentList),hasRsvped,rsvpCount,artifactFee,recordingConsent,gymId,createdAt]);
 
 @override
 String toString() {
-  return 'BuddyLive(id: $id, host: $host, title: $title, liveType: $liveType, category: $category, access: $access, status: $status, startedAt: $startedAt, endedAt: $endedAt, viewerPeak: $viewerPeak, viewerCount: $viewerCount, replayUrl: $replayUrl, replaySaved: $replaySaved, muxPlaybackId: $muxPlaybackId, scheduledFor: $scheduledFor, isRecurring: $isRecurring, equipmentList: $equipmentList, hasRsvped: $hasRsvped, rsvpCount: $rsvpCount, gymId: $gymId, createdAt: $createdAt)';
+  return 'BuddyLive(id: $id, host: $host, title: $title, liveType: $liveType, category: $category, access: $access, status: $status, startedAt: $startedAt, endedAt: $endedAt, viewerPeak: $viewerPeak, viewerCount: $viewerCount, replayUrl: $replayUrl, replaySaved: $replaySaved, muxPlaybackId: $muxPlaybackId, scheduledFor: $scheduledFor, isRecurring: $isRecurring, equipmentList: $equipmentList, hasRsvped: $hasRsvped, rsvpCount: $rsvpCount, artifactFee: $artifactFee, recordingConsent: $recordingConsent, gymId: $gymId, createdAt: $createdAt)';
 }
 
 
@@ -1163,7 +1163,7 @@ abstract mixin class $BuddyLiveCopyWith<$Res>  {
   factory $BuddyLiveCopyWith(BuddyLive value, $Res Function(BuddyLive) _then) = _$BuddyLiveCopyWithImpl;
 @useResult
 $Res call({
- String id, BuddyLiveHost host, String title, String liveType, String category, String access, String status, String? startedAt, String? endedAt, int viewerPeak, int viewerCount, String replayUrl, bool replaySaved, String? muxPlaybackId, String? scheduledFor, bool isRecurring, List<String> equipmentList, bool hasRsvped, int rsvpCount, String? gymId, String createdAt
+ String id, BuddyLiveHost host, String title, String liveType, String category, String access, String status, String? startedAt, String? endedAt, int viewerPeak, int viewerCount, String replayUrl, bool replaySaved, String? muxPlaybackId, String? scheduledFor, bool isRecurring, List<String> equipmentList, bool hasRsvped, int rsvpCount, @JsonKey(name: 'artifact_fee') Map<String, dynamic>? artifactFee, @JsonKey(name: 'recording_consent') String? recordingConsent, String? gymId, String createdAt
 });
 
 
@@ -1180,7 +1180,7 @@ class _$BuddyLiveCopyWithImpl<$Res>
 
 /// Create a copy of BuddyLive
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? host = null,Object? title = null,Object? liveType = null,Object? category = null,Object? access = null,Object? status = null,Object? startedAt = freezed,Object? endedAt = freezed,Object? viewerPeak = null,Object? viewerCount = null,Object? replayUrl = null,Object? replaySaved = null,Object? muxPlaybackId = freezed,Object? scheduledFor = freezed,Object? isRecurring = null,Object? equipmentList = null,Object? hasRsvped = null,Object? rsvpCount = null,Object? gymId = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? host = null,Object? title = null,Object? liveType = null,Object? category = null,Object? access = null,Object? status = null,Object? startedAt = freezed,Object? endedAt = freezed,Object? viewerPeak = null,Object? viewerCount = null,Object? replayUrl = null,Object? replaySaved = null,Object? muxPlaybackId = freezed,Object? scheduledFor = freezed,Object? isRecurring = null,Object? equipmentList = null,Object? hasRsvped = null,Object? rsvpCount = null,Object? artifactFee = freezed,Object? recordingConsent = freezed,Object? gymId = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,host: null == host ? _self.host : host // ignore: cast_nullable_to_non_nullable
@@ -1201,7 +1201,9 @@ as String?,isRecurring: null == isRecurring ? _self.isRecurring : isRecurring //
 as bool,equipmentList: null == equipmentList ? _self.equipmentList : equipmentList // ignore: cast_nullable_to_non_nullable
 as List<String>,hasRsvped: null == hasRsvped ? _self.hasRsvped : hasRsvped // ignore: cast_nullable_to_non_nullable
 as bool,rsvpCount: null == rsvpCount ? _self.rsvpCount : rsvpCount // ignore: cast_nullable_to_non_nullable
-as int,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
+as int,artifactFee: freezed == artifactFee ? _self.artifactFee : artifactFee // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,recordingConsent: freezed == recordingConsent ? _self.recordingConsent : recordingConsent // ignore: cast_nullable_to_non_nullable
+as String?,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -1297,10 +1299,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  BuddyLiveHost host,  String title,  String liveType,  String category,  String access,  String status,  String? startedAt,  String? endedAt,  int viewerPeak,  int viewerCount,  String replayUrl,  bool replaySaved,  String? muxPlaybackId,  String? scheduledFor,  bool isRecurring,  List<String> equipmentList,  bool hasRsvped,  int rsvpCount,  String? gymId,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  BuddyLiveHost host,  String title,  String liveType,  String category,  String access,  String status,  String? startedAt,  String? endedAt,  int viewerPeak,  int viewerCount,  String replayUrl,  bool replaySaved,  String? muxPlaybackId,  String? scheduledFor,  bool isRecurring,  List<String> equipmentList,  bool hasRsvped,  int rsvpCount, @JsonKey(name: 'artifact_fee')  Map<String, dynamic>? artifactFee, @JsonKey(name: 'recording_consent')  String? recordingConsent,  String? gymId,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BuddyLive() when $default != null:
-return $default(_that.id,_that.host,_that.title,_that.liveType,_that.category,_that.access,_that.status,_that.startedAt,_that.endedAt,_that.viewerPeak,_that.viewerCount,_that.replayUrl,_that.replaySaved,_that.muxPlaybackId,_that.scheduledFor,_that.isRecurring,_that.equipmentList,_that.hasRsvped,_that.rsvpCount,_that.gymId,_that.createdAt);case _:
+return $default(_that.id,_that.host,_that.title,_that.liveType,_that.category,_that.access,_that.status,_that.startedAt,_that.endedAt,_that.viewerPeak,_that.viewerCount,_that.replayUrl,_that.replaySaved,_that.muxPlaybackId,_that.scheduledFor,_that.isRecurring,_that.equipmentList,_that.hasRsvped,_that.rsvpCount,_that.artifactFee,_that.recordingConsent,_that.gymId,_that.createdAt);case _:
   return orElse();
 
 }
@@ -1318,10 +1320,10 @@ return $default(_that.id,_that.host,_that.title,_that.liveType,_that.category,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  BuddyLiveHost host,  String title,  String liveType,  String category,  String access,  String status,  String? startedAt,  String? endedAt,  int viewerPeak,  int viewerCount,  String replayUrl,  bool replaySaved,  String? muxPlaybackId,  String? scheduledFor,  bool isRecurring,  List<String> equipmentList,  bool hasRsvped,  int rsvpCount,  String? gymId,  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  BuddyLiveHost host,  String title,  String liveType,  String category,  String access,  String status,  String? startedAt,  String? endedAt,  int viewerPeak,  int viewerCount,  String replayUrl,  bool replaySaved,  String? muxPlaybackId,  String? scheduledFor,  bool isRecurring,  List<String> equipmentList,  bool hasRsvped,  int rsvpCount, @JsonKey(name: 'artifact_fee')  Map<String, dynamic>? artifactFee, @JsonKey(name: 'recording_consent')  String? recordingConsent,  String? gymId,  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _BuddyLive():
-return $default(_that.id,_that.host,_that.title,_that.liveType,_that.category,_that.access,_that.status,_that.startedAt,_that.endedAt,_that.viewerPeak,_that.viewerCount,_that.replayUrl,_that.replaySaved,_that.muxPlaybackId,_that.scheduledFor,_that.isRecurring,_that.equipmentList,_that.hasRsvped,_that.rsvpCount,_that.gymId,_that.createdAt);case _:
+return $default(_that.id,_that.host,_that.title,_that.liveType,_that.category,_that.access,_that.status,_that.startedAt,_that.endedAt,_that.viewerPeak,_that.viewerCount,_that.replayUrl,_that.replaySaved,_that.muxPlaybackId,_that.scheduledFor,_that.isRecurring,_that.equipmentList,_that.hasRsvped,_that.rsvpCount,_that.artifactFee,_that.recordingConsent,_that.gymId,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1338,10 +1340,10 @@ return $default(_that.id,_that.host,_that.title,_that.liveType,_that.category,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  BuddyLiveHost host,  String title,  String liveType,  String category,  String access,  String status,  String? startedAt,  String? endedAt,  int viewerPeak,  int viewerCount,  String replayUrl,  bool replaySaved,  String? muxPlaybackId,  String? scheduledFor,  bool isRecurring,  List<String> equipmentList,  bool hasRsvped,  int rsvpCount,  String? gymId,  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  BuddyLiveHost host,  String title,  String liveType,  String category,  String access,  String status,  String? startedAt,  String? endedAt,  int viewerPeak,  int viewerCount,  String replayUrl,  bool replaySaved,  String? muxPlaybackId,  String? scheduledFor,  bool isRecurring,  List<String> equipmentList,  bool hasRsvped,  int rsvpCount, @JsonKey(name: 'artifact_fee')  Map<String, dynamic>? artifactFee, @JsonKey(name: 'recording_consent')  String? recordingConsent,  String? gymId,  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _BuddyLive() when $default != null:
-return $default(_that.id,_that.host,_that.title,_that.liveType,_that.category,_that.access,_that.status,_that.startedAt,_that.endedAt,_that.viewerPeak,_that.viewerCount,_that.replayUrl,_that.replaySaved,_that.muxPlaybackId,_that.scheduledFor,_that.isRecurring,_that.equipmentList,_that.hasRsvped,_that.rsvpCount,_that.gymId,_that.createdAt);case _:
+return $default(_that.id,_that.host,_that.title,_that.liveType,_that.category,_that.access,_that.status,_that.startedAt,_that.endedAt,_that.viewerPeak,_that.viewerCount,_that.replayUrl,_that.replaySaved,_that.muxPlaybackId,_that.scheduledFor,_that.isRecurring,_that.equipmentList,_that.hasRsvped,_that.rsvpCount,_that.artifactFee,_that.recordingConsent,_that.gymId,_that.createdAt);case _:
   return null;
 
 }
@@ -1353,7 +1355,7 @@ return $default(_that.id,_that.host,_that.title,_that.liveType,_that.category,_t
 @JsonSerializable()
 
 class _BuddyLive implements BuddyLive {
-  const _BuddyLive({required this.id, required this.host, required this.title, this.liveType = 'open_sweat', this.category = '', this.access = 'public', this.status = 'scheduled', this.startedAt, this.endedAt, this.viewerPeak = 0, this.viewerCount = 0, this.replayUrl = '', this.replaySaved = false, this.muxPlaybackId, this.scheduledFor, this.isRecurring = false, final  List<String> equipmentList = const <String>[], this.hasRsvped = false, this.rsvpCount = 0, this.gymId, required this.createdAt}): _equipmentList = equipmentList;
+  const _BuddyLive({required this.id, required this.host, required this.title, this.liveType = 'open_sweat', this.category = '', this.access = 'public', this.status = 'scheduled', this.startedAt, this.endedAt, this.viewerPeak = 0, this.viewerCount = 0, this.replayUrl = '', this.replaySaved = false, this.muxPlaybackId, this.scheduledFor, this.isRecurring = false, final  List<String> equipmentList = const <String>[], this.hasRsvped = false, this.rsvpCount = 0, this.artifactFee, this.recordingConsent, this.gymId, required this.createdAt}): _equipmentList = equipmentList;
   factory _BuddyLive.fromJson(Map<String, dynamic> json) => _$BuddyLiveFromJson(json);
 
 @override final  String id;
@@ -1381,6 +1383,8 @@ class _BuddyLive implements BuddyLive {
 
 @override@JsonKey() final  bool hasRsvped;
 @override@JsonKey() final  int rsvpCount;
+@override@JsonKey(name: 'artifact_fee') final  Map<String, dynamic>? artifactFee;
+@override@JsonKey(name: 'recording_consent') final  String? recordingConsent;
 @override final  String? gymId;
 @override final  String createdAt;
 
@@ -1397,16 +1401,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BuddyLive&&(identical(other.id, id) || other.id == id)&&(identical(other.host, host) || other.host == host)&&(identical(other.title, title) || other.title == title)&&(identical(other.liveType, liveType) || other.liveType == liveType)&&(identical(other.category, category) || other.category == category)&&(identical(other.access, access) || other.access == access)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.endedAt, endedAt) || other.endedAt == endedAt)&&(identical(other.viewerPeak, viewerPeak) || other.viewerPeak == viewerPeak)&&(identical(other.viewerCount, viewerCount) || other.viewerCount == viewerCount)&&(identical(other.replayUrl, replayUrl) || other.replayUrl == replayUrl)&&(identical(other.replaySaved, replaySaved) || other.replaySaved == replaySaved)&&(identical(other.muxPlaybackId, muxPlaybackId) || other.muxPlaybackId == muxPlaybackId)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.isRecurring, isRecurring) || other.isRecurring == isRecurring)&&const DeepCollectionEquality().equals(other._equipmentList, _equipmentList)&&(identical(other.hasRsvped, hasRsvped) || other.hasRsvped == hasRsvped)&&(identical(other.rsvpCount, rsvpCount) || other.rsvpCount == rsvpCount)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BuddyLive&&(identical(other.id, id) || other.id == id)&&(identical(other.host, host) || other.host == host)&&(identical(other.title, title) || other.title == title)&&(identical(other.liveType, liveType) || other.liveType == liveType)&&(identical(other.category, category) || other.category == category)&&(identical(other.access, access) || other.access == access)&&(identical(other.status, status) || other.status == status)&&(identical(other.startedAt, startedAt) || other.startedAt == startedAt)&&(identical(other.endedAt, endedAt) || other.endedAt == endedAt)&&(identical(other.viewerPeak, viewerPeak) || other.viewerPeak == viewerPeak)&&(identical(other.viewerCount, viewerCount) || other.viewerCount == viewerCount)&&(identical(other.replayUrl, replayUrl) || other.replayUrl == replayUrl)&&(identical(other.replaySaved, replaySaved) || other.replaySaved == replaySaved)&&(identical(other.muxPlaybackId, muxPlaybackId) || other.muxPlaybackId == muxPlaybackId)&&(identical(other.scheduledFor, scheduledFor) || other.scheduledFor == scheduledFor)&&(identical(other.isRecurring, isRecurring) || other.isRecurring == isRecurring)&&const DeepCollectionEquality().equals(other._equipmentList, _equipmentList)&&(identical(other.hasRsvped, hasRsvped) || other.hasRsvped == hasRsvped)&&(identical(other.rsvpCount, rsvpCount) || other.rsvpCount == rsvpCount)&&(identical(other.artifactFee, artifactFee) || other.artifactFee == artifactFee)&&(identical(other.recordingConsent, recordingConsent) || other.recordingConsent == recordingConsent)&&(identical(other.gymId, gymId) || other.gymId == gymId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,host,title,liveType,category,access,status,startedAt,endedAt,viewerPeak,viewerCount,replayUrl,replaySaved,muxPlaybackId,scheduledFor,isRecurring,const DeepCollectionEquality().hash(_equipmentList),hasRsvped,rsvpCount,gymId,createdAt]);
+int get hashCode => Object.hashAll([runtimeType,id,host,title,liveType,category,access,status,startedAt,endedAt,viewerPeak,viewerCount,replayUrl,replaySaved,muxPlaybackId,scheduledFor,isRecurring,const DeepCollectionEquality().hash(_equipmentList),hasRsvped,rsvpCount,artifactFee,recordingConsent,gymId,createdAt]);
 
 @override
 String toString() {
-  return 'BuddyLive(id: $id, host: $host, title: $title, liveType: $liveType, category: $category, access: $access, status: $status, startedAt: $startedAt, endedAt: $endedAt, viewerPeak: $viewerPeak, viewerCount: $viewerCount, replayUrl: $replayUrl, replaySaved: $replaySaved, muxPlaybackId: $muxPlaybackId, scheduledFor: $scheduledFor, isRecurring: $isRecurring, equipmentList: $equipmentList, hasRsvped: $hasRsvped, rsvpCount: $rsvpCount, gymId: $gymId, createdAt: $createdAt)';
+  return 'BuddyLive(id: $id, host: $host, title: $title, liveType: $liveType, category: $category, access: $access, status: $status, startedAt: $startedAt, endedAt: $endedAt, viewerPeak: $viewerPeak, viewerCount: $viewerCount, replayUrl: $replayUrl, replaySaved: $replaySaved, muxPlaybackId: $muxPlaybackId, scheduledFor: $scheduledFor, isRecurring: $isRecurring, equipmentList: $equipmentList, hasRsvped: $hasRsvped, rsvpCount: $rsvpCount, artifactFee: $artifactFee, recordingConsent: $recordingConsent, gymId: $gymId, createdAt: $createdAt)';
 }
 
 
@@ -1417,7 +1421,7 @@ abstract mixin class _$BuddyLiveCopyWith<$Res> implements $BuddyLiveCopyWith<$Re
   factory _$BuddyLiveCopyWith(_BuddyLive value, $Res Function(_BuddyLive) _then) = __$BuddyLiveCopyWithImpl;
 @override @useResult
 $Res call({
- String id, BuddyLiveHost host, String title, String liveType, String category, String access, String status, String? startedAt, String? endedAt, int viewerPeak, int viewerCount, String replayUrl, bool replaySaved, String? muxPlaybackId, String? scheduledFor, bool isRecurring, List<String> equipmentList, bool hasRsvped, int rsvpCount, String? gymId, String createdAt
+ String id, BuddyLiveHost host, String title, String liveType, String category, String access, String status, String? startedAt, String? endedAt, int viewerPeak, int viewerCount, String replayUrl, bool replaySaved, String? muxPlaybackId, String? scheduledFor, bool isRecurring, List<String> equipmentList, bool hasRsvped, int rsvpCount, @JsonKey(name: 'artifact_fee') Map<String, dynamic>? artifactFee, @JsonKey(name: 'recording_consent') String? recordingConsent, String? gymId, String createdAt
 });
 
 
@@ -1434,7 +1438,7 @@ class __$BuddyLiveCopyWithImpl<$Res>
 
 /// Create a copy of BuddyLive
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? host = null,Object? title = null,Object? liveType = null,Object? category = null,Object? access = null,Object? status = null,Object? startedAt = freezed,Object? endedAt = freezed,Object? viewerPeak = null,Object? viewerCount = null,Object? replayUrl = null,Object? replaySaved = null,Object? muxPlaybackId = freezed,Object? scheduledFor = freezed,Object? isRecurring = null,Object? equipmentList = null,Object? hasRsvped = null,Object? rsvpCount = null,Object? gymId = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? host = null,Object? title = null,Object? liveType = null,Object? category = null,Object? access = null,Object? status = null,Object? startedAt = freezed,Object? endedAt = freezed,Object? viewerPeak = null,Object? viewerCount = null,Object? replayUrl = null,Object? replaySaved = null,Object? muxPlaybackId = freezed,Object? scheduledFor = freezed,Object? isRecurring = null,Object? equipmentList = null,Object? hasRsvped = null,Object? rsvpCount = null,Object? artifactFee = freezed,Object? recordingConsent = freezed,Object? gymId = freezed,Object? createdAt = null,}) {
   return _then(_BuddyLive(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,host: null == host ? _self.host : host // ignore: cast_nullable_to_non_nullable
@@ -1455,7 +1459,9 @@ as String?,isRecurring: null == isRecurring ? _self.isRecurring : isRecurring //
 as bool,equipmentList: null == equipmentList ? _self._equipmentList : equipmentList // ignore: cast_nullable_to_non_nullable
 as List<String>,hasRsvped: null == hasRsvped ? _self.hasRsvped : hasRsvped // ignore: cast_nullable_to_non_nullable
 as bool,rsvpCount: null == rsvpCount ? _self.rsvpCount : rsvpCount // ignore: cast_nullable_to_non_nullable
-as int,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
+as int,artifactFee: freezed == artifactFee ? _self.artifactFee : artifactFee // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,recordingConsent: freezed == recordingConsent ? _self.recordingConsent : recordingConsent // ignore: cast_nullable_to_non_nullable
+as String?,gymId: freezed == gymId ? _self.gymId : gymId // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
