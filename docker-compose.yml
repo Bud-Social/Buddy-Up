@@ -53,6 +53,7 @@ services:
       - AI_OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
     volumes:
       - ./backend/ai_service/app:/app/app
+      - ./backend/ai_service/models:/models
     ports:
       - "8003:8003"
     depends_on:

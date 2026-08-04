@@ -34,6 +34,10 @@ backend/ai_service/data/*
 !backend/ai_service/data/README.md
 !backend/ai_service/data/.gitignore
 
+# ── AI Service model artifacts (training outputs, served from /models) ─
+backend/ai_service/models/*
+!backend/ai_service/models/.gitkeep
+
 # ── IDE ─────────────────────────────────────────────────────────────
 .vscode/
 .idea/

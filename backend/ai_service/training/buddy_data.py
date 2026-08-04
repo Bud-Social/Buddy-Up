@@ -94,12 +94,13 @@ CATALOG: list[Dataset] = [
     # ── Moderation ──────────────────────────────────────────────────────
     Dataset(
         key='nsfw_images',
-        description='NSFW image corpus (train/val/test dirs) for NudeNet replacement',
+        description='NSFW image corpus (train/val/test dirs, each with Neutral/NSFW '
+                    'class subdirs) for NudeNet replacement',
         source='Internal curated set',
         license='Research use',
         size='~10 GB',
         marker='train',
-        local_dir='nsfw',
+        local_dir='nsfw/out',
     ),
     Dataset(
         key='reddit_nsfw',
