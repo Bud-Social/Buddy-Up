@@ -4,3 +4,4 @@ export * from './post';
 export * from './gym';
 export * from './live';
 export * from './wallet';
+export * from './analytics';

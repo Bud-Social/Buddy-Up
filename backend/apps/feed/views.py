@@ -1,4 +1,6 @@
 import os
+import json
+import logging
 import uuid
 
 from django.conf import settings
@@ -23,6 +25,19 @@ from .serializers import (
 from apps.profiles.models import BuddyRelationship
 from apps.ai.audit import audit_ai_call
 from . import ai_ranking
+
+logger = logging.getLogger(__name__)
+
+
+def _as_dict_meal(value):
+    """Coerce a JSONField value (dict or JSON-encoded string) into a dict."""
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, dict) else {}
+        except (ValueError, TypeError):
+            return {}
+    return value if isinstance(value, dict) else {}
 
 
 def _looks_like_video(url: str) -> bool:
@@ -121,6 +136,7 @@ class FeedView(views.APIView):
     def get(self, request):
         tab = request.query_params.get('tab', 'for_you')
         cursor = request.query_params.get('cursor')
+        post_type = request.query_params.get('post_type')
 
         user_profile = request.user.profile
 
@@ -152,6 +168,12 @@ class FeedView(views.APIView):
                 visibility='public',
                 moderation_status='clean',
             ).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
+        elif tab == 'meals':
+            queryset = FeedPost.objects.filter(
+                post_type='meal',
+                visibility='public',
+                moderation_status='clean',
+            ).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
         elif tab == 'nearby':
             queryset = FeedPost.objects.filter(
                 visibility='public',
@@ -176,7 +198,10 @@ class FeedView(views.APIView):
             queryset = FeedPost.objects.filter(
                 moderation_status='clean',
                 visibility__in=['public'],
-            ).select_related('author', 'gym_tag').annotate(
+            )
+            if post_type and post_type in dict(Post.POST_TYPES):
+                queryset = queryset.filter(post_type=post_type)
+            queryset = queryset.select_related('author', 'gym_tag').annotate(
                 rank=db_models.Case(
                     db_models.When(author_id__in=buddy_ids, then=db_models.Value(100)),
                     db_models.When(author_id__in=followed_ids, then=db_models.Value(50)),
@@ -298,6 +323,40 @@ class CreatePostView(views.APIView):
         validated = serializer.validated_data
         validated['media_urls'] = all_media_urls
 
+        # Auto-analyze meal photos into nutrition details when not provided.
+        if validated.get('post_type') == 'meal':
+            meal_data = validated.get('meal_data')
+            if not meal_data or not meal_data.get('calories'):
+                from apps.analytics import engine
+                import requests as http_requests
+
+                image_url = next((u for u in all_media_urls if not _looks_like_video(u)), None)
+                if image_url:
+                    try:
+                        resp = http_requests.get(image_url, timeout=10)
+                        if resp.status_code == 200:
+                            ai_resp = http_requests.post(
+                                f'{settings.AI_SERVICE_URL}/api/v1/food/recognize',
+                                files={'file': ('meal.jpg', resp.content, resp.headers.get('content-type', 'image/jpeg'))},
+                                timeout=30,
+                            )
+                            if ai_resp.status_code == 200:
+                                ai_data = ai_resp.json()
+                                if ai_data.get('items'):
+                                    from apps.ai.audit import audit_ai_call
+                                    audit_ai_call('meal_analyze_feed', input_data={'post_id': 'pending', 'url': image_url}, output_data=ai_data)
+                                    top = ai_data['items'][0]
+                                    nutrition = top.get('nutrition', {}) or {}
+                                    base = _as_dict_meal(meal_data)
+                                    base['food_name'] = base.get('food_name') or top.get('item')
+                                    base['calories'] = base.get('calories') or round(float(ai_data.get('total_calories', nutrition.get('calories', 0) or 0)), 1)
+                                    base['protein_g'] = base.get('protein_g') or round(float(ai_data.get('total_protein', nutrition.get('protein', 0) or 0)), 1)
+                                    base['carbs_g'] = base.get('carbs_g') or round(float(ai_data.get('total_carbs', nutrition.get('carbs', 0) or 0)), 1)
+                                    base['fat_g'] = base.get('fat_g') or round(float(ai_data.get('total_fat', nutrition.get('fat', 0) or 0)), 1)
+                                    validated['meal_data'] = base
+                    except Exception as exc:
+                        logger.warning('Meal photo auto-analysis failed: %s', exc)
+
         post = Post.objects.create(
             author=request.user.profile,
             **validated,
@@ -308,7 +367,6 @@ class CreatePostView(views.APIView):
         poll_serializer.is_valid(raise_exception=True)
         poll_data = poll_serializer.validated_data
         poll_question = poll_data.get('poll_question', '').strip()
-        import json
         try:
             poll_options_raw = json.loads(poll_data.get('poll_options_json', '[]'))
         except Exception:

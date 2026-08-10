@@ -48,6 +48,7 @@ import 'features/wallet/screens/wallet_screen.dart';
 import 'features/notifications/screens/notifications_screen.dart';
 import 'features/verification/screens/verification_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
+import 'features/analytics/screens/analytics_screen.dart';
 import 'features/sessions/screens/trainer_list_screen.dart';
 import 'features/sessions/screens/trainer_profile_screen.dart';
 import 'features/sessions/screens/booking_screen.dart';
@@ -72,16 +73,28 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
       if (isLoading) return null;
 
       final publicRoutes = [
-        '/login', '/signup', '/verify-registration-otp', '/verify-age',
-        '/forgot-password', '/reset-password', '/totp-setup', '/totp-challenge',
-        '/onboarding', '/terms', '/privacy', '/cookie-policy', '/community-guidelines',
+        '/login',
+        '/signup',
+        '/verify-registration-otp',
+        '/verify-age',
+        '/forgot-password',
+        '/reset-password',
+        '/totp-setup',
+        '/totp-challenge',
+        '/onboarding',
+        '/terms',
+        '/privacy',
+        '/cookie-policy',
+        '/community-guidelines',
       ];
 
       if (!isAuthenticated && !publicRoutes.contains(location)) {
         return '/login';
       }
 
-      if (isAuthenticated && publicRoutes.contains(location) && location != '/onboarding') {
+      if (isAuthenticated &&
+          publicRoutes.contains(location) &&
+          location != '/onboarding') {
         return '/feed';
       }
 
@@ -95,10 +108,16 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, state) {
           final token = state.uri.queryParameters['token'] ?? '';
           final email = state.uri.queryParameters['email'] ?? '';
-          return VerifyRegistrationOtpScreen(registrationToken: token, email: email);
+          return VerifyRegistrationOtpScreen(
+            registrationToken: token,
+            email: email,
+          );
         },
       ),
-      GoRoute(path: '/forgot-password', builder: (_, _) => const ForgotPasswordScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, _) => const ForgotPasswordScreen(),
+      ),
       GoRoute(
         path: '/reset-password',
         builder: (_, state) {
@@ -116,10 +135,22 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         },
       ),
       GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingScreen()),
-      GoRoute(path: '/terms', builder: (_, _) => _legalPage('Terms of Service')),
-      GoRoute(path: '/privacy', builder: (_, _) => _legalPage('Privacy Policy')),
-      GoRoute(path: '/cookie-policy', builder: (_, _) => _legalPage('Cookie Policy')),
-      GoRoute(path: '/community-guidelines', builder: (_, _) => _legalPage('Community Guidelines')),
+      GoRoute(
+        path: '/terms',
+        builder: (_, _) => _legalPage('Terms of Service'),
+      ),
+      GoRoute(
+        path: '/privacy',
+        builder: (_, _) => _legalPage('Privacy Policy'),
+      ),
+      GoRoute(
+        path: '/cookie-policy',
+        builder: (_, _) => _legalPage('Cookie Policy'),
+      ),
+      GoRoute(
+        path: '/community-guidelines',
+        builder: (_, _) => _legalPage('Community Guidelines'),
+      ),
       GoRoute(
         path: '/feed/post',
         parentNavigatorKey: _rootNavigatorKey,
@@ -283,9 +314,11 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, state) {
           final programmeId = state.pathParameters['programmeId'] ?? '';
-          final weekIndex = int.tryParse(state.uri.queryParameters['week'] ?? '0') ?? 0;
+          final weekIndex =
+              int.tryParse(state.uri.queryParameters['week'] ?? '0') ?? 0;
           final day = state.uri.queryParameters['day'] ?? 'Monday';
-          final activityIndex = int.tryParse(state.uri.queryParameters['activity'] ?? '0') ?? 0;
+          final activityIndex =
+              int.tryParse(state.uri.queryParameters['activity'] ?? '0') ?? 0;
           return ProgrammeActivityFocusScreen(
             programmeId: programmeId,
             weekIndex: weekIndex,
@@ -299,6 +332,12 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         path: '/wallet',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const WalletScreen(),
+      ),
+      // Analytics
+      GoRoute(
+        path: '/analytics',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AnalyticsScreen(),
       ),
       // Notifications
       GoRoute(
@@ -361,7 +400,10 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, state) {
           final programmeId = state.pathParameters['programmeId'] ?? '';
           final title = state.uri.queryParameters['title'] ?? 'Programme';
-          return ProgrammeWeeksScreen(programmeId: programmeId, programmeTitle: title);
+          return ProgrammeWeeksScreen(
+            programmeId: programmeId,
+            programmeTitle: title,
+          );
         },
       ),
       GoRoute(
@@ -378,7 +420,10 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, state) {
           final bookingId = state.pathParameters['bookingId'] ?? '';
           final trainerUsername = state.uri.queryParameters['trainer'] ?? '';
-          return SessionReviewScreen(bookingId: bookingId, trainerUsername: trainerUsername);
+          return SessionReviewScreen(
+            bookingId: bookingId,
+            trainerUsername: trainerUsername,
+          );
         },
       ),
       ShellRoute(
@@ -386,23 +431,39 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, _, child) => _AppShell(child: child),
         routes: [
           GoRoute(path: '/feed', builder: (_, _) => const FeedScreen()),
-          GoRoute(path: '/feed/following', builder: (_, _) => const FeedScreen(initialTab: 'following')),
-          GoRoute(path: '/feed/bud-press', builder: (_, _) => const FeedScreen(initialTab: 'videos')),
-          GoRoute(path: '/discover', builder: (_, _) => const DiscoverPeopleScreen()),
+          GoRoute(
+            path: '/feed/following',
+            builder: (_, _) => const FeedScreen(initialTab: 'following'),
+          ),
+          GoRoute(
+            path: '/feed/bud-press',
+            builder: (_, _) => const FeedScreen(initialTab: 'videos'),
+          ),
+          GoRoute(
+            path: '/discover',
+            builder: (_, _) => const DiscoverPeopleScreen(),
+          ),
           GoRoute(path: '/lives', builder: (_, _) => const LiveBrowserScreen()),
           GoRoute(path: '/gyms', builder: (_, _) => const GymListScreen()),
-          GoRoute(path: '/messages', builder: (_, _) => const ConversationListScreen()),
+          GoRoute(
+            path: '/messages',
+            builder: (_, _) => const ConversationListScreen(),
+          ),
           GoRoute(
             path: '/messages/:conversationId',
             parentNavigatorKey: _rootNavigatorKey,
             builder: (_, state) {
-              final conversationId = state.pathParameters['conversationId'] ?? '';
+              final conversationId =
+                  state.pathParameters['conversationId'] ?? '';
               return ChatScreen(conversationId: conversationId);
             },
           ),
           GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
           GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
-          GoRoute(path: '/buddies', builder: (_, _) => const BuddyListScreen(username: 'me')),
+          GoRoute(
+            path: '/buddies',
+            builder: (_, _) => const BuddyListScreen(username: 'me'),
+          ),
           GoRoute(
             path: '/:username',
             builder: (_, state) {
@@ -423,9 +484,16 @@ Widget _placeholder(String title) {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.construction, size: 64, color: BuddyColors.textSecondary.withValues(alpha: 0.3)),
+          Icon(
+            Icons.construction,
+            size: 64,
+            color: BuddyColors.textSecondary.withValues(alpha: 0.3),
+          ),
           const SizedBox(height: 16),
-          Text('$title — Coming soon', style: const TextStyle(color: BuddyColors.textSecondary)),
+          Text(
+            '$title — Coming soon',
+            style: const TextStyle(color: BuddyColors.textSecondary),
+          ),
         ],
       ),
     ),
@@ -436,7 +504,10 @@ Widget _legalPage(String title) {
   return Scaffold(
     appBar: AppBar(title: Text(title)),
     body: const Center(
-      child: Text('Content placeholder', style: TextStyle(color: BuddyColors.textSecondary)),
+      child: Text(
+        'Content placeholder',
+        style: TextStyle(color: BuddyColors.textSecondary),
+      ),
     ),
   );
 }
@@ -449,19 +520,49 @@ class _AppShell extends StatelessWidget {
 
   static const _railDestinations = <_NavDestination>[
     _NavDestination('/feed', Icons.home_outlined, Icons.home, 'Home'),
-    _NavDestination('/discover', Icons.explore_outlined, Icons.explore, 'Discover'),
+    _NavDestination(
+      '/discover',
+      Icons.explore_outlined,
+      Icons.explore,
+      'Discover',
+    ),
     _NavDestination('/lives', Icons.videocam_outlined, Icons.videocam, 'Lives'),
-    _NavDestination('/gyms', Icons.fitness_center_outlined, Icons.fitness_center, 'Gyms'),
-    _NavDestination('/messages', Icons.chat_bubble_outline, Icons.chat_bubble, 'Messages'),
+    _NavDestination(
+      '/gyms',
+      Icons.fitness_center_outlined,
+      Icons.fitness_center,
+      'Gyms',
+    ),
+    _NavDestination(
+      '/messages',
+      Icons.chat_bubble_outline,
+      Icons.chat_bubble,
+      'Messages',
+    ),
     _NavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
-    _NavDestination('/settings', Icons.settings_outlined, Icons.settings, 'Settings'),
+    _NavDestination(
+      '/settings',
+      Icons.settings_outlined,
+      Icons.settings,
+      'Settings',
+    ),
   ];
 
   static const _phoneDestinations = <_NavDestination>[
     _NavDestination('/feed', Icons.home_outlined, Icons.home, 'Home'),
-    _NavDestination('/discover', Icons.explore_outlined, Icons.explore, 'Discover'),
+    _NavDestination(
+      '/discover',
+      Icons.explore_outlined,
+      Icons.explore,
+      'Discover',
+    ),
     _NavDestination('/lives', Icons.videocam_outlined, Icons.videocam, 'Lives'),
-    _NavDestination('/gyms', Icons.fitness_center_outlined, Icons.fitness_center, 'Gyms'),
+    _NavDestination(
+      '/gyms',
+      Icons.fitness_center_outlined,
+      Icons.fitness_center,
+      'Gyms',
+    ),
     _NavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
   ];
 
@@ -476,7 +577,8 @@ class _AppShell extends StatelessWidget {
           children: [
             NavigationRail(
               selectedIndex: _calculateIndex(context, _railDestinations),
-              onDestinationSelected: (i) => context.go(_railDestinations[i].route),
+              onDestinationSelected: (i) =>
+                  context.go(_railDestinations[i].route),
               extended: width >= 1000,
               leading: const Padding(
                 padding: EdgeInsets.only(top: 16, bottom: 8),
@@ -531,7 +633,10 @@ class _AppShell extends StatelessWidget {
     );
   }
 
-  int _calculateIndex(BuildContext context, List<_NavDestination> destinations) {
+  int _calculateIndex(
+    BuildContext context,
+    List<_NavDestination> destinations,
+  ) {
     final location = GoRouterState.of(context).matchedLocation;
     for (var i = 0; i < destinations.length; i++) {
       if (location.startsWith(destinations[i].route)) return i;

@@ -9,14 +9,23 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-try:
-    import mediapipe as mp
-    mp_pose = mp.solutions.pose
-    mp_drawing = mp.solutions.drawing_utils
-    MEDIAPIPE_AVAILABLE = True
-except ImportError:
-    MEDIAPIPE_AVAILABLE = False
-    logger.warning('MediaPipe not installed. Form analysis will be unavailable.')
+from app.config import settings
+
+MEDIAPIPE_AVAILABLE = False
+mp = None
+mp_pose = None
+mp_drawing = None
+
+if settings.enable_mediapipe:
+    try:
+        import mediapipe as mp
+        mp_pose = mp.solutions.pose
+        mp_drawing = mp.solutions.drawing_utils
+        MEDIAPIPE_AVAILABLE = True
+    except (ImportError, AttributeError):
+        logger.warning('MediaPipe legacy API unavailable. Form analysis will be degraded.')
+else:
+    logger.info('MediaPipe disabled (config.enable_mediapipe=False); keeping torch/HF stable.')
 
 try:
     import cv2

@@ -12,6 +12,7 @@ const TAB_ROUTES: Record<string, FeedTab> = {
   '/feed': 'for_you',
   '/feed/following': 'following',
   '/feed/bud-press': 'videos',
+  '/feed/meals': 'meals',
 };
 
 export default function Feed() {
@@ -29,6 +30,7 @@ export default function Feed() {
     { key: 'for_you', label: 'For You', to: '/feed' },
     { key: 'following', label: 'Following', to: '/feed/following' },
     { key: 'videos', label: 'Bud Press', to: '/feed/bud-press' },
+    { key: 'meals', label: 'Meals', to: '/feed/meals' },
   ];
 
   const fetchPosts = useCallback(async (tab: FeedTab, reset = false) => {

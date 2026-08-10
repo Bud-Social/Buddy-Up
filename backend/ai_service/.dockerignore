@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.env
+.git/
+logs/
+data/
+tools/
+notebooks/
+training/
+models/
+mlflow_runs/
+*.ipynb
+*.onnx
+*.pt

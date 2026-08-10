@@ -6,6 +6,16 @@ from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def sms_delivery_configured() -> bool:
+    return bool(
+        getattr(settings, 'AFRICASTALKING_USERNAME', '')
+        and getattr(settings, 'AFRICASTALKING_API_KEY', '')
+    )
 
 
 @shared_task
@@ -42,8 +52,44 @@ def send_otp_email(user_id: str, otp: str, purpose: str = 'registration'):
 
 @shared_task
 def send_otp_sms(user_id: str, otp: str):
-    # TODO: Implement Africa's Talking SMS sending
-    pass
+    """Send an OTP through Africa's Talking without exposing it in logs."""
+    from .models import User
+    import requests
+
+    if not sms_delivery_configured():
+        logger.error('SMS delivery requested but Africa\'s Talking is not configured')
+        return False
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return False
+    if not user.phone:
+        logger.warning('SMS delivery requested for a user without a phone number')
+        return False
+
+    endpoint = getattr(
+        settings, 'AFRICASTALKING_SMS_URL',
+        'https://api.africastalking.com/version1/messaging',
+    )
+    try:
+        response = requests.post(
+            endpoint,
+            headers={
+                'apiKey': settings.AFRICASTALKING_API_KEY,
+                'Accept': 'application/json',
+            },
+            data={
+                'username': settings.AFRICASTALKING_USERNAME,
+                'to': user.phone,
+                'message': f'Your BuddyUp verification code is {otp}. It expires in 10 minutes.',
+            },
+            timeout=(3.05, 10),
+        )
+        response.raise_for_status()
+        return True
+    except requests.RequestException:
+        logger.exception('SMS delivery failed for user_id=%s', user_id)
+        return False
 
 
 @shared_task

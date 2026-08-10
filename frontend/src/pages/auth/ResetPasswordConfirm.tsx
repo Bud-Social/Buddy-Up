@@ -30,7 +30,11 @@ export default function ResetPasswordConfirm() {
 
     setIsLoading(true);
     try {
-      await authApi.resetPassword(otp, newPassword);
+      if (!email) {
+        setError('Your reset email is missing. Please start the reset process again.');
+        return;
+      }
+      await authApi.resetPassword(email, otp, newPassword);
       setSuccess(true);
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;

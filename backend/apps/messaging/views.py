@@ -2,6 +2,10 @@ import logging
 import mimetypes
 import os
 import uuid
+import ipaddress
+import socket
+from pathlib import PurePosixPath
+from urllib.parse import unquote, urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +14,6 @@ from django.db import models as db_models
 from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.core.files.storage import default_storage
-from django.core.files.base import ContentFile
-from django.conf import settings
 
 from rest_framework import views, permissions, status
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -38,6 +40,42 @@ def _allowed_to_message(requester: Profile, other: Profile) -> bool:
          db_models.Q(from_user=other, to_user=requester)),
         status='confirmed',
     ).exists()
+
+
+def _is_public_preview_url(value: str) -> bool:
+    """Reject URLs that could make the server request an internal service."""
+    from urllib.parse import urlparse
+
+    if len(value) > 2048:
+        return False
+    parsed = urlparse(value)
+    if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+        return False
+    if parsed.username or parsed.password:
+        return False
+    try:
+        addresses = {
+            info[4][0] for info in socket.getaddrinfo(
+                parsed.hostname, parsed.port or (443 if parsed.scheme == 'https' else 80),
+                type=socket.SOCK_STREAM,
+            )
+        }
+    except (socket.gaierror, ValueError):
+        return False
+    if not addresses:
+        return False
+    for address in addresses:
+        ip = ipaddress.ip_address(address)
+        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast
+                or ip.is_reserved or ip.is_unspecified):
+            return False
+    return True
+
+
+class _NoRedirectHandler(__import__('urllib.request', fromlist=['HTTPRedirectHandler']).HTTPRedirectHandler):
+    """A redirect can turn a safe public URL into an internal request."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
 
 
 class ConversationListView(views.APIView):
@@ -73,6 +111,17 @@ class StartConversationView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         all_participants = [request.user.profile] + [p for p in participants if p != request.user.profile]
+
+        unauthorized = [
+            p for p in all_participants
+            if p != request.user.profile and not _allowed_to_message(request.user.profile, p)
+        ]
+        if unauthorized:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You can only add confirmed buddies or professionals to a conversation.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
 
         if len(all_participants) == 2:
             other = all_participants[1]
@@ -170,6 +219,14 @@ class MessageListView(views.APIView):
         input_serializer.is_valid(raise_exception=True)
         data = input_serializer.validated_data
 
+        reply_to_id = data.get('reply_to_id')
+        if reply_to_id and not Message.objects.filter(id=reply_to_id, conversation=conv).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'A reply must reference a message in this conversation.',
+                'errors': {'reply_to_id': ['Invalid reply target.']}, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         msg = Message.objects.create(
             conversation=conv,
             sender=request.user.profile,
@@ -178,7 +235,7 @@ class MessageListView(views.APIView):
             media_url=data.get('media_url', ''),
             media_mime=data.get('media_mime', ''),
             file_name=data.get('file_name', ''),
-            reply_to_id=data.get('reply_to_id'),
+            reply_to_id=reply_to_id,
             metadata=data.get('metadata', {}),
         )
         conv.last_message_text = msg.body[:200] if msg.body else msg.message_type
@@ -333,16 +390,31 @@ class ServeMessageFileView(views.APIView):
         if not msg.media_url:
             raise Http404('No attachment on this message.')
 
-        # Resolve filesystem path from the stored URL
-        relative_path = msg.media_url.replace(default_storage.url(''), '', 1)
-        file_path = os.path.join(settings.MEDIA_ROOT, relative_path.lstrip('/'))
+        # Only proxy attachments that were placed in our messaging storage.
+        # Never turn an arbitrary URL saved in a message into a filesystem path.
+        storage_base_path = urlparse(default_storage.url('')).path.rstrip('/') + '/'
+        media_path = urlparse(msg.media_url).path
+        if not media_path.startswith(storage_base_path):
+            raise Http404('Attachment is not available through the secure proxy.')
+        relative_path = unquote(media_path[len(storage_base_path):]).lstrip('/')
+        path_parts = PurePosixPath(relative_path)
+        if (not relative_path.startswith('messaging/') or '..' in path_parts.parts
+                or path_parts.is_absolute()):
+            raise Http404('Invalid attachment path.')
 
-        if not os.path.isfile(file_path):
-            raise Http404('File not found on disk.')
+        try:
+            attachment = default_storage.open(relative_path, 'rb')
+        except (FileNotFoundError, OSError):
+            raise Http404('File not found.')
 
-        content_type = msg.media_mime or 'application/octet-stream'
-        response = FileResponse(open(file_path, 'rb'), content_type=content_type)
-        response['Content-Disposition'] = 'inline'
+        guessed_type, _ = mimetypes.guess_type(relative_path)
+        content_type = guessed_type or 'application/octet-stream'
+        response = FileResponse(attachment, content_type=content_type)
+        # Office documents and unknown types must download rather than render.
+        if content_type.startswith(('image/', 'video/', 'audio/')) or content_type == 'application/pdf':
+            response['Content-Disposition'] = 'inline'
+        else:
+            response['Content-Disposition'] = 'attachment'
         response['X-Content-Type-Options'] = 'nosniff'
         response['X-Frame-Options'] = 'DENY'
         response['Content-Security-Policy'] = "default-src 'none'; media-src 'self'; img-src 'self'"
@@ -406,6 +478,12 @@ class CallLogView(views.APIView):
         conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
         callee_id = request.data.get('callee_id')
         callee = get_object_or_404(Profile, user_id=callee_id)
+        if callee == request.user.profile or not conv.participants.filter(id=callee.id).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'The callee must be another participant in this conversation.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
         call_type = request.data.get('call_type', 'audio')
         call_status = request.data.get('status', 'initiated')
         duration = request.data.get('duration_seconds', 0)
@@ -429,11 +507,19 @@ class CallLogView(views.APIView):
 class LinkPreviewView(views.APIView):
     """Fetch Open Graph metadata for a URL to generate link previews."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'link_preview'
+    throttle_classes = [ScopedRateThrottle]
 
     def post(self, request):
         url = request.data.get('url', '').strip()
         if not url:
             return Response({'success': False, 'message': 'URL required.'}, status=400)
+        if not _is_public_preview_url(url):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only public HTTP(S) links can be previewed.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         import urllib.request
         import urllib.parse
@@ -449,8 +535,15 @@ class LinkPreviewView(views.APIView):
                 'User-Agent': 'BuddyUp/1.0 (+https://buddyup.app)',
                 'Accept': 'text/html,application/xhtml+xml',
             })
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                html = resp.read(8192).decode('utf-8', errors='ignore')
+            opener = urllib.request.build_opener(_NoRedirectHandler())
+            with opener.open(req, timeout=5) as resp:
+                content_type = (resp.headers.get_content_type() or '').lower()
+                content_length = resp.headers.get('Content-Length')
+                if content_type not in ('text/html', 'application/xhtml+xml'):
+                    raise ValueError('Preview response is not HTML')
+                if content_length and int(content_length) > 128 * 1024:
+                    raise ValueError('Preview response is too large')
+                html = resp.read(128 * 1024).decode('utf-8', errors='ignore')
 
             og_title = re_module.search(r'<meta\s+[^>]*property=["\']og:title["\'][^>]*content=["\']([^"\']+)["\']', html, re_module.I)
             og_desc = re_module.search(r'<meta\s+[^>]*property=["\']og:description["\'][^>]*content=["\']([^"\']+)["\']', html, re_module.I)
@@ -543,6 +636,15 @@ class CreateGroupConversationView(views.APIView):
             return Response({'success': False, 'message': 'Participants required.'}, status=400)
             
         profiles = list(Profile.objects.filter(user_id__in=participant_ids))
+        unauthorized = [
+            profile for profile in profiles
+            if profile != request.user.profile and not _allowed_to_message(request.user.profile, profile)
+        ]
+        if unauthorized:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You can only add confirmed buddies or professionals to a group.',
+            }, status=status.HTTP_403_FORBIDDEN)
         if request.user.profile not in profiles:
             profiles.append(request.user.profile)
             

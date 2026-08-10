@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
+import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAuthStore } from '@/store/authStore';
 
@@ -18,6 +19,12 @@ function AuthGuard() {
 
   if (isLoading) return <PageLoader />;
   if (!isAuthenticated && !PUBLIC_ROUTES.includes(location.pathname)) return <Navigate to="/login" replace />;
+  return <Outlet />;
+}
+
+function AdminGuard() {
+  const isStaff = useAuthStore((s) => s.user?.is_staff);
+  if (!isStaff) return <Navigate to="/feed" replace />;
   return <Outlet />;
 }
 
@@ -72,6 +79,9 @@ const LiveRoom = lazy(() => import('@/pages/app/LiveRoom'));
 const HealthInsights = lazy(() => import('@/pages/app/HealthInsights'));
 const WorkoutForm = lazy(() => import('@/pages/app/WorkoutForm'));
 const Verification = lazy(() => import('@/pages/app/Verification'));
+const AnalyticsPage = lazy(() => import('@/pages/app/AnalyticsPage'));
+const AdminDashboard = lazy(() => import('@/pages/app/AdminDashboard'));
+const ModerationQueue = lazy(() => import('@/pages/app/ModerationQueue'));
 
 const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Privacy = lazy(() => import('@/pages/legal/Privacy'));
@@ -122,6 +132,7 @@ export const router = createBrowserRouter([
           { path: '/feed', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/following', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/bud-press', element: <SWrapper><Feed /></SWrapper> },
+          { path: '/feed/meals', element: <SWrapper><Feed /></SWrapper> },
           { path: '/videos', element: <SWrapper><FullScreenVideoFeed /></SWrapper> },
           { path: '/discover', element: <SWrapper><Discover /></SWrapper> },
           { path: '/lives', element: <SWrapper><Lives /></SWrapper> },
@@ -161,11 +172,24 @@ export const router = createBrowserRouter([
           { path: '/health-insights', element: <SWrapper><HealthInsights /></SWrapper> },
           { path: '/workout-form', element: <SWrapper><WorkoutForm /></SWrapper> },
           { path: '/verification', element: <SWrapper><Verification /></SWrapper> },
+          { path: '/analytics', element: <SWrapper><AnalyticsPage /></SWrapper> },
         ],
       },
       { path: '/live/:liveId', element: <SWrapper><LiveRoom /></SWrapper> },
       { path: '/shops/:handle', element: <SWrapper><ShopDetail /></SWrapper> },
       { path: '/:username', element: <SWrapper><UserProfile /></SWrapper> },
+      {
+        element: <AdminGuard />,
+        children: [
+          {
+            element: <AdminLayout />,
+            children: [
+              { path: '/admin', element: <SWrapper><AdminDashboard /></SWrapper> },
+              { path: '/admin/moderation', element: <SWrapper><ModerationQueue /></SWrapper> },
+            ],
+          },
+        ],
+      },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

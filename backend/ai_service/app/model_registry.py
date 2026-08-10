@@ -1,5 +1,7 @@
 import logging
 import sys
+import threading
+import time
 from typing import Any
 
 import torch
@@ -31,15 +33,21 @@ DEVICE = _detect_device()
 
 class ModelRegistry:
     _models: dict[str, Any] = {}
+    _last_used: dict[str, float] = {}
+    _lock = threading.Lock()
 
     @classmethod
     def register(cls, name: str, model: Any) -> None:
         cls._models[name] = model
+        cls._last_used[name] = time.monotonic()
         logger.info('Registered model: %s', name)
 
     @classmethod
     def get(cls, name: str) -> Any | None:
-        return cls._models.get(name)
+        model = cls._models.get(name)
+        if model is not None:
+            cls._last_used[name] = time.monotonic()
+        return model
 
     @classmethod
     def list_models(cls) -> list[str]:
@@ -48,6 +56,7 @@ class ModelRegistry:
     @classmethod
     def unload(cls, name: str) -> bool:
         model = cls._models.pop(name, None)
+        cls._last_used.pop(name, None)
         if model is not None:
             if hasattr(model, 'to'):
                 model.to('cpu')
@@ -57,6 +66,21 @@ class ModelRegistry:
             logger.info('Unloaded model: %s', name)
             return True
         return False
+
+    @classmethod
+    def unload_idle(cls, ttl: float = 900) -> list[str]:
+        """Unload models untouched for `ttl` seconds to keep RAM bounded."""
+        cutoff = time.monotonic() - ttl
+        stale = [
+            name
+            for name, last in cls._last_used.items()
+            if last < cutoff and cls._models.get(name) is not None
+        ]
+        for name in stale:
+            cls.unload(name)
+        if stale:
+            logger.info('Unloaded %d idle model(s): %s', len(stale), stale)
+        return stale
 
     @classmethod
     def unload_all(cls) -> None:

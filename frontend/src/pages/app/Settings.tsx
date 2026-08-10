@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Shield, Bell, Lock, CreditCard, HelpCircle, User, Eye, Moon, Sun, Globe, Trash2, UserX, Download, Smartphone, CheckCircle, XCircle, Camera, Loader, LogOut, Activity, Monitor, Contrast } from 'lucide-react';
+import { ChevronRight, Shield, Bell, Lock, CreditCard, HelpCircle, User, Eye, Moon, Sun, Globe, Trash2, UserX, Download, Smartphone, CheckCircle, XCircle, Camera, Loader, LogOut, Activity, Monitor, Contrast, BrainCircuit } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -268,6 +268,19 @@ export default function Settings() {
               <ChevronRight size={18} className="text-buddy-text-secondary" />
             </Card>
           ))}
+          {user?.is_staff && (
+            <Card className="p-4 flex items-center gap-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer"
+              onClick={() => navigate('/admin')}>
+              <div className="w-10 h-10 rounded-xl bg-buddy-electric/10 flex items-center justify-center flex-shrink-0">
+                <BrainCircuit size={20} className="text-buddy-electric" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm">ML Admin</p>
+                <p className="text-xs text-buddy-text-secondary">Model registry, training runs & system health</p>
+              </div>
+              <ChevronRight size={18} className="text-buddy-text-secondary" />
+            </Card>
+          )}
         </div>
       </div>
     );

@@ -1,12 +1,16 @@
+import asyncio
 import json
 import logging
 
 import redis.asyncio as aioredis
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel
 
 from ..config import settings
-from ..embedding_engine import embed_text, find_top_matches, build_index, search_index, FaissIndex
+from ..embedding_engine import (
+    embed_text, embed_text_clip, embed_image,
+    find_top_matches, build_index, search_index, FaissIndex,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +82,33 @@ async def text_embedding(text: str):
     return EmbeddingResult(
         vector=vector,
         model='sentence-transformers/all-MiniLM-L6-v2',
+        dimension=dimension,
+    )
+
+
+@router.post('/image', response_model=EmbeddingResult)
+async def image_embedding(file: UploadFile = File(...)):
+    """Embed an image with CLIP (512-dim) for visual search / retrieval."""
+    contents = await file.read()
+    vector, dimension = await asyncio.to_thread(embed_image, contents)
+    if not vector:
+        raise HTTPException(status_code=400, detail='Could not embed image')
+    return EmbeddingResult(
+        vector=vector,
+        model='openai/clip-vit-base-patch32',
+        dimension=dimension,
+    )
+
+
+@router.post('/clip-text', response_model=EmbeddingResult)
+async def clip_text_embedding(text: str):
+    """Embed a text query with CLIP so it matches CLIP image vectors."""
+    vector, dimension = await asyncio.to_thread(embed_text_clip, text)
+    if not vector:
+        raise HTTPException(status_code=400, detail='Could not embed text')
+    return EmbeddingResult(
+        vector=vector,
+        model='openai/clip-vit-base-patch32',
         dimension=dimension,
     )
 

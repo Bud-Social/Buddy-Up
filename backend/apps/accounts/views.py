@@ -3,6 +3,7 @@ import hashlib
 import secrets
 import io
 import base64
+import os
 import qrcode
 import pyotp
 from datetime import timedelta
@@ -28,7 +29,10 @@ from .serializers import (
     TOTPChallengeSerializer, TOTPDisableSerializer, GoogleLoginSerializer,
 )
 from apps.profiles.models import Profile
-from .tasks import send_otp_email, send_welcome_email, send_login_alert_email
+from .tasks import (
+    send_otp_email, send_otp_sms, sms_delivery_configured,
+    send_welcome_email, send_login_alert_email,
+)
 
 try:
     from google.oauth2 import id_token
@@ -39,10 +43,17 @@ except ImportError:
 
 
 def _get_client_ip(request):
+    # X-Forwarded-For is client-controlled unless the immediate peer is a
+    # configured reverse proxy. Do not use it by default for audit/rate data.
+    remote_addr = request.META.get('REMOTE_ADDR', '0.0.0.0')
+    trusted_proxies = {
+        value.strip() for value in os.environ.get('TRUSTED_PROXY_IPS', '').split(',')
+        if value.strip()
+    }
     xf = request.META.get('HTTP_X_FORWARDED_FOR')
-    if xf:
+    if xf and remote_addr in trusted_proxies:
         return xf.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+    return remote_addr
 
 
 def _get_user_agent(request):
@@ -255,6 +266,7 @@ class VerifyRegistrationOTPView(views.APIView):
                     'is_adult': user.is_adult,
                     'totp_enabled': user.totp_enabled,
                     'created_at': user.created_at.isoformat(),
+                    'is_staff': user.is_staff,
                 },
                 'profile': ProfileSerializer(profile).data,
             },
@@ -450,6 +462,7 @@ class VerifyLoginOTPView(views.APIView):
                     'is_adult': user.is_adult,
                     'totp_enabled': user.totp_enabled,
                     'created_at': user.created_at.isoformat(),
+                    'is_staff': user.is_staff,
                 },
                 'profile': profile,
                 'new_device': new_device,
@@ -624,6 +637,7 @@ class TOTPChallengeView(views.APIView):
                     'is_adult': user.is_adult,
                     'totp_enabled': user.totp_enabled,
                     'created_at': user.created_at.isoformat(),
+                    'is_staff': user.is_staff,
                 },
                 'profile': profile,
             },
@@ -748,6 +762,7 @@ class GoogleLoginView(views.APIView):
                     'is_adult': user.is_adult,
                     'totp_enabled': user.totp_enabled,
                     'created_at': user.created_at.isoformat(),
+                    'is_staff': user.is_staff,
                 },
                 'profile': profile,
             },
@@ -850,6 +865,7 @@ class AppleLoginView(views.APIView):
                         'is_adult': user.is_adult,
                         'totp_enabled': user.totp_enabled,
                         'created_at': user.created_at.isoformat(),
+                        'is_staff': user.is_staff,
                     },
                     'profile': profile_data,
                 },
@@ -905,6 +921,18 @@ class TokenRefreshView(views.APIView):
 
         try:
             token = RefreshToken(refresh_token)
+            token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+            session = DeviceSession.objects.filter(
+                refresh_token_hash=token_hash,
+                is_active=True,
+            ).select_related('user').first()
+            if not session or not session.user.is_active or session.user.deleted_at:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'This session is no longer active. Please sign in again.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
             access = str(token.access_token)
 
             new_refresh = None
@@ -912,23 +940,20 @@ class TokenRefreshView(views.APIView):
                 token.blacklist()
                 user_id = token.payload.get('user_id')
                 try:
-                    user = User.objects.get(id=user_id)
+                    user = User.objects.get(id=user_id, is_active=True, deleted_at__isnull=True)
                     new_token = RefreshToken.for_user(user)
                     new_token['device_id'] = token.payload.get('device_id', str(uuid.uuid4()))
                     new_refresh = str(new_token)
                 except User.DoesNotExist:
                     new_refresh = None
 
-            old_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
-            session = DeviceSession.objects.filter(refresh_token_hash=old_hash).first()
-            if session:
-                if new_refresh:
-                    new_hash = hashlib.sha256(new_refresh.encode()).hexdigest()
-                    DeviceSession.objects.filter(id=session.id).update(
-                        refresh_token_hash=new_hash, last_active=timezone.now()
-                    )
-                else:
-                    DeviceSession.objects.filter(id=session.id).update(last_active=timezone.now())
+            if new_refresh:
+                new_hash = hashlib.sha256(new_refresh.encode()).hexdigest()
+                DeviceSession.objects.filter(id=session.id, is_active=True).update(
+                    refresh_token_hash=new_hash, last_active=timezone.now()
+                )
+            else:
+                DeviceSession.objects.filter(id=session.id, is_active=True).update(last_active=timezone.now())
 
             data = {'access': access}
             if new_refresh:
@@ -1025,6 +1050,13 @@ class ResendOTPView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        if data['channel'] == 'phone' and not sms_delivery_configured():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Phone verification is temporarily unavailable. Please use email verification.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
         recent = OTPToken.objects.filter(
             user=request.user,
             channel=data['channel'],
@@ -1046,7 +1078,8 @@ class ResendOTPView(views.APIView):
         )
         if data['channel'] == 'email':
             send_otp_email.delay(str(request.user.id), otp, 'registration')
-        # TODO: send OTP via SMS (Africa's Talking)
+        else:
+            send_otp_sms.delay(str(request.user.id), otp)
 
         return Response({
             'success': True,
@@ -1074,6 +1107,13 @@ class ResendRegistrationOTPView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        if data['channel'] == 'phone' and not sms_delivery_configured():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Phone verification is temporarily unavailable. Please use email verification.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
         recent = OTPToken.objects.filter(
             user=user,
             channel=data['channel'],
@@ -1095,7 +1135,8 @@ class ResendRegistrationOTPView(views.APIView):
         )
         if data['channel'] == 'email':
             send_otp_email.delay(str(user.id), otp, 'registration')
-        # TODO: send OTP via SMS (Africa's Talking)
+        else:
+            send_otp_sms.delay(str(user.id), otp)
 
         return Response({
             'success': True,
@@ -1108,6 +1149,7 @@ class ResendRegistrationOTPView(views.APIView):
 
 class PasswordResetRequestView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'password_reset'
 
     def post(self, request):
         serializer = PasswordResetRequestSerializer(data=request.data)
@@ -1122,6 +1164,11 @@ class PasswordResetRequestView(views.APIView):
                 'errors': None, 'pagination': None,
             })
 
+        # A reset code is single-purpose in practice: invalidate outstanding
+        # reset candidates before issuing a new one and never emit it to logs.
+        OTPToken.objects.filter(
+            user=user, channel='email', is_used=False,
+        ).update(is_used=True)
         otp = _generate_otp()
         OTPToken.objects.create(
             user=user,
@@ -1129,7 +1176,7 @@ class PasswordResetRequestView(views.APIView):
             channel='email',
             expires_at=timezone.now() + timedelta(minutes=30),
         )
-        print(f"[DEV] Password reset OTP for {user.email}: {otp}")
+        send_otp_email.delay(str(user.id), otp, 'password_reset')
 
         return Response({
             'success': True, 'data': None,
@@ -1147,11 +1194,27 @@ class PasswordResetConfirmView(views.APIView):
         data = serializer.validated_data
 
         try:
-            otp_token = OTPToken.objects.get(
-                code=data['token'], channel='email', is_used=False,
-                expires_at__gt=timezone.now(),
-            )
-        except OTPToken.DoesNotExist:
+            user = User.objects.get(email__iexact=data['email'])
+            otp_token = OTPToken.objects.filter(
+                user=user, channel='email', is_used=False,
+            ).latest('created_at')
+        except (User.DoesNotExist, OTPToken.DoesNotExist):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid or expired reset token.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not otp_token.is_valid():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid or expired reset token.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not secrets.compare_digest(otp_token.code, data['token']):
+            otp_token.attempts += 1
+            otp_token.save(update_fields=['attempts'])
             return Response({
                 'success': False, 'data': None,
                 'message': 'Invalid or expired reset token.',
@@ -1200,6 +1263,10 @@ class ChangePasswordView(views.APIView):
 
         request.user.set_password(data['new_password'])
         request.user.save()
+        # Current access tokens are short lived; revoke every refresh session
+        # immediately so a stolen long-lived refresh token cannot survive a
+        # password change.
+        DeviceSession.objects.filter(user=request.user, is_active=True).update(is_active=False)
 
         _log_event(request.user, 'password_changed', request)
 

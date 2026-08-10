@@ -10,6 +10,9 @@ logger = logging.getLogger(__name__)
 MODEL_NAME = 'sentence-transformers/all-MiniLM-L6-v2'
 DEFAULT_DIMENSION = 384
 
+CLIP_MODEL_NAME = 'openai/clip-vit-base-patch32'
+CLIP_DIMENSION = 512
+
 try:
     import faiss
     FAISS_AVAILABLE = True
@@ -131,6 +134,33 @@ def _get_model():
     return model
 
 
+def _get_clip():
+    """CLIP model + processor for image embeddings and cross-modal queries."""
+    cached = ModelRegistry.get(CLIP_MODEL_NAME)
+    if cached is not None:
+        return cached
+    from transformers import CLIPModel, CLIPProcessor
+    from .ml.hf_utils import load_preferred_hf
+
+    processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME)
+
+    def factory():
+        return CLIPModel.from_pretrained(CLIP_MODEL_NAME, torch_dtype='auto')
+
+    model = load_preferred_hf(CLIP_MODEL_NAME, factory)
+    ModelRegistry.register(f'{CLIP_MODEL_NAME}-processor', processor)
+    return model
+
+
+def _get_clip_processor():
+    processor = ModelRegistry.get(f'{CLIP_MODEL_NAME}-processor')
+    if processor is None:
+        from transformers import CLIPProcessor
+        processor = CLIPProcessor.from_pretrained(CLIP_MODEL_NAME)
+        ModelRegistry.register(f'{CLIP_MODEL_NAME}-processor', processor)
+    return processor
+
+
 async def embed_text(text: str) -> tuple[list[float], int]:
     if not text or not text.strip():
         return [], DEFAULT_DIMENSION
@@ -138,6 +168,47 @@ async def embed_text(text: str) -> tuple[list[float], int]:
     embedding = model.encode(text, normalize_embeddings=True)
     vector = embedding.tolist()
     return vector, DEFAULT_DIMENSION
+
+
+def embed_image(image_bytes: bytes) -> tuple[list[float], int]:
+    """Embed an image with CLIP (512-dim), normalised for cosine search."""
+    if not image_bytes:
+        return [], CLIP_DIMENSION
+    try:
+        import torch
+        from PIL import Image
+        from io import BytesIO
+    except ImportError as exc:
+        logger.warning('Image embedding dependencies unavailable: %s', exc)
+        return [], CLIP_DIMENSION
+
+    model = _get_clip()
+    processor = _get_clip_processor()
+    image = Image.open(BytesIO(image_bytes)).convert('RGB')
+    inputs = processor(images=image, return_tensors='pt').to(DEVICE)
+    with torch.inference_mode():
+        features = model.get_image_features(**inputs)
+    vector = torch.nn.functional.normalize(features.pooler_output, dim=-1)[0].tolist()
+    return vector, CLIP_DIMENSION
+
+
+def embed_text_clip(text: str) -> tuple[list[float], int]:
+    """Embed a text query with CLIP so it is comparable to CLIP image vectors."""
+    if not text or not text.strip():
+        return [], CLIP_DIMENSION
+    try:
+        import torch
+    except ImportError as exc:
+        logger.warning('CLIP text embedding dependencies unavailable: %s', exc)
+        return [], CLIP_DIMENSION
+
+    model = _get_clip()
+    processor = _get_clip_processor()
+    inputs = processor(text=text, return_tensors='pt').to(DEVICE)
+    with torch.inference_mode():
+        features = model.get_text_features(**inputs)
+    vector = torch.nn.functional.normalize(features.pooler_output, dim=-1)[0].tolist()
+    return vector, CLIP_DIMENSION
 
 
 async def compute_similarity(vec_a: list[float], vec_b: list[float]) -> float:

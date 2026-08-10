@@ -6,7 +6,13 @@ import 'app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load();
+  // `.env` holds shared/production values; `.env.local` (git-ignored) can
+  // override for local development and takes precedence when present.
+  await dotenv.load(
+    fileName: '.env',
+    overrideWithFiles: ['.env.local'],
+    isOptional: true,
+  );
   try {
     await Firebase.initializeApp();
   } catch (e) {

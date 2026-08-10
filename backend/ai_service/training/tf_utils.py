@@ -169,8 +169,79 @@ def quantize_dynamic_onnx(onnx_path: Path) -> Path:
 # --- tracking ----------------------------------------------------------------
 
 
-def mlflow_log(meta: dict, tracking_uri: str | None = None, run_name: str = ''):
-    """Log metrics/artifacts to MLflow if configured; else print model-card JSON."""
+def _gpu_label() -> str:
+    try:
+        return 'gpu' if on_gpu() else 'cpu'
+    except Exception:  # noqa: BLE001
+        return 'unknown'
+
+
+def _training_run_payload(meta: dict) -> dict:
+    """Map an mlflow_log meta dict onto the TrainingRun API payload."""
+    return {
+        'model_name': meta.get('name', ''),
+        'version': meta.get('version', '1.0.0'),
+        'scenario': meta.get('scenario', os.environ.get('BUDDY_SCALE', '')),
+        'framework': meta.get('framework', 'tensorflow'),
+        'artifact_path': meta.get('artifact_path', ''),
+        'metrics': meta.get('metrics') or {},
+        'n_classes': meta.get('n_classes'),
+        'status': 'failed' if meta.get('error') else meta.get('status', 'completed'),
+        'source': meta.get('source', 'notebook'),
+        'duration_seconds': meta.get('duration_seconds'),
+        'gpu': meta.get('gpu', _gpu_label()),
+        'error': meta.get('error', ''),
+    }
+
+
+def post_training_run(meta: dict, api_url: str = '', api_token: str = ''):
+    """POST a training run to the Django admin dashboard (best effort).
+
+    Reads BUDDY_API_BASE_URL / BUDDY_API_TOKEN from the environment when not
+    passed explicitly. Requires a staff access token; when absent the run is
+    only printed locally so notebooks never fail because of telemetry.
+    """
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    base = api_url or os.environ.get('BUDDY_API_BASE_URL', '')
+    token = api_token or os.environ.get('BUDDY_API_TOKEN', '')
+    if not base or not token:
+        print('[ml] post_training_run skipped (set BUDDY_API_BASE_URL + BUDDY_API_TOKEN)')
+        return None
+
+    try:
+        url = f"{base.rstrip('/')}/admin/dashboard/log-training/"
+        payload = _training_run_payload(meta)
+        req = urllib.request.Request(
+            url,
+            data=_json.dumps(payload).encode('utf-8'),
+            headers={
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {token}',
+            },
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            body = _json.loads(resp.read().decode('utf-8'))
+            run_id = (body.get('data') or {}).get('id')
+            print(f"[ml] training run logged: {payload['model_name']}:{payload['version']} "
+                  f"-> run#{run_id}")
+            return run_id
+    except urllib.error.HTTPError as e:
+        print(f'[ml] training run log failed (HTTP {e.code}): {e.read().decode()[:300]}')
+    except Exception as e:  # noqa: BLE001
+        print(f'[ml] training run log failed: {e}')
+    return None
+
+
+def mlflow_log(meta: dict, tracking_uri: str | None = None, run_name: str = '',
+               api_url: str = '', api_token: str = ''):
+    """Log metrics/artifacts to MLflow if configured; else print model-card JSON.
+
+    Also persists the run to the BuddyUp ML dashboard via post_training_run().
+    """
     if tracking_uri:
         import mlflow
 
@@ -182,3 +253,5 @@ def mlflow_log(meta: dict, tracking_uri: str | None = None, run_name: str = ''):
                 mlflow.log_artifact(meta['artifact_path'])
     else:
         print(json.dumps(meta, indent=2))
+
+    post_training_run(meta, api_url=api_url, api_token=api_token)

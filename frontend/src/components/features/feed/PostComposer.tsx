@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Image, FileText, Music, MapPin, BarChart2,
   Smile, X, Send, Globe, Users, Lock, Dumbbell, AtSign, ChevronDown,
+  Utensils, Scale, Camera,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api';
@@ -9,6 +10,8 @@ import { profilesApi } from '@/api';
 import { useAuthStore } from '@/store/authStore';
 import type { Post } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
+
+type ComposerKind = 'text' | 'meal' | 'progress';
 
 function getCaretOffset(el: HTMLElement): number {
   const sel = window.getSelection();
@@ -99,11 +102,14 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   const profile = useAuthStore((s) => s.profile);
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mealPhotoInputRef = useRef<HTMLInputElement>(null);
+  const progressPhotoInputRef = useRef<HTMLInputElement>(null);
   const mentionDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const draftDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiToggleRef = useRef<HTMLButtonElement>(null);
 
+  const [kind, setKind] = useState<ComposerKind>('text');
   const [content, setContent] = useState('');
   const [mediaFiles, setMediaFiles] = useState<MediaItem[]>([]);
   const [visibility, setVisibility] = useState<'public' | 'buddies' | 'gym_members' | 'private'>('public');
@@ -113,6 +119,20 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   const [showLocation, setShowLocation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDraftRestore, setShowDraftRestore] = useState(false);
+
+  // Meal-log state
+  const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink' | 'other'>('breakfast');
+  const [foodName, setFoodName] = useState('');
+  const [mealDesc, setMealDesc] = useState('');
+  const [calories, setCalories] = useState('');
+  const [proteinG, setProteinG] = useState('');
+  const [carbsG, setCarbsG] = useState('');
+  const [fatG, setFatG] = useState('');
+  const [mealPhoto, setMealPhoto] = useState<MediaItem | null>(null);
+
+  // Progress / body-snap state
+  const [progressWeight, setProgressWeight] = useState('');
+  const [progressPhoto, setProgressPhoto] = useState<MediaItem | null>(null);
 
   // Poll state
   const [showPoll, setShowPoll] = useState(false);
@@ -182,6 +202,8 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   // Cleanup blob URLs
   useEffect(() => () => {
     mediaFiles.forEach(m => { if (m.preview?.startsWith('blob:')) URL.revokeObjectURL(m.preview); });
+    if (mealPhoto?.preview?.startsWith('blob:')) URL.revokeObjectURL(mealPhoto.preview);
+    if (progressPhoto?.preview?.startsWith('blob:')) URL.revokeObjectURL(progressPhoto.preview);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -300,25 +322,50 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   };
 
   const handleSubmit = async () => {
-    if (!content.trim() && mediaFiles.length === 0 && !showPoll) return;
+    if (kind === 'meal') {
+      if (!foodName.trim() && !calories.trim()) return;
+    } else if (kind === 'progress') {
+      if (!progressWeight.trim() && !progressPhoto) return;
+    } else if (!content.trim() && mediaFiles.length === 0 && !showPoll) {
+      return;
+    }
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      const postType = showPoll ? 'poll' : mediaFiles.length > 0 ? 'photo' : 'text';
-      formData.append('post_type', postType);
       formData.append('body', content.trim());
       formData.append('visibility', visibility);
       if (gymId) formData.append('gym_tag', gymId);
       if (locationLabel) formData.append('location_label', locationLabel);
 
-      mediaFiles.forEach(m => formData.append('media', m.file));
-      taggedUsers.forEach(u => formData.append('mentioned_users', u.user_id));
-
-      if (showPoll && pollQuestion.trim()) {
-        formData.append('poll_question', pollQuestion.trim());
-        pollOptions.filter(o => o.text.trim()).forEach(o => formData.append('poll_options', o.text.trim()));
-        formData.append('poll_allow_multiple', String(pollAllowMultiple));
+      if (kind === 'meal') {
+        formData.append('post_type', 'meal');
+        const mealData: Record<string, unknown> = {
+          meal_type: mealType,
+          food_name: foodName.trim(),
+          description: mealDesc.trim(),
+        };
+        if (calories) mealData.calories = Number(calories);
+        if (proteinG) mealData.protein_g = Number(proteinG);
+        if (carbsG) mealData.carbs_g = Number(carbsG);
+        if (fatG) mealData.fat_g = Number(fatG);
+        formData.append('meal_data', JSON.stringify(mealData));
+        if (mealPhoto) formData.append('media', mealPhoto.file);
+      } else if (kind === 'progress') {
+        formData.append('post_type', 'progress');
+        formData.append('progress_data', JSON.stringify({ weight_kg: progressWeight ? Number(progressWeight) : null }));
+        if (progressPhoto) formData.append('media', progressPhoto.file);
+      } else {
+        const postType = showPoll ? 'poll' : mediaFiles.length > 0 ? 'photo' : 'text';
+        formData.append('post_type', postType);
+        mediaFiles.forEach(m => formData.append('media', m.file));
+        if (showPoll && pollQuestion.trim()) {
+          formData.append('poll_question', pollQuestion.trim());
+          pollOptions.filter(o => o.text.trim()).forEach(o => formData.append('poll_options', o.text.trim()));
+          formData.append('poll_allow_multiple', String(pollAllowMultiple));
+        }
       }
+
+      taggedUsers.forEach(u => formData.append('mentioned_users', u.user_id));
 
       const res = await feedApi.createPost(formData);
       if (res.data) onPost?.(res.data);
@@ -332,6 +379,9 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
       setShowPoll(false);
       setPollQuestion('');
       setPollOptions([{ text: '' }, { text: '' }]);
+      setKind('text');
+      setFoodName(''); setMealDesc(''); setCalories(''); setProteinG(''); setCarbsG(''); setFatG('');
+      setMealPhoto(null); setProgressWeight(''); setProgressPhoto(null);
       onClose?.();
     } catch (err) {
       console.error('Post failed:', err);
@@ -349,7 +399,13 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   const visOpt = visibilityOptions.find(v => v.value === visibility)!;
   const VisIcon = visOpt.icon;
 
-  const canPost = (content.trim().length > 0 || mediaFiles.length > 0 || (showPoll && pollQuestion.trim() && pollOptions.filter(o => o.text.trim()).length >= 2)) && !isSubmitting;
+  const canPost =
+    (kind === 'meal'
+      ? Boolean(foodName.trim() || calories.trim())
+      : kind === 'progress'
+        ? Boolean(progressWeight.trim() || progressPhoto)
+        : Boolean(content.trim() || mediaFiles.length > 0 || (showPoll && pollQuestion.trim() && pollOptions.filter(o => o.text.trim()).length >= 2))) &&
+    !isSubmitting;
 
   const composerContent = (
     <div className={`flex flex-col ${fullScreen ? 'h-full' : ''}`}>
@@ -390,7 +446,127 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
             </div>
           )}
 
-          {/* Editor */}
+          {/* Composer kind switcher */}
+          <div className="flex items-center gap-1 bg-buddy-surface rounded-xl p-1 mb-3 w-max">
+            <button
+              onClick={() => { setKind('text'); setShowEmoji(false); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${kind === 'text' ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+            >
+              <Image size={14} /> Post
+            </button>
+            <button
+              onClick={() => { setKind('meal'); setShowEmoji(false); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${kind === 'meal' ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+            >
+              <Utensils size={14} /> Meal
+            </button>
+            <button
+              onClick={() => { setKind('progress'); setShowEmoji(false); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${kind === 'progress' ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+            >
+              <Scale size={14} /> Progress
+            </button>
+          </div>
+
+          {/* Meal-log form */}
+          {kind === 'meal' && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {(['breakfast', 'lunch', 'dinner', 'snack', 'drink', 'other'] as const).map((mt) => (
+                  <button
+                    key={mt}
+                    onClick={() => setMealType(mt)}
+                    className={`px-3 py-1 rounded-full text-xs capitalize transition-colors ${
+                      mealType === mt
+                        ? 'bg-buddy-green text-buddy-black font-medium'
+                        : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
+                    }`}
+                  >
+                    {mt}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  value={foodName}
+                  onChange={(e) => setFoodName(e.target.value)}
+                  placeholder="What did you eat? (e.g. Oatmeal & banana)"
+                  className="flex-1 bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
+                />
+                <input
+                  type="number"
+                  value={calories}
+                  onChange={(e) => setCalories(e.target.value)}
+                  placeholder="kcal"
+                  className="w-20 bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <input value={proteinG} onChange={(e) => setProteinG(e.target.value)} type="number" placeholder="Protein (g)" className="w-full bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2 text-xs text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
+                <input value={carbsG} onChange={(e) => setCarbsG(e.target.value)} type="number" placeholder="Carbs (g)" className="w-full bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2 text-xs text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
+                <input value={fatG} onChange={(e) => setFatG(e.target.value)} type="number" placeholder="Fat (g)" className="w-full bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2 text-xs text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
+              </div>
+              {mealPhoto && (
+                <div className="relative rounded-xl overflow-hidden w-24 h-24">
+                  <img src={mealPhoto.preview!} alt="Meal" className="w-full h-full object-cover" />
+                  <button onClick={() => setMealPhoto(null)} className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white hover:bg-black/80"><X size={12} /></button>
+                </div>
+              )}
+              <input ref={mealPhotoInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setMealPhoto({ file: f, preview: URL.createObjectURL(f), type: 'image', name: f.name });
+                }} />
+              <button
+                onClick={() => mealPhotoInputRef.current?.click()}
+                className="flex items-center gap-1.5 text-xs text-buddy-text-secondary hover:text-buddy-green transition-colors"
+              >
+                <Camera size={14} /> {mealPhoto ? 'Change photo' : 'Add meal photo'}
+              </button>
+            </div>
+          )}
+
+          {/* Progress / body-snap form */}
+          {kind === 'progress' && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Scale size={16} className="text-buddy-green flex-shrink-0" />
+                <input
+                  type="number"
+                  step="0.1"
+                  value={progressWeight}
+                  onChange={(e) => setProgressWeight(e.target.value)}
+                  placeholder="Current weight (kg)"
+                  className="flex-1 bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
+                />
+              </div>
+              <input ref={progressPhotoInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setProgressPhoto({ file: f, preview: URL.createObjectURL(f), type: 'image', name: f.name });
+                }} />
+              {progressPhoto ? (
+                <div className="relative rounded-xl overflow-hidden">
+                  <img src={progressPhoto.preview!} alt="Progress" className="w-full h-48 object-cover" />
+                  <button onClick={() => setProgressPhoto(null)} className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full text-white hover:bg-black/80"><X size={14} /></button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => progressPhotoInputRef.current?.click()}
+                  className="w-full h-32 rounded-xl border-2 border-dashed border-buddy-text-secondary/20 hover:border-buddy-green/50 flex flex-col items-center justify-center gap-1.5 text-buddy-text-secondary hover:text-buddy-green transition-colors"
+                >
+                  <Camera size={20} />
+                  <span className="text-sm">Add body snap</span>
+                </button>
+              )}
+              <p className="text-[11px] text-buddy-text-secondary">
+                Your snap will be posted as a <span className="text-buddy-green font-medium">progress update</span> and counted in your analytics.
+              </p>
+            </div>
+          )}
+
+          {/* Editor (text/poll posts) */}
+          {kind === 'text' && (
           <div className="relative">
             <div
               ref={editorRef}
@@ -428,9 +604,10 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
               </div>
             )}
           </div>
+          )}
 
           {/* Tagged users chips */}
-          {taggedUsers.length > 0 && (
+          {kind === 'text' && taggedUsers.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {taggedUsers.map(u => (
                 <span key={u.user_id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-buddy-green/15 text-buddy-green rounded-full text-xs font-medium">
@@ -442,7 +619,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
           )}
 
           {/* Media previews */}
-          {mediaFiles.length > 0 && (
+          {kind === 'text' && mediaFiles.length > 0 && (
             <div className={`grid gap-2 mt-3 ${mediaFiles.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {mediaFiles.map((m, i) => (
                 <div key={i} className="relative rounded-xl overflow-hidden bg-buddy-surface-raised">
@@ -469,7 +646,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
           )}
 
           {/* Location */}
-          {showLocation && (
+          {kind === 'text' && showLocation && (
             <div className="mt-3 flex items-center gap-2 bg-buddy-surface-raised rounded-xl px-3 py-2">
               <MapPin size={14} className="text-buddy-green flex-shrink-0" />
               <input
@@ -483,7 +660,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
           )}
 
           {/* Poll builder */}
-          {showPoll && (
+          {kind === 'text' && showPoll && (
             <div className="mt-3 space-y-2 bg-buddy-surface-raised rounded-xl p-3">
               <input
                 value={pollQuestion}
@@ -516,7 +693,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
           )}
 
           {/* Emoji picker */}
-          {showEmoji && (
+          {kind === 'text' && showEmoji && (
             <div ref={emojiPickerRef} className="mt-3 relative z-20">
               <EmojiPicker
                 theme={Theme.DARK}
@@ -547,6 +724,8 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
       {/* Toolbar */}
       <div className="border-t border-buddy-surface px-4 py-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1">
+          {kind === 'text' && (
+            <>
           {/* Media */}
           <input
             ref={fileInputRef}
@@ -582,6 +761,8 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
             title="Add emoji">
             <Smile size={18} />
           </button>
+            </>
+          )}
 
           {/* Visibility */}
           {!hideVisibility && (
@@ -624,7 +805,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-buddy-green text-buddy-black text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-buddy-green/90 transition-colors"
             >
               <Send size={14} />
-              Post
+              {isSubmitting ? 'Posting...' : kind === 'meal' ? 'Log Meal' : kind === 'progress' ? 'Share' : 'Post'}
             </button>
           </div>
         )}

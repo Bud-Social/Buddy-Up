@@ -74,6 +74,15 @@ class Migration(migrations.Migration):
             fields=[
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
                 ("name", models.CharField(max_length=100, unique=True)),
                 ("version", models.CharField(max_length=50)),
                 ("description", models.TextField(blank=True)),
@@ -114,11 +123,11 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="aipredictionjob",
-            index=models.Index(fields=["task", "status"]),
+            index=models.Index(fields=["task", "status"], name="ai_pred_job_task_status_idx"),
         ),
         migrations.AddIndex(
             model_name="aipredictionjob",
-            index=models.Index(fields=["-created_at"]),
+            index=models.Index(fields=["-created_at"], name="ai_pred_job_created_idx"),
         ),
         migrations.AlterUniqueTogether(
             name="modelmetadata",

@@ -308,6 +308,11 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         from .models import Conversation, Message
         try:
             conv = Conversation.objects.get(id=self.conversation_id)
+            if reply_to_id and not Message.objects.filter(
+                id=reply_to_id, conversation=conv,
+            ).exists():
+                logger.warning('Rejected cross-conversation reply target in conversation=%s', self.conversation_id)
+                return None
             msg = Message.objects.create(
                 conversation=conv,
                 sender=self.profile,

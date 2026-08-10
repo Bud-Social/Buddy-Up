@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'apps.moderation',
     'apps.verification',
     'apps.ai',
+    'apps.analytics',
 ]
 
 MIDDLEWARE = [
@@ -130,6 +131,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.marketplace.tasks.send_meal_plan_daily_reminders',
         'schedule': 3600.0,  # Run every hour; task checks if current hour matches subscriber preference
     },
+    'visual-search-index-rebuild': {
+        'task': 'apps.ai.tasks.embed_and_index_images',
+        'schedule': 604800.0,  # Weekly marketplace image index rebuild
+    },
 }
 
 # Password validation
@@ -189,13 +194,17 @@ REST_FRAMEWORK = {
         'registration': '10/h',
         'login': '30/h',
         'otp': '3/h',
+        'password_reset': '3/h',
         'upload_attachment': '20/h',
+        'link_preview': '30/h',
     },
 }
 
 # JWT
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
+    # Access tokens are bearer credentials and must be short lived. Refresh
+    # tokens are bound to a DeviceSession and are rotated on use.
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
@@ -219,6 +228,13 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@buddyup.app')
+
+# Africa's Talking SMS (used only when both credentials are configured).
+AFRICASTALKING_USERNAME = os.environ.get('AFRICASTALKING_USERNAME', '')
+AFRICASTALKING_API_KEY = os.environ.get('AFRICASTALKING_API_KEY', '')
+AFRICASTALKING_SMS_URL = os.environ.get(
+    'AFRICASTALKING_SMS_URL', 'https://api.africastalking.com/version1/messaging'
+)
 
 # Social Auth
 AUTHENTICATION_BACKENDS = (

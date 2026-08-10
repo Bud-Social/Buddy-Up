@@ -11,3 +11,5 @@ export { marketplaceApi } from './marketplace';
 export { messagingApi } from './messaging';
 export { activityApi } from './activity';
 export { verificationApi } from './verification';
+export { adminApi } from './admin';
+export { moderationApi } from './moderation';

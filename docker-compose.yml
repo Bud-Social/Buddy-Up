@@ -49,8 +49,10 @@ services:
       - AI_REDIS_URL=redis://redis:6379/0
       - AI_LOG_LEVEL=DEBUG
       - AI_MODEL_CACHE_DIR=/models
+      - AI_HF_HOME=/models/hf
       - AI_OPENAI_API_KEY=${OPENAI_API_KEY}
       - AI_OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+      - HF_TOKEN=${HF_TOKEN}
     volumes:
       - ./backend/ai_service/app:/app/app
       - ./backend/ai_service/models:/models

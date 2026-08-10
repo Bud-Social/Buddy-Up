@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 import type { ApiResponse, Post, Comment } from '@/types';
 
-export type FeedTab = 'for_you' | 'following' | 'videos';
+export type FeedTab = 'for_you' | 'following' | 'videos' | 'meals';
 
 export const feedApi = {
   getFeed: (tab: FeedTab = 'for_you', cursor?: string) =>

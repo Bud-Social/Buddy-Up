@@ -28,6 +28,12 @@ class ContentFlagSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+class ContentFlagActionSerializer(serializers.Serializer):
+    """Moderator action on a ContentFlag (Sprint B3)."""
+    action = serializers.ChoiceField(choices=['approve', 'remove', 'escalate'])
+    note = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
 class ModerationActionSerializer(serializers.ModelSerializer):
     class Meta:
         model = ModerationAction

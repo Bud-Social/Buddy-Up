@@ -10,6 +10,7 @@ export interface User {
   phone_verified: boolean;
   is_adult: boolean;
   totp_enabled?: boolean;
+  is_staff: boolean;
   created_at: string;
 }
 

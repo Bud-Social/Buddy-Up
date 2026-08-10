@@ -254,3 +254,30 @@ Recommended sprint slicing:
 | 6 | ONNX INT8 CPU serving | Compose stack is CPU-only; quantization meets latency budgets |
 | 7 | Lightweight dependency-free monitoring | CPU-only service stays light; scrape into Prometheus later |
 | 8 | JEPA/RL in research lane, gated | Not production-mature for MVP; decisions deferred to data |
+
+---
+
+## 10. Bug-fix resolution log (completed sprint)
+
+| # | Bug | Root cause | Fix | Verification |
+|---|-----|------------|-----|--------------|
+| 1 | Mediapipe + torch segfault on import | `torch` + `mediapipe` shared C++ runtime conflict when both loaded in same process | Disable mediapipe by default (`USE_MEDIAPIPE=false` env); add lazy import guard in `form_analyzer_engine.py`; torch-only pose backend (OpenPose/YOLOv8) now primary | `app/form_analyzer_engine.py` loads without segfault; CPU-only CI passes |
+| 2 | TTS `generate_speech` kwarg error (`speaker_embeddings` vs `speaker`) | SpeechT5 API changed; caller passed old kwarg name causing `TypeError` | Map `speaker` → `speaker_embeddings` in `tts_engine.py:synthesize_speech()`; add fallback for legacy callers | `POST /api/v1/tts/synthesize` returns RIFF WAV (200 OK, ~1s) |
+| 3 | CLIP `get_text_features` / `get_image_features` returned `last_hidden_state` instead of pooled embeddings | Used raw `CLIPTextModel`/`CLIPVisionModel` outputs without `pooler_output` projection | Switch to `CLIPModel.get_text_features()` / `get_image_features()` (HuggingFace wrapper handles pooling + projection); fallback to manual mean-pool if pooler missing | `POST /api/v1/embeddings/clip-text` returns 512-dim vector (200 OK); visual search index builds + searches correctly |
+| 4 | Florence-2: (a) native PyTorch model unavailable on some runtimes; (b) fp16 OOM on CPU; (c) stale int8 cache served after model update | (a) Missing flash-attn dep; (b) CPU cannot run fp16; (c) `model_registry.py` cached int8 artifact keyed only by name, not version | (a) Fallback to HF transformers Florence-2 when flash-attn missing; (b) Force fp32 (`torch.float32`) on CPU; (c) Cache key now includes `model_version` + hash; auto-evict on version change | `POST /api/v1/food/recognize` with Florence-2 works (fp32 CPU, INT8 cache busted on version bump) |
+| 5 | Django async flow: `describe_workout_video` failure path left job in `pending` forever | `Task.retry(exc=exc)` re-raises **original exception** when max retries exhausted, not `MaxRetriesExceededError`; outer `except MaxRetriesExceededError:` never executed | New `_retry_or_fail(task, job_id, exc, ...)` helper checks `task.request.retries >= task.max_retries` explicitly; marks job `failed` + audits before re-raising | `POST /api/v1/ai/predictions/video-describe/` with bad URL → job transitions `pending` → `failed` with error message; audit row created |
+| 6 | Django async flow: all three tasks (`describe_workout_video`, `run_summarization`, `synthesize_speech`) shared same broken retry pattern | Same root cause as #5 | All three refactored to use `_retry_or_fail`; `_update_job` / `_store_audio` helpers unchanged | TTS: `POST /api/v1/ai/predictions/tts/` → completed, `result_url` + timestamps; Summarization: `POST /api/v1/ai/predictions/summarize/` → completed, `output_data` populated; Video: failure path → `failed` with error |
+
+**Verification checklist (all green):**
+- `python manage.py check` → 0 issues
+- `npx vite build` (frontend) → built in 7.76s
+- `npx tsc -b` (type-check) → clean for all touched files
+- `makemigrations --check --dry-run ai` → "No changes detected"
+- Celery worker processes tasks on `ai` queue (logs confirm)
+- `GET /api/v1/admin/dashboard/` returns TrainingRun + ModelMetadata + health (staff only)
+- `POST /api/v1/admin/dashboard/log-training/` persists TrainingRun (201)
+- `is_staff` propagated in all 5 auth payloads; frontend `/admin` gated correctly
+
+---
+
+*End of resolution log.*

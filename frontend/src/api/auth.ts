@@ -79,7 +79,7 @@ export const authApi = {
     apiClient.post<ApiResponse<null>>('/auth/resend-registration-otp/', { registration_token, channel }).then((r) => r.data),
   completeOnboarding: (data: OnboardingPayload) => apiClient.post<ApiResponse<Profile>>('/auth/onboarding/', data).then((r) => r.data),
   forgotPassword: (email: string) => apiClient.post<ApiResponse<null>>('/auth/forgot-password/', { email }).then((r) => r.data),
-  resetPassword: (token: string, new_password: string) => apiClient.post<ApiResponse<null>>('/auth/reset-password/', { token, new_password }).then((r) => r.data),
+  resetPassword: (email: string, token: string, new_password: string) => apiClient.post<ApiResponse<null>>('/auth/reset-password/', { email, token, new_password }).then((r) => r.data),
   googleLogin: (credential: string) => apiClient.post<ApiResponse<TokenResponse>>('/auth/google/', { credential }).then((r) => r.data),
   appleLogin: (access_token: string) => apiClient.post<ApiResponse<TokenResponse>>('/auth/apple/', { access_token }).then((r) => r.data),
 

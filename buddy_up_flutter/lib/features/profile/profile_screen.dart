@@ -212,6 +212,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _linkTile(Icons.storefront, 'Marketplace', () => context.push('/marketplace')),
           const SizedBox(height: 4),
           _linkTile(Icons.account_balance_wallet, 'Wallet', () => context.push('/wallet')),
+          const SizedBox(height: 4),
+          _linkTile(Icons.insights, 'Analytics', () => context.push('/analytics')),
         ],
       ),
     );
