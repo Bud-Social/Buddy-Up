@@ -22,7 +22,9 @@ class VerificationSubmissionSerializer(serializers.ModelSerializer):
         model = VerificationSubmission
         fields = ['id', 'profile', 'verification_type', 'status', 'documents',
                    'document_ids', 'notes', 'reviewed_by', 'reviewed_at',
-                   'submitted_at', 'created_at']
+                   'submitted_at', 'created_at',
+                   'credential_title', 'credential_issuer', 'credential_id',
+                   'issued_date', 'scope_of_practice']
         read_only_fields = ['id', 'profile', 'status', 'documents',
                             'reviewed_by', 'reviewed_at', 'created_at']
 

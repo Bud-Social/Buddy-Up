@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 from common.models import TimestampedModel, SoftDeleteModel
+from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
 
 
 class Post(TimestampedModel, SoftDeleteModel):
@@ -47,6 +48,9 @@ class Post(TimestampedModel, SoftDeleteModel):
     tags = models.JSONField(default=list)
     view_count = models.IntegerField(default=0)
     is_pinned = models.BooleanField(default=False)
+    content_rating = models.CharField(
+        max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
+    )
     moderation_status = models.CharField(max_length=15, choices=MODERATION_CHOICES, default='clean')
     pinned_comment = models.ForeignKey('Comment', null=True, blank=True, on_delete=models.SET_NULL, related_name='pinned_on')
     mentioned_profiles = models.ManyToManyField('profiles.Profile', blank=True, related_name='mention_posts')

@@ -1,13 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle, CheckCircle2, Flag, RefreshCw, Search, ShieldAlert,
+  CheckCircle2, Flag, RefreshCw, Search, ShieldAlert,
   ShieldCheck, Trash2, ArrowUpRight,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { moderationApi, type ContentFlag, type ModerationStats } from '@/api/moderation';
+import { moderationApi, type ContentFlag, type FlagReason, type ModerationStats } from '@/api/moderation';
 
 const POLL_MS = 30_000;
+
+const REASONS: FlagReason[] = ['nsfw', 'toxic', 'spam', 'misinfo', 'medical_claim', 'undisclosed_sponsor', 'adult_ungated', 'custom'];
+
+const REASON_HELP: Partial<Record<FlagReason, string>> = {
+  medical_claim: 'Content claims a meal plan or programme treats, cures, or manages a medical condition. Non-practitioners must never make these claims.',
+  undisclosed_sponsor: 'Content appears promotional (gifted/paid) without a clear, prominent disclosure. Reminders: hidden disclosures count as non-disclosure.',
+  adult_ungated: 'Adult content was posted outside the Mature category. Move it behind the age gate or remove it.',
+};
 
 function formatDate(iso: string) {
   try {
@@ -33,7 +41,9 @@ function SeverityBadge({ severity }: { severity: ContentFlag['severity'] }) {
 
 function ReasonBadge({ reason }: { reason: ContentFlag['flag_reason'] }) {
   const labels: Record<ContentFlag['flag_reason'], string> = {
-    nsfw: 'NSFW', toxic: 'Toxic', spam: 'Spam', misinfo: 'Misinfo', custom: 'Custom',
+    nsfw: 'NSFW', toxic: 'Toxic', spam: 'Spam', misinfo: 'Misinfo',
+    medical_claim: 'Medical Claim', undisclosed_sponsor: 'Undisclosed Sponsorship',
+    adult_ungated: 'Adult Outside Mature', custom: 'Custom',
   };
   return (
     <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-buddy-electric/15 text-buddy-electric uppercase tracking-wide">
@@ -149,11 +159,11 @@ export default function ModerationQueue() {
         <StatCard label="Total flags" value={stats?.total ?? 0} />
         <StatCard label="Pending review" value={unactioned} sub={`${stats?.by_severity.critical ?? 0} critical`} />
         <StatCard label="Actioned" value={stats?.actioned ?? 0} />
-        <StatCard label="By reason" value="—" sub={`${stats?.by_reason.nsfw ?? 0} NSFW · ${stats?.by_reason.toxic ?? 0} toxic`} />
+        <StatCard label="By reason" value="—" sub={`${stats?.by_reason.medical_claim ?? 0} medical · ${stats?.by_reason.undisclosed_sponsor ?? 0} sponsor`} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {(['all', 'nsfw', 'toxic', 'spam', 'misinfo', 'custom'] as const).map((r) => (
+        {(['all', ...REASONS] as const).map((r) => (
           <button
             key={r}
             onClick={() => setReasonFilter(r)}
@@ -163,7 +173,7 @@ export default function ModerationQueue() {
                 : 'text-buddy-text-secondary hover:bg-buddy-surface-raised'
             }`}
           >
-            {r === 'all' ? 'All' : r}
+            {r === 'all' ? 'All' : r === 'medical_claim' ? 'Medical Claim' : r === 'undisclosed_sponsor' ? 'Sponsor' : r}
           </button>
         ))}
         <div className="relative ml-auto">
@@ -200,6 +210,11 @@ export default function ModerationQueue() {
                     <span className="text-[11px] text-buddy-text-secondary">· {flag.source}</span>
                   </div>
                   <p className="text-sm mt-2 line-clamp-3 break-words">{flag.content_preview || 'No preview available.'}</p>
+                  {REASON_HELP[flag.flag_reason] && (
+                    <p className="text-[11px] text-buddy-orange mt-1.5">
+                      <span className="font-semibold">Guidance:</span> {REASON_HELP[flag.flag_reason]}
+                    </p>
+                  )}
                   <p className="text-[11px] text-buddy-text-secondary mt-1.5">{formatDate(flag.created_at)}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

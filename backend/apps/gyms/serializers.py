@@ -35,7 +35,8 @@ class GymSerializer(serializers.ModelSerializer):
         model = Gym
         fields = [
             'id', 'name', 'handle', 'description', 'logo_url', 'cover_url',
-            'category', 'categories', 'access_type', 'subscription_type',
+            'category', 'content_rating', 'categories', 'access_type',
+            'subscription_type',
             'monthly_fee_artifacts', 'join_fee_artifacts', 'category_pricing',
             'is_verified', 'is_reviews_enabled', 'is_donations_enabled',
             'average_rating', 'review_count', 'recent_reviewers',
@@ -118,7 +119,8 @@ class CreateGymSerializer(serializers.ModelSerializer):
     class Meta:
         model = Gym
         fields = [
-            'name', 'handle', 'description', 'category', 'category_ids',
+            'name', 'handle', 'description', 'category', 'content_rating',
+            'category_ids',
             'access_type', 'subscription_type',
             'monthly_fee_artifacts', 'join_fee_artifacts',
             'rules', 'tags', 'location_city', 'location_country',

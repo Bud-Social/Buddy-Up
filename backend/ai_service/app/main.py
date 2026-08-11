@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .monitoring import LatencyMiddleware
 from .routers import (
-    health, food, moderation, embeddings, meal_plans, workout, onboarding,
+    health, food, moderation, policy, embeddings, meal_plans, workout, onboarding,
     health_insights, form_analyzer, feed, metrics, models,
     video_caption, summarize, tts, body,
 )
@@ -53,6 +53,7 @@ async def _startup():
 app.include_router(health.router, tags=['health'])
 app.include_router(food.router, prefix='/api/v1/food', tags=['food'])
 app.include_router(moderation.router, prefix='/api/v1/moderation', tags=['moderation'])
+app.include_router(policy.router, prefix='/api/v1/policy', tags=['policy'])
 app.include_router(embeddings.router, prefix='/api/v1/embeddings', tags=['embeddings'])
 app.include_router(meal_plans.router, prefix='/api/v1/meal-plans', tags=['meal-plans'])
 app.include_router(workout.router, prefix='/api/v1/workout', tags=['workout'])

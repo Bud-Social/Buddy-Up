@@ -41,6 +41,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     apple_id = models.CharField(max_length=100, blank=True)
     preferences = models.JSONField(default=dict, blank=True)
 
+    # Parental co-owner (mandatory for users aged 16–17 per platform policy).
+    guardian_name = models.CharField(max_length=120, blank=True)
+    guardian_email = models.EmailField(blank=True)
+    guardian_phone = models.CharField(max_length=20, blank=True)
+    guardian_verified = models.BooleanField(default=False)
+
     objects = UserManager()
 
     USERNAME_FIELD = 'email'

@@ -15,6 +15,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from common.pagination import CursorPagination
+from common.age_gating import gate_mature_queryset
 from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft
 from .serializers import (
     PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer,
@@ -148,6 +149,7 @@ class FeedView(views.APIView):
             ).exclude(
                 db_models.Q(media_urls=[]) | db_models.Q(media_urls__isnull=True),
             ).select_related('author', 'gym_tag').order_by('-created_at')
+            queryset = gate_mature_queryset(request, queryset)
             videos = []
             for post in queryset[:150]:
                 if any(_looks_like_video(u) for u in (post.media_urls or [])):
@@ -211,11 +213,14 @@ class FeedView(views.APIView):
             ).order_by('-is_pinned', '-rank', '-created_at')
 
             # Sprint B1: personalised ML ranking (additive; falls back to DB ranking)
+            gated_queryset = gate_mature_queryset(request, queryset)
             ranked_response = _rank_for_you(
-                request, user_profile, queryset, buddy_ids, followed_ids, gym_ids,
+                request, user_profile, gated_queryset, buddy_ids, followed_ids, gym_ids,
             )
             if ranked_response is not None:
                 return ranked_response
+
+        queryset = gate_mature_queryset(request, queryset)
 
         count = queryset.count()
         paginator = CursorPagination()

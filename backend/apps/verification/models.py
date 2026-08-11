@@ -56,6 +56,8 @@ class VerificationSubmission(TimestampedModel):
         ('id', 'ID Verification'),
         ('trainer', 'Trainer Certification'),
         ('practitioner', 'Health Practitioner'),
+        ('shop', 'Shop / Seller Verification'),
+        ('gym', 'Gym Verification'),
     ]
     STATUS_CHOICES = [
         ('draft', 'Draft'),
@@ -81,6 +83,20 @@ class VerificationSubmission(TimestampedModel):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
+
+    # Credential + scope-of-practice fields (trainers / practitioners / shops).
+    credential_title = models.CharField(max_length=120, blank=True)
+    credential_issuer = models.CharField(max_length=200, blank=True)
+    credential_id = models.CharField(max_length=120, blank=True)
+    issued_date = models.DateField(null=True, blank=True)
+    scope_of_practice = models.CharField(max_length=30, blank=True, choices=[
+        ('general_fitness', 'General Fitness Coaching'),
+        ('nutrition_wellness', 'General Wellness Nutrition'),
+        ('meal_planning', 'Meal Planning (General Wellness)'),
+        ('medical_nutrition', 'Medical Nutrition Therapy'),
+        ('physical_therapy', 'Physiotherapy / Rehab'),
+        ('clinical', 'Clinical Practice'),
+    ])
 
     class Meta:
         db_table = 'verification_submission'

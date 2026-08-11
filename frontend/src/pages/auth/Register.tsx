@@ -57,9 +57,15 @@ export default function Register() {
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<string>('user');
+  const [age, setAge] = useState<number | null>(null);
+  const [guardianName, setGuardianName] = useState('');
+  const [guardianEmail, setGuardianEmail] = useState('');
+  const [guardianPhone, setGuardianPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [ageError, setAgeError] = useState('');
+
+  const requiresParentalCoowner = useMemo(() => age !== null && age >= 16 && age < 18, [age]);
 
   const pwStrength = useMemo(() => getPasswordStrength(password), [password]);
 
@@ -77,6 +83,7 @@ export default function Register() {
       setAgeError('BuddyUp is for users aged 16 and over. You cannot create an account at this time.');
       return;
     }
+    setAge(age);
     setStep(3);
   };
 
@@ -90,6 +97,11 @@ export default function Register() {
       const res = await authApi.register({
         email, password, dob, username, display_name: displayName || username, role,
         accepted_terms: acceptedTerms, accepted_privacy: true, accepted_guidelines: true, is_16_plus: true,
+        ...(requiresParentalCoowner && {
+          guardian_name: guardianName,
+          guardian_email: guardianEmail,
+          guardian_phone: guardianPhone,
+        }),
       });
       navigate(`/verify-registration-otp?token=${encodeURIComponent(res.data.registration_token)}&email=${encodeURIComponent(res.data.email)}`);
     } catch (err: unknown) {
@@ -174,6 +186,20 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} placeholder="fitness_fan" helperText="3–30 characters, letters, numbers, underscores" required minLength={3} maxLength={30} />
             <Input label="Display Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name or alias" required maxLength={50} />
+            {requiresParentalCoowner && (
+              <div className="space-y-3 rounded-xl border border-buddy-orange/30 bg-buddy-orange/5 p-4">
+                <div>
+                  <p className="text-sm font-medium text-buddy-text-primary">Parental Co-Owner Required</p>
+                  <p className="text-xs text-buddy-text-secondary mt-0.5">You are 16–17, so BuddyUp requires a parent or guardian co-owner to supervise your account. Provide at least one contact detail below.</p>
+                </div>
+                <Input label="Guardian Name" value={guardianName} onChange={(e) => setGuardianName(e.target.value)} placeholder="Parent or guardian's name" maxLength={120} />
+                <Input label="Guardian Email" type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} placeholder="guardian@example.com" />
+                <Input label="Guardian Phone" value={guardianPhone} onChange={(e) => setGuardianPhone(e.target.value)} placeholder="+2547..." maxLength={20} />
+                {!guardianName && !guardianEmail && !guardianPhone && (
+                  <p className="text-xs text-buddy-orange">At least one guardian detail is required to continue.</p>
+                )}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">I am a...</label>
               <div className="grid grid-cols-3 gap-2">
@@ -192,7 +218,7 @@ export default function Register() {
             </div>
             <div className="flex gap-3">
               <Button variant="ghost" type="button" onClick={() => setStep(2)} className="flex-1">Back</Button>
-              <Button type="submit" isLoading={isLoading} disabled={!username || !displayName} className="flex-1" size="lg">Create Account</Button>
+              <Button type="submit" isLoading={isLoading} disabled={!username || !displayName || (requiresParentalCoowner && !guardianName && !guardianEmail && !guardianPhone)} className="flex-1" size="lg">Create Account</Button>
             </div>
           </form>
         )}

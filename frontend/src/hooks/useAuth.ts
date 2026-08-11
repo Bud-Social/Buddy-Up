@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/api';
 
-const PUBLIC_ROUTES = ['/', '/login', '/signup', '/verify-age', '/forgot-password', '/terms', '/privacy', '/community-guidelines', '/cookie-policy'];
+const PUBLIC_ROUTES = ['/', '/login', '/signup', '/verify-age', '/forgot-password', '/terms', '/privacy', '/community-guidelines', '/cookie-policy', '/medical-disclaimer', '/sponsorship-policy', '/adult-content-policy'];
 
 export function useAuthRequired() {
   const { isAuthenticated, isLoading, setUser, logout, setLoading, setTokens } = useAuthStore();

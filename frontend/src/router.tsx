@@ -9,6 +9,7 @@ const PUBLIC_ROUTES = [
   '/', '/login', '/signup', '/verify-registration-otp', '/verify-age',
   '/forgot-password', '/reset-password',
   '/terms', '/privacy', '/community-guidelines', '/cookie-policy',
+  '/medical-disclaimer', '/sponsorship-policy', '/adult-content-policy', '/help',
   '/totp-setup', '/totp-challenge',
 ];
 
@@ -82,11 +83,16 @@ const Verification = lazy(() => import('@/pages/app/Verification'));
 const AnalyticsPage = lazy(() => import('@/pages/app/AnalyticsPage'));
 const AdminDashboard = lazy(() => import('@/pages/app/AdminDashboard'));
 const ModerationQueue = lazy(() => import('@/pages/app/ModerationQueue'));
+const AdminVerification = lazy(() => import('@/pages/app/AdminVerification'));
 
 const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Privacy = lazy(() => import('@/pages/legal/Privacy'));
 const CommunityGuidelines = lazy(() => import('@/pages/legal/CommunityGuidelines'));
 const CookiePolicy = lazy(() => import('@/pages/legal/CookiePolicy'));
+const MedicalDisclaimer = lazy(() => import('@/pages/legal/MedicalDisclaimer'));
+const SponsorshipPolicy = lazy(() => import('@/pages/legal/SponsorshipPolicy'));
+const AdultContentPolicy = lazy(() => import('@/pages/legal/AdultContentPolicy'));
+const Help = lazy(() => import('@/pages/legal/Help'));
 
 const Landing = lazy(() => import('@/pages/Landing'));
 
@@ -123,6 +129,10 @@ export const router = createBrowserRouter([
   { path: '/privacy', element: <SWrapper><Privacy /></SWrapper> },
   { path: '/community-guidelines', element: <SWrapper><CommunityGuidelines /></SWrapper> },
   { path: '/cookie-policy', element: <SWrapper><CookiePolicy /></SWrapper> },
+  { path: '/medical-disclaimer', element: <SWrapper><MedicalDisclaimer /></SWrapper> },
+  { path: '/sponsorship-policy', element: <SWrapper><SponsorshipPolicy /></SWrapper> },
+  { path: '/adult-content-policy', element: <SWrapper><AdultContentPolicy /></SWrapper> },
+  { path: '/help', element: <SWrapper><Help /></SWrapper> },
   {
     element: <AuthGuard />,
     children: [
@@ -186,6 +196,7 @@ export const router = createBrowserRouter([
             children: [
               { path: '/admin', element: <SWrapper><AdminDashboard /></SWrapper> },
               { path: '/admin/moderation', element: <SWrapper><ModerationQueue /></SWrapper> },
+              { path: '/admin/verification', element: <SWrapper><AdminVerification /></SWrapper> },
             ],
           },
         ],

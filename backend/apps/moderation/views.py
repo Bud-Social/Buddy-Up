@@ -113,7 +113,7 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
             by_severity[sev] = qs.filter(severity=sev, is_actioned=False).count()
 
         by_reason = {}
-        for reason in ('nsfw', 'toxic', 'spam', 'misinfo', 'custom'):
+        for reason in ('nsfw', 'toxic', 'spam', 'misinfo', 'medical_claim', 'undisclosed_sponsor', 'custom'):
             by_reason[reason] = qs.filter(flag_reason=reason, is_actioned=False).count()
 
         return Response({

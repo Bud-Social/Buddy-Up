@@ -89,6 +89,7 @@ _Gym _$GymFromJson(Map<String, dynamic> json) => _Gym(
   logoUrl: json['logoUrl'] as String? ?? '',
   coverUrl: json['coverUrl'] as String? ?? '',
   category: json['category'] as String? ?? '',
+  contentRating: json['content_rating'] as String? ?? 'general',
   categories:
       (json['categories'] as List<dynamic>?)
           ?.map((e) => GymCategory.fromJson(e as Map<String, dynamic>))
@@ -135,6 +136,7 @@ Map<String, dynamic> _$GymToJson(_Gym instance) => <String, dynamic>{
   'logoUrl': instance.logoUrl,
   'coverUrl': instance.coverUrl,
   'category': instance.category,
+  'content_rating': instance.contentRating,
   'categories': instance.categories,
   'accessType': instance.accessType,
   'subscriptionType': instance.subscriptionType,
@@ -378,6 +380,7 @@ _CreateGymPayload _$CreateGymPayloadFromJson(Map<String, dynamic> json) =>
       handle: json['handle'] as String,
       description: json['description'] as String?,
       category: json['category'] as String,
+      contentRating: json['content_rating'] as String? ?? 'general',
       categoryIds:
           (json['categoryIds'] as List<dynamic>?)
               ?.map((e) => e as String)
@@ -408,6 +411,7 @@ Map<String, dynamic> _$CreateGymPayloadToJson(_CreateGymPayload instance) =>
       'handle': instance.handle,
       'description': instance.description,
       'category': instance.category,
+      'content_rating': instance.contentRating,
       'categoryIds': instance.categoryIds,
       'accessType': instance.accessType,
       'subscriptionType': instance.subscriptionType,

@@ -28,4 +28,6 @@ urlpatterns = [
     path('logout-all/', views.LogoutAllSessionsView.as_view(), name='logout_all'),
     path('activity-log/', views.ActivityLogView.as_view(), name='activity_log'),
     path('verify-age/', views.VerifyAgeView.as_view(), name='verify_age'),
+    path('policies/', views.PolicyVersionsView.as_view(), name='policy_versions'),
+    path('consent-status/', views.ConsentStatusView.as_view(), name='consent_status'),
 ]

@@ -6,6 +6,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from django.core.validators import MinValueValidator, MaxValueValidator
 from rest_framework.exceptions import ValidationError
+from common.age_gating import CONTENT_RATING_CHOICES
 from .models import (
     Shop, ShopMembership, ShopGymLink, ShopVerificationApplication, PushDevice,
     MealPlan, MealPlanPurchase, MealPlanReview,
@@ -214,6 +215,7 @@ class MealPlanSerializer(serializers.ModelSerializer):
             'id', 'creator_id', 'shop_id', 'title', 'description', 'cover',
             'trailer_video_url', 'diet_type', 'duration_weeks', 'meals_per_day',
             'calorie_range', 'macro_targets', 'allergen_flags',
+            'content_rating',
             'price_artifacts', 'preview_day', 'purchase_count', 'average_rating',
             'review_count', 'reminder_settings', 'is_published', 'is_draft',
             'creator_data', 'shop_data', 'is_purchased', 'created_at',
@@ -280,6 +282,7 @@ class TrainingProgrammeSerializer(serializers.ModelSerializer):
             'id', 'creator_id', 'shop_id', 'title', 'description', 'cover',
             'trailer_video_url', 'category', 'difficulty', 'fitness_goals',
             'duration_weeks', 'sessions_per_week', 'equipment_list',
+            'content_rating',
             'price_artifacts', 'purchase_count', 'notification_config',
             'is_published', 'is_draft', 'creator_data', 'shop_data', 'is_purchased', 'created_at',
         ]
@@ -320,7 +323,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'brand', 'description', 'category',
+        fields = ['id', 'name', 'brand', 'description', 'category', 'content_rating',
                    'image_url', 'affiliate_url', 'price_display',
                    'recommended_by', 'recommender_data', 'shop_data', 'click_count', 'created_at']
 
@@ -350,6 +353,7 @@ class CreateMealPlanSerializer(serializers.Serializer):
     preview_day = serializers.JSONField(default=dict)
     full_plan = serializers.JSONField(default=dict)
     shopping_list = serializers.ListField(child=serializers.CharField(), default=list)
+    content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     is_published = serializers.BooleanField(default=True)
     shop_id = serializers.UUIDField(required=False, allow_null=True)
     meals_per_day = serializers.IntegerField(default=3, required=False)
@@ -368,6 +372,7 @@ class UpdateMealPlanSerializer(serializers.Serializer):
     preview_day = serializers.JSONField(required=False)
     full_plan = serializers.JSONField(required=False)
     shopping_list = serializers.ListField(child=serializers.CharField(), required=False)
+    content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     is_published = serializers.BooleanField(required=False)
 
 
@@ -378,6 +383,7 @@ class CreateTrainingProgrammeSerializer(serializers.Serializer):
     category = serializers.CharField(max_length=50)
     duration_weeks = serializers.IntegerField(default=8, validators=[MinValueValidator(1)])
     price_artifacts = serializers.JSONField(default=dict, validators=[validate_price_artifacts])
+    content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     is_published = serializers.BooleanField(default=True)
 
 
@@ -388,6 +394,7 @@ class UpdateTrainingProgrammeSerializer(serializers.Serializer):
     category = serializers.CharField(max_length=50, required=False)
     duration_weeks = serializers.IntegerField(validators=[MinValueValidator(1)], required=False)
     price_artifacts = serializers.JSONField(required=False, validators=[validate_price_artifacts])
+    content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     is_published = serializers.BooleanField(required=False)
 
 
@@ -397,6 +404,7 @@ class CreateProductSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
     category = serializers.ChoiceField(choices=[c[0] for c in Product.CATEGORIES], default='supplement')
     image_url = serializers.URLField(required=False, allow_blank=True)
+    content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     affiliate_url = serializers.URLField()
     price_display = serializers.CharField(required=False, allow_blank=True, max_length=50)
 
@@ -407,6 +415,7 @@ class UpdateProductSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True)
     category = serializers.ChoiceField(choices=[c[0] for c in Product.CATEGORIES], required=False)
     image_url = serializers.URLField(required=False, allow_blank=True)
+    content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     affiliate_url = serializers.URLField(required=False)
     price_display = serializers.CharField(required=False, allow_blank=True, max_length=50)
     is_active = serializers.BooleanField(required=False)
@@ -459,7 +468,8 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
             'early_bird_enabled', 'early_bird_deadline', 'early_bird_price_artifacts',
             'agenda', 'cancellation_policy',
             'is_published', 'is_cancelled', 'is_draft',
-            'attendee_count', 'tags', 'category', 'is_registered', 'spots_remaining',
+            'attendee_count', 'tags', 'category', 'content_rating',
+            'is_registered', 'spots_remaining',
             'media', 'created_at',
         ]
 
@@ -552,6 +562,7 @@ class CreateEventSerializer(serializers.Serializer):
     is_published = serializers.BooleanField(default=True)
     tags = serializers.ListField(child=serializers.CharField(), default=list)
     category = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     gym_id = serializers.UUIDField(required=False, allow_null=True)
     shop_id = serializers.UUIDField(required=False, allow_null=True)
     agenda = serializers.JSONField(required=False, default=list)

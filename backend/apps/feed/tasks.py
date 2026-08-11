@@ -80,6 +80,7 @@ def moderate_content(self, post_id: str):
 
     analysis = dict(post.ai_analysis or {})
     is_flagged = False
+    is_gated_mature = post.content_rating == 'mature'
 
     # Text moderation — persist positive results so the UI can surface them.
     if post.body and post.body.strip():
@@ -111,6 +112,21 @@ def moderate_content(self, post_id: str):
             logger.warning('AI text moderation call failed for %s: %s', post.id, exc)
             audit_ai_call('text_moderation', input_data={'post_id': str(post.id)}, error_message=str(exc))
 
+    # Policy guardrails: health-claim scope-of-practice + sponsorship disclosure.
+    if post.body and post.body.strip():
+        try:
+            from apps.moderation.tasks import moderate_policy_text
+            author_is_practitioner = post.author.verification_status == 'practitioner'
+            moderate_policy_text.delay(
+                'feed.post',
+                post_id,
+                post.body,
+                author_is_practitioner=author_is_practitioner,
+            )
+        except Exception as exc:
+            logger.warning('Policy moderation dispatch failed for %s: %s', post.id, exc)
+
+
     image_results = []
     for url in post.media_urls or []:
         try:
@@ -131,8 +147,18 @@ def moderate_content(self, post_id: str):
                     output_data=result,
                 )
                 if result.get('is_nsfw'):
-                    post.moderation_status = 'flagged'
-                    is_flagged = True
+                    if is_gated_mature:
+                        analysis['images'] = analysis.get('images', []) + [{
+                            'url': url,
+                            'is_nsfw': True,
+                            'confidence': result.get('confidence', 0.0),
+                            'labels': result.get('labels', ['nsfw']),
+                            'method': result.get('method', 'model'),
+                            'gated': True,
+                        }]
+                    else:
+                        post.moderation_status = 'flagged'
+                        is_flagged = True
                     break
                 image_results.append({
                     'url': url,
@@ -156,7 +182,7 @@ def moderate_content(self, post_id: str):
         post.save(update_fields=['moderation_status'])
         from apps.moderation.models import ContentFlag
         ContentFlag.objects.create(
-            flag_reason='nsfw',
+            flag_reason='adult_ungated',
             severity='medium',
             confidence=0.0,
             source='ai_service (feed)',
@@ -174,6 +200,21 @@ def moderate_content(self, post_id: str):
             body='Your post has been flagged for review. It may contain sensitive content.',
             metadata={'post_id': str(post.id)},
         )
+    elif is_gated_mature and (post.media_urls or []):
+        # Mature posts are allowed but remain behind the age gate.
+        from apps.moderation.models import ContentFlag
+        ContentFlag.objects.create(
+            flag_reason='nsfw',
+            severity='low',
+            confidence=0.0,
+            source='ai_service (feed)',
+            content_type='feed.post',
+            content_id=post_id,
+            content_preview=(post.media_urls or [''])[0][:500],
+            is_actioned=True,
+            action_taken='gated_mature',
+        )
+        post.save(update_fields=['ai_analysis'])
     else:
         if image_results:
             analysis['images'] = image_results

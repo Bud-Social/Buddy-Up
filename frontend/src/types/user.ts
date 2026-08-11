@@ -1,6 +1,7 @@
 export type UserRole = 'user' | 'trainer' | 'practitioner';
 export type VerificationStatus = 'none' | 'email' | 'id' | 'trainer' | 'practitioner';
 export type PrivacyLevel = 'public' | 'private';
+export type ContentRating = 'general' | 'mature';
 
 export interface User {
   id: string;
@@ -25,6 +26,7 @@ export interface Profile {
   location_city: string;
   location_country: string;
   external_link?: string;
+  content_rating?: ContentRating;
   is_anonymous_posting?: boolean;
   is_buddy?: boolean;
   buddy_status?: string;

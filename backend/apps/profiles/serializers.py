@@ -21,7 +21,8 @@ class ProfileSerializer(serializers.ModelSerializer):
             'user_id', 'username', 'display_name', 'bio', 'avatar_url', 'cover_url',
             'pronouns', 'location_city', 'location_country', 'role',
             'verification_status', 'privacy_level', 'streak_days',
-            'artifact_balance', 'external_link', 'workout_schedule',
+            'artifact_balance', 'external_link', 'content_rating',
+            'workout_schedule',
             'show_active_status', 'is_anonymous_posting',
             'buddy_count', 'following_count', 'follower_count', 'gym_count', 'post_count',
             'is_buddy', 'is_following', 'buddy_status', 'is_blocked',
@@ -101,6 +102,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'display_name', 'bio', 'avatar_url', 'cover_url', 'pronouns',
             'location_city', 'location_country', 'external_link',
+            'content_rating',
             'workout_schedule', 'show_active_status', 'is_anonymous_posting',
             'privacy_level', 'creator_display_name',
         ]

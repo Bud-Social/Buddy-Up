@@ -177,3 +177,16 @@ abstract class ChangePasswordPayload with _$ChangePasswordPayload {
   factory ChangePasswordPayload.fromJson(Map<String, dynamic> json) =>
       _$ChangePasswordPayloadFromJson(json);
 }
+
+@freezed
+abstract class VerifyAgeResponse with _$VerifyAgeResponse {
+  const factory VerifyAgeResponse({
+    @Default(0) int age,
+    @Default(false) bool isAdult,
+    @Default(false) bool is16Plus,
+    @JsonKey(name: 'dob_hash') @Default('') String doBHash,
+  }) = _VerifyAgeResponse;
+
+  factory VerifyAgeResponse.fromJson(Map<String, dynamic> json) =>
+      _$VerifyAgeResponseFromJson(json);
+}

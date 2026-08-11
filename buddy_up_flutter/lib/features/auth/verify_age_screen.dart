@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/age_gating.dart';
+import '../../data/models/auth_models.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../shared/widgets/button.dart';
 import '../../shared/widgets/toast.dart';
@@ -15,6 +17,7 @@ class VerifyAgeScreen extends StatefulWidget {
 class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
   DateTime? _selectedDate;
   bool _isLoading = false;
+  String _country = '';
   late AuthRepository _authRepo;
 
   @override
@@ -26,9 +29,23 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
   Future<void> _handleVerify() async {
     if (_selectedDate == null) return;
     setState(() => _isLoading = true);
+    final age = AgeGating.calculateAge(_selectedDate!);
+    final country = _country.trim().isEmpty ? null : _country.trim();
+    final canAccessMature = AgeGating.canAccessMature(age: age, country: country);
     try {
-      await _authRepo.verifyAge({'dob': _selectedDate!.toIso8601String().split('T')[0]});
-      if (mounted) Navigator.of(context).pop(true);
+      await _authRepo.verifyAge({
+        'dob': _selectedDate!.toIso8601String().split('T')[0],
+        if (country != null) 'location_country': country,
+      });
+      if (!mounted) return;
+      Navigator.of(context).pop({
+        'age': age,
+        'canAccessMature': canAccessMature,
+        'matureMinAge': AgeGating.matureContentMinAge(country),
+      });
+      if (age < 16) {
+        showToast(context, 'You must be 16 or older to use Buddy-Up.', type: ToastType.error);
+      }
     } catch (e) {
       if (mounted) showToast(context, 'You must be 16 or older to use Buddy-Up.', type: ToastType.error);
     } finally {
@@ -53,7 +70,17 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Country (for age thresholds)',
+                  hintText: 'e.g. KE',
+                  prefixIcon: Icon(Icons.public, color: BuddyColors.green),
+                ),
+                textCapitalization: TextCapitalization.characters,
+                onChanged: (v) => setState(() => _country = v),
+              ),
+              const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -87,6 +114,13 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              if (_selectedDate != null)
+                Text(
+                  _matureEligibilityText(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                ),
               const SizedBox(height: 32),
               BuddyButton(
                 label: 'Verify Age',
@@ -99,5 +133,16 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
         ),
       ),
     );
+  }
+
+  String _matureEligibilityText() {
+    final age = AgeGating.calculateAge(_selectedDate!);
+    final minAge = AgeGating.matureContentMinAge(
+      _country.trim().isEmpty ? null : _country.trim(),
+    );
+    if (age >= minAge) {
+      return 'You are eligible to view the Mature ($minAge+) category.';
+    }
+    return 'You must be $minAge+ to view the Mature category.';
   }
 }

@@ -7,6 +7,7 @@ from rest_framework import views, permissions, status
 from rest_framework.response import Response
 
 from common.pagination import CursorPagination
+from common.age_gating import gate_mature_queryset
 from .models import BuddyLive, LiveAttendee
 from .serializers import (
     BuddyLiveSerializer, CreateLiveSerializer, RandomDropRequestSerializer,
@@ -51,6 +52,8 @@ class LiveBrowserView(views.APIView):
 
         if category:
             queryset = queryset.filter(category=category)
+
+        queryset = gate_mature_queryset(request, queryset)
 
         count = queryset.count()
         paginator = CursorPagination()
@@ -854,6 +857,8 @@ class UserLivesView(views.APIView):
             ).distinct()
 
         queryset = queryset.select_related('host')
+
+        queryset = gate_mature_queryset(request, queryset)
 
         count = queryset.count()
         paginator = CursorPagination()

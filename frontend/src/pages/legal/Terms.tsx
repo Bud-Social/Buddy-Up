@@ -1,71 +1,99 @@
+import LegalPage, { LegalSection, LegalNotice } from './LegalPage';
+
 export default function Terms() {
   return (
-    <div className="min-h-screen bg-buddy-black">
-      <div className="max-w-3xl mx-auto px-6 py-16">
-        <h1 className="font-display text-4xl font-extrabold mb-2">Terms of Service</h1>
-        <p className="text-buddy-text-secondary text-sm mb-12">Version 1.0 — Last updated June 2025</p>
+    <LegalPage
+      title="Terms of Service"
+      subtitle="This is not medical, nutritional, legal or professional advice. BuddyUp is a connection and accountability platform. Coaches, trainers and practitioners are independent providers, not employees of BuddyUp."
+      updatedAt="August 2026"
+    >
+      <LegalSection title="1. Acceptance and Eligibility">
+        <p>By creating an account you confirm that you are at least 16 years old, that the information you provide is accurate, and that you accept these Terms, the Privacy Policy, and the Community Guidelines. If you do not accept them, do not use the service.</p>
+        <p className="mt-2">Users aged 16–17 may only use BuddyUp with a verified parental co-owner (parent or guardian), who is bound by the same Terms and may be contacted by our Trust &amp; Safety team. Accounts found to belong to users under 16 are terminated.</p>
+        <LegalNotice>
+          You must provide accurate, current registration information. BuddyUp may verify age, identity, and credentials, and may block or suspend accounts that rely on false information.
+        </LegalNotice>
+      </LegalSection>
 
-        <div className="prose prose-invert max-w-none space-y-8 text-sm leading-relaxed text-buddy-text-secondary">
-          <p className="text-buddy-text-primary">Welcome to BuddyUp. By accessing or using our platform, you agree to these Terms of Service. Please read them carefully.</p>
+      <LegalSection title="2. Account Security">
+        <p>You are responsible for your account credentials and for activity under your account. Enable two-factor authentication where available. Notify us immediately at <strong>security@buddyup.app</strong> if you suspect unauthorised access.</p>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">1. Age Requirement</h2>
-            <p>You must be 16 years of age or older to use BuddyUp. By creating an account, you confirm that you meet this age requirement. BuddyUp reserves the right to terminate any account where the user is found to be under 16, without refund of any virtual currency balance.</p>
-          </section>
+      <LegalSection title="3. Service Description">
+        <p>BuddyUp combines free social and accountability features (posts, buddy circles, live sessions) with optional paid services: gym subscriptions, session bookings, training programmes, meal plans, and marketplace purchases. Funds for booked services are held in escrow and released on completion of the service.</p>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">2. Account Ownership</h2>
-            <p>Accounts are personal and non-transferable. You are responsible for all activity under your account, including maintaining the confidentiality of your password. You must provide accurate, current, and complete information during registration and keep your account information updated.</p>
-          </section>
+      <LegalSection title="4. Health, Fitness & Nutrition Information">
+        <p>BuddyUp provides a platform for users to share fitness experiences and for verified coaches, trainers and practitioners to offer guidance. The platform does not provide medical advice, diagnosis, or treatment.</p>
+        <p className="mt-2"><strong>Scope of practice.</strong> Only verified practitioners (licensed clinicians, dietitians, physiotherapists) may present advice as professional or clinical guidance. All other users and coaches may only share general wellness information. Content that claims to diagnose, treat, cure, or manage a medical condition (e.g. "reverses insulin resistance", "cures PCOS", "treatment for diabetes") is prohibited outside a licensed professional relationship.</p>
+        <p className="mt-2"><strong>No guarantees.</strong> Fitness and nutrition outcomes depend on individual factors and are never guaranteed. Meal plans and programmes provided on BuddyUp are general wellness resources, not personalised medical nutrition therapy.</p>
+        <LegalNotice tone="red">
+          AI-generated recommendations are for informational purposes only and are not a substitute for professional judgement. If you have a medical condition, injury, or persistent symptoms, consult a qualified healthcare professional.
+        </LegalNotice>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">3. Content Licence</h2>
-            <p>By posting content on BuddyUp (including posts, comments, photos, videos, workout logs, and live sessions), you grant BuddyUp a non-exclusive, royalty-free, worldwide licence to display, distribute, and promote the content on and through the platform. You retain full ownership of your content. This licence ends when you delete your content or your account, except where content has been shared with others and they have not deleted it.</p>
-          </section>
+      <LegalSection title="5. Sponsored Content & Gifting Disclosure">
+        <p>Creators, trainers, and members must clearly disclose any material connection to a brand, gym, or programme — including gifted products, free programme access, affiliate arrangements, or paid partnerships. Disclosures must be prominent and placed where they are likely to be seen (for example "#ad", "Sponsored", or "Paid partnership" near the top of the post).</p>
+        <p className="mt-2">Hiding a disclosure in a long caption or fine print is treated as non-disclosure. Undisclosed promotional content may be flagged, labelled, or removed, and repeat violations may lead to suspension.</p>
+        <p className="mt-2">Sponsored and partner placements are never mixed into organic ranking without a visible label.</p>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">4. Virtual Currency (Fitness Artifacts)</h2>
-            <p>Fitness Artifacts are virtual tokens with no cash value outside the BuddyUp platform. They cannot be exchanged for real currency except through BuddyUp's approved withdrawal process. BuddyUp reserves the right to adjust the artifact economy, including pricing and exchange rates, with reasonable notice. Unused artifact balances are non-refundable except as required by applicable law.</p>
-            <p className="mt-2">Purchases of artifacts are final unless required otherwise by law. Withdrawn balances are subject to platform fees (2.5%) and payment processor fees. Minimum withdrawal amount: $10.00 USD equivalent.</p>
-          </section>
+      <LegalSection title="6. AI-Generated Content">
+        <p>Every AI-generated output on BuddyUp is labelled with its source and a limitation statement. You may not repost AI output as your own advice or present it as professional guidance. Automated moderation flags are reviewed by a human moderator before any removal action is taken.</p>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">5. Trainer & Practitioner Liability</h2>
-            <p>BuddyUp is a connection platform. We do not employ, endorse, or guarantee the qualifications of trainers, health practitioners, or any service providers on the platform. While we verify credentials to the best of our ability, users engage these professionals at their own risk. BuddyUp is not liable for any harm, injury, or loss arising from:</p>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Following fitness, nutrition, or health advice obtained on the platform</li>
-              <li>Participating in live workout sessions</li>
-              <li>Using meal plans, training programmes, or supplements purchased through the marketplace</li>
-              <li>Services provided by trainers or practitioners</li>
-            </ul>
-          </section>
+      <LegalSection title="7. Community Standards &amp; Enforcement">
+        <p>All users must comply with the Community Guidelines. Violations are handled through a graduated enforcement process (warning → content removal → suspension → permanent removal). You may appeal an enforcement action through Settings → Help &amp; Safety within 14 days.</p>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">6. Community Guidelines</h2>
-            <p>All users must comply with our Community Guidelines, which are incorporated into these Terms. Violations may result in content removal, account suspension, or permanent termination. Repeated or severe violations will result in account termination without refund.</p>
-          </section>
+      <LegalSection title="8. Mature Content Category">
+        <p>BuddyUp offers a separate, age-gated Mature category for adult fitness content — including nude or suggestive trainer profiles, adult-only live sessions, adult marketplace items (events, products, programmes, and the rest), and nude or adult-themed gyms. Access is restricted to users who pass a country-aware age check: <strong>18+ by default, and 16+ only where local law permits</strong>.</p>
+        <p className="mt-2"><strong>Eligibility.</strong> Users aged 16–17 may only access the Mature category in jurisdictions where local law sets the age threshold at 16. Users must not misrepresent their age, country, or consent to gain access.</p>
+        <p className="mt-2"><strong>Creator obligations.</strong> Adult content must be classified as mature at the time of posting and kept inside the Mature category. Content that is adult but posted outside the category is a violation and may be hidden or removed. All other Terms — medical-claim prohibitions, sponsorship disclosure, and community standards — apply in full to Mature content.</p>
+        <LegalNotice>
+          Mature content is hidden by default and never shown to users who fail the age gate. It is not a substitute for, and does not waive, any other platform rule.
+        </LegalNotice>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">7. Platform Modifications</h2>
-            <p>BuddyUp reserves the right to modify, suspend, or discontinue any aspect of the platform at any time. We will provide 30 days' notice for material changes to these Terms. Continued use after such notice constitutes acceptance of the modified Terms.</p>
-          </section>
+      <LegalSection title="9. Verification &amp; Credentials">
+        <p>Trainers, practitioners, gyms, and marketplace sellers must complete the relevant verification tier. Verification checks credentials against issuing registries where possible and is subject to periodic re-verification and renewal. Listings that rely on false credentials, or that fail to renew on time, may be suspended.</p>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">8. Dispute Resolution</h2>
-            <p>All disputes must first go through BuddyUp's internal resolution process. If unresolved, binding arbitration applies. Jurisdiction: Republic of Kenya, with users outside Kenya subject to international arbitration under UNCITRAL rules. Users waive the right to participate in class action lawsuits.</p>
-          </section>
+      <LegalSection title="10. Marketplace Purchases">
+        <p>Marketplace listings are governed by the seller's verification tier and their published cancellation/refund policy. BuddyUp is the platform of record and is not the seller of record except for first-party items. Digital products are refundable within 7 days if not more than 25% consumed.</p>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">9. Limitation of Liability</h2>
-            <p>To the maximum extent permitted by law, BuddyUp shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the platform. Our total liability is limited to the amount you have paid to BuddyUp in the 12 months preceding the claim.</p>
-          </section>
+      <LegalSection title="11. Payments, Fees &amp; Refunds">
+        <p>Paid services are billed in Kenyan Shillings via M-Pesa, card, or other approved payment rails. Cancellations follow the partner's published policy. Sessions cancelled at least 2 hours before start receive a full refund; later cancellations follow the partner's policy (default 50%). No-shows forfeit the session fee. Refund and dispute procedures are described in Settings → Help.</p>
+      </LegalSection>
 
-          <section>
-            <h2 className="font-heading text-lg font-semibold text-buddy-text-primary mb-3">10. Contact</h2>
-            <p>For questions about these Terms, contact us at legal@buddyup.app.</p>
-          </section>
-        </div>
-      </div>
-    </div>
+      <LegalSection title="12. Content Ownership &amp; Licence">
+        <p>You retain ownership of content you create. You grant BuddyUp a limited, non-exclusive, royalty-free licence to host, display, distribute, and process that content to operate the service (including ranking, search, and replay where applicable). The licence ends when you delete the content or close your account, subject to legal retention obligations.</p>
+      </LegalSection>
+
+      <LegalSection title="13. Suspension &amp; Termination">
+        <p>BuddyUp may suspend or terminate accounts that breach these Terms, the Community Guidelines, or applicable law, after a proportionate warning except in cases of imminent harm. You may close your account at any time; closure triggers a 30-day recoverable soft-delete followed by permanent deletion.</p>
+      </LegalSection>
+
+      <LegalSection title="14. Disclaimer of Warranties">
+        <p>The service is provided "as is" and "as available". BuddyUp does not warrant that fitness outcomes will be achieved and is not responsible for the actions, advice, or conduct of independent coaches, trainers, or practitioners. Users engage these professionals at their own risk.</p>
+      </LegalSection>
+
+      <LegalSection title="15. Limitation of Liability">
+        <p>To the maximum extent permitted by law, BuddyUp's aggregate liability for any claim is limited to the fees paid by you to BuddyUp in the 12 months preceding the event giving rise to the claim. BuddyUp is not liable for indirect, incidental, special, or consequential damages.</p>
+      </LegalSection>
+
+      <LegalSection title="16. Disputes">
+        <p>Disputes are resolved through BuddyUp's three-level procedure: (1) Buddy/gym-mediated, (2) Bud Concierge mediation for disputes up to KSh 20,000, and (3) a formal Dispute Panel for larger disputes and fraud/harm allegations. Unresolved disputes are subject to the exclusive jurisdiction of the Kenyan courts and governed by the laws of the Republic of Kenya.</p>
+      </LegalSection>
+
+      <LegalSection title="17. Changes to the Service or Terms">
+        <p>BuddyUp may add, modify, or remove features with reasonable notice. Material changes affecting your rights (including these Terms and the Privacy Policy) will be communicated by email and in-app at least 30 days before they take effect. Continued use after the effective date constitutes acceptance.</p>
+      </LegalSection>
+
+      <LegalSection title="18. Contact">
+        <p>BuddyUp Ltd., Nairobi, Kenya. For questions about these Terms, contact <strong>legal@buddyup.app</strong>. For safety concerns, contact <strong>safety@buddyup.app</strong>.</p>
+      </LegalSection>
+    </LegalPage>
   );
 }

@@ -3,7 +3,7 @@ import type { ApiResponse } from '@/types';
 
 export interface ContentFlag {
   id: string;
-  flag_reason: 'nsfw' | 'toxic' | 'spam' | 'misinfo' | 'custom';
+  flag_reason: 'nsfw' | 'toxic' | 'spam' | 'misinfo' | 'custom' | 'medical_claim' | 'undisclosed_sponsor' | 'adult_ungated';
   severity: 'low' | 'medium' | 'high' | 'critical';
   confidence: number;
   source: string;
@@ -15,12 +15,14 @@ export interface ContentFlag {
   created_at: string;
 }
 
+export type FlagReason = ContentFlag['flag_reason'];
+
 export interface ModerationStats {
   total: number;
   unactioned: number;
   actioned: number;
   by_severity: Record<'critical' | 'high' | 'medium' | 'low', number>;
-  by_reason: Record<'nsfw' | 'toxic' | 'spam' | 'misinfo' | 'custom', number>;
+  by_reason: Record<FlagReason, number>;
 }
 
 export const moderationApi = {

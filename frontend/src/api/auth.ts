@@ -5,6 +5,7 @@ export interface RegisterPayload {
   email: string; phone?: string; password: string; dob: string;
   username: string; display_name: string; role: string;
   accepted_terms: boolean; accepted_privacy: boolean; accepted_guidelines: boolean; is_16_plus: boolean;
+  guardian_name?: string; guardian_email?: string; guardian_phone?: string;
 }
 
 export interface LoginPayload { email: string; password: string; remember_me?: boolean; }
@@ -44,6 +45,18 @@ export interface TOTPSetupResponse {
 export interface TOTPChallengeInitResponse {
   require_totp: boolean;
   temp_token: string;
+}
+
+export interface PolicyVersionMeta {
+  version: string;
+  updated_at: string;
+}
+
+export interface ConsentStatus {
+  consent_log: Record<string, unknown>;
+  requires_parental_coowner: boolean;
+  guardian_verified: boolean;
+  policies: Record<string, { current_version: string; accepted_version: string; up_to_date: boolean; updated_at: string }>;
 }
 
 export const authApi = {
@@ -103,4 +116,10 @@ export const authApi = {
 
   verifyAge: (date_of_birth: string) =>
     apiClient.post<ApiResponse<{ age: number; is_adult: boolean; is_16_plus: boolean; dob_hash: string }>>('/auth/verify-age/', { date_of_birth }).then((r) => r.data),
+
+  getPolicyVersions: () =>
+    apiClient.get<ApiResponse<Record<string, PolicyVersionMeta>>>('/auth/policies/').then((r) => r.data),
+
+  getConsentStatus: () =>
+    apiClient.get<ApiResponse<ConsentStatus>>('/auth/consent-status/').then((r) => r.data),
 };

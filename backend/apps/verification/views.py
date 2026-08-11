@@ -90,6 +90,10 @@ class VerificationSubmissionViewSet(
                 profile.verification_status = 'trainer'
             elif submission.verification_type == 'practitioner':
                 profile.verification_status = 'practitioner'
+            elif submission.verification_type == 'shop':
+                profile.verification_status = 'shop'
+            elif submission.verification_type == 'gym':
+                profile.verification_status = 'gym'
             profile.save(update_fields=['verification_status'])
 
             doc_ids = serializer.validated_data.get('document_ids', [])

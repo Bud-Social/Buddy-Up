@@ -62,7 +62,7 @@ abstract class AuthRepository {
   Future<TOTPChallengeResponse> totpChallenge(@Body() Map<String, dynamic> body);
 
   @POST('/auth/verify-age/')
-  Future<void> verifyAge(@Body() Map<String, dynamic> body);
+  Future<VerifyAgeResponse> verifyAge(@Body() Map<String, dynamic> body);
 
   @POST('/auth/deactivate/')
   Future<void> deactivateAccount();

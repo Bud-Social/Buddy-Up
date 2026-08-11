@@ -54,6 +54,9 @@ export default function Settings() {
   const [notifPrefs, setNotifPrefs] = useState<NotificationPreferences | null>(null);
   const [notifLoading, setNotifLoading] = useState(false);
 
+  const [consentStatus, setConsentStatus] = useState<Awaited<ReturnType<typeof authApi.getConsentStatus>>['data'] | null>(null);
+  const [consentLoading, setConsentLoading] = useState(false);
+
   const [sessions, setSessions] = useState<Array<{ id: string; device_name: string; ip_address: string; location: string; last_active: string; is_current: boolean }>>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [logoutAllLoading, setLogoutAllLoading] = useState(false);
@@ -102,7 +105,11 @@ export default function Settings() {
       setActivityLoading(true);
       activityApi.getActivityLog(activityType || undefined).then((res) => setActivityEvents(res.data || [])).catch(() => {}).finally(() => setActivityLoading(false));
     }
-  }, [activeSection, user, profile]);
+    if (activeSection === 'data' && !consentStatus) {
+      setConsentLoading(true);
+      authApi.getConsentStatus().then((res) => setConsentStatus(res.data)).catch(() => {}).finally(() => setConsentLoading(false));
+    }
+  }, [activeSection, user, profile, consentStatus]);
 
   const handleAvatarFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -651,9 +658,13 @@ export default function Settings() {
           <h2 className="font-heading text-xl font-semibold">Help & Safety</h2>
           <div className="space-y-2">
             {[
+              { label: 'Help Centre', desc: 'FAQs, reporting, and support contacts', link: '/help' },
               { label: 'Report a Problem', desc: 'Report bugs, abusive content, or safety concerns', onClick: () => window.open('mailto:support@buddyup.app') },
               { label: 'Community Guidelines', desc: 'Read our rules for respectful interaction', link: '/community-guidelines' },
               { label: 'Safety Centre', desc: 'Resources and tools for staying safe', link: '/community-guidelines' },
+              { label: 'Medical Disclaimer', desc: 'Scope of health and wellness information', link: '/medical-disclaimer' },
+              { label: 'Sponsorship Policy', desc: 'Gifting and disclosure requirements', link: '/sponsorship-policy' },
+              { label: 'Adult Content Policy', desc: 'Rules for the age-gated Mature category', link: '/adult-content-policy' },
               { label: 'Terms of Service', desc: 'Our terms and conditions', link: '/terms' },
               { label: 'Privacy Policy', desc: 'How we handle your data', link: '/privacy' },
               { label: 'Cookie Policy', desc: 'How we use cookies', link: '/cookie-policy' },
@@ -672,6 +683,37 @@ export default function Settings() {
       {activeSection === 'data' && (
         <div className="space-y-4">
           <h2 className="font-heading text-xl font-semibold">Your Data</h2>
+
+          <Card className="p-4">
+            <p className="text-sm font-medium mb-1">Consent & Policy Versions</p>
+            <p className="text-xs text-buddy-text-secondary mb-3">The version of each policy you accepted at registration.</p>
+            {consentLoading ? (
+              <p className="text-xs text-buddy-text-secondary">Loading consent status…</p>
+            ) : consentStatus ? (
+              <div className="space-y-1.5">
+                {Object.entries(consentStatus.policies).map(([key, p]) => (
+                  <div key={key} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="text-buddy-text-primary capitalize">{key.replace(/_/g, ' ')}</span>
+                    <span className="flex items-center gap-2 text-buddy-text-secondary">
+                      {p.up_to_date
+                        ? <CheckCircle size={13} className="text-buddy-green" />
+                        : <XCircle size={13} className="text-buddy-orange" />}
+                      v{p.accepted_version || '—'} / current v{p.current_version}
+                    </span>
+                  </div>
+                ))}
+                {consentStatus.requires_parental_coowner && (
+                  <p className={`text-xs mt-2 ${consentStatus.guardian_verified ? 'text-buddy-green' : 'text-buddy-orange'}`}>
+                    {consentStatus.guardian_verified
+                      ? 'Parental co-owner verified.'
+                      : 'This account requires parental co-owner verification. Contact support to complete it.'}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-buddy-text-secondary">Could not load consent status.</p>
+            )}
+          </Card>
 
           <Card className="p-4">
             <p className="text-sm font-medium mb-1">Export Your Data</p>

@@ -1,5 +1,6 @@
 from django.db import models
 from common.models import TimestampedModel
+from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
 
 
 class Profile(TimestampedModel):
@@ -14,6 +15,8 @@ class Profile(TimestampedModel):
         ('id', 'ID Verified'),
         ('trainer', 'Certified Trainer'),
         ('practitioner', 'Health Practitioner'),
+        ('shop', 'Verified Shop'),
+        ('gym', 'Verified Gym'),
     ]
     PRIVACY_CHOICES = [
         ('public', 'Public'),
@@ -41,6 +44,9 @@ class Profile(TimestampedModel):
     verification_status = models.CharField(max_length=20, choices=VERIFICATION_CHOICES, default='none')
     privacy_level = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='public')
     external_link = models.URLField(blank=True)
+    content_rating = models.CharField(
+        max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
+    )
     workout_schedule = models.JSONField(null=True, blank=True)
     saved_payment_methods = models.JSONField(default=list, blank=True)
     last_seen = models.DateTimeField(null=True, blank=True)

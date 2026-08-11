@@ -144,6 +144,7 @@ _MealPlan _$MealPlanFromJson(Map<String, dynamic> json) => _MealPlan(
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
+  contentRating: json['content_rating'] as String? ?? 'general',
   purchaseCount: (json['purchase_count'] as num?)?.toInt() ?? 0,
   averageRating: (json['average_rating'] as num?)?.toDouble() ?? 0.0,
   reviewCount: (json['review_count'] as num?)?.toInt() ?? 0,
@@ -171,6 +172,7 @@ Map<String, dynamic> _$MealPlanToJson(_MealPlan instance) => <String, dynamic>{
   'preview_day': instance.previewDay,
   'full_plan': instance.fullPlan,
   'shopping_list': instance.shoppingList,
+  'content_rating': instance.contentRating,
   'purchase_count': instance.purchaseCount,
   'average_rating': instance.averageRating,
   'review_count': instance.reviewCount,
@@ -218,6 +220,7 @@ _TrainingProgramme _$TrainingProgrammeFromJson(Map<String, dynamic> json) =>
       shopData: json['shop_data'] == null
           ? null
           : Shop.fromJson(json['shop_data'] as Map<String, dynamic>),
+      contentRating: json['content_rating'] as String? ?? 'general',
       createdAt: json['created_at'] as String,
     );
 
@@ -236,6 +239,7 @@ Map<String, dynamic> _$TrainingProgrammeToJson(_TrainingProgramme instance) =>
       'is_purchased': instance.isPurchased,
       'is_published': instance.isPublished,
       'shop_data': instance.shopData,
+      'content_rating': instance.contentRating,
       'created_at': instance.createdAt,
     };
 
@@ -269,6 +273,7 @@ _MarketplaceProduct _$MarketplaceProductFromJson(Map<String, dynamic> json) =>
       imageUrl: json['image_url'] as String,
       affiliateUrl: json['affiliate_url'] as String,
       priceDisplay: json['price_display'] as String,
+      contentRating: json['content_rating'] as String? ?? 'general',
       recommendedBy: json['recommended_by'] as String?,
       recommenderData: json['recommender_data'] as Map<String, dynamic>?,
       clickCount: (json['click_count'] as num?)?.toInt() ?? 0,
@@ -289,6 +294,7 @@ Map<String, dynamic> _$MarketplaceProductToJson(_MarketplaceProduct instance) =>
       'image_url': instance.imageUrl,
       'affiliate_url': instance.affiliateUrl,
       'price_display': instance.priceDisplay,
+      'content_rating': instance.contentRating,
       'recommended_by': instance.recommendedBy,
       'recommender_data': instance.recommenderData,
       'click_count': instance.clickCount,
@@ -386,6 +392,7 @@ _MarketplaceEvent _$MarketplaceEventFromJson(Map<String, dynamic> json) =>
           (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
           const <String>[],
       category: json['category'] as String? ?? '',
+      contentRating: json['content_rating'] as String? ?? 'general',
       isRegistered: json['is_registered'] as bool? ?? false,
       spotsRemaining: (json['spots_remaining'] as num?)?.toInt(),
       shopData: json['shop_data'] == null
@@ -430,6 +437,7 @@ Map<String, dynamic> _$MarketplaceEventToJson(_MarketplaceEvent instance) =>
       'attendee_count': instance.attendeeCount,
       'tags': instance.tags,
       'category': instance.category,
+      'content_rating': instance.contentRating,
       'is_registered': instance.isRegistered,
       'spots_remaining': instance.spotsRemaining,
       'shop_data': instance.shopData,

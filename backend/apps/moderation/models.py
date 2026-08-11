@@ -12,6 +12,7 @@ class ModerationReport(TimestampedModel):
         ('harassment', 'Harassment'),
         ('hate_speech', 'Hate Speech'),
         ('nudity', 'Nudity / Sexual Content'),
+        ('adult_ungated', 'Adult Content Outside Mature Category'),
         ('violence', 'Violence'),
         ('misinformation', 'Misinformation'),
         ('impersonation', 'Impersonation'),
@@ -63,6 +64,9 @@ class ContentFlag(TimestampedModel):
         ('toxic', 'Toxic Language'),
         ('spam', 'Spam'),
         ('misinfo', 'Misinformation'),
+        ('medical_claim', 'Medical / Treatment Claim'),
+        ('undisclosed_sponsor', 'Undisclosed Sponsorship'),
+        ('adult_ungated', 'Adult Content Outside Mature Category'),
         ('custom', 'Custom Rule'),
     ]
     SEVERITY_CHOICES = [

@@ -13,7 +13,20 @@ const VERIFICATION_TYPES = [
   { value: 'id', label: 'ID Verification', desc: 'Verify your identity with a government-issued ID' },
   { value: 'trainer', label: 'Trainer Certification', desc: 'Get certified as a personal trainer' },
   { value: 'practitioner', label: 'Health Practitioner', desc: 'Verify your health practitioner credentials' },
+  { value: 'shop', label: 'Shop / Seller Verification', desc: 'Verify your shop or seller business' },
+  { value: 'gym', label: 'Gym Verification', desc: 'Verify your gym or training facility' },
 ];
+
+const SCOPE_OPTIONS = [
+  { value: 'general_fitness', label: 'General Fitness Coaching' },
+  { value: 'nutrition_wellness', label: 'General Wellness Nutrition' },
+  { value: 'meal_planning', label: 'Meal Planning (General Wellness)' },
+  { value: 'medical_nutrition', label: 'Medical Nutrition Therapy' },
+  { value: 'physical_therapy', label: 'Physiotherapy / Rehab' },
+  { value: 'clinical', label: 'Clinical Practice' },
+];
+
+const NEEDS_CREDENTIALS = ['trainer', 'practitioner', 'shop'];
 
 export default function Verification() {
   const { toast } = useToast();
@@ -24,6 +37,12 @@ export default function Verification() {
   const [documentUrl, setDocumentUrl] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [credentialTitle, setCredentialTitle] = useState('');
+  const [credentialIssuer, setCredentialIssuer] = useState('');
+  const [credentialId, setCredentialId] = useState('');
+  const [issuedDate, setIssuedDate] = useState('');
+  const [scopeOfPractice, setScopeOfPractice] = useState('');
 
   const fetchSubmissions = async () => {
     setIsLoading(true);
@@ -47,12 +66,23 @@ export default function Verification() {
     setIsSubmitting(true);
     try {
       const docRes = await verificationApi.uploadDocument(selectedType === 'id' ? 'id_card' : 'certification', documentUrl);
-      await verificationApi.createSubmission(selectedType, [docRes.data.id], notes || undefined);
+      await verificationApi.createSubmission(selectedType, [docRes.data.id], notes || undefined, {
+        credential_title: credentialTitle || undefined,
+        credential_issuer: credentialIssuer || undefined,
+        credential_id: credentialId || undefined,
+        issued_date: issuedDate || undefined,
+        scope_of_practice: scopeOfPractice || undefined,
+      });
       toast('success', 'Verification submission created!');
       setShowSubmitModal(false);
       setSelectedType('');
       setDocumentUrl('');
       setNotes('');
+      setCredentialTitle('');
+      setCredentialIssuer('');
+      setCredentialId('');
+      setIssuedDate('');
+      setScopeOfPractice('');
       fetchSubmissions();
     } catch {
       toast('error', 'Failed to create verification submission');
@@ -135,6 +165,16 @@ export default function Verification() {
               {sub.status === 'rejected' && sub.documents?.[0]?.rejection_reason && (
                 <p className="text-xs text-buddy-red mt-2">Reason: {sub.documents[0].rejection_reason}</p>
               )}
+              {(sub.credential_title || sub.scope_of_practice) && (
+                <div className="mt-2 space-y-0.5 text-xs text-buddy-text-secondary">
+                  {sub.credential_title && (
+                    <p><span className="font-medium">Credential:</span> {sub.credential_title}{sub.credential_issuer ? ` — ${sub.credential_issuer}` : ''}{sub.credential_id ? ` (${sub.credential_id})` : ''}</p>
+                  )}
+                  {sub.scope_of_practice && (
+                    <p><span className="font-medium">Scope:</span> {SCOPE_OPTIONS.find((s) => s.value === sub.scope_of_practice)?.label || sub.scope_of_practice.replace(/_/g, ' ')}</p>
+                  )}
+                </div>
+              )}
               <div className="flex items-center gap-2 mt-2 text-xs text-buddy-text-secondary">
                 <Clock size={12} /> {sub.documents?.length || 0} document(s)
               </div>
@@ -158,6 +198,43 @@ export default function Verification() {
             </div>
           </div>
           <Input label="Document URL" placeholder="https://..." value={documentUrl} onChange={(e) => setDocumentUrl(e.target.value)} />
+          {NEEDS_CREDENTIALS.includes(selectedType) && (
+            <div className="space-y-3 rounded-xl border border-buddy-surface-raised p-3">
+              <p className="text-xs font-medium text-buddy-text-secondary uppercase tracking-wide">Credential Details</p>
+              <Input label="Credential Title" placeholder="e.g. Certified Personal Trainer, Business Registration" value={credentialTitle} onChange={(e) => setCredentialTitle(e.target.value)} />
+              <Input label="Issuer" placeholder="e.g. REPs Kenya, ACSM, Registrar of Companies" value={credentialIssuer} onChange={(e) => setCredentialIssuer(e.target.value)} />
+              <Input label="Credential / Registration ID" placeholder="e.g. Certification number" value={credentialId} onChange={(e) => setCredentialId(e.target.value)} />
+              <div>
+                <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">Issued Date</label>
+                <input
+                  type="date"
+                  value={issuedDate}
+                  onChange={(e) => setIssuedDate(e.target.value)}
+                  className="w-full bg-buddy-surface rounded-xl px-4 py-2.5 text-sm text-buddy-text-primary focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
+                />
+              </div>
+              {selectedType === 'trainer' || selectedType === 'practitioner' ? (
+                <div>
+                  <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">Scope of Practice</label>
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {SCOPE_OPTIONS.map((s) => (
+                      <button key={s.value} type="button" onClick={() => setScopeOfPractice(s.value)}
+                        className={`w-full text-left px-3 py-2 rounded-lg border text-xs transition-colors ${scopeOfPractice === s.value ? 'border-buddy-green bg-buddy-green/10 text-buddy-text-primary' : 'border-buddy-surface-raised text-buddy-text-secondary hover:border-buddy-green/40'}`}>
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-buddy-orange mt-1.5">
+                    Your verified scope limits what advice you may provide. Medical claims outside a licensed scope are prohibited.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[11px] text-buddy-text-secondary">
+                  Business verification requires a registration document. Provide the registered name and number above.
+                </p>
+              )}
+            </div>
+          )}
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}

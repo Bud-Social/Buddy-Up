@@ -3864,4 +3864,276 @@ as String,
 
 }
 
+
+/// @nodoc
+mixin _$VerifyAgeResponse {
+
+ int get age; bool get isAdult; bool get is16Plus;@JsonKey(name: 'dob_hash') String get doBHash;
+/// Create a copy of VerifyAgeResponse
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$VerifyAgeResponseCopyWith<VerifyAgeResponse> get copyWith => _$VerifyAgeResponseCopyWithImpl<VerifyAgeResponse>(this as VerifyAgeResponse, _$identity);
+
+  /// Serializes this VerifyAgeResponse to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is VerifyAgeResponse&&(identical(other.age, age) || other.age == age)&&(identical(other.isAdult, isAdult) || other.isAdult == isAdult)&&(identical(other.is16Plus, is16Plus) || other.is16Plus == is16Plus)&&(identical(other.doBHash, doBHash) || other.doBHash == doBHash));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,age,isAdult,is16Plus,doBHash);
+
+@override
+String toString() {
+  return 'VerifyAgeResponse(age: $age, isAdult: $isAdult, is16Plus: $is16Plus, doBHash: $doBHash)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $VerifyAgeResponseCopyWith<$Res>  {
+  factory $VerifyAgeResponseCopyWith(VerifyAgeResponse value, $Res Function(VerifyAgeResponse) _then) = _$VerifyAgeResponseCopyWithImpl;
+@useResult
+$Res call({
+ int age, bool isAdult, bool is16Plus,@JsonKey(name: 'dob_hash') String doBHash
+});
+
+
+
+
+}
+/// @nodoc
+class _$VerifyAgeResponseCopyWithImpl<$Res>
+    implements $VerifyAgeResponseCopyWith<$Res> {
+  _$VerifyAgeResponseCopyWithImpl(this._self, this._then);
+
+  final VerifyAgeResponse _self;
+  final $Res Function(VerifyAgeResponse) _then;
+
+/// Create a copy of VerifyAgeResponse
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? age = null,Object? isAdult = null,Object? is16Plus = null,Object? doBHash = null,}) {
+  return _then(_self.copyWith(
+age: null == age ? _self.age : age // ignore: cast_nullable_to_non_nullable
+as int,isAdult: null == isAdult ? _self.isAdult : isAdult // ignore: cast_nullable_to_non_nullable
+as bool,is16Plus: null == is16Plus ? _self.is16Plus : is16Plus // ignore: cast_nullable_to_non_nullable
+as bool,doBHash: null == doBHash ? _self.doBHash : doBHash // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [VerifyAgeResponse].
+extension VerifyAgeResponsePatterns on VerifyAgeResponse {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _VerifyAgeResponse value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _VerifyAgeResponse() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _VerifyAgeResponse value)  $default,){
+final _that = this;
+switch (_that) {
+case _VerifyAgeResponse():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _VerifyAgeResponse value)?  $default,){
+final _that = this;
+switch (_that) {
+case _VerifyAgeResponse() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int age,  bool isAdult,  bool is16Plus, @JsonKey(name: 'dob_hash')  String doBHash)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _VerifyAgeResponse() when $default != null:
+return $default(_that.age,_that.isAdult,_that.is16Plus,_that.doBHash);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int age,  bool isAdult,  bool is16Plus, @JsonKey(name: 'dob_hash')  String doBHash)  $default,) {final _that = this;
+switch (_that) {
+case _VerifyAgeResponse():
+return $default(_that.age,_that.isAdult,_that.is16Plus,_that.doBHash);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int age,  bool isAdult,  bool is16Plus, @JsonKey(name: 'dob_hash')  String doBHash)?  $default,) {final _that = this;
+switch (_that) {
+case _VerifyAgeResponse() when $default != null:
+return $default(_that.age,_that.isAdult,_that.is16Plus,_that.doBHash);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _VerifyAgeResponse implements VerifyAgeResponse {
+  const _VerifyAgeResponse({this.age = 0, this.isAdult = false, this.is16Plus = false, @JsonKey(name: 'dob_hash') this.doBHash = ''});
+  factory _VerifyAgeResponse.fromJson(Map<String, dynamic> json) => _$VerifyAgeResponseFromJson(json);
+
+@override@JsonKey() final  int age;
+@override@JsonKey() final  bool isAdult;
+@override@JsonKey() final  bool is16Plus;
+@override@JsonKey(name: 'dob_hash') final  String doBHash;
+
+/// Create a copy of VerifyAgeResponse
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$VerifyAgeResponseCopyWith<_VerifyAgeResponse> get copyWith => __$VerifyAgeResponseCopyWithImpl<_VerifyAgeResponse>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$VerifyAgeResponseToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _VerifyAgeResponse&&(identical(other.age, age) || other.age == age)&&(identical(other.isAdult, isAdult) || other.isAdult == isAdult)&&(identical(other.is16Plus, is16Plus) || other.is16Plus == is16Plus)&&(identical(other.doBHash, doBHash) || other.doBHash == doBHash));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,age,isAdult,is16Plus,doBHash);
+
+@override
+String toString() {
+  return 'VerifyAgeResponse(age: $age, isAdult: $isAdult, is16Plus: $is16Plus, doBHash: $doBHash)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$VerifyAgeResponseCopyWith<$Res> implements $VerifyAgeResponseCopyWith<$Res> {
+  factory _$VerifyAgeResponseCopyWith(_VerifyAgeResponse value, $Res Function(_VerifyAgeResponse) _then) = __$VerifyAgeResponseCopyWithImpl;
+@override @useResult
+$Res call({
+ int age, bool isAdult, bool is16Plus,@JsonKey(name: 'dob_hash') String doBHash
+});
+
+
+
+
+}
+/// @nodoc
+class __$VerifyAgeResponseCopyWithImpl<$Res>
+    implements _$VerifyAgeResponseCopyWith<$Res> {
+  __$VerifyAgeResponseCopyWithImpl(this._self, this._then);
+
+  final _VerifyAgeResponse _self;
+  final $Res Function(_VerifyAgeResponse) _then;
+
+/// Create a copy of VerifyAgeResponse
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? age = null,Object? isAdult = null,Object? is16Plus = null,Object? doBHash = null,}) {
+  return _then(_VerifyAgeResponse(
+age: null == age ? _self.age : age // ignore: cast_nullable_to_non_nullable
+as int,isAdult: null == isAdult ? _self.isAdult : isAdult // ignore: cast_nullable_to_non_nullable
+as bool,is16Plus: null == is16Plus ? _self.is16Plus : is16Plus // ignore: cast_nullable_to_non_nullable
+as bool,doBHash: null == doBHash ? _self.doBHash : doBHash // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
 // dart format on

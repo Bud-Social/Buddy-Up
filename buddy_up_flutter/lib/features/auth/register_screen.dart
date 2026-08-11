@@ -321,6 +321,33 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   title: const Text('I am 16 or older', style: TextStyle(fontSize: 14)),
                   controlAffinity: ListTileControlAffinity.leading,
                   dense: true,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, right: 8, bottom: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.lock_outline, size: 16, color: BuddyColors.gold),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => launchUrl(Uri.parse('https://buddyup.app/adult-content-policy')),
+                          child: const Text.rich(
+                            TextSpan(
+                              text: 'The Mature (18+/16+) category is age-gated and hidden by default. ',
+                              style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                              children: [
+                                TextSpan(
+                                  text: 'Read the Adult Content Policy',
+                                  style: TextStyle(color: BuddyColors.green, decoration: TextDecoration.underline),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
                 BuddyButton(

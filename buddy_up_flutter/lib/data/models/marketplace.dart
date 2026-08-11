@@ -96,6 +96,7 @@ abstract class MealPlan with _$MealPlan {
     @JsonKey(name: 'preview_day') required Map<String, dynamic> previewDay,
     @JsonKey(name: 'full_plan') Map<String, dynamic>? fullPlan,
     @JsonKey(name: 'shopping_list') @Default(<String>[]) List<String> shoppingList,
+    @JsonKey(name: 'content_rating') @Default('general') String contentRating,
     @JsonKey(name: 'purchase_count') @Default(0) int purchaseCount,
     @JsonKey(name: 'average_rating') @Default(0.0) double averageRating,
     @JsonKey(name: 'review_count') @Default(0) int reviewCount,
@@ -140,6 +141,7 @@ abstract class TrainingProgramme with _$TrainingProgramme {
     @JsonKey(name: 'is_purchased') @Default(false) bool isPurchased,
     @JsonKey(name: 'is_published') @Default(true) bool isPublished,
     @JsonKey(name: 'shop_data') Shop? shopData,
+    @JsonKey(name: 'content_rating') @Default('general') String contentRating,
     @JsonKey(name: 'created_at') required String createdAt,
   }) = _TrainingProgramme;
 
@@ -172,6 +174,7 @@ abstract class MarketplaceProduct with _$MarketplaceProduct {
     @JsonKey(name: 'image_url') required String imageUrl,
     @JsonKey(name: 'affiliate_url') required String affiliateUrl,
     @JsonKey(name: 'price_display') required String priceDisplay,
+    @JsonKey(name: 'content_rating') @Default('general') String contentRating,
     @JsonKey(name: 'recommended_by') String? recommendedBy,
     @JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,
     @JsonKey(name: 'click_count') @Default(0) int clickCount,
@@ -246,6 +249,7 @@ abstract class MarketplaceEvent with _$MarketplaceEvent {
     @JsonKey(name: 'attendee_count') @Default(0) int attendeeCount,
     @Default(<String>[]) List<String> tags,
     @Default('') String category,
+    @JsonKey(name: 'content_rating') @Default('general') String contentRating,
     @JsonKey(name: 'is_registered') @Default(false) bool isRegistered,
     @JsonKey(name: 'spots_remaining') int? spotsRemaining,
     @JsonKey(name: 'shop_data') Shop? shopData,

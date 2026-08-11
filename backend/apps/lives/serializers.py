@@ -24,7 +24,8 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
     class Meta:
         model = BuddyLive
         fields = [
-            'id', 'title', 'live_type', 'category', 'access', 'artifact_fee',
+            'id', 'title', 'live_type', 'category', 'content_rating', 'access',
+            'artifact_fee',
             'gym_id', 'status', 'started_at', 'ended_at', 'viewer_peak',
             'replay_url', 'replay_saved', 'co_hosts', 'scheduled_for',
             'is_recurring', 'recurrence_rule', 'equipment_list',
@@ -72,7 +73,8 @@ class CreateLiveSerializer(serializers.ModelSerializer):
     class Meta:
         model = BuddyLive
         fields = [
-            'title', 'live_type', 'category', 'access', 'artifact_fee',
+            'title', 'live_type', 'category', 'content_rating', 'access',
+            'artifact_fee',
             'gym_id', 'co_hosts', 'scheduled_for', 'is_recurring',
             'recurrence_rule', 'equipment_list', 'recording_consent',
         ]

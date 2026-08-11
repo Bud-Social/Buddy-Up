@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Profile {
 
- String get userId; String get username; String get displayName; String get bio; String get avatarUrl; String get coverUrl; String get pronouns; String get locationCity; String get locationCountry; String? get externalLink; String get role; String get verificationStatus; String get privacyLevel; int get streakDays; Map<String, int> get artifactBalance; int get buddyCount; int get followingCount; int get followerCount; int get gymCount; int get postCount; bool get isBuddy; String? get buddyStatus; bool get isFollowing; bool get showActiveStatus; String? get createdAt; String? get updatedAt;
+ String get userId; String get username; String get displayName; String get bio; String get avatarUrl; String get coverUrl; String get pronouns; String get locationCity; String get locationCountry; String? get externalLink;@JsonKey(name: 'content_rating') String get contentRating; String get role; String get verificationStatus; String get privacyLevel; int get streakDays; Map<String, int> get artifactBalance; int get buddyCount; int get followingCount; int get followerCount; int get gymCount; int get postCount; bool get isBuddy; String? get buddyStatus; bool get isFollowing; bool get showActiveStatus; String? get createdAt; String? get updatedAt;
 /// Create a copy of Profile
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $ProfileCopyWith<Profile> get copyWith => _$ProfileCopyWithImpl<Profile>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Profile&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.pronouns, pronouns) || other.pronouns == pronouns)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&(identical(other.externalLink, externalLink) || other.externalLink == externalLink)&&(identical(other.role, role) || other.role == role)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.privacyLevel, privacyLevel) || other.privacyLevel == privacyLevel)&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&const DeepCollectionEquality().equals(other.artifactBalance, artifactBalance)&&(identical(other.buddyCount, buddyCount) || other.buddyCount == buddyCount)&&(identical(other.followingCount, followingCount) || other.followingCount == followingCount)&&(identical(other.followerCount, followerCount) || other.followerCount == followerCount)&&(identical(other.gymCount, gymCount) || other.gymCount == gymCount)&&(identical(other.postCount, postCount) || other.postCount == postCount)&&(identical(other.isBuddy, isBuddy) || other.isBuddy == isBuddy)&&(identical(other.buddyStatus, buddyStatus) || other.buddyStatus == buddyStatus)&&(identical(other.isFollowing, isFollowing) || other.isFollowing == isFollowing)&&(identical(other.showActiveStatus, showActiveStatus) || other.showActiveStatus == showActiveStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Profile&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.pronouns, pronouns) || other.pronouns == pronouns)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&(identical(other.externalLink, externalLink) || other.externalLink == externalLink)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.role, role) || other.role == role)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.privacyLevel, privacyLevel) || other.privacyLevel == privacyLevel)&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&const DeepCollectionEquality().equals(other.artifactBalance, artifactBalance)&&(identical(other.buddyCount, buddyCount) || other.buddyCount == buddyCount)&&(identical(other.followingCount, followingCount) || other.followingCount == followingCount)&&(identical(other.followerCount, followerCount) || other.followerCount == followerCount)&&(identical(other.gymCount, gymCount) || other.gymCount == gymCount)&&(identical(other.postCount, postCount) || other.postCount == postCount)&&(identical(other.isBuddy, isBuddy) || other.isBuddy == isBuddy)&&(identical(other.buddyStatus, buddyStatus) || other.buddyStatus == buddyStatus)&&(identical(other.isFollowing, isFollowing) || other.isFollowing == isFollowing)&&(identical(other.showActiveStatus, showActiveStatus) || other.showActiveStatus == showActiveStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,userId,username,displayName,bio,avatarUrl,coverUrl,pronouns,locationCity,locationCountry,externalLink,role,verificationStatus,privacyLevel,streakDays,const DeepCollectionEquality().hash(artifactBalance),buddyCount,followingCount,followerCount,gymCount,postCount,isBuddy,buddyStatus,isFollowing,showActiveStatus,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,userId,username,displayName,bio,avatarUrl,coverUrl,pronouns,locationCity,locationCountry,externalLink,contentRating,role,verificationStatus,privacyLevel,streakDays,const DeepCollectionEquality().hash(artifactBalance),buddyCount,followingCount,followerCount,gymCount,postCount,isBuddy,buddyStatus,isFollowing,showActiveStatus,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'Profile(userId: $userId, username: $username, displayName: $displayName, bio: $bio, avatarUrl: $avatarUrl, coverUrl: $coverUrl, pronouns: $pronouns, locationCity: $locationCity, locationCountry: $locationCountry, externalLink: $externalLink, role: $role, verificationStatus: $verificationStatus, privacyLevel: $privacyLevel, streakDays: $streakDays, artifactBalance: $artifactBalance, buddyCount: $buddyCount, followingCount: $followingCount, followerCount: $followerCount, gymCount: $gymCount, postCount: $postCount, isBuddy: $isBuddy, buddyStatus: $buddyStatus, isFollowing: $isFollowing, showActiveStatus: $showActiveStatus, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Profile(userId: $userId, username: $username, displayName: $displayName, bio: $bio, avatarUrl: $avatarUrl, coverUrl: $coverUrl, pronouns: $pronouns, locationCity: $locationCity, locationCountry: $locationCountry, externalLink: $externalLink, contentRating: $contentRating, role: $role, verificationStatus: $verificationStatus, privacyLevel: $privacyLevel, streakDays: $streakDays, artifactBalance: $artifactBalance, buddyCount: $buddyCount, followingCount: $followingCount, followerCount: $followerCount, gymCount: $gymCount, postCount: $postCount, isBuddy: $isBuddy, buddyStatus: $buddyStatus, isFollowing: $isFollowing, showActiveStatus: $showActiveStatus, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $ProfileCopyWith<$Res>  {
   factory $ProfileCopyWith(Profile value, $Res Function(Profile) _then) = _$ProfileCopyWithImpl;
 @useResult
 $Res call({
- String userId, String username, String displayName, String bio, String avatarUrl, String coverUrl, String pronouns, String locationCity, String locationCountry, String? externalLink, String role, String verificationStatus, String privacyLevel, int streakDays, Map<String, int> artifactBalance, int buddyCount, int followingCount, int followerCount, int gymCount, int postCount, bool isBuddy, String? buddyStatus, bool isFollowing, bool showActiveStatus, String? createdAt, String? updatedAt
+ String userId, String username, String displayName, String bio, String avatarUrl, String coverUrl, String pronouns, String locationCity, String locationCountry, String? externalLink,@JsonKey(name: 'content_rating') String contentRating, String role, String verificationStatus, String privacyLevel, int streakDays, Map<String, int> artifactBalance, int buddyCount, int followingCount, int followerCount, int gymCount, int postCount, bool isBuddy, String? buddyStatus, bool isFollowing, bool showActiveStatus, String? createdAt, String? updatedAt
 });
 
 
@@ -65,7 +65,7 @@ class _$ProfileCopyWithImpl<$Res>
 
 /// Create a copy of Profile
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? bio = null,Object? avatarUrl = null,Object? coverUrl = null,Object? pronouns = null,Object? locationCity = null,Object? locationCountry = null,Object? externalLink = freezed,Object? role = null,Object? verificationStatus = null,Object? privacyLevel = null,Object? streakDays = null,Object? artifactBalance = null,Object? buddyCount = null,Object? followingCount = null,Object? followerCount = null,Object? gymCount = null,Object? postCount = null,Object? isBuddy = null,Object? buddyStatus = freezed,Object? isFollowing = null,Object? showActiveStatus = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? bio = null,Object? avatarUrl = null,Object? coverUrl = null,Object? pronouns = null,Object? locationCity = null,Object? locationCountry = null,Object? externalLink = freezed,Object? contentRating = null,Object? role = null,Object? verificationStatus = null,Object? privacyLevel = null,Object? streakDays = null,Object? artifactBalance = null,Object? buddyCount = null,Object? followingCount = null,Object? followerCount = null,Object? gymCount = null,Object? postCount = null,Object? isBuddy = null,Object? buddyStatus = freezed,Object? isFollowing = null,Object? showActiveStatus = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
@@ -77,7 +77,8 @@ as String,pronouns: null == pronouns ? _self.pronouns : pronouns // ignore: cast
 as String,locationCity: null == locationCity ? _self.locationCity : locationCity // ignore: cast_nullable_to_non_nullable
 as String,locationCountry: null == locationCountry ? _self.locationCountry : locationCountry // ignore: cast_nullable_to_non_nullable
 as String,externalLink: freezed == externalLink ? _self.externalLink : externalLink // ignore: cast_nullable_to_non_nullable
-as String?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String?,contentRating: null == contentRating ? _self.contentRating : contentRating // ignore: cast_nullable_to_non_nullable
+as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
 as String,privacyLevel: null == privacyLevel ? _self.privacyLevel : privacyLevel // ignore: cast_nullable_to_non_nullable
 as String,streakDays: null == streakDays ? _self.streakDays : streakDays // ignore: cast_nullable_to_non_nullable
@@ -178,10 +179,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String bio,  String avatarUrl,  String coverUrl,  String pronouns,  String locationCity,  String locationCountry,  String? externalLink,  String role,  String verificationStatus,  String privacyLevel,  int streakDays,  Map<String, int> artifactBalance,  int buddyCount,  int followingCount,  int followerCount,  int gymCount,  int postCount,  bool isBuddy,  String? buddyStatus,  bool isFollowing,  bool showActiveStatus,  String? createdAt,  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String bio,  String avatarUrl,  String coverUrl,  String pronouns,  String locationCity,  String locationCountry,  String? externalLink, @JsonKey(name: 'content_rating')  String contentRating,  String role,  String verificationStatus,  String privacyLevel,  int streakDays,  Map<String, int> artifactBalance,  int buddyCount,  int followingCount,  int followerCount,  int gymCount,  int postCount,  bool isBuddy,  String? buddyStatus,  bool isFollowing,  bool showActiveStatus,  String? createdAt,  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Profile() when $default != null:
-return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.avatarUrl,_that.coverUrl,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.role,_that.verificationStatus,_that.privacyLevel,_that.streakDays,_that.artifactBalance,_that.buddyCount,_that.followingCount,_that.followerCount,_that.gymCount,_that.postCount,_that.isBuddy,_that.buddyStatus,_that.isFollowing,_that.showActiveStatus,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.avatarUrl,_that.coverUrl,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.contentRating,_that.role,_that.verificationStatus,_that.privacyLevel,_that.streakDays,_that.artifactBalance,_that.buddyCount,_that.followingCount,_that.followerCount,_that.gymCount,_that.postCount,_that.isBuddy,_that.buddyStatus,_that.isFollowing,_that.showActiveStatus,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -199,10 +200,10 @@ return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.av
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String bio,  String avatarUrl,  String coverUrl,  String pronouns,  String locationCity,  String locationCountry,  String? externalLink,  String role,  String verificationStatus,  String privacyLevel,  int streakDays,  Map<String, int> artifactBalance,  int buddyCount,  int followingCount,  int followerCount,  int gymCount,  int postCount,  bool isBuddy,  String? buddyStatus,  bool isFollowing,  bool showActiveStatus,  String? createdAt,  String? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String bio,  String avatarUrl,  String coverUrl,  String pronouns,  String locationCity,  String locationCountry,  String? externalLink, @JsonKey(name: 'content_rating')  String contentRating,  String role,  String verificationStatus,  String privacyLevel,  int streakDays,  Map<String, int> artifactBalance,  int buddyCount,  int followingCount,  int followerCount,  int gymCount,  int postCount,  bool isBuddy,  String? buddyStatus,  bool isFollowing,  bool showActiveStatus,  String? createdAt,  String? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Profile():
-return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.avatarUrl,_that.coverUrl,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.role,_that.verificationStatus,_that.privacyLevel,_that.streakDays,_that.artifactBalance,_that.buddyCount,_that.followingCount,_that.followerCount,_that.gymCount,_that.postCount,_that.isBuddy,_that.buddyStatus,_that.isFollowing,_that.showActiveStatus,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.avatarUrl,_that.coverUrl,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.contentRating,_that.role,_that.verificationStatus,_that.privacyLevel,_that.streakDays,_that.artifactBalance,_that.buddyCount,_that.followingCount,_that.followerCount,_that.gymCount,_that.postCount,_that.isBuddy,_that.buddyStatus,_that.isFollowing,_that.showActiveStatus,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -219,10 +220,10 @@ return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.av
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String username,  String displayName,  String bio,  String avatarUrl,  String coverUrl,  String pronouns,  String locationCity,  String locationCountry,  String? externalLink,  String role,  String verificationStatus,  String privacyLevel,  int streakDays,  Map<String, int> artifactBalance,  int buddyCount,  int followingCount,  int followerCount,  int gymCount,  int postCount,  bool isBuddy,  String? buddyStatus,  bool isFollowing,  bool showActiveStatus,  String? createdAt,  String? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String username,  String displayName,  String bio,  String avatarUrl,  String coverUrl,  String pronouns,  String locationCity,  String locationCountry,  String? externalLink, @JsonKey(name: 'content_rating')  String contentRating,  String role,  String verificationStatus,  String privacyLevel,  int streakDays,  Map<String, int> artifactBalance,  int buddyCount,  int followingCount,  int followerCount,  int gymCount,  int postCount,  bool isBuddy,  String? buddyStatus,  bool isFollowing,  bool showActiveStatus,  String? createdAt,  String? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Profile() when $default != null:
-return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.avatarUrl,_that.coverUrl,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.role,_that.verificationStatus,_that.privacyLevel,_that.streakDays,_that.artifactBalance,_that.buddyCount,_that.followingCount,_that.followerCount,_that.gymCount,_that.postCount,_that.isBuddy,_that.buddyStatus,_that.isFollowing,_that.showActiveStatus,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.avatarUrl,_that.coverUrl,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.contentRating,_that.role,_that.verificationStatus,_that.privacyLevel,_that.streakDays,_that.artifactBalance,_that.buddyCount,_that.followingCount,_that.followerCount,_that.gymCount,_that.postCount,_that.isBuddy,_that.buddyStatus,_that.isFollowing,_that.showActiveStatus,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -234,7 +235,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.av
 @JsonSerializable()
 
 class _Profile implements Profile {
-  const _Profile({required this.userId, required this.username, required this.displayName, this.bio = '', this.avatarUrl = '', this.coverUrl = '', this.pronouns = '', this.locationCity = '', this.locationCountry = '', this.externalLink, this.role = 'user', this.verificationStatus = 'none', this.privacyLevel = 'public', this.streakDays = 0, final  Map<String, int> artifactBalance = const {}, this.buddyCount = 0, this.followingCount = 0, this.followerCount = 0, this.gymCount = 0, this.postCount = 0, this.isBuddy = false, this.buddyStatus, this.isFollowing = false, this.showActiveStatus = true, this.createdAt, this.updatedAt}): _artifactBalance = artifactBalance;
+  const _Profile({required this.userId, required this.username, required this.displayName, this.bio = '', this.avatarUrl = '', this.coverUrl = '', this.pronouns = '', this.locationCity = '', this.locationCountry = '', this.externalLink, @JsonKey(name: 'content_rating') this.contentRating = 'general', this.role = 'user', this.verificationStatus = 'none', this.privacyLevel = 'public', this.streakDays = 0, final  Map<String, int> artifactBalance = const {}, this.buddyCount = 0, this.followingCount = 0, this.followerCount = 0, this.gymCount = 0, this.postCount = 0, this.isBuddy = false, this.buddyStatus, this.isFollowing = false, this.showActiveStatus = true, this.createdAt, this.updatedAt}): _artifactBalance = artifactBalance;
   factory _Profile.fromJson(Map<String, dynamic> json) => _$ProfileFromJson(json);
 
 @override final  String userId;
@@ -247,6 +248,7 @@ class _Profile implements Profile {
 @override@JsonKey() final  String locationCity;
 @override@JsonKey() final  String locationCountry;
 @override final  String? externalLink;
+@override@JsonKey(name: 'content_rating') final  String contentRating;
 @override@JsonKey() final  String role;
 @override@JsonKey() final  String verificationStatus;
 @override@JsonKey() final  String privacyLevel;
@@ -283,16 +285,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Profile&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.pronouns, pronouns) || other.pronouns == pronouns)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&(identical(other.externalLink, externalLink) || other.externalLink == externalLink)&&(identical(other.role, role) || other.role == role)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.privacyLevel, privacyLevel) || other.privacyLevel == privacyLevel)&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&const DeepCollectionEquality().equals(other._artifactBalance, _artifactBalance)&&(identical(other.buddyCount, buddyCount) || other.buddyCount == buddyCount)&&(identical(other.followingCount, followingCount) || other.followingCount == followingCount)&&(identical(other.followerCount, followerCount) || other.followerCount == followerCount)&&(identical(other.gymCount, gymCount) || other.gymCount == gymCount)&&(identical(other.postCount, postCount) || other.postCount == postCount)&&(identical(other.isBuddy, isBuddy) || other.isBuddy == isBuddy)&&(identical(other.buddyStatus, buddyStatus) || other.buddyStatus == buddyStatus)&&(identical(other.isFollowing, isFollowing) || other.isFollowing == isFollowing)&&(identical(other.showActiveStatus, showActiveStatus) || other.showActiveStatus == showActiveStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Profile&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.pronouns, pronouns) || other.pronouns == pronouns)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&(identical(other.externalLink, externalLink) || other.externalLink == externalLink)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.role, role) || other.role == role)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.privacyLevel, privacyLevel) || other.privacyLevel == privacyLevel)&&(identical(other.streakDays, streakDays) || other.streakDays == streakDays)&&const DeepCollectionEquality().equals(other._artifactBalance, _artifactBalance)&&(identical(other.buddyCount, buddyCount) || other.buddyCount == buddyCount)&&(identical(other.followingCount, followingCount) || other.followingCount == followingCount)&&(identical(other.followerCount, followerCount) || other.followerCount == followerCount)&&(identical(other.gymCount, gymCount) || other.gymCount == gymCount)&&(identical(other.postCount, postCount) || other.postCount == postCount)&&(identical(other.isBuddy, isBuddy) || other.isBuddy == isBuddy)&&(identical(other.buddyStatus, buddyStatus) || other.buddyStatus == buddyStatus)&&(identical(other.isFollowing, isFollowing) || other.isFollowing == isFollowing)&&(identical(other.showActiveStatus, showActiveStatus) || other.showActiveStatus == showActiveStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,userId,username,displayName,bio,avatarUrl,coverUrl,pronouns,locationCity,locationCountry,externalLink,role,verificationStatus,privacyLevel,streakDays,const DeepCollectionEquality().hash(_artifactBalance),buddyCount,followingCount,followerCount,gymCount,postCount,isBuddy,buddyStatus,isFollowing,showActiveStatus,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,userId,username,displayName,bio,avatarUrl,coverUrl,pronouns,locationCity,locationCountry,externalLink,contentRating,role,verificationStatus,privacyLevel,streakDays,const DeepCollectionEquality().hash(_artifactBalance),buddyCount,followingCount,followerCount,gymCount,postCount,isBuddy,buddyStatus,isFollowing,showActiveStatus,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'Profile(userId: $userId, username: $username, displayName: $displayName, bio: $bio, avatarUrl: $avatarUrl, coverUrl: $coverUrl, pronouns: $pronouns, locationCity: $locationCity, locationCountry: $locationCountry, externalLink: $externalLink, role: $role, verificationStatus: $verificationStatus, privacyLevel: $privacyLevel, streakDays: $streakDays, artifactBalance: $artifactBalance, buddyCount: $buddyCount, followingCount: $followingCount, followerCount: $followerCount, gymCount: $gymCount, postCount: $postCount, isBuddy: $isBuddy, buddyStatus: $buddyStatus, isFollowing: $isFollowing, showActiveStatus: $showActiveStatus, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Profile(userId: $userId, username: $username, displayName: $displayName, bio: $bio, avatarUrl: $avatarUrl, coverUrl: $coverUrl, pronouns: $pronouns, locationCity: $locationCity, locationCountry: $locationCountry, externalLink: $externalLink, contentRating: $contentRating, role: $role, verificationStatus: $verificationStatus, privacyLevel: $privacyLevel, streakDays: $streakDays, artifactBalance: $artifactBalance, buddyCount: $buddyCount, followingCount: $followingCount, followerCount: $followerCount, gymCount: $gymCount, postCount: $postCount, isBuddy: $isBuddy, buddyStatus: $buddyStatus, isFollowing: $isFollowing, showActiveStatus: $showActiveStatus, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -303,7 +305,7 @@ abstract mixin class _$ProfileCopyWith<$Res> implements $ProfileCopyWith<$Res> {
   factory _$ProfileCopyWith(_Profile value, $Res Function(_Profile) _then) = __$ProfileCopyWithImpl;
 @override @useResult
 $Res call({
- String userId, String username, String displayName, String bio, String avatarUrl, String coverUrl, String pronouns, String locationCity, String locationCountry, String? externalLink, String role, String verificationStatus, String privacyLevel, int streakDays, Map<String, int> artifactBalance, int buddyCount, int followingCount, int followerCount, int gymCount, int postCount, bool isBuddy, String? buddyStatus, bool isFollowing, bool showActiveStatus, String? createdAt, String? updatedAt
+ String userId, String username, String displayName, String bio, String avatarUrl, String coverUrl, String pronouns, String locationCity, String locationCountry, String? externalLink,@JsonKey(name: 'content_rating') String contentRating, String role, String verificationStatus, String privacyLevel, int streakDays, Map<String, int> artifactBalance, int buddyCount, int followingCount, int followerCount, int gymCount, int postCount, bool isBuddy, String? buddyStatus, bool isFollowing, bool showActiveStatus, String? createdAt, String? updatedAt
 });
 
 
@@ -320,7 +322,7 @@ class __$ProfileCopyWithImpl<$Res>
 
 /// Create a copy of Profile
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? bio = null,Object? avatarUrl = null,Object? coverUrl = null,Object? pronouns = null,Object? locationCity = null,Object? locationCountry = null,Object? externalLink = freezed,Object? role = null,Object? verificationStatus = null,Object? privacyLevel = null,Object? streakDays = null,Object? artifactBalance = null,Object? buddyCount = null,Object? followingCount = null,Object? followerCount = null,Object? gymCount = null,Object? postCount = null,Object? isBuddy = null,Object? buddyStatus = freezed,Object? isFollowing = null,Object? showActiveStatus = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? bio = null,Object? avatarUrl = null,Object? coverUrl = null,Object? pronouns = null,Object? locationCity = null,Object? locationCountry = null,Object? externalLink = freezed,Object? contentRating = null,Object? role = null,Object? verificationStatus = null,Object? privacyLevel = null,Object? streakDays = null,Object? artifactBalance = null,Object? buddyCount = null,Object? followingCount = null,Object? followerCount = null,Object? gymCount = null,Object? postCount = null,Object? isBuddy = null,Object? buddyStatus = freezed,Object? isFollowing = null,Object? showActiveStatus = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_Profile(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
@@ -332,7 +334,8 @@ as String,pronouns: null == pronouns ? _self.pronouns : pronouns // ignore: cast
 as String,locationCity: null == locationCity ? _self.locationCity : locationCity // ignore: cast_nullable_to_non_nullable
 as String,locationCountry: null == locationCountry ? _self.locationCountry : locationCountry // ignore: cast_nullable_to_non_nullable
 as String,externalLink: freezed == externalLink ? _self.externalLink : externalLink // ignore: cast_nullable_to_non_nullable
-as String?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String?,contentRating: null == contentRating ? _self.contentRating : contentRating // ignore: cast_nullable_to_non_nullable
+as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
 as String,privacyLevel: null == privacyLevel ? _self.privacyLevel : privacyLevel // ignore: cast_nullable_to_non_nullable
 as String,streakDays: null == streakDays ? _self.streakDays : streakDays // ignore: cast_nullable_to_non_nullable
@@ -359,7 +362,7 @@ as String?,
 /// @nodoc
 mixin _$ProfileUpdatePayload {
 
- String? get displayName; String? get bio; String? get pronouns; String? get locationCity; String? get locationCountry; String? get externalLink; String? get workoutSchedule; bool? get showActiveStatus; bool? get isAnonymousPosting; String? get privacyLevel;
+ String? get displayName; String? get bio; String? get pronouns; String? get locationCity; String? get locationCountry; String? get externalLink; String? get workoutSchedule;@JsonKey(name: 'content_rating') String get contentRating; bool? get showActiveStatus; bool? get isAnonymousPosting; String? get privacyLevel;
 /// Create a copy of ProfileUpdatePayload
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -372,16 +375,16 @@ $ProfileUpdatePayloadCopyWith<ProfileUpdatePayload> get copyWith => _$ProfileUpd
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProfileUpdatePayload&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.pronouns, pronouns) || other.pronouns == pronouns)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&(identical(other.externalLink, externalLink) || other.externalLink == externalLink)&&(identical(other.workoutSchedule, workoutSchedule) || other.workoutSchedule == workoutSchedule)&&(identical(other.showActiveStatus, showActiveStatus) || other.showActiveStatus == showActiveStatus)&&(identical(other.isAnonymousPosting, isAnonymousPosting) || other.isAnonymousPosting == isAnonymousPosting)&&(identical(other.privacyLevel, privacyLevel) || other.privacyLevel == privacyLevel));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProfileUpdatePayload&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.pronouns, pronouns) || other.pronouns == pronouns)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&(identical(other.externalLink, externalLink) || other.externalLink == externalLink)&&(identical(other.workoutSchedule, workoutSchedule) || other.workoutSchedule == workoutSchedule)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.showActiveStatus, showActiveStatus) || other.showActiveStatus == showActiveStatus)&&(identical(other.isAnonymousPosting, isAnonymousPosting) || other.isAnonymousPosting == isAnonymousPosting)&&(identical(other.privacyLevel, privacyLevel) || other.privacyLevel == privacyLevel));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,displayName,bio,pronouns,locationCity,locationCountry,externalLink,workoutSchedule,showActiveStatus,isAnonymousPosting,privacyLevel);
+int get hashCode => Object.hash(runtimeType,displayName,bio,pronouns,locationCity,locationCountry,externalLink,workoutSchedule,contentRating,showActiveStatus,isAnonymousPosting,privacyLevel);
 
 @override
 String toString() {
-  return 'ProfileUpdatePayload(displayName: $displayName, bio: $bio, pronouns: $pronouns, locationCity: $locationCity, locationCountry: $locationCountry, externalLink: $externalLink, workoutSchedule: $workoutSchedule, showActiveStatus: $showActiveStatus, isAnonymousPosting: $isAnonymousPosting, privacyLevel: $privacyLevel)';
+  return 'ProfileUpdatePayload(displayName: $displayName, bio: $bio, pronouns: $pronouns, locationCity: $locationCity, locationCountry: $locationCountry, externalLink: $externalLink, workoutSchedule: $workoutSchedule, contentRating: $contentRating, showActiveStatus: $showActiveStatus, isAnonymousPosting: $isAnonymousPosting, privacyLevel: $privacyLevel)';
 }
 
 
@@ -392,7 +395,7 @@ abstract mixin class $ProfileUpdatePayloadCopyWith<$Res>  {
   factory $ProfileUpdatePayloadCopyWith(ProfileUpdatePayload value, $Res Function(ProfileUpdatePayload) _then) = _$ProfileUpdatePayloadCopyWithImpl;
 @useResult
 $Res call({
- String? displayName, String? bio, String? pronouns, String? locationCity, String? locationCountry, String? externalLink, String? workoutSchedule, bool? showActiveStatus, bool? isAnonymousPosting, String? privacyLevel
+ String? displayName, String? bio, String? pronouns, String? locationCity, String? locationCountry, String? externalLink, String? workoutSchedule,@JsonKey(name: 'content_rating') String contentRating, bool? showActiveStatus, bool? isAnonymousPosting, String? privacyLevel
 });
 
 
@@ -409,7 +412,7 @@ class _$ProfileUpdatePayloadCopyWithImpl<$Res>
 
 /// Create a copy of ProfileUpdatePayload
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? displayName = freezed,Object? bio = freezed,Object? pronouns = freezed,Object? locationCity = freezed,Object? locationCountry = freezed,Object? externalLink = freezed,Object? workoutSchedule = freezed,Object? showActiveStatus = freezed,Object? isAnonymousPosting = freezed,Object? privacyLevel = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? displayName = freezed,Object? bio = freezed,Object? pronouns = freezed,Object? locationCity = freezed,Object? locationCountry = freezed,Object? externalLink = freezed,Object? workoutSchedule = freezed,Object? contentRating = null,Object? showActiveStatus = freezed,Object? isAnonymousPosting = freezed,Object? privacyLevel = freezed,}) {
   return _then(_self.copyWith(
 displayName: freezed == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String?,bio: freezed == bio ? _self.bio : bio // ignore: cast_nullable_to_non_nullable
@@ -418,7 +421,8 @@ as String?,locationCity: freezed == locationCity ? _self.locationCity : location
 as String?,locationCountry: freezed == locationCountry ? _self.locationCountry : locationCountry // ignore: cast_nullable_to_non_nullable
 as String?,externalLink: freezed == externalLink ? _self.externalLink : externalLink // ignore: cast_nullable_to_non_nullable
 as String?,workoutSchedule: freezed == workoutSchedule ? _self.workoutSchedule : workoutSchedule // ignore: cast_nullable_to_non_nullable
-as String?,showActiveStatus: freezed == showActiveStatus ? _self.showActiveStatus : showActiveStatus // ignore: cast_nullable_to_non_nullable
+as String?,contentRating: null == contentRating ? _self.contentRating : contentRating // ignore: cast_nullable_to_non_nullable
+as String,showActiveStatus: freezed == showActiveStatus ? _self.showActiveStatus : showActiveStatus // ignore: cast_nullable_to_non_nullable
 as bool?,isAnonymousPosting: freezed == isAnonymousPosting ? _self.isAnonymousPosting : isAnonymousPosting // ignore: cast_nullable_to_non_nullable
 as bool?,privacyLevel: freezed == privacyLevel ? _self.privacyLevel : privacyLevel // ignore: cast_nullable_to_non_nullable
 as String?,
@@ -506,10 +510,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? displayName,  String? bio,  String? pronouns,  String? locationCity,  String? locationCountry,  String? externalLink,  String? workoutSchedule,  bool? showActiveStatus,  bool? isAnonymousPosting,  String? privacyLevel)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? displayName,  String? bio,  String? pronouns,  String? locationCity,  String? locationCountry,  String? externalLink,  String? workoutSchedule, @JsonKey(name: 'content_rating')  String contentRating,  bool? showActiveStatus,  bool? isAnonymousPosting,  String? privacyLevel)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ProfileUpdatePayload() when $default != null:
-return $default(_that.displayName,_that.bio,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.workoutSchedule,_that.showActiveStatus,_that.isAnonymousPosting,_that.privacyLevel);case _:
+return $default(_that.displayName,_that.bio,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.workoutSchedule,_that.contentRating,_that.showActiveStatus,_that.isAnonymousPosting,_that.privacyLevel);case _:
   return orElse();
 
 }
@@ -527,10 +531,10 @@ return $default(_that.displayName,_that.bio,_that.pronouns,_that.locationCity,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? displayName,  String? bio,  String? pronouns,  String? locationCity,  String? locationCountry,  String? externalLink,  String? workoutSchedule,  bool? showActiveStatus,  bool? isAnonymousPosting,  String? privacyLevel)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? displayName,  String? bio,  String? pronouns,  String? locationCity,  String? locationCountry,  String? externalLink,  String? workoutSchedule, @JsonKey(name: 'content_rating')  String contentRating,  bool? showActiveStatus,  bool? isAnonymousPosting,  String? privacyLevel)  $default,) {final _that = this;
 switch (_that) {
 case _ProfileUpdatePayload():
-return $default(_that.displayName,_that.bio,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.workoutSchedule,_that.showActiveStatus,_that.isAnonymousPosting,_that.privacyLevel);case _:
+return $default(_that.displayName,_that.bio,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.workoutSchedule,_that.contentRating,_that.showActiveStatus,_that.isAnonymousPosting,_that.privacyLevel);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -547,10 +551,10 @@ return $default(_that.displayName,_that.bio,_that.pronouns,_that.locationCity,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? displayName,  String? bio,  String? pronouns,  String? locationCity,  String? locationCountry,  String? externalLink,  String? workoutSchedule,  bool? showActiveStatus,  bool? isAnonymousPosting,  String? privacyLevel)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? displayName,  String? bio,  String? pronouns,  String? locationCity,  String? locationCountry,  String? externalLink,  String? workoutSchedule, @JsonKey(name: 'content_rating')  String contentRating,  bool? showActiveStatus,  bool? isAnonymousPosting,  String? privacyLevel)?  $default,) {final _that = this;
 switch (_that) {
 case _ProfileUpdatePayload() when $default != null:
-return $default(_that.displayName,_that.bio,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.workoutSchedule,_that.showActiveStatus,_that.isAnonymousPosting,_that.privacyLevel);case _:
+return $default(_that.displayName,_that.bio,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.workoutSchedule,_that.contentRating,_that.showActiveStatus,_that.isAnonymousPosting,_that.privacyLevel);case _:
   return null;
 
 }
@@ -562,7 +566,7 @@ return $default(_that.displayName,_that.bio,_that.pronouns,_that.locationCity,_t
 @JsonSerializable()
 
 class _ProfileUpdatePayload implements ProfileUpdatePayload {
-  const _ProfileUpdatePayload({this.displayName, this.bio, this.pronouns, this.locationCity, this.locationCountry, this.externalLink, this.workoutSchedule, this.showActiveStatus, this.isAnonymousPosting, this.privacyLevel});
+  const _ProfileUpdatePayload({this.displayName, this.bio, this.pronouns, this.locationCity, this.locationCountry, this.externalLink, this.workoutSchedule, @JsonKey(name: 'content_rating') this.contentRating = 'general', this.showActiveStatus, this.isAnonymousPosting, this.privacyLevel});
   factory _ProfileUpdatePayload.fromJson(Map<String, dynamic> json) => _$ProfileUpdatePayloadFromJson(json);
 
 @override final  String? displayName;
@@ -572,6 +576,7 @@ class _ProfileUpdatePayload implements ProfileUpdatePayload {
 @override final  String? locationCountry;
 @override final  String? externalLink;
 @override final  String? workoutSchedule;
+@override@JsonKey(name: 'content_rating') final  String contentRating;
 @override final  bool? showActiveStatus;
 @override final  bool? isAnonymousPosting;
 @override final  String? privacyLevel;
@@ -589,16 +594,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProfileUpdatePayload&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.pronouns, pronouns) || other.pronouns == pronouns)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&(identical(other.externalLink, externalLink) || other.externalLink == externalLink)&&(identical(other.workoutSchedule, workoutSchedule) || other.workoutSchedule == workoutSchedule)&&(identical(other.showActiveStatus, showActiveStatus) || other.showActiveStatus == showActiveStatus)&&(identical(other.isAnonymousPosting, isAnonymousPosting) || other.isAnonymousPosting == isAnonymousPosting)&&(identical(other.privacyLevel, privacyLevel) || other.privacyLevel == privacyLevel));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProfileUpdatePayload&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.bio, bio) || other.bio == bio)&&(identical(other.pronouns, pronouns) || other.pronouns == pronouns)&&(identical(other.locationCity, locationCity) || other.locationCity == locationCity)&&(identical(other.locationCountry, locationCountry) || other.locationCountry == locationCountry)&&(identical(other.externalLink, externalLink) || other.externalLink == externalLink)&&(identical(other.workoutSchedule, workoutSchedule) || other.workoutSchedule == workoutSchedule)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.showActiveStatus, showActiveStatus) || other.showActiveStatus == showActiveStatus)&&(identical(other.isAnonymousPosting, isAnonymousPosting) || other.isAnonymousPosting == isAnonymousPosting)&&(identical(other.privacyLevel, privacyLevel) || other.privacyLevel == privacyLevel));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,displayName,bio,pronouns,locationCity,locationCountry,externalLink,workoutSchedule,showActiveStatus,isAnonymousPosting,privacyLevel);
+int get hashCode => Object.hash(runtimeType,displayName,bio,pronouns,locationCity,locationCountry,externalLink,workoutSchedule,contentRating,showActiveStatus,isAnonymousPosting,privacyLevel);
 
 @override
 String toString() {
-  return 'ProfileUpdatePayload(displayName: $displayName, bio: $bio, pronouns: $pronouns, locationCity: $locationCity, locationCountry: $locationCountry, externalLink: $externalLink, workoutSchedule: $workoutSchedule, showActiveStatus: $showActiveStatus, isAnonymousPosting: $isAnonymousPosting, privacyLevel: $privacyLevel)';
+  return 'ProfileUpdatePayload(displayName: $displayName, bio: $bio, pronouns: $pronouns, locationCity: $locationCity, locationCountry: $locationCountry, externalLink: $externalLink, workoutSchedule: $workoutSchedule, contentRating: $contentRating, showActiveStatus: $showActiveStatus, isAnonymousPosting: $isAnonymousPosting, privacyLevel: $privacyLevel)';
 }
 
 
@@ -609,7 +614,7 @@ abstract mixin class _$ProfileUpdatePayloadCopyWith<$Res> implements $ProfileUpd
   factory _$ProfileUpdatePayloadCopyWith(_ProfileUpdatePayload value, $Res Function(_ProfileUpdatePayload) _then) = __$ProfileUpdatePayloadCopyWithImpl;
 @override @useResult
 $Res call({
- String? displayName, String? bio, String? pronouns, String? locationCity, String? locationCountry, String? externalLink, String? workoutSchedule, bool? showActiveStatus, bool? isAnonymousPosting, String? privacyLevel
+ String? displayName, String? bio, String? pronouns, String? locationCity, String? locationCountry, String? externalLink, String? workoutSchedule,@JsonKey(name: 'content_rating') String contentRating, bool? showActiveStatus, bool? isAnonymousPosting, String? privacyLevel
 });
 
 
@@ -626,7 +631,7 @@ class __$ProfileUpdatePayloadCopyWithImpl<$Res>
 
 /// Create a copy of ProfileUpdatePayload
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? displayName = freezed,Object? bio = freezed,Object? pronouns = freezed,Object? locationCity = freezed,Object? locationCountry = freezed,Object? externalLink = freezed,Object? workoutSchedule = freezed,Object? showActiveStatus = freezed,Object? isAnonymousPosting = freezed,Object? privacyLevel = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? displayName = freezed,Object? bio = freezed,Object? pronouns = freezed,Object? locationCity = freezed,Object? locationCountry = freezed,Object? externalLink = freezed,Object? workoutSchedule = freezed,Object? contentRating = null,Object? showActiveStatus = freezed,Object? isAnonymousPosting = freezed,Object? privacyLevel = freezed,}) {
   return _then(_ProfileUpdatePayload(
 displayName: freezed == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String?,bio: freezed == bio ? _self.bio : bio // ignore: cast_nullable_to_non_nullable
@@ -635,7 +640,8 @@ as String?,locationCity: freezed == locationCity ? _self.locationCity : location
 as String?,locationCountry: freezed == locationCountry ? _self.locationCountry : locationCountry // ignore: cast_nullable_to_non_nullable
 as String?,externalLink: freezed == externalLink ? _self.externalLink : externalLink // ignore: cast_nullable_to_non_nullable
 as String?,workoutSchedule: freezed == workoutSchedule ? _self.workoutSchedule : workoutSchedule // ignore: cast_nullable_to_non_nullable
-as String?,showActiveStatus: freezed == showActiveStatus ? _self.showActiveStatus : showActiveStatus // ignore: cast_nullable_to_non_nullable
+as String?,contentRating: null == contentRating ? _self.contentRating : contentRating // ignore: cast_nullable_to_non_nullable
+as String,showActiveStatus: freezed == showActiveStatus ? _self.showActiveStatus : showActiveStatus // ignore: cast_nullable_to_non_nullable
 as bool?,isAnonymousPosting: freezed == isAnonymousPosting ? _self.isAnonymousPosting : isAnonymousPosting // ignore: cast_nullable_to_non_nullable
 as bool?,privacyLevel: freezed == privacyLevel ? _self.privacyLevel : privacyLevel // ignore: cast_nullable_to_non_nullable
 as String?,

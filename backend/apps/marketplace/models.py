@@ -3,6 +3,7 @@ from uuid import uuid4
 from django.db import models
 from cloudinary.models import CloudinaryField
 from common.models import TimestampedModel, SoftDeleteModel
+from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +215,9 @@ class MealPlan(TimestampedModel):
     macro_targets = models.JSONField(default=dict)   # {protein_pct, carbs_pct, fat_pct}
     allergen_flags = models.JSONField(default=list)  # ['gluten', 'dairy', ...]
     rest_days = models.JSONField(default=list)        # [0, 6] = Sunday+Saturday
+    content_rating = models.CharField(
+        max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
+    )
     price_artifacts = models.JSONField(default=dict)
     preview_day = models.JSONField(default=dict)
     full_plan = models.JSONField(default=dict)        # {week: {day: {meal_slot: {...}}}}
@@ -290,6 +294,9 @@ class TrainingProgramme(TimestampedModel):
     rest_days_pattern = models.JSONField(default=list)   # [0, 6]
     equipment_list = models.JSONField(default=list)      # ['resistance bands', 'dumbbells', ...]
     prerequisites = models.TextField(blank=True)
+    content_rating = models.CharField(
+        max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
+    )
     # Structured activity schedule: [{week, day, time_of_day, duration_min, activity:{...}}, ...]
     schedule = models.JSONField(default=list)
     # Default notification config (creators set defaults; subscribers can override)
@@ -379,6 +386,9 @@ class Product(TimestampedModel):
     cover_image = CloudinaryField('image', folder='marketplace/products', blank=True, null=True)
     image_url = models.URLField(blank=True)       # fallback / old data
     gallery_urls = models.JSONField(default=list)  # additional images
+    content_rating = models.CharField(
+        max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
+    )
     variants = models.JSONField(default=list)      # [{size, color, sku, price_display}, ...]
     affiliate_url = models.URLField()
     price_display = models.CharField(max_length=50, blank=True)
@@ -448,6 +458,9 @@ class MarketplaceEvent(TimestampedModel):
     attendee_count = models.IntegerField(default=0)
     tags = models.JSONField(default=list)
     category = models.CharField(max_length=50, blank=True)
+    content_rating = models.CharField(
+        max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
+    )
 
     class Meta:
         db_table = 'marketplace_event'

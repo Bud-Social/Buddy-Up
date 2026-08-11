@@ -13,6 +13,7 @@ from rest_framework.response import Response
 import requests
 
 from common.pagination import PageNumberPagination
+from common.age_gating import gate_mature_queryset
 from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite, GymMembershipException
 from .serializers import (
     GymSerializer, CreateGymSerializer, GymMembershipSerializer,
@@ -52,6 +53,8 @@ class GymListView(views.APIView):
 
         if category:
             queryset = queryset.filter(categories__name=category)
+
+        queryset = gate_mature_queryset(request, queryset)
 
         queryset = queryset.order_by('-member_count')
 

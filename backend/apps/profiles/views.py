@@ -18,6 +18,7 @@ from .serializers import (
 )
 from common.pagination import CursorPagination, PageNumberPagination
 from common.permissions import AreBuddies
+from common.age_gating import gate_mature_queryset, request_can_access_mature
 
 
 class MyProfileView(generics.RetrieveUpdateAPIView):
@@ -536,6 +537,7 @@ class ProfileSearchView(views.APIView):
                 location_city__icontains=location,
             ) | queryset.filter(location_country__icontains=location)
 
+        queryset = gate_mature_queryset(request, queryset)
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request)
         serializer = ProfileSerializer(page, many=True, context={'request': request})
@@ -775,6 +777,8 @@ class DiscoverTrendingView(views.APIView):
         from apps.marketplace.models import DiscountCode, MarketplaceEvent
         from apps.marketplace.serializers import DiscountCodeSerializer, MarketplaceEventSerializer
 
+        mature_allowed = request_can_access_mature(request)
+
         now = timezone.now()
         since = now - timezone.timedelta(days=7)
 
@@ -785,7 +789,10 @@ class DiscoverTrendingView(views.APIView):
             moderation_status='clean',
         ).exclude(
             db_models.Q(tags=[]) | db_models.Q(tags__isnull=True),
-        ).values_list('tags', flat=True)[:1000]
+        )
+        if not mature_allowed:
+            recent_tags = recent_tags.exclude(content_rating='mature')
+        recent_tags = recent_tags.values_list('tags', flat=True)[:1000]
         for tags in recent_tags:
             for tag in (tags or []):
                 t = str(tag).lower().lstrip('#')
@@ -801,7 +808,10 @@ class DiscoverTrendingView(views.APIView):
             created_at__gte=since,
             moderation_status='clean',
             visibility='public',
-        ).select_related('author', 'gym_tag').annotate(
+        )
+        if not mature_allowed:
+            trending_posts_qs = trending_posts_qs.exclude(content_rating='mature')
+        trending_posts_qs = trending_posts_qs.select_related('author', 'gym_tag').annotate(
             engagement=(
                 Count('reactions', distinct=True)
                 + Count('comments', distinct=True)
@@ -831,7 +841,10 @@ class DiscoverTrendingView(views.APIView):
             is_draft=False,
             is_cancelled=False,
             start_datetime__gte=now,
-        ).select_related('creator').order_by('-attendee_count', 'start_datetime')[:5]
+        )
+        if not mature_allowed:
+            free_events = free_events.exclude(content_rating='mature')
+        free_events = free_events.select_related('creator').order_by('-attendee_count', 'start_datetime')[:5]
         for event in free_events:
             trending_offers.append({
                 'type': 'free_event',

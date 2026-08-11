@@ -40,3 +40,27 @@ class AreBuddies(permissions.BasePermission):
 class IsAdult(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.is_adult
+
+
+class CanAccessMatureContent(permissions.BasePermission):
+    """Allow authenticated users old enough to view the mature category.
+
+    The threshold is country-aware: 18+ by default, 16+ only where local law
+    permits. Because age is only persisted as an 18+ flag (``User.is_adult``)
+    and a 16+ consent flag, an 18+ threshold is satisfied by ``is_adult``; a
+    16+ threshold falls back to the user's 16+ consent flag. Unauthenticated
+    users can never access mature content.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        from common.age_gating import mature_content_min_age
+
+        country = None
+        if hasattr(request.user, 'profile'):
+            country = request.user.profile.location_country or None
+        min_age = mature_content_min_age(country)
+        if min_age >= 18:
+            return request.user.is_adult
+        return request.user.consent_log.get('is_16_plus', False)

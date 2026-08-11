@@ -10,6 +10,7 @@ from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.response import Response
 
 from common.pagination import PageNumberPagination
+from common.age_gating import gate_mature_queryset
 from .models import (
     Shop, ShopMembership, ShopGymLink, ShopVerificationApplication, PushDevice,
     MealPlan, MealPlanPurchase, MealPlanReview,
@@ -544,6 +545,7 @@ class MealPlanListView(views.APIView):
         qs = MealPlan.objects.filter(is_published=True).select_related('creator')
         if diet_type:
             qs = qs.filter(diet_type=diet_type)
+        qs = gate_mature_queryset(request, qs)
         qs = qs.order_by('-purchase_count', '-average_rating')
 
         paginator = PageNumberPagination()
@@ -774,6 +776,7 @@ class TrainingProgrammeListView(views.APIView):
         qs = TrainingProgramme.objects.filter(is_published=True).select_related('creator')
         if category:
             qs = qs.filter(category=category)
+        qs = gate_mature_queryset(request, qs)
 
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs.order_by('-purchase_count'), request)
@@ -971,6 +974,7 @@ class ProductListView(views.APIView):
         qs = Product.objects.filter(is_active=True).select_related('recommended_by')
         if category:
             qs = qs.filter(category=category)
+        qs = gate_mature_queryset(request, qs)
 
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs.order_by('-click_count'), request)
@@ -1077,6 +1081,7 @@ class EventListView(views.APIView):
             pass
         elif upcoming_only:
             qs = qs.filter(start_datetime__gte=tz.now())
+        qs = gate_mature_queryset(request, qs)
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
         serializer = MarketplaceEventSerializer(page, many=True, context={'request': request})

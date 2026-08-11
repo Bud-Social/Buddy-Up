@@ -1,5 +1,5 @@
 import { Outlet, Link, NavLink } from 'react-router-dom';
-import { ArrowLeft, BrainCircuit, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, ShieldCheck, BadgeCheck } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
 export function AdminLayout() {
@@ -42,6 +42,14 @@ export function AdminLayout() {
             }`}
           >
             <ShieldCheck size={14} /> Moderation
+          </NavLink>
+          <NavLink
+            to="/admin/verification"
+            className={({ isActive }) => `inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+              isActive ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised'
+            }`}
+          >
+            <BadgeCheck size={14} /> Verification
           </NavLink>
         </nav>
       </header>

@@ -48,6 +48,7 @@ import 'features/wallet/screens/wallet_screen.dart';
 import 'features/notifications/screens/notifications_screen.dart';
 import 'features/verification/screens/verification_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
+import 'features/settings/screens/adult_content_policy_screen.dart';
 import 'features/analytics/screens/analytics_screen.dart';
 import 'features/sessions/screens/trainer_list_screen.dart';
 import 'features/sessions/screens/trainer_profile_screen.dart';
@@ -86,6 +87,9 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         '/privacy',
         '/cookie-policy',
         '/community-guidelines',
+        '/medical-disclaimer',
+        '/sponsorship-policy',
+        '/adult-content-policy',
       ];
 
       if (!isAuthenticated && !publicRoutes.contains(location)) {
@@ -150,6 +154,18 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
       GoRoute(
         path: '/community-guidelines',
         builder: (_, _) => _legalPage('Community Guidelines'),
+      ),
+      GoRoute(
+        path: '/medical-disclaimer',
+        builder: (_, _) => _legalPage('Medical & Wellness Disclaimer'),
+      ),
+      GoRoute(
+        path: '/sponsorship-policy',
+        builder: (_, _) => _legalPage('Sponsorship & Disclosure Policy'),
+      ),
+      GoRoute(
+        path: '/adult-content-policy',
+        builder: (_, _) => const AdultContentPolicyScreen(),
       ),
       GoRoute(
         path: '/feed/post',

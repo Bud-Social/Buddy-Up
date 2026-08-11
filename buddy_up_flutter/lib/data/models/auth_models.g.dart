@@ -216,3 +216,19 @@ Map<String, dynamic> _$ChangePasswordPayloadToJson(
   'currentPassword': instance.currentPassword,
   'newPassword': instance.newPassword,
 };
+
+_VerifyAgeResponse _$VerifyAgeResponseFromJson(Map<String, dynamic> json) =>
+    _VerifyAgeResponse(
+      age: (json['age'] as num?)?.toInt() ?? 0,
+      isAdult: json['isAdult'] as bool? ?? false,
+      is16Plus: json['is16Plus'] as bool? ?? false,
+      doBHash: json['dob_hash'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$VerifyAgeResponseToJson(_VerifyAgeResponse instance) =>
+    <String, dynamic>{
+      'age': instance.age,
+      'isAdult': instance.isAdult,
+      'is16Plus': instance.is16Plus,
+      'dob_hash': instance.doBHash,
+    };

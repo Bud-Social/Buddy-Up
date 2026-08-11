@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 from common.models import TimestampedModel
+from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
 
 
 class BuddyLive(TimestampedModel):
@@ -34,6 +35,9 @@ class BuddyLive(TimestampedModel):
     title = models.CharField(max_length=80)
     live_type = models.CharField(max_length=20, choices=LIVE_TYPES)
     category = models.CharField(max_length=50)
+    content_rating = models.CharField(
+        max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
+    )
     access = models.CharField(max_length=15, choices=ACCESS_CHOICES, default='public')
     artifact_fee = models.JSONField(null=True, blank=True)
     gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='lives')

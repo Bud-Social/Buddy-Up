@@ -53,6 +53,7 @@ export interface Post {
   is_pinned?: boolean;
   visibility: string;
   moderation_status: string;
+  ai_analysis?: Record<string, unknown>;
   gym_tag_id: string | null;
   created_at: string;
   updated_at: string;

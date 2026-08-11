@@ -19,6 +19,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from common.utils import hash_dob, calculate_age
 from common.pagination import CursorPagination
 from .models import User, OTPToken, DeviceSession, AccountEvent
+from .policy_versions import CURRENT_POLICY_VERSIONS, policy_version
 from .serializers import (
     RegisterSerializer, LoginSerializer, OTPSerializer, ResendOTPSerializer,
     ResendRegistrationOTPSerializer,
@@ -131,14 +132,21 @@ class RegisterView(views.APIView):
             is_adult=data['age'] >= 18,
             email_verified=False,
             last_login_ip=_get_client_ip(request),
+            guardian_name=data.get('guardian_name', ''),
+            guardian_email=data.get('guardian_email', ''),
+            guardian_phone=data.get('guardian_phone', ''),
             consent_log={
-                'tos_version': '1.0',
-                'privacy_version': '1.0',
-                'guidelines_version': '1.0',
+                'tos_version': policy_version('terms'),
+                'privacy_version': policy_version('privacy'),
+                'guidelines_version': policy_version('guidelines'),
+                'cookie_version': policy_version('cookie_policy'),
+                'medical_disclaimer_version': policy_version('medical_disclaimer'),
+                'sponsorship_policy_version': policy_version('sponsorship_policy'),
                 'accepted_terms': data['accepted_terms'],
                 'accepted_privacy': data['accepted_privacy'],
                 'accepted_guidelines': data['accepted_guidelines'],
                 'is_16_plus': data['is_16_plus'],
+                'requires_parental_coowner': data.get('requires_parental_coowner', False),
                 'consented_at': timezone.now().isoformat(),
                 'ip': _get_client_ip(request),
             },
@@ -1334,6 +1342,58 @@ def health_check(request):
         'version': '1.0.0',
         'database': 'connected' if db_ok else 'disconnected',
     })
+
+
+class PolicyVersionsView(views.APIView):
+    """Public list of current legal/policy document versions.
+
+    The frontend uses this to display the exact version a user has accepted and
+    to prompt re-consent when a document is materially updated.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({
+            'success': True,
+            'data': CURRENT_POLICY_VERSIONS,
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class ConsentStatusView(views.APIView):
+    """Show the authenticated user's recorded consent for current policy versions.
+
+    Returns which documents are up-to-date (accepted version == current version)
+    and which require re-consent after a policy update.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        log = request.user.consent_log or {}
+        consent_status = {}
+        for key, meta in CURRENT_POLICY_VERSIONS.items():
+            accepted = log.get(f'{key}_version', '')
+            consent_status[key] = {
+                'current_version': meta['version'],
+                'accepted_version': accepted,
+                'up_to_date': accepted == meta['version'],
+                'updated_at': meta['updated_at'],
+            }
+
+        return Response({
+            'success': True,
+            'data': {
+                'consent_log': log,
+                'requires_parental_coowner': request.user.consent_log.get('requires_parental_coowner', False),
+                'guardian_verified': request.user.guardian_verified,
+                'policies': consent_status,
+            },
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
 
 
 class DeactivateAccountView(views.APIView):

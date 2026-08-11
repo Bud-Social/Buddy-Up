@@ -21,6 +21,11 @@ class RegisterSerializer(serializers.Serializer):
     is_16_plus = serializers.BooleanField()
     referral_code = serializers.CharField(max_length=20, required=False, allow_blank=True)
 
+    # Parental co-owner (required when the account belongs to a 16–17 year old).
+    guardian_name = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    guardian_email = serializers.EmailField(required=False, allow_blank=True)
+    guardian_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
+
     def validate_email(self, value):
         if User.objects.filter(email__iexact=value).exists():
             raise serializers.ValidationError('An account with this email already exists.')
@@ -47,6 +52,16 @@ class RegisterSerializer(serializers.Serializer):
         if age < 16:
             raise serializers.ValidationError({'dob': 'BuddyUp is for users aged 16 and over. You cannot create an account at this time.'})
         data['age'] = age
+
+        # 16–17 year olds must provide a verified parental co-owner.
+        if 16 <= age < 18:
+            if not (data.get('guardian_name') or data.get('guardian_email') or data.get('guardian_phone')):
+                raise serializers.ValidationError({
+                    'guardian': 'Users aged 16–17 must provide a parent or guardian co-owner (name, email, or phone).',
+                })
+            data['requires_parental_coowner'] = True
+        else:
+            data['requires_parental_coowner'] = False
         return data
 
 

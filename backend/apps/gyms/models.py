@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 from common.models import TimestampedModel, SoftDeleteModel
+from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
 
 
 class GymCategory(models.Model):
@@ -38,6 +39,9 @@ class Gym(TimestampedModel, SoftDeleteModel):
     logo_url = models.URLField(blank=True)
     cover_url = models.URLField(blank=True)
     category = models.CharField(max_length=50)
+    content_rating = models.CharField(
+        max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
+    )
     categories = models.ManyToManyField(GymCategory, related_name='gyms', blank=True)
     access_type = models.CharField(max_length=8, choices=ACCESS_CHOICES, default='public')
     subscription_type = models.CharField(max_length=15, choices=SUBSCRIPTION_CHOICES, default='free')

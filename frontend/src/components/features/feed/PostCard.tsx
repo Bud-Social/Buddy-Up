@@ -388,6 +388,12 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
                 {displayAuthor?.verification_status === 'practitioner' && (
                   <span className="text-[10px] bg-buddy-gold/20 text-buddy-gold px-1.5 py-0.5 rounded-full font-medium leading-tight shrink-0">Practitioner</span>
                 )}
+                {displayAuthor?.verification_status === 'shop' && (
+                  <span className="text-[10px] bg-buddy-electric/20 text-buddy-electric px-1.5 py-0.5 rounded-full font-medium leading-tight shrink-0">Shop</span>
+                )}
+                {displayAuthor?.verification_status === 'gym' && (
+                  <span className="text-[10px] bg-buddy-green/20 text-buddy-green px-1.5 py-0.5 rounded-full font-medium leading-tight shrink-0">Gym</span>
+                )}
               </div>
               <p className="text-xs text-buddy-text-secondary leading-tight">
                 @{displayAuthor?.username} · {formatPostDate(displayPost.created_at)}

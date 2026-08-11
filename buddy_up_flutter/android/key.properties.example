@@ -1,0 +1,19 @@
+# BuddyUp Android signing configuration
+# ---------------------------------------
+# Copy this file to `android/key.properties` and fill in real values.
+# NEVER commit the real file or the keystore (both are gitignored).
+#
+# Generate a release keystore once:
+#   keytool -genkey -v -keystore android/keys/buddyup-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias buddyup
+#
+# CI: instead of this file, set the SIGNING_STORE_FILE, SIGNING_STORE_PASSWORD,
+# SIGNING_KEY_PASSWORD and SIGNING_KEY_ALIAS environment variables (or repo secrets).
+
+storeFile=../keys/buddyup-release.jks
+storePassword=CHANGE_ME
+keyAlias=buddyup
+keyPassword=CHANGE_ME
+
+# Optional: Google Maps API key (overrides GOOGLE_MAPS_API_KEY env var).
+# googleMapsApiKey=AIza...
