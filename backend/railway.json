@@ -11,7 +11,8 @@
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3,
     "healthcheckPath": "/api/v1/health/",
-    "healthcheckTimeout": 100,
-    "startCommand": "sh -c \"export DJANGO_SETTINGS_MODULE=config.settings.production && python manage.py migrate --noinput && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p $PORT config.asgi:application\""
+    "healthcheckTimeout": 480,
+    "preDeploy": "sh -c \"export DJANGO_SETTINGS_MODULE=config.settings.production && python manage.py migrate --noinput && python manage.py collectstatic --noinput\"",
+    "startCommand": "sh -c \"export DJANGO_SETTINGS_MODULE=config.settings.production && daphne -b 0.0.0.0 -p $PORT config.asgi:application\""
   }
 }
