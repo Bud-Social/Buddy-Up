@@ -314,7 +314,11 @@ class CreatePostView(views.APIView):
 
     def post(self, request):
         # Handle file uploads — build media_urls from uploaded files
-        uploaded_files = request.FILES.getlist('media')
+        if hasattr(request.FILES, 'getlist'):
+            uploaded_files = request.FILES.getlist('media')
+        else:
+            uploaded_files = [request.FILES['media']] if request.FILES.get('media') else []
+
         media_urls = []
         if uploaded_files:
             try:
@@ -323,8 +327,10 @@ class CreatePostView(views.APIView):
                 pass
 
         # Merge uploaded URLs with any pre-existing media_urls (e.g. from mobile)
-        existing_urls = request.data.getlist('media_urls') or []
-        all_media_urls = existing_urls + media_urls
+        existing_urls = request.data.getlist('media_urls') if hasattr(request.data, 'getlist') else (request.data.get('media_urls') or [])
+        if isinstance(existing_urls, str):
+            existing_urls = [existing_urls]
+        all_media_urls = list(existing_urls) + media_urls
 
         # Build mutable data dict
         data = request.data.dict() if hasattr(request.data, 'dict') else dict(request.data)
@@ -382,7 +388,9 @@ class CreatePostView(views.APIView):
         try:
             poll_options_raw = json.loads(poll_data.get('poll_options_json', '[]'))
         except Exception:
-            poll_options_raw = request.data.getlist('poll_options')
+            poll_options_raw = request.data.getlist('poll_options') if hasattr(request.data, 'getlist') else (request.data.get('poll_options') or [])
+            if isinstance(poll_options_raw, str):
+                poll_options_raw = [poll_options_raw]
 
         if poll_question and len(poll_options_raw) >= 2:
             closes_at = poll_data.get('poll_closes_at') or None
@@ -398,7 +406,9 @@ class CreatePostView(views.APIView):
                     PollOption.objects.create(poll=poll, text=opt_text.strip(), order=i)
 
         # Handle @mentions — store and send notifications
-        mentioned_user_ids = request.data.getlist('mentioned_users')
+        mentioned_user_ids = request.data.getlist('mentioned_users') if hasattr(request.data, 'getlist') else (request.data.get('mentioned_users') or [])
+        if isinstance(mentioned_user_ids, str):
+            mentioned_user_ids = [mentioned_user_ids]
         if mentioned_user_ids:
             from apps.profiles.models import Profile
             profiles = Profile.objects.filter(user_id__in=mentioned_user_ids)

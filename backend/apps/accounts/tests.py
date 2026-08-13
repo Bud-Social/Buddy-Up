@@ -31,10 +31,24 @@ class AuthTests(TestCase):
         response = self.client.post(self.register_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data['success'])
-        self.assertIn('access', response.data['data'])
-        self.assertIn('refresh', response.data['data'])
+        self.assertIn('registration_token', response.data['data'])
         self.assertTrue(User.objects.filter(email='test@example.com').exists())
         self.assertTrue(Profile.objects.filter(username='testuser').exists())
+
+        user = User.objects.get(email='test@example.com')
+        self.assertFalse(user.email_verified)
+        otp = OTPToken.objects.get(user=user, channel='email', is_used=False).code
+        verify_data = {
+            'registration_token': response.data['data']['registration_token'],
+            'otp': otp,
+        }
+        verify_res = self.client.post(
+            '/api/v1/auth/verify-registration-otp/', verify_data, format='json')
+        self.assertEqual(verify_res.status_code, status.HTTP_200_OK)
+        self.assertIn('access', verify_res.data['data'])
+        self.assertIn('refresh', verify_res.data['data'])
+        user.refresh_from_db()
+        self.assertTrue(user.email_verified)
 
     def test_register_under_16_blocked(self):
         today = date.today()
@@ -59,6 +73,7 @@ class AuthTests(TestCase):
         user = User.objects.create_user(email='login@example.com', password='TestPass123!')
         user.dob_hash = hash_dob(date(2000, 6, 15))
         user.is_adult = True
+        user.email_verified = True
         user.save()
         Profile.objects.create(user=user, username='loginuser', display_name='Login User')
 
@@ -66,7 +81,18 @@ class AuthTests(TestCase):
         response = self.client.post(self.login_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['success'])
-        self.assertIn('access', response.data['data'])
+        self.assertTrue(response.data['data']['require_otp'])
+        self.assertIn('login_token', response.data['data'])
+
+        otp = OTPToken.objects.get(user=user, channel='email', is_used=False).code
+        verify_data = {
+            'login_token': response.data['data']['login_token'],
+            'otp': otp,
+        }
+        verify_res = self.client.post(
+            '/api/v1/auth/verify-login-otp/', verify_data, format='json')
+        self.assertEqual(verify_res.status_code, status.HTTP_200_OK)
+        self.assertIn('access', verify_res.data['data'])
 
     def test_login_with_wrong_password(self):
         user = User.objects.create_user(email='wrong@example.com', password='CorrectPass1!')
@@ -82,12 +108,21 @@ class AuthTests(TestCase):
         user = User.objects.create_user(email='refresh@example.com', password='TestPass123!')
         user.dob_hash = hash_dob(date(2000, 6, 15))
         user.is_adult = True
+        user.email_verified = True
         user.save()
         Profile.objects.create(user=user, username='refreshuser', display_name='Refresh User')
 
         login_data = {'email': 'refresh@example.com', 'password': 'TestPass123!'}
         login_res = self.client.post(self.login_url, login_data, format='json')
-        refresh_token = login_res.data['data']['refresh']
+        self.assertTrue(login_res.data['data']['require_otp'])
+        otp = OTPToken.objects.get(user=user, channel='email', is_used=False).code
+        verify_data = {
+            'login_token': login_res.data['data']['login_token'],
+            'otp': otp,
+        }
+        login_verified = self.client.post(
+            '/api/v1/auth/verify-login-otp/', verify_data, format='json')
+        refresh_token = login_verified.data['data']['refresh']
 
         refresh_data = {'refresh': refresh_token}
         response = self.client.post(self.refresh_url, refresh_data, format='json')

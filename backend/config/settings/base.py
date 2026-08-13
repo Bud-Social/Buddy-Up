@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -80,16 +81,38 @@ ASGI_APPLICATION = 'config.asgi.application'
 AUTH_USER_MODEL = 'accounts.User'
 
 # Database
-DATABASES = {
-    'default': {
+# Railway provides a single postgres URL. Fall back to discrete DB_* vars for
+# the docker-compose stack.
+import urllib.parse as _urlparse
+
+_DATABASE_URL = os.environ.get('DATABASE_URL', '')
+
+
+def _database_from_url(url: str) -> dict:
+    parsed = _urlparse.urlparse(url)
+    return {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'buddyup_dev'),
-        'USER': os.environ.get('DB_USER', 'buddyup'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'devpassword'),
-        'HOST': os.environ.get('DB_HOST', 'db'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
+        'NAME': parsed.path.lstrip('/') or 'postgres',
+        'USER': parsed.username or 'postgres',
+        'PASSWORD': parsed.password or '',
+        'HOST': parsed.hostname or 'localhost',
+        'PORT': parsed.port or '5432',
     }
-}
+
+
+if _DATABASE_URL:
+    DATABASES = {'default': _database_from_url(_DATABASE_URL)}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('DB_NAME', 'buddyup_dev'),
+            'USER': os.environ.get('DB_USER', 'buddyup'),
+            'PASSWORD': os.environ.get('DB_PASSWORD', 'devpassword'),
+            'HOST': os.environ.get('DB_HOST', 'db'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
+    }
 
 # Redis / Channels
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
@@ -153,6 +176,15 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Whitenoise serves collected static files from the container itself — no
+# separate static host required on Railway. The `default` storage stays on
+# DEFAULT_FILE_STORAGE (set below, Cloudinary with filesystem fallback).
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -250,7 +282,10 @@ GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY', '')
 
 SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/feed'
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://buddyup.app').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get(
+    'CSRF_TRUSTED_ORIGINS',
+    'https://buddyup.app,https://buddy-up-tan.vercel.app,https://*.up.railway.app,https://*.vercel.app',
+).split(',')
 SOCIAL_AUTH_LOGIN_ERROR_URL = '/login'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['email', 'profile']
 SOCIAL_AUTH_USER_FIELDS = ['email', 'username']

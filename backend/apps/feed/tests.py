@@ -2,6 +2,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
 from common.utils import hash_dob
 from apps.accounts.models import User
@@ -14,12 +15,12 @@ class FeedTests(TestCase):
         self.client = APIClient()
         self.user = User.objects.create_user(email='feed@example.com', password='TestPass123!')
         self.user.dob_hash = hash_dob(date(2000, 6, 15))
+        self.user.email_verified = True
         self.user.save()
         self.profile = Profile.objects.create(user=self.user, username='feeduser', display_name='Feed User')
 
-        login_res = self.client.post('/api/v1/auth/login/',
-            {'email': 'feed@example.com', 'password': 'TestPass123!'}, format='json')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {login_res.data["data"]["access"]}')
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
 
     def test_create_text_post(self):
         data = {'post_type': 'text', 'body': 'Hello BuddyUp! 💪', 'visibility': 'public'}

@@ -1,0 +1,24 @@
+# ── Python / Django ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.mypy_cache/
+.pytest_cache/
+coverage.xml
+htmlcov/
+
+# ── Local data & secrets (must never enter the image) ─────────────────
+.env
+.env.*
+db.sqlite3
+media/
+staticfiles/
+logs/
+
+# ── Not deployed to Railway ───────────────────────────────────────────
+ai_service/
+tests/
+railway.json

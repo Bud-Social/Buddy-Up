@@ -1,6 +1,7 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
 from common.utils import hash_dob
 from apps.accounts.models import User
@@ -22,9 +23,8 @@ class BuddySystemTests(TestCase):
         self.user_b.save()
         self.profile_b = Profile.objects.create(user=self.user_b, username='userb', display_name='User B')
 
-        self.login_response = self.client.post('/api/v1/auth/login/',
-            {'email': 'a@example.com', 'password': 'TestPass123!'}, format='json')
-        self.token = self.login_response.data['data']['access']
+        self.login_response = None
+        self.token = RefreshToken.for_user(self.user_a).access_token
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
     def test_send_buddy_request(self):
@@ -89,13 +89,13 @@ class ProfileTests(TestCase):
         self.client = APIClient()
         self.user = User.objects.create_user(email='profile@example.com', password='TestPass123!')
         self.user.dob_hash = hash_dob(date(2000, 6, 15))
+        self.user.email_verified = True
         self.user.save()
         self.profile = Profile.objects.create(user=self.user, username='profileuser', display_name='Profile User',
                                                bio='Test bio', location_city='Nairobi')
 
-        login_res = self.client.post('/api/v1/auth/login/',
-            {'email': 'profile@example.com', 'password': 'TestPass123!'}, format='json')
-        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {login_res.data["data"]["access"]}')
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
 
     def test_get_my_profile(self):
         response = self.client.get('/api/v1/profiles/me/')

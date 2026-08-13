@@ -1,11 +1,36 @@
 from .base import *
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
-from sentry_sdk.integrations.celery import CeleryIntegration
+import os
+
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    _HAS_SENTRY = True
+except ImportError:
+    sentry_sdk = None
+    _HAS_SENTRY = False
 
 DEBUG = False
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
+
+# Platform hosts always allowed (Railway + Vercel + local), extended by the
+# ALLOWED_HOSTS env var (e.g. your custom domain).
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    '.up.railway.app',
+    '.vercel.app',
+    'buddyup.app',
+    'www.buddyup.app',
+    'api.buddyup.app',
+] + [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h.strip()]
+
+CORS_ALLOWED_ORIGINS = [
+    'https://buddy-up-tan.vercel.app',
+    'https://buddyup.app',
+    'https://www.buddyup.app',
+    'http://localhost:3002',
+    'http://localhost:5173',
+] + [o.strip() for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
 
 SECRET_KEY = os.environ['SECRET_KEY']
 
@@ -30,12 +55,13 @@ CORS_ALLOW_CREDENTIALS = False
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-sentry_sdk.init(
-    dsn=os.environ.get('SENTRY_DSN', ''),
-    integrations=[DjangoIntegration(), CeleryIntegration()],
-    traces_sample_rate=0.1,
-    send_default_pii=False,
-)
+if _HAS_SENTRY:
+    sentry_sdk.init(
+        dsn=os.environ.get('SENTRY_DSN', ''),
+        integrations=[DjangoIntegration(), CeleryIntegration()],
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+    )
 
 LOGGING = {
     'version': 1,

@@ -14,7 +14,7 @@ from django.conf import settings
 from rest_framework import status, views, permissions, generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from common.utils import hash_dob, calculate_age
 from common.pagination import CursorPagination
@@ -107,7 +107,7 @@ def _generate_temp_token(user, purpose, expiry_minutes=5):
 
 def _verify_temp_token(token_str, expected_purpose):
     try:
-        token = AccessToken(token_str)
+        token = RefreshToken(token_str)
         if token.get('purpose') != expected_purpose:
             return None
         return User.objects.get(id=token['user_id'])
