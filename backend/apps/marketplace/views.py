@@ -8,9 +8,10 @@ from django.utils.text import slugify
 from rest_framework import views, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 
 from common.pagination import PageNumberPagination
-from common.age_gating import gate_mature_queryset
+from common.age_gating import gate_mature_queryset, can_view_content
 from .models import (
     Shop, ShopMembership, ShopGymLink, ShopVerificationApplication, PushDevice,
     MealPlan, MealPlanPurchase, MealPlanReview,
@@ -592,6 +593,12 @@ class MealPlanDetailView(views.APIView):
         is_owner = profile == plan.creator
         is_purchased = MealPlanPurchase.objects.filter(meal_plan=plan, buyer=profile).exists()
 
+        if not is_owner and not can_view_content(request, plan):
+            return Response({
+                'success': False, 'data': None, 'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
         if is_owner or is_purchased:
             serializer = MealPlanFullSerializer(plan, context={'request': request})
         else:
@@ -655,12 +662,7 @@ class PurchaseMealPlanView(views.APIView):
             with transaction.atomic():
                 for at, qty in plan.price_artifacts.items():
                     if not deduct_artifacts(buyer, at, qty):
-                        purchase.delete()
-                        return Response({
-                            'success': False, 'data': None,
-                            'message': f'Insufficient {at} tokens.',
-                            'errors': None, 'pagination': None,
-                        }, status=status.HTTP_400_BAD_REQUEST)
+                        raise ValidationError(f'Insufficient {at} tokens.')
 
                     cut_qty = max(1, int(qty * platform_cut_rate))
                     creator_qty = qty - cut_qty
@@ -817,6 +819,11 @@ class TrainingProgrammeDetailView(views.APIView):
 
     def get(self, request, programme_id):
         programme = get_object_or_404(TrainingProgramme, id=programme_id, is_published=True)
+        if programme.creator != request.user.profile and not can_view_content(request, programme):
+            return Response({
+                'success': False, 'data': None, 'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
         serializer = TrainingProgrammeSerializer(programme, context={'request': request})
         return Response({
             'success': True, 'data': serializer.data, 'message': 'OK',
@@ -876,12 +883,7 @@ class PurchaseTrainingProgrammeView(views.APIView):
             with transaction.atomic():
                 for at, qty in programme.price_artifacts.items():
                     if not deduct_artifacts(buyer, at, qty):
-                        purchase.delete()
-                        return Response({
-                            'success': False, 'data': None,
-                            'message': f'Insufficient {at} tokens.',
-                            'errors': None, 'pagination': None,
-                        }, status=status.HTTP_400_BAD_REQUEST)
+                        raise ValidationError(f'Insufficient {at} tokens.')
 
                     cut_qty = max(1, int(qty * platform_cut_rate))
                     creator_qty = qty - cut_qty
@@ -1015,6 +1017,11 @@ class ProductDetailView(views.APIView):
 
     def get(self, request, product_id):
         product = get_object_or_404(Product, id=product_id, is_active=True)
+        if product.recommended_by != request.user.profile and not can_view_content(request, product):
+            return Response({
+                'success': False, 'data': None, 'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
         serializer = ProductSerializer(product)
         return Response({
             'success': True, 'data': serializer.data, 'message': 'OK',
@@ -1140,6 +1147,9 @@ class EventDetailView(views.APIView):
         event = self.get_object(event_id)
         if not event:
             return Response({'success': False, 'message': 'Event not found.'}, status=404)
+        if event.creator != request.user.profile and not can_view_content(request, event):
+            return Response({'success': False, 'data': None, 'message': 'Not found.'},
+                            status=status.HTTP_404_NOT_FOUND)
         return Response({'success': True, 'data': MarketplaceEventSerializer(event, context={'request': request}).data})
 
     def put(self, request, event_id):
@@ -1184,6 +1194,9 @@ class PurchaseEventTicketView(views.APIView):
             return Response({'success': False, 'message': 'This event has been cancelled.'}, status=400)
 
         profile = request.user.profile
+        if event.creator == profile:
+            return Response({'success': False, 'message': 'You cannot purchase your own event.'}, status=400)
+
         if EventTicket.objects.filter(event=event, holder=profile, status='active').exists():
             return Response({'success': False, 'message': 'You already have a ticket for this event.'}, status=400)
 
@@ -1192,29 +1205,50 @@ class PurchaseEventTicketView(views.APIView):
 
         price_artifacts = event.ticket_price_artifacts
         if price_artifacts and not event.is_free:
-            from apps.wallet.serializers import PLATFORM_CUTS
+            from apps.wallet.utils import credit_artifacts
             platform_cut_rate = PLATFORM_CUTS.get('marketplace', 0.15)
             with transaction.atomic():
                 for at, qty in price_artifacts.items():
                     if not deduct_artifacts(profile, at, qty):
-                        return Response({
-                            'success': False, 'data': None,
-                            'message': f'Insufficient {at} tokens.',
-                            'errors': None, 'pagination': None,
-                        }, status=status.HTTP_400_BAD_REQUEST)
+                        raise ValidationError(f'Insufficient {at} tokens.')
+                    ArtifactTransaction.objects.create(
+                        user=profile, transaction_type='marketplace', artifact_type=at,
+                        quantity=qty, direction='debit', counterparty=event.creator,
+                        status='completed', reference_id=f'mp_et_{event.id}',
+                        fiat_amount=round(qty * ARTIFACT_VALUES.get(at, 0), 2),
+                        fiat_currency='USD',
+                    )
                     cut_qty = max(1, int(qty * platform_cut_rate))
                     creator_qty = qty - cut_qty
                     if creator_qty > 0:
                         credit_artifacts(event.creator, at, creator_qty)
+                        ArtifactTransaction.objects.create(
+                            user=event.creator, transaction_type='marketplace', artifact_type=at,
+                            quantity=creator_qty, direction='credit', counterparty=profile,
+                            status='completed', reference_id=f'mp_et_{event.id}',
+                            fiat_amount=round(creator_qty * ARTIFACT_VALUES.get(at, 0), 2),
+                            fiat_currency='USD',
+                        )
+                    if cut_qty > 0:
+                        ArtifactTransaction.objects.create(
+                            user=event.creator, transaction_type='platform_cut', artifact_type=at,
+                            quantity=cut_qty, direction='debit', status='completed',
+                            reference_id=f'mp_et_{event.id}',
+                            fiat_amount=round(cut_qty * ARTIFACT_VALUES.get(at, 0), 2),
+                            fiat_currency='USD',
+                        )
 
-        ticket = EventTicket.objects.create(
-            event=event,
-            holder=profile,
-            price_paid_artifacts=price_artifacts if not event.is_free else {},
+        ticket, created = EventTicket.objects.get_or_create(
+            event=event, holder=profile, defaults={
+                'status': 'active', 'price_paid_artifacts': price_artifacts if not event.is_free else {},
+            }
         )
+        if not created and ticket.status != 'active':
+            ticket.status = 'active'
+            ticket.save(update_fields=['status'])
         event.attendee_count = EventTicket.objects.filter(event=event, status='active').count()
         event.save(update_fields=['attendee_count'])
-        return Response({'success': True, 'data': EventTicketSerializer(ticket, context={'request': request}).data}, status=201)
+        return Response({'success': True, 'data': EventTicketSerializer(ticket, context={'request': request}).data}, status=201 if created else 200)
 
 
 class MyEventTicketsView(views.APIView):
@@ -1695,11 +1729,7 @@ class CheckoutCartView(views.APIView):
             if qty <= 0:
                 continue
             if not deduct_artifacts(request.user.profile, at, qty):
-                return Response({
-                    'success': False, 'data': None,
-                    'message': f'Insufficient {at} tokens.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_402_PAYMENT_REQUIRED)
+                raise ValidationError(f'Insufficient {at} tokens.')
             ArtifactTransaction.objects.create(
                 user=request.user.profile,
                 transaction_type='purchase',

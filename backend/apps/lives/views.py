@@ -7,7 +7,7 @@ from rest_framework import views, permissions, status
 from rest_framework.response import Response
 
 from common.pagination import CursorPagination
-from common.age_gating import gate_mature_queryset
+from common.age_gating import gate_mature_queryset, can_view_content
 from .models import BuddyLive, LiveAttendee
 from .serializers import (
     BuddyLiveSerializer, CreateLiveSerializer, RandomDropRequestSerializer,
@@ -81,6 +81,12 @@ class LiveDetailView(views.APIView):
             BuddyLive.objects.select_related('host'),
             id=live_id,
         )
+        if not can_view_content(request, live):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
         live.viewer_count_cache = get_live_viewer_count(str(live.id))
         serializer = BuddyLiveSerializer(live, context={'request': request})
         return Response({
@@ -132,6 +138,7 @@ class StartLiveView(views.APIView):
             recurrence_rule=data.get('recurrence_rule', ''),
             equipment_list=data.get('equipment_list', []),
             recording_consent=data.get('recording_consent', 'auto_record'),
+            content_rating=data.get('content_rating', 'general'),
             status='live' if not data.get('scheduled_for') else 'scheduled',
             started_at=timezone.now() if not data.get('scheduled_for') else None,
             agora_channel=channel_id,

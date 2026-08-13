@@ -17,6 +17,7 @@ export interface CreateGymPayload {
   location_country?: string;
   rules?: string[];
   tags?: string[];
+  content_rating?: 'general' | 'mature';
   category_pricing?: Omit<GymCategoryPricing, 'id' | 'category_name'>[];
 }
 

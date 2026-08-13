@@ -55,6 +55,7 @@ export interface Post {
   moderation_status: string;
   ai_analysis?: Record<string, unknown>;
   gym_tag_id: string | null;
+  content_rating: 'general' | 'mature';
   created_at: string;
   updated_at: string;
   poll?: Poll | null;

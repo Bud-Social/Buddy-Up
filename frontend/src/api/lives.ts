@@ -22,6 +22,7 @@ export interface StartLivePayload {
   equipment_list?: string[];
   co_hosts?: string[];
   recording_consent?: 'auto_record' | 'opt_out';
+  content_rating?: 'general' | 'mature';
 }
 
 export interface RandomDropPayload {

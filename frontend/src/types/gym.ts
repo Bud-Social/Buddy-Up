@@ -51,6 +51,7 @@ export interface Gym {
   recent_reviewers?: MemberData[];
   rules: string[];
   tags: string[];
+  content_rating: 'general' | 'mature';
   member_count: number;
   active_today: number;
   location_city: string;

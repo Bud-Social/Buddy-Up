@@ -82,3 +82,14 @@ def gate_mature_queryset(request, queryset, rating_field: str = 'content_rating'
     elif not request_can_access_mature(request):
         queryset = queryset.exclude(**{rating_field: AUDIENCE_MATURE})
     return queryset
+
+
+def can_view_content(request, obj, rating_field: str = 'content_rating') -> bool:
+    """Return True when ``request``'s user may view a single content object.
+
+    If the object is mature-rated, the caller must pass the mature age gate.
+    """
+    rating = (getattr(obj, rating_field, None) or AUDIENCE_GENERAL)
+    if rating != AUDIENCE_MATURE:
+        return True
+    return request_can_access_mature(request)

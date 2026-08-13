@@ -18,7 +18,7 @@ from .serializers import (
 )
 from common.pagination import CursorPagination, PageNumberPagination
 from common.permissions import AreBuddies
-from common.age_gating import gate_mature_queryset, request_can_access_mature
+from common.age_gating import gate_mature_queryset, request_can_access_mature, can_view_content
 
 
 class MyProfileView(generics.RetrieveUpdateAPIView):
@@ -101,6 +101,13 @@ class UserProfileView(generics.RetrieveAPIView):
                 'errors': None,
                 'pagination': None,
             })
+
+        if profile != (request.user.profile if request.user.is_authenticated else None) and not can_view_content(request, profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
 
         serializer = self.get_serializer(profile, context={'request': request})
         return Response({

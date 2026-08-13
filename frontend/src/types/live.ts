@@ -47,6 +47,7 @@ export interface BuddyLive {
   has_rsvped?: boolean;
   rsvp_count?: number;
   recording_consent?: 'auto_record' | 'opt_out';
+  content_rating: 'general' | 'mature';
   created_at: string;
 }
 

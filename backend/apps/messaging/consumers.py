@@ -505,8 +505,13 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
 
     async def _process_gift(self, artifact_type: str, quantity: int):
         from apps.wallet.utils import platform_cut
+        from apps.wallet.serializers import ARTIFACT_VALUES
         host = await self._get_live_host()
         if not host or host.user_id == self.user_id:
+            return None
+        if artifact_type not in ARTIFACT_VALUES:
+            return None
+        if not isinstance(quantity, int) or quantity <= 0 or quantity > 10000:
             return None
         ok = await database_sync_to_async(deduct_artifacts)(self.profile, artifact_type, quantity)
         if not ok:

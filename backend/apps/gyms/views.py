@@ -13,7 +13,7 @@ from rest_framework.response import Response
 import requests
 
 from common.pagination import PageNumberPagination
-from common.age_gating import gate_mature_queryset
+from common.age_gating import gate_mature_queryset, can_view_content
 from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite, GymMembershipException
 from .serializers import (
     GymSerializer, CreateGymSerializer, GymMembershipSerializer,
@@ -230,6 +230,13 @@ class GymDetailView(views.APIView):
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_404_NOT_FOUND)
 
+        if not can_view_content(request, gym):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
         serializer = GymSerializer(gym, context={'request': request})
         return Response({
             'success': True,
@@ -249,7 +256,7 @@ class GymDetailView(views.APIView):
 
         allowed_fields = [
             'description', 'logo_url', 'cover_url', 'rules', 'tags',
-            'location_city', 'location_country',
+            'location_city', 'location_country', 'content_rating',
         ]
 
         if membership.role == 'owner':
@@ -1153,21 +1160,24 @@ class GymDonationCreateView(views.APIView):
         artifact_type = data['artifact_type']
         quantity = data.get('quantity')
         message = data.get('message', '')
-        amount = data.get('amount', 0)
 
-        if quantity is not None:
-            if not deduct_artifacts(request.user.profile, artifact_type, quantity):
-                return Response({
-                    'success': False, 'data': None,
-                    'message': f'Insufficient {artifact_type} balance.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_402_PAYMENT_REQUIRED)
+        if not quantity or quantity <= 0:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Donation amount (quantity) is required and must be positive.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not deduct_artifacts(request.user.profile, artifact_type, quantity):
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Insufficient {artifact_type} balance.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         from apps.wallet.models import ArtifactTransaction
 
-        fiat_value = amount
-        if not fiat_value and quantity:
-            fiat_value = round(ARTIFACT_VALUES.get(artifact_type, 0) * quantity, 2)
+        fiat_value = round(ARTIFACT_VALUES.get(artifact_type, 0) * quantity, 2)
 
         donation = GymDonation.objects.create(
             gym=gym, donor=request.user.profile, amount=fiat_value, message=message

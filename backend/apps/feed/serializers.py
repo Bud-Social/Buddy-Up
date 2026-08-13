@@ -2,6 +2,9 @@ from rest_framework import serializers
 from collections import Counter
 from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft
 from apps.gyms.models import Gym
+from common.age_gating import CONTENT_RATING_CHOICES
+
+CONTENT_RATING_CHOICES_VALUES = {value for value, _label in CONTENT_RATING_CHOICES}
 
 LEGACY_REACTION_EMOJI_MAP = {
     'pump': '💪',
@@ -123,6 +126,7 @@ class PostSerializer(serializers.ModelSerializer):
         'visibility', 'is_repost', 'original_post_id', 'quote_body',
         'location_label', 'workout_log_data', 'meal_data', 'progress_data',
         'media_urls', 'tags', 'view_count', 'moderation_status',
+        'content_rating',
         'author_data', 'reaction_counts', 'user_reaction',
         'comment_count', 'repost_count', 'is_saved', 'is_pinned',
         'poll', 'original_post_data', 'reposters', 'created_at', 'updated_at',
@@ -251,13 +255,18 @@ class PostCreateSerializer(serializers.ModelSerializer):
         fields = [
             'post_type', 'body', 'is_anonymous', 'gym_tag', 'visibility',
             'location_label', 'workout_log_data', 'meal_data', 'progress_data',
-            'media_urls', 'tags',
+            'media_urls', 'tags', 'content_rating',
         ]
 
     def validate_body(self, value):
         max_length = 2200
         if len(value) > max_length:
             raise serializers.ValidationError(f'Body must be {max_length} characters or fewer.')
+        return value
+
+    def validate_content_rating(self, value):
+        if value not in (CONTENT_RATING_CHOICES_VALUES):
+            raise serializers.ValidationError('content_rating must be one of general/mature.')
         return value
 
 

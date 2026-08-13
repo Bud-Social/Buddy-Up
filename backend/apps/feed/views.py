@@ -15,7 +15,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from common.pagination import CursorPagination
-from common.age_gating import gate_mature_queryset
+from common.age_gating import gate_mature_queryset, can_view_content
 from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft
 from .serializers import (
     PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer,
@@ -262,6 +262,13 @@ class PostDetailView(views.APIView):
         if post.visibility == 'private' and (
             not request.user.is_authenticated or post.author_id != request.user.profile.user_id
         ):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        if post.author_id != (request.user.profile.user_id if request.user.is_authenticated else None) and not can_view_content(request, post):
             return Response({
                 'success': False, 'data': None,
                 'message': 'Not found.',
