@@ -47,6 +47,7 @@ export function VoiceNoteRecorder({ onSend, onCancel }: Props) {
         if (!canvas) return;
         const ctx2d = canvas.getContext('2d');
         if (!ctx2d) return;
+        if (!analyser) return;
         const bufferLength = analyser.frequencyBinCount;
         const dataArr = new Uint8Array(bufferLength);
         analyser.getByteFrequencyData(dataArr);

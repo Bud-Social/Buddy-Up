@@ -28,7 +28,9 @@ export interface MealPlan {
   cover_image_url: string;
   diet_type: string;
   duration_weeks: number;
+  meals_per_day: number;
   calorie_range: string;
+  macro_targets?: { protein_pct: number; carbs_pct: number; fat_pct: number };
   price_artifacts: Record<string, number>;
   preview_day: Record<string, unknown>;
   full_plan?: Record<string, unknown>;
@@ -61,14 +63,20 @@ export interface TrainingProgrammeMP {
   cover_image_url: string;
   category: string;
   duration_weeks: number;
+  sessions_per_week?: number;
+  equipment_list?: string[];
+  content_rating?: string;
+  schedule?: Record<string, Record<string, unknown[]>>;
   price_artifacts: Record<string, number>;
   purchase_count: number;
+  average_rating: number;
+  review_count: number;
   creator_data: { username: string; display_name: string; avatar_url: string; verification_status: string };
   is_purchased: boolean;
   is_draft?: boolean;
   is_active?: boolean;
   abandoned_cart_count?: number;
-  shop_data?: { id: string; name: string; handle: string };
+  shop_data?: { id: string; name: string; handle: string; verification_status: string };
   created_at: string;
 }
 
@@ -95,7 +103,7 @@ export interface ProductMP {
   is_active?: boolean;
   is_draft?: boolean;
   abandoned_cart_count?: number;
-  shop_data?: { id: string; name: string; handle: string };
+  shop_data?: { id: string; name: string; handle: string; verification_status: string };
   created_at: string;
 }
 

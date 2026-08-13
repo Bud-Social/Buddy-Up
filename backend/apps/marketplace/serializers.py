@@ -275,6 +275,8 @@ class TrainingProgrammeSerializer(serializers.ModelSerializer):
     is_purchased = serializers.SerializerMethodField()
     cover = serializers.SerializerMethodField()
     shop_data = serializers.SerializerMethodField()
+    average_rating = serializers.SerializerMethodField()
+    review_count = serializers.SerializerMethodField()
 
     class Meta:
         model = TrainingProgramme
@@ -282,11 +284,20 @@ class TrainingProgrammeSerializer(serializers.ModelSerializer):
             'id', 'creator_id', 'shop_id', 'title', 'description', 'cover',
             'trailer_video_url', 'category', 'difficulty', 'fitness_goals',
             'duration_weeks', 'sessions_per_week', 'equipment_list',
-            'content_rating',
-            'price_artifacts', 'purchase_count', 'notification_config',
+            'content_rating', 'schedule',
+            'price_artifacts', 'purchase_count', 'average_rating', 'review_count', 'notification_config',
             'is_published', 'is_draft', 'creator_data', 'shop_data', 'is_purchased', 'created_at',
         ]
         read_only_fields = ['is_purchased']
+
+    def get_average_rating(self, obj):
+        reviews = obj.reviews_list.all()
+        if not reviews:
+            return 0.0
+        return round(sum(r.rating for r in reviews) / reviews.count(), 1)
+
+    def get_review_count(self, obj):
+        return obj.reviews_list.count()
 
     def get_cover(self, obj):
         if obj.cover_image:
