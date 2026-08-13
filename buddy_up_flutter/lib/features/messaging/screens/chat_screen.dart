@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,7 +15,6 @@ import 'package:dio/dio.dart';
 import '../../../data/models/messaging.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/auth/auth_provider.dart';
-import '../../../core/api/api_client.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -252,7 +250,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final other = convo?.participantsData.where((p) => p.userId != _myUserId).firstOrNull;
     final title = convo?.isGroup == true
-        ? ((convo?.groupName ?? '').isNotEmpty ? convo!.groupName! : 'Group')
+        ? ((convo?.groupName ?? '').isNotEmpty ? convo?.groupName ?? 'Group' : 'Group')
         : (other?.displayName ?? 'Chat');
 
     final displayMessages = messagesState.messages.reversed.toList();

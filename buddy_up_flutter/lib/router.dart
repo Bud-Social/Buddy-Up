@@ -493,28 +493,6 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
   );
 }
 
-Widget _placeholder(String title) {
-  return Scaffold(
-    appBar: AppBar(title: Text(title)),
-    body: Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.construction,
-            size: 64,
-            color: BuddyColors.textSecondary.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '$title — Coming soon',
-            style: const TextStyle(color: BuddyColors.textSecondary),
-          ),
-        ],
-      ),
-    ),
-  );
-}
 
 Widget _legalPage(String title) {
   return Scaffold(

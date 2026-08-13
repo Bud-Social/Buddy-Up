@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
-import '../../../shared/widgets/button.dart';
 
 class ShopDetailScreen extends ConsumerWidget {
   final String handle;

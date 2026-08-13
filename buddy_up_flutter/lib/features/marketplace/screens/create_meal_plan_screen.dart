@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/repositories/marketplace_repository.dart';
 import '../../../shared/widgets/wizard_widgets.dart';
 import '../providers/marketplace_provider.dart';
 
@@ -268,7 +267,6 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
               title: Text('Week ${weekIdx + 1}',
                   style: const TextStyle(fontWeight: FontWeight.bold)),
               children: _days.map((day) {
-                final key = 'w${weekIdx}_$day';
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Row(children: [

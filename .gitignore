@@ -7,7 +7,7 @@ build/
 *.egg
 .venv/
 venv/
-env/
+/env/
 *.so
 .mypy_cache/
 
@@ -62,3 +62,5 @@ buddy_up_flutter/.flutter-plugins
 buddy_up_flutter/.flutter-plugins-dependencies
 buddy_up_flutter/.packages
 buddy_up_flutter/build/
+!buddy_up_flutter/lib/core/env/env.dart
+

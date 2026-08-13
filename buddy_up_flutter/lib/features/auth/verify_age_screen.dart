@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/age_gating.dart';
-import '../../data/models/auth_models.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../shared/widgets/button.dart';
 import '../../shared/widgets/toast.dart';

@@ -7,7 +7,6 @@ import '../../../shared/widgets/wizard_widgets.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
-import '../../../data/repositories/marketplace_repository.dart';
 
 class CreateEventScreen extends ConsumerStatefulWidget {
   final String? shopHandle;
@@ -468,105 +467,6 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   }
 }
 
-// ─── Shared Widgets ──────────────────────────────────────────────────────────
-
-class _StepIndicator extends StatelessWidget {
-  final int current;
-  final int total;
-  const _StepIndicator({required this.current, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: BuddyColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-      child: Row(
-        children: List.generate(total, (i) {
-          return Expanded(
-            child: Container(
-              margin: EdgeInsets.only(right: i < total - 1 ? 4 : 0),
-              height: 3,
-              decoration: BoxDecoration(
-                color: i <= current ? BuddyColors.green : BuddyColors.surfaceRaised,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}
-
-class _NavButtons extends StatelessWidget {
-  final int currentStep;
-  final int total;
-  final bool loading;
-  final VoidCallback onNext;
-  final VoidCallback onBack;
-  final Future<void> Function() onSubmit;
-  final String submitLabel;
-
-  const _NavButtons({
-    required this.currentStep,
-    required this.total,
-    required this.loading,
-    required this.onNext,
-    required this.onBack,
-    required this.onSubmit,
-    required this.submitLabel,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            if (currentStep > 0)
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: onBack,
-                  style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: BuddyColors.green),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Back'),
-                ),
-              ),
-            if (currentStep > 0) const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: ElevatedButton(
-                onPressed: loading
-                    ? null
-                    : currentStep < total - 1
-                        ? onNext
-                        : () => onSubmit(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: BuddyColors.green,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: loading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                      )
-                    : Text(currentStep < total - 1 ? 'Next' : submitLabel,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _DateTimePicker extends StatelessWidget {
   final String label;
