@@ -37,6 +37,12 @@ RUN pip install --no-cache-dir -r requirements/production.txt
 
 COPY . .
 
+# Collect static files at build time so whitenoise has the directory on startup.
+# SECRET_KEY is only needed for the collectstatic Django init; it's not stored.
+RUN DJANGO_SETTINGS_MODULE=config.settings.production \
+    SECRET_KEY=build-only-placeholder \
+    python manage.py collectstatic --noinput
+
 RUN addgroup --system appgroup && \
     adduser --system --ingroup appgroup appuser && \
     chown -R appuser:appgroup /app

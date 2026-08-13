@@ -1,3 +1,4 @@
+# ruff: noqa: F403, F405
 from .base import *
 import os
 
@@ -39,6 +40,11 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Railway's internal health probe hits the container directly over HTTP on the
+# private network (no X-Forwarded-Proto), so SECURE_SSL_REDIRECT would 301 it.
+# Exempt the health path so the probe gets a 200 and the deploy succeeds.
+SECURE_REDIRECT_EXEMPT = [r'^api/v1/health/$']
+
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Lax'
