@@ -121,7 +121,7 @@ class VisualSearchViewSet(viewsets.GenericViewSet):
             )
             search_resp.raise_for_status()
             matches = search_resp.json().get('matches', [])
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             return Response(
                 {'detail': f'Visual search unavailable: {exc}'},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,

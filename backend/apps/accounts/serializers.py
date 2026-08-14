@@ -1,9 +1,7 @@
 from rest_framework import serializers
-from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
-from django.utils import timezone
-from common.utils import hash_dob, calculate_age
-from .models import User, OTPToken
+from common.utils import calculate_age
+from .models import User
 from apps.profiles.models import Profile
 
 

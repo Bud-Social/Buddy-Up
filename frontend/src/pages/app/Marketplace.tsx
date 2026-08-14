@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2, DollarSign } from 'lucide-react';
+import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -61,7 +61,7 @@ export default function Marketplace() {
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto pb-20">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-20 bg-buddy-background/80 backdrop-blur-md p-4 pb-2 border-b border-buddy-surface">
+      <div className="sticky top-12 lg:top-0 z-20 bg-buddy-background/80 backdrop-blur-md p-4 pb-2 border-b border-buddy-surface">
         <div className="flex items-center justify-between mb-4">
           <h1 className="font-display text-2xl font-extrabold">Marketplace</h1>
           <div className="flex items-center gap-2">
@@ -338,7 +338,7 @@ function ProductsTab({ hasShop }: { hasShop: boolean }) {
   );
 }
 
-function EventsTab({ hasShop }: { hasShop: boolean }) {
+function EventsTab({ hasShop: _hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
   const [scope, setScope] = useState<'upcoming' | 'past' | 'all'>('upcoming');

@@ -1,4 +1,4 @@
-from rest_framework import views, permissions, status
+from rest_framework import views, permissions
 from rest_framework.response import Response
 from common.pagination import CursorPagination
 from .models import Notification, NotificationPreference

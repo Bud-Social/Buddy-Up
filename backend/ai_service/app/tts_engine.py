@@ -124,6 +124,6 @@ def synthesize(text: str, speaker: str | None = None) -> dict:
             'model': 'speecht5-tts',
             'media_type': 'audio/wav',
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('TTS synthesis failed: %s', exc)
         return {'error': f'TTS unavailable: {exc}'}

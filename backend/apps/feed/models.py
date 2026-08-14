@@ -41,6 +41,8 @@ class Post(TimestampedModel, SoftDeleteModel):
     original_post = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='reposts')
     quote_body = models.TextField(blank=True)
     location_label = models.CharField(max_length=200, blank=True)
+    location_lat = models.FloatField(null=True, blank=True)
+    location_lng = models.FloatField(null=True, blank=True)
     workout_log_data = models.JSONField(null=True, blank=True)
     meal_data = models.JSONField(null=True, blank=True)
     progress_data = models.JSONField(null=True, blank=True)

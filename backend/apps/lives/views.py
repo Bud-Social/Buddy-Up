@@ -16,7 +16,7 @@ from .serializers import (
 )
 from .provider_service import get_live_credentials, generate_live_channel_id
 from .access import can_access_live, has_live_admission, may_publish_media
-from apps.profiles.models import Profile, BuddyRelationship
+from apps.profiles.models import Profile
 from apps.wallet.models import ArtifactTransaction
 
 
@@ -262,10 +262,13 @@ class JoinLiveView(views.APIView):
 
         # Track attendee
         role = 'host' if user == live.host else 'co_host' if live.co_hosts.filter(id=user.id).exists() else 'attendee'
-        LiveAttendee.objects.update_or_create(
-            live=live, user=user,
-            defaults={'role': role, 'left_at': None},
-        )
+        attendee = LiveAttendee.objects.filter(live=live, user=user).order_by('-joined_at').first()
+        if attendee is None:
+            LiveAttendee.objects.create(live=live, user=user, role=role)
+        else:
+            attendee.role = role
+            attendee.left_at = None
+            attendee.save(update_fields=['role', 'left_at'])
 
         return Response({
             'success': True,

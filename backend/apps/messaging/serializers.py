@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Conversation, Message, MessageReaction, CallLog
+from .models import Conversation, Message, CallLog
 
 
 class StartConversationInputSerializer(serializers.Serializer):

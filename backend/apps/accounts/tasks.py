@@ -166,7 +166,7 @@ def cleanup_expired_sessions():
 def delete_user_data(user_id: str):
     from .models import User
     from apps.profiles.models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship
-    from apps.feed.models import Post, Comment, Reaction
+    from apps.feed.models import Post, Comment
     from apps.messaging.models import Message
 
     try:

@@ -1,9 +1,8 @@
 import logging
-from typing import Optional
 
 import numpy as np
 
-from .model_registry import ModelRegistry, DEVICE
+from .model_registry import DEVICE, ModelRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +75,7 @@ async def build_index(index_name: str, vectors: list[dict]) -> dict:
     """Build a FAISS index, storing raw vectors for brute-force fallback."""
     try:
         return FaissIndex.build(index_name, vectors)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('FAISS build failed (%s) — storing vectors for brute force', exc)
         ids = [str(v.get('id') or v.get('profile_id') or '') for v in vectors]
         normalized = []
@@ -99,7 +98,7 @@ async def search_index(index_name: str, query_vec: list[float], top_k: int = 20)
             results = FaissIndex.search(index_name, query_vec, top_k)
             if results:
                 return results
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning('FAISS search failed (%s) — brute force', exc)
 
     state = _FAISS_INDEXES.get(index_name)

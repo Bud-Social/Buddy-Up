@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { lazy, Suspense, useMemo } from 'react';
 
 interface RouteMapProps {
   route: number[][];
@@ -15,6 +15,10 @@ function toLatLngs(route: number[][]): LatLng[] {
     .filter((p) => Array.isArray(p) && p.length >= 2)
     .map((p) => ({ lat: p[0], lng: p[1] }));
 }
+
+const GoogleMapsRouteMap = lazy(() =>
+  import('./GoogleMapsRouteMap').then((m) => ({ default: m.GoogleMapsRouteMap })),
+);
 
 /**
  * SVG route map used when a Google Maps API key is unavailable.
@@ -75,8 +79,9 @@ export function SvgRouteMap({ route, height = 220 }: RouteMapProps) {
 }
 
 /**
- * Google Maps route renderer. Only renders when a real key is configured;
- * otherwise defers to SvgRouteMap.
+ * Google Maps route renderer. Only loads the Maps bundle when a real key is
+ * configured; otherwise defers to SvgRouteMap. The maps module is imported
+ * lazily so the app never pulls in the Google Maps SDK without a key.
  */
 export function RouteMap({ route, height = 220 }: RouteMapProps) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
@@ -87,36 +92,9 @@ export function RouteMap({ route, height = 220 }: RouteMapProps) {
     return <SvgRouteMap route={route} height={height} />;
   }
 
-  // Lazy-import the Google Maps components only when a key exists.
-  const { GoogleMap, Polyline } = require('@vis.gl/react-google-maps') as {
-    GoogleMap: React.ComponentType<Record<string, unknown>>;
-    Polyline: React.ComponentType<Record<string, unknown>>;
-  };
-
-  const bounds = points.reduce(
-    (acc, p) => ({
-      n: Math.max(acc.n, p.lat), s: Math.min(acc.s, p.lat),
-      e: Math.max(acc.e, p.lng), w: Math.min(acc.w, p.lng),
-    }),
-    { n: -90, s: 90, e: -180, w: 180 },
-  );
-  const center = { lat: (bounds.n + bounds.s) / 2, lng: (bounds.e + bounds.w) / 2 };
-  const dLat = Math.max(bounds.n - bounds.s, 0.001);
-  const dLng = Math.max(bounds.e - bounds.w, 0.001);
-
   return (
-    <div className="rounded-xl overflow-hidden border border-buddy-surface-raised" style={{ height }}>
-      <GoogleMap
-        apiKey={mapsKey}
-        center={center}
-        zoom={Math.max(10, Math.min(17, Math.log2(360 / Math.max(dLat, dLng))))}
-        mapId="buddyup-analytics-route"
-        fullscreenControl={false}
-        streetViewControl={false}
-        mapTypeControl={false}
-      >
-        <Polyline path={points} strokeColor="#00C896" strokeOpacity={1.0} strokeWeight={4} />
-      </GoogleMap>
-    </div>
+    <Suspense fallback={<SvgRouteMap route={route} height={height} />}>
+      <GoogleMapsRouteMap route={route} height={height} mapsKey={mapsKey} />
+    </Suspense>
   );
 }

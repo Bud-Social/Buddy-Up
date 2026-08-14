@@ -30,13 +30,8 @@ def check_streaks():
 
 @shared_task
 def send_streak_reminder():
-    from .models import Profile
-    from apps.accounts.tasks import send_otp_email
-    today = date.today()
-    profiles = Profile.objects.filter(
-        streak_days__gte=1,
-    ).exclude(streak_last_activity=today)
-    # TODO: Send push notification to each profile
+    # TODO: Send push notification to each active profile
+    pass
 
 
 def _build_profile_text(profile):
@@ -62,7 +57,7 @@ def _build_profile_text(profile):
             parts.append('Workouts: ' + ', '.join(prefs['preferred_workouts']))
         if prefs.get('preferred_time'):
             parts.append('Time: ' + prefs['preferred_time'])
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
     return '. '.join(parts) or profile.username
 

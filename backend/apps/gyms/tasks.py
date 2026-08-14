@@ -5,7 +5,7 @@ from django.db import models as db_models
 @shared_task
 def check_expired_subscriptions():
     from django.utils import timezone
-    from .models import GymMembership
+    from .models import GymMembership, Gym
     expired = GymMembership.objects.filter(
         subscription_active=True,
         subscription_expires_at__lt=timezone.now(),
@@ -20,7 +20,7 @@ def check_expired_subscriptions():
 
 @shared_task
 def generate_schedule_notifications():
-    from .models import Gym, GymMembership
+    from .models import GymMembership
     from apps.lives.models import BuddyLive
     from apps.notifications.models import Notification
     from django.utils import timezone
@@ -44,6 +44,6 @@ def generate_schedule_notifications():
                 recipient_id=member_id,
                 notification_type='live_starting',
                 title=f'{live.gym.name}: {live.title} starting soon!',
-                body=f'Live session starts in 15 minutes.',
+                body='Live session starts in 15 minutes.',
                 metadata={'live_id': str(live.id), 'gym_id': str(live.gym_id)},
             )

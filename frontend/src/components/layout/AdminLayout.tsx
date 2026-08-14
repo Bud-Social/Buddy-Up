@@ -5,7 +5,7 @@ import { Logo } from '@/components/ui/Logo';
 export function AdminLayout() {
   return (
     <div className="min-h-screen bg-buddy-black flex flex-col">
-      <header className="sticky top-0 z-30 border-b border-buddy-surface-raised bg-buddy-black/95 backdrop-blur-lg">
+      <header className="sticky top-12 lg:top-0 z-30 border-b border-buddy-surface-raised bg-buddy-black/95 backdrop-blur-lg">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-4">
           <Link
             to="/feed"

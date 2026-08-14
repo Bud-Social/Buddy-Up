@@ -9,7 +9,6 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
@@ -59,7 +58,7 @@ def food101_image_generator(split_csv: Path, img_dir: Path, class_to_idx: dict,
                 else:
                     arr = arr / 255.0
                 yield arr, tf.keras.utils.to_categorical([class_to_idx[cls]], len(class_to_idx))[0]
-            except Exception:
+            except Exception:  # noqa: BLE001
                 continue
 
     ds = tf.data.Dataset.from_generator(

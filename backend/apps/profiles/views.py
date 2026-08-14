@@ -1,23 +1,20 @@
-import uuid
-from datetime import date as date_type
 
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 from django.db import models as db_models
 from django.utils import timezone
 from django.db.models import Q
 from django.contrib.postgres.search import SearchVector, SearchQuery
 from rest_framework import views, permissions, status, generics
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
 
-from .models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship, AccountabilityPing, SharedGoal
+from .models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship, AccountabilityPing
 from .buddy_notifications import notify_buddy_request, notify_buddy_accepted, notify_follow
 from .serializers import (
     ProfileSerializer, ProfileUpdateSerializer, OnboardingSerializer,
-    BuddyRequestSerializer, ProfileSearchSerializer, PingMessageSerializer,
+    PingMessageSerializer,
 )
 from common.pagination import CursorPagination, PageNumberPagination
-from common.permissions import AreBuddies
 from common.age_gating import gate_mature_queryset, request_can_access_mature, can_view_content
 
 
@@ -138,7 +135,7 @@ class OnboardingView(views.APIView):
             resp = http_requests.post(ai_url, json=serializer.validated_data, timeout=15)
             resp.raise_for_status()
             onboarding_plan = resp.json()
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
         return Response({
@@ -174,7 +171,7 @@ def _validate_image_file(file):
         from io import BytesIO
         Image.open(BytesIO(file.read()))
         file.seek(0)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return 'File is not a valid image or is corrupted.'
 
     return None
@@ -663,7 +660,7 @@ class SendPingView(views.APIView):
             str(target.user_id),
             'accountability_ping',
             f'{user_profile.display_name} pinged you! 💪',
-            message[:100],
+            ping.message[:100],
             {
                 'from_user_id': str(user_profile.user_id),
                 'from_username': user_profile.username,
@@ -685,16 +682,16 @@ class ProfileRecommendationsView(views.APIView):
 
     def _base_qs(self, profile):
         exclude_ids = {str(profile.user_id)}
-        exclude_ids.update(
-            str(pid) for pid in BuddyRelationship.objects.filter(
-                db_models.Q(from_user=profile) | db_models.Q(to_user=profile),
-            ).values_list('from_user_id', 'to_user_id')
+        buddy_rel = BuddyRelationship.objects.filter(
+            db_models.Q(from_user=profile) | db_models.Q(to_user=profile),
         )
-        exclude_ids.update(
-            str(pid) for pid in BlockRelationship.objects.filter(
-                db_models.Q(blocker=profile) | db_models.Q(blocked=profile),
-            ).values_list('blocker_id', 'blocked_id')
+        exclude_ids.update((str(pid) for pid in buddy_rel.values_list('from_user_id', flat=True)))
+        exclude_ids.update((str(pid) for pid in buddy_rel.values_list('to_user_id', flat=True)))
+        block_rel = BlockRelationship.objects.filter(
+            db_models.Q(blocker=profile) | db_models.Q(blocked=profile),
         )
+        exclude_ids.update((str(pid) for pid in block_rel.values_list('blocker_id', flat=True)))
+        exclude_ids.update((str(pid) for pid in block_rel.values_list('blocked_id', flat=True)))
         return Profile.objects.filter(privacy_level='public').exclude(pk__in=list(exclude_ids))
 
     def get(self, request):
@@ -710,7 +707,7 @@ class ProfileRecommendationsView(views.APIView):
             )
             resp.raise_for_status()
             matches = resp.json().get('matches', [])
-        except Exception:
+        except Exception:  # noqa: BLE001
             matches = []
 
         base_qs = self._base_qs(profile)

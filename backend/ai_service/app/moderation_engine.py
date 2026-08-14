@@ -38,7 +38,7 @@ def _load_nudenet():
         ModelRegistry.register('nsfw_classifier', detector)
         logger.info('NudeNet NSFW detector loaded')
         return detector
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('NudeNet unavailable (%s) — falling back to pixel analysis', exc)
         ModelRegistry.register('nsfw_classifier', None)
         return None
@@ -103,7 +103,7 @@ def _nudenet_analyze(image_bytes: bytes) -> dict | None:
             fh.write(image_bytes)
         detections = detector.detect(path)
         return _classify_detections(detections)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('NudeNet inference failed: %s — falling back to pixel analysis', exc)
         return None
     finally:
@@ -116,7 +116,7 @@ def _nudenet_analyze(image_bytes: bytes) -> dict | None:
 async def analyze_image(image_bytes: bytes) -> dict:
     try:
         img = Image.open(BytesIO(image_bytes))
-    except Exception:
+    except Exception:  # noqa: BLE001
         return {'is_nsfw': False, 'confidence': 0.0, 'labels': ['error'], 'action': 'approve', 'method': 'error'}
 
     result = _nudenet_analyze(image_bytes)
@@ -151,10 +151,8 @@ async def _openai_moderate(text: str) -> dict | None:
             resp.raise_for_status()
             data = resp.json()
         result = data['results'][0]
-        categories = result.get('categories', {})
         scores = result.get('category_scores', {})
         flagged = result.get('flagged', False)
-        category_names = [k.replace('_', ' ').title() for k, v in categories.items() if v]
         max_score = max(scores.values(), default=0.0)
         return {
             'is_toxic': bool(flagged),
@@ -164,7 +162,7 @@ async def _openai_moderate(text: str) -> dict | None:
             'action': 'flag' if flagged else 'approve',
             'method': 'openai_moderation',
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('OpenAI moderation failed: %s', exc)
         return None
 
@@ -197,7 +195,7 @@ async def analyze_text(text: str) -> dict:
             )
             ModelRegistry.register('toxicity_classifier', classifier)
             logger.info('Toxicity classifier loaded')
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning('Failed to load toxicity model: %s — using keyword fallback', exc)
 
     if classifier is not None:
@@ -214,7 +212,7 @@ async def analyze_text(text: str) -> dict:
                 'action': 'flag' if is_toxic else 'approve',
                 'method': 'model',
             }
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning('Toxicity inference failed: %s — using keyword fallback', exc)
 
     toxic_keywords = [

@@ -1,9 +1,8 @@
 from django.test import TestCase
-from django.contrib.auth import authenticate
 from rest_framework.test import APIClient
 from rest_framework import status
 from datetime import date
-from .models import User, OTPToken, DeviceSession
+from .models import User, OTPToken
 from apps.profiles.models import Profile
 from common.utils import hash_dob, calculate_age
 

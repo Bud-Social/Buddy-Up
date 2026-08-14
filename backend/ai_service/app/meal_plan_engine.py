@@ -97,7 +97,7 @@ def _build_rag_context(req: dict) -> str:
     if plan.get('full_plan'):
         parts.append(f'Meal plan:\n{plan["full_plan"]}')
     if plan.get('shopping_list'):
-        parts.append(f'Base shopping list:\n' + '\n'.join(plan['shopping_list']))
+        parts.append('Base shopping list:\n' + '\n'.join(plan['shopping_list']))
     return '\n\n'.join(parts)
 
 
@@ -156,7 +156,7 @@ async def _call_openai(req: dict) -> dict | None:
         content = data['choices'][0]['message']['content']
         parsed = json.loads(content)
         return _validate_result(parsed)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('OpenAI meal-plan personalisation failed: %s', exc)
         return None
 

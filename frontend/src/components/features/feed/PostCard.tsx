@@ -13,6 +13,7 @@ import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
 import type { Post } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
 import { RichText } from '@/components/ui/RichText';
+import { PostMap } from './PostMap';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function WorkoutLogCard({ data }: { data: Record<string, unknown> }) {
@@ -75,37 +76,57 @@ function MealCard({ data }: { data: Record<string, unknown> }) {
   );
 }
 
-function ProgressCard({ data }: { data: Record<string, unknown> }) {
+function ProgressCard({ data, mediaUrls = [] }: { data: Record<string, unknown>; mediaUrls?: string[] }) {
   const d = data as Record<string, number | string | undefined>;
-  const weight = Number(d.weight_kg ?? d.weight ?? 0);
+  const weight = Number(d.weight ?? d.weight_kg ?? d.weight_lbs ?? 0);
+  const unit = (d.weight_unit as string) || (d.weight !== undefined ? 'kg' : '');
+  const mode = (d.mode as string) || 'transformation';
+  const beforeCount = Number(d.before_count ?? 0);
+
+  // Prefer explicit URLs, else derive from the post's media list.
+  const beforeUrls = (d.before_urls as string[] | undefined) ?? mediaUrls.slice(0, beforeCount || Math.floor(mediaUrls.length / 2));
+  const afterUrls = (d.after_urls as string[] | undefined) ?? mediaUrls.slice(beforeCount || Math.floor(mediaUrls.length / 2));
+
+  const showBeforeAfter = mode === 'transformation' && (beforeUrls.length > 0 || afterUrls.length > 0);
+  const snaps = afterUrls.length > 0 ? afterUrls : mediaUrls;
+
   return (
     <div className="bg-buddy-surface-raised rounded-xl p-4 mt-3 border border-buddy-surface">
       <div className="flex items-center gap-2 mb-3">
         <TrendingUp size={15} className="text-buddy-electric" />
         <span className="font-heading font-semibold text-sm">{(d as { label?: string }).label || 'Transformation'}</span>
         {weight > 0 && (
-          <span className="ml-auto text-sm font-bold text-buddy-electric">{weight} kg</span>
+          <span className="ml-auto text-sm font-bold text-buddy-electric">{weight} {unit}</span>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-1">
-        {(d as { before_url?: string }).before_url && (
-          <div className="aspect-square bg-buddy-surface rounded-xl overflow-hidden relative">
-            <img src={(d as { before_url?: string }).before_url} alt="Before" className="w-full h-full object-cover" />
-            <span className="absolute top-2 left-2 bg-black/70 text-[10px] px-2 py-0.5 rounded-full">Before</span>
-          </div>
-        )}
-        {(d as { after_url?: string }).after_url && (
-          <div className="aspect-square bg-buddy-surface rounded-xl overflow-hidden relative">
-            <img src={(d as { after_url?: string }).after_url} alt="After" className="w-full h-full object-cover" />
-            <span className="absolute top-2 right-2 bg-buddy-green/80 text-[10px] px-2 py-0.5 rounded-full">After</span>
-          </div>
-        )}
-        {!((d as { before_url?: string }).before_url || (d as { after_url?: string }).after_url) && weight > 0 && (
-          <div className="col-span-2 aspect-[2/1] bg-buddy-surface rounded-xl flex items-center justify-center">
-            <span className="text-2xl font-display font-bold text-buddy-electric">{weight} kg</span>
-          </div>
-        )}
-      </div>
+      {showBeforeAfter ? (
+        <div className="grid grid-cols-2 gap-2">
+          {beforeUrls.length > 0 && (
+            <div className="aspect-square bg-buddy-surface rounded-xl overflow-hidden relative">
+              <img src={beforeUrls[0]} alt="Before" className="w-full h-full object-cover" loading="lazy" />
+              <span className="absolute top-2 left-2 bg-black/70 text-[10px] px-2 py-0.5 rounded-full">Before</span>
+            </div>
+          )}
+          {afterUrls.length > 0 && (
+            <div className="aspect-square bg-buddy-surface rounded-xl overflow-hidden relative">
+              <img src={afterUrls[0]} alt="After" className="w-full h-full object-cover" loading="lazy" />
+              <span className="absolute top-2 right-2 bg-buddy-green/80 text-[10px] px-2 py-0.5 rounded-full">After</span>
+            </div>
+          )}
+        </div>
+      ) : snaps.length > 0 ? (
+        <div className="grid grid-cols-2 gap-2">
+          {snaps.slice(0, 4).map((url, i) => (
+            <div key={i} className="aspect-square bg-buddy-surface rounded-xl overflow-hidden relative">
+              <img src={url} alt={`Progress ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
+            </div>
+          ))}
+        </div>
+      ) : weight > 0 ? (
+        <div className="col-span-2 aspect-[2/1] bg-buddy-surface rounded-xl flex items-center justify-center">
+          <span className="text-2xl font-display font-bold text-buddy-electric">{weight} {unit}</span>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -264,8 +285,6 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
     .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1]);
   const topReactions = reactionsArr.slice(0, 3);
-  const remainingReactions = reactionsArr.slice(3);
-  const remainingCount = remainingReactions.reduce((sum, [, count]) => sum + count, 0);
 
   const handleReact = async (emojiStr: string) => {
     setShowReactionPicker(false);
@@ -424,13 +443,18 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           )}
 
           {/* Rich content */}
-          {displayPost.post_type === 'workout_log' && displayPost.workout_log_data && <WorkoutLogCard data={displayPost.workout_log_data} />}
+          {displayPost.post_type === 'workout_log' && displayPost.workout_log_data && <WorkoutLogCard data={displayPost.workout_log_data as Record<string, unknown>} />}
           {displayPost.post_type === 'meal' && displayPost.meal_data && <MealCard data={displayPost.meal_data} />}
-          {displayPost.post_type === 'progress' && displayPost.progress_data && <ProgressCard data={displayPost.progress_data} />}
+          {displayPost.post_type === 'progress' && displayPost.progress_data && <ProgressCard data={displayPost.progress_data} mediaUrls={displayPost.media_urls || []} />}
           {displayPost.post_type === 'poll' && (displayPost as any).poll && <PollCard poll={(displayPost as any).poll} postId={displayPost.id} />}
 
           {/* Media */}
           <MediaGallery urls={displayPost.media_urls || []} blurred={post.moderation_status === 'flagged'} postId={displayPost.id} />
+
+          {/* Map */}
+          {displayPost.location_lat != null && displayPost.location_lng != null && (
+            <PostMap lat={displayPost.location_lat} lng={displayPost.location_lng} label={displayPost.location_label} />
+          )}
 
           {/* Heart pop overlay */}
           {heartPop?.show && (

@@ -26,6 +26,14 @@ export default function Feed() {
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef<HTMLDivElement | null>(null);
 
+  // Meal prefill coming from the Food Scanner ("Share as Meal Post")
+  const locationState = location.state as { mealData?: { food_name?: string; calories?: number; protein_g?: number; carbs_g?: number; fat_g?: number; meal_type?: string } } | null;
+  const mealPrefill = locationState?.mealData ?? null;
+  const [initialMeal] = useState(mealPrefill);
+  const [initialMealPhoto] = useState(() => {
+    try { return sessionStorage.getItem('buddyup-meal-photo'); } catch { return null; }
+  });
+
   const tabs: { key: FeedTab; label: string; to: string }[] = [
     { key: 'for_you', label: 'For You', to: '/feed' },
     { key: 'following', label: 'Following', to: '/feed/following' },
@@ -82,7 +90,7 @@ export default function Feed() {
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto">
       {/* Tab bar */}
-      <div className="sticky top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3">
+      <div className="sticky top-12 lg:top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3">
         <div className="flex gap-1 bg-buddy-surface rounded-xl p-1">
           {tabs.map(({ key, label, to }) => (
             <button
@@ -105,6 +113,8 @@ export default function Feed() {
         <PostComposer
           placeholder="Share your workout, meal, or progress..."
           onPost={handleNewPost}
+          initialMeal={initialMeal}
+          initialMealPhotoDataUrl={initialMealPhoto}
         />
       </div>
 

@@ -19,7 +19,7 @@ from .serializers import (
     BookingActionSerializer, AvailabilityCreateSerializer, ReviewCreateSerializer,
 )
 from apps.profiles.models import Profile
-from apps.wallet.utils import hold_artifacts, release_held_refund, release_held_to_party, platform_cut
+from apps.wallet.utils import hold_artifacts, release_held_refund, release_held_to_party
 from apps.wallet.models import ArtifactTransaction
 
 
@@ -296,7 +296,7 @@ class BookingDetailView(views.APIView):
                         continue
                     release_held_refund(booking.client, tx.artifact_type, tx.quantity)
                     tx.status = 'refunded'
-                    tx.description = f'Trainer cancelled. Full refund.'
+                    tx.description = 'Trainer cancelled. Full refund.'
                     tx.save(update_fields=['status', 'description'])
                 booking.status = 'cancelled_by_trainer'
                 booking.cancelled_at = timezone.now()
@@ -415,7 +415,7 @@ class ProgrammeWeekCompleteView(views.APIView):
 
     def post(self, request, programme_id, week_number):
         programme = get_object_or_404(AsyncProgramme, id=programme_id, is_active=True)
-        week = get_object_or_404(ProgrammeWeek, programme=programme, week_number=week_number)
+        get_object_or_404(ProgrammeWeek, programme=programme, week_number=week_number)
         enrollment = get_object_or_404(ProgrammeEnrollment, client=request.user.profile, programme=programme)
 
         completed = enrollment.completed_weeks or []

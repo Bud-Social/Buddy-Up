@@ -2,7 +2,7 @@ from uuid import uuid4
 
 from django.db import models
 from cloudinary.models import CloudinaryField
-from common.models import TimestampedModel, SoftDeleteModel
+from common.models import TimestampedModel
 from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
 
 

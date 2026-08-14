@@ -12,7 +12,7 @@ def create_notification(recipient_id: str, notification_type: str, title: str, b
     except Profile.DoesNotExist:
         return
 
-    Notification.objects.create(
+    notification = Notification.objects.create(
         recipient=profile,
         notification_type=notification_type,
         title=title,
@@ -46,7 +46,7 @@ def create_notification(recipient_id: str, notification_type: str, title: str, b
             {
                 'type': 'event_notification',
                 'data': {
-                    'id': str(notification.id) if hasattr(locals(), 'notification') else '',
+                    'id': str(notification.id),
                     'type': notification_type,
                     'title': title,
                     'body': body,
@@ -54,7 +54,7 @@ def create_notification(recipient_id: str, notification_type: str, title: str, b
                 },
             },
         )
-    except:
+    except Exception:  # noqa: BLE001
         pass
 
 
@@ -93,7 +93,7 @@ def _deliver_notification(recipient_id: str, notification_type: str, title: str,
                 },
             },
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
 
 
@@ -123,7 +123,8 @@ def send_buddy_request_notification(from_profile_id: str, to_profile_id: str):
             'data': {'id': str(notification.id), 'type': 'buddy_request', 'title': notification.title,
                       'body': notification.body, 'metadata': notification.metadata, 'created_at': notification.created_at.isoformat()},
         })
-    except: pass
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @shared_task
@@ -148,7 +149,8 @@ def send_buddy_accepted_notification(from_profile_id: str, to_profile_id: str):
                    'from_display_name': from_profile.display_name, 'from_avatar_url': from_profile.avatar_url},
     )
     try:
-        from asgiref.sync import async_to_sync; from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
         cl = get_channel_layer()
         for n in [n1, n2]:
             async_to_sync(cl.group_send)(f'user_{n.recipient.user_id}', {
@@ -156,7 +158,8 @@ def send_buddy_accepted_notification(from_profile_id: str, to_profile_id: str):
                 'data': {'id': str(n.id), 'type': n.notification_type, 'title': n.title,
                           'body': n.body, 'metadata': n.metadata, 'created_at': n.created_at.isoformat()},
             })
-    except: pass
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @shared_task
@@ -173,13 +176,15 @@ def send_follow_notification(follower_id: str, followee_id: str):
                    'from_display_name': follower.display_name, 'from_avatar_url': follower.avatar_url},
     )
     try:
-        from asgiref.sync import async_to_sync; from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
         async_to_sync(get_channel_layer().group_send)(f'user_{followee.user_id}', {
             'type': 'event_notification',
             'data': {'id': str(n.id), 'type': n.notification_type, 'title': n.title,
                       'body': n.body, 'metadata': n.metadata, 'created_at': n.created_at.isoformat()},
         })
-    except: pass
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @shared_task
@@ -192,18 +197,20 @@ def send_login_alert(user_id: str, ip_address: str, device: str, location: str =
         return
     n = Notification.objects.create(
         recipient=profile, notification_type='new_device_login',
-        title=f'New login detected',
+        title='New login detected',
         body=f'New login from {device} ({ip_address})',
         metadata={'ip': ip_address, 'device': device, 'location': location},
     )
     try:
-        from asgiref.sync import async_to_sync; from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
         async_to_sync(get_channel_layer().group_send)(f'user_{user_id}', {
             'type': 'event_notification',
             'data': {'id': str(n.id), 'type': n.notification_type, 'title': n.title,
                       'body': n.body, 'metadata': n.metadata, 'created_at': n.created_at.isoformat()},
         })
-    except: pass
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @shared_task
@@ -216,18 +223,20 @@ def send_verification_update(user_id: str, status: str, message: str = ''):
         return
     n = Notification.objects.create(
         recipient=profile, notification_type='verification_update',
-        title=f'Verification status updated',
+        title='Verification status updated',
         body=message or f'Your verification status is now: {status}.',
         metadata={'status': status},
     )
     try:
-        from asgiref.sync import async_to_sync; from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
         async_to_sync(get_channel_layer().group_send)(f'user_{user_id}', {
             'type': 'event_notification',
             'data': {'id': str(n.id), 'type': n.notification_type, 'title': n.title,
                       'body': n.body, 'metadata': n.metadata, 'created_at': n.created_at.isoformat()},
         })
-    except: pass
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @shared_task
@@ -246,13 +255,15 @@ def send_payment_notification(user_id: str, tx_type: str, amount: str):
         metadata={'tx_type': tx_type, 'amount': amount},
     )
     try:
-        from asgiref.sync import async_to_sync; from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
         async_to_sync(get_channel_layer().group_send)(f'user_{user_id}', {
             'type': 'event_notification',
             'data': {'id': str(n.id), 'type': n.notification_type, 'title': n.title,
                       'body': n.body, 'metadata': n.metadata, 'created_at': n.created_at.isoformat()},
         })
-    except: pass
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @shared_task
@@ -289,7 +300,7 @@ def cleanup_old_notifications():
 
 @shared_task
 def send_live_started_notification(live_id: str, host_profile_id: str):
-    from apps.profiles.models import Profile, BuddyRelationship
+    from apps.profiles.models import Profile
     from .models import Notification
     from django.db.models import Q
 
@@ -343,7 +354,7 @@ def send_live_started_notification(live_id: str, host_profile_id: str):
                     },
                 },
             )
-        except:
+        except Exception:  # noqa: BLE001
             pass
 
 
@@ -380,7 +391,8 @@ def send_cohost_invite_notification(host_profile_id: str, invitee_profile_id: st
             'data': {'id': str(n.id), 'type': n.notification_type, 'title': n.title,
                       'body': n.body, 'metadata': n.metadata, 'created_at': n.created_at.isoformat()},
         })
-    except: pass
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @shared_task
@@ -416,7 +428,8 @@ def send_cohost_request_notification(requesting_profile_id: str, live_id: str):
             'data': {'id': str(n.id), 'type': n.notification_type, 'title': n.title,
                       'body': n.body, 'metadata': n.metadata, 'created_at': n.created_at.isoformat()},
         })
-    except: pass
+    except Exception:  # noqa: BLE001
+        pass
 
 
 @shared_task
@@ -485,7 +498,7 @@ def send_post_notification(post_id: str, author_profile_id: str):
                     },
                 },
             )
-        except:
+        except Exception:  # noqa: BLE001
             pass
 
 
@@ -525,4 +538,5 @@ def send_repost_notification(repost_author_id: str, original_post_id: str):
             'data': {'id': str(n.id), 'type': n.notification_type, 'title': n.title,
                       'body': n.body, 'metadata': n.metadata, 'created_at': n.created_at.isoformat()},
         })
-    except: pass
+    except Exception:  # noqa: BLE001
+        pass

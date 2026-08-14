@@ -64,7 +64,7 @@ def load_preferred(name: str, torch_factory, *args, **kwargs):
             ModelRegistry.register(name, model)
             logger.info('Loaded ONNX artifact for %s (%s)', name, path)
             return model
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning('Failed to load ONNX artifact %s: %s — using torch', path, exc)
 
     model = torch_factory(*args, **kwargs)

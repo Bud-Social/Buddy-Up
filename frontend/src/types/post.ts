@@ -41,6 +41,8 @@ export interface Post {
   meal_data: Record<string, unknown> | null;
   progress_data: Record<string, unknown> | null;
   location_label: string;
+  location_lat?: number | null;
+  location_lng?: number | null;
   view_count: number;
   reaction_counts: Record<string, number>;
   user_reaction: string | null;
@@ -68,6 +70,9 @@ export interface Post {
     created_at: string;
     post_type: string;
     location_label?: string;
+    location_lat?: number | null;
+    location_lng?: number | null;
+    quote_body?: string;
     workout_log_data?: Record<string, unknown> | null;
     meal_data?: Record<string, unknown> | null;
     progress_data?: Record<string, unknown> | null;

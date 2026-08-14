@@ -5,7 +5,6 @@ and work across multiple AI-service workers.
 """
 import json
 import logging
-import math
 from typing import Any
 
 import numpy as np

@@ -7,8 +7,6 @@ import socket
 from pathlib import PurePosixPath
 from urllib.parse import unquote, urlparse
 
-logger = logging.getLogger(__name__)
-
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
 from django.http import FileResponse, Http404
@@ -20,8 +18,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
-from common.pagination import CursorPagination
-from common.utils import validate_file_signature, validate_mime_from_bytes
+from common.utils import validate_file_signature
 from .models import Conversation, Message, MessageReaction, CallLog
 from .serializers import (
     ConversationSerializer, MessageSerializer,
@@ -29,6 +26,8 @@ from .serializers import (
     MessageReactionSerializer, CallLogSerializer,
 )
 from apps.profiles.models import BuddyRelationship, Profile
+
+logger = logging.getLogger(__name__)
 
 
 def _allowed_to_message(requester: Profile, other: Profile) -> bool:
@@ -561,7 +560,7 @@ class LinkPreviewView(views.APIView):
                 preview['description'] = og_desc.group(1)[:300]
             if og_img:
                 preview['image'] = og_img.group(1)
-        except Exception:
+        except Exception:  # noqa: BLE001
             preview['title'] = url
 
         return Response({

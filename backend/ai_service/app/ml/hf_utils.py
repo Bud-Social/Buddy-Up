@@ -47,7 +47,7 @@ def _cached_state_dict(name: str) -> dict[str, Any] | None:
         return None
     try:
         return torch.load(path, map_location='cpu', weights_only=True)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('Failed to load cached int8 state for %s: %s', name, exc)
         return None
 
@@ -69,7 +69,7 @@ def load_preferred_hf(name: str, factory: Callable[[], torch.nn.Module], **kwarg
         model = factory(**kwargs)
         try:
             quantize_dynamic_torch(model)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning('Dynamic quantization failed for %s (%s) — serving fp32', name, exc)
             ModelRegistry.register(name, model)
             return model
@@ -78,14 +78,14 @@ def load_preferred_hf(name: str, factory: Callable[[], torch.nn.Module], **kwarg
             try:
                 model.load_state_dict(state)
                 logger.info('Loaded cached int8 weights for %s', name)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.warning('Cached int8 weights mismatch for %s (%s) — using freshly quantized', name, exc)
         else:
             try:
                 _cache_path(name).parent.mkdir(parents=True, exist_ok=True)
                 torch.save(model.state_dict(), _cache_path(name))
                 logger.info('Cached int8 weights for %s at %s', name, _cache_path(name))
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.warning('Failed to persist int8 weights for %s: %s', name, exc)
 
         ModelRegistry.register(name, model)

@@ -123,7 +123,7 @@ def read_scale_weight(image_bytes: bytes) -> dict:
     try:
         image = Image.open(BytesIO(image_bytes))
         image.load()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('Weight image decode failed: %s', exc)
         return {'weight_kg': None, 'weight_lb': None, 'unit': 'kg', 'confidence': 0.0, 'raw_text': '', 'method': 'error'}
 
@@ -132,6 +132,6 @@ def read_scale_weight(image_bytes: bytes) -> dict:
         parsed = _parse_weight(raw)
         parsed['method'] = 'florence-2'
         return parsed
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('Weight OCR failed (%s) — returning empty', exc)
         return {'weight_kg': None, 'weight_lb': None, 'unit': 'kg', 'confidence': 0.0, 'raw_text': '', 'method': 'error'}

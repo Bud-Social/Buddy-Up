@@ -2,7 +2,6 @@ from django.contrib.auth.models import AnonymousUser
 from channels.db import database_sync_to_async
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
-from django.conf import settings
 
 
 @database_sync_to_async

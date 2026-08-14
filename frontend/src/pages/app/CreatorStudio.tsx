@@ -110,7 +110,7 @@ export default function CreatorStudio() {
 
   const handleShare = async (code: any) => {
     try {
-      const res = await marketplaceApi.shareDiscountCode(code.id);
+      await marketplaceApi.shareDiscountCode(code.id);
       await navigator.clipboard.writeText(code.code).catch(() => {});
       toast('success', `Code ${code.code} copied to clipboard`);
       refreshServices();

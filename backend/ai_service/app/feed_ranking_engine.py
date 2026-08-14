@@ -14,7 +14,6 @@ See `apps.feed.redis_bandit` for the storage layer.
 import logging
 import math
 import time
-from typing import Any
 
 import numpy as np
 

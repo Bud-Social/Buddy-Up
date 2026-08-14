@@ -28,7 +28,7 @@ class BuddySystemTests(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.token}')
 
     def test_send_buddy_request(self):
-        response = self.client.post(f'/api/v1/profiles/userb/buddy/')
+        response = self.client.post('/api/v1/profiles/userb/buddy/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(BuddyRelationship.objects.filter(
             from_user=self.profile_a, to_user=self.profile_b, status='pending'
@@ -36,7 +36,7 @@ class BuddySystemTests(TestCase):
 
     def test_accept_buddy_request(self):
         BuddyRelationship.objects.create(from_user=self.profile_b, to_user=self.profile_a, status='pending')
-        response = self.client.post(f'/api/v1/profiles/userb/buddy/accept/')
+        response = self.client.post('/api/v1/profiles/userb/buddy/accept/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(BuddyRelationship.objects.filter(
             from_user=self.profile_b, to_user=self.profile_a, status='confirmed'
@@ -44,18 +44,18 @@ class BuddySystemTests(TestCase):
 
     def test_decline_buddy_request(self):
         BuddyRelationship.objects.create(from_user=self.profile_b, to_user=self.profile_a, status='pending')
-        response = self.client.post(f'/api/v1/profiles/userb/buddy/decline/')
+        response = self.client.post('/api/v1/profiles/userb/buddy/decline/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(BuddyRelationship.objects.filter(
             from_user=self.profile_b, to_user=self.profile_a, status='declined'
         ).exists())
 
     def test_cannot_buddy_self(self):
-        response = self.client.post(f'/api/v1/profiles/usera/buddy/')
+        response = self.client.post('/api/v1/profiles/usera/buddy/')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_follow_user(self):
-        response = self.client.post(f'/api/v1/profiles/userb/follow/')
+        response = self.client.post('/api/v1/profiles/userb/follow/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(FollowRelationship.objects.filter(
             follower=self.profile_a, followee=self.profile_b
@@ -63,14 +63,14 @@ class BuddySystemTests(TestCase):
 
     def test_unfollow_user(self):
         FollowRelationship.objects.create(follower=self.profile_a, followee=self.profile_b)
-        response = self.client.delete(f'/api/v1/profiles/userb/follow/')
+        response = self.client.delete('/api/v1/profiles/userb/follow/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(FollowRelationship.objects.filter(
             follower=self.profile_a, followee=self.profile_b
         ).exists())
 
     def test_block_user(self):
-        response = self.client.post(f'/api/v1/profiles/userb/block/')
+        response = self.client.post('/api/v1/profiles/userb/block/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(BlockRelationship.objects.filter(
             blocker=self.profile_a, blocked=self.profile_b
@@ -78,7 +78,7 @@ class BuddySystemTests(TestCase):
 
     def test_block_removes_buddy(self):
         BuddyRelationship.objects.create(from_user=self.profile_a, to_user=self.profile_b, status='confirmed')
-        self.client.post(f'/api/v1/profiles/userb/block/')
+        self.client.post('/api/v1/profiles/userb/block/')
         self.assertFalse(BuddyRelationship.objects.filter(
             from_user=self.profile_a, to_user=self.profile_b
         ).exists())

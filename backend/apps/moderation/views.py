@@ -147,7 +147,6 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
         note = serializer.validated_data.get('note', '')
 
         moderator = request.user
-        now = timezone.now()
         content_author = self._get_content_author(flag) or moderator
 
         if action_name == 'approve':
@@ -207,7 +206,7 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
             if ct == 'feed.post':
                 from apps.feed.models import Post
                 Post.objects.filter(id=cid).update(moderation_status='removed')
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     def _unflag_content(self, flag: ContentFlag) -> None:
@@ -220,7 +219,7 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
                 Post.objects.filter(id=cid, moderation_status='flagged').update(
                     moderation_status='clean',
                 )
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     def _get_content_author(self, flag: ContentFlag):
@@ -233,7 +232,7 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
                 post = Post.objects.filter(id=cid).select_related('author').first()
                 if post:
                     return post.author
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
         return None
 

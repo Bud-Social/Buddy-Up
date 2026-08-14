@@ -21,7 +21,7 @@ function getItemName(item: any): string {
   return detail.title || detail.name || item.item_type.replace('_', ' ');
 }
 
-function getItemPrice(item: any): Record<string, number> {
+function _getItemPrice(item: any): Record<string, number> {
   const detail = item[`${item.item_type}_detail`];
   if (!detail) return {};
   if (item.item_type === 'meal_plan') return detail.price_artifacts || {};
@@ -159,7 +159,6 @@ export default function CartPage() {
             {items.map((item: any) => {
               const Icon = itemIcons[item.item_type] || ShoppingCart;
               const img = getItemImage(item);
-              const price = getItemPrice(item);
               const itemTotal = item.item_total_artifacts;
               const itemUsd = item.item_total_usd;
               const totalStr = itemTotal ? artifactDisplay(itemTotal) : null;

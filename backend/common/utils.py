@@ -1,7 +1,4 @@
-import io
-import os
 import re
-import struct
 from datetime import date
 from hashlib import sha256
 

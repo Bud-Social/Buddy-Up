@@ -10,7 +10,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         from apps.feed.models import Post, Reaction, Comment, Save
-        from django.db.models import Count, F
+        from django.db.models import Count
 
         out_dir = self._out_dir()
         out_dir.mkdir(parents=True, exist_ok=True)

@@ -44,7 +44,6 @@ export default function AdminVerification() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<'all' | string>('all');
   const [query, setQuery] = useState('');
-  const [expanded, setExpanded] = useState<string | null>(null);
 
   const load = useCallback((silent = false) => {
     if (!silent) setLoading(true);

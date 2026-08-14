@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { ShieldCheck, ArrowLeft, Upload, FileText, CheckCircle2, Building, Activity, FileCheck } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, FileText, CheckCircle2, Building, Activity, FileCheck } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
 
@@ -33,7 +32,7 @@ const SERVICE_REQUIREMENTS: Record<ServiceType, { title: string; documents: stri
   }
 };
 
-export default function BuddyUpCertification({ shopId, shopName, onClose }: CertificationProps) {
+export default function BuddyUpCertification({ shopId: _shopId, shopName, onClose }: CertificationProps) {
   const [step, setStep] = useState(1);
   const [services, setServices] = useState<ServiceType[]>([]);
   const [documents, setDocuments] = useState<Record<string, string>>({});

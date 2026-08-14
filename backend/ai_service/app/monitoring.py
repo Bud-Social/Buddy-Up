@@ -74,7 +74,7 @@ class LatencyMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
             ok = status[0] < 500
-        except Exception:
+        except Exception:  # noqa: BLE001
             ok = False
             raise
         finally:

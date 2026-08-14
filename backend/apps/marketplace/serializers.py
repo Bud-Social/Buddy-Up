@@ -1,11 +1,9 @@
 import qrcode
 import base64
 from io import BytesIO
-from uuid import uuid4
 from django.utils import timezone
 from rest_framework import serializers
-from django.core.validators import MinValueValidator, MaxValueValidator
-from rest_framework.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from common.age_gating import CONTENT_RATING_CHOICES
 from .models import (
     Shop, ShopMembership, ShopGymLink, ShopVerificationApplication, PushDevice,
@@ -96,7 +94,7 @@ class ShopSerializer(serializers.ModelSerializer):
         if obj.banner:
             try:
                 return obj.banner.url
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         return obj.banner_url or ''
 
@@ -104,7 +102,7 @@ class ShopSerializer(serializers.ModelSerializer):
         if obj.logo:
             try:
                 return obj.logo.url
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         return obj.logo_url or ''
 
@@ -225,7 +223,7 @@ class MealPlanSerializer(serializers.ModelSerializer):
         if obj.cover_image:
             try:
                 return obj.cover_image.url
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         return obj.cover_image_url or ''
 
@@ -303,7 +301,7 @@ class TrainingProgrammeSerializer(serializers.ModelSerializer):
         if obj.cover_image:
             try:
                 return obj.cover_image.url
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         return obj.cover_image_url or ''
 
@@ -511,7 +509,7 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
         if obj.cover_image:
             try:
                 return obj.cover_image.url
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         return obj.cover_image_url or ''
 
@@ -538,7 +536,7 @@ class EventTicketSerializer(serializers.ModelSerializer):
         if obj.event.cover_image:
             try:
                 cover_url = obj.event.cover_image.url
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         return {
             'id': str(obj.event.id),
@@ -630,7 +628,7 @@ class DiscountCodeSerializer(serializers.ModelSerializer):
             img.save(buf, format='PNG')
             obj.qr_code = base64.b64encode(buf.getvalue()).decode()
             obj.save(update_fields=['qr_code'])
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
 

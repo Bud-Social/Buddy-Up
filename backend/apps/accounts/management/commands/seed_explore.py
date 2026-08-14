@@ -262,7 +262,7 @@ class Command(BaseCommand):
             try:
                 FollowRelationship.objects.get_or_create(follower=a, followee=b)
                 count += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('follow relationships', count)
 
@@ -273,7 +273,7 @@ class Command(BaseCommand):
             try:
                 BlockRelationship.objects.get_or_create(blocker=a, blocked=b)
                 count += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('block relationships', count)
 
@@ -330,7 +330,7 @@ class Command(BaseCommand):
             author = self._pick(all_profiles)
             try:
                 Comment.objects.create(post=post, author=author, body=self._pick(COMMENT_TEXTS))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('comments', Comment.objects.count())
 
@@ -369,7 +369,7 @@ class Command(BaseCommand):
                 option = self._pick(list(poll.options.all()))
                 try:
                     PollVote.objects.get_or_create(poll=poll, option=option, voter=voter)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
         self._log('polls', Poll.objects.count())
         self._log('poll options', PollOption.objects.count())
@@ -499,7 +499,7 @@ class Command(BaseCommand):
                     schedule_post=sp, member=member,
                     defaults={'recurrence': 'none', 'is_active': True},
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('slot enrollments', ScheduleSlotEnrollment.objects.count())
 
@@ -512,7 +512,7 @@ class Command(BaseCommand):
                     gym=gym, reviewer=reviewer,
                     defaults={'rating': random.randint(3, 5), 'comment': self._pick(COMMENT_TEXTS)},
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('gym reviews', GymReview.objects.count())
 
@@ -529,7 +529,6 @@ class Command(BaseCommand):
 
     # -- 6. Sessions & trainers ----------------------------------------------
     def _seed_sessions(self):
-        all_profiles = self.profiles
         trainer_profs = []
         for t in self.trainers[:12]:
             tp, _ = TrainerProfile.objects.get_or_create(
@@ -589,7 +588,7 @@ class Command(BaseCommand):
                     defaults={'trainer': booking.trainer, 'rating': random.randint(3, 5), 'body': self._pick(COMMENT_TEXTS)},
                 )
                 count += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('session reviews', count)
 
@@ -626,7 +625,7 @@ class Command(BaseCommand):
                     client=client, programme=prog,
                     defaults={'completed_weeks': [1, 2], 'progress_pct': random.randint(10, 80)},
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('programme enrollments', ProgrammeEnrollment.objects.count())
 
@@ -659,7 +658,7 @@ class Command(BaseCommand):
                 member = self._pick(all_profiles)
                 try:
                     LiveRSVP.objects.get_or_create(live=live, user=member)
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
             for _ in range(random.randint(2, 5)):
                 member = self._pick(all_profiles)
@@ -668,7 +667,7 @@ class Command(BaseCommand):
                         live=live, user=member,
                         defaults={'role': random.choice(['attendee', 'co_host']), 'left_at': self.now},
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
         self._log('lives', len(lives))
         self._log('live rsvps', LiveRSVP.objects.count())
@@ -702,7 +701,7 @@ class Command(BaseCommand):
             if gyms:
                 try:
                     ShopGymLink.objects.get_or_create(shop=shop, gym=self._pick(gyms), defaults={'is_primary': True})
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
             ShopVerificationApplication.objects.get_or_create(
                 shop=shop, submitted_by=creator,
@@ -820,7 +819,7 @@ class Command(BaseCommand):
                         purchase=purchase, buyer=buyer, meal_plan=mp,
                         defaults={'rating': random.randint(3, 5), 'body': self._pick(COMMENT_TEXTS)},
                     )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('meal plan purchases', MealPlanPurchase.objects.count())
         self._log('meal plan reviews', MealPlanReview.objects.count())
@@ -845,7 +844,7 @@ class Command(BaseCommand):
                             purchase=purchase, activity_key=f'w1_d{k}',
                             defaults={'status': random.choice(['completed', 'in_progress', 'pending']), 'completed_at': self.now if random.random() > 0.5 else None},
                         )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('programme purchases', TrainingProgrammePurchase.objects.count())
         self._log('programme reviews', TrainingProgrammeReview.objects.count())
@@ -889,7 +888,7 @@ class Command(BaseCommand):
                         event=ev, holder=holder,
                         defaults={'tier': 'Standard', 'price_paid_artifacts': {'dumbbell': 20}, 'status': random.choice(['active', 'used'])},
                     )
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
         self._log('events', MarketplaceEvent.objects.count())
         self._log('event media', EventMedia.objects.count())
@@ -927,7 +926,7 @@ class Command(BaseCommand):
                     discount=code, user=user,
                     defaults={'discount_pct_applied': code.discount_pct, 'was_successful': True},
                 )
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('discount usages', DiscountUsage.objects.count())
 
@@ -952,7 +951,7 @@ class Command(BaseCommand):
                         },
                     )
                     items += 1
-                except Exception:
+                except Exception:  # noqa: BLE001
                     pass
         self._log('cart items', items)
 
@@ -1019,7 +1018,7 @@ class Command(BaseCommand):
             try:
                 MessageReaction.objects.get_or_create(message=msg, user=user, emoji=random.choice(['🔥', '💪', '❤️', '👏', '👍', '🎉']))
                 reactions += 1
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         self._log('message reactions', reactions)
 

@@ -5,7 +5,7 @@ import requests
 import redis
 from celery import shared_task
 from django.conf import settings
-from django.db.models import Count, Q, OuterRef, Subquery
+from django.db.models import Count, OuterRef, Subquery
 from django.utils import timezone
 from datetime import timedelta
 
@@ -123,7 +123,7 @@ def moderate_content(self, post_id: str):
                 post.body,
                 author_is_practitioner=author_is_practitioner,
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning('Policy moderation dispatch failed for %s: %s', post.id, exc)
 
 
@@ -239,7 +239,6 @@ def send_mention_notifications(post_id: str, author_profile_id: str):
     try:
         from .models import Post
         from apps.notifications.models import Notification
-        from apps.profiles.models import Profile
 
         post = Post.objects.select_related('author').get(id=post_id)
         author = post.author
@@ -253,7 +252,7 @@ def send_mention_notifications(post_id: str, author_profile_id: str):
                 body=post.body[:200],
                 metadata={'post_id': str(post.id), 'author_username': author.username},
             )
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
 
 

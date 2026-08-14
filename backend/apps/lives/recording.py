@@ -7,7 +7,6 @@ from pathlib import Path
 
 from django.conf import settings
 
-from .models import BuddyLive
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,7 @@ def start_livekit_egress(live_id: str, room_name: str) -> str | None:
     http_url = livekit_url.replace('wss://', 'https://').replace('ws://', 'http://')
 
     async def _start():
-        from livekit.api import LiveKitAPI, RoomCompositeEgressRequest, EncodedFileOutput, EncodedFileType
+        from livekit.api import LiveKitAPI, RoomCompositeEgressRequest, EncodedFileOutput, EncodedFileType, S3Upload
         api = LiveKitAPI(http_url, api_key, api_secret)
         try:
             egress = await api.egress_service.start_room_composite_egress(
@@ -43,7 +42,7 @@ def start_livekit_egress(live_id: str, room_name: str) -> str | None:
                     file_outputs=[EncodedFileOutput(
                         file_type=EncodedFileType.MP4,
                         filepath=f'replays/{live_id}.mp4',
-                        s3=livekit_api.S3Upload(
+                        s3=S3Upload(
                             endpoint=settings.LIVE_RECORDING_S3_ENDPOINT,
                             bucket=settings.LIVE_RECORDING_S3_BUCKET,
                             access_key=settings.LIVE_RECORDING_S3_ACCESS_KEY,
@@ -55,7 +54,7 @@ def start_livekit_egress(live_id: str, room_name: str) -> str | None:
             )
             logger.info('Started LiveKit egress %s for room %s', egress.egress_id, room_name)
             return egress.egress_id
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error('Failed to start LiveKit egress for room %s: %s', room_name, e)
             return None
         finally:
@@ -89,7 +88,7 @@ def stop_livekit_egress(egress_id: str, live_id: str) -> str | None:
             if settings.LIVE_REPLAY_BASE_URL:
                 return f"{settings.LIVE_REPLAY_BASE_URL.rstrip('/')}/{live_id}.mp4"
             return _extract_egress_url(info)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error('Failed to stop LiveKit egress %s: %s', egress_id, e)
             return None
         finally:
@@ -110,7 +109,7 @@ def _extract_egress_url(egress_info) -> str | None:
             for f in egress_info.file_outputs:
                 if f.file_type == 1:
                     return f.filepath or None
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
     return None
 
@@ -123,7 +122,7 @@ def save_client_replay_chunk(live_id: str, chunk_index: int, chunk_data: bytes, 
         chunk_path.write_bytes(chunk_data)
         logger.info('Saved replay chunk %d for live %s (session %s)', chunk_index, live_id, recording_session_id)
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error('Failed to save replay chunk %d for live %s: %s', chunk_index, live_id, e)
         return False
 
@@ -158,7 +157,7 @@ def _upload_replay_file(live_id: str, file_path: str) -> str | None:
         if url:
             logger.info('Uploaded client replay for live %s to Cloudinary', live_id)
             return url
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error('Cloudinary upload failed for live %s: %s', live_id, e)
     return None
 
@@ -180,7 +179,7 @@ def stitch_and_upload_client_replay(live_id: str, recording_session_id: str) -> 
             return None
         replay_url = _upload_replay_file(live_id, output_path)
         return replay_url
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error('Failed to stitch client replay for %s: %s', live_id, e)
         return None
     finally:

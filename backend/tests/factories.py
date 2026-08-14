@@ -1,10 +1,9 @@
 import factory
 from datetime import date, timedelta
 from django.utils import timezone
-from django.contrib.auth.hashers import make_password
 from common.utils import hash_dob
 from apps.accounts.models import User
-from apps.profiles.models import Profile, BuddyRelationship, FollowRelationship
+from apps.profiles.models import Profile
 from apps.sessions.models import TrainerProfile, Availability, BookingSession, Review, AsyncProgramme, ProgrammeWeek, ProgrammeEnrollment
 from apps.gyms.models import Gym, GymMembership
 from apps.feed.models import Post, Comment, Reaction

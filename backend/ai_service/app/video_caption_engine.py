@@ -8,7 +8,6 @@ description built from `form_analyzer_engine.analyze_form_video`.
 import logging
 import tempfile
 
-import numpy as np
 
 from .config import settings
 from .ml.hf_utils import load_preferred_hf
@@ -129,7 +128,7 @@ def describe_workout_video(video_bytes: bytes, exercise: str = 'auto') -> dict:
         for f in frames:
             try:
                 captions.append(_caption_image(f['image']))
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 logger.warning('Frame %d caption failed: %s', f['frame_index'], exc)
                 break
 
@@ -146,7 +145,7 @@ def describe_workout_video(video_bytes: bytes, exercise: str = 'auto') -> dict:
                 'model': 'florence-2-base',
                 'exercise': exercise,
             }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('Florence-2 caption failed (%s) — pose fallback', exc)
 
     # Pose-based fallback: detected exercise + form coaching notes.

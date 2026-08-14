@@ -1,7 +1,6 @@
 """
 Unified WebSocket consumers for BuddyUp messaging, live rooms, and gym chat.
 """
-import json
 import time
 import logging
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
@@ -82,7 +81,7 @@ class UserConsumer(AsyncJsonWebsocketConsumer):
             from apps.profiles.models import Profile
             from django.utils import timezone
             Profile.objects.filter(user_id=self.user_id).update(last_seen=timezone.now())
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     async def receive_json(self, content, **kwargs):
@@ -328,7 +327,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             conv.last_message_at = timezone.now()
             conv.save(update_fields=['last_message_text', 'last_message_at'])
             return msg
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.exception('ChatConsumer._save_message error: %s', exc)
             return None
 
@@ -343,7 +342,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     'body': r.body[:100],
                     'sender_name': r.sender.display_name,
                 }
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         return {
             'id': str(msg.id),
@@ -382,7 +381,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     f'user_{participant.user_id}',
                     {'type': 'event_message', 'data': {'type': 'new_message', **payload}},
                 )
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     @database_sync_to_async
@@ -398,7 +397,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
                     f'user_{participant.user_id}',
                     {'type': 'event_notification', 'data': {'type': 'incoming_call', **payload}},
                 )
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     @database_sync_to_async
@@ -422,7 +421,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             if not created:
                 obj.delete()
             return dict(Counter(msg.reactions.values_list('emoji', flat=True)))
-        except Exception:
+        except Exception:  # noqa: BLE001
             return {}
 
 
@@ -477,7 +476,7 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
             LiveAttendee.objects.filter(
                 live_id=self.live_id, user=self.profile, left_at__isnull=True,
             ).update(left_at=timezone.now())
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     def _may_connect(self):

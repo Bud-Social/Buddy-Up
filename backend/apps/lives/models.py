@@ -101,6 +101,7 @@ class LiveAttendee(TimestampedModel):
         db_table = 'lives_attendee'
         verbose_name = 'Live Attendee'
         verbose_name_plural = 'Live Attendees'
+        unique_together = ('live', 'user')
         indexes = [
             models.Index(fields=['live', '-joined_at']),
             models.Index(fields=['user', '-joined_at']),

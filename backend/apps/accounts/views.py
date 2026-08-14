@@ -6,12 +6,15 @@ import base64
 import os
 import qrcode
 import pyotp
+import jwt
+import requests
 from datetime import timedelta
+from jwt.algorithms import RSAAlgorithm
 
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from django.conf import settings
-from rest_framework import status, views, permissions, generics
+from rest_framework import status, views, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -24,15 +27,13 @@ from .serializers import (
     RegisterSerializer, LoginSerializer, OTPSerializer, ResendOTPSerializer,
     ResendRegistrationOTPSerializer,
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
-    ChangePasswordSerializer, SocialAuthSerializer,
-    TOTPSetupSerializer, TOTPVerifySerializer,
+    ChangePasswordSerializer, TOTPVerifySerializer,
     LoginOTPSerializer, RegistrationOTPSerializer,
     TOTPChallengeSerializer, TOTPDisableSerializer, GoogleLoginSerializer,
 )
 from apps.profiles.models import Profile
 from .tasks import (
     send_otp_email, send_otp_sms, sms_delivery_configured,
-    send_welcome_email, send_login_alert_email,
 )
 
 try:
@@ -111,7 +112,7 @@ def _verify_temp_token(token_str, expected_purpose):
         if token.get('purpose') != expected_purpose:
             return None
         return User.objects.get(id=token['user_id'])
-    except Exception:
+    except Exception:  # noqa: BLE001
         return None
 
 
@@ -699,7 +700,7 @@ class GoogleLoginView(views.APIView):
             try:
                 with urllib.request.urlopen(url, timeout=10) as resp:
                     info = json.loads(resp.read().decode())
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 return Response({
                     'success': False, 'data': None,
                     'message': f'Invalid Google access token: {e}',
@@ -779,10 +780,6 @@ class GoogleLoginView(views.APIView):
             'pagination': None,
         })
 
-import jwt
-import requests
-from jwt.algorithms import RSAAlgorithm
-
 class AppleLoginView(views.APIView):
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'login'
@@ -822,7 +819,6 @@ class AppleLoginView(views.APIView):
                 options={"verify_aud": hasattr(settings, 'SOCIAL_AUTH_APPLE_CLIENT_ID')}
             )
             email = decoded.get('email', '').lower()
-            apple_id = decoded.get('sub', '')
             
             if not email:
                 return Response({
@@ -882,7 +878,7 @@ class AppleLoginView(views.APIView):
                 'pagination': None,
             })
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return Response({
                 'success': False, 'data': None,
                 'message': f'Invalid Apple token: {e}',
@@ -903,7 +899,7 @@ class LogoutView(views.APIView):
             try:
                 token = RefreshToken(refresh_token)
                 token.blacklist()
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
         return Response({
@@ -974,7 +970,7 @@ class TokenRefreshView(views.APIView):
                 'errors': None,
                 'pagination': None,
             })
-        except Exception:
+        except Exception:  # noqa: BLE001
             return Response({
                 'success': False, 'data': None,
                 'message': 'Invalid or expired refresh token.',
@@ -1524,7 +1520,6 @@ class ActivityLogView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        from common.pagination import CursorPagination
 
         event_type = request.query_params.get('type', '')
         events = AccountEvent.objects.filter(user=request.user).order_by('-created_at')

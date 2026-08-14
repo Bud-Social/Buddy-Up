@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from collections import Counter
-from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft
+from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, Draft
 from apps.gyms.models import Gym
 from common.age_gating import CONTENT_RATING_CHOICES
 
@@ -124,7 +124,8 @@ class PostSerializer(serializers.ModelSerializer):
         fields = [
         'id', 'post_type', 'body', 'is_anonymous', 'gym_tag_id', 'gym_tag_name',
         'visibility', 'is_repost', 'original_post_id', 'quote_body',
-        'location_label', 'workout_log_data', 'meal_data', 'progress_data',
+        'location_label', 'location_lat', 'location_lng', 'workout_log_data',
+        'meal_data', 'progress_data',
         'media_urls', 'tags', 'view_count', 'moderation_status',
         'content_rating',
         'author_data', 'reaction_counts', 'user_reaction',
@@ -184,14 +185,24 @@ class PostSerializer(serializers.ModelSerializer):
             orig = obj.original_post
             return {
                 'id': str(orig.id),
+                'post_type': orig.post_type,
                 'author_data': {
                     'user_id': str(orig.author.user_id),
                     'username': orig.author.username,
                     'display_name': orig.author.display_name,
                     'avatar_url': orig.author.avatar_url,
+                    'verification_status': orig.author.verification_status,
                 },
                 'body': orig.body,
-                'media_urls': orig.media_urls,
+                'media_urls': orig.media_urls or [],
+                'location_label': orig.location_label,
+                'location_lat': orig.location_lat,
+                'location_lng': orig.location_lng,
+                'meal_data': orig.meal_data,
+                'progress_data': orig.progress_data,
+                'workout_log_data': orig.workout_log_data,
+                'quote_body': orig.quote_body,
+                'gym_tag_name': orig.gym_tag.name if orig.gym_tag else None,
                 'created_at': orig.created_at.isoformat(),
             }
         return None
@@ -254,7 +265,8 @@ class PostCreateSerializer(serializers.ModelSerializer):
         model = Post
         fields = [
             'post_type', 'body', 'is_anonymous', 'gym_tag', 'visibility',
-            'location_label', 'workout_log_data', 'meal_data', 'progress_data',
+            'location_label', 'location_lat', 'location_lng', 'workout_log_data',
+            'meal_data', 'progress_data',
             'media_urls', 'tags', 'content_rating',
         ]
 

@@ -1,9 +1,9 @@
 import requests
+from uuid import uuid4
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
 from django.utils import timezone
-from django.utils.text import slugify
 
 from rest_framework import views, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
@@ -31,12 +31,12 @@ from .serializers import (
     ProductSerializer, UpdateProductSerializer, CreateProductSerializer,
     MarketplaceEventSerializer, EventMediaSerializer,
     EventTicketSerializer, CreateMealPlanSerializer, CreateTrainingProgrammeSerializer,
-    CreateEventSerializer, PersonaliseMealPlanSerializer, ReviewInputSerializer,
-    DiscountCodeSerializer, DiscountCodeWriteSerializer, DiscountUsageSerializer,
+    CreateEventSerializer, ReviewInputSerializer,
+    DiscountCodeSerializer, DiscountCodeWriteSerializer,
 )
 from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator_artifacts, platform_cut
 from apps.wallet.models import ArtifactTransaction
-from apps.wallet.serializers import PLATFORM_CUTS, ARTIFACT_LABELS, ARTIFACT_VALUES
+from apps.wallet.serializers import PLATFORM_CUTS, ARTIFACT_VALUES
 
 
 # ===========================================================================
@@ -103,7 +103,7 @@ class ShopListView(views.APIView):
             try:
                 gym = Gym.objects.get(id=gym_id)
                 ShopGymLink.objects.create(shop=shop, gym=gym, is_primary=True)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
         # Notify the creator
@@ -202,7 +202,7 @@ class ShopMembershipView(views.APIView):
         create_notification.delay(
             str(profile.user_id), 'shop_invite',
             f'You\'ve been added to "{shop.name}" as {role}',
-            f'Visit the shop to start managing services.',
+            'Visit the shop to start managing services.',
             {'shop_id': str(shop.id), 'shop_handle': shop.handle, 'role': role},
         )
 
@@ -283,7 +283,7 @@ class CoverImageUploadView(views.APIView):
                 'data': {'url': result['secure_url'], 'public_id': result['public_id'], 'provider': 'cloudinary'},
                 'message': 'Image uploaded.', 'errors': None, 'pagination': None,
             })
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
         # Fallback: save to Django media
@@ -342,7 +342,7 @@ class ShopVerificationApplicationView(views.APIView):
                 import cloudinary.uploader
                 result = cloudinary.uploader.upload(request.FILES['id_document'], folder='certs/id_docs', resource_type='raw')
                 app.id_document_url = result['secure_url']
-            except Exception:
+            except Exception:  # noqa: BLE001
                 from django.core.files.storage import default_storage
                 from django.core.files.base import ContentFile
                 f = request.FILES['id_document']
@@ -354,7 +354,7 @@ class ShopVerificationApplicationView(views.APIView):
                 import cloudinary.uploader
                 result = cloudinary.uploader.upload(request.FILES['professional_cert'], folder='certs/prof_certs', resource_type='raw')
                 app.professional_cert_url = result['secure_url']
-            except Exception:
+            except Exception:  # noqa: BLE001
                 from django.core.files.storage import default_storage
                 from django.core.files.base import ContentFile
                 f = request.FILES['professional_cert']
@@ -569,7 +569,7 @@ class MealPlanListView(views.APIView):
             try:
                 from apps.marketplace.models import Shop
                 shop = Shop.objects.get(id=shop_id)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         plan = MealPlan.objects.create(
             creator=request.user.profile,
@@ -799,7 +799,7 @@ class TrainingProgrammeListView(views.APIView):
             try:
                 from apps.marketplace.models import Shop
                 shop = Shop.objects.get(id=shop_id)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         programme = TrainingProgramme.objects.create(
             creator=request.user.profile,
@@ -997,7 +997,7 @@ class ProductListView(views.APIView):
             try:
                 from apps.marketplace.models import Shop
                 shop = Shop.objects.get(id=shop_id)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         product = Product.objects.create(
             recommended_by=request.user.profile,
@@ -1056,7 +1056,7 @@ class ProductClickView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, product_id):
-        product = get_object_or_404(Product, id=product_id, is_active=True)
+        get_object_or_404(Product, id=product_id, is_active=True)
         Product.objects.filter(id=product_id).update(click_count=db_models.F('click_count') + 1)
         return Response({
             'success': True, 'data': None,
@@ -1113,7 +1113,7 @@ class EventListView(views.APIView):
             try:
                 from apps.gyms.models import Gym
                 gym = Gym.objects.get(id=gym_id)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
         
         shop_id = data.pop('shop_id', None)
@@ -1122,7 +1122,7 @@ class EventListView(views.APIView):
             try:
                 from apps.marketplace.models import Shop
                 shop = Shop.objects.get(id=shop_id)
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
         event = MarketplaceEvent.objects.create(
@@ -1356,7 +1356,7 @@ class FoodRecognizeView(views.APIView):
                 'message': 'Food recognition complete.',
                 'errors': None, 'pagination': None,
             })
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             return Response({
                 'success': False, 'data': None,
                 'message': 'Food recognition service unavailable.',
@@ -1440,7 +1440,6 @@ class CreatorAnalyticsView(views.APIView):
         total_revenue = 0.0
         category_sales = defaultdict(int)
         category_revenue = defaultdict(float)
-        monthly_revenue = defaultdict(float)
 
         for mp in meal_plans:
             cnt = mp.purchase_count

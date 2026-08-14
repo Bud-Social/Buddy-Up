@@ -3,13 +3,12 @@ import math
 import os
 import tempfile
 from collections import Counter
-from typing import Any
 
 import numpy as np
 
-logger = logging.getLogger(__name__)
-
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 MEDIAPIPE_AVAILABLE = False
 mp = None
@@ -389,7 +388,7 @@ def analyze_form(image_bytes: bytes, exercise: str = 'auto') -> dict:
         frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         if frame is None:
             return {'error': 'Invalid image', 'form_score': 0, 'feedback': ['Could not decode image.']}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         logger.error('Image decode error: %s', e)
         return {'error': 'Image processing failed', 'form_score': 0, 'feedback': ['Image processing failed.']}
 
@@ -432,7 +431,7 @@ def analyze_form_video(
                     frame_scores.append({'frame_index': idx, **result})
             idx += 1
         cap.release()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.error('Video analysis error: %s', exc)
         return {'error': 'Video processing failed', 'form_score': 0, 'feedback': ['Video processing failed.']}
     finally:

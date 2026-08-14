@@ -15,19 +15,6 @@ logger = logging.getLogger(__name__)
 def scan_random_drop_pool():
     activity_types = ['weights', 'cardio', 'hiit', 'yoga', 'pilates', 'crossfit', 'martial_arts', 'swimming', 'running', 'cycling', 'other']
 
-    compatible_pairs = {
-        'hiit': ['cardio', 'crossfit'],
-        'cardio': ['hiit', 'running', 'cycling'],
-        'running': ['cardio', 'cycling'],
-        'cycling': ['cardio', 'running'],
-        'crossfit': ['hiit', 'weights'],
-        'weights': ['crossfit'],
-        'yoga': ['pilates'],
-        'pilates': ['yoga'],
-        'martial_arts': ['cardio', 'crossfit'],
-        'swimming': ['cardio'],
-    }
-
     for activity in activity_types:
         pool_key = f"random_drop:{activity}"
         entries = cache.zrangebyscore(pool_key, '-inf', '+inf')
@@ -160,7 +147,7 @@ def process_live_replay(live_id: str):
         try:
             import requests
             resp = requests.post(
-                f'https://api.mux.com/video/v1/assets',
+                'https://api.mux.com/video/v1/assets',
                 json={'input': [{'type': 'video', 'url': live.replay_url}]},
                 auth=(mux_token_id, mux_token_secret),
                 timeout=30,
@@ -170,7 +157,7 @@ def process_live_replay(live_id: str):
                 live.mux_asset_id = data.get('id', live.mux_asset_id or '')
                 live.mux_playback_id = data.get('playback_ids', [{}])[0].get('id', '')
                 live.save(update_fields=['mux_asset_id', 'mux_playback_id'])
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             logger.error(f'Mux ingest failed for {live_id}: {e}')
 
 
@@ -207,7 +194,7 @@ def send_live_starting_notifications(live_id: str):
                 recipient_id=member_id,
                 notification_type='live_starting',
                 title=f'{live.gym.name}: {live.title} starting soon!',
-                body=f'Your gym live session starts in 15 minutes.',
+                body='Your gym live session starts in 15 minutes.',
                 metadata={'live_id': str(live.id), 'gym_id': str(live.gym_id), 'agora_channel': live.agora_channel},
             )
 
@@ -215,9 +202,8 @@ def send_live_starting_notifications(live_id: str):
 @shared_task
 def send_live_reminders():
     from django.db import models as db_models
-    from apps.notifications.models import Notification
     from apps.notifications.tasks import _deliver_notification
-    from apps.profiles.models import Profile, BuddyRelationship
+    from apps.profiles.models import Profile
     from apps.lives.models import LiveRSVP
 
     now = timezone.now()

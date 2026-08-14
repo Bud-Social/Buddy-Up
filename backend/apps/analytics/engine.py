@@ -339,7 +339,7 @@ def _call_ai_service(endpoint: str, files: dict, timeout: int = 30):
         resp = requests.post(url, files=files, timeout=timeout)
         resp.raise_for_status()
         return resp.json()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('AI service call %s failed: %s', endpoint, exc)
         return None
 

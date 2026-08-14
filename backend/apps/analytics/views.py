@@ -1,12 +1,9 @@
-import io
 import os
 import uuid
 
-from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 
 from rest_framework import views, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser

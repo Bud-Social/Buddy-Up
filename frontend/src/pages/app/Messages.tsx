@@ -15,7 +15,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical, Check, CheckCheck,
   X, FileText, Plus, MapPin, BarChart2, Smile, Mic, Search, Calendar, Clock, Download, Forward,
-  ChevronLeft, ChevronRight, Palette,
+  ChevronLeft, ChevronRight, Palette, Menu,
 } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/Avatar';
@@ -35,6 +35,8 @@ import DocumentPreview from '@/components/chat/DocumentPreview';
 import CameraCapture from '@/components/chat/CameraCapture';
 import ChatThemePicker from '@/components/chat/ChatThemePicker';
 import { useChatPreferences } from '@/store/chatPreferencesStore';
+import { useSidebarStore } from '@/store/sidebarStore';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 // Quick emoji picker options
 const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '👎', '🔥', '💪'];
@@ -191,7 +193,7 @@ function ConversationSkeleton() {
   );
 }
 
-function MessageSkeleton() {
+function _MessageSkeleton() {
   const isMine = Math.random() > 0.5;
   return (
     <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} animate-pulse px-4 py-2`}>
@@ -252,6 +254,8 @@ export default function Messages() {
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
   const chatPrefs = useChatPreferences();
+  const openMobile = useSidebarStore((s) => s.openMobile);
+  const isTablet = useMediaQuery('(min-width: 768px)');
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -289,6 +293,18 @@ export default function Messages() {
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupUsers, setNewGroupUsers] = useState<string>('');
+  const [kbHeight, setKbHeight] = useState(0);
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      const delta = window.innerHeight - vv.height;
+      setKbHeight(delta > 0 ? delta : 0);
+    };
+    vv.addEventListener('resize', onResize);
+    return () => vv.removeEventListener('resize', onResize);
+  }, []);
 
   const linkPreviewsRef = useRef(linkPreviews);
   linkPreviewsRef.current = linkPreviews;
@@ -685,7 +701,7 @@ export default function Messages() {
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-full overflow-hidden bg-buddy-black">
+    <div className="flex h-[calc(100dvh-8rem)] md:h-[calc(100dvh-3rem)] lg:h-dvh overflow-hidden bg-buddy-black" style={{ paddingBottom: kbHeight }}>
       {/* Advanced Call Room overlay */}
       {callState !== 'idle' && (
         <CallRoom
@@ -726,7 +742,16 @@ export default function Messages() {
       } ${conversationListCollapsed ? 'w-0 md:w-0 overflow-hidden' : 'w-full md:w-80 lg:w-96'}`}>
         <div className="p-4 border-b border-buddy-surface">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-xl font-bold font-display">Messages</h1>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => isTablet ? setConversationListCollapsed(true) : openMobile()}
+                className="p-1 -ml-1 text-buddy-text-secondary hover:text-buddy-text-primary lg:hidden"
+                title="Open menu"
+              >
+                <Menu size={24} />
+              </button>
+              <h1 className="text-xl font-bold font-display">Messages</h1>
+            </div>
             <button onClick={() => setShowNewGroupModal(true)} className="p-2 bg-buddy-surface hover:bg-buddy-surface-raised rounded-full text-buddy-green transition-colors" title="New Group">
               <Plus size={18} />
             </button>
@@ -826,6 +851,15 @@ export default function Messages() {
 
           {/* Header */}
           <div className="flex items-center gap-3 p-3.5 border-b border-buddy-surface bg-buddy-black/90 backdrop-blur-md sticky top-0 z-20 shrink-0">
+            {isTablet && conversationListCollapsed && (
+              <button
+                onClick={() => setConversationListCollapsed(false)}
+                className="p-1.5 -ml-1 rounded-xl hover:bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary transition-colors lg:hidden"
+                title="Show conversations"
+              >
+                <Menu size={20} />
+              </button>
+            )}
             <button
               onClick={closeConversation}
               className="p-1.5 rounded-xl hover:bg-buddy-surface text-buddy-text-secondary transition-colors md:hidden"

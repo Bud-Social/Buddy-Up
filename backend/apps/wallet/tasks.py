@@ -2,7 +2,6 @@ import logging
 from celery import shared_task
 from django.db import transaction as db_transaction
 from django.utils import timezone
-from datetime import timedelta
 
 
 @shared_task
@@ -37,7 +36,7 @@ def process_withdrawal(self, withdrawal_id: str):
         tx.status = 'completed'
         tx.description = f'Withdrawal via {method} — completed'
         tx.save(update_fields=['status', 'description'])
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         raise self.retry(exc=exc)
 
 

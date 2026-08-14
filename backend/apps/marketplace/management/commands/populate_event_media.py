@@ -82,7 +82,7 @@ class Command(BaseCommand):
             return None
         try:
             url, thumbnail = self._upload_file(path, media_type)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             self.stderr.write(f'  !! failed to upload {path}: {exc}')
             return None
 
@@ -144,7 +144,7 @@ class Command(BaseCommand):
                 format='jpg',
             )
             thumbnail = thumb.get('secure_url', '')
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
         return result['secure_url'], thumbnail
 

@@ -1,0 +1,13 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["ai_service/notebooks", "ai_service/models"]
+
+[tool.ruff.lint]
+# Restore ruff's pre-0.16 default rule set (E4, E7, E9, F). Ruff 0.16 expanded
+# the built-in defaults from 59 to 413 rules, which silently broke unpinned CI.
+# Keeping an explicit select makes results reproducible across ruff versions.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.format]
+line-ending = "auto"

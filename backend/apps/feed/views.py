@@ -19,7 +19,7 @@ from common.age_gating import gate_mature_queryset, can_view_content
 from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft
 from .serializers import (
     PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer,
-    ReactionSerializer, SaveSerializer, PollSerializer, DraftSerializer,
+    PollSerializer, DraftSerializer,
     CommentCreateSerializer, ReactionInputSerializer, RepostSerializer,
     SavePostSerializer, PollCreateSerializer, OptionVoteSerializer,
 )
@@ -51,13 +51,21 @@ def _looks_like_video(url: str) -> bool:
 
 
 def _handle_media_uploads(request_files):
-    """Save uploaded files to media storage and return list of public URLs."""
+    """Save uploaded files to media storage and return list of public URLs.
+
+    Raises RuntimeError if any file fails to store so callers can surface a
+    real error instead of silently dropping photos from the post.
+    """
     urls = []
     for f in request_files:
         ext = os.path.splitext(f.name)[1].lower()
         filename = f'posts/{uuid.uuid4().hex}{ext}'
-        saved_name = default_storage.save(filename, ContentFile(f.read()))
-        url = default_storage.url(saved_name)
+        try:
+            saved_name = default_storage.save(filename, ContentFile(f.read()))
+            url = default_storage.url(saved_name)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception('Media upload failed for %s: %s', f.name, exc)
+            raise RuntimeError(f'Failed to store uploaded file {f.name!r}.') from exc
         urls.append(url)
     return urls
 
@@ -136,7 +144,6 @@ class FeedView(views.APIView):
 
     def get(self, request):
         tab = request.query_params.get('tab', 'for_you')
-        cursor = request.query_params.get('cursor')
         post_type = request.query_params.get('post_type')
 
         user_profile = request.user.profile
@@ -222,7 +229,6 @@ class FeedView(views.APIView):
 
         queryset = gate_mature_queryset(request, queryset)
 
-        count = queryset.count()
         paginator = CursorPagination()
         paginator.ordering = '-created_at'
         page = paginator.paginate_queryset(queryset, request)
@@ -323,8 +329,12 @@ class CreatePostView(views.APIView):
         if uploaded_files:
             try:
                 media_urls = _handle_media_uploads(uploaded_files)
-            except Exception:
-                pass
+            except RuntimeError as exc:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': str(exc),
+                    'errors': str(exc), 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         # Merge uploaded URLs with any pre-existing media_urls (e.g. from mobile)
         existing_urls = request.data.getlist('media_urls') if hasattr(request.data, 'getlist') else (request.data.get('media_urls') or [])
@@ -345,7 +355,6 @@ class CreatePostView(views.APIView):
         if validated.get('post_type') == 'meal':
             meal_data = validated.get('meal_data')
             if not meal_data or not meal_data.get('calories'):
-                from apps.analytics import engine
                 import requests as http_requests
 
                 image_url = next((u for u in all_media_urls if not _looks_like_video(u)), None)
@@ -372,7 +381,7 @@ class CreatePostView(views.APIView):
                                     base['carbs_g'] = base.get('carbs_g') or round(float(ai_data.get('total_carbs', nutrition.get('carbs', 0) or 0)), 1)
                                     base['fat_g'] = base.get('fat_g') or round(float(ai_data.get('total_fat', nutrition.get('fat', 0) or 0)), 1)
                                     validated['meal_data'] = base
-                    except Exception as exc:
+                    except Exception as exc:  # noqa: BLE001
                         logger.warning('Meal photo auto-analysis failed: %s', exc)
 
         post = Post.objects.create(
@@ -387,7 +396,7 @@ class CreatePostView(views.APIView):
         poll_question = poll_data.get('poll_question', '').strip()
         try:
             poll_options_raw = json.loads(poll_data.get('poll_options_json', '[]'))
-        except Exception:
+        except Exception:  # noqa: BLE001
             poll_options_raw = request.data.getlist('poll_options') if hasattr(request.data, 'getlist') else (request.data.get('poll_options') or [])
             if isinstance(poll_options_raw, str):
                 poll_options_raw = [poll_options_raw]
@@ -418,20 +427,20 @@ class CreatePostView(views.APIView):
             try:
                 from .tasks import send_mention_notifications
                 send_mention_notifications.delay(str(post.id), str(request.user.profile.user_id))
-            except Exception:
+            except Exception:  # noqa: BLE001
                 pass
 
         try:
             from .tasks import moderate_content
             moderate_content.delay(str(post.id))
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
         # Notify buddies + followers about the new public post
         try:
             from apps.notifications.tasks import send_post_notification
             send_post_notification.delay(str(post.id), str(request.user.profile.user_id))
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
         output = PostSerializer(post, context={'request': request})
@@ -644,6 +653,14 @@ class RepostView(views.APIView):
         serializer.is_valid(raise_exception=True)
         quote_body = serializer.validated_data.get('quote_body', '')
 
+        # Resolve the ROOT original so reposting a repost still points at the
+        # real source post. This keeps reposters stacked on one original and
+        # avoids "empty repost" cards whose original is itself a repost.
+        root = original
+        while root.is_repost and root.original_post_id:
+            root = root.original_post
+        original = root
+
         repost = Post.objects.create(
             author=request.user.profile,
             post_type='text',
@@ -658,7 +675,7 @@ class RepostView(views.APIView):
         try:
             from apps.notifications.tasks import send_repost_notification
             send_repost_notification.delay(str(request.user.profile.user_id), str(original.id))
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
         ai_ranking.send_feedback(str(request.user.profile.user_id), original, 1.0)

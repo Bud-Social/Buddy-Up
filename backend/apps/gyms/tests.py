@@ -64,7 +64,7 @@ class GymCrudTests(TestCase):
     def test_get_gym_detail(self):
         gym = Gym.objects.create(name='Detail Gym', handle='detailgym', category='fitness', access_type='public')
         GymMembership.objects.create(gym=gym, member=self.profile, role='owner')
-        response = self.client.get(f'/api/v1/gyms/detailgym/')
+        response = self.client.get('/api/v1/gyms/detailgym/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['data']['name'], 'Detail Gym')
 
@@ -437,5 +437,4 @@ class GymDonationTests(TestCase):
             'artifact_type': 'dumbbell', 'quantity': 999, 'message': '',
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
-from datetime import timedelta
 

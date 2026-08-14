@@ -5,7 +5,6 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from .config import settings
 from .model_registry import ModelRegistry, DEVICE
 from .ml.serving import load_preferred, OnnxModel
 
@@ -71,7 +70,6 @@ FOOD_IMAGENET_MAP: dict[str, str] = {
     'croissant': 'muffin',
     'baguette': 'bread',
     'french loaf': 'bread',
-    'pretzel': 'pretzel',
     'sandwich': 'sandwich',
     'submarine sandwich': 'sandwich',
     'club sandwich': 'sandwich',
@@ -105,7 +103,7 @@ def _load_imagenet_categories(model: Any) -> list[str] | None:
         categories = meta.get('categories')
         if isinstance(categories, list) and len(categories) == 1000:
             return categories
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
     return None
 
@@ -116,7 +114,6 @@ def _load_food_model() -> Any:
         return model
 
     def _torch_factory():
-        import torch
         import torchvision.transforms as T
         from torchvision.models import vit_b_16, ViT_B_16_Weights
 
@@ -140,7 +137,7 @@ def _load_food_model() -> Any:
         model = load_preferred('food_classifier', _torch_factory)
         ModelRegistry.register('food_classifier', model)
         return model
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('Failed to load food model: %s — using keyword fallback', exc)
         ModelRegistry.register('food_classifier', None)
         return None
@@ -331,7 +328,7 @@ def _match_food_by_text(text: str) -> tuple[str | None, dict]:
 def _keyword_food_match(image_bytes: bytes) -> list[dict]:
     try:
         img = Image.open(BytesIO(image_bytes))
-    except Exception:
+    except Exception:  # noqa: BLE001
         return [{'item': 'Unknown food', 'confidence': 0.0, 'nutrition': {}}]
 
     avg_color = np.array(img.resize((32, 32))).mean(axis=(0, 1))
@@ -427,6 +424,6 @@ async def recognize_food(image_bytes: bytes) -> list[dict]:
             return _keyword_food_match(image_bytes)
 
         return results
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('Food model inference failed: %s — using fallback', exc)
         return _keyword_food_match(image_bytes)

@@ -166,7 +166,6 @@ def analyze_health_claims(text: str) -> dict:
 
     has_condition = any(m.startswith('condition:') for m in matched)
     has_treatment = any(m.startswith('treatment:') for m in matched)
-    has_redflag = any(m.startswith('redflag:') for m in matched)
 
     if has_condition or has_treatment:
         risk_level = 'high'
@@ -298,6 +297,6 @@ async def _llm_policy_review(text: str, kind: str) -> dict | None:
             'confidence': round(float(parsed.get('confidence', 0.7)), 2),
             'method': 'openai_policy_review',
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('LLM policy review failed: %s', exc)
         return None

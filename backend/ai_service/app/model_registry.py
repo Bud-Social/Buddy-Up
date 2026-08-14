@@ -6,7 +6,6 @@ from typing import Any
 
 import torch
 
-from .config import settings
 
 logger = logging.getLogger(__name__)
 

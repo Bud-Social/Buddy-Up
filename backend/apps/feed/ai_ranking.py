@@ -7,7 +7,6 @@ vector can learn.
 """
 import logging
 import threading
-from typing import Any
 
 from django.conf import settings
 
@@ -74,7 +73,7 @@ def rank_candidates(user_id: str, candidates: list[dict]) -> list[dict] | None:
         resp.raise_for_status()
         ranked = resp.json().get('ranked', [])
         return ranked if isinstance(ranked, list) else None
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('AI feed ranking unavailable: %s — using DB ranking', exc)
         return None
 
@@ -108,7 +107,7 @@ def send_feedback(user_id: str, post, reward: float):
             'post_type': post.post_type or 'text',
             'author_trust': 0.5,
         }
-    except Exception:
+    except Exception:  # noqa: BLE001
         return
 
     def _call():
@@ -124,7 +123,7 @@ def send_feedback(user_id: str, post, reward: float):
                 },
                 timeout=2.0,
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             pass
 
     threading.Thread(target=_call, daemon=True).start()

@@ -688,7 +688,7 @@ function HistoryTab() {
 
   return (
     <div className="space-y-4">
-      <div className="sticky top-0 z-10 bg-buddy-black pb-2 -mx-4 px-4 border-b border-buddy-surface mb-2">
+      <div className="sticky top-12 lg:top-0 z-10 bg-buddy-black pb-2 -mx-4 px-4 border-b border-buddy-surface mb-2">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {types.map((t) => (
             <button key={t} onClick={() => setFilter(t)}

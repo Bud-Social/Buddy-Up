@@ -41,7 +41,7 @@ async def _idle_unload_loop():
             evicted = ModelRegistry.unload_idle(settings.model_idle_ttl or 900)
             if evicted:
                 logger.info('Idle-unload evicted: %s', evicted)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning('Idle-unload pass failed: %s', exc)
 
 

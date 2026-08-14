@@ -109,7 +109,7 @@ def summarize(text: str, max_length: int = MAX_OUTPUT_TOKENS) -> dict:
             'input_chars': len(text),
             'output_chars': len(summary),
         }
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning('Abstractive summarization failed (%s) — extractive fallback', exc)
         summary = _extractive_summary(text)
         return {

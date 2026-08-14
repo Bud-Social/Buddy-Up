@@ -4,7 +4,6 @@ import { ArrowLeft, Star, Sparkles, ShoppingCart, MessageCircle, Clock, CheckCir
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 import { marketplaceApi } from '@/api/marketplace';
 import type { MealPlan, MealPlanReview } from '@/api/marketplace';
 

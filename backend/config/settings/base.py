@@ -83,7 +83,7 @@ AUTH_USER_MODEL = 'accounts.User'
 # Database
 # Railway provides a single postgres URL. Fall back to discrete DB_* vars for
 # the docker-compose stack.
-import urllib.parse as _urlparse
+import urllib.parse as _urlparse  # noqa: E402
 
 _DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
@@ -178,8 +178,8 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Whitenoise serves collected static files from the container itself — no
-# separate static host required on Railway. The `default` storage stays on
-# DEFAULT_FILE_STORAGE (set below, Cloudinary with filesystem fallback).
+# separate static host required on Railway. The `default` storage backend is
+# chosen below (Cloudinary with filesystem fallback).
 STORAGES = {
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
@@ -188,6 +188,11 @@ STORAGES = {
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Upload limits — allow larger post media (photos, videos, documents).
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('DATA_UPLOAD_MAX_MEMORY_SIZE', 52428800))
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('FILE_UPLOAD_MAX_MEMORY_SIZE', 52428800))
+DATA_UPLOAD_MAX_NUMBER_FILES = int(os.environ.get('DATA_UPLOAD_MAX_NUMBER_FILES', 24))
 
 # Messaging attachment storage (S3-compatible, falls back to FileSystemStorage)
 MESSAGING_S3_ENDPOINT = os.environ.get('MESSAGING_S3_ENDPOINT', '')
@@ -359,10 +364,10 @@ if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY:
         'INVALID_VIDEO_ERROR_MESSAGE': 'Please upload a valid video file.',
         'EXCLUDE_DELETE_ORPHANED_MEDIA_PATHS': [],
     }
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    STORAGES['default'] = {'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage'}
 else:
     # Fall back to local Django media when no Cloudinary credentials are configured
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    STORAGES['default'] = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}
 
 # ---------------------------------------------------------------------------
 # FCM / Firebase push notifications

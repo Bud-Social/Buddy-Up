@@ -63,7 +63,7 @@ class Command(BaseCommand):
 
             client = Profile.objects.filter(role='user').first()
             if client and not BookingSession.objects.filter(trainer=profile).exists():
-                booking = BookingSession.objects.create(
+                BookingSession.objects.create(
                     client=client,
                     trainer=profile,
                     session_type='1on1_live',
@@ -77,7 +77,7 @@ class Command(BaseCommand):
 
             completed_client = Profile.objects.filter(role='user').exclude(id=client.id if client else None).first()
             if completed_client and not BookingSession.objects.filter(trainer=profile, status='completed').exists():
-                completed = BookingSession.objects.create(
+                BookingSession.objects.create(
                     client=completed_client,
                     trainer=profile,
                     session_type='group_live',

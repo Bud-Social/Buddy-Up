@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite, GymSchedulePost, GymReview, GymDonation, GymMembershipException
+from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite, GymSchedulePost, GymReview, GymDonation, GymMembershipException, ScheduleSlotEnrollment
 
 
 class GymCategorySerializer(serializers.ModelSerializer):
@@ -347,8 +347,6 @@ class GymDonationSerializer(serializers.ModelSerializer):
             'avatar_url': obj.donor.avatar_url,
         }
 
-
-from .models import ScheduleSlotEnrollment
 
 class ScheduleSlotEnrollmentSerializer(serializers.ModelSerializer):
     member_data = serializers.SerializerMethodField()

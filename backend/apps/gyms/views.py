@@ -1,4 +1,3 @@
-import hashlib
 from datetime import timedelta
 
 from django.shortcuts import get_object_or_404
@@ -7,14 +6,14 @@ from django.utils import timezone
 from django.conf import settings
 
 
-from rest_framework import views, permissions, status, generics
+from rest_framework import views, permissions, status
 from rest_framework.response import Response
 
 import requests
 
 from common.pagination import PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
-from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite, GymMembershipException
+from .models import Gym, GymMembership, GymCategory, JoinRequest, GymInvite, GymMembershipException
 from .serializers import (
     GymSerializer, CreateGymSerializer, GymMembershipSerializer,
     GymCategorySerializer, JoinRequestSerializer, CreateJoinRequestSerializer,
@@ -25,7 +24,7 @@ from .serializers import (
 )
 from .models import GymSchedulePost, GymReview, GymDonation
 from apps.wallet.utils import deduct_artifacts
-from apps.wallet.serializers import ARTIFACT_VALUES, ARTIFACT_LABELS
+from apps.wallet.serializers import ARTIFACT_VALUES
 from apps.marketplace.models import DiscountCode, DiscountUsage
 
 
@@ -288,7 +287,7 @@ class GymDetailView(views.APIView):
 
     def delete(self, request, gym_slug):
         gym = get_object_or_404(Gym, handle__iexact=gym_slug)
-        membership = get_object_or_404(
+        get_object_or_404(
             GymMembership,
             gym=gym, member=request.user.profile,
             role='owner',
@@ -767,7 +766,7 @@ class ManageMemberView(views.APIView):
 
     def delete(self, request, gym_slug, user_id):
         gym = get_object_or_404(Gym, handle__iexact=gym_slug)
-        admin = get_object_or_404(GymMembership, gym=gym, member=request.user.profile, role__in=['owner', 'co_owner', 'moderator'])
+        get_object_or_404(GymMembership, gym=gym, member=request.user.profile, role__in=['owner', 'co_owner', 'moderator'])
 
         target = get_object_or_404(GymMembership, gym=gym, member_id=user_id)
 
@@ -1004,7 +1003,7 @@ class GymSchedulePostListView(views.APIView):
 
     def post(self, request, gym_slug):
         gym = get_object_or_404(Gym, handle__iexact=gym_slug)
-        membership = get_object_or_404(
+        get_object_or_404(
             GymMembership, gym=gym, member=request.user.profile,
             role__in=['owner', 'co_owner', 'trainer', 'moderator']
         )
@@ -1324,7 +1323,7 @@ class SlotEnrollView(views.APIView):
             enrollment = ScheduleSlotEnrollment.objects.get(
                 schedule_post=schedule_post, member=request.user.profile
             )
-        except Exception:
+        except Exception:  # noqa: BLE001
             return Response({'success': False, 'message': 'Enrollment not found.'}, status=404)
 
         enrollment.is_active = False

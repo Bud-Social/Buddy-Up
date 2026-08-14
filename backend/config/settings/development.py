@@ -1,3 +1,6 @@
+# Settings modules extend the base with `from .base import *`, which is the
+# standard Django composition pattern; ruff can't statically resolve those.
+# ruff: noqa: F403, F405
 from .base import *
 
 DEBUG = True
@@ -41,7 +44,7 @@ LOGGING = {
 
 # Docker Compose passes DATABASE_URL (Postgres). Local dev without Docker
 # falls back to a SQLite file.
-from urllib.parse import urlparse
+from urllib.parse import urlparse  # noqa: E402
 
 if os.environ.get('DATABASE_URL'):
     _db_url = urlparse(os.environ['DATABASE_URL'])

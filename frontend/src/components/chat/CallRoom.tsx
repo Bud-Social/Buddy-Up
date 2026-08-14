@@ -141,7 +141,7 @@ export function CallRoom({
     : 'Call ended';
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-gradient-to-b from-gray-950 via-gray-900 to-black flex flex-col overflow-hidden" style={{ paddingLeft: 'env(safe-area-inset-left)', paddingRight: 'env(safe-area-inset-right)' }}>
       {/* Top glow strip */}
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-buddy-green to-transparent" />
 
@@ -160,7 +160,7 @@ export function CallRoom({
 
       {/* ── PRE-CALL: Calling / Ringing states ── */}
       {(isCalling || isRinging || isEnded) && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8">
+        <div className="flex-1 flex flex-col items-center justify-center gap-6 p-8 pt-[calc(2rem+env(safe-area-inset-top))]">
           {/* Pulse ring when ringing */}
           {isRinging && (
             <div className="absolute w-64 h-64 rounded-full border-2 border-buddy-green/20 animate-ping" />
@@ -231,7 +231,7 @@ export function CallRoom({
 
           {/* Screen share banner */}
           {isSharingScreen && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-buddy-green text-black text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-buddy-green text-black text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5" style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}>
               <Monitor size={13} />
               Sharing screen
             </div>
@@ -258,20 +258,15 @@ export function CallRoom({
 
           {/* Group call grid overlay (top strip) */}
           {isGroupCall && groupParticipants && groupParticipants.length > 0 && (
-            <div className="absolute top-4 left-4 flex gap-2">
-              {groupParticipants.slice(0, 4).map((p) => (
-                <div key={p.username} className="relative w-14 h-14 rounded-xl overflow-hidden border border-gray-700 bg-gray-900">
+            <div className="absolute top-4 left-4 right-4 flex gap-2 overflow-x-auto scrollbar-none pb-2" style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}>
+              {groupParticipants.map((p) => (
+                <div key={p.username} className="shrink-0 relative w-14 h-14 rounded-xl overflow-hidden border border-gray-700 bg-gray-900">
                   <Avatar src={p.avatar_url} alt={p.display_name} size="sm" className="w-full h-full" />
                   <div className="absolute inset-x-0 bottom-0 bg-black/60 text-[8px] text-center text-white py-0.5 truncate px-0.5">
                     {p.display_name.split(' ')[0]}
                   </div>
                 </div>
               ))}
-              {groupParticipants.length > 4 && (
-                <div className="w-14 h-14 rounded-xl border border-gray-700 bg-gray-800 flex items-center justify-center text-xs text-gray-400 font-bold">
-                  +{groupParticipants.length - 4}
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -311,7 +306,7 @@ export function CallRoom({
 
       {/* Video duration overlay */}
       {isInCall && callType === 'video' && (
-        <div className="absolute top-4 left-4 bg-black/50 text-white text-xs font-mono px-3 py-1.5 rounded-lg backdrop-blur-sm z-20 flex items-center gap-2">
+        <div className="absolute top-4 left-4 bg-black/50 text-white text-xs font-mono px-3 py-1.5 rounded-lg backdrop-blur-sm z-20 flex items-center gap-2" style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}>
           {isRecording && <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
           {formatDuration(durationSecs)}
         </div>
@@ -330,7 +325,7 @@ export function CallRoom({
       <audio ref={ringAudioRef} src="data:audio/mp3;base64,//NExAAAAANIAAAAAExBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq" preload="auto" />
 
       {/* ── CONTROLS BAR ── */}
-      <div className="shrink-0 px-4 pb-8 pt-4">
+      <div className="shrink-0 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-4">
         {/* Emoji picker popup */}
         {showEmojiPicker && (
           <div className="flex justify-center gap-2 mb-4 animate-in fade-in slide-in-from-bottom-2">
@@ -362,7 +357,7 @@ export function CallRoom({
         )}
 
         {/* Main call controls */}
-        <div className="flex items-center justify-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3">
           {/* Mute */}
           <button
             onClick={onToggleMute}

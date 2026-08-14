@@ -3,7 +3,6 @@ import uuid
 from datetime import timedelta
 
 from django.shortcuts import get_object_or_404
-from django.db import models as db_models
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
@@ -18,7 +17,7 @@ from .serializers import (
     InitializePurchaseSerializer, ConfirmPurchaseSerializer,
     BankResolveSerializer, WithdrawSerializer,
     GiftArtifactsSerializer, ARTIFACT_VALUES, ARTIFACT_LABELS,
-    BUNDLES,
+    BUNDLES, PLATFORM_CUTS,
 )
 from apps.profiles.models import Profile
 from .flutterwave import FlutterwaveClient

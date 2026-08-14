@@ -1,5 +1,4 @@
 import logging
-import os
 import json
 import requests
 from celery import shared_task
@@ -38,7 +37,7 @@ def _send_push_to_device(platform: str, token: str, title: str, body: str, data:
                 timeout=10,
             )
             resp.raise_for_status()
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning('FCM push failed for token %s: %s', token[:20], exc)
 
     elif platform == 'web':
@@ -48,7 +47,7 @@ def _send_push_to_device(platform: str, token: str, title: str, body: str, data:
         if not vapid_private:
             return
         try:
-            from pywebpush import webpush, WebPushException
+            from pywebpush import webpush
             subscription_info = json.loads(token)
             webpush(
                 subscription_info=subscription_info,
@@ -56,7 +55,7 @@ def _send_push_to_device(platform: str, token: str, title: str, body: str, data:
                 vapid_private_key=vapid_private,
                 vapid_claims={'sub': f'mailto:{vapid_email}'},
             )
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.warning('Web Push failed: %s', exc)
 
 
@@ -162,7 +161,7 @@ def send_programme_activity_reminder(purchase_id: str, activity_key: str, minute
     Send a reminder push + in-app notification to a subscriber about an upcoming activity.
     Called by Celery beat or a scheduled task set at purchase time.
     """
-    from .models import TrainingProgrammePurchase, TrainingProgramme
+    from .models import TrainingProgrammePurchase
     from apps.notifications.models import Notification
 
     try:
@@ -238,7 +237,7 @@ def send_programme_activity_reminder(purchase_id: str, activity_key: str, minute
                 },
             },
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
 
 
@@ -318,7 +317,7 @@ def send_meal_plan_daily_reminders():
         body = custom_msg
 
         # In-app
-        notification = Notification.objects.create(
+        Notification.objects.create(
             recipient=buyer,
             notification_type='meal_reminder',
             title=title,
@@ -331,75 +330,3 @@ def send_meal_plan_daily_reminders():
             buyer, title, body,
             {'type': 'meal_reminder', 'meal_plan_id': str(plan.id)},
         )
-
-    from .models import MealPlanPurchase
-    from apps.profiles.models import Profile
-
-    try:
-        purchase = MealPlanPurchase.objects.select_related('meal_plan', 'buyer').get(id=purchase_id)
-        profile = Profile.objects.get(user_id=profile_id)
-    except (MealPlanPurchase.DoesNotExist, Profile.DoesNotExist):
-        return
-
-    plan = purchase.meal_plan
-    user_prefs = profile.user.preferences or {}
-
-    payload = {
-        'profile_summary': f'Age: {profile.user.date_of_birth}, Goals: {user_prefs.get("goals", "")}, Activity: {user_prefs.get("activity_level", "")}',
-        'goals': user_prefs.get('goals', ''),
-        'dietary_preferences': plan.diet_type.split(',') if plan.diet_type else [],
-        'allergies': user_prefs.get('allergies', []),
-        'calorie_target': user_prefs.get('calorie_target'),
-        'plan_template': {
-            'title': plan.title,
-            'description': plan.description,
-            'duration_weeks': plan.duration_weeks,
-            'calorie_range': plan.calorie_range,
-            'full_plan': plan.full_plan,
-            'shopping_list': plan.shopping_list,
-        },
-    }
-
-    try:
-        resp = requests.post(
-            f'{settings.AI_SERVICE_URL}/api/v1/meal-plans/personalise',
-            json=payload,
-            timeout=30,
-        )
-        resp.raise_for_status()
-        ai_result = resp.json()
-        audit_ai_call('meal_plan_personalise', input_data=payload, output_data=ai_result)
-        personalised = {
-            'adjusted_portions': ai_result.get('adjusted_portions', True),
-            'substitutions': ai_result.get('substitutions', []),
-            'macro_summary': ai_result.get('macro_summary', {}),
-            'shopping_list': ai_result.get('shopping_list', plan.shopping_list),
-            'notes': ai_result.get('notes', ''),
-            'generated_at': timezone.now().isoformat(),
-        }
-    except requests.RequestException as exc:
-        logger.warning('AI service unavailable for purchase %s: %s', purchase_id, exc)
-        try:
-            self.retry(exc=exc)
-        except self.MaxRetriesExceededError:
-            personalised = {
-                'adjusted_portions': True,
-                'substitutions': [],
-                'macro_summary': {},
-                'shopping_list': plan.shopping_list,
-                'notes': 'Personalisation is temporarily unavailable. Your meal plan has been applied with default settings.',
-                'generated_at': timezone.now().isoformat(),
-            }
-
-    purchase.is_personalised = True
-    purchase.personalised_data = personalised
-    purchase.save(update_fields=['is_personalised', 'personalised_data'])
-
-    from apps.notifications.models import Notification
-    Notification.objects.create(
-        recipient=purchase.buyer,
-        notification_type='payment_received',
-        title='Your personalised meal plan is ready!',
-        body=f'"{plan.title}" has been personalised based on your goals and preferences.',
-        metadata={'meal_plan_id': str(plan.id), 'purchase_id': str(purchase.id)},
-    )

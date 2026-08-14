@@ -1,7 +1,7 @@
 import hashlib
 import hmac
 import urllib.parse
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from django.conf import settings
 
 
@@ -23,7 +23,6 @@ def generate_presigned_url(
     use_https = endpoint.startswith('https')
 
     now = datetime.now(timezone.utc)
-    expires = int(now.timestamp()) + expiration_seconds
     date_stamp = now.strftime('%Y%m%d')
     amz_date = now.strftime('%Y%m%dT%H%M%SZ')
 

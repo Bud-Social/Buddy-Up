@@ -64,3 +64,4 @@ buddy_up_flutter/.packages
 buddy_up_flutter/build/
 !buddy_up_flutter/lib/core/env/env.dart
 
+.gstack/

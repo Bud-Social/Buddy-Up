@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Store, Globe, Mail, Phone, MapPin, ChevronLeft, ChevronRight, Star, Users, ShoppingCart, Dumbbell, Utensils, Video, Calendar, ShieldCheck, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Store, Globe, Mail, Phone, Star, ShoppingCart, Dumbbell, Utensils, Calendar, ShieldCheck, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -58,7 +58,7 @@ export default function ShopDetail() {
     </div>
   );
 
-  const renderItem = (item: MealPlan | TrainingProgrammeMP | MarketplaceEvent | ProductMP, type: string) => {
+  const renderItem = (item: MealPlan | TrainingProgrammeMP | MarketplaceEvent | ProductMP, _type: string) => {
     const isMealPlan = 'diet_type' in item;
     const isProgramme = 'category' in item && !('event_type' in item);
     const isEvent = 'event_type' in item;

@@ -8,7 +8,6 @@ nutrition when no exact key exists.
 
     mapping = { 'pizza': ('pizza', 'fastfood'), 'greek_salad': ('salad', 'salad'), ... }
 """
-from typing import TypeAlias
 
 Label = tuple[str, str]  # (nutrition_key, bucket)
 
@@ -119,7 +118,6 @@ FOOD101_LABELS: dict[str, Label] = {
     'falafel': ('burrito', 'legume'),
     'samosa': ('fried rice', 'fastfood'),
     'ceviche': ('fish', 'seafood'),
-    'chicken_curry': ('rice bowl', 'meat'),
     'cheese_plate': ('cheese', 'dairy'),
     'chocolate_cake': ('chocolate cake', 'dessert'),
     'steak': ('steak', 'meat'),

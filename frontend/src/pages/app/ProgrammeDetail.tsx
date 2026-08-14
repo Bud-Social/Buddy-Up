@@ -4,7 +4,6 @@ import { ArrowLeft, Star, ShoppingCart, MessageCircle, Clock, Video, Lock, Check
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 import { marketplaceApi } from '@/api/marketplace';
 import type { TrainingProgrammeMP, TrainingProgrammeReview } from '@/api/marketplace';
 

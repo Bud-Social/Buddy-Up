@@ -167,7 +167,22 @@ export default function FoodRecognition() {
           <Button
             variant="secondary"
             className="w-full"
-            onClick={() => navigate('/feed', { state: { mealData: result } })}
+            onClick={() => {
+              if (preview && preview.length < 4_000_000) {
+                try { sessionStorage.setItem('buddyup-meal-photo', preview); } catch {}
+              }
+              navigate('/feed', {
+                state: {
+                  mealData: {
+                    food_name: result.items[0]?.item ?? '',
+                    calories: result.total_calories,
+                    protein_g: result.total_protein,
+                    carbs_g: result.total_carbs,
+                    fat_g: result.total_fat,
+                  },
+                },
+              });
+            }}
           >
             Share as Meal Post
           </Button>

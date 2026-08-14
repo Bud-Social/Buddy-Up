@@ -19,10 +19,9 @@ interface Options {
   enabled?: boolean;
 }
 
-const WS_BASE = (import.meta.env.VITE_WS_URL ?? 'ws://localhost:8000').replace(/\/$/, '');
+const WS_BASE = (import.meta.env.VITE_WS_BASE_URL ?? 'ws://localhost:8002').replace(/\/$/, '');
 
 export function useChatSocket({ conversationId, onEvent, enabled = true }: Options) {
-  const token = useAuthStore((s) => s.accessToken);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttempts = useRef(0);

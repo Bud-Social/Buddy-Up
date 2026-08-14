@@ -1,4 +1,3 @@
-import io
 import logging
 
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.db.models import Q
 from .models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship
-from apps.gyms.models import Gym, GymMembership
+from apps.gyms.models import GymMembership
 
 
 class ProfileSerializer(serializers.ModelSerializer):

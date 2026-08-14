@@ -27,7 +27,6 @@ export default function DocumentPreview({ url, name, mime, onClose }: DocPreview
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
   const isText = ext === 'txt' || ext === 'csv' || ext === 'md' || mime.startsWith('text/');
   const isPdf = ext === 'pdf' || mime.includes('pdf');
-  const isOffice = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext);
   const isImage = mime.startsWith('image/');
 
   useEffect(() => {

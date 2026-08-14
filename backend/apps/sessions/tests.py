@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from common.utils import hash_dob
 from apps.accounts.models import User
 from apps.profiles.models import Profile
-from .models import TrainerProfile, Availability, BookingSession, Review, AsyncProgramme, ProgrammeEnrollment
+from .models import TrainerProfile, Availability, BookingSession, AsyncProgramme, ProgrammeEnrollment
 
 
 def _auth_client(client, email='client@test.com', password='TestPass123!'):

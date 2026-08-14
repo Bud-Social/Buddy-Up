@@ -13,7 +13,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont
 
 _BG = (13, 13, 16)
 _SURFACE = (24, 26, 32)
@@ -29,7 +29,6 @@ _FONT_DIR = os.path.join(settings.BASE_DIR, 'apps', 'analytics', 'static', 'anal
 
 def _font(size, bold=False):
     """Load a usable TTF (DejaVu is bundled with Pillow wheels)."""
-    from PIL import ImageFont
     candidates = [
         '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf' if bold else '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
         '/usr/local/lib/python3.12/site-packages/PIL/fonts/DejaVuSans-Bold.ttf' if bold else '/usr/local/lib/python3.12/site-packages/PIL/fonts/DejaVuSans.ttf',
@@ -89,13 +88,10 @@ def render_report_image(summary, period_label):
     if logo:
         img.paste(logo, (40, 36), logo)
 
-    title_font = _font(30, bold=True)
     header_font = _font(22, bold=True)
     value_font = _font(26, bold=True)
-    label_font = _font(16)
-    row_font = _font(18)
     small_font = _font(14)
-    muted_font = _font(16)
+    row_font = _font(18)
 
     # Header
     draw.text((40, 250), 'BUDDY-UP  ·  PROGRESS REPORT', font=header_font, fill=_GREEN)
@@ -218,8 +214,6 @@ def render_report_image(summary, period_label):
     wdraw = ImageDraw.Draw(watermark)
     wfont = _font(120, bold=True)
     wtext = 'BUDDY-UP'
-    bbox = wdraw.textbbox((0, 0), wtext, font=wfont)
-    tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
     # repeating diagonal watermark
     for row in range(0, height, 320):
         for col_wm in range(-width, width, 720):

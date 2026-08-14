@@ -22,5 +22,5 @@ def audit_ai_call(
             error_message=error_message,
             model_version=model_version,
         )
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass

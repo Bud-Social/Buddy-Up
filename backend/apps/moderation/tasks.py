@@ -103,7 +103,6 @@ def moderate_text_content(self, content_type: str, content_id: str, text: str):
 @shared_task
 def auto_flag_expired_reports():
     from .models import ModerationReport
-    from django.utils import timezone
     from datetime import timedelta
 
     cutoff = timezone.now() - timedelta(days=7)

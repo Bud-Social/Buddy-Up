@@ -11,5 +11,5 @@ def on_model_metadata_saved(sender, instance, created, **kwargs):
     canary/rollback flip takes effect without redeploying the AI service."""
     try:
         sync_model_metadata.delay()
-    except Exception:
+    except Exception:  # noqa: BLE001
         pass
