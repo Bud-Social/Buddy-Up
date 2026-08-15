@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/app_theme.dart';
 import 'core/auth/auth_provider.dart';
 import 'features/notifications/services/push_notification_service.dart';
+import 'features/messaging/widgets/call_host.dart';
 import 'router.dart';
 
 class BuddyUpApp extends ConsumerStatefulWidget {
@@ -25,11 +26,13 @@ class _BuddyUpAppState extends ConsumerState<BuddyUpApp> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
-    return MaterialApp.router(
-      title: 'Buddy-Up',
-      debugShowCheckedModeBanner: false,
-      theme: buildBuddyTheme(),
-      routerConfig: buildRouter(ref, authState),
+    return CallHost(
+      child: MaterialApp.router(
+        title: 'Buddy-Up',
+        debugShowCheckedModeBanner: false,
+        theme: buildBuddyTheme(),
+        routerConfig: buildRouter(ref, authState),
+      ),
     );
   }
 }

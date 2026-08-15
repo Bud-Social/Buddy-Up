@@ -97,14 +97,46 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         react: (conversationId, messageId, reactions) {
           ref.read(messagesProvider(widget.conversationId).notifier).updateMessage(messageId, reactions);
         },
-        callOffer: (callType, _) {},
-        callAnswer: (callType, _) {},
-        callIce: (_) {},
-        callEnd: () {},
-        callDecline: () {},
-        callRinging: (_) {},
+        callOffer: (callType, data) => _forwardCall('callOffer', data: data, callType: callType),
+        callAnswer: (callType, data) => _forwardCall('callAnswer', data: data, callType: callType),
+        callIce: (data) => _forwardCall('callIce', data: data),
+        callEnd: () => _forwardCall('callEnd'),
+        callDecline: () => _forwardCall('callDecline'),
+        callRinging: (data) => _forwardCall('callRinging', data: data),
       );
     });
+  }
+
+  void _forwardCall(String kind, {Map<String, dynamic>? data, String? callType}) {
+    final engine = ref.read(callEngineProvider);
+    if (kind == 'callOffer') {
+      final convoState = ref.read(conversationsProvider);
+      final convo = convoState.conversations.where((c) => c.id == widget.conversationId).firstOrNull;
+      final other = convo?.participantsData.where((p) => p.userId != _myUserId).firstOrNull;
+      if (other != null) {
+        engine.setPeer(userId: other.userId, name: other.displayName, avatar: other.avatarUrl);
+      }
+    }
+    engine.handleSignal(kind, data: data, callTypeFromEvent: callType);
+  }
+
+  Future<void> _startCall(String callType) async {
+    final engine = ref.read(callEngineProvider);
+    if (engine.isActive) return;
+    final socket = ref.read(chatSocketProvider(widget.conversationId));
+    if (socket == null) return;
+    final convoState = ref.read(conversationsProvider);
+    final convo = convoState.conversations.where((c) => c.id == widget.conversationId).firstOrNull;
+    final other = convo?.participantsData.where((p) => p.userId != _myUserId).firstOrNull;
+    if (other == null) return;
+    await engine.startCall(
+      socket: socket,
+      conversationId: widget.conversationId,
+      callType: callType,
+      peerName: other.displayName,
+      peerAvatar: other.avatarUrl,
+      peerUserId: other.userId,
+    );
   }
 
   void _onScroll() {
@@ -289,6 +321,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
+          if (convo?.isGroup != true && other != null) ...[
+            IconButton(
+              icon: const Icon(Icons.call),
+              tooltip: 'Audio call',
+              onPressed: () => _startCall('audio'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.videocam_outlined),
+              tooltip: 'Video call',
+              onPressed: () => _startCall('video'),
+            ),
+          ],
           IconButton(
             icon: const Icon(Icons.palette_outlined),
             tooltip: 'Chat theme',

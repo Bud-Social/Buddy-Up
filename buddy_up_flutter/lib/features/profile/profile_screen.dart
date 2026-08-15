@@ -10,6 +10,7 @@ import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/button.dart';
 import '../../shared/widgets/page_loader.dart';
 import '../../shared/widgets/error_view.dart';
+import '../../shared/navigation/app_nav.dart';
 import 'edit_profile_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -85,6 +86,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return SliverAppBar(
       expandedHeight: 160,
       pinned: true,
+      leading: IconButton(
+        icon: const Icon(Icons.menu),
+        tooltip: 'Menu',
+        onPressed: () => AppNav.open(context),
+      ),
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: const BoxDecoration(

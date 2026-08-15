@@ -51,6 +51,7 @@ class PostCard extends StatelessWidget {
         children: [
           if (post.isRepost)
             RepostIndicator(
+              reposters: post.reposters,
               username: post.authorData.displayName,
               quoteBody: post.quoteBody,
             ),

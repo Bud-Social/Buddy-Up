@@ -5,6 +5,7 @@ import '../providers/messaging_provider.dart';
 import '../widgets/conversation_tile.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/messaging.dart';
+import '../../../shared/navigation/app_nav.dart';
 
 class ConversationListScreen extends ConsumerStatefulWidget {
   const ConversationListScreen({super.key});
@@ -49,6 +50,11 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          tooltip: 'Menu',
+          onPressed: () => AppNav.open(context),
+        ),
         title: const Text('Messages', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           IconButton(

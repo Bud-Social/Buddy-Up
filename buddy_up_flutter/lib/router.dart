@@ -58,6 +58,7 @@ import 'features/sessions/screens/availability_screen.dart';
 import 'features/sessions/screens/programme_weeks_screen.dart';
 import 'features/messaging/screens/conversation_list_screen.dart';
 import 'features/messaging/screens/chat_screen.dart';
+import 'shared/navigation/app_nav.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -506,11 +507,17 @@ Widget _legalPage(String title) {
   );
 }
 
-class _AppShell extends StatelessWidget {
+class _AppShell extends StatefulWidget {
   final Widget child;
   const _AppShell({required this.child});
 
+  @override
+  State<_AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<_AppShell> {
   static const _tabletBreakpoint = 600.0;
+  bool _railExtended = true;
 
   static const _railDestinations = <_NavDestination>[
     _NavDestination('/feed', Icons.home_outlined, Icons.home, 'Home'),
@@ -573,14 +580,28 @@ class _AppShell extends StatelessWidget {
               selectedIndex: _calculateIndex(context, _railDestinations),
               onDestinationSelected: (i) =>
                   context.go(_railDestinations[i].route),
-              extended: width >= 1000,
-              leading: const Padding(
-                padding: EdgeInsets.only(top: 16, bottom: 8),
-                child: Icon(
-                  Icons.fitness_center,
-                  color: BuddyColors.green,
-                  size: 28,
-                ),
+              extended: _railExtended,
+              leading: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      _railExtended ? Icons.menu_open : Icons.menu,
+                      color: BuddyColors.textSecondary,
+                    ),
+                    tooltip: _railExtended ? 'Collapse' : 'Expand',
+                    onPressed: () =>
+                        setState(() => _railExtended = !_railExtended),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8, bottom: 8),
+                    child: Icon(
+                      Icons.fitness_center,
+                      color: BuddyColors.green,
+                      size: 28,
+                    ),
+                  ),
+                ],
               ),
               backgroundColor: BuddyColors.black,
               indicatorColor: BuddyColors.green.withValues(alpha: 0.2),
@@ -602,14 +623,16 @@ class _AppShell extends StatelessWidget {
                   )
                   .toList(),
             ),
-            Expanded(child: child),
+            Expanded(child: widget.child),
           ],
         ),
       );
     }
 
     return Scaffold(
-      body: child,
+      key: appShellScaffoldKey,
+      drawer: const AppNavDrawer(),
+      body: widget.child,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _calculateIndex(context, _phoneDestinations),
         onTap: (i) => context.go(_phoneDestinations[i].route),

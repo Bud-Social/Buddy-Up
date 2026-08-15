@@ -68,6 +68,20 @@ Map<String, dynamic> _$PollToJson(_Poll instance) => <String, dynamic>{
   'userVotedOptionIds': instance.userVotedOptionIds,
 };
 
+_ReposterData _$ReposterDataFromJson(Map<String, dynamic> json) =>
+    _ReposterData(
+      userId: json['userId'] as String?,
+      displayName: json['displayName'] as String? ?? '',
+      avatarUrl: json['avatarUrl'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$ReposterDataToJson(_ReposterData instance) =>
+    <String, dynamic>{
+      'userId': instance.userId,
+      'displayName': instance.displayName,
+      'avatarUrl': instance.avatarUrl,
+    };
+
 _OriginalPostData _$OriginalPostDataFromJson(
   Map<String, dynamic> json,
 ) => _OriginalPostData(
@@ -135,6 +149,11 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   isRepost: json['isRepost'] as bool? ?? false,
   originalPostId: json['originalPostId'] as String?,
   quoteBody: json['quoteBody'] as String? ?? '',
+  reposters:
+      (json['reposters'] as List<dynamic>?)
+          ?.map((e) => ReposterData.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <ReposterData>[],
   isSaved: json['isSaved'] as bool? ?? false,
   isPinned: json['isPinned'] as bool? ?? false,
   visibility: json['visibility'] as String? ?? 'public',
@@ -175,6 +194,7 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'isRepost': instance.isRepost,
   'originalPostId': instance.originalPostId,
   'quoteBody': instance.quoteBody,
+  'reposters': instance.reposters,
   'isSaved': instance.isSaved,
   'isPinned': instance.isPinned,
   'visibility': instance.visibility,

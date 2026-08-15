@@ -6,6 +6,7 @@ import '../widgets/gym_card.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/navigation/app_nav.dart';
 
 class GymListScreen extends ConsumerStatefulWidget {
   const GymListScreen({super.key});
@@ -37,6 +38,11 @@ class _GymListScreenState extends ConsumerState<GymListScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          tooltip: 'Menu',
+          onPressed: () => AppNav.open(context),
+        ),
         title: const Text('Gyms'),
       ),
       body: Column(

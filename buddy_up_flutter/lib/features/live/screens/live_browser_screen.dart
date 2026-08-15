@@ -8,6 +8,7 @@ import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/constants.dart';
+import '../../../shared/navigation/app_nav.dart';
 
 class LiveBrowserScreen extends ConsumerStatefulWidget {
   const LiveBrowserScreen({super.key});
@@ -46,6 +47,11 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          tooltip: 'Menu',
+          onPressed: () => AppNav.open(context),
+        ),
         title: const Text('Lives'),
         actions: [
           IconButton(

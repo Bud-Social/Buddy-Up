@@ -6,6 +6,7 @@ import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/input.dart';
 import '../../shared/widgets/page_loader.dart';
 import '../../shared/widgets/toast.dart';
+import '../../shared/navigation/app_nav.dart';
 
 class DiscoverPeopleScreen extends StatefulWidget {
   const DiscoverPeopleScreen({super.key});
@@ -78,7 +79,14 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Discover People')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          tooltip: 'Menu',
+          onPressed: () => AppNav.open(context),
+        ),
+        title: const Text('Discover People'),
+      ),
       body: Column(
         children: [
           Padding(

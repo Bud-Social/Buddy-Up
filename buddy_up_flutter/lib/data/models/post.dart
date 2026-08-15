@@ -55,6 +55,18 @@ abstract class Poll with _$Poll {
 }
 
 @freezed
+abstract class ReposterData with _$ReposterData {
+  const factory ReposterData({
+    String? userId,
+    @Default('') String displayName,
+    @Default('') String avatarUrl,
+  }) = _ReposterData;
+
+  factory ReposterData.fromJson(Map<String, dynamic> json) =>
+      _$ReposterDataFromJson(json);
+}
+
+@freezed
 abstract class OriginalPostData with _$OriginalPostData {
   const factory OriginalPostData({
     required String id,
@@ -98,6 +110,7 @@ abstract class Post with _$Post {
     @Default(false) bool isRepost,
     String? originalPostId,
     @Default('') String quoteBody,
+    @Default(<ReposterData>[]) List<ReposterData> reposters,
     @Default(false) bool isSaved,
     @Default(false) bool isPinned,
     @Default('public') String visibility,
