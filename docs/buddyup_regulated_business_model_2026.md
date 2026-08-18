@@ -1,6 +1,6 @@
 # BuddyUp (Bud) — Regulated Business Model & Platform Analysis
 
-**Version:** 2.0 · **Prepared:** 11 August 2026  
+**Version:** 3.0 · **Prepared:** 18 August 2026  
 **Working currency:** Kenya shillings (KSh); USD shown where useful  
 **Global + Kenya operating lens**  
 **Status:** Business-model and compliance analysis grounded in two regulatory research documents; not a legal opinion, medical claim, or audited forecast.
@@ -18,6 +18,7 @@ It also encodes two **platform audits** run against the current codebase:
 
 - **A. Transaction audit** — every money/currency flow reviewed for security and seamlessness.
 - **B. Mature-content audit** — end-to-end accommodation of the age-gated Mature category (nude/suggestive trainers, adult-only lives, adult marketplace, nude gyms).
+- **C. Feature delivery audit** — mapping of the features shipped since v2.0 to the revenue model and go-to-market, so this document reflects what actually runs today.
 
 The structure of BuddyUp Ltd. is unchanged (see §1), but the operating model has been tightened around the two governing compliance duties that emerge from the regulations: **(1) keep wellness coaching out of medical-nutrition-therapy**, and **(2) make every gifted/sponsored promotion and every money movement transparent, authorised and auditable.**
 
@@ -42,6 +43,19 @@ BuddyUp Ltd. (platform operator)
 ├── Trust, safety & data      Identity, moderation, consent, risk operations
 └── Platform & intelligence   Payments, messaging, video, analytics, APIs
 ```
+
+### 1.1 Platform capabilities delivered (audit C — what now runs)
+
+Since v2.0 the stack has shipped the following, all live on web (React/PWA) and mobile (Flutter) against the shared Django/DRF core:
+
+- **Commerce / orders.** Checkout now persists a real **Order** (`marketplace_order`) with `OrderItem`, status history (`paid → processing → shipped → out_for_delivery → ready_for_pickup → delivered → completed | cancelled`), fulfillment tracking (`OrderFulfillment` with carrier/tracking/pickup milestones), delivery address and pickup details, and artifact-ledger totals with discount codes. Order history + detail screens exist on web and Flutter. This hardens the **curated marketplace** and **booking/programme fee** revenue lines into an auditable purchase record.
+- **Communities.** Beyond gyms, members now belong to **community conversations** with a posts feed (`CommunityPost`, likes, comments, pinned posts) — the accountability/cohort layer of the model now has its own product surface. Web (`Communities`, `CommunityDetail`) and Flutter (`communities_screen`, `community_detail_screen`). This is the on-platform home for **fitness communities** launch segment.
+- **Discover & recommendations.** `ProfileRecommendationsView` serves ranked `{profile, match_score}` recommendations; the Flutter Discover surface adds a **"Recommended for you"** rail and **trainer/practitioner badges** on search results, surfacing verified supply. Directly powers the coach/trainer acquisition loop and gifting/sponsorship economics.
+- **Profile/media sync (P4).** Avatar and cover uploads on web now update the local profile store immediately; Flutter's edit-profile screen writes the returned `avatar_url` back to the auth provider, so the same image follows the user across sessions instead of only persisting server-side.
+- **Settings audit & authentication verification.** Flutter settings now expose **security (2FA/TOTP enable + disable with password)**, **verification status** (identity / trainer / practitioner / shop / gym lanes with a route into the verification flow), and **privacy controls** (public/private profile + active-status visibility). Web settings already carry 2FA, sessions, blocked users, notifications and consent. Both platforms run the age-verification gate (`/verify-age`) and TOTP challenge flows.
+- **Addressed v2.0 audit gaps.** With the Mature-category write-path, discover and verification surfaces now in product, the earlier **"no write path in any UI"** gap (old §7.3 items 4–7) is materially closed for profile-edit, discover and settings; the marketplace/live/gym/post create forms remain the outstanding surface (see §7.3).
+
+> Together these convert several "will build" lines of v2.0 into shipped, revenue-relevant product: orders underpin marketplace commissions, communities underpin retention and the community segment, discover underpins coach supply, and settings/verification underpin the **trust, safety & data** layer the revenue model depends on.
 
 ---
 
@@ -200,12 +214,28 @@ A dedicated, age-gated **Mature** content category (18+ by default, 16+ only whe
 1. **Post (feed):** `PostSerializer` and `PostCreateSerializer` do not expose `content_rating` → a creator cannot post mature content via API, and clients never receive the flag. *(Open the field in both; carry it through `Post.objects.create`.)*
 2. **Live create:** `StartLiveView` builds `BuddyLive.objects.create(...)` without `content_rating`, silently dropping a mature value the serializer accepts. *(Persist it.)*
 3. **Detail endpoints bypass the gate:** `UserProfileView`, `LiveDetailView`, `PostDetailView`, `GymDetailView`, and all marketplace detail views do **not** apply `CanAccessMatureContent`. A minor could still fetch a mature item by direct detail URL. *(Apply the gate to detail reads too.)*
-4. **No write path in any UI (web or Flutter):** no create/edit screen sends `content_rating` for gym, live, post, meal plan, product, programme, event, or profile-edit. Creators **cannot actually classify content as mature** even though the backend sometimes accepts it. *(Add a "Content rating" control to every create/edit form.)*
+4. **No write path in most create/edit UIs (web or Flutter):** profile-edit now writes `content_rating` through the profile store (P4) and settings surfaces verification state, but the **gym, live, post, meal plan, product, programme and event create/edit forms still do not send `content_rating`**. Creators **cannot actually classify most content as mature** even though the backend sometimes accepts it. *(Add a "Content rating" control to every remaining create/edit form.)*
 5. **Gym update** omits `content_rating` from allowed fields.
 6. **Web types** for gym/live/post and all four marketplace items lack `content_rating` (only `types/user.ts` has it) → no client can render a badge or gate display.
-7. **Flutter** carries the field in models but no screen consumes `canAccessMature` / `contentRating` locally to blur/gate/badge.
+7. **Flutter** carries the field in models but no screen consumes `canAccessMature` / `contentRating` locally to blur/gate/badge (Discover surfaces trainer **badges** but not the mature gate).
 
-**Conclusion:** the data layer, migrations, moderation and age-gating plumbing are well-orchestrated and consistent. Full accommodation requires closing the **create-write UI, Post serializer, Live create persistence, detail-endpoint gating, and web/Flutter type+UI** gaps above (7.3).
+**Conclusion:** the data layer, migrations, moderation and age-gating plumbing are well-orchestrated and consistent. Full accommodation requires closing the **remaining create-write forms, Post serializer, Live create persistence, detail-endpoint gating, and web/Flutter type+UI** gaps above (7.3 items 1–3, 5–7).
+
+### 7.4 Nude gyms — operating & compliance design
+
+"Nude gyms" are physical member venues (or venue-listed programs) that train in the nude or minimal attire, surfaced on the platform as **Gym records with `content_rating='mature'`** and a clothing/nudity policy. They are a **hybrid digital-physical offer**: the platform is the booking/payment/verification layer; the venue owns the space, liability and operating licence.
+
+**What the platform must provide for a nude gym listing:**
+1. **Age + identity gate, end-to-end.** Entry requires a **verified adult** (18+, via the verification pipeline and age gate) on both the **browse/listing page and the booking panel** — the detail endpoint must apply `CanAccessMatureContent` (§7.3 item 3), and on-site check-in should re-confirm identity against the booker.
+2. **Explicit venue policy upfront.** A mandatory, plainly worded **nudity/clothing policy, photography ban, consent ground rules and grievance/exit path** must be attached to the listing before booking is enabled. No photo/video capture inside nudity zones.
+3. **Written consent + assumption-of-risk.** Every booking must capture participant consent to the nudity policy and an assumption-of-risk / waiver, stored auditably alongside the order or booking record (mirrors §6 transaction standard: ledgered, reversible).
+4. **Compliance-by-venue.** The venue must hold its own **business licence and premises classification** under local law (many jurisdictions treat nude fitness as a distinct licensed activity from a standard gym) and its own insurance; the platform contractually requires both, plus its own verified-child/no-minors policy and staff vetting.
+5. **Local-law threshold per §7.1.** 18+ default; 16+ only where local law permits **and** the venue's premises classification and legal review confirm it. No cross-border override.
+6. **Moderation + reporting.** In-category moderation (same as §7.1) plus a venue-specific **report flow** for policy breaches, with the adult-ungated / flag path reused for anything posted outside the Mature category.
+
+**Monetisation:** nudity-policy gyms can price through the standard gym SaaS (Gym Core/Growth), plus in-app paid events and any programme sales — consistent with §5, with the same commission/payout rules and the disclosure + PPB checks whenever products ride along (supplements, meal plans, programmes). No separate margins are assumed; the venue economics belong to the venue operator.
+
+**Open items to close before nudity-policy venues list:** the §7.3 create-write UI and gym-update `content_rating` gap (items 4–5), the detail-endpoint gate on `GymDetailView` (item 3), venue licence/consent document fields on the gym record, and a booking consent step.
 
 ---
 
@@ -299,11 +329,14 @@ The plan does not assume three-year break-even. A trust-, content-scope- and pay
 2. Approve **direct KSh payments + non-cash artifacts**; keep cash-out/transferable value paused pending specialist review.
 3. Fund the **compliance + financial-hardening backlog** from §7.3 and §8 before public money or mature content.
 4. Fund a **90-day design-partner pilot** with the activation/retention and compliance gates above.
-5. Close the **mature-content accommodation gaps (§7.3)** so the Mature category is fully and safely live, and the **transaction gaps (§8)** so every movement is secure and seamless.
+5. Close the **mature-content accommodation gaps (§7.3)** so the Mature category — including **nude gyms (§7.4)** — is fully and safely live, and the **transaction gaps (§8)** so every movement is secure and seamless.
+6. Ship the remaining **create/edit `content_rating` write-forms** and detail-endpoint gating (§7.3 items 1–3, 5–7) as part of the mature-category go-live, and add the **nude-gym venue-license/consent booking step** (§7.4) before listing nudity-policy venues.
+7. Treat the features delivered since v2.0 (§1.1) — **orders/fulfillment, communities, discover recommendations, profile-media sync, settings/2FA/verification/privacy** — as launch scope, and align the design-partner pilot to measure their activation/retention impact.
 
 ---
 
 ## 12. Sources
 - The two regulation briefs (referenced in §0) — fitness-platform consumer protection/wellness-vs-MNT; Kenya/Africa/global fitness & gifting, CPA and PPB requirements.
 - Repository transaction audit (§8) and mature-content audit (§7) of the BuddyUp codebase.
+- Feature delivery audit (§1.1) of the BuddyUp codebase — orders, communities, discover, settings/2FA/verification, profile-media sync.
 - Prior BuddyUp business-plan and funding-pitch working papers (2026), WHO physical-activity data, CA Kenya digital adoption, Safaricom FY2025 results.
