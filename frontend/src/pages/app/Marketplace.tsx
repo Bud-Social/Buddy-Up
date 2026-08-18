@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2 } from 'lucide-react';
+import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -69,6 +69,10 @@ export default function Marketplace() {
               <BarChart2 size={14} />
               <span className="hidden sm:inline">Creator</span>
             </Button>
+            <Button variant="secondary" size="sm" onClick={() => navigate('/marketplace/orders')} className="flex items-center gap-1">
+              <Package size={14} />
+              <span className="hidden sm:inline">Orders</span>
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => navigate('/marketplace/cart')} className="relative flex items-center gap-1">
               <ShoppingBag size={14} />
               <span className="hidden sm:inline">Cart</span>
@@ -109,6 +113,13 @@ export default function Marketplace() {
   );
 }
 
+const CART_ID_KEYS: Record<'meal_plan' | 'programme' | 'event_ticket' | 'product', string> = {
+  meal_plan: 'meal_plan_id',
+  programme: 'programme_id',
+  product: 'product_id',
+  event_ticket: 'event_id',
+};
+
 function AddToCartButton({ type, id }: { type: 'meal_plan' | 'programme' | 'event_ticket' | 'product', id: string }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -117,7 +128,7 @@ function AddToCartButton({ type, id }: { type: 'meal_plan' | 'programme' | 'even
     e.stopPropagation();
     setLoading(true);
     try {
-      await marketplaceApi.addToCart(type, { [`${type}_id`]: id }, 1);
+      await marketplaceApi.addToCart(type, { [CART_ID_KEYS[type]]: id }, 1);
       toast('success', 'Added to cart!');
       window.dispatchEvent(new CustomEvent('cart-updated'));
     } catch {
@@ -338,7 +349,7 @@ function ProductsTab({ hasShop }: { hasShop: boolean }) {
   );
 }
 
-function EventsTab({ hasShop: _hasShop }: { hasShop: boolean }) {
+function EventsTab({ hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
   const [scope, setScope] = useState<'upcoming' | 'past' | 'all'>('upcoming');
@@ -383,7 +394,7 @@ function EventsTab({ hasShop: _hasShop }: { hasShop: boolean }) {
         </div>
         <div className="flex gap-2">
           <button onClick={() => navigate('/marketplace/events/my-tickets')} className="text-xs font-medium text-buddy-electric hover:underline">My Tickets</button>
-          <button onClick={() => navigate('/marketplace/events/create')} className="text-xs font-medium text-buddy-green hover:underline">Host</button>
+          <button onClick={() => navigate(hasShop ? '/marketplace/events/create' : '/marketplace/creator')} className="text-xs font-medium text-buddy-green hover:underline">{hasShop ? 'Host' : 'Become Host'}</button>
         </div>
       </div>
 

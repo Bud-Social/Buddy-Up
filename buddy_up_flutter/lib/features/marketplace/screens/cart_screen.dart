@@ -16,6 +16,11 @@ class CartScreen extends ConsumerStatefulWidget {
 
 class _CartScreenState extends ConsumerState<CartScreen> {
   final _discountController = TextEditingController();
+  final _pickupController = TextEditingController();
+  final _deliveryLineController = TextEditingController();
+  final _deliveryCityController = TextEditingController();
+  final _deliveryCountryController = TextEditingController();
+  String _fulfillmentType = 'digital';
   bool _isCheckingOut = false;
 
   @override
@@ -27,6 +32,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   @override
   void dispose() {
     _discountController.dispose();
+    _pickupController.dispose();
+    _deliveryLineController.dispose();
+    _deliveryCityController.dispose();
+    _deliveryCountryController.dispose();
     super.dispose();
   }
 
@@ -313,6 +322,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
             ],
             const SizedBox(height: 16),
+            _fulfillmentSection(sheetCtx),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -344,12 +355,28 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Future<void> _doCheckout(BuildContext context) async {
     setState(() => _isCheckingOut = true);
     try {
-      final res = await ref.read(marketplaceRepositoryProvider).checkoutCart();
+      final payload = <String, dynamic>{
+        'fulfillment_type': _fulfillmentType,
+      };
+      if (_fulfillmentType == 'delivery') {
+        payload['delivery_address'] = {
+          'line1': _deliveryLineController.text,
+          'city': _deliveryCityController.text,
+          'country': _deliveryCountryController.text,
+        };
+      } else if (_fulfillmentType == 'pickup') {
+        payload['pickup_details'] = {
+          'location': _pickupController.text,
+        };
+      }
+      final res = await ref
+          .read(marketplaceRepositoryProvider)
+          .checkoutCart(payload);
       if (!mounted) return;
       final data = res['data'] as Map<String, dynamic>? ?? {};
       Navigator.pop(context, true);
       ref.read(cartProvider.notifier).loadCart();
-      _showReceipt(context, data);
+      _showReceipt(data);
     } catch (e) {
       if (mounted) {
         Navigator.pop(context, false);
@@ -362,13 +389,142 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
   }
 
-  void _showReceipt(BuildContext context, Map<String, dynamic> receipt) {
+  Widget _fulfillmentSection(BuildContext sheetCtx) {
+    const types = [
+      ('digital', 'Digital', Icons.check_circle_outline),
+      ('pickup', 'Pickup', Icons.store_outlined),
+      ('delivery', 'Delivery', Icons.local_shipping_outlined),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Delivery method',
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const SizedBox(height: 8),
+        Row(
+          children: types.map((t) {
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: InkWell(
+                  onTap: () => setState(() => _fulfillmentType = t.$1),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _fulfillmentType == t.$1
+                            ? BuddyColors.green
+                            : BuddyColors.border,
+                      ),
+                      color: _fulfillmentType == t.$1
+                          ? BuddyColors.green.withValues(alpha: 0.1)
+                          : null,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(t.$3,
+                            size: 16,
+                            color: _fulfillmentType == t.$1
+                                ? BuddyColors.green
+                                : BuddyColors.textSecondary),
+                        const SizedBox(height: 4),
+                        Text(t.$2,
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: _fulfillmentType == t.$1
+                                    ? BuddyColors.green
+                                    : BuddyColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        if (_fulfillmentType == 'delivery') ...[
+          const SizedBox(height: 8),
+          TextField(
+            controller: _deliveryLineController,
+            decoration: const InputDecoration(
+              hintText: 'Street address',
+              filled: true,
+              fillColor: BuddyColors.surface,
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              isDense: true,
+            ),
+            style: const TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _deliveryCityController,
+                  decoration: const InputDecoration(
+                    hintText: 'City',
+                    filled: true,
+                    fillColor: BuddyColors.surface,
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    isDense: true,
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _deliveryCountryController,
+                  decoration: const InputDecoration(
+                    hintText: 'Country',
+                    filled: true,
+                    fillColor: BuddyColors.surface,
+                    border: OutlineInputBorder(),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    isDense: true,
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ],
+        if (_fulfillmentType == 'pickup') ...[
+          const SizedBox(height: 8),
+          TextField(
+            controller: _pickupController,
+            decoration: const InputDecoration(
+              hintText: 'Pickup location / venue',
+              filled: true,
+              fillColor: BuddyColors.surface,
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              isDense: true,
+            ),
+            style: const TextStyle(fontSize: 13),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _showReceipt(Map<String, dynamic> receipt) {
+    if (!mounted) return;
     final items = (receipt['items'] as List?) ?? [];
     final total = (receipt['total_artifacts'] as Map<String, dynamic>?) ?? {};
     final original = (receipt['original_artifacts'] as Map<String, dynamic>?) ?? {};
     final savings = (receipt['savings_artifacts'] as Map<String, dynamic>?) ?? {};
     final code = receipt['discount_code'] as String?;
     final spentUsd = (receipt['spent_usd'] as num?) ?? 0;
+    final orderId = receipt['order_id'] as String?;
+    final orderNumber = receipt['order_number'] as String? ?? '';
 
     String artifacts(Map<String, dynamic> m) => m.entries
         .where((e) => (e.value as num) > 0)
@@ -395,7 +551,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 4),
               Text(
-                'Order #${(receipt['order_id'] as String? ?? '').substring(0, (receipt['order_id'] as String? ?? '').length > 8 ? 8 : (receipt['order_id'] as String? ?? '').length).toUpperCase()}',
+                orderNumber.isNotEmpty
+                    ? 'Order #$orderNumber'
+                    : 'Order #${(receipt['order_id'] as String? ?? '').substring(0, (receipt['order_id'] as String? ?? '').length > 8 ? 8 : (receipt['order_id'] as String? ?? '').length).toUpperCase()}',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                     fontSize: 12, color: BuddyColors.textSecondary),
@@ -479,6 +637,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ),
         ),
         actions: [
+          if (orderId != null)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                context.go('/marketplace/orders/$orderId');
+              },
+              child: const Text('View Order',
+                  style: TextStyle(color: BuddyColors.green)),
+            ),
           TextButton(
             onPressed: () {
               Navigator.pop(dialogCtx);

@@ -46,17 +46,23 @@ _Conversation _$ConversationFromJson(Map<String, dynamic> json) =>
     _Conversation(
       id: json['id'] as String,
       isGroup: json['isGroup'] as bool? ?? false,
+      isCommunity: json['isCommunity'] as bool? ?? false,
       groupName: json['groupName'] as String? ?? '',
       groupAvatarUrl: json['groupAvatarUrl'] as String? ?? '',
       groupGymId: json['groupGymId'] as String?,
       subChannel: json['subChannel'] as String? ?? '',
       callInProgress: json['callInProgress'] as bool? ?? false,
+      description: json['description'] as String? ?? '',
+      coverUrl: json['coverUrl'] as String? ?? '',
+      inviteCode: json['inviteCode'] as String? ?? '',
+      isPublic: json['isPublic'] as bool? ?? false,
       participantsData:
           (json['participantsData'] as List<dynamic>?)
               ?.map((e) => ParticipantData.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const <ParticipantData>[],
       unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+      membershipRole: json['membershipRole'] as String?,
       lastMessage: json['lastMessage'] == null
           ? null
           : LastMessageData.fromJson(
@@ -70,12 +76,200 @@ Map<String, dynamic> _$ConversationToJson(_Conversation instance) =>
     <String, dynamic>{
       'id': instance.id,
       'isGroup': instance.isGroup,
+      'isCommunity': instance.isCommunity,
       'groupName': instance.groupName,
       'groupAvatarUrl': instance.groupAvatarUrl,
       'groupGymId': instance.groupGymId,
       'subChannel': instance.subChannel,
       'callInProgress': instance.callInProgress,
+      'description': instance.description,
+      'coverUrl': instance.coverUrl,
+      'inviteCode': instance.inviteCode,
+      'isPublic': instance.isPublic,
       'participantsData': instance.participantsData,
+      'unreadCount': instance.unreadCount,
+      'membershipRole': instance.membershipRole,
+      'lastMessage': instance.lastMessage,
+      'lastMessageAt': instance.lastMessageAt,
+      'createdAt': instance.createdAt,
+    };
+
+_CommunityMember _$CommunityMemberFromJson(Map<String, dynamic> json) =>
+    _CommunityMember(
+      userId: json['userId'] as String,
+      username: json['username'] as String,
+      displayName: json['displayName'] as String,
+      avatarUrl: json['avatarUrl'] as String? ?? '',
+      verificationStatus: json['verificationStatus'] as String? ?? 'none',
+      role: json['role'] as String? ?? 'member',
+      createdAt: json['createdAt'] as String,
+    );
+
+Map<String, dynamic> _$CommunityMemberToJson(_CommunityMember instance) =>
+    <String, dynamic>{
+      'userId': instance.userId,
+      'username': instance.username,
+      'displayName': instance.displayName,
+      'avatarUrl': instance.avatarUrl,
+      'verificationStatus': instance.verificationStatus,
+      'role': instance.role,
+      'createdAt': instance.createdAt,
+    };
+
+_CommunityPostComment _$CommunityPostCommentFromJson(
+  Map<String, dynamic> json,
+) => _CommunityPostComment(
+  id: json['id'] as String,
+  postId: json['postId'] as String,
+  body: json['body'] as String,
+  replyToId: json['replyToId'] as String?,
+  replyCount: (json['replyCount'] as num?)?.toInt() ?? 0,
+  authorData: ProfileBrief.fromJson(json['authorData'] as Map<String, dynamic>),
+  createdAt: json['createdAt'] as String,
+);
+
+Map<String, dynamic> _$CommunityPostCommentToJson(
+  _CommunityPostComment instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'postId': instance.postId,
+  'body': instance.body,
+  'replyToId': instance.replyToId,
+  'replyCount': instance.replyCount,
+  'authorData': instance.authorData,
+  'createdAt': instance.createdAt,
+};
+
+_ProfileBrief _$ProfileBriefFromJson(Map<String, dynamic> json) =>
+    _ProfileBrief(
+      userId: json['userId'] as String,
+      username: json['username'] as String,
+      displayName: json['displayName'] as String,
+      avatarUrl: json['avatarUrl'] as String? ?? '',
+      role: json['role'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$ProfileBriefToJson(_ProfileBrief instance) =>
+    <String, dynamic>{
+      'userId': instance.userId,
+      'username': instance.username,
+      'displayName': instance.displayName,
+      'avatarUrl': instance.avatarUrl,
+      'role': instance.role,
+    };
+
+_CommunityPost _$CommunityPostFromJson(
+  Map<String, dynamic> json,
+) => _CommunityPost(
+  id: json['id'] as String,
+  conversationId: json['conversationId'] as String,
+  authorId: json['authorId'] as String,
+  body: json['body'] as String? ?? '',
+  mediaUrl: json['mediaUrl'] as String? ?? '',
+  mediaMime: json['mediaMime'] as String? ?? '',
+  isPinned: json['isPinned'] as bool? ?? false,
+  likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
+  commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
+  authorData: ProfileBrief.fromJson(json['authorData'] as Map<String, dynamic>),
+  isLiked: json['isLiked'] as bool? ?? false,
+  comments:
+      (json['comments'] as List<dynamic>?)
+          ?.map((e) => CommunityPostComment.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <CommunityPostComment>[],
+  createdAt: json['createdAt'] as String,
+);
+
+Map<String, dynamic> _$CommunityPostToJson(_CommunityPost instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'conversationId': instance.conversationId,
+      'authorId': instance.authorId,
+      'body': instance.body,
+      'mediaUrl': instance.mediaUrl,
+      'mediaMime': instance.mediaMime,
+      'isPinned': instance.isPinned,
+      'likeCount': instance.likeCount,
+      'commentCount': instance.commentCount,
+      'authorData': instance.authorData,
+      'isLiked': instance.isLiked,
+      'comments': instance.comments,
+      'createdAt': instance.createdAt,
+    };
+
+_CommunityListData _$CommunityListDataFromJson(Map<String, dynamic> json) =>
+    _CommunityListData(
+      mine:
+          (json['mine'] as List<dynamic>?)
+              ?.map((e) => Conversation.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <Conversation>[],
+      discover:
+          (json['discover'] as List<dynamic>?)
+              ?.map((e) => Conversation.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <Conversation>[],
+    );
+
+Map<String, dynamic> _$CommunityListDataToJson(_CommunityListData instance) =>
+    <String, dynamic>{'mine': instance.mine, 'discover': instance.discover};
+
+_CommunityDetail _$CommunityDetailFromJson(Map<String, dynamic> json) =>
+    _CommunityDetail(
+      id: json['id'] as String,
+      isGroup: json['isGroup'] as bool? ?? false,
+      isCommunity: json['isCommunity'] as bool? ?? true,
+      groupName: json['groupName'] as String? ?? '',
+      groupAvatarUrl: json['groupAvatarUrl'] as String? ?? '',
+      groupGymId: json['groupGymId'] as String?,
+      subChannel: json['subChannel'] as String? ?? '',
+      callInProgress: json['callInProgress'] as bool? ?? false,
+      description: json['description'] as String? ?? '',
+      coverUrl: json['coverUrl'] as String? ?? '',
+      inviteCode: json['inviteCode'] as String? ?? '',
+      isPublic: json['isPublic'] as bool? ?? false,
+      membershipRole: json['membershipRole'] as String?,
+      myRole: json['myRole'] as String?,
+      memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+      participantsData:
+          (json['participantsData'] as List<dynamic>?)
+              ?.map((e) => ParticipantData.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <ParticipantData>[],
+      members:
+          (json['members'] as List<dynamic>?)
+              ?.map((e) => CommunityMember.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <CommunityMember>[],
+      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
+      lastMessage: json['lastMessage'] == null
+          ? null
+          : LastMessageData.fromJson(
+              json['lastMessage'] as Map<String, dynamic>,
+            ),
+      lastMessageAt: json['lastMessageAt'] as String?,
+      createdAt: json['createdAt'] as String,
+    );
+
+Map<String, dynamic> _$CommunityDetailToJson(_CommunityDetail instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'isGroup': instance.isGroup,
+      'isCommunity': instance.isCommunity,
+      'groupName': instance.groupName,
+      'groupAvatarUrl': instance.groupAvatarUrl,
+      'groupGymId': instance.groupGymId,
+      'subChannel': instance.subChannel,
+      'callInProgress': instance.callInProgress,
+      'description': instance.description,
+      'coverUrl': instance.coverUrl,
+      'inviteCode': instance.inviteCode,
+      'isPublic': instance.isPublic,
+      'membershipRole': instance.membershipRole,
+      'myRole': instance.myRole,
+      'memberCount': instance.memberCount,
+      'participantsData': instance.participantsData,
+      'members': instance.members,
       'unreadCount': instance.unreadCount,
       'lastMessage': instance.lastMessage,
       'lastMessageAt': instance.lastMessageAt,

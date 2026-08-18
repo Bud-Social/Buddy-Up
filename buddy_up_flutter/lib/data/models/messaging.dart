@@ -36,13 +36,19 @@ abstract class Conversation with _$Conversation {
   const factory Conversation({
     required String id,
     @Default(false) bool isGroup,
+    @Default(false) bool isCommunity,
     @Default('') String groupName,
     @Default('') String groupAvatarUrl,
     String? groupGymId,
     @Default('') String subChannel,
     @Default(false) bool callInProgress,
+    @Default('') String description,
+    @Default('') String coverUrl,
+    @Default('') String inviteCode,
+    @Default(false) bool isPublic,
     @Default(<ParticipantData>[]) List<ParticipantData> participantsData,
     @Default(0) int unreadCount,
+    String? membershipRole,
     LastMessageData? lastMessage,
     String? lastMessageAt,
     required String createdAt,
@@ -50,6 +56,115 @@ abstract class Conversation with _$Conversation {
 
   factory Conversation.fromJson(Map<String, dynamic> json) =>
       _$ConversationFromJson(json);
+}
+
+@freezed
+abstract class CommunityMember with _$CommunityMember {
+  const factory CommunityMember({
+    required String userId,
+    required String username,
+    required String displayName,
+    @Default('') String avatarUrl,
+    @Default('none') String verificationStatus,
+    @Default('member') String role,
+    required String createdAt,
+  }) = _CommunityMember;
+
+  factory CommunityMember.fromJson(Map<String, dynamic> json) =>
+      _$CommunityMemberFromJson(json);
+}
+
+@freezed
+abstract class CommunityPostComment with _$CommunityPostComment {
+  const factory CommunityPostComment({
+    required String id,
+    required String postId,
+    required String body,
+    String? replyToId,
+    @Default(0) int replyCount,
+    required ProfileBrief authorData,
+    required String createdAt,
+  }) = _CommunityPostComment;
+
+  factory CommunityPostComment.fromJson(Map<String, dynamic> json) =>
+      _$CommunityPostCommentFromJson(json);
+}
+
+@freezed
+abstract class ProfileBrief with _$ProfileBrief {
+  const factory ProfileBrief({
+    required String userId,
+    required String username,
+    required String displayName,
+    @Default('') String avatarUrl,
+    @Default('') String role,
+  }) = _ProfileBrief;
+
+  factory ProfileBrief.fromJson(Map<String, dynamic> json) =>
+      _$ProfileBriefFromJson(json);
+}
+
+@freezed
+abstract class CommunityPost with _$CommunityPost {
+  const factory CommunityPost({
+    required String id,
+    required String conversationId,
+    required String authorId,
+    @Default('') String body,
+    @Default('') String mediaUrl,
+    @Default('') String mediaMime,
+    @Default(false) bool isPinned,
+    @Default(0) int likeCount,
+    @Default(0) int commentCount,
+    required ProfileBrief authorData,
+    @Default(false) bool isLiked,
+    @Default(<CommunityPostComment>[]) List<CommunityPostComment> comments,
+    required String createdAt,
+  }) = _CommunityPost;
+
+  factory CommunityPost.fromJson(Map<String, dynamic> json) =>
+      _$CommunityPostFromJson(json);
+}
+
+@freezed
+abstract class CommunityListData with _$CommunityListData {
+  const factory CommunityListData({
+    @Default(<Conversation>[]) List<Conversation> mine,
+    @Default(<Conversation>[]) List<Conversation> discover,
+  }) = _CommunityListData;
+
+  factory CommunityListData.fromJson(Map<String, dynamic> json) =>
+      _$CommunityListDataFromJson(json);
+}
+
+@freezed
+abstract class CommunityDetail with _$CommunityDetail {
+  const factory CommunityDetail({
+    required String id,
+    @Default(false) bool isGroup,
+    @Default(true) bool isCommunity,
+    @Default('') String groupName,
+    @Default('') String groupAvatarUrl,
+    String? groupGymId,
+    @Default('') String subChannel,
+    @Default(false) bool callInProgress,
+    @Default('') String description,
+    @Default('') String coverUrl,
+    @Default('') String inviteCode,
+    @Default(false) bool isPublic,
+    String? membershipRole,
+    String? myRole,
+    @Default(0) int memberCount,
+    @Default(<ParticipantData>[]) List<ParticipantData> participantsData,
+    @Default(<CommunityMember>[]) List<CommunityMember> members,
+    @Default(0) int unreadCount,
+    LastMessageData? lastMessage,
+    String? lastMessageAt,
+    required String createdAt,
+  }) = _CommunityDetail;
+
+  factory CommunityDetail.fromJson(Map<String, dynamic> json) =>
+      _$CommunityDetailFromJson(json);
 }
 
 @freezed

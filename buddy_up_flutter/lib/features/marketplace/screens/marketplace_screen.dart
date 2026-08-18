@@ -39,6 +39,10 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
             onPressed: () => context.push('/marketplace/cart'),
           ),
           IconButton(
+            icon: const Icon(Icons.receipt_long_outlined),
+            onPressed: () => context.push('/marketplace/orders'),
+          ),
+          IconButton(
             icon: const Icon(Icons.dashboard_outlined),
             onPressed: () => context.push('/marketplace/creator-studio'),
           ),

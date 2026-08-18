@@ -75,6 +75,28 @@ export default function CreatorStudio() {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
+  const hasShop = shops.length > 0;
+
+  const handleRegisterCreator = async () => {
+    try {
+      await marketplaceApi.registerCreator();
+      toast('success', 'You are now a creator!');
+      loadShops();
+      refreshServices();
+    } catch (err: any) {
+      toast('error', err.response?.data?.message || 'Registration failed');
+      loadShops();
+    }
+  };
+
+  const loadShops = () => {
+    setLoadingShops(true);
+    marketplaceApi.getMyShops()
+      .then((res) => setShops(res.data || []))
+      .catch(() => {})
+      .finally(() => setLoadingShops(false));
+  };
+
   const refreshServices = () => {
     setLoadingServices(true);
     marketplaceApi.getMyServices()
@@ -354,6 +376,12 @@ export default function CreatorStudio() {
           <p className="text-sm text-buddy-text-secondary text-center py-8">Failed to load services.</p>
         ) : (
           <div className="space-y-6">
+            {!hasShop && (
+              <Card className="p-5 bg-buddy-electric/10 border-buddy-electric/30 text-center space-y-3">
+                <p className="text-sm font-medium">Become a creator to start selling on BuddyUp.</p>
+                <Button onClick={handleRegisterCreator} className="bg-buddy-electric text-buddy-black font-bold">Register as Creator</Button>
+              </Card>
+            )}
             <section>
               <div className="flex items-center justify-between mb-2">
                 <h3 className={`text-xs font-bold uppercase px-2 py-1 rounded-lg border ${TYPE_COLORS.meal_plan}`}>Meal Plans ({services.meal_plans.length})</h3>
@@ -434,8 +462,10 @@ export default function CreatorStudio() {
           </div>
         ) : shops.length === 0 ? (
           <div className="text-center py-10 space-y-4 bg-buddy-surface/30 rounded-xl">
-            <p className="text-sm text-buddy-text-secondary">You don't have any shops yet.</p>
-            <Button onClick={() => navigate('/marketplace/shops/create')} className="bg-buddy-electric text-buddy-black font-bold">Create a Shop</Button>
+            <p className="text-sm text-buddy-text-secondary">You're not a creator yet. Register to start selling your services on BuddyUp.</p>
+            <Button onClick={handleRegisterCreator} className="bg-buddy-electric text-buddy-black font-bold">Register as Creator</Button>
+            <p className="text-[11px] text-buddy-text-secondary">or</p>
+            <Button onClick={() => navigate('/marketplace/shops/create')} variant="outline" className="text-buddy-electric">Set up a custom shop</Button>
           </div>
         ) : (
           <div className="space-y-4">

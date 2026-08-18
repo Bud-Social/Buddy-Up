@@ -154,6 +154,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.marketplace.tasks.send_meal_plan_daily_reminders',
         'schedule': 3600.0,  # Run every hour; task checks if current hour matches subscriber preference
     },
+    'event-ticket-reminders': {
+        'task': 'apps.marketplace.tasks.send_event_ticket_reminders',
+        'schedule': 900.0,  # Every 15 min; notifies holders of events starting within 24h
+    },
     'visual-search-index-rebuild': {
         'task': 'apps.ai.tasks.embed_and_index_images',
         'schedule': 604800.0,  # Weekly marketplace image index rebuild

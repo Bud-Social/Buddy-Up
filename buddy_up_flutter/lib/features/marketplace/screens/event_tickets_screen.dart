@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/marketplace_provider.dart';
@@ -49,6 +50,13 @@ class EventTicketsScreen extends ConsumerWidget {
                           Text('Code: ${ticket.ticketCode.substring(0, 8)}...', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
                           if (ticket.tier.isNotEmpty) Text('Tier: ${ticket.tier}', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
                           Text('Purchased: ${_formatDate(ticket.createdAt)}', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+                          if (ticket.qrDataUri != null && ticket.qrDataUri!.isNotEmpty) ...[
+                            const SizedBox(height: 16),
+                            Align(
+                              alignment: Alignment.center,
+                              child: _QrImage(qrDataUri: ticket.qrDataUri!),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -85,5 +93,28 @@ class EventTicketsScreen extends ConsumerWidget {
     final dt = DateTime.tryParse(iso);
     if (dt == null) return iso;
     return '${dt.month}/${dt.day}/${dt.year}';
+  }
+}
+
+class _QrImage extends StatelessWidget {
+  final String qrDataUri;
+  const _QrImage({required this.qrDataUri});
+
+  @override
+  Widget build(BuildContext context) {
+    try {
+      final base64Part = qrDataUri.split(',').length > 1 ? qrDataUri.split(',')[1] : qrDataUri;
+      final bytes = base64Decode(base64Part);
+      return Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Image.memory(bytes, width: 140, height: 140, gaplessPlayback: true),
+      );
+    } catch (_) {
+      return const SizedBox.shrink();
+    }
   }
 }

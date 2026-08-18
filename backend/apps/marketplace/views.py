@@ -19,6 +19,7 @@ from .models import (
     ProgrammeActivityProgress,
     Product, MarketplaceEvent, EventMedia, EventTicket,
     Cart, CartItem, DiscountCode, DiscountUsage,
+    Order, OrderItem, OrderFulfillment,
 )
 from .serializers import (
     ShopSerializer, ShopDetailSerializer, ShopCreateSerializer,
@@ -33,10 +34,73 @@ from .serializers import (
     EventTicketSerializer, CreateMealPlanSerializer, CreateTrainingProgrammeSerializer,
     CreateEventSerializer, ReviewInputSerializer,
     DiscountCodeSerializer, DiscountCodeWriteSerializer,
+    OrderSerializer, OrderItemSerializer, OrderFulfillmentSerializer,
 )
 from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator_artifacts, platform_cut
 from apps.wallet.models import ArtifactTransaction
 from apps.wallet.serializers import PLATFORM_CUTS, ARTIFACT_VALUES
+
+
+def _resolve_creator_shop(profile, shop_id=None):
+    """Resolve the shop a creator may attach new content to.
+
+    Returns (shop, error_message). If ``shop_id`` is provided the profile must
+    own/manage that shop (otherwise ``(None, msg)``). Without a ``shop_id`` we
+    fall back to the first shop the profile owns or manages. Content creation is
+    gated behind an explicit creator registration (a shop membership), so a
+    profile with no shop cannot publish.
+    """
+    if shop_id:
+        try:
+            shop = Shop.objects.get(id=shop_id)
+        except Shop.DoesNotExist:
+            return None, 'The shop no longer exists.'
+        if not ShopMembership.objects.filter(
+            shop=shop, profile=profile, role__in=('owner', 'manager')
+        ).exists():
+            return None, 'You do not have permission to publish under this shop.'
+        return shop, None
+
+    membership = ShopMembership.objects.filter(
+        profile=profile, role__in=('owner', 'manager')
+    ).select_related('shop').first()
+    if not membership:
+        return None, 'Register as a creator before publishing content.'
+    return membership.shop, None
+
+
+def _create_order_for_purchase(buyer, item_type, item_obj, title, creator, price_artifacts):
+    """Record a single-item Order (used by direct purchase endpoints)."""
+    price_artifacts = price_artifacts or {}
+    spent_usd = round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in price_artifacts.items()), 2)
+    order = Order.objects.create(
+        buyer=buyer,
+        fulfillment_type='digital',
+        items_total_artifacts=price_artifacts,
+        total_artifacts=price_artifacts,
+        spent_usd=spent_usd,
+        status='paid',
+        paid_at=timezone.now(),
+        status_history=[{
+            'status': 'paid',
+            'at': timezone.now().isoformat(),
+            'note': 'Order placed and payment confirmed.',
+        }],
+    )
+    OrderItem.objects.create(
+        order=order,
+        item_type=item_type,
+        meal_plan=item_obj if item_type == 'meal_plan' else None,
+        programme=item_obj if item_type == 'programme' else None,
+        product=item_obj if item_type == 'product' else None,
+        event=item_obj if item_type == 'event_ticket' else None,
+        creator=creator,
+        title=title,
+        quantity=1,
+        price_artifacts=price_artifacts,
+        paid_artifacts=price_artifacts,
+    )
+    return order
 
 
 # ===========================================================================
@@ -91,6 +155,11 @@ class ShopListView(views.APIView):
             shop.logo = request.FILES['logo']
         if 'banner' in request.FILES:
             shop.banner = request.FILES['banner']
+        # Handle logo/banner URL fallbacks (from the upload-cover endpoint)
+        if 'logo_url' in request.data:
+            shop.logo_url = request.data['logo_url']
+        if 'banner_url' in request.data:
+            shop.banner_url = request.data['banner_url']
         shop.save()
 
         # Create membership: the creator is the owner
@@ -538,6 +607,54 @@ class MyShopsView(views.APIView):
 
 
 
+class RegisterCreatorView(views.APIView):
+    """Explicitly register the current user as a marketplace creator by
+    provisioning a shop they own. This replaces the old silent auto-create hack."""
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def post(self, request):
+        profile = request.user.profile
+        if ShopMembership.objects.filter(profile=profile, role__in=('owner', 'manager')).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You are already registered as a creator.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        name = (request.data.get('name') or '').strip() or f"{profile.display_name or profile.username}'s Shop"
+        handle_base = (request.data.get('handle') or '').strip().lower() or f"{profile.username.lower().replace(' ', '-')}-shop"
+        handle = handle_base
+        suffix = 1
+        while Shop.objects.filter(handle=handle).exists():
+            suffix += 1
+            handle = f"{handle_base}-{suffix}"
+
+        shop = Shop.objects.create(
+            name=name,
+            handle=handle,
+            description=request.data.get('description', ''),
+            category=request.data.get('category', 'mixed'),
+        )
+        ShopMembership.objects.create(shop=shop, profile=profile, role='owner')
+
+        from apps.notifications.tasks import create_notification
+        create_notification.delay(
+            str(request.user.id),
+            'shop_created',
+            f'Your shop "{shop.name}" is live! 🛍️',
+            'Start adding your services to reach buyers on BuddyUp.',
+            {'shop_id': str(shop.id), 'shop_handle': shop.handle},
+        )
+
+        return Response({
+            'success': True,
+            'data': ShopDetailSerializer(shop, context={'request': request}).data,
+            'message': 'You are now a creator.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
 class MealPlanListView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -564,13 +681,12 @@ class MealPlanListView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         shop_id = data.pop('shop_id', None)
-        shop = None
-        if shop_id:
-            try:
-                from apps.marketplace.models import Shop
-                shop = Shop.objects.get(id=shop_id)
-            except Exception:  # noqa: BLE001
-                pass
+        shop, error = _resolve_creator_shop(request.user.profile, shop_id)
+        if error:
+            return Response({
+                'success': False, 'data': None, 'message': error,
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
         plan = MealPlan.objects.create(
             creator=request.user.profile,
             shop=shop,
@@ -701,11 +817,17 @@ class PurchaseMealPlanView(views.APIView):
         plan.purchase_count = db_models.F('purchase_count') + 1
         plan.save(update_fields=['purchase_count'])
 
+        order = _create_order_for_purchase(
+            buyer, 'meal_plan', plan, plan.title, plan.creator, plan.price_artifacts,
+        )
+
         serializer = MealPlanFullSerializer(plan, context={'request': request})
         return Response({
             'success': True, 'data': serializer.data,
             'message': 'Meal plan purchased! Enjoy your plan.',
             'errors': None, 'pagination': None,
+            'order_id': str(order.id),
+            'order_number': order.order_number,
         })
 
 
@@ -794,13 +916,12 @@ class TrainingProgrammeListView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         shop_id = data.pop('shop_id', None)
-        shop = None
-        if shop_id:
-            try:
-                from apps.marketplace.models import Shop
-                shop = Shop.objects.get(id=shop_id)
-            except Exception:  # noqa: BLE001
-                pass
+        shop, error = _resolve_creator_shop(request.user.profile, shop_id)
+        if error:
+            return Response({
+                'success': False, 'data': None, 'message': error,
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
         programme = TrainingProgramme.objects.create(
             creator=request.user.profile,
             shop=shop,
@@ -922,11 +1043,17 @@ class PurchaseTrainingProgrammeView(views.APIView):
         programme.purchase_count = db_models.F('purchase_count') + 1
         programme.save(update_fields=['purchase_count'])
 
+        order = _create_order_for_purchase(
+            buyer, 'programme', programme, programme.title, programme.creator, programme.price_artifacts,
+        )
+
         serializer = TrainingProgrammeSerializer(programme, context={'request': request})
         return Response({
             'success': True, 'data': serializer.data,
             'message': 'Programme purchased!',
             'errors': None, 'pagination': None,
+            'order_id': str(order.id),
+            'order_number': order.order_number,
         })
 
 
@@ -992,13 +1119,12 @@ class ProductListView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         shop_id = data.pop('shop_id', None)
-        shop = None
-        if shop_id:
-            try:
-                from apps.marketplace.models import Shop
-                shop = Shop.objects.get(id=shop_id)
-            except Exception:  # noqa: BLE001
-                pass
+        shop, error = _resolve_creator_shop(request.user.profile, shop_id)
+        if error:
+            return Response({
+                'success': False, 'data': None, 'message': error,
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
         product = Product.objects.create(
             recommended_by=request.user.profile,
             shop=shop,
@@ -1032,7 +1158,17 @@ class ProductDetailView(views.APIView):
         product = get_object_or_404(Product, id=product_id, recommended_by=request.user.profile)
         serializer = UpdateProductSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        for k, v in serializer.validated_data.items():
+        data = dict(serializer.validated_data)
+        shop_id = data.pop('shop_id', None)
+        if shop_id:
+            shop, error = _resolve_creator_shop(request.user.profile, shop_id)
+            if error:
+                return Response({
+                    'success': False, 'data': None, 'message': error,
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_403_FORBIDDEN)
+            product.shop = shop
+        for k, v in data.items():
             setattr(product, k, v)
         product.save()
         output = ProductSerializer(product)
@@ -1117,13 +1253,10 @@ class EventListView(views.APIView):
                 pass
         
         shop_id = data.pop('shop_id', None)
-        shop = None
-        if shop_id:
-            try:
-                from apps.marketplace.models import Shop
-                shop = Shop.objects.get(id=shop_id)
-            except Exception:  # noqa: BLE001
-                pass
+        shop, error = _resolve_creator_shop(request.user.profile, shop_id)
+        if error:
+            return Response({'success': False, 'data': None, 'message': error,
+                             'errors': None, 'pagination': None}, status=403)
 
         event = MarketplaceEvent.objects.create(
             creator=request.user.profile,
@@ -1248,7 +1381,21 @@ class PurchaseEventTicketView(views.APIView):
             ticket.save(update_fields=['status'])
         event.attendee_count = EventTicket.objects.filter(event=event, status='active').count()
         event.save(update_fields=['attendee_count'])
-        return Response({'success': True, 'data': EventTicketSerializer(ticket, context={'request': request}).data}, status=201 if created else 200)
+
+        order = _create_order_for_purchase(
+            profile, 'event_ticket', event, event.title, event.creator,
+            {} if event.is_free else event.ticket_price_artifacts,
+        )
+
+        from .tasks import send_ticket_confirmation
+        send_ticket_confirmation.delay(str(ticket.id))
+
+        return Response({
+            'success': True,
+            'data': EventTicketSerializer(ticket, context={'request': request}).data,
+            'order_id': str(order.id),
+            'order_number': order.order_number,
+        }, status=201 if created else 200)
 
 
 class MyEventTicketsView(views.APIView):
@@ -1371,22 +1518,7 @@ class MyMarketplaceServicesView(views.APIView):
         from django.db.models import Count
         profile = request.user.profile
 
-        # Auto-create shop for creators who have items but no shop
-        has_any_items = (
-            MealPlan.objects.filter(creator=profile).exists()
-            or TrainingProgramme.objects.filter(creator=profile).exists()
-            or MarketplaceEvent.objects.filter(creator=profile).exists()
-            or Product.objects.filter(shop__memberships__profile=profile).exists()
-        )
         membership = ShopMembership.objects.filter(profile=profile).first()
-        if has_any_items and not membership:
-            shop = Shop.objects.create(
-                name=f"{profile.display_name or profile.username}'s Shop",
-                handle=f"{profile.username.lower().replace(' ', '-')}-shop",
-                description='',
-            )
-            ShopMembership.objects.create(shop=shop, profile=profile, role='owner')
-            membership = ShopMembership.objects.get(profile=profile)
 
         meal_plans = MealPlan.objects.filter(creator=profile).annotate(abandoned_cart_count=Count('cartitem'))
         programmes = TrainingProgramme.objects.filter(creator=profile).annotate(abandoned_cart_count=Count('cartitem'))
@@ -1617,6 +1749,12 @@ class CheckoutCartView(views.APIView):
             return Response({'success': False, 'data': None, 'message': 'Cart is empty.',
                              'errors': None, 'pagination': None}, status=400)
 
+        fulfillment_type = request.data.get('fulfillment_type', 'digital')
+        if fulfillment_type not in dict(Order.FULFILLMENT_CHOICES):
+            fulfillment_type = 'digital'
+        delivery_address = request.data.get('delivery_address') or {}
+        pickup_details = request.data.get('pickup_details') or {}
+
         def _item_price(item):
             if item.item_type == 'meal_plan' and item.meal_plan:
                 return item.meal_plan.price_artifacts, item.meal_plan.title, item.meal_plan.creator
@@ -1762,8 +1900,40 @@ class CheckoutCartView(views.APIView):
             for t in eligible:
                 t['allocated'][at] = allocated.get(id(t), 0)
 
+        # ---- Phase 4.5: persist the Order ledger ----
+        spent_usd = round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in discounted_artifacts.items()), 2)
+        order = Order.objects.create(
+            buyer=request.user.profile,
+            fulfillment_type=fulfillment_type,
+            delivery_address=delivery_address,
+            pickup_details=pickup_details,
+            items_total_artifacts=original_artifacts,
+            discount_artifacts=savings_artifacts,
+            total_artifacts=discounted_artifacts,
+            spent_usd=spent_usd,
+            discount_code=discount,
+            status='paid',
+            paid_at=timezone.now(),
+            status_history=[{
+                'status': 'paid',
+                'at': timezone.now().isoformat(),
+                'note': 'Order placed and payment confirmed.',
+            }],
+        )
+        if fulfillment_type != 'digital':
+            fulfillment = OrderFulfillment.objects.create(order=order)
+            if fulfillment_type == 'pickup' and pickup_details.get('location'):
+                fulfillment.pickup_location = pickup_details.get('location')
+            if fulfillment_type == 'delivery' and delivery_address:
+                fulfillment.notes = 'Delivery to: ' + ', '.join(
+                    str(v) for k, v in delivery_address.items() if v and k != 'notes'
+                )
+            fulfillment.add_timeline_entry('paid', 'Order placed and payment confirmed.', commit=False)
+            fulfillment.save()
+
         # ---- Phase 5: create purchases, credit creators on post-discount price ----
         purchase_rows = []
+        purchase_rows_created_tickets = []
         for t in item_totals:
             item = t['item']
             discounted_item = t.get('allocated', {})
@@ -1779,13 +1949,14 @@ class CheckoutCartView(views.APIView):
                 item.programme.save(update_fields=['purchase_count'])
             elif item.item_type == 'event_ticket' and item.event:
                 for _ in range(item.quantity):
-                    EventTicket.objects.create(
+                    created_ticket = EventTicket.objects.create(
                         event=item.event,
                         holder=request.user.profile,
                         price_paid_artifacts={
                             k: v // item.quantity for k, v in discounted_item.items() if v >= item.quantity
                         } if discounted_item else {},
                     )
+                    purchase_rows_created_tickets.append(created_ticket)
                 item.event.attendee_count += item.quantity
                 item.event.save(update_fields=['attendee_count'])
             elif item.item_type == 'product' and item.product:
@@ -1835,6 +2006,21 @@ class CheckoutCartView(views.APIView):
                 'creator_name': t['creator'].display_name if t['creator'] else None,
             })
 
+            # Order line item (snapshot of what was paid)
+            OrderItem.objects.create(
+                order=order,
+                item_type=item.item_type,
+                meal_plan=item.meal_plan if item.item_type == 'meal_plan' else None,
+                programme=item.programme if item.item_type == 'programme' else None,
+                product=item.product if item.item_type == 'product' else None,
+                event=item.event if item.item_type == 'event_ticket' else None,
+                creator=t['creator'],
+                title=t['title'],
+                quantity=item.quantity,
+                price_artifacts=t['price'],
+                paid_artifacts=discounted_item,
+            )
+
         # ---- Phase 6: record discount usage ----
         savings_usd = round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in savings_artifacts.items()), 2)
         if discount:
@@ -1856,20 +2042,189 @@ class CheckoutCartView(views.APIView):
         cart.discount_code = None
         cart.save()
 
+        if purchase_rows_created_tickets:
+            from .tasks import send_ticket_confirmation
+            for created_ticket in purchase_rows_created_tickets:
+                send_ticket_confirmation.delay(str(created_ticket.id))
+
         return Response({
             'success': True,
             'message': 'Cart checkout successful. Items have been purchased!',
             'data': {
-                'order_id': str(cart.id),
+                'order_id': str(order.id),
+                'order_number': order.order_number,
+                'status': order.status,
+                'fulfillment_type': order.fulfillment_type,
                 'items': purchase_rows,
                 'total_artifacts': discounted_artifacts,
                 'original_artifacts': original_artifacts,
                 'savings_artifacts': savings_artifacts,
                 'savings_usd': savings_usd,
                 'discount_code': discount.code if discount else None,
-                'spent_usd': round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in discounted_artifacts.items()), 2),
+                'spent_usd': spent_usd,
             },
         })
+
+
+# ---------------------------------------------------------------------------
+# Orders & tracking
+# ---------------------------------------------------------------------------
+
+ORDER_FORWARD_STATES = {
+    'paid': ['processing', 'shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered', 'cancelled'],
+    'processing': ['shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered', 'cancelled'],
+    'shipped': ['out_for_delivery', 'delivered', 'cancelled'],
+    'out_for_delivery': ['delivered', 'cancelled'],
+    'ready_for_pickup': ['delivered', 'cancelled'],
+    'delivered': ['completed'],
+}
+
+
+def _is_order_seller(order, profile):
+    return order.items.filter(creator=profile).exists()
+
+
+def _apply_fulfillment_status(order, fulfillment, new_status, note=''):
+    """Apply a forward status transition, updating the fulfillment timeline + milestones."""
+    order.set_status(new_status, note=note)
+    now = timezone.now()
+    if new_status == 'shipped' and not fulfillment.shipped_at:
+        fulfillment.shipped_at = now
+    if new_status == 'out_for_delivery' and not fulfillment.out_for_delivery_at:
+        fulfillment.out_for_delivery_at = now
+    if new_status == 'ready_for_pickup' and not fulfillment.ready_for_pickup_at:
+        fulfillment.ready_for_pickup_at = now
+    if new_status == 'delivered' and not fulfillment.delivered_at:
+        fulfillment.delivered_at = now
+    fulfillment.add_timeline_entry(new_status, note=note)
+
+
+class OrderListView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        qs = Order.objects.filter(buyer=request.user.profile).prefetch_related('items').select_related(
+            'discount_code'
+        )
+        status_filter = request.query_params.get('status', '')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(qs, request)
+        serializer = OrderSerializer(page, many=True, context={'request': request})
+        return Response({
+            'success': True, 'data': serializer.data, 'message': 'OK', 'errors': None,
+            'pagination': {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
+        })
+
+
+class SellerOrdersView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        profile = request.user.profile
+        item_ids = OrderItem.objects.filter(creator=profile).values_list('order_id', flat=True).distinct()
+        qs = Order.objects.filter(id__in=item_ids).prefetch_related('items')
+        status_filter = request.query_params.get('status', '')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        qs = qs.order_by('-created_at')
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(qs, request)
+        serializer = OrderSerializer(page, many=True, context={'request': request, 'viewer': profile})
+        return Response({
+            'success': True, 'data': serializer.data, 'message': 'OK', 'errors': None,
+            'pagination': {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
+        })
+
+
+class OrderDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id)
+        except Order.DoesNotExist:
+            return Response({'success': False, 'data': None, 'message': 'Order not found.',
+                             'errors': None, 'pagination': None}, status=404)
+        profile = request.user.profile
+        if order.buyer != profile and not _is_order_seller(order, profile):
+            return Response({'success': False, 'data': None, 'message': 'Permission denied.',
+                             'errors': None, 'pagination': None}, status=403)
+        serializer = OrderSerializer(order, context={'request': request, 'viewer': profile})
+        return Response({'success': True, 'data': serializer.data, 'message': 'OK',
+                         'errors': None, 'pagination': None})
+
+
+class OrderFulfillmentView(views.APIView):
+    """Sellers update shipping/pickup/delivery tracking on their orders."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id)
+        except Order.DoesNotExist:
+            return Response({'success': False, 'message': 'Order not found.'}, status=404)
+        if order.buyer != request.user.profile and not _is_order_seller(order, request.user.profile):
+            return Response({'success': False, 'message': 'Permission denied.'}, status=403)
+        fulfillment = order.fulfillment
+        return Response({'success': True, 'data': OrderFulfillmentSerializer(fulfillment).data})
+
+    @transaction.atomic
+    def patch(self, request, order_id):
+        profile = request.user.profile
+        try:
+            order = Order.objects.get(id=order_id)
+        except Order.DoesNotExist:
+            return Response({'success': False, 'message': 'Order not found.'}, status=404)
+        if not _is_order_seller(order, profile):
+            return Response({'success': False, 'message': 'Permission denied.'}, status=403)
+
+        fulfillment = order.fulfillment
+        carrier = request.data.get('carrier')
+        if carrier is not None:
+            fulfillment.carrier = carrier
+        tracking_number = request.data.get('tracking_number')
+        if tracking_number is not None:
+            fulfillment.tracking_number = tracking_number
+        tracking_url = request.data.get('tracking_url')
+        if tracking_url is not None:
+            fulfillment.tracking_url = tracking_url
+        pickup_location = request.data.get('pickup_location')
+        if pickup_location is not None:
+            fulfillment.pickup_location = pickup_location
+        notes = request.data.get('notes')
+        if notes is not None:
+            fulfillment.notes = notes
+
+        new_status = request.data.get('status')
+        note = request.data.get('note', '')
+        if new_status and new_status != order.status:
+            if new_status not in ORDER_FORWARD_STATES.get(order.status, []):
+                return Response({'success': False, 'message': f'Cannot move order from {order.status} to {new_status}.'}, status=400)
+            _apply_fulfillment_status(order, fulfillment, new_status, note)
+        fulfillment.save()
+        order.refresh_from_db()
+
+        if new_status in ('shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered'):
+            from apps.notifications.tasks import create_notification
+            from .tasks import _push_notification_to_profile
+            message = f'Your order {order.order_number} is now {dict(Order.STATUS_CHOICES).get(new_status, new_status)}.'
+            create_notification.delay(
+                str(order.buyer.user_id), 'new_purchase', 'Order update', message,
+                {'order_id': str(order.id), 'order_number': order.order_number, 'status': new_status},
+            )
+            _push_notification_to_profile(order.buyer, 'Order update', message)
+
+        return Response({'success': True, 'data': OrderSerializer(order, context={'request': request, 'viewer': profile}).data})
 
 
 class DiscountCodeView(views.APIView):

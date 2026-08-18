@@ -202,3 +202,18 @@ final userShopProvider = FutureProvider.family<UserShopResponse, String>((ref, h
   final raw = await repo.getUserShop(handle);
   return UserShopResponse.fromJson(raw['data'] as Map<String, dynamic>);
 });
+
+// -- Order Providers --
+final ordersProvider = FutureProvider<List<Order>>((ref) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getOrders();
+  return (raw['data'] as List)
+      .map((e) => Order.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
+
+final orderDetailProvider = FutureProvider.family<Order, String>((ref, orderId) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getOrder(orderId);
+  return Order.fromJson(raw['data'] as Map<String, dynamic>);
+});

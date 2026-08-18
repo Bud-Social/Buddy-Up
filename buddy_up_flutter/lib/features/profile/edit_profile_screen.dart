@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import '../../core/api/api_client.dart';
+import '../../core/auth/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/profile.dart';
 import '../../data/repositories/profile_repository.dart';
@@ -9,21 +11,22 @@ import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/input.dart';
 import '../../shared/widgets/toast.dart';
 
-class EditProfileScreen extends StatefulWidget {
+class EditProfileScreen extends ConsumerStatefulWidget {
   final Profile profile;
   const EditProfileScreen({super.key, required this.profile});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _displayNameController;
   late TextEditingController _bioController;
   late TextEditingController _pronounsController;
   late TextEditingController _locationCityController;
   late TextEditingController _locationCountryController;
   late TextEditingController _externalLinkController;
+  String _avatarUrl = '';
   // ignore: unused_field
   bool _isLoading = false;
   final _formKey = GlobalKey<FormState>();
@@ -34,6 +37,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   void initState() {
     super.initState();
     _profileRepo = ProfileRepository(ApiClient().dio);
+    _avatarUrl = widget.profile.avatarUrl;
     _displayNameController = TextEditingController(text: widget.profile.displayName);
     _bioController = TextEditingController(text: widget.profile.bio);
     _pronounsController = TextEditingController(text: widget.profile.pronouns);
@@ -58,11 +62,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (file == null) return;
     setState(() => _isLoading = true);
     try {
-      await _profileRepo.uploadAvatar(
+      final res = await _profileRepo.uploadAvatar(
         FormData.fromMap({
           'avatar': await MultipartFile.fromFile(file.path, filename: 'avatar.jpg'),
         }),
       );
+      final data = res['data'] as Map<String, dynamic>?;
+      final newUrl = data?['avatar_url'] as String? ?? '';
+      if (newUrl.isNotEmpty) {
+        setState(() => _avatarUrl = newUrl);
+        await ref.read(authProvider.notifier).updateProfile(
+          widget.profile.copyWith(avatarUrl: newUrl),
+        );
+      }
       if (mounted) showToast(context, 'Avatar updated!', type: ToastType.success);
     } catch (e) {
       if (mounted) showToast(context, 'Failed to upload avatar.', type: ToastType.error);
@@ -87,7 +99,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       );
       if (mounted) {
         showToast(context, 'Profile updated!', type: ToastType.success);
-        Navigator.of(context).pop();
+        await ref.read(authProvider.notifier).updateProfile(widget.profile.copyWith(
+          displayName: _displayNameController.text.trim(),
+          bio: _bioController.text.trim(),
+          pronouns: _pronounsController.text.trim(),
+          locationCity: _locationCityController.text.trim(),
+          locationCountry: _locationCountryController.text.trim(),
+          avatarUrl: _avatarUrl,
+        ));
+        if (mounted) Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) showToast(context, 'Failed to update profile.', type: ToastType.error);
@@ -126,7 +146,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   child: Stack(
                     children: [
                       Avatar(
-                        src: widget.profile.avatarUrl.isNotEmpty ? widget.profile.avatarUrl : null,
+                        src: _avatarUrl.isNotEmpty ? _avatarUrl : null,
                         alt: widget.profile.displayName,
                         size: AvatarSize.xl,
                       ),

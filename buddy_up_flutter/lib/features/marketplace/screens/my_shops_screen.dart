@@ -8,6 +8,24 @@ import '../../../data/models/marketplace.dart';
 class MyShopsScreen extends ConsumerWidget {
   const MyShopsScreen({super.key});
 
+  Future<void> _registerCreator(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(marketplaceRepositoryProvider).registerCreator({});
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('You are now a creator! 🎉'),
+          backgroundColor: BuddyColors.green,
+        ),
+      );
+      ref.invalidate(myShopsProvider);
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Registration failed: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final shopsAsync = ref.watch(myShopsProvider);
@@ -27,7 +45,10 @@ class MyShopsScreen extends ConsumerWidget {
       ),
       body: shopsAsync.when(
         data: (shops) => shops.isEmpty
-            ? _EmptyShopsState(onCreateTap: () => context.push('/marketplace/shops/create'))
+            ? _EmptyShopsState(
+                onCreateTap: () => context.push('/marketplace/shops/create'),
+                onRegisterTap: () => _registerCreator(context, ref),
+              )
             : ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: shops.length,
@@ -140,7 +161,8 @@ class _ShopCard extends StatelessWidget {
 
 class _EmptyShopsState extends StatelessWidget {
   final VoidCallback onCreateTap;
-  const _EmptyShopsState({required this.onCreateTap});
+  final VoidCallback onRegisterTap;
+  const _EmptyShopsState({required this.onCreateTap, required this.onRegisterTap});
 
   @override
   Widget build(BuildContext context) {
@@ -170,15 +192,26 @@ class _EmptyShopsState extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              icon: const Icon(Icons.add),
-              label: const Text('Create Shop'),
-              onPressed: onCreateTap,
+              icon: const Icon(Icons.rocket_launch),
+              label: const Text('Register as Creator'),
+              onPressed: onRegisterTap,
               style: ElevatedButton.styleFrom(
                 backgroundColor: BuddyColors.green,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: onCreateTap,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: BuddyColors.green),
+                foregroundColor: BuddyColors.green,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Set up a custom shop manually'),
             ),
           ],
         ),

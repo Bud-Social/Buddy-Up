@@ -36,6 +36,12 @@ class Notification(TimestampedModel):
         ('meal_reminder', 'Meal Plan Daily Reminder'),
         ('new_purchase', 'New Purchase'),
         ('shop_invite', 'Shop Invite'),
+        # Communities
+        ('community_invite', 'Community Invite'),
+        ('community_member', 'New Community Member'),
+        ('community_post', 'Community Post'),
+        ('community_comment', 'Community Comment'),
+        ('community_reaction', 'Community Reaction'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)

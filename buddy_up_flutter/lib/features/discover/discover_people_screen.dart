@@ -18,6 +18,7 @@ class DiscoverPeopleScreen extends StatefulWidget {
 class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
   final _searchController = TextEditingController();
   List _results = [];
+  List _recommendations = [];
   bool _isLoading = false;
   bool _hasSearched = false;
   String _roleFilter = '';
@@ -32,6 +33,25 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
     super.initState();
     _profileRepo = ProfileRepository(ApiClient().dio);
     _loadTrending();
+    _loadRecommendations();
+  }
+
+  Future<void> _loadRecommendations() async {
+    try {
+      final raw = await _profileRepo.getBuddyRecommendations();
+      final data = raw['data'];
+      if (data is List) {
+        final profiles = <Map<String, dynamic>>[];
+        for (final item in data) {
+          if (item is Map<String, dynamic> && item['profile'] is Map<String, dynamic>) {
+            final p = item['profile'] as Map<String, dynamic>;
+            p['match_score'] = item['match_score'];
+            profiles.add(p);
+          }
+        }
+        if (mounted) setState(() => _recommendations = profiles);
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadTrending() async {
@@ -144,9 +164,36 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                               final name = user['display_name'] ?? user['username'] ?? '';
                               final username = user['username'] ?? '';
                               final avatarUrl = user['avatar_url'] as String?;
+                              final verification = user['verification_status'] as String? ?? '';
+                              final badgeColor = switch (verification) {
+                                'trainer' => BuddyColors.green,
+                                'practitioner' => BuddyColors.gold,
+                                _ => null,
+                              };
                               return ListTile(
                                 leading: Avatar(src: avatarUrl, alt: name, size: AvatarSize.md),
-                                title: Text(name, style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w500)),
+                                title: Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w500)),
+                                    ),
+                                    if (badgeColor != null) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: badgeColor.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          verification == 'trainer' ? 'Trainer' : 'Practitioner',
+                                          style: TextStyle(color: badgeColor, fontSize: 10, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                                 subtitle: Text('@$username', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
                                 trailing: IconButton(
                                   icon: const Icon(Icons.person_add, color: BuddyColors.green),
@@ -168,7 +215,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
     final posts = (t?['posts'] as List? ?? []).cast<Map<String, dynamic>>();
     final offers = (t?['offers'] as List? ?? []).cast<Map<String, dynamic>>();
 
-    if (hashtags.isEmpty && posts.isEmpty && offers.isEmpty) {
+    if (hashtags.isEmpty && posts.isEmpty && offers.isEmpty && _recommendations.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -184,6 +231,12 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
+        if (_recommendations.isNotEmpty) ...[
+          const _SectionHeader(icon: Icons.recommend, title: 'Recommended for you'),
+          const SizedBox(height: 4),
+          ..._recommendations.take(5).map((p) => _recommendationTile(p)),
+          const SizedBox(height: 20),
+        ],
         if (hashtags.isNotEmpty) ...[
           const _SectionHeader(icon: Icons.local_fire_department, title: 'Trending Challenges'),
           const SizedBox(height: 10),
@@ -256,6 +309,68 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
           const SizedBox(height: 2),
           Text('$reactions reactions', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
         ],
+      ),
+    );
+  }
+
+  Widget _recommendationTile(Map<String, dynamic> p) {
+    final name = p['display_name'] ?? p['username'] ?? '';
+    final username = p['username'] as String? ?? '';
+    final avatarUrl = p['avatar_url'] as String?;
+    final bio = p['bio'] as String? ?? '';
+    final city = p['location_city'] as String? ?? '';
+    final followers = (p['follower_count'] as num?)?.toInt() ?? 0;
+    final buddies = (p['buddy_count'] as num?)?.toInt() ?? 0;
+    final verification = p['verification_status'] as String? ?? '';
+    final badgeColor = switch (verification) {
+      'trainer' => BuddyColors.green,
+      'practitioner' => BuddyColors.gold,
+      _ => null,
+    };
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      color: BuddyColors.surface,
+      child: ListTile(
+        leading: Avatar(src: avatarUrl, alt: name, size: AvatarSize.md),
+        title: Row(
+          children: [
+            Flexible(
+              child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+            ),
+            if (badgeColor != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  verification == 'trainer' ? 'Trainer' : 'Practitioner',
+                  style: TextStyle(color: badgeColor, fontSize: 10, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('@$username', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+            if (bio.isNotEmpty)
+              Text(bio, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+            Text(
+              [if (followers > 0) '$followers followers', if (buddies > 0) '$buddies buddies', if (city.isNotEmpty) city].join(' · '),
+              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.person_add, color: BuddyColors.green),
+          onPressed: () => _sendBuddyRequest(username),
+        ),
+        onTap: () => Navigator.of(context).pushNamed('/$username'),
       ),
     );
   }

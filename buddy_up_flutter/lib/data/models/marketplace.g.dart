@@ -456,6 +456,7 @@ _EventTicket _$EventTicketFromJson(Map<String, dynamic> json) => _EventTicket(
   status: json['status'] as String? ?? 'active',
   isCheckedIn: json['is_checked_in'] as bool? ?? false,
   checkedInAt: json['checked_in_at'] as String?,
+  qrDataUri: json['qr_data_uri'] as String?,
   createdAt: json['created_at'] as String,
 );
 
@@ -470,6 +471,7 @@ Map<String, dynamic> _$EventTicketToJson(_EventTicket instance) =>
       'status': instance.status,
       'is_checked_in': instance.isCheckedIn,
       'checked_in_at': instance.checkedInAt,
+      'qr_data_uri': instance.qrDataUri,
       'created_at': instance.createdAt,
     };
 
@@ -880,3 +882,142 @@ Map<String, dynamic> _$CheckoutResponseToJson(_CheckoutResponse instance) =>
       'purchased': instance.purchased,
       'errors': instance.errors,
     };
+
+_OrderTimelineEntry _$OrderTimelineEntryFromJson(Map<String, dynamic> json) =>
+    _OrderTimelineEntry(
+      status: json['status'] as String? ?? '',
+      at: json['at'] as String?,
+      note: json['note'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$OrderTimelineEntryToJson(_OrderTimelineEntry instance) =>
+    <String, dynamic>{
+      'status': instance.status,
+      'at': instance.at,
+      'note': instance.note,
+    };
+
+_OrderFulfillment _$OrderFulfillmentFromJson(Map<String, dynamic> json) =>
+    _OrderFulfillment(
+      carrier: json['carrier'] as String? ?? '',
+      trackingNumber: json['tracking_number'] as String? ?? '',
+      trackingUrl: json['tracking_url'] as String? ?? '',
+      pickupLocation: json['pickup_location'] as String? ?? '',
+      notes: json['notes'] as String? ?? '',
+      timeline:
+          (json['timeline'] as List<dynamic>?)
+              ?.map(
+                (e) => OrderTimelineEntry.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const <OrderTimelineEntry>[],
+      shippedAt: json['shipped_at'] as String?,
+      outForDeliveryAt: json['out_for_delivery_at'] as String?,
+      readyForPickupAt: json['ready_for_pickup_at'] as String?,
+      deliveredAt: json['delivered_at'] as String?,
+    );
+
+Map<String, dynamic> _$OrderFulfillmentToJson(_OrderFulfillment instance) =>
+    <String, dynamic>{
+      'carrier': instance.carrier,
+      'tracking_number': instance.trackingNumber,
+      'tracking_url': instance.trackingUrl,
+      'pickup_location': instance.pickupLocation,
+      'notes': instance.notes,
+      'timeline': instance.timeline,
+      'shipped_at': instance.shippedAt,
+      'out_for_delivery_at': instance.outForDeliveryAt,
+      'ready_for_pickup_at': instance.readyForPickupAt,
+      'delivered_at': instance.deliveredAt,
+    };
+
+_OrderItem _$OrderItemFromJson(Map<String, dynamic> json) => _OrderItem(
+  itemType: json['item_type'] as String? ?? '',
+  title: json['title'] as String? ?? '',
+  quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+  priceArtifacts:
+      (json['price_artifacts'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ) ??
+      const <String, int>{},
+  paidArtifacts:
+      (json['paid_artifacts'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ) ??
+      const <String, int>{},
+  creatorName: json['creator_name'] as String?,
+  createdAt: json['created_at'] as String?,
+);
+
+Map<String, dynamic> _$OrderItemToJson(_OrderItem instance) =>
+    <String, dynamic>{
+      'item_type': instance.itemType,
+      'title': instance.title,
+      'quantity': instance.quantity,
+      'price_artifacts': instance.priceArtifacts,
+      'paid_artifacts': instance.paidArtifacts,
+      'creator_name': instance.creatorName,
+      'created_at': instance.createdAt,
+    };
+
+_Order _$OrderFromJson(Map<String, dynamic> json) => _Order(
+  id: json['id'] as String,
+  orderNumber: json['order_number'] as String? ?? '',
+  status: json['status'] as String? ?? 'paid',
+  statusLabel: json['status_label'] as String? ?? '',
+  fulfillmentType: json['fulfillment_type'] as String? ?? 'digital',
+  deliveryAddress:
+      json['delivery_address'] as Map<String, dynamic>? ??
+      const <String, dynamic>{},
+  pickupDetails:
+      json['pickup_details'] as Map<String, dynamic>? ??
+      const <String, dynamic>{},
+  totalArtifacts:
+      (json['total_artifacts'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ) ??
+      const <String, int>{},
+  discountArtifacts:
+      (json['discount_artifacts'] as Map<String, dynamic>?)?.map(
+        (k, e) => MapEntry(k, (e as num).toInt()),
+      ) ??
+      const <String, int>{},
+  spentUsd: (json['spentUsd'] as num?)?.toDouble() ?? 0.0,
+  discountCode: json['discount_code'] as String?,
+  statusHistory:
+      (json['status_history'] as List<dynamic>?)
+          ?.map((e) => OrderTimelineEntry.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <OrderTimelineEntry>[],
+  items:
+      (json['items'] as List<dynamic>?)
+          ?.map((e) => OrderItem.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <OrderItem>[],
+  fulfillment: json['fulfillment'] == null
+      ? null
+      : OrderFulfillment.fromJson(json['fulfillment'] as Map<String, dynamic>),
+  isSeller: json['is_seller'] as bool? ?? false,
+  paidAt: json['paid_at'] as String?,
+  createdAt: json['created_at'] as String?,
+);
+
+Map<String, dynamic> _$OrderToJson(_Order instance) => <String, dynamic>{
+  'id': instance.id,
+  'order_number': instance.orderNumber,
+  'status': instance.status,
+  'status_label': instance.statusLabel,
+  'fulfillment_type': instance.fulfillmentType,
+  'delivery_address': instance.deliveryAddress,
+  'pickup_details': instance.pickupDetails,
+  'total_artifacts': instance.totalArtifacts,
+  'discount_artifacts': instance.discountArtifacts,
+  'spentUsd': instance.spentUsd,
+  'discount_code': instance.discountCode,
+  'status_history': instance.statusHistory,
+  'items': instance.items,
+  'fulfillment': instance.fulfillment,
+  'is_seller': instance.isSeller,
+  'paid_at': instance.paidAt,
+  'created_at': instance.createdAt,
+};

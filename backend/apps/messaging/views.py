@@ -19,11 +19,15 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
 from common.utils import validate_file_signature
-from .models import Conversation, Message, MessageReaction, CallLog
+from .models import (
+    Conversation, Message, MessageReaction, CallLog,
+    ConversationMembership, CommunityPost, CommunityPostLike, CommunityPostComment,
+)
 from .serializers import (
     ConversationSerializer, MessageSerializer,
     StartConversationInputSerializer, SendMessageInputSerializer,
     MessageReactionSerializer, CallLogSerializer,
+    CommunityMemberSerializer, CommunityPostSerializer, CommunityPostCommentSerializer,
 )
 from apps.profiles.models import BuddyRelationship, Profile
 
@@ -659,3 +663,622 @@ class CreateGroupConversationView(views.APIView):
         return Response({
             'success': True, 'data': serializer.data, 'message': 'Group created.',
         }, status=201)
+
+
+def _community_roles() -> set:
+    return {'owner', 'admin', 'member'}
+
+
+def _get_membership(conv: Conversation, profile: Profile):
+    return ConversationMembership.objects.filter(conversation=conv, profile=profile).first()
+
+
+def _is_community_manager(membership) -> bool:
+    return membership is not None and membership.role in ('owner', 'admin')
+
+
+def _notify_community_members(conv, payload):
+    """Fan out an event to every community participant's user channel."""
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+    channel_layer = get_channel_layer()
+    for participant in conv.participants.all():
+        async_to_sync(channel_layer.group_send)(
+            f'user_{participant.user_id}',
+            {'type': 'event_message', 'data': payload},
+        )
+
+
+def _push_community_notification(recipient_id, notification_type, title, body='', metadata=None):
+    from apps.notifications.tasks import create_notification
+    create_notification.delay(
+        str(recipient_id), notification_type, title, body, metadata or {}
+    )
+
+
+class CommunityListView(views.APIView):
+    """List communities I'm in + discoverable public communities; create a community."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        profile = request.user.profile
+        mine = Conversation.objects.filter(
+            is_community=True, participants=profile,
+        ).order_by('-last_message_at')
+        discoverable = Conversation.objects.filter(
+            is_community=True, is_public=True,
+        ).exclude(participants=profile).order_by('-created_at')
+
+        my_data = ConversationSerializer(mine, many=True, context={'request': request}).data
+        discover_data = ConversationSerializer(discoverable, many=True, context={'request': request}).data
+        return Response({
+            'success': True, 'data': {'mine': my_data, 'discover': discover_data},
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    def post(self, request):
+        name = (request.data.get('name') or '').strip()
+        description = (request.data.get('description') or '').strip()
+        cover_url = (request.data.get('cover_url') or '').strip()
+        group_gym_id = request.data.get('group_gym_id') or request.data.get('gym_id')
+        is_public = bool(request.data.get('is_public'))
+
+        if not name:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'A community name is required.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        gym = None
+        if group_gym_id:
+            from apps.gyms.models import Gym
+            gym = Gym.objects.filter(id=group_gym_id).first()
+
+        from .models import _generate_invite_code
+        conv = Conversation.objects.create(
+            is_group=True,
+            is_community=True,
+            group_name=name[:100],
+            description=description,
+            cover_url=cover_url,
+            group_gym=gym,
+            is_public=is_public,
+            invite_code=_generate_invite_code(),
+            created_by=request.user.profile,
+            last_message_at=timezone.now(),
+        )
+        conv.participants.add(request.user.profile)
+        ConversationMembership.objects.create(
+            conversation=conv, profile=request.user.profile, role='owner',
+        )
+
+        return Response({
+            'success': True,
+            'data': ConversationSerializer(conv, context={'request': request}).data,
+            'message': 'Community created.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CommunityDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _get_community(self, request, community_id):
+        return get_object_or_404(Conversation, id=community_id, is_community=True)
+
+    def get(self, request, community_id):
+        conv = self._get_community(request, community_id)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership and not conv.is_public:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You are not a member of this community.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        members = conv.memberships.select_related('profile').order_by(
+            db_models.Case(
+                db_models.When(role='owner', then=0),
+                db_models.When(role='admin', then=1),
+                default=2,
+            ), 'created_at',
+        )
+        data = ConversationSerializer(conv, context={'request': request}).data
+        data['members'] = CommunityMemberSerializer(members, many=True).data
+        data['member_count'] = members.count()
+        data['my_role'] = membership.role if membership else None
+        return Response({
+            'success': True, 'data': data, 'message': 'OK',
+            'errors': None, 'pagination': None,
+        })
+
+    def patch(self, request, community_id):
+        conv = self._get_community(request, community_id)
+        membership = _get_membership(conv, request.user.profile)
+        if not _is_community_manager(membership):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only admins can update community settings.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        if 'name' in request.data:
+            name = (request.data.get('name') or '').strip()
+            if not name:
+                return Response({'success': False, 'message': 'Name required.'}, status=400)
+            conv.group_name = name[:100]
+        if 'description' in request.data:
+            conv.description = (request.data.get('description') or '').strip()
+        if 'cover_url' in request.data:
+            conv.cover_url = (request.data.get('cover_url') or '').strip()
+        if 'is_public' in request.data:
+            conv.is_public = bool(request.data.get('is_public'))
+        if 'group_gym_id' in request.data:
+            from apps.gyms.models import Gym
+            gym_id = request.data.get('group_gym_id')
+            conv.group_gym = Gym.objects.filter(id=gym_id).first() if gym_id else None
+        if 'group_avatar_url' in request.data:
+            conv.group_avatar_url = (request.data.get('group_avatar_url') or '').strip()
+        conv.save()
+
+        return Response({
+            'success': True,
+            'data': ConversationSerializer(conv, context={'request': request}).data,
+            'message': 'Community updated.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CommunityJoinView(views.APIView):
+    """Join a community by invite code or via a public community's id."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        profile = request.user.profile
+
+        invite_code = (request.data.get('invite_code') or '').strip().upper()
+        if not conv.is_public and conv.invite_code != invite_code:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid or missing invite code.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        existing = _get_membership(conv, profile)
+        if existing:
+            return Response({
+                'success': True,
+                'data': ConversationSerializer(conv, context={'request': request}).data,
+                'message': 'Already a member.',
+                'errors': None, 'pagination': None,
+            })
+
+        conv.participants.add(profile)
+        ConversationMembership.objects.create(conversation=conv, profile=profile, role='member')
+
+        _notify_community_members(conv, {
+            'type': 'community_member_joined',
+            'community_id': str(conv.id),
+            'community_name': conv.group_name,
+            'user_id': str(profile.user_id),
+            'display_name': profile.display_name,
+        })
+        return Response({
+            'success': True,
+            'data': ConversationSerializer(conv, context={'request': request}).data,
+            'message': 'Joined the community.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CommunityJoinByCodeView(views.APIView):
+    """Join a community using just its invite code."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        invite_code = (request.data.get('invite_code') or '').strip().upper()
+        if not invite_code:
+            return Response({'success': False, 'message': 'Invite code required.'}, status=400)
+        conv = Conversation.objects.filter(is_community=True, invite_code=invite_code).first()
+        if not conv:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No community found for that invite code.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+        return CommunityJoinView().post(request, str(conv.id))
+
+
+class CommunityLeaveView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        profile = request.user.profile
+        membership = _get_membership(conv, profile)
+
+        if not membership:
+            return Response({'success': False, 'message': 'Not a member.'}, status=400)
+
+        if membership.role == 'owner':
+            other_owners = conv.memberships.filter(role='owner').exclude(id=membership.id).exists()
+            if not other_owners and conv.memberships.count() > 1:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Transfer ownership before leaving.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        membership.delete()
+        conv.participants.remove(profile)
+        _notify_community_members(conv, {
+            'type': 'community_member_left',
+            'community_id': str(conv.id),
+            'user_id': str(profile.user_id),
+        })
+        return Response({
+            'success': True, 'data': None, 'message': 'Left the community.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CommunityMemberManagementView(views.APIView):
+    """Add/remove members and manage roles (manager permission)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _conv(self, request, community_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not _is_community_manager(membership):
+            return conv, None
+        return conv, membership
+
+    def post(self, request, community_id):
+        conv, my_membership = self._conv(request, community_id)
+        if my_membership is None:
+            return Response({'success': False, 'message': 'Admins only.'}, status=403)
+
+        user_ids = request.data.get('user_ids', [])
+        if not isinstance(user_ids, list) or not user_ids:
+            return Response({'success': False, 'message': 'user_ids required.'}, status=400)
+
+        profiles = list(Profile.objects.filter(user_id__in=user_ids))
+        if len(profiles) != len(set(user_ids)):
+            return Response({'success': False, 'message': 'Some users not found.'}, status=400)
+
+        added = []
+        for profile in profiles:
+            if profile.user_id == request.user.profile.user_id or conv.participants.filter(user_id=profile.user_id).exists():
+                continue
+            conv.participants.add(profile)
+            ConversationMembership.objects.create(conversation=conv, profile=profile, role='member')
+            added.append(str(profile.user_id))
+            _push_community_notification(
+                profile.user_id, 'community_invite',
+                f'You were added to {conv.group_name}',
+                f'{request.user.profile.display_name} added you to a community.',
+                {'community_id': str(conv.id), 'community_name': conv.group_name},
+            )
+
+        return Response({
+            'success': True,
+            'data': {'added_user_ids': added},
+            'message': 'Members added.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, community_id, user_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        my_membership = _get_membership(conv, request.user.profile)
+        if not _is_community_manager(my_membership):
+            return Response({'success': False, 'message': 'Admins only.'}, status=403)
+
+        target_profile = get_object_or_404(Profile, user_id=user_id)
+        target_membership = _get_membership(conv, target_profile)
+        if not target_membership:
+            return Response({'success': False, 'message': 'Not a member.'}, status=400)
+        if target_membership.role == 'owner':
+            return Response({'success': False, 'message': 'Cannot remove the owner.'}, status=400)
+        if target_membership.role == 'admin' and my_membership.role != 'owner':
+            return Response({'success': False, 'message': 'Only the owner can remove admins.'}, status=403)
+
+        target_membership.delete()
+        conv.participants.remove(target_profile)
+        return Response({
+            'success': True, 'data': None, 'message': 'Member removed.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CommunityRoleView(views.APIView):
+    """Owner-only: promote/demote a member between admin and member."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, community_id, user_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        my_membership = _get_membership(conv, request.user.profile)
+        if my_membership is None or my_membership.role != 'owner':
+            return Response({'success': False, 'message': 'Owner only.'}, status=403)
+
+        role = request.data.get('role')
+        if role not in ('admin', 'member'):
+            return Response({'success': False, 'message': 'role must be admin or member.'}, status=400)
+
+        target = get_object_or_404(ConversationMembership, conversation=conv, profile__user_id=user_id)
+        if target.role == 'owner':
+            return Response({'success': False, 'message': 'Cannot change the owner role.'}, status=400)
+        target.role = role
+        target.save(update_fields=['role', 'updated_at'])
+        return Response({
+            'success': True,
+            'data': CommunityMemberSerializer(target).data,
+            'message': 'Role updated.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CommunityTransferOwnershipView(views.APIView):
+    """Owner-only: transfer ownership to another member."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        my_membership = _get_membership(conv, request.user.profile)
+        if my_membership is None or my_membership.role != 'owner':
+            return Response({'success': False, 'message': 'Owner only.'}, status=403)
+
+        target = get_object_or_404(
+            ConversationMembership, conversation=conv, profile__user_id=request.data.get('user_id')
+        )
+        if target.id == my_membership.id:
+            return Response({'success': False, 'message': 'You already own this community.'}, status=400)
+        my_membership.role = 'admin'
+        my_membership.save(update_fields=['role', 'updated_at'])
+        target.role = 'owner'
+        target.save(update_fields=['role', 'updated_at'])
+        return Response({
+            'success': True, 'data': None, 'message': 'Ownership transferred.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CommunityInviteView(views.APIView):
+    """Owner/admin: rotate the community invite code."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not _is_community_manager(membership):
+            return Response({'success': False, 'message': 'Admins only.'}, status=403)
+        from .models import _generate_invite_code
+        conv.invite_code = _generate_invite_code()
+        conv.save(update_fields=['invite_code', 'updated_at'])
+        return Response({
+            'success': True, 'data': {'invite_code': conv.invite_code},
+            'message': 'Invite code rotated.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class CommunityPostListView(views.APIView):
+    """Feed of a community's posts; create a post."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _conv(self, request, community_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership and not conv.is_public:
+            return conv, None
+        return conv, membership
+
+    def get(self, request, community_id):
+        conv, membership = self._conv(request, community_id)
+        if membership is None:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+
+        posts = conv.community_posts.select_related('author').prefetch_related('likes')
+        author_id = request.query_params.get('author_id')
+        if author_id:
+            posts = posts.filter(author__user_id=author_id)
+        only_pinned = request.query_params.get('pinned') in ('true', '1')
+        if only_pinned:
+            posts = posts.filter(is_pinned=True)
+        posts = posts[:50]
+
+        serializer = CommunityPostSerializer(
+            posts, many=True, context={'request': request, 'include_comments': True}
+        )
+        return Response({
+            'success': True, 'data': serializer.data, 'message': 'OK',
+            'errors': None, 'pagination': None,
+        })
+
+    def post(self, request, community_id):
+        conv, membership = self._conv(request, community_id)
+        if membership is None:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+
+        body = (request.data.get('body') or '').strip()
+        media_url = (request.data.get('media_url') or '').strip()
+        is_pinned = bool(request.data.get('is_pinned'))
+        if is_pinned and not _is_community_manager(membership):
+            return Response({'success': False, 'message': 'Admins only can pin.'}, status=403)
+        if not body and not media_url:
+            return Response({'success': False, 'message': 'Body or media required.'}, status=400)
+
+        post = CommunityPost.objects.create(
+            conversation=conv,
+            author=request.user.profile,
+            body=body,
+            media_url=media_url,
+            media_mime=(request.data.get('media_mime') or '').strip(),
+            is_pinned=is_pinned,
+        )
+        _notify_community_members(conv, {
+            'type': 'community_post',
+            'community_id': str(conv.id),
+            'post_id': str(post.id),
+            'author_name': request.user.profile.display_name,
+        })
+        serializer = CommunityPostSerializer(post, context={'request': request})
+        return Response({
+            'success': True, 'data': serializer.data, 'message': 'Post created.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CommunityPostDetailView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _post(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership:
+            return None, None
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+        return post, membership
+
+    def get(self, request, community_id, post_id):
+        post, membership = self._post(request, community_id, post_id)
+        if membership is None:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        serializer = CommunityPostSerializer(
+            post, context={'request': request, 'include_comments': True}
+        )
+        return Response({'success': True, 'data': serializer.data, 'message': 'OK',
+                         'errors': None, 'pagination': None})
+
+    def patch(self, request, community_id, post_id):
+        post, membership = self._post(request, community_id, post_id)
+        if membership is None:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        is_author = post.author_id == request.user.profile.user_id
+        if not is_author and not _is_community_manager(membership):
+            return Response({'success': False, 'message': 'Authors or admins only.'}, status=403)
+
+        if 'body' in request.data:
+            post.body = (request.data.get('body') or '').strip()
+        if 'media_url' in request.data:
+            post.media_url = (request.data.get('media_url') or '').strip()
+        if 'is_pinned' in request.data and _is_community_manager(membership):
+            post.is_pinned = bool(request.data.get('is_pinned'))
+        post.save()
+
+        serializer = CommunityPostSerializer(post, context={'request': request})
+        return Response({'success': True, 'data': serializer.data, 'message': 'Post updated.',
+                         'errors': None, 'pagination': None})
+
+    def delete(self, request, community_id, post_id):
+        post, membership = self._post(request, community_id, post_id)
+        if membership is None:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        is_author = post.author_id == request.user.profile.user_id
+        if not is_author and not _is_community_manager(membership):
+            return Response({'success': False, 'message': 'Authors or admins only.'}, status=403)
+        post.delete()
+        return Response({'success': True, 'data': None, 'message': 'Post deleted.',
+                         'errors': None, 'pagination': None})
+
+
+class CommunityPostLikeView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+
+        like = CommunityPostLike.objects.filter(post=post, profile=request.user.profile).first()
+        if like:
+            like.delete()
+            post.like_count = max(0, post.like_count - 1)
+            post.save(update_fields=['like_count', 'updated_at'])
+            liked = False
+        else:
+            CommunityPostLike.objects.create(post=post, profile=request.user.profile)
+            post.like_count += 1
+            post.save(update_fields=['like_count', 'updated_at'])
+            liked = True
+            if post.author_id != request.user.profile.user_id:
+                _push_community_notification(
+                    post.author.user_id, 'community_reaction',
+                    f'{request.user.profile.display_name} reacted to your post',
+                    post.body[:100],
+                    {'community_id': str(conv.id), 'post_id': str(post.id)},
+                )
+        return Response({
+            'success': True, 'data': {'is_liked': liked, 'like_count': post.like_count},
+            'message': 'Like toggled.', 'errors': None, 'pagination': None,
+        })
+
+
+class CommunityPostCommentView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _post(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership:
+            return None, None
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+        return post, membership
+
+    def get(self, request, community_id, post_id):
+        post, membership = self._post(request, community_id, post_id)
+        if membership is None:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        comments = post.comments.select_related('author').prefetch_related('replies').order_by('created_at')
+        serializer = CommunityPostCommentSerializer(comments, many=True)
+        return Response({'success': True, 'data': serializer.data, 'message': 'OK',
+                         'errors': None, 'pagination': None})
+
+    def post(self, request, community_id, post_id):
+        post, membership = self._post(request, community_id, post_id)
+        if membership is None:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        body = (request.data.get('body') or '').strip()
+        if not body:
+            return Response({'success': False, 'message': 'Comment body required.'}, status=400)
+        reply_to_id = request.data.get('reply_to_id')
+        if reply_to_id and not post.comments.filter(id=reply_to_id).exists():
+            return Response({'success': False, 'message': 'Invalid reply target.'}, status=400)
+
+        comment = CommunityPostComment.objects.create(
+            post=post, author=request.user.profile, body=body,
+            reply_to_id=reply_to_id,
+        )
+        post.comment_count += 1
+        post.save(update_fields=['comment_count', 'updated_at'])
+
+        if post.author_id != request.user.profile.user_id:
+            _push_community_notification(
+                post.author.user_id, 'community_comment',
+                f'{request.user.profile.display_name} commented on your post',
+                body[:100],
+                {'community_id': str(post.conversation_id),
+                 'post_id': str(post.id), 'comment_id': str(comment.id)},
+            )
+        serializer = CommunityPostCommentSerializer(comment)
+        return Response({
+            'success': True, 'data': serializer.data, 'message': 'Comment added.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, community_id, post_id, comment_id):
+        post, membership = self._post(request, community_id, post_id)
+        if membership is None:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        comment = get_object_or_404(CommunityPostComment, id=comment_id, post=post)
+        is_author = comment.author_id == request.user.profile.user_id
+        if not is_author and not _is_community_manager(membership):
+            return Response({'success': False, 'message': 'Authors or admins only.'}, status=403)
+        comment.delete()
+        post.comment_count = max(0, post.comment_count - 1)
+        post.save(update_fields=['comment_count', 'updated_at'])
+        return Response({'success': True, 'data': None, 'message': 'Comment deleted.',
+                         'errors': None, 'pagination': None})

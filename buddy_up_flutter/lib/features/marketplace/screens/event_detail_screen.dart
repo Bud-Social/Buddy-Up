@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
@@ -222,9 +223,9 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: BuddyButton(
-                    label: event.isRegistered ? 'In Cart' : 'Add to Cart',
+                    label: event.isRegistered ? 'My Ticket' : 'Add to Cart',
                     onPressed: event.isRegistered
-                        ? null
+                        ? () => context.push('/marketplace/tickets')
                         : () {
                             ref.read(cartProvider.notifier).addToCart(
                               'event_ticket',

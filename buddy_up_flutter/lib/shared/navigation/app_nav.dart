@@ -41,6 +41,12 @@ const List<AppNavDestination> appNavDestinations = [
     Icons.chat_bubble,
     'Messages',
   ),
+  AppNavDestination(
+    '/communities',
+    Icons.groups_outlined,
+    Icons.groups,
+    'Communities',
+  ),
   AppNavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
   AppNavDestination(
     '/settings',

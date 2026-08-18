@@ -6,6 +6,7 @@ urlpatterns = [
     # --- Shops ---
     path('shops/', views.ShopListView.as_view(), name='shops'),
     path('shops/my/', views.MyShopsView.as_view(), name='my_shops'),
+    path('register-creator/', views.RegisterCreatorView.as_view(), name='register_creator'),
     path('shops/<slug:handle>/', views.ShopDetailView.as_view(), name='shop_detail'),
     path('shops/<slug:handle>/public/', views.UserShopView.as_view(), name='shop_public'),
     path('shops/<slug:handle>/members/', views.ShopMembershipView.as_view(), name='shop_members'),
@@ -57,6 +58,12 @@ urlpatterns = [
     path('cart/', views.CartView.as_view(), name='cart'),
     path('cart/checkout/', views.CheckoutCartView.as_view(), name='cart_checkout'),
     path('cart/discount/', views.DiscountCodeView.as_view(), name='cart_discount'),
+
+    # --- Orders & Tracking ---
+    path('orders/', views.OrderListView.as_view(), name='orders'),
+    path('orders/seller/', views.SellerOrdersView.as_view(), name='seller_orders'),
+    path('orders/<uuid:order_id>/', views.OrderDetailView.as_view(), name='order_detail'),
+    path('orders/<uuid:order_id>/fulfillment/', views.OrderFulfillmentView.as_view(), name='order_fulfillment'),
 
     # --- Discount Codes ---
     path('discount-codes/', views.DiscountCodeManageView.as_view(), name='discount_codes'),

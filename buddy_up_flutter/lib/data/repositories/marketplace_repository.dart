@@ -137,13 +137,28 @@ abstract class MarketplaceRepository {
   Future<void> removeFromCart(@Body() Map<String, dynamic> data);
 
   @POST('/marketplace/cart/checkout/')
-  Future<Map<String, dynamic>> checkoutCart();
+  Future<Map<String, dynamic>> checkoutCart([@Body() Map<String, dynamic>? data]);
 
   @POST('/marketplace/cart/discount/')
   Future<Map<String, dynamic>> applyDiscount(@Body() Map<String, dynamic> data);
 
   @DELETE('/marketplace/cart/discount/')
   Future<void> removeDiscount();
+
+  @GET('/marketplace/orders/')
+  Future<Map<String, dynamic>> getOrders({@Query('status') String? status});
+
+  @GET('/marketplace/orders/seller/')
+  Future<Map<String, dynamic>> getSellerOrders({@Query('status') String? status});
+
+  @GET('/marketplace/orders/{id}/')
+  Future<Map<String, dynamic>> getOrder(@Path('id') String orderId);
+
+  @PATCH('/marketplace/orders/{id}/fulfillment/')
+  Future<Map<String, dynamic>> updateOrderFulfillment(
+    @Path('id') String orderId,
+    @Body() Map<String, dynamic> data,
+  );
 
   @GET('/marketplace/discount-codes/')
   Future<Map<String, dynamic>> getDiscountCodes();
@@ -175,8 +190,11 @@ abstract class MarketplaceRepository {
   @POST('/marketplace/discount-codes/{id}/share/')
   Future<Map<String, dynamic>> shareDiscountCode(@Path('id') String codeId);
 
-  @GET('/marketplace/shops/my-shops/')
+  @GET('/marketplace/shops/my/')
   Future<Map<String, dynamic>> getMyShops();
+
+  @POST('/marketplace/register-creator/')
+  Future<Map<String, dynamic>> registerCreator(@Body() Map<String, dynamic> data);
 
   @POST('/marketplace/shops/')
   Future<Map<String, dynamic>> createShop(@Body() Map<String, dynamic> data);
@@ -199,6 +217,6 @@ abstract class MarketplaceRepository {
     @Body() Map<String, dynamic> data,
   );
 
-  @POST('/marketplace/upload-image/')
+  @POST('/marketplace/upload-cover/')
   Future<Map<String, dynamic>> uploadImage(@Body() FormData data);
 }

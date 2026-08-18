@@ -47,10 +47,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -77,10 +74,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -107,10 +101,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -141,10 +132,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -194,10 +182,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -248,10 +233,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -321,10 +303,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -351,10 +330,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -381,10 +357,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -415,10 +388,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -450,10 +420,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -484,10 +451,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -518,10 +482,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -552,10 +513,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -586,10 +544,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -616,10 +571,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -646,10 +598,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -677,10 +626,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -711,10 +657,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -746,10 +689,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -777,10 +717,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -811,10 +748,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
@@ -842,10 +776,7 @@ class _GymRepository implements GymRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      _value = _result.data!.cast<String, dynamic>();
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

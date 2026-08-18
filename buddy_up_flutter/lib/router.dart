@@ -35,6 +35,8 @@ import 'features/marketplace/screens/product_detail_screen.dart';
 import 'features/marketplace/screens/event_detail_screen.dart';
 import 'features/marketplace/screens/event_tickets_screen.dart';
 import 'features/marketplace/screens/cart_screen.dart';
+import 'features/marketplace/screens/orders_screen.dart';
+import 'features/marketplace/screens/order_detail_screen.dart';
 import 'features/marketplace/screens/creator_studio_screen.dart';
 import 'features/marketplace/screens/discount_codes_screen.dart';
 import 'features/marketplace/screens/create_meal_plan_screen.dart';
@@ -58,6 +60,8 @@ import 'features/sessions/screens/availability_screen.dart';
 import 'features/sessions/screens/programme_weeks_screen.dart';
 import 'features/messaging/screens/conversation_list_screen.dart';
 import 'features/messaging/screens/chat_screen.dart';
+import 'features/community/screens/communities_screen.dart';
+import 'features/community/screens/community_detail_screen.dart';
 import 'shared/navigation/app_nav.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -273,6 +277,16 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, _) => const CartScreen(),
       ),
       GoRoute(
+        path: '/marketplace/orders',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const OrdersScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/orders/:orderId',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => OrderDetailScreen(orderId: state.pathParameters['orderId']!),
+      ),
+      GoRoute(
         path: '/marketplace/creator-studio',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const CreatorStudioScreen(),
@@ -473,6 +487,17 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
               final conversationId =
                   state.pathParameters['conversationId'] ?? '';
               return ChatScreen(conversationId: conversationId);
+            },
+          ),
+          GoRoute(
+            path: '/communities',
+            builder: (_, _) => const CommunitiesScreen(),
+          ),
+          GoRoute(
+            path: '/communities/:communityId',
+            builder: (_, state) {
+              final communityId = state.pathParameters['communityId'] ?? '';
+              return CommunityDetailScreen(communityId: communityId);
             },
           ),
           GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),

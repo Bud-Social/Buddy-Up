@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from django.db import models
+from django.utils import timezone
 from cloudinary.models import CloudinaryField
 from common.models import TimestampedModel
 from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
@@ -642,6 +643,140 @@ class CartItem(TimestampedModel):
     class Meta:
         db_table = 'marketplace_cart_item'
         unique_together = ('cart', 'item_type', 'meal_plan', 'programme', 'product', 'event')
+
+
+# ---------------------------------------------------------------------------
+# Orders & fulfillment
+# ---------------------------------------------------------------------------
+
+class Order(TimestampedModel):
+    """A persisted purchase. Created when checkout completes (or a single item is bought)."""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('processing', 'Processing'),
+        ('shipped', 'Shipped'),
+        ('out_for_delivery', 'Out for Delivery'),
+        ('ready_for_pickup', 'Ready for Pickup'),
+        ('delivered', 'Delivered'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    FULFILLMENT_CHOICES = [
+        ('digital', 'Digital / Instant'),
+        ('pickup', 'Pickup'),
+        ('delivery', 'Delivery'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    buyer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='orders')
+    order_number = models.CharField(max_length=40, unique=True)
+    fulfillment_type = models.CharField(max_length=10, choices=FULFILLMENT_CHOICES, default='digital')
+    delivery_address = models.JSONField(default=dict)   # {line1, line2, city, postal_code, country, phone, notes}
+    pickup_details = models.JSONField(default=dict)     # {venue, location, instructions}
+    # Artifact ledger (original totals -> discounts -> final paid)
+    items_total_artifacts = models.JSONField(default=dict)
+    discount_artifacts = models.JSONField(default=dict)
+    total_artifacts = models.JSONField(default=dict)
+    spent_usd = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discount_code = models.ForeignKey(DiscountCode, null=True, blank=True, on_delete=models.SET_NULL)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='paid')
+    status_history = models.JSONField(default=list)     # [{status, at, note}]
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_order'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['buyer']),
+            models.Index(fields=['status']),
+            models.Index(fields=['order_number']),
+        ]
+
+    def __str__(self):
+        return self.order_number
+
+    def save(self, *args, **kwargs):
+        if not self.order_number:
+            created = self.created_at or timezone.now()
+            self.order_number = f"BU-{created.strftime('%y%m%d')}-{uuid4().hex[:8].upper()}"
+        super().save(*args, **kwargs)
+
+    def set_status(self, new_status, note='', commit=True):
+        """Transition status and record history. Also touches the fulfillment timeline."""
+        self.status = new_status
+        entry = {'status': new_status, 'at': self.updated_at.isoformat() if self.updated_at else None, 'note': note}
+        history = list(self.status_history)
+        history.append(entry)
+        self.status_history = history
+        if commit:
+            self.save(update_fields=['status', 'status_history'])
+
+    @property
+    def fulfillment(self):
+        fulfillment, _ = OrderFulfillment.objects.get_or_create(order=self)
+        return fulfillment
+
+
+class OrderItem(TimestampedModel):
+    ITEM_TYPES = CartItem.ITEM_TYPES
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
+    item_type = models.CharField(max_length=20, choices=ITEM_TYPES)
+    # Target item foreign keys (nullable because items may be deleted later)
+    meal_plan = models.ForeignKey(MealPlan, null=True, blank=True, on_delete=models.SET_NULL)
+    programme = models.ForeignKey(TrainingProgramme, null=True, blank=True, on_delete=models.SET_NULL)
+    product = models.ForeignKey(Product, null=True, blank=True, on_delete=models.SET_NULL)
+    event = models.ForeignKey(MarketplaceEvent, null=True, blank=True, on_delete=models.SET_NULL)
+    creator = models.ForeignKey('profiles.Profile', null=True, blank=True,
+                                on_delete=models.SET_NULL, related_name='order_items')
+    title = models.CharField(max_length=200)
+    quantity = models.IntegerField(default=1)
+    price_artifacts = models.JSONField(default=dict)   # original per-unit price
+    paid_artifacts = models.JSONField(default=dict)    # per-unit after discount
+
+    class Meta:
+        db_table = 'marketplace_order_item'
+        indexes = [
+            models.Index(fields=['order']),
+            models.Index(fields=['item_type']),
+            models.Index(fields=['creator']),
+        ]
+
+    def __str__(self):
+        return f'{self.title} x{self.quantity} in {self.order.order_number}'
+
+
+class OrderFulfillment(TimestampedModel):
+    """Shipping / pickup / delivery tracking for an order."""
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='fulfillment_record')
+    carrier = models.CharField(max_length=100, blank=True)
+    tracking_number = models.CharField(max_length=120, blank=True)
+    tracking_url = models.URLField(blank=True)
+    pickup_location = models.CharField(max_length=300, blank=True)
+    notes = models.TextField(blank=True)
+    timeline = models.JSONField(default=list)           # [{status, at, note}]
+    # Milestones
+    shipped_at = models.DateTimeField(null=True, blank=True)
+    out_for_delivery_at = models.DateTimeField(null=True, blank=True)
+    ready_for_pickup_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_order_fulfillment'
+
+    def __str__(self):
+        return f'Fulfillment for {self.order.order_number}'
+
+    def add_timeline_entry(self, status, note='', commit=True):
+        entry = {'status': status, 'at': self.updated_at.isoformat() if self.updated_at else None, 'note': note}
+        timeline = list(self.timeline)
+        timeline.append(entry)
+        self.timeline = timeline
+        if commit:
+            self.save(update_fields=['timeline'])
 
 
 

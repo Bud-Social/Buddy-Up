@@ -269,6 +269,51 @@ export interface CreatorAnalytics {
   top_services: { id: string; title: string; type: string; sales: number }[];
 }
 
+export interface OrderItem {
+  item_type: string;
+  title: string;
+  quantity: number;
+  price_artifacts: Record<string, number>;
+  paid_artifacts: Record<string, number>;
+  creator_name: string | null;
+  created_at: string;
+}
+
+export interface OrderFulfillment {
+  carrier: string;
+  tracking_number: string;
+  tracking_url: string;
+  pickup_location: string;
+  notes: string;
+  timeline: { status: string; at: string | null; note: string }[];
+  shipped_at: string | null;
+  out_for_delivery_at: string | null;
+  ready_for_pickup_at: string | null;
+  delivered_at: string | null;
+}
+
+export interface Order {
+  id: string;
+  order_number: string;
+  status: string;
+  status_label: string;
+  fulfillment_type: string;
+  delivery_address: Record<string, unknown>;
+  pickup_details: Record<string, unknown>;
+  items_total_artifacts: Record<string, number>;
+  discount_artifacts: Record<string, number>;
+  total_artifacts: Record<string, number>;
+  total_usd: number;
+  spent_usd: number;
+  discount_code: string | null;
+  status_history: { status: string; at: string | null; note: string }[];
+  items: OrderItem[];
+  fulfillment: OrderFulfillment | null;
+  is_seller?: boolean;
+  paid_at: string | null;
+  created_at: string;
+}
+
 export const marketplaceApi = {
   getMealPlans: (diet_type?: string) =>
     apiClient.get<ApiResponse<MealPlan[]>>('/marketplace/meal-plans/', { params: diet_type ? { diet_type } : {} }).then((r) => r.data),
@@ -390,8 +435,20 @@ export const marketplaceApi = {
   removeFromCart: (item_id?: string) =>
     apiClient.delete<ApiResponse<any>>('/marketplace/cart/', { data: { item_id } }).then((r) => r.data),
 
-  checkoutCart: () =>
-    apiClient.post<ApiResponse<any>>('/marketplace/cart/checkout/').then((r) => r.data),
+  checkoutCart: (data?: Record<string, unknown>) =>
+    apiClient.post<ApiResponse<any>>('/marketplace/cart/checkout/', data || {}).then((r) => r.data),
+
+  getOrders: (status?: string) =>
+    apiClient.get<ApiResponse<Order[]>>('/marketplace/orders/', { params: status ? { status } : {} }).then((r) => r.data),
+
+  getSellerOrders: (status?: string) =>
+    apiClient.get<ApiResponse<Order[]>>('/marketplace/orders/seller/', { params: status ? { status } : {} }).then((r) => r.data),
+
+  getOrder: (orderId: string) =>
+    apiClient.get<ApiResponse<Order>>(`/marketplace/orders/${orderId}/`).then((r) => r.data),
+
+  updateOrderFulfillment: (orderId: string, data: Record<string, unknown>) =>
+    apiClient.patch<ApiResponse<Order>>(`/marketplace/orders/${orderId}/fulfillment/`, data).then((r) => r.data),
 
   applyDiscount: (code: string) =>
     apiClient.post<ApiResponse<any>>('/marketplace/cart/discount/', { code }).then((r) => r.data),
@@ -436,6 +493,9 @@ export const marketplaceApi = {
   
   getMyShops: () =>
     apiClient.get<ApiResponse<Shop[]>>('/marketplace/shops/my/').then((r) => r.data),
+
+  registerCreator: (data?: Record<string, unknown>) =>
+    apiClient.post<ApiResponse<Shop>>('/marketplace/register-creator/', data || {}).then((r) => r.data),
 
   getShop: (handle: string) =>
     apiClient.get<ApiResponse<Shop>>(`/marketplace/shops/${handle}/`).then((r) => r.data),

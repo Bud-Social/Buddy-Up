@@ -565,7 +565,7 @@ as String,
 /// @nodoc
 mixin _$Conversation {
 
- String get id; bool get isGroup; String get groupName; String get groupAvatarUrl; String? get groupGymId; String get subChannel; bool get callInProgress; List<ParticipantData> get participantsData; int get unreadCount; LastMessageData? get lastMessage; String? get lastMessageAt; String get createdAt;
+ String get id; bool get isGroup; bool get isCommunity; String get groupName; String get groupAvatarUrl; String? get groupGymId; String get subChannel; bool get callInProgress; String get description; String get coverUrl; String get inviteCode; bool get isPublic; List<ParticipantData> get participantsData; int get unreadCount; String? get membershipRole; LastMessageData? get lastMessage; String? get lastMessageAt; String get createdAt;
 /// Create a copy of Conversation
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -578,16 +578,16 @@ $ConversationCopyWith<Conversation> get copyWith => _$ConversationCopyWithImpl<C
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Conversation&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&const DeepCollectionEquality().equals(other.participantsData, participantsData)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Conversation&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.isCommunity, isCommunity) || other.isCommunity == isCommunity)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&const DeepCollectionEquality().equals(other.participantsData, participantsData)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,isGroup,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,const DeepCollectionEquality().hash(participantsData),unreadCount,lastMessage,lastMessageAt,createdAt);
+int get hashCode => Object.hash(runtimeType,id,isGroup,isCommunity,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,description,coverUrl,inviteCode,isPublic,const DeepCollectionEquality().hash(participantsData),unreadCount,membershipRole,lastMessage,lastMessageAt,createdAt);
 
 @override
 String toString() {
-  return 'Conversation(id: $id, isGroup: $isGroup, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, participantsData: $participantsData, unreadCount: $unreadCount, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt)';
+  return 'Conversation(id: $id, isGroup: $isGroup, isCommunity: $isCommunity, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, description: $description, coverUrl: $coverUrl, inviteCode: $inviteCode, isPublic: $isPublic, participantsData: $participantsData, unreadCount: $unreadCount, membershipRole: $membershipRole, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt)';
 }
 
 
@@ -598,7 +598,7 @@ abstract mixin class $ConversationCopyWith<$Res>  {
   factory $ConversationCopyWith(Conversation value, $Res Function(Conversation) _then) = _$ConversationCopyWithImpl;
 @useResult
 $Res call({
- String id, bool isGroup, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, List<ParticipantData> participantsData, int unreadCount, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
+ String id, bool isGroup, bool isCommunity, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, String description, String coverUrl, String inviteCode, bool isPublic, List<ParticipantData> participantsData, int unreadCount, String? membershipRole, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
 });
 
 
@@ -615,18 +615,24 @@ class _$ConversationCopyWithImpl<$Res>
 
 /// Create a copy of Conversation
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? isGroup = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? participantsData = null,Object? unreadCount = null,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? isGroup = null,Object? isCommunity = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? description = null,Object? coverUrl = null,Object? inviteCode = null,Object? isPublic = null,Object? participantsData = null,Object? unreadCount = null,Object? membershipRole = freezed,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,isGroup: null == isGroup ? _self.isGroup : isGroup // ignore: cast_nullable_to_non_nullable
+as bool,isCommunity: null == isCommunity ? _self.isCommunity : isCommunity // ignore: cast_nullable_to_non_nullable
 as bool,groupName: null == groupName ? _self.groupName : groupName // ignore: cast_nullable_to_non_nullable
 as String,groupAvatarUrl: null == groupAvatarUrl ? _self.groupAvatarUrl : groupAvatarUrl // ignore: cast_nullable_to_non_nullable
 as String,groupGymId: freezed == groupGymId ? _self.groupGymId : groupGymId // ignore: cast_nullable_to_non_nullable
 as String?,subChannel: null == subChannel ? _self.subChannel : subChannel // ignore: cast_nullable_to_non_nullable
 as String,callInProgress: null == callInProgress ? _self.callInProgress : callInProgress // ignore: cast_nullable_to_non_nullable
+as bool,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,coverUrl: null == coverUrl ? _self.coverUrl : coverUrl // ignore: cast_nullable_to_non_nullable
+as String,inviteCode: null == inviteCode ? _self.inviteCode : inviteCode // ignore: cast_nullable_to_non_nullable
+as String,isPublic: null == isPublic ? _self.isPublic : isPublic // ignore: cast_nullable_to_non_nullable
 as bool,participantsData: null == participantsData ? _self.participantsData : participantsData // ignore: cast_nullable_to_non_nullable
 as List<ParticipantData>,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
-as int,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
+as int,membershipRole: freezed == membershipRole ? _self.membershipRole : membershipRole // ignore: cast_nullable_to_non_nullable
+as String?,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
 as LastMessageData?,lastMessageAt: freezed == lastMessageAt ? _self.lastMessageAt : lastMessageAt // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
@@ -726,10 +732,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  bool isGroup,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  List<ParticipantData> participantsData,  int unreadCount,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  List<ParticipantData> participantsData,  int unreadCount,  String? membershipRole,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Conversation() when $default != null:
-return $default(_that.id,_that.isGroup,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.participantsData,_that.unreadCount,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
+return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.participantsData,_that.unreadCount,_that.membershipRole,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
   return orElse();
 
 }
@@ -747,10 +753,10 @@ return $default(_that.id,_that.isGroup,_that.groupName,_that.groupAvatarUrl,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  bool isGroup,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  List<ParticipantData> participantsData,  int unreadCount,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  List<ParticipantData> participantsData,  int unreadCount,  String? membershipRole,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Conversation():
-return $default(_that.id,_that.isGroup,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.participantsData,_that.unreadCount,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
+return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.participantsData,_that.unreadCount,_that.membershipRole,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -767,10 +773,10 @@ return $default(_that.id,_that.isGroup,_that.groupName,_that.groupAvatarUrl,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  bool isGroup,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  List<ParticipantData> participantsData,  int unreadCount,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  List<ParticipantData> participantsData,  int unreadCount,  String? membershipRole,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Conversation() when $default != null:
-return $default(_that.id,_that.isGroup,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.participantsData,_that.unreadCount,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
+return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.participantsData,_that.unreadCount,_that.membershipRole,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
   return null;
 
 }
@@ -782,16 +788,21 @@ return $default(_that.id,_that.isGroup,_that.groupName,_that.groupAvatarUrl,_tha
 @JsonSerializable()
 
 class _Conversation implements Conversation {
-  const _Conversation({required this.id, this.isGroup = false, this.groupName = '', this.groupAvatarUrl = '', this.groupGymId, this.subChannel = '', this.callInProgress = false, final  List<ParticipantData> participantsData = const <ParticipantData>[], this.unreadCount = 0, this.lastMessage, this.lastMessageAt, required this.createdAt}): _participantsData = participantsData;
+  const _Conversation({required this.id, this.isGroup = false, this.isCommunity = false, this.groupName = '', this.groupAvatarUrl = '', this.groupGymId, this.subChannel = '', this.callInProgress = false, this.description = '', this.coverUrl = '', this.inviteCode = '', this.isPublic = false, final  List<ParticipantData> participantsData = const <ParticipantData>[], this.unreadCount = 0, this.membershipRole, this.lastMessage, this.lastMessageAt, required this.createdAt}): _participantsData = participantsData;
   factory _Conversation.fromJson(Map<String, dynamic> json) => _$ConversationFromJson(json);
 
 @override final  String id;
 @override@JsonKey() final  bool isGroup;
+@override@JsonKey() final  bool isCommunity;
 @override@JsonKey() final  String groupName;
 @override@JsonKey() final  String groupAvatarUrl;
 @override final  String? groupGymId;
 @override@JsonKey() final  String subChannel;
 @override@JsonKey() final  bool callInProgress;
+@override@JsonKey() final  String description;
+@override@JsonKey() final  String coverUrl;
+@override@JsonKey() final  String inviteCode;
+@override@JsonKey() final  bool isPublic;
  final  List<ParticipantData> _participantsData;
 @override@JsonKey() List<ParticipantData> get participantsData {
   if (_participantsData is EqualUnmodifiableListView) return _participantsData;
@@ -800,6 +811,7 @@ class _Conversation implements Conversation {
 }
 
 @override@JsonKey() final  int unreadCount;
+@override final  String? membershipRole;
 @override final  LastMessageData? lastMessage;
 @override final  String? lastMessageAt;
 @override final  String createdAt;
@@ -817,16 +829,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Conversation&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&const DeepCollectionEquality().equals(other._participantsData, _participantsData)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Conversation&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.isCommunity, isCommunity) || other.isCommunity == isCommunity)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&const DeepCollectionEquality().equals(other._participantsData, _participantsData)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,isGroup,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,const DeepCollectionEquality().hash(_participantsData),unreadCount,lastMessage,lastMessageAt,createdAt);
+int get hashCode => Object.hash(runtimeType,id,isGroup,isCommunity,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,description,coverUrl,inviteCode,isPublic,const DeepCollectionEquality().hash(_participantsData),unreadCount,membershipRole,lastMessage,lastMessageAt,createdAt);
 
 @override
 String toString() {
-  return 'Conversation(id: $id, isGroup: $isGroup, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, participantsData: $participantsData, unreadCount: $unreadCount, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt)';
+  return 'Conversation(id: $id, isGroup: $isGroup, isCommunity: $isCommunity, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, description: $description, coverUrl: $coverUrl, inviteCode: $inviteCode, isPublic: $isPublic, participantsData: $participantsData, unreadCount: $unreadCount, membershipRole: $membershipRole, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt)';
 }
 
 
@@ -837,7 +849,7 @@ abstract mixin class _$ConversationCopyWith<$Res> implements $ConversationCopyWi
   factory _$ConversationCopyWith(_Conversation value, $Res Function(_Conversation) _then) = __$ConversationCopyWithImpl;
 @override @useResult
 $Res call({
- String id, bool isGroup, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, List<ParticipantData> participantsData, int unreadCount, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
+ String id, bool isGroup, bool isCommunity, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, String description, String coverUrl, String inviteCode, bool isPublic, List<ParticipantData> participantsData, int unreadCount, String? membershipRole, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
 });
 
 
@@ -854,18 +866,24 @@ class __$ConversationCopyWithImpl<$Res>
 
 /// Create a copy of Conversation
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? isGroup = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? participantsData = null,Object? unreadCount = null,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? isGroup = null,Object? isCommunity = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? description = null,Object? coverUrl = null,Object? inviteCode = null,Object? isPublic = null,Object? participantsData = null,Object? unreadCount = null,Object? membershipRole = freezed,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? createdAt = null,}) {
   return _then(_Conversation(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,isGroup: null == isGroup ? _self.isGroup : isGroup // ignore: cast_nullable_to_non_nullable
+as bool,isCommunity: null == isCommunity ? _self.isCommunity : isCommunity // ignore: cast_nullable_to_non_nullable
 as bool,groupName: null == groupName ? _self.groupName : groupName // ignore: cast_nullable_to_non_nullable
 as String,groupAvatarUrl: null == groupAvatarUrl ? _self.groupAvatarUrl : groupAvatarUrl // ignore: cast_nullable_to_non_nullable
 as String,groupGymId: freezed == groupGymId ? _self.groupGymId : groupGymId // ignore: cast_nullable_to_non_nullable
 as String?,subChannel: null == subChannel ? _self.subChannel : subChannel // ignore: cast_nullable_to_non_nullable
 as String,callInProgress: null == callInProgress ? _self.callInProgress : callInProgress // ignore: cast_nullable_to_non_nullable
+as bool,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,coverUrl: null == coverUrl ? _self.coverUrl : coverUrl // ignore: cast_nullable_to_non_nullable
+as String,inviteCode: null == inviteCode ? _self.inviteCode : inviteCode // ignore: cast_nullable_to_non_nullable
+as String,isPublic: null == isPublic ? _self.isPublic : isPublic // ignore: cast_nullable_to_non_nullable
 as bool,participantsData: null == participantsData ? _self._participantsData : participantsData // ignore: cast_nullable_to_non_nullable
 as List<ParticipantData>,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
-as int,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
+as int,membershipRole: freezed == membershipRole ? _self.membershipRole : membershipRole // ignore: cast_nullable_to_non_nullable
+as String?,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
 as LastMessageData?,lastMessageAt: freezed == lastMessageAt ? _self.lastMessageAt : lastMessageAt // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
@@ -873,6 +891,1821 @@ as String,
 }
 
 /// Create a copy of Conversation
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$LastMessageDataCopyWith<$Res>? get lastMessage {
+    if (_self.lastMessage == null) {
+    return null;
+  }
+
+  return $LastMessageDataCopyWith<$Res>(_self.lastMessage!, (value) {
+    return _then(_self.copyWith(lastMessage: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$CommunityMember {
+
+ String get userId; String get username; String get displayName; String get avatarUrl; String get verificationStatus; String get role; String get createdAt;
+/// Create a copy of CommunityMember
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CommunityMemberCopyWith<CommunityMember> get copyWith => _$CommunityMemberCopyWithImpl<CommunityMember>(this as CommunityMember, _$identity);
+
+  /// Serializes this CommunityMember to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunityMember&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.role, role) || other.role == role)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,verificationStatus,role,createdAt);
+
+@override
+String toString() {
+  return 'CommunityMember(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, verificationStatus: $verificationStatus, role: $role, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CommunityMemberCopyWith<$Res>  {
+  factory $CommunityMemberCopyWith(CommunityMember value, $Res Function(CommunityMember) _then) = _$CommunityMemberCopyWithImpl;
+@useResult
+$Res call({
+ String userId, String username, String displayName, String avatarUrl, String verificationStatus, String role, String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$CommunityMemberCopyWithImpl<$Res>
+    implements $CommunityMemberCopyWith<$Res> {
+  _$CommunityMemberCopyWithImpl(this._self, this._then);
+
+  final CommunityMember _self;
+  final $Res Function(CommunityMember) _then;
+
+/// Create a copy of CommunityMember
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? verificationStatus = null,Object? role = null,Object? createdAt = null,}) {
+  return _then(_self.copyWith(
+userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CommunityMember].
+extension CommunityMemberPatterns on CommunityMember {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CommunityMember value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CommunityMember() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CommunityMember value)  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityMember():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CommunityMember value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityMember() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus,  String role,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CommunityMember() when $default != null:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.role,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus,  String role,  String createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _CommunityMember():
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.role,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus,  String role,  String createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _CommunityMember() when $default != null:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.role,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CommunityMember implements CommunityMember {
+  const _CommunityMember({required this.userId, required this.username, required this.displayName, this.avatarUrl = '', this.verificationStatus = 'none', this.role = 'member', required this.createdAt});
+  factory _CommunityMember.fromJson(Map<String, dynamic> json) => _$CommunityMemberFromJson(json);
+
+@override final  String userId;
+@override final  String username;
+@override final  String displayName;
+@override@JsonKey() final  String avatarUrl;
+@override@JsonKey() final  String verificationStatus;
+@override@JsonKey() final  String role;
+@override final  String createdAt;
+
+/// Create a copy of CommunityMember
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CommunityMemberCopyWith<_CommunityMember> get copyWith => __$CommunityMemberCopyWithImpl<_CommunityMember>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CommunityMemberToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunityMember&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.role, role) || other.role == role)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,verificationStatus,role,createdAt);
+
+@override
+String toString() {
+  return 'CommunityMember(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, verificationStatus: $verificationStatus, role: $role, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CommunityMemberCopyWith<$Res> implements $CommunityMemberCopyWith<$Res> {
+  factory _$CommunityMemberCopyWith(_CommunityMember value, $Res Function(_CommunityMember) _then) = __$CommunityMemberCopyWithImpl;
+@override @useResult
+$Res call({
+ String userId, String username, String displayName, String avatarUrl, String verificationStatus, String role, String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$CommunityMemberCopyWithImpl<$Res>
+    implements _$CommunityMemberCopyWith<$Res> {
+  __$CommunityMemberCopyWithImpl(this._self, this._then);
+
+  final _CommunityMember _self;
+  final $Res Function(_CommunityMember) _then;
+
+/// Create a copy of CommunityMember
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? verificationStatus = null,Object? role = null,Object? createdAt = null,}) {
+  return _then(_CommunityMember(
+userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$CommunityPostComment {
+
+ String get id; String get postId; String get body; String? get replyToId; int get replyCount; ProfileBrief get authorData; String get createdAt;
+/// Create a copy of CommunityPostComment
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CommunityPostCommentCopyWith<CommunityPostComment> get copyWith => _$CommunityPostCommentCopyWithImpl<CommunityPostComment>(this as CommunityPostComment, _$identity);
+
+  /// Serializes this CommunityPostComment to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunityPostComment&&(identical(other.id, id) || other.id == id)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.body, body) || other.body == body)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,postId,body,replyToId,replyCount,authorData,createdAt);
+
+@override
+String toString() {
+  return 'CommunityPostComment(id: $id, postId: $postId, body: $body, replyToId: $replyToId, replyCount: $replyCount, authorData: $authorData, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CommunityPostCommentCopyWith<$Res>  {
+  factory $CommunityPostCommentCopyWith(CommunityPostComment value, $Res Function(CommunityPostComment) _then) = _$CommunityPostCommentCopyWithImpl;
+@useResult
+$Res call({
+ String id, String postId, String body, String? replyToId, int replyCount, ProfileBrief authorData, String createdAt
+});
+
+
+$ProfileBriefCopyWith<$Res> get authorData;
+
+}
+/// @nodoc
+class _$CommunityPostCommentCopyWithImpl<$Res>
+    implements $CommunityPostCommentCopyWith<$Res> {
+  _$CommunityPostCommentCopyWithImpl(this._self, this._then);
+
+  final CommunityPostComment _self;
+  final $Res Function(CommunityPostComment) _then;
+
+/// Create a copy of CommunityPostComment
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? postId = null,Object? body = null,Object? replyToId = freezed,Object? replyCount = null,Object? authorData = null,Object? createdAt = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,postId: null == postId ? _self.postId : postId // ignore: cast_nullable_to_non_nullable
+as String,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,replyToId: freezed == replyToId ? _self.replyToId : replyToId // ignore: cast_nullable_to_non_nullable
+as String?,replyCount: null == replyCount ? _self.replyCount : replyCount // ignore: cast_nullable_to_non_nullable
+as int,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
+as ProfileBrief,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+/// Create a copy of CommunityPostComment
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ProfileBriefCopyWith<$Res> get authorData {
+  
+  return $ProfileBriefCopyWith<$Res>(_self.authorData, (value) {
+    return _then(_self.copyWith(authorData: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [CommunityPostComment].
+extension CommunityPostCommentPatterns on CommunityPostComment {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CommunityPostComment value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CommunityPostComment() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CommunityPostComment value)  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityPostComment():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CommunityPostComment value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityPostComment() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String postId,  String body,  String? replyToId,  int replyCount,  ProfileBrief authorData,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CommunityPostComment() when $default != null:
+return $default(_that.id,_that.postId,_that.body,_that.replyToId,_that.replyCount,_that.authorData,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String postId,  String body,  String? replyToId,  int replyCount,  ProfileBrief authorData,  String createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _CommunityPostComment():
+return $default(_that.id,_that.postId,_that.body,_that.replyToId,_that.replyCount,_that.authorData,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String postId,  String body,  String? replyToId,  int replyCount,  ProfileBrief authorData,  String createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _CommunityPostComment() when $default != null:
+return $default(_that.id,_that.postId,_that.body,_that.replyToId,_that.replyCount,_that.authorData,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CommunityPostComment implements CommunityPostComment {
+  const _CommunityPostComment({required this.id, required this.postId, required this.body, this.replyToId, this.replyCount = 0, required this.authorData, required this.createdAt});
+  factory _CommunityPostComment.fromJson(Map<String, dynamic> json) => _$CommunityPostCommentFromJson(json);
+
+@override final  String id;
+@override final  String postId;
+@override final  String body;
+@override final  String? replyToId;
+@override@JsonKey() final  int replyCount;
+@override final  ProfileBrief authorData;
+@override final  String createdAt;
+
+/// Create a copy of CommunityPostComment
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CommunityPostCommentCopyWith<_CommunityPostComment> get copyWith => __$CommunityPostCommentCopyWithImpl<_CommunityPostComment>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CommunityPostCommentToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunityPostComment&&(identical(other.id, id) || other.id == id)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.body, body) || other.body == body)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,postId,body,replyToId,replyCount,authorData,createdAt);
+
+@override
+String toString() {
+  return 'CommunityPostComment(id: $id, postId: $postId, body: $body, replyToId: $replyToId, replyCount: $replyCount, authorData: $authorData, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CommunityPostCommentCopyWith<$Res> implements $CommunityPostCommentCopyWith<$Res> {
+  factory _$CommunityPostCommentCopyWith(_CommunityPostComment value, $Res Function(_CommunityPostComment) _then) = __$CommunityPostCommentCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String postId, String body, String? replyToId, int replyCount, ProfileBrief authorData, String createdAt
+});
+
+
+@override $ProfileBriefCopyWith<$Res> get authorData;
+
+}
+/// @nodoc
+class __$CommunityPostCommentCopyWithImpl<$Res>
+    implements _$CommunityPostCommentCopyWith<$Res> {
+  __$CommunityPostCommentCopyWithImpl(this._self, this._then);
+
+  final _CommunityPostComment _self;
+  final $Res Function(_CommunityPostComment) _then;
+
+/// Create a copy of CommunityPostComment
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? postId = null,Object? body = null,Object? replyToId = freezed,Object? replyCount = null,Object? authorData = null,Object? createdAt = null,}) {
+  return _then(_CommunityPostComment(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,postId: null == postId ? _self.postId : postId // ignore: cast_nullable_to_non_nullable
+as String,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,replyToId: freezed == replyToId ? _self.replyToId : replyToId // ignore: cast_nullable_to_non_nullable
+as String?,replyCount: null == replyCount ? _self.replyCount : replyCount // ignore: cast_nullable_to_non_nullable
+as int,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
+as ProfileBrief,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+/// Create a copy of CommunityPostComment
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ProfileBriefCopyWith<$Res> get authorData {
+  
+  return $ProfileBriefCopyWith<$Res>(_self.authorData, (value) {
+    return _then(_self.copyWith(authorData: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$ProfileBrief {
+
+ String get userId; String get username; String get displayName; String get avatarUrl; String get role;
+/// Create a copy of ProfileBrief
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ProfileBriefCopyWith<ProfileBrief> get copyWith => _$ProfileBriefCopyWithImpl<ProfileBrief>(this as ProfileBrief, _$identity);
+
+  /// Serializes this ProfileBrief to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProfileBrief&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,role);
+
+@override
+String toString() {
+  return 'ProfileBrief(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, role: $role)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ProfileBriefCopyWith<$Res>  {
+  factory $ProfileBriefCopyWith(ProfileBrief value, $Res Function(ProfileBrief) _then) = _$ProfileBriefCopyWithImpl;
+@useResult
+$Res call({
+ String userId, String username, String displayName, String avatarUrl, String role
+});
+
+
+
+
+}
+/// @nodoc
+class _$ProfileBriefCopyWithImpl<$Res>
+    implements $ProfileBriefCopyWith<$Res> {
+  _$ProfileBriefCopyWithImpl(this._self, this._then);
+
+  final ProfileBrief _self;
+  final $Res Function(ProfileBrief) _then;
+
+/// Create a copy of ProfileBrief
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? role = null,}) {
+  return _then(_self.copyWith(
+userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ProfileBrief].
+extension ProfileBriefPatterns on ProfileBrief {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ProfileBrief value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ProfileBrief() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ProfileBrief value)  $default,){
+final _that = this;
+switch (_that) {
+case _ProfileBrief():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ProfileBrief value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ProfileBrief() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String role)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ProfileBrief() when $default != null:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.role);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String role)  $default,) {final _that = this;
+switch (_that) {
+case _ProfileBrief():
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.role);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String username,  String displayName,  String avatarUrl,  String role)?  $default,) {final _that = this;
+switch (_that) {
+case _ProfileBrief() when $default != null:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.role);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ProfileBrief implements ProfileBrief {
+  const _ProfileBrief({required this.userId, required this.username, required this.displayName, this.avatarUrl = '', this.role = ''});
+  factory _ProfileBrief.fromJson(Map<String, dynamic> json) => _$ProfileBriefFromJson(json);
+
+@override final  String userId;
+@override final  String username;
+@override final  String displayName;
+@override@JsonKey() final  String avatarUrl;
+@override@JsonKey() final  String role;
+
+/// Create a copy of ProfileBrief
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ProfileBriefCopyWith<_ProfileBrief> get copyWith => __$ProfileBriefCopyWithImpl<_ProfileBrief>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ProfileBriefToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProfileBrief&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.role, role) || other.role == role));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,role);
+
+@override
+String toString() {
+  return 'ProfileBrief(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, role: $role)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ProfileBriefCopyWith<$Res> implements $ProfileBriefCopyWith<$Res> {
+  factory _$ProfileBriefCopyWith(_ProfileBrief value, $Res Function(_ProfileBrief) _then) = __$ProfileBriefCopyWithImpl;
+@override @useResult
+$Res call({
+ String userId, String username, String displayName, String avatarUrl, String role
+});
+
+
+
+
+}
+/// @nodoc
+class __$ProfileBriefCopyWithImpl<$Res>
+    implements _$ProfileBriefCopyWith<$Res> {
+  __$ProfileBriefCopyWithImpl(this._self, this._then);
+
+  final _ProfileBrief _self;
+  final $Res Function(_ProfileBrief) _then;
+
+/// Create a copy of ProfileBrief
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? role = null,}) {
+  return _then(_ProfileBrief(
+userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$CommunityPost {
+
+ String get id; String get conversationId; String get authorId; String get body; String get mediaUrl; String get mediaMime; bool get isPinned; int get likeCount; int get commentCount; ProfileBrief get authorData; bool get isLiked; List<CommunityPostComment> get comments; String get createdAt;
+/// Create a copy of CommunityPost
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CommunityPostCopyWith<CommunityPost> get copyWith => _$CommunityPostCopyWithImpl<CommunityPost>(this as CommunityPost, _$identity);
+
+  /// Serializes this CommunityPost to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunityPost&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.authorId, authorId) || other.authorId == authorId)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.likeCount, likeCount) || other.likeCount == likeCount)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.isLiked, isLiked) || other.isLiked == isLiked)&&const DeepCollectionEquality().equals(other.comments, comments)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,conversationId,authorId,body,mediaUrl,mediaMime,isPinned,likeCount,commentCount,authorData,isLiked,const DeepCollectionEquality().hash(comments),createdAt);
+
+@override
+String toString() {
+  return 'CommunityPost(id: $id, conversationId: $conversationId, authorId: $authorId, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, isPinned: $isPinned, likeCount: $likeCount, commentCount: $commentCount, authorData: $authorData, isLiked: $isLiked, comments: $comments, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CommunityPostCopyWith<$Res>  {
+  factory $CommunityPostCopyWith(CommunityPost value, $Res Function(CommunityPost) _then) = _$CommunityPostCopyWithImpl;
+@useResult
+$Res call({
+ String id, String conversationId, String authorId, String body, String mediaUrl, String mediaMime, bool isPinned, int likeCount, int commentCount, ProfileBrief authorData, bool isLiked, List<CommunityPostComment> comments, String createdAt
+});
+
+
+$ProfileBriefCopyWith<$Res> get authorData;
+
+}
+/// @nodoc
+class _$CommunityPostCopyWithImpl<$Res>
+    implements $CommunityPostCopyWith<$Res> {
+  _$CommunityPostCopyWithImpl(this._self, this._then);
+
+  final CommunityPost _self;
+  final $Res Function(CommunityPost) _then;
+
+/// Create a copy of CommunityPost
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? conversationId = null,Object? authorId = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? isPinned = null,Object? likeCount = null,Object? commentCount = null,Object? authorData = null,Object? isLiked = null,Object? comments = null,Object? createdAt = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
+as String,authorId: null == authorId ? _self.authorId : authorId // ignore: cast_nullable_to_non_nullable
+as String,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,mediaUrl: null == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
+as String,mediaMime: null == mediaMime ? _self.mediaMime : mediaMime // ignore: cast_nullable_to_non_nullable
+as String,isPinned: null == isPinned ? _self.isPinned : isPinned // ignore: cast_nullable_to_non_nullable
+as bool,likeCount: null == likeCount ? _self.likeCount : likeCount // ignore: cast_nullable_to_non_nullable
+as int,commentCount: null == commentCount ? _self.commentCount : commentCount // ignore: cast_nullable_to_non_nullable
+as int,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
+as ProfileBrief,isLiked: null == isLiked ? _self.isLiked : isLiked // ignore: cast_nullable_to_non_nullable
+as bool,comments: null == comments ? _self.comments : comments // ignore: cast_nullable_to_non_nullable
+as List<CommunityPostComment>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+/// Create a copy of CommunityPost
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ProfileBriefCopyWith<$Res> get authorData {
+  
+  return $ProfileBriefCopyWith<$Res>(_self.authorData, (value) {
+    return _then(_self.copyWith(authorData: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [CommunityPost].
+extension CommunityPostPatterns on CommunityPost {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CommunityPost value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CommunityPost() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CommunityPost value)  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityPost():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CommunityPost value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityPost() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String conversationId,  String authorId,  String body,  String mediaUrl,  String mediaMime,  bool isPinned,  int likeCount,  int commentCount,  ProfileBrief authorData,  bool isLiked,  List<CommunityPostComment> comments,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CommunityPost() when $default != null:
+return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String conversationId,  String authorId,  String body,  String mediaUrl,  String mediaMime,  bool isPinned,  int likeCount,  int commentCount,  ProfileBrief authorData,  bool isLiked,  List<CommunityPostComment> comments,  String createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _CommunityPost():
+return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String conversationId,  String authorId,  String body,  String mediaUrl,  String mediaMime,  bool isPinned,  int likeCount,  int commentCount,  ProfileBrief authorData,  bool isLiked,  List<CommunityPostComment> comments,  String createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _CommunityPost() when $default != null:
+return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CommunityPost implements CommunityPost {
+  const _CommunityPost({required this.id, required this.conversationId, required this.authorId, this.body = '', this.mediaUrl = '', this.mediaMime = '', this.isPinned = false, this.likeCount = 0, this.commentCount = 0, required this.authorData, this.isLiked = false, final  List<CommunityPostComment> comments = const <CommunityPostComment>[], required this.createdAt}): _comments = comments;
+  factory _CommunityPost.fromJson(Map<String, dynamic> json) => _$CommunityPostFromJson(json);
+
+@override final  String id;
+@override final  String conversationId;
+@override final  String authorId;
+@override@JsonKey() final  String body;
+@override@JsonKey() final  String mediaUrl;
+@override@JsonKey() final  String mediaMime;
+@override@JsonKey() final  bool isPinned;
+@override@JsonKey() final  int likeCount;
+@override@JsonKey() final  int commentCount;
+@override final  ProfileBrief authorData;
+@override@JsonKey() final  bool isLiked;
+ final  List<CommunityPostComment> _comments;
+@override@JsonKey() List<CommunityPostComment> get comments {
+  if (_comments is EqualUnmodifiableListView) return _comments;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_comments);
+}
+
+@override final  String createdAt;
+
+/// Create a copy of CommunityPost
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CommunityPostCopyWith<_CommunityPost> get copyWith => __$CommunityPostCopyWithImpl<_CommunityPost>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CommunityPostToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunityPost&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.authorId, authorId) || other.authorId == authorId)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.likeCount, likeCount) || other.likeCount == likeCount)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.isLiked, isLiked) || other.isLiked == isLiked)&&const DeepCollectionEquality().equals(other._comments, _comments)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,conversationId,authorId,body,mediaUrl,mediaMime,isPinned,likeCount,commentCount,authorData,isLiked,const DeepCollectionEquality().hash(_comments),createdAt);
+
+@override
+String toString() {
+  return 'CommunityPost(id: $id, conversationId: $conversationId, authorId: $authorId, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, isPinned: $isPinned, likeCount: $likeCount, commentCount: $commentCount, authorData: $authorData, isLiked: $isLiked, comments: $comments, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CommunityPostCopyWith<$Res> implements $CommunityPostCopyWith<$Res> {
+  factory _$CommunityPostCopyWith(_CommunityPost value, $Res Function(_CommunityPost) _then) = __$CommunityPostCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String conversationId, String authorId, String body, String mediaUrl, String mediaMime, bool isPinned, int likeCount, int commentCount, ProfileBrief authorData, bool isLiked, List<CommunityPostComment> comments, String createdAt
+});
+
+
+@override $ProfileBriefCopyWith<$Res> get authorData;
+
+}
+/// @nodoc
+class __$CommunityPostCopyWithImpl<$Res>
+    implements _$CommunityPostCopyWith<$Res> {
+  __$CommunityPostCopyWithImpl(this._self, this._then);
+
+  final _CommunityPost _self;
+  final $Res Function(_CommunityPost) _then;
+
+/// Create a copy of CommunityPost
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? conversationId = null,Object? authorId = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? isPinned = null,Object? likeCount = null,Object? commentCount = null,Object? authorData = null,Object? isLiked = null,Object? comments = null,Object? createdAt = null,}) {
+  return _then(_CommunityPost(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
+as String,authorId: null == authorId ? _self.authorId : authorId // ignore: cast_nullable_to_non_nullable
+as String,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,mediaUrl: null == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
+as String,mediaMime: null == mediaMime ? _self.mediaMime : mediaMime // ignore: cast_nullable_to_non_nullable
+as String,isPinned: null == isPinned ? _self.isPinned : isPinned // ignore: cast_nullable_to_non_nullable
+as bool,likeCount: null == likeCount ? _self.likeCount : likeCount // ignore: cast_nullable_to_non_nullable
+as int,commentCount: null == commentCount ? _self.commentCount : commentCount // ignore: cast_nullable_to_non_nullable
+as int,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
+as ProfileBrief,isLiked: null == isLiked ? _self.isLiked : isLiked // ignore: cast_nullable_to_non_nullable
+as bool,comments: null == comments ? _self._comments : comments // ignore: cast_nullable_to_non_nullable
+as List<CommunityPostComment>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+/// Create a copy of CommunityPost
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ProfileBriefCopyWith<$Res> get authorData {
+  
+  return $ProfileBriefCopyWith<$Res>(_self.authorData, (value) {
+    return _then(_self.copyWith(authorData: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$CommunityListData {
+
+ List<Conversation> get mine; List<Conversation> get discover;
+/// Create a copy of CommunityListData
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CommunityListDataCopyWith<CommunityListData> get copyWith => _$CommunityListDataCopyWithImpl<CommunityListData>(this as CommunityListData, _$identity);
+
+  /// Serializes this CommunityListData to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunityListData&&const DeepCollectionEquality().equals(other.mine, mine)&&const DeepCollectionEquality().equals(other.discover, discover));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(mine),const DeepCollectionEquality().hash(discover));
+
+@override
+String toString() {
+  return 'CommunityListData(mine: $mine, discover: $discover)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CommunityListDataCopyWith<$Res>  {
+  factory $CommunityListDataCopyWith(CommunityListData value, $Res Function(CommunityListData) _then) = _$CommunityListDataCopyWithImpl;
+@useResult
+$Res call({
+ List<Conversation> mine, List<Conversation> discover
+});
+
+
+
+
+}
+/// @nodoc
+class _$CommunityListDataCopyWithImpl<$Res>
+    implements $CommunityListDataCopyWith<$Res> {
+  _$CommunityListDataCopyWithImpl(this._self, this._then);
+
+  final CommunityListData _self;
+  final $Res Function(CommunityListData) _then;
+
+/// Create a copy of CommunityListData
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? mine = null,Object? discover = null,}) {
+  return _then(_self.copyWith(
+mine: null == mine ? _self.mine : mine // ignore: cast_nullable_to_non_nullable
+as List<Conversation>,discover: null == discover ? _self.discover : discover // ignore: cast_nullable_to_non_nullable
+as List<Conversation>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CommunityListData].
+extension CommunityListDataPatterns on CommunityListData {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CommunityListData value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CommunityListData() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CommunityListData value)  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityListData():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CommunityListData value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityListData() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<Conversation> mine,  List<Conversation> discover)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CommunityListData() when $default != null:
+return $default(_that.mine,_that.discover);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<Conversation> mine,  List<Conversation> discover)  $default,) {final _that = this;
+switch (_that) {
+case _CommunityListData():
+return $default(_that.mine,_that.discover);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<Conversation> mine,  List<Conversation> discover)?  $default,) {final _that = this;
+switch (_that) {
+case _CommunityListData() when $default != null:
+return $default(_that.mine,_that.discover);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CommunityListData implements CommunityListData {
+  const _CommunityListData({final  List<Conversation> mine = const <Conversation>[], final  List<Conversation> discover = const <Conversation>[]}): _mine = mine,_discover = discover;
+  factory _CommunityListData.fromJson(Map<String, dynamic> json) => _$CommunityListDataFromJson(json);
+
+ final  List<Conversation> _mine;
+@override@JsonKey() List<Conversation> get mine {
+  if (_mine is EqualUnmodifiableListView) return _mine;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_mine);
+}
+
+ final  List<Conversation> _discover;
+@override@JsonKey() List<Conversation> get discover {
+  if (_discover is EqualUnmodifiableListView) return _discover;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_discover);
+}
+
+
+/// Create a copy of CommunityListData
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CommunityListDataCopyWith<_CommunityListData> get copyWith => __$CommunityListDataCopyWithImpl<_CommunityListData>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CommunityListDataToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunityListData&&const DeepCollectionEquality().equals(other._mine, _mine)&&const DeepCollectionEquality().equals(other._discover, _discover));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_mine),const DeepCollectionEquality().hash(_discover));
+
+@override
+String toString() {
+  return 'CommunityListData(mine: $mine, discover: $discover)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CommunityListDataCopyWith<$Res> implements $CommunityListDataCopyWith<$Res> {
+  factory _$CommunityListDataCopyWith(_CommunityListData value, $Res Function(_CommunityListData) _then) = __$CommunityListDataCopyWithImpl;
+@override @useResult
+$Res call({
+ List<Conversation> mine, List<Conversation> discover
+});
+
+
+
+
+}
+/// @nodoc
+class __$CommunityListDataCopyWithImpl<$Res>
+    implements _$CommunityListDataCopyWith<$Res> {
+  __$CommunityListDataCopyWithImpl(this._self, this._then);
+
+  final _CommunityListData _self;
+  final $Res Function(_CommunityListData) _then;
+
+/// Create a copy of CommunityListData
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? mine = null,Object? discover = null,}) {
+  return _then(_CommunityListData(
+mine: null == mine ? _self._mine : mine // ignore: cast_nullable_to_non_nullable
+as List<Conversation>,discover: null == discover ? _self._discover : discover // ignore: cast_nullable_to_non_nullable
+as List<Conversation>,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$CommunityDetail {
+
+ String get id; bool get isGroup; bool get isCommunity; String get groupName; String get groupAvatarUrl; String? get groupGymId; String get subChannel; bool get callInProgress; String get description; String get coverUrl; String get inviteCode; bool get isPublic; String? get membershipRole; String? get myRole; int get memberCount; List<ParticipantData> get participantsData; List<CommunityMember> get members; int get unreadCount; LastMessageData? get lastMessage; String? get lastMessageAt; String get createdAt;
+/// Create a copy of CommunityDetail
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CommunityDetailCopyWith<CommunityDetail> get copyWith => _$CommunityDetailCopyWithImpl<CommunityDetail>(this as CommunityDetail, _$identity);
+
+  /// Serializes this CommunityDetail to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunityDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.isCommunity, isCommunity) || other.isCommunity == isCommunity)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.myRole, myRole) || other.myRole == myRole)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&const DeepCollectionEquality().equals(other.participantsData, participantsData)&&const DeepCollectionEquality().equals(other.members, members)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hashAll([runtimeType,id,isGroup,isCommunity,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,description,coverUrl,inviteCode,isPublic,membershipRole,myRole,memberCount,const DeepCollectionEquality().hash(participantsData),const DeepCollectionEquality().hash(members),unreadCount,lastMessage,lastMessageAt,createdAt]);
+
+@override
+String toString() {
+  return 'CommunityDetail(id: $id, isGroup: $isGroup, isCommunity: $isCommunity, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, description: $description, coverUrl: $coverUrl, inviteCode: $inviteCode, isPublic: $isPublic, membershipRole: $membershipRole, myRole: $myRole, memberCount: $memberCount, participantsData: $participantsData, members: $members, unreadCount: $unreadCount, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CommunityDetailCopyWith<$Res>  {
+  factory $CommunityDetailCopyWith(CommunityDetail value, $Res Function(CommunityDetail) _then) = _$CommunityDetailCopyWithImpl;
+@useResult
+$Res call({
+ String id, bool isGroup, bool isCommunity, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, String description, String coverUrl, String inviteCode, bool isPublic, String? membershipRole, String? myRole, int memberCount, List<ParticipantData> participantsData, List<CommunityMember> members, int unreadCount, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
+});
+
+
+$LastMessageDataCopyWith<$Res>? get lastMessage;
+
+}
+/// @nodoc
+class _$CommunityDetailCopyWithImpl<$Res>
+    implements $CommunityDetailCopyWith<$Res> {
+  _$CommunityDetailCopyWithImpl(this._self, this._then);
+
+  final CommunityDetail _self;
+  final $Res Function(CommunityDetail) _then;
+
+/// Create a copy of CommunityDetail
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? isGroup = null,Object? isCommunity = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? description = null,Object? coverUrl = null,Object? inviteCode = null,Object? isPublic = null,Object? membershipRole = freezed,Object? myRole = freezed,Object? memberCount = null,Object? participantsData = null,Object? members = null,Object? unreadCount = null,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? createdAt = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,isGroup: null == isGroup ? _self.isGroup : isGroup // ignore: cast_nullable_to_non_nullable
+as bool,isCommunity: null == isCommunity ? _self.isCommunity : isCommunity // ignore: cast_nullable_to_non_nullable
+as bool,groupName: null == groupName ? _self.groupName : groupName // ignore: cast_nullable_to_non_nullable
+as String,groupAvatarUrl: null == groupAvatarUrl ? _self.groupAvatarUrl : groupAvatarUrl // ignore: cast_nullable_to_non_nullable
+as String,groupGymId: freezed == groupGymId ? _self.groupGymId : groupGymId // ignore: cast_nullable_to_non_nullable
+as String?,subChannel: null == subChannel ? _self.subChannel : subChannel // ignore: cast_nullable_to_non_nullable
+as String,callInProgress: null == callInProgress ? _self.callInProgress : callInProgress // ignore: cast_nullable_to_non_nullable
+as bool,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,coverUrl: null == coverUrl ? _self.coverUrl : coverUrl // ignore: cast_nullable_to_non_nullable
+as String,inviteCode: null == inviteCode ? _self.inviteCode : inviteCode // ignore: cast_nullable_to_non_nullable
+as String,isPublic: null == isPublic ? _self.isPublic : isPublic // ignore: cast_nullable_to_non_nullable
+as bool,membershipRole: freezed == membershipRole ? _self.membershipRole : membershipRole // ignore: cast_nullable_to_non_nullable
+as String?,myRole: freezed == myRole ? _self.myRole : myRole // ignore: cast_nullable_to_non_nullable
+as String?,memberCount: null == memberCount ? _self.memberCount : memberCount // ignore: cast_nullable_to_non_nullable
+as int,participantsData: null == participantsData ? _self.participantsData : participantsData // ignore: cast_nullable_to_non_nullable
+as List<ParticipantData>,members: null == members ? _self.members : members // ignore: cast_nullable_to_non_nullable
+as List<CommunityMember>,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
+as int,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
+as LastMessageData?,lastMessageAt: freezed == lastMessageAt ? _self.lastMessageAt : lastMessageAt // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+/// Create a copy of CommunityDetail
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$LastMessageDataCopyWith<$Res>? get lastMessage {
+    if (_self.lastMessage == null) {
+    return null;
+  }
+
+  return $LastMessageDataCopyWith<$Res>(_self.lastMessage!, (value) {
+    return _then(_self.copyWith(lastMessage: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [CommunityDetail].
+extension CommunityDetailPatterns on CommunityDetail {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CommunityDetail value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CommunityDetail() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CommunityDetail value)  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityDetail():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CommunityDetail value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CommunityDetail() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  String? membershipRole,  String? myRole,  int memberCount,  List<ParticipantData> participantsData,  List<CommunityMember> members,  int unreadCount,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CommunityDetail() when $default != null:
+return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.membershipRole,_that.myRole,_that.memberCount,_that.participantsData,_that.members,_that.unreadCount,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  String? membershipRole,  String? myRole,  int memberCount,  List<ParticipantData> participantsData,  List<CommunityMember> members,  int unreadCount,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _CommunityDetail():
+return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.membershipRole,_that.myRole,_that.memberCount,_that.participantsData,_that.members,_that.unreadCount,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  String? membershipRole,  String? myRole,  int memberCount,  List<ParticipantData> participantsData,  List<CommunityMember> members,  int unreadCount,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _CommunityDetail() when $default != null:
+return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.membershipRole,_that.myRole,_that.memberCount,_that.participantsData,_that.members,_that.unreadCount,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CommunityDetail implements CommunityDetail {
+  const _CommunityDetail({required this.id, this.isGroup = false, this.isCommunity = true, this.groupName = '', this.groupAvatarUrl = '', this.groupGymId, this.subChannel = '', this.callInProgress = false, this.description = '', this.coverUrl = '', this.inviteCode = '', this.isPublic = false, this.membershipRole, this.myRole, this.memberCount = 0, final  List<ParticipantData> participantsData = const <ParticipantData>[], final  List<CommunityMember> members = const <CommunityMember>[], this.unreadCount = 0, this.lastMessage, this.lastMessageAt, required this.createdAt}): _participantsData = participantsData,_members = members;
+  factory _CommunityDetail.fromJson(Map<String, dynamic> json) => _$CommunityDetailFromJson(json);
+
+@override final  String id;
+@override@JsonKey() final  bool isGroup;
+@override@JsonKey() final  bool isCommunity;
+@override@JsonKey() final  String groupName;
+@override@JsonKey() final  String groupAvatarUrl;
+@override final  String? groupGymId;
+@override@JsonKey() final  String subChannel;
+@override@JsonKey() final  bool callInProgress;
+@override@JsonKey() final  String description;
+@override@JsonKey() final  String coverUrl;
+@override@JsonKey() final  String inviteCode;
+@override@JsonKey() final  bool isPublic;
+@override final  String? membershipRole;
+@override final  String? myRole;
+@override@JsonKey() final  int memberCount;
+ final  List<ParticipantData> _participantsData;
+@override@JsonKey() List<ParticipantData> get participantsData {
+  if (_participantsData is EqualUnmodifiableListView) return _participantsData;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_participantsData);
+}
+
+ final  List<CommunityMember> _members;
+@override@JsonKey() List<CommunityMember> get members {
+  if (_members is EqualUnmodifiableListView) return _members;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_members);
+}
+
+@override@JsonKey() final  int unreadCount;
+@override final  LastMessageData? lastMessage;
+@override final  String? lastMessageAt;
+@override final  String createdAt;
+
+/// Create a copy of CommunityDetail
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CommunityDetailCopyWith<_CommunityDetail> get copyWith => __$CommunityDetailCopyWithImpl<_CommunityDetail>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CommunityDetailToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunityDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.isCommunity, isCommunity) || other.isCommunity == isCommunity)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.myRole, myRole) || other.myRole == myRole)&&(identical(other.memberCount, memberCount) || other.memberCount == memberCount)&&const DeepCollectionEquality().equals(other._participantsData, _participantsData)&&const DeepCollectionEquality().equals(other._members, _members)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hashAll([runtimeType,id,isGroup,isCommunity,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,description,coverUrl,inviteCode,isPublic,membershipRole,myRole,memberCount,const DeepCollectionEquality().hash(_participantsData),const DeepCollectionEquality().hash(_members),unreadCount,lastMessage,lastMessageAt,createdAt]);
+
+@override
+String toString() {
+  return 'CommunityDetail(id: $id, isGroup: $isGroup, isCommunity: $isCommunity, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, description: $description, coverUrl: $coverUrl, inviteCode: $inviteCode, isPublic: $isPublic, membershipRole: $membershipRole, myRole: $myRole, memberCount: $memberCount, participantsData: $participantsData, members: $members, unreadCount: $unreadCount, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CommunityDetailCopyWith<$Res> implements $CommunityDetailCopyWith<$Res> {
+  factory _$CommunityDetailCopyWith(_CommunityDetail value, $Res Function(_CommunityDetail) _then) = __$CommunityDetailCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, bool isGroup, bool isCommunity, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, String description, String coverUrl, String inviteCode, bool isPublic, String? membershipRole, String? myRole, int memberCount, List<ParticipantData> participantsData, List<CommunityMember> members, int unreadCount, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
+});
+
+
+@override $LastMessageDataCopyWith<$Res>? get lastMessage;
+
+}
+/// @nodoc
+class __$CommunityDetailCopyWithImpl<$Res>
+    implements _$CommunityDetailCopyWith<$Res> {
+  __$CommunityDetailCopyWithImpl(this._self, this._then);
+
+  final _CommunityDetail _self;
+  final $Res Function(_CommunityDetail) _then;
+
+/// Create a copy of CommunityDetail
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? isGroup = null,Object? isCommunity = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? description = null,Object? coverUrl = null,Object? inviteCode = null,Object? isPublic = null,Object? membershipRole = freezed,Object? myRole = freezed,Object? memberCount = null,Object? participantsData = null,Object? members = null,Object? unreadCount = null,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? createdAt = null,}) {
+  return _then(_CommunityDetail(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,isGroup: null == isGroup ? _self.isGroup : isGroup // ignore: cast_nullable_to_non_nullable
+as bool,isCommunity: null == isCommunity ? _self.isCommunity : isCommunity // ignore: cast_nullable_to_non_nullable
+as bool,groupName: null == groupName ? _self.groupName : groupName // ignore: cast_nullable_to_non_nullable
+as String,groupAvatarUrl: null == groupAvatarUrl ? _self.groupAvatarUrl : groupAvatarUrl // ignore: cast_nullable_to_non_nullable
+as String,groupGymId: freezed == groupGymId ? _self.groupGymId : groupGymId // ignore: cast_nullable_to_non_nullable
+as String?,subChannel: null == subChannel ? _self.subChannel : subChannel // ignore: cast_nullable_to_non_nullable
+as String,callInProgress: null == callInProgress ? _self.callInProgress : callInProgress // ignore: cast_nullable_to_non_nullable
+as bool,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,coverUrl: null == coverUrl ? _self.coverUrl : coverUrl // ignore: cast_nullable_to_non_nullable
+as String,inviteCode: null == inviteCode ? _self.inviteCode : inviteCode // ignore: cast_nullable_to_non_nullable
+as String,isPublic: null == isPublic ? _self.isPublic : isPublic // ignore: cast_nullable_to_non_nullable
+as bool,membershipRole: freezed == membershipRole ? _self.membershipRole : membershipRole // ignore: cast_nullable_to_non_nullable
+as String?,myRole: freezed == myRole ? _self.myRole : myRole // ignore: cast_nullable_to_non_nullable
+as String?,memberCount: null == memberCount ? _self.memberCount : memberCount // ignore: cast_nullable_to_non_nullable
+as int,participantsData: null == participantsData ? _self._participantsData : participantsData // ignore: cast_nullable_to_non_nullable
+as List<ParticipantData>,members: null == members ? _self._members : members // ignore: cast_nullable_to_non_nullable
+as List<CommunityMember>,unreadCount: null == unreadCount ? _self.unreadCount : unreadCount // ignore: cast_nullable_to_non_nullable
+as int,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
+as LastMessageData?,lastMessageAt: freezed == lastMessageAt ? _self.lastMessageAt : lastMessageAt // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+/// Create a copy of CommunityDetail
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')

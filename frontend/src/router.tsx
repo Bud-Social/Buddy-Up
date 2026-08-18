@@ -52,6 +52,8 @@ const EventDetail = lazy(() => import('@/pages/app/EventDetail'));
 const CreateEvent = lazy(() => import('@/pages/app/CreateEvent'));
 const MyEventTickets = lazy(() => import('@/pages/app/MyEventTickets'));
 const CartPage = lazy(() => import('@/pages/app/CartPage'));
+const OrderHistory = lazy(() => import('@/pages/app/OrderHistory'));
+const OrderDetail = lazy(() => import('@/pages/app/OrderDetail'));
 const CreatorStudio = lazy(() => import('@/pages/app/CreatorStudio'));
 const DiscountCodes = lazy(() => import('@/pages/app/DiscountCodes'));
 
@@ -68,6 +70,8 @@ const Sessions = lazy(() => import('@/pages/app/Sessions'));
 const CreateSessionOffering = lazy(() => import('@/pages/app/CreateSessionOffering'));
 const SessionDetail = lazy(() => import('@/pages/app/SessionDetail'));
 const Messages = lazy(() => import('@/pages/app/Messages'));
+const Communities = lazy(() => import('@/pages/app/Communities'));
+const CommunityDetail = lazy(() => import('@/pages/app/CommunityDetail'));
 const Wallet = lazy(() => import('@/pages/app/Wallet'));
 const Notifications = lazy(() => import('@/pages/app/Notifications'));
 const Profile = lazy(() => import('@/pages/app/Profile'));
@@ -158,6 +162,8 @@ export const router = createBrowserRouter([
 
           { path: '/marketplace/creator/discount-codes/:codeId/analytics', element: <SWrapper><DiscountCodeAnalyticsPage /></SWrapper> },
           { path: '/marketplace/cart', element: <SWrapper><CartPage /></SWrapper> },
+          { path: '/marketplace/orders', element: <SWrapper><OrderHistory /></SWrapper> },
+          { path: '/marketplace/orders/:orderId', element: <SWrapper><OrderDetail /></SWrapper> },
           { path: '/marketplace/events/create', element: <SWrapper><CreateEvent /></SWrapper> },
           { path: '/marketplace/events/my-tickets', element: <SWrapper><MyEventTickets /></SWrapper> },
           { path: '/marketplace/events/:eventId', element: <SWrapper><EventDetail /></SWrapper> },
@@ -173,6 +179,8 @@ export const router = createBrowserRouter([
           { path: '/sessions/:bookingId', element: <SWrapper><SessionDetail /></SWrapper> },
           { path: '/messages', element: <SWrapper><Messages /></SWrapper> },
           { path: '/messages/:conversationId', element: <SWrapper><Messages /></SWrapper> },
+          { path: '/communities', element: <SWrapper><Communities /></SWrapper> },
+          { path: '/communities/:communityId', element: <SWrapper><CommunityDetail /></SWrapper> },
           { path: '/wallet', element: <SWrapper><Wallet /></SWrapper> },
           { path: '/notifications', element: <SWrapper><Notifications /></SWrapper> },
           { path: '/profile', element: <SWrapper><Profile /></SWrapper> },

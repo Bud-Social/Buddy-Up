@@ -56,6 +56,7 @@ export default function EditProfile() {
     try {
       const res = await profilesApi.uploadAvatar(file);
       setAvatarUrl(res.data.avatar_url);
+      setProfile({ ...profile!, avatar_url: res.data.avatar_url });
       toast('success', 'Avatar updated');
     } catch {
       toast('error', 'Failed to upload avatar');
@@ -72,6 +73,7 @@ export default function EditProfile() {
     try {
       const res = await profilesApi.uploadCover(file);
       setCoverUrl(res.data.cover_url);
+      setProfile({ ...profile!, cover_url: res.data.cover_url });
       toast('success', 'Cover photo updated');
     } catch {
       toast('error', 'Failed to upload cover');

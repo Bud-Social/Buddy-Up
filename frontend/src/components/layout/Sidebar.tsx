@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, MessageCircle, Bell, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, BrainCircuit, Activity } from 'lucide-react';
+import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, MessageCircle, Bell, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, BrainCircuit, Activity, UsersRound } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useAuthStore } from '@/store/authStore';
@@ -12,6 +12,7 @@ const main = [
   { to: '/lives', icon: Radio, label: 'Lives' }, { to: '/gyms', icon: Dumbbell, label: 'Gyms' },
   { to: '/trainers', icon: Users, label: 'Trainers' }, { to: '/marketplace', icon: ShoppingBag, label: 'Marketplace' },
   { to: '/sessions', icon: Calendar, label: 'Sessions' }, { to: '/messages', icon: MessageCircle, label: 'Messages' },
+  { to: '/communities', icon: UsersRound, label: 'Communities' },
   { to: '/notifications', icon: Bell, label: 'Notifications' }, { to: '/wallet', icon: Wallet, label: 'Wallet' },
   { to: '/profile', icon: User, label: 'Profile' },
 ];

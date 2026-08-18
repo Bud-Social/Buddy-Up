@@ -20,6 +20,12 @@ class Conversation(TimestampedModel):
     sub_channel = models.CharField(max_length=50, blank=True)
     # A flag set while a call is active in this DM
     call_in_progress = models.BooleanField(default=False)
+    # Community (community group chat) extras
+    is_community = models.BooleanField(default=False)
+    description = models.TextField(blank=True)
+    cover_url = models.URLField(blank=True)
+    invite_code = models.CharField(max_length=12, blank=True, db_index=True)
+    is_public = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'messaging_conversation'
@@ -27,6 +33,36 @@ class Conversation(TimestampedModel):
             models.Index(fields=['is_group', 'last_message_at']),
             models.Index(fields=['group_gym']),
         ]
+
+
+def _generate_invite_code() -> str:
+    """Short, unguessable invite code for community joining."""
+    import secrets
+    alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    return ''.join(secrets.choice(alphabet) for _ in range(8))
+
+
+class ConversationMembership(TimestampedModel):
+    ROLE_CHOICES = [
+        ('owner', 'Owner'),
+        ('admin', 'Admin'),
+        ('member', 'Member'),
+    ]
+
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE, related_name='memberships'
+    )
+    profile = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='conversation_memberships'
+    )
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='member')
+
+    class Meta:
+        db_table = 'messaging_conversation_membership'
+        unique_together = ('conversation', 'profile')
+
+    def __str__(self):
+        return f'{self.profile} @ {self.conversation} ({self.role})'
 
 
 class Message(TimestampedModel, SoftDeleteModel):
@@ -109,4 +145,66 @@ class CallLog(TimestampedModel):
             models.Index(fields=['conversation', '-created_at']),
             models.Index(fields=['caller']),
             models.Index(fields=['callee']),
+        ]
+
+
+class CommunityPost(TimestampedModel):
+    """A post in a community's feed (announcements, updates, discussions)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE, related_name='community_posts'
+    )
+    author = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='community_posts'
+    )
+    body = models.TextField(blank=True)
+    media_url = models.URLField(blank=True, max_length=1000)
+    media_mime = models.CharField(max_length=100, blank=True)
+    is_pinned = models.BooleanField(default=False)
+    # Denormalised for cheap feed sorting/filtering
+    like_count = models.PositiveIntegerField(default=0)
+    comment_count = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return f'Post {self.id} in {self.conversation}'
+
+    class Meta:
+        db_table = 'messaging_community_post'
+        ordering = ['-is_pinned', '-created_at']
+        indexes = [
+            models.Index(fields=['conversation', '-created_at']),
+            models.Index(fields=['conversation', 'author']),
+        ]
+
+
+class CommunityPostLike(TimestampedModel):
+    post = models.ForeignKey(CommunityPost, on_delete=models.CASCADE, related_name='likes')
+    profile = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_likes'
+    )
+
+    class Meta:
+        db_table = 'messaging_community_post_like'
+        unique_together = ('post', 'profile')
+
+
+class CommunityPostComment(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    post = models.ForeignKey(
+        CommunityPost, on_delete=models.CASCADE, related_name='comments'
+    )
+    author = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_comments'
+    )
+    body = models.TextField()
+    reply_to = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies'
+    )
+
+    class Meta:
+        db_table = 'messaging_community_post_comment'
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['post', 'created_at']),
         ]

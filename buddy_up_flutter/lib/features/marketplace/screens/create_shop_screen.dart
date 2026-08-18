@@ -82,10 +82,10 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
         'name': _nameController.text.trim(),
         'handle': _handleController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'shop_type': _shopType,
+        'category': _shopType,
         'contact_email': _emailController.text.trim(),
         'contact_phone': _phoneController.text.trim(),
-        'website': _websiteController.text.trim(),
+        'website_url': _websiteController.text.trim(),
       };
 
       // Upload logo if selected
@@ -103,7 +103,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
           'image': await MultipartFile.fromFile(_coverFile!.path, filename: 'cover.jpg'),
         });
         final result = await repo.uploadImage(formData);
-        data['cover_url'] = result['data']['url'] as String;
+        data['banner_url'] = result['data']['url'] as String;
       }
 
       await repo.createShop(data);

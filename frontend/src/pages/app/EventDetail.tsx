@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin, Tag, Users, Video, ShoppingCart, Clock, Store, ShieldCheck, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Tag, Users, Video, ShoppingCart, Clock, Store, ShieldCheck, CheckCircle2, ChevronLeft, ChevronRight, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -14,6 +14,7 @@ export default function EventDetail() {
   const [event, setEvent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [qty, setQty] = useState(1);
   const [mediaIndex, setMediaIndex] = useState(0);
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export default function EventDetail() {
     if (!event || !eventId) return;
     setIsAdding(true);
     try {
-      await marketplaceApi.addToCart('event_ticket', { event_id: eventId }, 1);
+      await marketplaceApi.addToCart('event_ticket', { event_id: eventId }, qty);
       toast('success', 'Added to cart!');
       window.dispatchEvent(new CustomEvent('cart-updated'));
     } catch {
@@ -238,6 +239,29 @@ export default function EventDetail() {
             </div>
           )}
 
+          {event.ticket_tiers && event.ticket_tiers.length > 0 && (
+            <div>
+              <h3 className="font-bold text-lg mb-2 flex items-center gap-2"><Tag size={18} className="text-buddy-gold" /> Ticket Tiers</h3>
+              <div className="space-y-2">
+                {event.ticket_tiers.map((tier: any, i: number) => (
+                  <div key={i} className="flex items-start justify-between bg-buddy-surface rounded-xl p-3">
+                    <div>
+                      <p className="text-sm font-semibold">{tier.name}</p>
+                      {tier.perks && tier.perks.length > 0 && (
+                        <p className="text-xs text-buddy-text-secondary mt-0.5">{tier.perks.join(' · ')}</p>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-buddy-green flex-shrink-0 ml-3">
+                      {tier.price_artifacts && Object.keys(tier.price_artifacts).length > 0
+                        ? Object.entries(tier.price_artifacts).map(([k, v]) => `${v} ${k}s`).join(', ')
+                        : tier.price != null ? `${tier.price}` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {event.early_bird_enabled && (
             <div className="bg-buddy-gold/10 border border-buddy-gold/30 rounded-xl p-3">
               <p className="text-xs font-bold text-buddy-gold uppercase tracking-wide">Early Bird</p>
@@ -291,18 +315,27 @@ export default function EventDetail() {
               return <span className="text-[10px] text-buddy-text-secondary font-medium">~${usd.toFixed(2)} USD</span>;
             })()}
           </div>
-          <Button
-            className={`w-1/2 h-12 text-buddy-black font-bold text-base shadow-lg ${event.is_registered ? 'bg-buddy-surface text-buddy-text-primary' : 'bg-buddy-green hover:bg-buddy-green/90 shadow-[0_0_15px_rgba(23,248,154,0.3)]'}`}
-            onClick={handleAddToCart}
-            disabled={isAdding || event.is_cancelled || isSoldOut || isPast || event.is_registered}
-            isLoading={isAdding}
-          >
-            {event.is_cancelled ? 'Cancelled' : 
-             isPast ? 'Ended' : 
-             event.is_registered ? <><CheckCircle2 size={18} className="mr-2 text-buddy-green" /> Registered</> : 
-             isSoldOut ? 'Sold Out' : 
-             <><ShoppingCart size={18} className="mr-2" /> Get Ticket</>}
-          </Button>
+          <div className="flex items-center gap-3">
+            {!event.is_registered && !event.is_cancelled && !isPast && !isSoldOut && (
+              <div className="flex items-center border border-buddy-surface-raised rounded-xl">
+                <button onClick={() => setQty(q => Math.max(1, q - 1))} className="p-2.5 hover:bg-buddy-surface transition-colors rounded-l-xl"><Minus size={14} /></button>
+                <span className="px-3 text-sm font-medium min-w-[24px] text-center">{qty}</span>
+                <button onClick={() => setQty(q => q + 1)} className="p-2.5 hover:bg-buddy-surface transition-colors rounded-r-xl"><Plus size={14} /></button>
+              </div>
+            )}
+            <Button
+              className={`min-w-[170px] h-12 text-buddy-black font-bold text-base shadow-lg ${event.is_registered ? 'bg-buddy-surface text-buddy-text-primary' : 'bg-buddy-green hover:bg-buddy-green/90 shadow-[0_0_15px_rgba(23,248,154,0.3)]'}`}
+              onClick={event.is_registered ? () => navigate('/marketplace/events/my-tickets') : handleAddToCart}
+              disabled={isAdding || event.is_cancelled || isSoldOut || isPast}
+              isLoading={isAdding}
+            >
+              {event.is_cancelled ? 'Cancelled' : 
+               isPast ? 'Ended' : 
+               event.is_registered ? <><CheckCircle2 size={18} className="mr-2 text-buddy-green" /> My Ticket</> : 
+               isSoldOut ? 'Sold Out' : 
+               <><ShoppingCart size={18} className="mr-2" /> Get Ticket</>}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

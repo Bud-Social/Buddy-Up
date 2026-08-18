@@ -330,3 +330,158 @@ def send_meal_plan_daily_reminders():
             buyer, title, body,
             {'type': 'meal_reminder', 'meal_plan_id': str(plan.id)},
         )
+
+
+# ---------------------------------------------------------------------------
+# NEW: Event ticket confirmation (in-app + push + email with QR)
+# ---------------------------------------------------------------------------
+
+@shared_task
+def send_ticket_confirmation(ticket_id: str):
+    """
+    After a ticket is purchased, notify the holder (in-app + push) and email
+    them the ticket with a scannable QR code. Email delivery falls back to the
+    console backend in development when no SMTP credentials are configured.
+    """
+    import base64
+    import qrcode
+    from io import BytesIO
+    from django.core.mail import send_mail
+    from django.template.loader import render_to_string
+    from django.utils.html import strip_tags
+    from .models import EventTicket
+    from apps.notifications.models import Notification
+
+    try:
+        ticket = EventTicket.objects.select_related('event', 'holder').get(id=ticket_id)
+    except EventTicket.DoesNotExist:
+        return
+
+    event = ticket.event
+    holder = ticket.holder
+    start = timezone.localtime(event.start_datetime)
+
+    qr_data_uri = None
+    try:
+        qr = qrcode.QRCode(box_size=10, border=4)
+        qr.add_data(str(ticket.ticket_code))
+        qr.make(fit=True)
+        img = qr.make_image(fill='black', back_color='white')
+        buf = BytesIO()
+        img.save(buf, format='PNG')
+        qr_data_uri = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode()
+    except Exception:  # noqa: BLE001
+        pass
+
+    # In-app notification
+    notification = Notification.objects.create(
+        recipient=holder,
+        notification_type='ticket_confirmed',
+        title=f'🎟️ Ticket confirmed: {event.title}',
+        body=f'{start.strftime("%a, %b %d at %I:%M %p")} · {event.location or "Online event"}',
+        metadata={'event_id': str(event.id), 'ticket_id': str(ticket.id)},
+    )
+
+    # Push
+    _push_notification_to_profile(
+        holder, notification.title, notification.body,
+        {'type': 'ticket_confirmed', 'event_id': str(event.id), 'ticket_id': str(ticket.id)},
+    )
+
+    # WebSocket real-time notification
+    try:
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f'user_{holder.user_id}',
+            {
+                'type': 'event_notification',
+                'data': {
+                    'id': str(notification.id),
+                    'type': 'ticket_confirmed',
+                    'title': notification.title,
+                    'body': notification.body,
+                    'metadata': notification.metadata,
+                },
+            },
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Email with QR
+    if holder.user.email:
+        try:
+            html = render_to_string('emails/ticket.html', {
+                'username': holder.user.email.split('@')[0],
+                'display_name': holder.display_name,
+                'event': event,
+                'ticket': ticket,
+                'start_datetime': start,
+                'qr_data_uri': qr_data_uri,
+                'ticket_code': ticket.ticket_code,
+            })
+            plain = strip_tags(html)
+            send_mail(
+                subject=f'Your ticket for {event.title} 🎟️',
+                message=plain,
+                html_message=html,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[holder.user.email],
+                fail_silently=False,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning('Ticket email failed for %s: %s', holder.user_id, exc)
+
+
+# ---------------------------------------------------------------------------
+# NEW: Event-day ticket reminders (Celery Beat, every 15 min)
+# ---------------------------------------------------------------------------
+
+@shared_task
+def send_event_ticket_reminders():
+    """
+    Periodic task: remind ticket holders whose event starts within the next
+    24 hours (once per event per holder). Skips events that are cancelled or
+    already started, and avoids duplicate reminders via a matching Notification.
+    """
+    from datetime import timedelta
+    from .models import EventTicket, MarketplaceEvent
+    from apps.notifications.models import Notification
+
+    now = timezone.now()
+    window_start = now + timedelta(hours=23, minutes=45)
+    window_end = now + timedelta(hours=24, minutes=15)
+
+    events = MarketplaceEvent.objects.filter(
+        is_cancelled=False,
+        start_datetime__gte=window_start,
+        start_datetime__lte=window_end,
+    )
+
+    for event in events:
+        for ticket in event.tickets.select_related('holder').filter(status='active'):
+            if Notification.objects.filter(
+                recipient=ticket.holder,
+                notification_type='event_reminder',
+                metadata__event_id=str(event.id),
+            ).exists():
+                continue
+
+            start = timezone.localtime(event.start_datetime)
+            title = f'⏰ Tomorrow: {event.title}'
+            body = (f'{start.strftime("%a, %b %d at %I:%M %p")} · '
+                    f'{event.location or "Online event"} — see you there!')
+
+            Notification.objects.create(
+                recipient=ticket.holder,
+                notification_type='event_reminder',
+                title=title,
+                body=body,
+                metadata={'event_id': str(event.id), 'ticket_id': str(ticket.id)},
+            )
+
+            _push_notification_to_profile(
+                ticket.holder, title, body,
+                {'type': 'event_reminder', 'event_id': str(event.id), 'ticket_id': str(ticket.id)},
+            )

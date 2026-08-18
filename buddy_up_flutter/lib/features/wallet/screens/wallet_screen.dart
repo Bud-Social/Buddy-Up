@@ -1,10 +1,18 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wallet_provider.dart';
 import '../../../data/models/wallet.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/api/api_client.dart';
+import '../../../data/repositories/profile_repository.dart';
+import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/input.dart' show BuddyInput;
+
+final _walletProfileRepoProvider = Provider<ProfileRepository>((ref) {
+  return ProfileRepository(ApiClient().dio);
+});
 
 class WalletScreen extends ConsumerStatefulWidget {
   const WalletScreen({super.key});
@@ -368,9 +376,14 @@ class _SendTabState extends ConsumerState<_SendTab> {
   final _qtyCtrl = TextEditingController(text: '1');
   final _msgCtrl = TextEditingController();
   bool _isSending = false;
+  bool _isSearching = false;
+  List<Map<String, dynamic>> _searchResults = [];
+  String? _selectedUsername;
+  Timer? _searchDebounce;
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _usernameCtrl.dispose();
     _artifactTypeCtrl.dispose();
     _qtyCtrl.dispose();
@@ -378,8 +391,42 @@ class _SendTabState extends ConsumerState<_SendTab> {
     super.dispose();
   }
 
+  void _onUsernameChanged(String value) {
+    setState(() {
+      _selectedUsername = null;
+      _searchResults = [];
+    });
+    _searchDebounce?.cancel();
+    final query = value.trim().replaceAll('@', '');
+    if (query.length < 2) {
+      setState(() => _searchResults = []);
+      return;
+    }
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () async {
+      setState(() => _isSearching = true);
+      try {
+        final repo = ref.read(_walletProfileRepoProvider);
+        final result = await repo.searchProfiles(query, null, 1);
+        final data = result['data'] as List? ?? result['results'] as List? ?? [];
+        if (mounted) setState(() => _searchResults = data.cast<Map<String, dynamic>>());
+      } catch (_) {
+        if (mounted) setState(() => _searchResults = []);
+      } finally {
+        if (mounted) setState(() => _isSearching = false);
+      }
+    });
+  }
+
+  void _selectRecipient(Map<String, dynamic> p) {
+    setState(() {
+      _selectedUsername = (p['username'] as String?) ?? '';
+      _usernameCtrl.text = p['username'] as String? ?? '';
+      _searchResults = [];
+    });
+  }
+
   Future<void> _send(bool isGift) async {
-    final username = _usernameCtrl.text.trim();
+    final username = (_selectedUsername ?? _usernameCtrl.text.trim()).replaceAll('@', '');
     final type = _artifactTypeCtrl.text.trim();
     final qty = int.tryParse(_qtyCtrl.text.trim()) ?? 1;
     if (username.isEmpty || type.isEmpty) return;
@@ -405,6 +452,10 @@ class _SendTabState extends ConsumerState<_SendTab> {
         _artifactTypeCtrl.clear();
         _qtyCtrl.text = '1';
         _msgCtrl.clear();
+        setState(() {
+          _selectedUsername = null;
+          _searchResults = [];
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -426,7 +477,49 @@ class _SendTabState extends ConsumerState<_SendTab> {
         children: [
           const Text('Send Artifacts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          BuddyInput(label: 'Username', controller: _usernameCtrl),
+          Text(
+            _selectedUsername != null ? 'To: @$_selectedUsername' : 'Search for a recipient or type a @username',
+            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          BuddyInput(
+            label: 'Recipient',
+            controller: _usernameCtrl,
+            hint: '@username',
+            suffixIcon: _isSearching ? Icons.sync : Icons.search,
+            onChanged: _onUsernameChanged,
+          ),
+          if (_searchResults.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(
+                color: BuddyColors.surface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: BuddyColors.surfaceRaised),
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _searchResults.length.clamp(0, 5),
+                separatorBuilder: (_, _) => const Divider(height: 1, color: BuddyColors.surfaceRaised),
+                itemBuilder: (_, i) {
+                  final p = _searchResults[i];
+                  final name = p['display_name'] ?? p['username'] ?? '';
+                  final username = p['username'] as String? ?? '';
+                  return ListTile(
+                    dense: true,
+                    leading: Avatar(
+                      src: p['avatar_url'] as String?,
+                      alt: name,
+                      size: AvatarSize.sm,
+                    ),
+                    title: Text(name, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w500)),
+                    subtitle: Text('@$username', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                    onTap: () => _selectRecipient(p),
+                  );
+                },
+              ),
+            ),
           const SizedBox(height: 12),
           BuddyInput(label: 'Artifact Type', controller: _artifactTypeCtrl, hint: 'e.g. dumbbell, burpee, sprint'),
           const SizedBox(height: 12),

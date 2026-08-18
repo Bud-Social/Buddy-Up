@@ -10,7 +10,8 @@ from .models import (
     MealPlan, MealPlanPurchase, MealPlanReview,
     TrainingProgramme, TrainingProgrammePurchase, TrainingProgrammeReview,
     ProgrammeActivityProgress,
-    Product, MarketplaceEvent, EventMedia, EventTicket, Cart, CartItem, DiscountCode, DiscountUsage
+    Product, MarketplaceEvent, EventMedia, EventTicket, Cart, CartItem, DiscountCode, DiscountUsage,
+    Order, OrderItem, OrderFulfillment,
 )
 
 ARTIFACT_TYPES = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion']
@@ -522,13 +523,14 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
 class EventTicketSerializer(serializers.ModelSerializer):
     event_data = serializers.SerializerMethodField()
     holder_data = serializers.SerializerMethodField()
+    qr_data_uri = serializers.SerializerMethodField()
 
     class Meta:
         model = EventTicket
         fields = [
             'id', 'ticket_code', 'event_data', 'holder_data',
             'tier', 'price_paid_artifacts', 'status',
-            'is_checked_in', 'checked_in_at', 'created_at',
+            'is_checked_in', 'checked_in_at', 'qr_data_uri', 'created_at',
         ]
 
     def get_event_data(self, obj):
@@ -553,6 +555,23 @@ class EventTicketSerializer(serializers.ModelSerializer):
             'display_name': obj.holder.display_name,
             'avatar_url': obj.holder.avatar_url,
         }
+
+    def get_qr_data_uri(self, obj):
+        if not getattr(obj, '_qr_data_uri', None):
+            obj._qr_data_uri = self._make_qr(obj)
+        return obj._qr_data_uri
+
+    def _make_qr(self, obj):
+        try:
+            qr = qrcode.QRCode(box_size=10, border=4)
+            qr.add_data(str(obj.ticket_code))
+            qr.make(fit=True)
+            img = qr.make_image(fill='black', back_color='white')
+            buf = BytesIO()
+            img.save(buf, format='PNG')
+            return 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode()
+        except Exception:  # noqa: BLE001
+            return None
 
 
 class CreateEventSerializer(serializers.Serializer):
@@ -772,4 +791,67 @@ class CartSerializer(serializers.ModelSerializer):
         if item.item_type == 'product' and item.product:
             return {}
         return {}
+
+
+# ---------------------------------------------------------------------------
+# Order serializers
+# ---------------------------------------------------------------------------
+
+class OrderFulfillmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderFulfillment
+        fields = ['carrier', 'tracking_number', 'tracking_url', 'pickup_location',
+                  'notes', 'timeline', 'shipped_at', 'out_for_delivery_at',
+                  'ready_for_pickup_at', 'delivered_at']
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    price_artifacts = serializers.SerializerMethodField()
+    paid_artifacts = serializers.SerializerMethodField()
+    creator_name = serializers.CharField(source='creator.display_name', default=None, read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ['item_type', 'title', 'quantity', 'price_artifacts',
+                  'paid_artifacts', 'creator_name', 'created_at']
+
+    def get_price_artifacts(self, obj):
+        return obj.price_artifacts or {}
+
+    def get_paid_artifacts(self, obj):
+        return obj.paid_artifacts or {}
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    fulfillment = serializers.SerializerMethodField()
+    total_usd = serializers.SerializerMethodField()
+    status_label = serializers.SerializerMethodField()
+    is_seller = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = ['id', 'order_number', 'status', 'status_label', 'fulfillment_type',
+                  'delivery_address', 'pickup_details', 'items_total_artifacts',
+                  'discount_artifacts', 'total_artifacts', 'total_usd', 'spent_usd',
+                  'discount_code', 'status_history', 'items', 'fulfillment',
+                  'is_seller', 'paid_at', 'created_at']
+
+    def get_fulfillment(self, obj):
+        try:
+            return OrderFulfillmentSerializer(obj.fulfillment_record).data
+        except OrderFulfillment.DoesNotExist:
+            return None
+
+    def get_total_usd(self, obj):
+        return round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in (obj.total_artifacts or {}).items()), 2)
+
+    def get_status_label(self, obj):
+        return dict(Order.STATUS_CHOICES).get(obj.status, obj.status)
+
+    def get_is_seller(self, obj):
+        viewer = self.context.get('viewer')
+        if viewer is None:
+            return False
+        return obj.items.filter(creator=viewer).exists()
 

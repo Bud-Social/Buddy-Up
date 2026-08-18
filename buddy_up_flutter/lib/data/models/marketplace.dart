@@ -273,6 +273,7 @@ abstract class EventTicket with _$EventTicket {
     @Default('active') String status,
     @JsonKey(name: 'is_checked_in') @Default(false) bool isCheckedIn,
     @JsonKey(name: 'checked_in_at') String? checkedInAt,
+    @JsonKey(name: 'qr_data_uri') String? qrDataUri,
     @JsonKey(name: 'created_at') required String createdAt,
   }) = _EventTicket;
 
@@ -567,4 +568,75 @@ class TopService {
       sales: (json['sales'] ?? 0) as int,
     );
   }
+}
+
+@freezed
+abstract class OrderTimelineEntry with _$OrderTimelineEntry {
+  const factory OrderTimelineEntry({
+    @Default('') String status,
+    String? at,
+    @Default('') String note,
+  }) = _OrderTimelineEntry;
+
+  factory OrderTimelineEntry.fromJson(Map<String, dynamic> json) =>
+      _$OrderTimelineEntryFromJson(json);
+}
+
+@freezed
+abstract class OrderFulfillment with _$OrderFulfillment {
+  const factory OrderFulfillment({
+    @Default('') String carrier,
+    @JsonKey(name: 'tracking_number') @Default('') String trackingNumber,
+    @JsonKey(name: 'tracking_url') @Default('') String trackingUrl,
+    @JsonKey(name: 'pickup_location') @Default('') String pickupLocation,
+    @Default('') String notes,
+    @Default(<OrderTimelineEntry>[]) List<OrderTimelineEntry> timeline,
+    @JsonKey(name: 'shipped_at') String? shippedAt,
+    @JsonKey(name: 'out_for_delivery_at') String? outForDeliveryAt,
+    @JsonKey(name: 'ready_for_pickup_at') String? readyForPickupAt,
+    @JsonKey(name: 'delivered_at') String? deliveredAt,
+  }) = _OrderFulfillment;
+
+  factory OrderFulfillment.fromJson(Map<String, dynamic> json) =>
+      _$OrderFulfillmentFromJson(json);
+}
+
+@freezed
+abstract class OrderItem with _$OrderItem {
+  const factory OrderItem({
+    @JsonKey(name: 'item_type') @Default('') String itemType,
+    @Default('') String title,
+    @Default(1) int quantity,
+    @JsonKey(name: 'price_artifacts') @Default(<String, int>{}) Map<String, int> priceArtifacts,
+    @JsonKey(name: 'paid_artifacts') @Default(<String, int>{}) Map<String, int> paidArtifacts,
+    @JsonKey(name: 'creator_name') String? creatorName,
+    @JsonKey(name: 'created_at') String? createdAt,
+  }) = _OrderItem;
+
+  factory OrderItem.fromJson(Map<String, dynamic> json) => _$OrderItemFromJson(json);
+}
+
+@freezed
+abstract class Order with _$Order {
+  const factory Order({
+    required String id,
+    @JsonKey(name: 'order_number') @Default('') String orderNumber,
+    @Default('paid') String status,
+    @JsonKey(name: 'status_label') @Default('') String statusLabel,
+    @JsonKey(name: 'fulfillment_type') @Default('digital') String fulfillmentType,
+    @JsonKey(name: 'delivery_address') @Default(<String, dynamic>{}) Map<String, dynamic> deliveryAddress,
+    @JsonKey(name: 'pickup_details') @Default(<String, dynamic>{}) Map<String, dynamic> pickupDetails,
+    @JsonKey(name: 'total_artifacts') @Default(<String, int>{}) Map<String, int> totalArtifacts,
+    @JsonKey(name: 'discount_artifacts') @Default(<String, int>{}) Map<String, int> discountArtifacts,
+    @Default(0.0) double spentUsd,
+    @JsonKey(name: 'discount_code') String? discountCode,
+    @JsonKey(name: 'status_history') @Default(<OrderTimelineEntry>[]) List<OrderTimelineEntry> statusHistory,
+    @Default(<OrderItem>[]) List<OrderItem> items,
+    OrderFulfillment? fulfillment,
+    @JsonKey(name: 'is_seller') @Default(false) bool isSeller,
+    @JsonKey(name: 'paid_at') String? paidAt,
+    @JsonKey(name: 'created_at') String? createdAt,
+  }) = _Order;
+
+  factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
 }

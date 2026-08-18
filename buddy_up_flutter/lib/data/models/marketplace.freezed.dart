@@ -4146,7 +4146,7 @@ $ShopCopyWith<$Res>? get shopData {
 /// @nodoc
 mixin _$EventTicket {
 
- String get id;@JsonKey(name: 'event_data') Map<String, dynamic>? get eventData;@JsonKey(name: 'holder_data') Map<String, dynamic>? get holderData;@JsonKey(name: 'ticket_code') String get ticketCode; String get tier;@JsonKey(name: 'price_paid_artifacts') Map<String, int>? get pricePaidArtifacts; String get status;@JsonKey(name: 'is_checked_in') bool get isCheckedIn;@JsonKey(name: 'checked_in_at') String? get checkedInAt;@JsonKey(name: 'created_at') String get createdAt;
+ String get id;@JsonKey(name: 'event_data') Map<String, dynamic>? get eventData;@JsonKey(name: 'holder_data') Map<String, dynamic>? get holderData;@JsonKey(name: 'ticket_code') String get ticketCode; String get tier;@JsonKey(name: 'price_paid_artifacts') Map<String, int>? get pricePaidArtifacts; String get status;@JsonKey(name: 'is_checked_in') bool get isCheckedIn;@JsonKey(name: 'checked_in_at') String? get checkedInAt;@JsonKey(name: 'qr_data_uri') String? get qrDataUri;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of EventTicket
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4159,16 +4159,16 @@ $EventTicketCopyWith<EventTicket> get copyWith => _$EventTicketCopyWithImpl<Even
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventTicket&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other.eventData, eventData)&&const DeepCollectionEquality().equals(other.holderData, holderData)&&(identical(other.ticketCode, ticketCode) || other.ticketCode == ticketCode)&&(identical(other.tier, tier) || other.tier == tier)&&const DeepCollectionEquality().equals(other.pricePaidArtifacts, pricePaidArtifacts)&&(identical(other.status, status) || other.status == status)&&(identical(other.isCheckedIn, isCheckedIn) || other.isCheckedIn == isCheckedIn)&&(identical(other.checkedInAt, checkedInAt) || other.checkedInAt == checkedInAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EventTicket&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other.eventData, eventData)&&const DeepCollectionEquality().equals(other.holderData, holderData)&&(identical(other.ticketCode, ticketCode) || other.ticketCode == ticketCode)&&(identical(other.tier, tier) || other.tier == tier)&&const DeepCollectionEquality().equals(other.pricePaidArtifacts, pricePaidArtifacts)&&(identical(other.status, status) || other.status == status)&&(identical(other.isCheckedIn, isCheckedIn) || other.isCheckedIn == isCheckedIn)&&(identical(other.checkedInAt, checkedInAt) || other.checkedInAt == checkedInAt)&&(identical(other.qrDataUri, qrDataUri) || other.qrDataUri == qrDataUri)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(eventData),const DeepCollectionEquality().hash(holderData),ticketCode,tier,const DeepCollectionEquality().hash(pricePaidArtifacts),status,isCheckedIn,checkedInAt,createdAt);
+int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(eventData),const DeepCollectionEquality().hash(holderData),ticketCode,tier,const DeepCollectionEquality().hash(pricePaidArtifacts),status,isCheckedIn,checkedInAt,qrDataUri,createdAt);
 
 @override
 String toString() {
-  return 'EventTicket(id: $id, eventData: $eventData, holderData: $holderData, ticketCode: $ticketCode, tier: $tier, pricePaidArtifacts: $pricePaidArtifacts, status: $status, isCheckedIn: $isCheckedIn, checkedInAt: $checkedInAt, createdAt: $createdAt)';
+  return 'EventTicket(id: $id, eventData: $eventData, holderData: $holderData, ticketCode: $ticketCode, tier: $tier, pricePaidArtifacts: $pricePaidArtifacts, status: $status, isCheckedIn: $isCheckedIn, checkedInAt: $checkedInAt, qrDataUri: $qrDataUri, createdAt: $createdAt)';
 }
 
 
@@ -4179,7 +4179,7 @@ abstract mixin class $EventTicketCopyWith<$Res>  {
   factory $EventTicketCopyWith(EventTicket value, $Res Function(EventTicket) _then) = _$EventTicketCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'event_data') Map<String, dynamic>? eventData,@JsonKey(name: 'holder_data') Map<String, dynamic>? holderData,@JsonKey(name: 'ticket_code') String ticketCode, String tier,@JsonKey(name: 'price_paid_artifacts') Map<String, int>? pricePaidArtifacts, String status,@JsonKey(name: 'is_checked_in') bool isCheckedIn,@JsonKey(name: 'checked_in_at') String? checkedInAt,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'event_data') Map<String, dynamic>? eventData,@JsonKey(name: 'holder_data') Map<String, dynamic>? holderData,@JsonKey(name: 'ticket_code') String ticketCode, String tier,@JsonKey(name: 'price_paid_artifacts') Map<String, int>? pricePaidArtifacts, String status,@JsonKey(name: 'is_checked_in') bool isCheckedIn,@JsonKey(name: 'checked_in_at') String? checkedInAt,@JsonKey(name: 'qr_data_uri') String? qrDataUri,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -4196,7 +4196,7 @@ class _$EventTicketCopyWithImpl<$Res>
 
 /// Create a copy of EventTicket
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? eventData = freezed,Object? holderData = freezed,Object? ticketCode = null,Object? tier = null,Object? pricePaidArtifacts = freezed,Object? status = null,Object? isCheckedIn = null,Object? checkedInAt = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? eventData = freezed,Object? holderData = freezed,Object? ticketCode = null,Object? tier = null,Object? pricePaidArtifacts = freezed,Object? status = null,Object? isCheckedIn = null,Object? checkedInAt = freezed,Object? qrDataUri = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,eventData: freezed == eventData ? _self.eventData : eventData // ignore: cast_nullable_to_non_nullable
@@ -4207,6 +4207,7 @@ as String,pricePaidArtifacts: freezed == pricePaidArtifacts ? _self.pricePaidArt
 as Map<String, int>?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,isCheckedIn: null == isCheckedIn ? _self.isCheckedIn : isCheckedIn // ignore: cast_nullable_to_non_nullable
 as bool,checkedInAt: freezed == checkedInAt ? _self.checkedInAt : checkedInAt // ignore: cast_nullable_to_non_nullable
+as String?,qrDataUri: freezed == qrDataUri ? _self.qrDataUri : qrDataUri // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -4293,10 +4294,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'event_data')  Map<String, dynamic>? eventData, @JsonKey(name: 'holder_data')  Map<String, dynamic>? holderData, @JsonKey(name: 'ticket_code')  String ticketCode,  String tier, @JsonKey(name: 'price_paid_artifacts')  Map<String, int>? pricePaidArtifacts,  String status, @JsonKey(name: 'is_checked_in')  bool isCheckedIn, @JsonKey(name: 'checked_in_at')  String? checkedInAt, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'event_data')  Map<String, dynamic>? eventData, @JsonKey(name: 'holder_data')  Map<String, dynamic>? holderData, @JsonKey(name: 'ticket_code')  String ticketCode,  String tier, @JsonKey(name: 'price_paid_artifacts')  Map<String, int>? pricePaidArtifacts,  String status, @JsonKey(name: 'is_checked_in')  bool isCheckedIn, @JsonKey(name: 'checked_in_at')  String? checkedInAt, @JsonKey(name: 'qr_data_uri')  String? qrDataUri, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _EventTicket() when $default != null:
-return $default(_that.id,_that.eventData,_that.holderData,_that.ticketCode,_that.tier,_that.pricePaidArtifacts,_that.status,_that.isCheckedIn,_that.checkedInAt,_that.createdAt);case _:
+return $default(_that.id,_that.eventData,_that.holderData,_that.ticketCode,_that.tier,_that.pricePaidArtifacts,_that.status,_that.isCheckedIn,_that.checkedInAt,_that.qrDataUri,_that.createdAt);case _:
   return orElse();
 
 }
@@ -4314,10 +4315,10 @@ return $default(_that.id,_that.eventData,_that.holderData,_that.ticketCode,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'event_data')  Map<String, dynamic>? eventData, @JsonKey(name: 'holder_data')  Map<String, dynamic>? holderData, @JsonKey(name: 'ticket_code')  String ticketCode,  String tier, @JsonKey(name: 'price_paid_artifacts')  Map<String, int>? pricePaidArtifacts,  String status, @JsonKey(name: 'is_checked_in')  bool isCheckedIn, @JsonKey(name: 'checked_in_at')  String? checkedInAt, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'event_data')  Map<String, dynamic>? eventData, @JsonKey(name: 'holder_data')  Map<String, dynamic>? holderData, @JsonKey(name: 'ticket_code')  String ticketCode,  String tier, @JsonKey(name: 'price_paid_artifacts')  Map<String, int>? pricePaidArtifacts,  String status, @JsonKey(name: 'is_checked_in')  bool isCheckedIn, @JsonKey(name: 'checked_in_at')  String? checkedInAt, @JsonKey(name: 'qr_data_uri')  String? qrDataUri, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _EventTicket():
-return $default(_that.id,_that.eventData,_that.holderData,_that.ticketCode,_that.tier,_that.pricePaidArtifacts,_that.status,_that.isCheckedIn,_that.checkedInAt,_that.createdAt);case _:
+return $default(_that.id,_that.eventData,_that.holderData,_that.ticketCode,_that.tier,_that.pricePaidArtifacts,_that.status,_that.isCheckedIn,_that.checkedInAt,_that.qrDataUri,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4334,10 +4335,10 @@ return $default(_that.id,_that.eventData,_that.holderData,_that.ticketCode,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'event_data')  Map<String, dynamic>? eventData, @JsonKey(name: 'holder_data')  Map<String, dynamic>? holderData, @JsonKey(name: 'ticket_code')  String ticketCode,  String tier, @JsonKey(name: 'price_paid_artifacts')  Map<String, int>? pricePaidArtifacts,  String status, @JsonKey(name: 'is_checked_in')  bool isCheckedIn, @JsonKey(name: 'checked_in_at')  String? checkedInAt, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'event_data')  Map<String, dynamic>? eventData, @JsonKey(name: 'holder_data')  Map<String, dynamic>? holderData, @JsonKey(name: 'ticket_code')  String ticketCode,  String tier, @JsonKey(name: 'price_paid_artifacts')  Map<String, int>? pricePaidArtifacts,  String status, @JsonKey(name: 'is_checked_in')  bool isCheckedIn, @JsonKey(name: 'checked_in_at')  String? checkedInAt, @JsonKey(name: 'qr_data_uri')  String? qrDataUri, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _EventTicket() when $default != null:
-return $default(_that.id,_that.eventData,_that.holderData,_that.ticketCode,_that.tier,_that.pricePaidArtifacts,_that.status,_that.isCheckedIn,_that.checkedInAt,_that.createdAt);case _:
+return $default(_that.id,_that.eventData,_that.holderData,_that.ticketCode,_that.tier,_that.pricePaidArtifacts,_that.status,_that.isCheckedIn,_that.checkedInAt,_that.qrDataUri,_that.createdAt);case _:
   return null;
 
 }
@@ -4349,7 +4350,7 @@ return $default(_that.id,_that.eventData,_that.holderData,_that.ticketCode,_that
 @JsonSerializable()
 
 class _EventTicket implements EventTicket {
-  const _EventTicket({required this.id, @JsonKey(name: 'event_data') final  Map<String, dynamic>? eventData, @JsonKey(name: 'holder_data') final  Map<String, dynamic>? holderData, @JsonKey(name: 'ticket_code') required this.ticketCode, this.tier = '', @JsonKey(name: 'price_paid_artifacts') final  Map<String, int>? pricePaidArtifacts, this.status = 'active', @JsonKey(name: 'is_checked_in') this.isCheckedIn = false, @JsonKey(name: 'checked_in_at') this.checkedInAt, @JsonKey(name: 'created_at') required this.createdAt}): _eventData = eventData,_holderData = holderData,_pricePaidArtifacts = pricePaidArtifacts;
+  const _EventTicket({required this.id, @JsonKey(name: 'event_data') final  Map<String, dynamic>? eventData, @JsonKey(name: 'holder_data') final  Map<String, dynamic>? holderData, @JsonKey(name: 'ticket_code') required this.ticketCode, this.tier = '', @JsonKey(name: 'price_paid_artifacts') final  Map<String, int>? pricePaidArtifacts, this.status = 'active', @JsonKey(name: 'is_checked_in') this.isCheckedIn = false, @JsonKey(name: 'checked_in_at') this.checkedInAt, @JsonKey(name: 'qr_data_uri') this.qrDataUri, @JsonKey(name: 'created_at') required this.createdAt}): _eventData = eventData,_holderData = holderData,_pricePaidArtifacts = pricePaidArtifacts;
   factory _EventTicket.fromJson(Map<String, dynamic> json) => _$EventTicketFromJson(json);
 
 @override final  String id;
@@ -4385,6 +4386,7 @@ class _EventTicket implements EventTicket {
 @override@JsonKey() final  String status;
 @override@JsonKey(name: 'is_checked_in') final  bool isCheckedIn;
 @override@JsonKey(name: 'checked_in_at') final  String? checkedInAt;
+@override@JsonKey(name: 'qr_data_uri') final  String? qrDataUri;
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of EventTicket
@@ -4400,16 +4402,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventTicket&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other._eventData, _eventData)&&const DeepCollectionEquality().equals(other._holderData, _holderData)&&(identical(other.ticketCode, ticketCode) || other.ticketCode == ticketCode)&&(identical(other.tier, tier) || other.tier == tier)&&const DeepCollectionEquality().equals(other._pricePaidArtifacts, _pricePaidArtifacts)&&(identical(other.status, status) || other.status == status)&&(identical(other.isCheckedIn, isCheckedIn) || other.isCheckedIn == isCheckedIn)&&(identical(other.checkedInAt, checkedInAt) || other.checkedInAt == checkedInAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EventTicket&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other._eventData, _eventData)&&const DeepCollectionEquality().equals(other._holderData, _holderData)&&(identical(other.ticketCode, ticketCode) || other.ticketCode == ticketCode)&&(identical(other.tier, tier) || other.tier == tier)&&const DeepCollectionEquality().equals(other._pricePaidArtifacts, _pricePaidArtifacts)&&(identical(other.status, status) || other.status == status)&&(identical(other.isCheckedIn, isCheckedIn) || other.isCheckedIn == isCheckedIn)&&(identical(other.checkedInAt, checkedInAt) || other.checkedInAt == checkedInAt)&&(identical(other.qrDataUri, qrDataUri) || other.qrDataUri == qrDataUri)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(_eventData),const DeepCollectionEquality().hash(_holderData),ticketCode,tier,const DeepCollectionEquality().hash(_pricePaidArtifacts),status,isCheckedIn,checkedInAt,createdAt);
+int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(_eventData),const DeepCollectionEquality().hash(_holderData),ticketCode,tier,const DeepCollectionEquality().hash(_pricePaidArtifacts),status,isCheckedIn,checkedInAt,qrDataUri,createdAt);
 
 @override
 String toString() {
-  return 'EventTicket(id: $id, eventData: $eventData, holderData: $holderData, ticketCode: $ticketCode, tier: $tier, pricePaidArtifacts: $pricePaidArtifacts, status: $status, isCheckedIn: $isCheckedIn, checkedInAt: $checkedInAt, createdAt: $createdAt)';
+  return 'EventTicket(id: $id, eventData: $eventData, holderData: $holderData, ticketCode: $ticketCode, tier: $tier, pricePaidArtifacts: $pricePaidArtifacts, status: $status, isCheckedIn: $isCheckedIn, checkedInAt: $checkedInAt, qrDataUri: $qrDataUri, createdAt: $createdAt)';
 }
 
 
@@ -4420,7 +4422,7 @@ abstract mixin class _$EventTicketCopyWith<$Res> implements $EventTicketCopyWith
   factory _$EventTicketCopyWith(_EventTicket value, $Res Function(_EventTicket) _then) = __$EventTicketCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'event_data') Map<String, dynamic>? eventData,@JsonKey(name: 'holder_data') Map<String, dynamic>? holderData,@JsonKey(name: 'ticket_code') String ticketCode, String tier,@JsonKey(name: 'price_paid_artifacts') Map<String, int>? pricePaidArtifacts, String status,@JsonKey(name: 'is_checked_in') bool isCheckedIn,@JsonKey(name: 'checked_in_at') String? checkedInAt,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'event_data') Map<String, dynamic>? eventData,@JsonKey(name: 'holder_data') Map<String, dynamic>? holderData,@JsonKey(name: 'ticket_code') String ticketCode, String tier,@JsonKey(name: 'price_paid_artifacts') Map<String, int>? pricePaidArtifacts, String status,@JsonKey(name: 'is_checked_in') bool isCheckedIn,@JsonKey(name: 'checked_in_at') String? checkedInAt,@JsonKey(name: 'qr_data_uri') String? qrDataUri,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -4437,7 +4439,7 @@ class __$EventTicketCopyWithImpl<$Res>
 
 /// Create a copy of EventTicket
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? eventData = freezed,Object? holderData = freezed,Object? ticketCode = null,Object? tier = null,Object? pricePaidArtifacts = freezed,Object? status = null,Object? isCheckedIn = null,Object? checkedInAt = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? eventData = freezed,Object? holderData = freezed,Object? ticketCode = null,Object? tier = null,Object? pricePaidArtifacts = freezed,Object? status = null,Object? isCheckedIn = null,Object? checkedInAt = freezed,Object? qrDataUri = freezed,Object? createdAt = null,}) {
   return _then(_EventTicket(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,eventData: freezed == eventData ? _self._eventData : eventData // ignore: cast_nullable_to_non_nullable
@@ -4448,6 +4450,7 @@ as String,pricePaidArtifacts: freezed == pricePaidArtifacts ? _self._pricePaidAr
 as Map<String, int>?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,isCheckedIn: null == isCheckedIn ? _self.isCheckedIn : isCheckedIn // ignore: cast_nullable_to_non_nullable
 as bool,checkedInAt: freezed == checkedInAt ? _self.checkedInAt : checkedInAt // ignore: cast_nullable_to_non_nullable
+as String?,qrDataUri: freezed == qrDataUri ? _self.qrDataUri : qrDataUri // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -8183,6 +8186,1235 @@ as List<String>,
 }
 
 
+}
+
+
+/// @nodoc
+mixin _$OrderTimelineEntry {
+
+ String get status; String? get at; String get note;
+/// Create a copy of OrderTimelineEntry
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$OrderTimelineEntryCopyWith<OrderTimelineEntry> get copyWith => _$OrderTimelineEntryCopyWithImpl<OrderTimelineEntry>(this as OrderTimelineEntry, _$identity);
+
+  /// Serializes this OrderTimelineEntry to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OrderTimelineEntry&&(identical(other.status, status) || other.status == status)&&(identical(other.at, at) || other.at == at)&&(identical(other.note, note) || other.note == note));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,status,at,note);
+
+@override
+String toString() {
+  return 'OrderTimelineEntry(status: $status, at: $at, note: $note)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $OrderTimelineEntryCopyWith<$Res>  {
+  factory $OrderTimelineEntryCopyWith(OrderTimelineEntry value, $Res Function(OrderTimelineEntry) _then) = _$OrderTimelineEntryCopyWithImpl;
+@useResult
+$Res call({
+ String status, String? at, String note
+});
+
+
+
+
+}
+/// @nodoc
+class _$OrderTimelineEntryCopyWithImpl<$Res>
+    implements $OrderTimelineEntryCopyWith<$Res> {
+  _$OrderTimelineEntryCopyWithImpl(this._self, this._then);
+
+  final OrderTimelineEntry _self;
+  final $Res Function(OrderTimelineEntry) _then;
+
+/// Create a copy of OrderTimelineEntry
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? status = null,Object? at = freezed,Object? note = null,}) {
+  return _then(_self.copyWith(
+status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,at: freezed == at ? _self.at : at // ignore: cast_nullable_to_non_nullable
+as String?,note: null == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [OrderTimelineEntry].
+extension OrderTimelineEntryPatterns on OrderTimelineEntry {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _OrderTimelineEntry value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _OrderTimelineEntry() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _OrderTimelineEntry value)  $default,){
+final _that = this;
+switch (_that) {
+case _OrderTimelineEntry():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _OrderTimelineEntry value)?  $default,){
+final _that = this;
+switch (_that) {
+case _OrderTimelineEntry() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String status,  String? at,  String note)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _OrderTimelineEntry() when $default != null:
+return $default(_that.status,_that.at,_that.note);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String status,  String? at,  String note)  $default,) {final _that = this;
+switch (_that) {
+case _OrderTimelineEntry():
+return $default(_that.status,_that.at,_that.note);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String status,  String? at,  String note)?  $default,) {final _that = this;
+switch (_that) {
+case _OrderTimelineEntry() when $default != null:
+return $default(_that.status,_that.at,_that.note);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _OrderTimelineEntry implements OrderTimelineEntry {
+  const _OrderTimelineEntry({this.status = '', this.at, this.note = ''});
+  factory _OrderTimelineEntry.fromJson(Map<String, dynamic> json) => _$OrderTimelineEntryFromJson(json);
+
+@override@JsonKey() final  String status;
+@override final  String? at;
+@override@JsonKey() final  String note;
+
+/// Create a copy of OrderTimelineEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$OrderTimelineEntryCopyWith<_OrderTimelineEntry> get copyWith => __$OrderTimelineEntryCopyWithImpl<_OrderTimelineEntry>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$OrderTimelineEntryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OrderTimelineEntry&&(identical(other.status, status) || other.status == status)&&(identical(other.at, at) || other.at == at)&&(identical(other.note, note) || other.note == note));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,status,at,note);
+
+@override
+String toString() {
+  return 'OrderTimelineEntry(status: $status, at: $at, note: $note)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$OrderTimelineEntryCopyWith<$Res> implements $OrderTimelineEntryCopyWith<$Res> {
+  factory _$OrderTimelineEntryCopyWith(_OrderTimelineEntry value, $Res Function(_OrderTimelineEntry) _then) = __$OrderTimelineEntryCopyWithImpl;
+@override @useResult
+$Res call({
+ String status, String? at, String note
+});
+
+
+
+
+}
+/// @nodoc
+class __$OrderTimelineEntryCopyWithImpl<$Res>
+    implements _$OrderTimelineEntryCopyWith<$Res> {
+  __$OrderTimelineEntryCopyWithImpl(this._self, this._then);
+
+  final _OrderTimelineEntry _self;
+  final $Res Function(_OrderTimelineEntry) _then;
+
+/// Create a copy of OrderTimelineEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? status = null,Object? at = freezed,Object? note = null,}) {
+  return _then(_OrderTimelineEntry(
+status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,at: freezed == at ? _self.at : at // ignore: cast_nullable_to_non_nullable
+as String?,note: null == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$OrderFulfillment {
+
+ String get carrier;@JsonKey(name: 'tracking_number') String get trackingNumber;@JsonKey(name: 'tracking_url') String get trackingUrl;@JsonKey(name: 'pickup_location') String get pickupLocation; String get notes; List<OrderTimelineEntry> get timeline;@JsonKey(name: 'shipped_at') String? get shippedAt;@JsonKey(name: 'out_for_delivery_at') String? get outForDeliveryAt;@JsonKey(name: 'ready_for_pickup_at') String? get readyForPickupAt;@JsonKey(name: 'delivered_at') String? get deliveredAt;
+/// Create a copy of OrderFulfillment
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$OrderFulfillmentCopyWith<OrderFulfillment> get copyWith => _$OrderFulfillmentCopyWithImpl<OrderFulfillment>(this as OrderFulfillment, _$identity);
+
+  /// Serializes this OrderFulfillment to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OrderFulfillment&&(identical(other.carrier, carrier) || other.carrier == carrier)&&(identical(other.trackingNumber, trackingNumber) || other.trackingNumber == trackingNumber)&&(identical(other.trackingUrl, trackingUrl) || other.trackingUrl == trackingUrl)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.notes, notes) || other.notes == notes)&&const DeepCollectionEquality().equals(other.timeline, timeline)&&(identical(other.shippedAt, shippedAt) || other.shippedAt == shippedAt)&&(identical(other.outForDeliveryAt, outForDeliveryAt) || other.outForDeliveryAt == outForDeliveryAt)&&(identical(other.readyForPickupAt, readyForPickupAt) || other.readyForPickupAt == readyForPickupAt)&&(identical(other.deliveredAt, deliveredAt) || other.deliveredAt == deliveredAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,carrier,trackingNumber,trackingUrl,pickupLocation,notes,const DeepCollectionEquality().hash(timeline),shippedAt,outForDeliveryAt,readyForPickupAt,deliveredAt);
+
+@override
+String toString() {
+  return 'OrderFulfillment(carrier: $carrier, trackingNumber: $trackingNumber, trackingUrl: $trackingUrl, pickupLocation: $pickupLocation, notes: $notes, timeline: $timeline, shippedAt: $shippedAt, outForDeliveryAt: $outForDeliveryAt, readyForPickupAt: $readyForPickupAt, deliveredAt: $deliveredAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $OrderFulfillmentCopyWith<$Res>  {
+  factory $OrderFulfillmentCopyWith(OrderFulfillment value, $Res Function(OrderFulfillment) _then) = _$OrderFulfillmentCopyWithImpl;
+@useResult
+$Res call({
+ String carrier,@JsonKey(name: 'tracking_number') String trackingNumber,@JsonKey(name: 'tracking_url') String trackingUrl,@JsonKey(name: 'pickup_location') String pickupLocation, String notes, List<OrderTimelineEntry> timeline,@JsonKey(name: 'shipped_at') String? shippedAt,@JsonKey(name: 'out_for_delivery_at') String? outForDeliveryAt,@JsonKey(name: 'ready_for_pickup_at') String? readyForPickupAt,@JsonKey(name: 'delivered_at') String? deliveredAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$OrderFulfillmentCopyWithImpl<$Res>
+    implements $OrderFulfillmentCopyWith<$Res> {
+  _$OrderFulfillmentCopyWithImpl(this._self, this._then);
+
+  final OrderFulfillment _self;
+  final $Res Function(OrderFulfillment) _then;
+
+/// Create a copy of OrderFulfillment
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? carrier = null,Object? trackingNumber = null,Object? trackingUrl = null,Object? pickupLocation = null,Object? notes = null,Object? timeline = null,Object? shippedAt = freezed,Object? outForDeliveryAt = freezed,Object? readyForPickupAt = freezed,Object? deliveredAt = freezed,}) {
+  return _then(_self.copyWith(
+carrier: null == carrier ? _self.carrier : carrier // ignore: cast_nullable_to_non_nullable
+as String,trackingNumber: null == trackingNumber ? _self.trackingNumber : trackingNumber // ignore: cast_nullable_to_non_nullable
+as String,trackingUrl: null == trackingUrl ? _self.trackingUrl : trackingUrl // ignore: cast_nullable_to_non_nullable
+as String,pickupLocation: null == pickupLocation ? _self.pickupLocation : pickupLocation // ignore: cast_nullable_to_non_nullable
+as String,notes: null == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String,timeline: null == timeline ? _self.timeline : timeline // ignore: cast_nullable_to_non_nullable
+as List<OrderTimelineEntry>,shippedAt: freezed == shippedAt ? _self.shippedAt : shippedAt // ignore: cast_nullable_to_non_nullable
+as String?,outForDeliveryAt: freezed == outForDeliveryAt ? _self.outForDeliveryAt : outForDeliveryAt // ignore: cast_nullable_to_non_nullable
+as String?,readyForPickupAt: freezed == readyForPickupAt ? _self.readyForPickupAt : readyForPickupAt // ignore: cast_nullable_to_non_nullable
+as String?,deliveredAt: freezed == deliveredAt ? _self.deliveredAt : deliveredAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [OrderFulfillment].
+extension OrderFulfillmentPatterns on OrderFulfillment {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _OrderFulfillment value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _OrderFulfillment() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _OrderFulfillment value)  $default,){
+final _that = this;
+switch (_that) {
+case _OrderFulfillment():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _OrderFulfillment value)?  $default,){
+final _that = this;
+switch (_that) {
+case _OrderFulfillment() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String carrier, @JsonKey(name: 'tracking_number')  String trackingNumber, @JsonKey(name: 'tracking_url')  String trackingUrl, @JsonKey(name: 'pickup_location')  String pickupLocation,  String notes,  List<OrderTimelineEntry> timeline, @JsonKey(name: 'shipped_at')  String? shippedAt, @JsonKey(name: 'out_for_delivery_at')  String? outForDeliveryAt, @JsonKey(name: 'ready_for_pickup_at')  String? readyForPickupAt, @JsonKey(name: 'delivered_at')  String? deliveredAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _OrderFulfillment() when $default != null:
+return $default(_that.carrier,_that.trackingNumber,_that.trackingUrl,_that.pickupLocation,_that.notes,_that.timeline,_that.shippedAt,_that.outForDeliveryAt,_that.readyForPickupAt,_that.deliveredAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String carrier, @JsonKey(name: 'tracking_number')  String trackingNumber, @JsonKey(name: 'tracking_url')  String trackingUrl, @JsonKey(name: 'pickup_location')  String pickupLocation,  String notes,  List<OrderTimelineEntry> timeline, @JsonKey(name: 'shipped_at')  String? shippedAt, @JsonKey(name: 'out_for_delivery_at')  String? outForDeliveryAt, @JsonKey(name: 'ready_for_pickup_at')  String? readyForPickupAt, @JsonKey(name: 'delivered_at')  String? deliveredAt)  $default,) {final _that = this;
+switch (_that) {
+case _OrderFulfillment():
+return $default(_that.carrier,_that.trackingNumber,_that.trackingUrl,_that.pickupLocation,_that.notes,_that.timeline,_that.shippedAt,_that.outForDeliveryAt,_that.readyForPickupAt,_that.deliveredAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String carrier, @JsonKey(name: 'tracking_number')  String trackingNumber, @JsonKey(name: 'tracking_url')  String trackingUrl, @JsonKey(name: 'pickup_location')  String pickupLocation,  String notes,  List<OrderTimelineEntry> timeline, @JsonKey(name: 'shipped_at')  String? shippedAt, @JsonKey(name: 'out_for_delivery_at')  String? outForDeliveryAt, @JsonKey(name: 'ready_for_pickup_at')  String? readyForPickupAt, @JsonKey(name: 'delivered_at')  String? deliveredAt)?  $default,) {final _that = this;
+switch (_that) {
+case _OrderFulfillment() when $default != null:
+return $default(_that.carrier,_that.trackingNumber,_that.trackingUrl,_that.pickupLocation,_that.notes,_that.timeline,_that.shippedAt,_that.outForDeliveryAt,_that.readyForPickupAt,_that.deliveredAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _OrderFulfillment implements OrderFulfillment {
+  const _OrderFulfillment({this.carrier = '', @JsonKey(name: 'tracking_number') this.trackingNumber = '', @JsonKey(name: 'tracking_url') this.trackingUrl = '', @JsonKey(name: 'pickup_location') this.pickupLocation = '', this.notes = '', final  List<OrderTimelineEntry> timeline = const <OrderTimelineEntry>[], @JsonKey(name: 'shipped_at') this.shippedAt, @JsonKey(name: 'out_for_delivery_at') this.outForDeliveryAt, @JsonKey(name: 'ready_for_pickup_at') this.readyForPickupAt, @JsonKey(name: 'delivered_at') this.deliveredAt}): _timeline = timeline;
+  factory _OrderFulfillment.fromJson(Map<String, dynamic> json) => _$OrderFulfillmentFromJson(json);
+
+@override@JsonKey() final  String carrier;
+@override@JsonKey(name: 'tracking_number') final  String trackingNumber;
+@override@JsonKey(name: 'tracking_url') final  String trackingUrl;
+@override@JsonKey(name: 'pickup_location') final  String pickupLocation;
+@override@JsonKey() final  String notes;
+ final  List<OrderTimelineEntry> _timeline;
+@override@JsonKey() List<OrderTimelineEntry> get timeline {
+  if (_timeline is EqualUnmodifiableListView) return _timeline;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_timeline);
+}
+
+@override@JsonKey(name: 'shipped_at') final  String? shippedAt;
+@override@JsonKey(name: 'out_for_delivery_at') final  String? outForDeliveryAt;
+@override@JsonKey(name: 'ready_for_pickup_at') final  String? readyForPickupAt;
+@override@JsonKey(name: 'delivered_at') final  String? deliveredAt;
+
+/// Create a copy of OrderFulfillment
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$OrderFulfillmentCopyWith<_OrderFulfillment> get copyWith => __$OrderFulfillmentCopyWithImpl<_OrderFulfillment>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$OrderFulfillmentToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OrderFulfillment&&(identical(other.carrier, carrier) || other.carrier == carrier)&&(identical(other.trackingNumber, trackingNumber) || other.trackingNumber == trackingNumber)&&(identical(other.trackingUrl, trackingUrl) || other.trackingUrl == trackingUrl)&&(identical(other.pickupLocation, pickupLocation) || other.pickupLocation == pickupLocation)&&(identical(other.notes, notes) || other.notes == notes)&&const DeepCollectionEquality().equals(other._timeline, _timeline)&&(identical(other.shippedAt, shippedAt) || other.shippedAt == shippedAt)&&(identical(other.outForDeliveryAt, outForDeliveryAt) || other.outForDeliveryAt == outForDeliveryAt)&&(identical(other.readyForPickupAt, readyForPickupAt) || other.readyForPickupAt == readyForPickupAt)&&(identical(other.deliveredAt, deliveredAt) || other.deliveredAt == deliveredAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,carrier,trackingNumber,trackingUrl,pickupLocation,notes,const DeepCollectionEquality().hash(_timeline),shippedAt,outForDeliveryAt,readyForPickupAt,deliveredAt);
+
+@override
+String toString() {
+  return 'OrderFulfillment(carrier: $carrier, trackingNumber: $trackingNumber, trackingUrl: $trackingUrl, pickupLocation: $pickupLocation, notes: $notes, timeline: $timeline, shippedAt: $shippedAt, outForDeliveryAt: $outForDeliveryAt, readyForPickupAt: $readyForPickupAt, deliveredAt: $deliveredAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$OrderFulfillmentCopyWith<$Res> implements $OrderFulfillmentCopyWith<$Res> {
+  factory _$OrderFulfillmentCopyWith(_OrderFulfillment value, $Res Function(_OrderFulfillment) _then) = __$OrderFulfillmentCopyWithImpl;
+@override @useResult
+$Res call({
+ String carrier,@JsonKey(name: 'tracking_number') String trackingNumber,@JsonKey(name: 'tracking_url') String trackingUrl,@JsonKey(name: 'pickup_location') String pickupLocation, String notes, List<OrderTimelineEntry> timeline,@JsonKey(name: 'shipped_at') String? shippedAt,@JsonKey(name: 'out_for_delivery_at') String? outForDeliveryAt,@JsonKey(name: 'ready_for_pickup_at') String? readyForPickupAt,@JsonKey(name: 'delivered_at') String? deliveredAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$OrderFulfillmentCopyWithImpl<$Res>
+    implements _$OrderFulfillmentCopyWith<$Res> {
+  __$OrderFulfillmentCopyWithImpl(this._self, this._then);
+
+  final _OrderFulfillment _self;
+  final $Res Function(_OrderFulfillment) _then;
+
+/// Create a copy of OrderFulfillment
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? carrier = null,Object? trackingNumber = null,Object? trackingUrl = null,Object? pickupLocation = null,Object? notes = null,Object? timeline = null,Object? shippedAt = freezed,Object? outForDeliveryAt = freezed,Object? readyForPickupAt = freezed,Object? deliveredAt = freezed,}) {
+  return _then(_OrderFulfillment(
+carrier: null == carrier ? _self.carrier : carrier // ignore: cast_nullable_to_non_nullable
+as String,trackingNumber: null == trackingNumber ? _self.trackingNumber : trackingNumber // ignore: cast_nullable_to_non_nullable
+as String,trackingUrl: null == trackingUrl ? _self.trackingUrl : trackingUrl // ignore: cast_nullable_to_non_nullable
+as String,pickupLocation: null == pickupLocation ? _self.pickupLocation : pickupLocation // ignore: cast_nullable_to_non_nullable
+as String,notes: null == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String,timeline: null == timeline ? _self._timeline : timeline // ignore: cast_nullable_to_non_nullable
+as List<OrderTimelineEntry>,shippedAt: freezed == shippedAt ? _self.shippedAt : shippedAt // ignore: cast_nullable_to_non_nullable
+as String?,outForDeliveryAt: freezed == outForDeliveryAt ? _self.outForDeliveryAt : outForDeliveryAt // ignore: cast_nullable_to_non_nullable
+as String?,readyForPickupAt: freezed == readyForPickupAt ? _self.readyForPickupAt : readyForPickupAt // ignore: cast_nullable_to_non_nullable
+as String?,deliveredAt: freezed == deliveredAt ? _self.deliveredAt : deliveredAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$OrderItem {
+
+@JsonKey(name: 'item_type') String get itemType; String get title; int get quantity;@JsonKey(name: 'price_artifacts') Map<String, int> get priceArtifacts;@JsonKey(name: 'paid_artifacts') Map<String, int> get paidArtifacts;@JsonKey(name: 'creator_name') String? get creatorName;@JsonKey(name: 'created_at') String? get createdAt;
+/// Create a copy of OrderItem
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$OrderItemCopyWith<OrderItem> get copyWith => _$OrderItemCopyWithImpl<OrderItem>(this as OrderItem, _$identity);
+
+  /// Serializes this OrderItem to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OrderItem&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.title, title) || other.title == title)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&const DeepCollectionEquality().equals(other.priceArtifacts, priceArtifacts)&&const DeepCollectionEquality().equals(other.paidArtifacts, paidArtifacts)&&(identical(other.creatorName, creatorName) || other.creatorName == creatorName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,itemType,title,quantity,const DeepCollectionEquality().hash(priceArtifacts),const DeepCollectionEquality().hash(paidArtifacts),creatorName,createdAt);
+
+@override
+String toString() {
+  return 'OrderItem(itemType: $itemType, title: $title, quantity: $quantity, priceArtifacts: $priceArtifacts, paidArtifacts: $paidArtifacts, creatorName: $creatorName, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $OrderItemCopyWith<$Res>  {
+  factory $OrderItemCopyWith(OrderItem value, $Res Function(OrderItem) _then) = _$OrderItemCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'item_type') String itemType, String title, int quantity,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'paid_artifacts') Map<String, int> paidArtifacts,@JsonKey(name: 'creator_name') String? creatorName,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$OrderItemCopyWithImpl<$Res>
+    implements $OrderItemCopyWith<$Res> {
+  _$OrderItemCopyWithImpl(this._self, this._then);
+
+  final OrderItem _self;
+  final $Res Function(OrderItem) _then;
+
+/// Create a copy of OrderItem
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? itemType = null,Object? title = null,Object? quantity = null,Object? priceArtifacts = null,Object? paidArtifacts = null,Object? creatorName = freezed,Object? createdAt = freezed,}) {
+  return _then(_self.copyWith(
+itemType: null == itemType ? _self.itemType : itemType // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,quantity: null == quantity ? _self.quantity : quantity // ignore: cast_nullable_to_non_nullable
+as int,priceArtifacts: null == priceArtifacts ? _self.priceArtifacts : priceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,paidArtifacts: null == paidArtifacts ? _self.paidArtifacts : paidArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,creatorName: freezed == creatorName ? _self.creatorName : creatorName // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [OrderItem].
+extension OrderItemPatterns on OrderItem {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _OrderItem value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _OrderItem() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _OrderItem value)  $default,){
+final _that = this;
+switch (_that) {
+case _OrderItem():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _OrderItem value)?  $default,){
+final _that = this;
+switch (_that) {
+case _OrderItem() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'item_type')  String itemType,  String title,  int quantity, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'paid_artifacts')  Map<String, int> paidArtifacts, @JsonKey(name: 'creator_name')  String? creatorName, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _OrderItem() when $default != null:
+return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_that.paidArtifacts,_that.creatorName,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'item_type')  String itemType,  String title,  int quantity, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'paid_artifacts')  Map<String, int> paidArtifacts, @JsonKey(name: 'creator_name')  String? creatorName, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _OrderItem():
+return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_that.paidArtifacts,_that.creatorName,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'item_type')  String itemType,  String title,  int quantity, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'paid_artifacts')  Map<String, int> paidArtifacts, @JsonKey(name: 'creator_name')  String? creatorName, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _OrderItem() when $default != null:
+return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_that.paidArtifacts,_that.creatorName,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _OrderItem implements OrderItem {
+  const _OrderItem({@JsonKey(name: 'item_type') this.itemType = '', this.title = '', this.quantity = 1, @JsonKey(name: 'price_artifacts') final  Map<String, int> priceArtifacts = const <String, int>{}, @JsonKey(name: 'paid_artifacts') final  Map<String, int> paidArtifacts = const <String, int>{}, @JsonKey(name: 'creator_name') this.creatorName, @JsonKey(name: 'created_at') this.createdAt}): _priceArtifacts = priceArtifacts,_paidArtifacts = paidArtifacts;
+  factory _OrderItem.fromJson(Map<String, dynamic> json) => _$OrderItemFromJson(json);
+
+@override@JsonKey(name: 'item_type') final  String itemType;
+@override@JsonKey() final  String title;
+@override@JsonKey() final  int quantity;
+ final  Map<String, int> _priceArtifacts;
+@override@JsonKey(name: 'price_artifacts') Map<String, int> get priceArtifacts {
+  if (_priceArtifacts is EqualUnmodifiableMapView) return _priceArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_priceArtifacts);
+}
+
+ final  Map<String, int> _paidArtifacts;
+@override@JsonKey(name: 'paid_artifacts') Map<String, int> get paidArtifacts {
+  if (_paidArtifacts is EqualUnmodifiableMapView) return _paidArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_paidArtifacts);
+}
+
+@override@JsonKey(name: 'creator_name') final  String? creatorName;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+
+/// Create a copy of OrderItem
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$OrderItemCopyWith<_OrderItem> get copyWith => __$OrderItemCopyWithImpl<_OrderItem>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$OrderItemToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OrderItem&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.title, title) || other.title == title)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&const DeepCollectionEquality().equals(other._priceArtifacts, _priceArtifacts)&&const DeepCollectionEquality().equals(other._paidArtifacts, _paidArtifacts)&&(identical(other.creatorName, creatorName) || other.creatorName == creatorName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,itemType,title,quantity,const DeepCollectionEquality().hash(_priceArtifacts),const DeepCollectionEquality().hash(_paidArtifacts),creatorName,createdAt);
+
+@override
+String toString() {
+  return 'OrderItem(itemType: $itemType, title: $title, quantity: $quantity, priceArtifacts: $priceArtifacts, paidArtifacts: $paidArtifacts, creatorName: $creatorName, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$OrderItemCopyWith<$Res> implements $OrderItemCopyWith<$Res> {
+  factory _$OrderItemCopyWith(_OrderItem value, $Res Function(_OrderItem) _then) = __$OrderItemCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'item_type') String itemType, String title, int quantity,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'paid_artifacts') Map<String, int> paidArtifacts,@JsonKey(name: 'creator_name') String? creatorName,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$OrderItemCopyWithImpl<$Res>
+    implements _$OrderItemCopyWith<$Res> {
+  __$OrderItemCopyWithImpl(this._self, this._then);
+
+  final _OrderItem _self;
+  final $Res Function(_OrderItem) _then;
+
+/// Create a copy of OrderItem
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? itemType = null,Object? title = null,Object? quantity = null,Object? priceArtifacts = null,Object? paidArtifacts = null,Object? creatorName = freezed,Object? createdAt = freezed,}) {
+  return _then(_OrderItem(
+itemType: null == itemType ? _self.itemType : itemType // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,quantity: null == quantity ? _self.quantity : quantity // ignore: cast_nullable_to_non_nullable
+as int,priceArtifacts: null == priceArtifacts ? _self._priceArtifacts : priceArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,paidArtifacts: null == paidArtifacts ? _self._paidArtifacts : paidArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,creatorName: freezed == creatorName ? _self.creatorName : creatorName // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$Order {
+
+ String get id;@JsonKey(name: 'order_number') String get orderNumber; String get status;@JsonKey(name: 'status_label') String get statusLabel;@JsonKey(name: 'fulfillment_type') String get fulfillmentType;@JsonKey(name: 'delivery_address') Map<String, dynamic> get deliveryAddress;@JsonKey(name: 'pickup_details') Map<String, dynamic> get pickupDetails;@JsonKey(name: 'total_artifacts') Map<String, int> get totalArtifacts;@JsonKey(name: 'discount_artifacts') Map<String, int> get discountArtifacts; double get spentUsd;@JsonKey(name: 'discount_code') String? get discountCode;@JsonKey(name: 'status_history') List<OrderTimelineEntry> get statusHistory; List<OrderItem> get items; OrderFulfillment? get fulfillment;@JsonKey(name: 'is_seller') bool get isSeller;@JsonKey(name: 'paid_at') String? get paidAt;@JsonKey(name: 'created_at') String? get createdAt;
+/// Create a copy of Order
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$OrderCopyWith<Order> get copyWith => _$OrderCopyWithImpl<Order>(this as Order, _$identity);
+
+  /// Serializes this Order to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Order&&(identical(other.id, id) || other.id == id)&&(identical(other.orderNumber, orderNumber) || other.orderNumber == orderNumber)&&(identical(other.status, status) || other.status == status)&&(identical(other.statusLabel, statusLabel) || other.statusLabel == statusLabel)&&(identical(other.fulfillmentType, fulfillmentType) || other.fulfillmentType == fulfillmentType)&&const DeepCollectionEquality().equals(other.deliveryAddress, deliveryAddress)&&const DeepCollectionEquality().equals(other.pickupDetails, pickupDetails)&&const DeepCollectionEquality().equals(other.totalArtifacts, totalArtifacts)&&const DeepCollectionEquality().equals(other.discountArtifacts, discountArtifacts)&&(identical(other.spentUsd, spentUsd) || other.spentUsd == spentUsd)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&const DeepCollectionEquality().equals(other.statusHistory, statusHistory)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.fulfillment, fulfillment) || other.fulfillment == fulfillment)&&(identical(other.isSeller, isSeller) || other.isSeller == isSeller)&&(identical(other.paidAt, paidAt) || other.paidAt == paidAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,orderNumber,status,statusLabel,fulfillmentType,const DeepCollectionEquality().hash(deliveryAddress),const DeepCollectionEquality().hash(pickupDetails),const DeepCollectionEquality().hash(totalArtifacts),const DeepCollectionEquality().hash(discountArtifacts),spentUsd,discountCode,const DeepCollectionEquality().hash(statusHistory),const DeepCollectionEquality().hash(items),fulfillment,isSeller,paidAt,createdAt);
+
+@override
+String toString() {
+  return 'Order(id: $id, orderNumber: $orderNumber, status: $status, statusLabel: $statusLabel, fulfillmentType: $fulfillmentType, deliveryAddress: $deliveryAddress, pickupDetails: $pickupDetails, totalArtifacts: $totalArtifacts, discountArtifacts: $discountArtifacts, spentUsd: $spentUsd, discountCode: $discountCode, statusHistory: $statusHistory, items: $items, fulfillment: $fulfillment, isSeller: $isSeller, paidAt: $paidAt, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $OrderCopyWith<$Res>  {
+  factory $OrderCopyWith(Order value, $Res Function(Order) _then) = _$OrderCopyWithImpl;
+@useResult
+$Res call({
+ String id,@JsonKey(name: 'order_number') String orderNumber, String status,@JsonKey(name: 'status_label') String statusLabel,@JsonKey(name: 'fulfillment_type') String fulfillmentType,@JsonKey(name: 'delivery_address') Map<String, dynamic> deliveryAddress,@JsonKey(name: 'pickup_details') Map<String, dynamic> pickupDetails,@JsonKey(name: 'total_artifacts') Map<String, int> totalArtifacts,@JsonKey(name: 'discount_artifacts') Map<String, int> discountArtifacts, double spentUsd,@JsonKey(name: 'discount_code') String? discountCode,@JsonKey(name: 'status_history') List<OrderTimelineEntry> statusHistory, List<OrderItem> items, OrderFulfillment? fulfillment,@JsonKey(name: 'is_seller') bool isSeller,@JsonKey(name: 'paid_at') String? paidAt,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+$OrderFulfillmentCopyWith<$Res>? get fulfillment;
+
+}
+/// @nodoc
+class _$OrderCopyWithImpl<$Res>
+    implements $OrderCopyWith<$Res> {
+  _$OrderCopyWithImpl(this._self, this._then);
+
+  final Order _self;
+  final $Res Function(Order) _then;
+
+/// Create a copy of Order
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? orderNumber = null,Object? status = null,Object? statusLabel = null,Object? fulfillmentType = null,Object? deliveryAddress = null,Object? pickupDetails = null,Object? totalArtifacts = null,Object? discountArtifacts = null,Object? spentUsd = null,Object? discountCode = freezed,Object? statusHistory = null,Object? items = null,Object? fulfillment = freezed,Object? isSeller = null,Object? paidAt = freezed,Object? createdAt = freezed,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,orderNumber: null == orderNumber ? _self.orderNumber : orderNumber // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,statusLabel: null == statusLabel ? _self.statusLabel : statusLabel // ignore: cast_nullable_to_non_nullable
+as String,fulfillmentType: null == fulfillmentType ? _self.fulfillmentType : fulfillmentType // ignore: cast_nullable_to_non_nullable
+as String,deliveryAddress: null == deliveryAddress ? _self.deliveryAddress : deliveryAddress // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,pickupDetails: null == pickupDetails ? _self.pickupDetails : pickupDetails // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,totalArtifacts: null == totalArtifacts ? _self.totalArtifacts : totalArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,discountArtifacts: null == discountArtifacts ? _self.discountArtifacts : discountArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,spentUsd: null == spentUsd ? _self.spentUsd : spentUsd // ignore: cast_nullable_to_non_nullable
+as double,discountCode: freezed == discountCode ? _self.discountCode : discountCode // ignore: cast_nullable_to_non_nullable
+as String?,statusHistory: null == statusHistory ? _self.statusHistory : statusHistory // ignore: cast_nullable_to_non_nullable
+as List<OrderTimelineEntry>,items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
+as List<OrderItem>,fulfillment: freezed == fulfillment ? _self.fulfillment : fulfillment // ignore: cast_nullable_to_non_nullable
+as OrderFulfillment?,isSeller: null == isSeller ? _self.isSeller : isSeller // ignore: cast_nullable_to_non_nullable
+as bool,paidAt: freezed == paidAt ? _self.paidAt : paidAt // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+/// Create a copy of Order
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$OrderFulfillmentCopyWith<$Res>? get fulfillment {
+    if (_self.fulfillment == null) {
+    return null;
+  }
+
+  return $OrderFulfillmentCopyWith<$Res>(_self.fulfillment!, (value) {
+    return _then(_self.copyWith(fulfillment: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [Order].
+extension OrderPatterns on Order {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _Order value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _Order() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _Order value)  $default,){
+final _that = this;
+switch (_that) {
+case _Order():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _Order value)?  $default,){
+final _that = this;
+switch (_that) {
+case _Order() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'order_number')  String orderNumber,  String status, @JsonKey(name: 'status_label')  String statusLabel, @JsonKey(name: 'fulfillment_type')  String fulfillmentType, @JsonKey(name: 'delivery_address')  Map<String, dynamic> deliveryAddress, @JsonKey(name: 'pickup_details')  Map<String, dynamic> pickupDetails, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'discount_artifacts')  Map<String, int> discountArtifacts,  double spentUsd, @JsonKey(name: 'discount_code')  String? discountCode, @JsonKey(name: 'status_history')  List<OrderTimelineEntry> statusHistory,  List<OrderItem> items,  OrderFulfillment? fulfillment, @JsonKey(name: 'is_seller')  bool isSeller, @JsonKey(name: 'paid_at')  String? paidAt, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _Order() when $default != null:
+return $default(_that.id,_that.orderNumber,_that.status,_that.statusLabel,_that.fulfillmentType,_that.deliveryAddress,_that.pickupDetails,_that.totalArtifacts,_that.discountArtifacts,_that.spentUsd,_that.discountCode,_that.statusHistory,_that.items,_that.fulfillment,_that.isSeller,_that.paidAt,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'order_number')  String orderNumber,  String status, @JsonKey(name: 'status_label')  String statusLabel, @JsonKey(name: 'fulfillment_type')  String fulfillmentType, @JsonKey(name: 'delivery_address')  Map<String, dynamic> deliveryAddress, @JsonKey(name: 'pickup_details')  Map<String, dynamic> pickupDetails, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'discount_artifacts')  Map<String, int> discountArtifacts,  double spentUsd, @JsonKey(name: 'discount_code')  String? discountCode, @JsonKey(name: 'status_history')  List<OrderTimelineEntry> statusHistory,  List<OrderItem> items,  OrderFulfillment? fulfillment, @JsonKey(name: 'is_seller')  bool isSeller, @JsonKey(name: 'paid_at')  String? paidAt, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _Order():
+return $default(_that.id,_that.orderNumber,_that.status,_that.statusLabel,_that.fulfillmentType,_that.deliveryAddress,_that.pickupDetails,_that.totalArtifacts,_that.discountArtifacts,_that.spentUsd,_that.discountCode,_that.statusHistory,_that.items,_that.fulfillment,_that.isSeller,_that.paidAt,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'order_number')  String orderNumber,  String status, @JsonKey(name: 'status_label')  String statusLabel, @JsonKey(name: 'fulfillment_type')  String fulfillmentType, @JsonKey(name: 'delivery_address')  Map<String, dynamic> deliveryAddress, @JsonKey(name: 'pickup_details')  Map<String, dynamic> pickupDetails, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'discount_artifacts')  Map<String, int> discountArtifacts,  double spentUsd, @JsonKey(name: 'discount_code')  String? discountCode, @JsonKey(name: 'status_history')  List<OrderTimelineEntry> statusHistory,  List<OrderItem> items,  OrderFulfillment? fulfillment, @JsonKey(name: 'is_seller')  bool isSeller, @JsonKey(name: 'paid_at')  String? paidAt, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _Order() when $default != null:
+return $default(_that.id,_that.orderNumber,_that.status,_that.statusLabel,_that.fulfillmentType,_that.deliveryAddress,_that.pickupDetails,_that.totalArtifacts,_that.discountArtifacts,_that.spentUsd,_that.discountCode,_that.statusHistory,_that.items,_that.fulfillment,_that.isSeller,_that.paidAt,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _Order implements Order {
+  const _Order({required this.id, @JsonKey(name: 'order_number') this.orderNumber = '', this.status = 'paid', @JsonKey(name: 'status_label') this.statusLabel = '', @JsonKey(name: 'fulfillment_type') this.fulfillmentType = 'digital', @JsonKey(name: 'delivery_address') final  Map<String, dynamic> deliveryAddress = const <String, dynamic>{}, @JsonKey(name: 'pickup_details') final  Map<String, dynamic> pickupDetails = const <String, dynamic>{}, @JsonKey(name: 'total_artifacts') final  Map<String, int> totalArtifacts = const <String, int>{}, @JsonKey(name: 'discount_artifacts') final  Map<String, int> discountArtifacts = const <String, int>{}, this.spentUsd = 0.0, @JsonKey(name: 'discount_code') this.discountCode, @JsonKey(name: 'status_history') final  List<OrderTimelineEntry> statusHistory = const <OrderTimelineEntry>[], final  List<OrderItem> items = const <OrderItem>[], this.fulfillment, @JsonKey(name: 'is_seller') this.isSeller = false, @JsonKey(name: 'paid_at') this.paidAt, @JsonKey(name: 'created_at') this.createdAt}): _deliveryAddress = deliveryAddress,_pickupDetails = pickupDetails,_totalArtifacts = totalArtifacts,_discountArtifacts = discountArtifacts,_statusHistory = statusHistory,_items = items;
+  factory _Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
+
+@override final  String id;
+@override@JsonKey(name: 'order_number') final  String orderNumber;
+@override@JsonKey() final  String status;
+@override@JsonKey(name: 'status_label') final  String statusLabel;
+@override@JsonKey(name: 'fulfillment_type') final  String fulfillmentType;
+ final  Map<String, dynamic> _deliveryAddress;
+@override@JsonKey(name: 'delivery_address') Map<String, dynamic> get deliveryAddress {
+  if (_deliveryAddress is EqualUnmodifiableMapView) return _deliveryAddress;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_deliveryAddress);
+}
+
+ final  Map<String, dynamic> _pickupDetails;
+@override@JsonKey(name: 'pickup_details') Map<String, dynamic> get pickupDetails {
+  if (_pickupDetails is EqualUnmodifiableMapView) return _pickupDetails;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_pickupDetails);
+}
+
+ final  Map<String, int> _totalArtifacts;
+@override@JsonKey(name: 'total_artifacts') Map<String, int> get totalArtifacts {
+  if (_totalArtifacts is EqualUnmodifiableMapView) return _totalArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_totalArtifacts);
+}
+
+ final  Map<String, int> _discountArtifacts;
+@override@JsonKey(name: 'discount_artifacts') Map<String, int> get discountArtifacts {
+  if (_discountArtifacts is EqualUnmodifiableMapView) return _discountArtifacts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_discountArtifacts);
+}
+
+@override@JsonKey() final  double spentUsd;
+@override@JsonKey(name: 'discount_code') final  String? discountCode;
+ final  List<OrderTimelineEntry> _statusHistory;
+@override@JsonKey(name: 'status_history') List<OrderTimelineEntry> get statusHistory {
+  if (_statusHistory is EqualUnmodifiableListView) return _statusHistory;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_statusHistory);
+}
+
+ final  List<OrderItem> _items;
+@override@JsonKey() List<OrderItem> get items {
+  if (_items is EqualUnmodifiableListView) return _items;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_items);
+}
+
+@override final  OrderFulfillment? fulfillment;
+@override@JsonKey(name: 'is_seller') final  bool isSeller;
+@override@JsonKey(name: 'paid_at') final  String? paidAt;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+
+/// Create a copy of Order
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$OrderCopyWith<_Order> get copyWith => __$OrderCopyWithImpl<_Order>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$OrderToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Order&&(identical(other.id, id) || other.id == id)&&(identical(other.orderNumber, orderNumber) || other.orderNumber == orderNumber)&&(identical(other.status, status) || other.status == status)&&(identical(other.statusLabel, statusLabel) || other.statusLabel == statusLabel)&&(identical(other.fulfillmentType, fulfillmentType) || other.fulfillmentType == fulfillmentType)&&const DeepCollectionEquality().equals(other._deliveryAddress, _deliveryAddress)&&const DeepCollectionEquality().equals(other._pickupDetails, _pickupDetails)&&const DeepCollectionEquality().equals(other._totalArtifacts, _totalArtifacts)&&const DeepCollectionEquality().equals(other._discountArtifacts, _discountArtifacts)&&(identical(other.spentUsd, spentUsd) || other.spentUsd == spentUsd)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&const DeepCollectionEquality().equals(other._statusHistory, _statusHistory)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.fulfillment, fulfillment) || other.fulfillment == fulfillment)&&(identical(other.isSeller, isSeller) || other.isSeller == isSeller)&&(identical(other.paidAt, paidAt) || other.paidAt == paidAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,orderNumber,status,statusLabel,fulfillmentType,const DeepCollectionEquality().hash(_deliveryAddress),const DeepCollectionEquality().hash(_pickupDetails),const DeepCollectionEquality().hash(_totalArtifacts),const DeepCollectionEquality().hash(_discountArtifacts),spentUsd,discountCode,const DeepCollectionEquality().hash(_statusHistory),const DeepCollectionEquality().hash(_items),fulfillment,isSeller,paidAt,createdAt);
+
+@override
+String toString() {
+  return 'Order(id: $id, orderNumber: $orderNumber, status: $status, statusLabel: $statusLabel, fulfillmentType: $fulfillmentType, deliveryAddress: $deliveryAddress, pickupDetails: $pickupDetails, totalArtifacts: $totalArtifacts, discountArtifacts: $discountArtifacts, spentUsd: $spentUsd, discountCode: $discountCode, statusHistory: $statusHistory, items: $items, fulfillment: $fulfillment, isSeller: $isSeller, paidAt: $paidAt, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$OrderCopyWith<$Res> implements $OrderCopyWith<$Res> {
+  factory _$OrderCopyWith(_Order value, $Res Function(_Order) _then) = __$OrderCopyWithImpl;
+@override @useResult
+$Res call({
+ String id,@JsonKey(name: 'order_number') String orderNumber, String status,@JsonKey(name: 'status_label') String statusLabel,@JsonKey(name: 'fulfillment_type') String fulfillmentType,@JsonKey(name: 'delivery_address') Map<String, dynamic> deliveryAddress,@JsonKey(name: 'pickup_details') Map<String, dynamic> pickupDetails,@JsonKey(name: 'total_artifacts') Map<String, int> totalArtifacts,@JsonKey(name: 'discount_artifacts') Map<String, int> discountArtifacts, double spentUsd,@JsonKey(name: 'discount_code') String? discountCode,@JsonKey(name: 'status_history') List<OrderTimelineEntry> statusHistory, List<OrderItem> items, OrderFulfillment? fulfillment,@JsonKey(name: 'is_seller') bool isSeller,@JsonKey(name: 'paid_at') String? paidAt,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+@override $OrderFulfillmentCopyWith<$Res>? get fulfillment;
+
+}
+/// @nodoc
+class __$OrderCopyWithImpl<$Res>
+    implements _$OrderCopyWith<$Res> {
+  __$OrderCopyWithImpl(this._self, this._then);
+
+  final _Order _self;
+  final $Res Function(_Order) _then;
+
+/// Create a copy of Order
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? orderNumber = null,Object? status = null,Object? statusLabel = null,Object? fulfillmentType = null,Object? deliveryAddress = null,Object? pickupDetails = null,Object? totalArtifacts = null,Object? discountArtifacts = null,Object? spentUsd = null,Object? discountCode = freezed,Object? statusHistory = null,Object? items = null,Object? fulfillment = freezed,Object? isSeller = null,Object? paidAt = freezed,Object? createdAt = freezed,}) {
+  return _then(_Order(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,orderNumber: null == orderNumber ? _self.orderNumber : orderNumber // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,statusLabel: null == statusLabel ? _self.statusLabel : statusLabel // ignore: cast_nullable_to_non_nullable
+as String,fulfillmentType: null == fulfillmentType ? _self.fulfillmentType : fulfillmentType // ignore: cast_nullable_to_non_nullable
+as String,deliveryAddress: null == deliveryAddress ? _self._deliveryAddress : deliveryAddress // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,pickupDetails: null == pickupDetails ? _self._pickupDetails : pickupDetails // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,totalArtifacts: null == totalArtifacts ? _self._totalArtifacts : totalArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,discountArtifacts: null == discountArtifacts ? _self._discountArtifacts : discountArtifacts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,spentUsd: null == spentUsd ? _self.spentUsd : spentUsd // ignore: cast_nullable_to_non_nullable
+as double,discountCode: freezed == discountCode ? _self.discountCode : discountCode // ignore: cast_nullable_to_non_nullable
+as String?,statusHistory: null == statusHistory ? _self._statusHistory : statusHistory // ignore: cast_nullable_to_non_nullable
+as List<OrderTimelineEntry>,items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
+as List<OrderItem>,fulfillment: freezed == fulfillment ? _self.fulfillment : fulfillment // ignore: cast_nullable_to_non_nullable
+as OrderFulfillment?,isSeller: null == isSeller ? _self.isSeller : isSeller // ignore: cast_nullable_to_non_nullable
+as bool,paidAt: freezed == paidAt ? _self.paidAt : paidAt // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+/// Create a copy of Order
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$OrderFulfillmentCopyWith<$Res>? get fulfillment {
+    if (_self.fulfillment == null) {
+    return null;
+  }
+
+  return $OrderFulfillmentCopyWith<$Res>(_self.fulfillment!, (value) {
+    return _then(_self.copyWith(fulfillment: value));
+  });
+}
 }
 
 // dart format on
