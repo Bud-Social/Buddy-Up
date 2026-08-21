@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Star, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Lock, Eye, Monitor } from 'lucide-react';
+import { Check, Star, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
@@ -34,19 +34,7 @@ const features = {
     desc: 'Share workouts, meals, progress, and moments with your fitness family.',
     points: ['7 post types to share', 'Fitness-themed reactions', 'Workout & meal log cards', 'Progress transformations'],
   },
-  mature: {
-    title: 'Mature Category (18+/16+)',
-    desc: 'A separate, age-gated category for adult fitness content — nude trainers, adult-only lives, adult marketplace items, and nude gyms. Hidden by default.',
-    points: ['Nude trainer profiles', 'Adult-only live sessions', 'Adult marketplace — events, products, programmes', 'Nude & adult-themed gyms'],
-  },
 };
-
-const matureCategories = [
-  { icon: GraduationCap, title: 'Nude Trainers', desc: 'Adult trainer profiles and creators sharing mature fitness content behind the age gate.' },
-  { icon: Radio, title: 'Adult Lives', desc: 'Adult-only live sessions and replays, restricted to users who pass the age check.' },
-  { icon: Utensils, title: 'Adult Marketplace', desc: 'Adult events, products, and programmes — every listing stays inside the Mature category.' },
-  { icon: Dumbbell, title: 'Nude Gyms', desc: 'Nude and adult-themed fitness communities with mature member feeds.' },
-];
 
 const testimonials = [
   { name: 'Sarah K.', goal: 'Lost 15kg in 6 months', quote: 'BuddyUp changed everything. Having a buddy to check in with daily kept me accountable like nothing else could.', avatar: '' },
@@ -189,14 +177,13 @@ export default function Landing() {
         <p className="text-buddy-text-secondary text-center mb-12">All the tools you need to reach your fitness goals.</p>
 
         <div className="flex overflow-x-auto gap-2 mb-8 scrollbar-hide justify-center">
-          {['live', 'gyms', 'trainers', 'mealPlans', 'buddyFeed', 'mature'].map((key) => {
+          {['live', 'gyms', 'trainers', 'mealPlans', 'buddyFeed'].map((key) => {
             const tabIcons: Record<string, React.ReactNode> = {
               live: <Radio size={16} />,
               gyms: <Dumbbell size={16} />,
               trainers: <GraduationCap size={16} />,
               mealPlans: <Utensils size={16} />,
               buddyFeed: <Newspaper size={16} />,
-              mature: <Lock size={16} />,
             };
             return (
               <button key={key} onClick={() => setActiveFeature(key)}
@@ -229,7 +216,6 @@ export default function Landing() {
                   trainers: <GraduationCap size={96} className="text-buddy-green" />,
                   mealPlans: <Utensils size={96} className="text-buddy-green" />,
                   buddyFeed: <Newspaper size={96} className="text-buddy-green" />,
-                  mature: <Lock size={96} className="text-buddy-green" />,
                 };
                 return featureIcons[activeFeature];
               })()}
@@ -238,38 +224,7 @@ export default function Landing() {
         </Card>
       </section>
 
-      {/* ── 5. MATURE CATEGORY ── */}
-      <section className="max-w-6xl mx-auto px-6 py-24">
-        <div className="flex items-center gap-2 mb-2">
-          <Lock size={20} className="text-buddy-gold" />
-          <h2 className="font-display text-3xl font-extrabold">The <span className="text-buddy-gold">Mature</span> Category</h2>
-        </div>
-        <p className="text-buddy-text-secondary mb-4 max-w-2xl">
-          A separate, hidden-by-default section for adult fitness content: nude trainers, adult-only lives, adult marketplace items, and nude gyms. Access is gated by a country-aware age check — <strong>18+ by default, 16+ only where local law permits</strong>.
-        </p>
-        <div className="grid md:grid-cols-4 gap-6">
-          {matureCategories.map(({ icon: Icon, title, desc }) => (
-            <Card key={title} className="p-6 hover:bg-buddy-surface-raised transition-colors">
-              <div className="mb-4"><Icon size={32} className="text-buddy-gold" /></div>
-              <h3 className="font-heading font-semibold mb-2">{title}</h3>
-              <p className="text-xs text-buddy-text-secondary leading-relaxed">{desc}</p>
-            </Card>
-          ))}
-        </div>
-        <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 justify-between rounded-2xl border border-buddy-gold/30 bg-buddy-gold/5 p-6">
-          <div className="flex items-start gap-3">
-            <Eye size={20} className="text-buddy-gold mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-buddy-text-secondary">
-              Mature content is <strong>never shown to minors</strong> and is always hidden until you pass the age gate. It is subject to the same health-claim, sponsorship, and community rules as all other content.
-            </p>
-          </div>
-          <Link to="/adult-content-policy" className="flex-shrink-0">
-            <Button variant="outline" className="gap-2">Read the Adult Content Policy <ChevronRight size={18} /></Button>
-          </Link>
-        </div>
-      </section>
-
-      {/* ── 6. TESTIMONIALS ── */}
+      {/* ── 5. TESTIMONIALS ── */}
       <section className="max-w-6xl mx-auto px-6 py-24">
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">What Our <span className="text-buddy-green">Community</span> Says</h2>
         <p className="text-buddy-text-secondary text-center mb-16">Real people. Real results.</p>
@@ -292,7 +247,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 7. TRAINERS CTA ── */}
+      {/* ── 6. TRAINERS CTA ── */}
       <section className="bg-buddy-surface py-24">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <GraduationCap size={48} className="text-buddy-electric mx-auto" />
@@ -306,7 +261,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 8. GYM FOUNDERS CTA ── */}
+      {/* ── 7. GYM FOUNDERS CTA ── */}
       <section className="py-24">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <Dumbbell size={48} className="text-buddy-green mx-auto" />
@@ -320,7 +275,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 9. PRICING ── */}
+      {/* ── 8. PRICING ── */}
       <section className="max-w-5xl mx-auto px-6 py-24">
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">Simple <span className="text-buddy-green">Pricing</span></h2>
         <p className="text-buddy-text-secondary text-center mb-16">Start free. Upgrade when you're ready.</p>
@@ -350,7 +305,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 10. APP DOWNLOAD ── */}
+      {/* ── 9. APP DOWNLOAD ── */}
       <section className="bg-buddy-surface py-24">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <Download size={48} className="mx-auto text-buddy-green mb-6" />
@@ -400,7 +355,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 11. FOOTER ── */}
+      {/* ── 10. FOOTER ── */}
       <footer className="border-t border-buddy-surface py-16">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-8 mb-12">
@@ -429,7 +384,6 @@ export default function Landing() {
                 <Link to="/cookie-policy" className="block hover:text-buddy-text-primary">Cookie Policy</Link>
                 <Link to="/medical-disclaimer" className="block hover:text-buddy-text-primary">Medical Disclaimer</Link>
                 <Link to="/sponsorship-policy" className="block hover:text-buddy-text-primary">Sponsorship Policy</Link>
-                <Link to="/adult-content-policy" className="block hover:text-buddy-text-primary">Adult Content Policy</Link>
                 <Link to="/help" className="block hover:text-buddy-text-primary">Help</Link>
               </div>
             </div>

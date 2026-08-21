@@ -47,17 +47,7 @@ export default function CommunityGuidelines() {
         </div>
       </LegalSection>
 
-      <LegalSection title="5. Adult &amp; Mature Content Category">
-        <div className="space-y-2">
-          <p><strong>Separate, age-gated category.</strong> Mature content — nude or suggestive trainer profiles, adult-only live sessions, adult marketplace items (events, products, programmes, and the rest), and nude or adult-themed gyms — may only be posted inside the dedicated Mature category. It is hidden by default and gated by an age check: <strong>18+ by default, and 16+ only where local law permits</strong>.</p>
-          <p><strong>Self-classification duty.</strong> Creators must accurately mark content as mature at the time of posting. Content that is adult but not placed in the Mature category is a policy violation and may be flagged, hidden, or removed.</p>
-          <p><strong>No sexual activity.</strong> Depictions of sexual activity, non-consensual content, or content that sexualises minors are strictly prohibited everywhere, including the Mature category, and will be removed.</p>
-          <p><strong>Consent.</strong> Adult content may only feature adults who have consented. You must be able to verify the age and consent of everyone depicted if requested.</p>
-          <p><strong>All other rules still apply.</strong> Health claims, medical advice, and undisclosed sponsorship rules apply to Mature content exactly as they do everywhere else.</p>
-        </div>
-      </LegalSection>
-
-      <LegalSection title="6. Respect &amp; Inclusion">
+      <LegalSection title="5. Respect &amp; Inclusion">
         <div className="space-y-2">
           <p><strong>No hate speech.</strong> Zero tolerance for hate speech targeting any person based on body size/shape, race, ethnicity, religion, gender, sexual orientation, disability, or nationality.</p>
           <p><strong>No body-shaming.</strong> No fat-phobia, body-shaming, diet-culture extremism, or derogatory comments about anyone's appearance or abilities.</p>
@@ -68,30 +58,29 @@ export default function CommunityGuidelines() {
         </div>
       </LegalSection>
 
-      <LegalSection title="7. Live Sessions">
+      <LegalSection title="6. Live Sessions">
         <div className="space-y-2">
           <p><strong>Host controls.</strong> Hosts may mute, remove, and ban viewers. Recording requires explicit consent from the host and visible participants.</p>
           <p><strong>Viewer conduct.</strong> No doxxing, no sexual content, no medical advice, no commercial solicitation outside authorised paid sessions.</p>
-          <p><strong>Mature lives.</strong> Live sessions marked mature are restricted to users who pass the same age gate as the Mature category. Viewer conduct rules apply with no exceptions.</p>
           <p><strong>Safety.</strong> Every live session shows the host's emergency contact and a BuddyUp safety shortcut.</p>
         </div>
       </LegalSection>
 
-      <LegalSection title="8. Enforcement">
+      <LegalSection title="7. Enforcement">
         <div className="space-y-2">
           <p><strong>1st minor violation:</strong> Warning + content removal</p>
           <p><strong>2nd minor / 1st moderate:</strong> 24-hour content posting suspension</p>
           <p><strong>3rd minor / 2nd moderate / 1st severe:</strong> 7-day full suspension</p>
           <p><strong>4th / 2nd severe:</strong> 30-day suspension + mandatory account review</p>
           <p><strong>5th / any critical:</strong> Permanent ban + potential law enforcement referral</p>
-          <p className="mt-3">Adult content posted outside the Mature category, undisclosed sponsorship, and medical claims are treated as moderate-to-severe violations. Users may appeal enforcement actions within 14 days through Settings → Help &amp; Safety.</p>
+          <p className="mt-3">Undisclosed sponsorship and medical claims are treated as moderate-to-severe violations. Users may appeal enforcement actions within 14 days through Settings → Help &amp; Safety.</p>
         </div>
       </LegalSection>
 
-      <LegalSection title="9. Reporting">
+      <LegalSection title="8. Reporting">
         <p>Report violations via the Report button on any post, comment, or profile, or email <strong>safety@buddyup.app</strong>. Reports are reviewed within 24 hours; severe categories are escalated within 1 hour. Reports involving imminent harm bypass the queue.</p>
         <LegalNotice>
-          Health misinformation, medical claims, undisclosed sponsorships, and adult content posted outside the Mature category are automatically flagged by our moderation systems and always reviewed by a human moderator before action.
+          Health misinformation, medical claims, and undisclosed sponsorships are automatically flagged by our moderation systems and always reviewed by a human moderator before action.
         </LegalNotice>
       </LegalSection>
     </LegalPage>

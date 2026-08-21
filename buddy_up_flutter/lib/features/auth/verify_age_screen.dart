@@ -30,7 +30,6 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
     setState(() => _isLoading = true);
     final age = AgeGating.calculateAge(_selectedDate!);
     final country = _country.trim().isEmpty ? null : _country.trim();
-    final canAccessMature = AgeGating.canAccessMature(age: age, country: country);
     try {
       await _authRepo.verifyAge({
         'dob': _selectedDate!.toIso8601String().split('T')[0],
@@ -39,8 +38,6 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
       if (!mounted) return;
       Navigator.of(context).pop({
         'age': age,
-        'canAccessMature': canAccessMature,
-        'matureMinAge': AgeGating.matureContentMinAge(country),
       });
       if (age < 16) {
         showToast(context, 'You must be 16 or older to use Buddy-Up.', type: ToastType.error);
@@ -114,12 +111,6 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              if (_selectedDate != null)
-                Text(
-                  _matureEligibilityText(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
-                ),
               const SizedBox(height: 32),
               BuddyButton(
                 label: 'Verify Age',
@@ -134,14 +125,4 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
     );
   }
 
-  String _matureEligibilityText() {
-    final age = AgeGating.calculateAge(_selectedDate!);
-    final minAge = AgeGating.matureContentMinAge(
-      _country.trim().isEmpty ? null : _country.trim(),
-    );
-    if (age >= minAge) {
-      return 'You are eligible to view the Mature ($minAge+) category.';
-    }
-    return 'You must be $minAge+ to view the Mature category.';
-  }
 }

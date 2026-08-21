@@ -1,8 +1,8 @@
-/// Country-aware age gating for the mature/adult content category.
+/// Country-aware age gating for content categories.
 ///
 /// Buddy-Up exposes a separate "Mature" (18+/16+) category for adult fitness
-/// content: nude trainner/creator profiles, adult-only live sessions, adult
-/// marketplace items and nude gyms. The minimum age to view the category is
+/// content: adult-only live sessions, adult marketplace items, etc.
+/// The minimum age to view the category is
 /// country-dependent:
 ///
 /// * 18+ for the vast majority of countries (including Kenya).

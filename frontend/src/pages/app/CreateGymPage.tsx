@@ -31,7 +31,7 @@ export default function CreateGymPage() {
   const [categories, setCategories] = useState<GymCategory[]>([]);
   const [accessType, setAccessType] = useState('public');
   const [subscriptionType, setSubscriptionType] = useState('free');
-  const [contentRating, setContentRating] = useState<'general' | 'mature'>('general');
+  const [contentRating] = useState<'general' | 'mature'>('general');
   const [locationCity, setLocationCity] = useState('');
   const [locationCountry, setLocationCountry] = useState('');
   const [cityQuery, setCityQuery] = useState('');
@@ -379,29 +379,6 @@ export default function CreateGymPage() {
                   <button key={value} onClick={() => setAccessType(value)}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-colors ${
                       accessType === value ? 'border-buddy-green bg-buddy-green/5' : 'border-buddy-surface hover:border-buddy-text-secondary/30'
-                    }`}>
-                    <div className="flex items-center gap-3">
-                      <Icon size={20} className="text-buddy-green" />
-                      <div>
-                        <p className="font-medium text-sm">{label}</p>
-                        <p className="text-xs text-buddy-text-secondary">{desc}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-buddy-text-secondary mb-2">Content Rating</label>
-              <div className="space-y-2">
-                {[
-                  { value: 'general' as const, icon: EyeOff, label: 'General (All Ages)', desc: 'Standard fitness content, visible to everyone' },
-                  { value: 'mature' as const, icon: Lock, label: 'Mature (18+)', desc: 'Nude/suggestive content, age-gated to verified adults only' },
-                ].map(({ value, icon: Icon, label, desc }) => (
-                  <button key={value} onClick={() => setContentRating(value)}
-                    className={`w-full p-4 rounded-xl border-2 text-left transition-colors ${
-                      contentRating === value ? 'border-buddy-green bg-buddy-green/5' : 'border-buddy-surface hover:border-buddy-text-secondary/30'
                     }`}>
                     <div className="flex items-center gap-3">
                       <Icon size={20} className="text-buddy-green" />

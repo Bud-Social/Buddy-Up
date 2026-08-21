@@ -592,12 +592,6 @@ export default function Settings() {
                 <div className="absolute right-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow" />
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <div><p className="text-sm font-medium">NSFW content filter</p><p className="text-xs text-buddy-text-secondary">Blur sensitive images by default</p></div>
-              <div className="w-10 h-6 rounded-full bg-buddy-green relative">
-                <div className="absolute right-0.5 top-0.5 w-5 h-5 rounded-full bg-white shadow" />
-              </div>
-            </div>
           </Card>
         </div>
       )}

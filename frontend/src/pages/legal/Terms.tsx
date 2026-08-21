@@ -46,52 +46,43 @@ export default function Terms() {
         <p>All users must comply with the Community Guidelines. Violations are handled through a graduated enforcement process (warning → content removal → suspension → permanent removal). You may appeal an enforcement action through Settings → Help &amp; Safety within 14 days.</p>
       </LegalSection>
 
-      <LegalSection title="8. Mature Content Category">
-        <p>BuddyUp offers a separate, age-gated Mature category for adult fitness content — including nude or suggestive trainer profiles, adult-only live sessions, adult marketplace items (events, products, programmes, and the rest), and nude or adult-themed gyms. Access is restricted to users who pass a country-aware age check: <strong>18+ by default, and 16+ only where local law permits</strong>.</p>
-        <p className="mt-2"><strong>Eligibility.</strong> Users aged 16–17 may only access the Mature category in jurisdictions where local law sets the age threshold at 16. Users must not misrepresent their age, country, or consent to gain access.</p>
-        <p className="mt-2"><strong>Creator obligations.</strong> Adult content must be classified as mature at the time of posting and kept inside the Mature category. Content that is adult but posted outside the category is a violation and may be hidden or removed. All other Terms — medical-claim prohibitions, sponsorship disclosure, and community standards — apply in full to Mature content.</p>
-        <LegalNotice>
-          Mature content is hidden by default and never shown to users who fail the age gate. It is not a substitute for, and does not waive, any other platform rule.
-        </LegalNotice>
-      </LegalSection>
-
-      <LegalSection title="9. Verification &amp; Credentials">
+      <LegalSection title="8. Verification &amp; Credentials">
         <p>Trainers, practitioners, gyms, and marketplace sellers must complete the relevant verification tier. Verification checks credentials against issuing registries where possible and is subject to periodic re-verification and renewal. Listings that rely on false credentials, or that fail to renew on time, may be suspended.</p>
       </LegalSection>
 
-      <LegalSection title="10. Marketplace Purchases">
+      <LegalSection title="9. Marketplace Purchases">
         <p>Marketplace listings are governed by the seller's verification tier and their published cancellation/refund policy. BuddyUp is the platform of record and is not the seller of record except for first-party items. Digital products are refundable within 7 days if not more than 25% consumed.</p>
       </LegalSection>
 
-      <LegalSection title="11. Payments, Fees &amp; Refunds">
+      <LegalSection title="10. Payments, Fees &amp; Refunds">
         <p>Paid services are billed in Kenyan Shillings via M-Pesa, card, or other approved payment rails. Cancellations follow the partner's published policy. Sessions cancelled at least 2 hours before start receive a full refund; later cancellations follow the partner's policy (default 50%). No-shows forfeit the session fee. Refund and dispute procedures are described in Settings → Help.</p>
       </LegalSection>
 
-      <LegalSection title="12. Content Ownership &amp; Licence">
+      <LegalSection title="11. Content Ownership &amp; Licence">
         <p>You retain ownership of content you create. You grant BuddyUp a limited, non-exclusive, royalty-free licence to host, display, distribute, and process that content to operate the service (including ranking, search, and replay where applicable). The licence ends when you delete the content or close your account, subject to legal retention obligations.</p>
       </LegalSection>
 
-      <LegalSection title="13. Suspension &amp; Termination">
+      <LegalSection title="12. Suspension &amp; Termination">
         <p>BuddyUp may suspend or terminate accounts that breach these Terms, the Community Guidelines, or applicable law, after a proportionate warning except in cases of imminent harm. You may close your account at any time; closure triggers a 30-day recoverable soft-delete followed by permanent deletion.</p>
       </LegalSection>
 
-      <LegalSection title="14. Disclaimer of Warranties">
+      <LegalSection title="13. Disclaimer of Warranties">
         <p>The service is provided "as is" and "as available". BuddyUp does not warrant that fitness outcomes will be achieved and is not responsible for the actions, advice, or conduct of independent coaches, trainers, or practitioners. Users engage these professionals at their own risk.</p>
       </LegalSection>
 
-      <LegalSection title="15. Limitation of Liability">
+      <LegalSection title="14. Limitation of Liability">
         <p>To the maximum extent permitted by law, BuddyUp's aggregate liability for any claim is limited to the fees paid by you to BuddyUp in the 12 months preceding the event giving rise to the claim. BuddyUp is not liable for indirect, incidental, special, or consequential damages.</p>
       </LegalSection>
 
-      <LegalSection title="16. Disputes">
+      <LegalSection title="15. Disputes">
         <p>Disputes are resolved through BuddyUp's three-level procedure: (1) Buddy/gym-mediated, (2) Bud Concierge mediation for disputes up to KSh 20,000, and (3) a formal Dispute Panel for larger disputes and fraud/harm allegations. Unresolved disputes are subject to the exclusive jurisdiction of the Kenyan courts and governed by the laws of the Republic of Kenya.</p>
       </LegalSection>
 
-      <LegalSection title="17. Changes to the Service or Terms">
+      <LegalSection title="16. Changes to the Service or Terms">
         <p>BuddyUp may add, modify, or remove features with reasonable notice. Material changes affecting your rights (including these Terms and the Privacy Policy) will be communicated by email and in-app at least 30 days before they take effect. Continued use after the effective date constitutes acceptance.</p>
       </LegalSection>
 
-      <LegalSection title="18. Contact">
+      <LegalSection title="17. Contact">
         <p>BuddyUp Ltd., Nairobi, Kenya. For questions about these Terms, contact <strong>legal@buddyup.app</strong>. For safety concerns, contact <strong>safety@buddyup.app</strong>.</p>
       </LegalSection>
     </LegalPage>
