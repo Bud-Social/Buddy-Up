@@ -25,7 +25,8 @@ import type { Conversation, Message as MsgType, LinkPreviewData } from '@/api/me
 import { useAuthStore } from '@/store/authStore';
 import { useChatSocket } from '@/hooks/useChatSocket';
 import type { ChatEvent } from '@/hooks/useChatSocket';
-import { useWebRTC } from '@/hooks/useWebRTC';
+import { useLiveKitCall } from '@/hooks/useLiveKitCall';
+import { useCallStore } from '@/store/callStore';
 import { usePresence, formatLastSeen } from '@/hooks/usePresence';
 import { AttachmentMenu } from '@/components/chat/AttachmentMenu';
 import { VoiceNoteRecorder } from '@/components/chat/VoiceNoteRecorder';
@@ -37,6 +38,7 @@ import ChatThemePicker from '@/components/chat/ChatThemePicker';
 import { useChatPreferences } from '@/store/chatPreferencesStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { getConversationIdentity, conversationSearchText } from '@/lib/conversationDisplay';
 
 // Quick emoji picker options
 const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '👎', '🔥', '💪'];
@@ -339,6 +341,12 @@ export default function Messages() {
     return activeConvo.participants_data.find((p) => p.user_id !== profile?.user_id) ?? activeConvo.participants_data[0] ?? null;
   }, [activeConvo, profile?.user_id]);
 
+  // ── Derived: display identity (group/community uses its own name + avatar) ──
+  const activeIdentity = useMemo(
+    () => (activeConvo ? getConversationIdentity(activeConvo, profile?.user_id) : null),
+    [activeConvo, profile?.user_id],
+  );
+
   // ── Presence ───────────────────────────────────────────────────────────────
   const partnerIds = useMemo(() => (other?.user_id ? [other.user_id] : []), [other?.user_id]);
   const presence = usePresence(partnerIds);
@@ -354,7 +362,7 @@ export default function Messages() {
 
   // ── WS Event handler ───────────────────────────────────────────────────────
   const sendReadRef = useRef<(id?: string) => void>(() => {});
-  const handleWebRTCSignalRef = useRef<(type: string, data: Record<string, unknown>) => void>(() => {});
+  const lkLeaveRef = useRef<(() => Promise<void>) | null>(null);
 
   const handleChatEvent = useCallback((event: ChatEvent) => {
     if (event.type === 'message') {
@@ -414,38 +422,41 @@ export default function Messages() {
       );
       return;
     }
-    if (['call_offer', 'call_answer', 'call_ice', 'call_end', 'call_decline', 'call_ringing'].includes(event.type)) {
-      const data = (event as { data?: Record<string, unknown> }).data ?? {};
-      handleWebRTCSignalRef.current(event.type, data);
+    // Legacy WebRTC relay events are no longer used for calls (LiveKit now);
+    // still surface a remote hang-up so stale UI never lingers.
+    if (event.type === 'call_end' || event.type === 'call_decline') {
+      void lkLeaveRef.current?.();
     }
   }, [profile?.user_id]);
 
-  const { sendMessage, sendTypingStart, sendTypingStop, sendRead, sendReact, sendCallSignal } = useChatSocket({
+  const { sendMessage, sendTypingStart, sendTypingStop, sendRead, sendReact } = useChatSocket({
     conversationId: activeConvo?.id ?? null,
     onEvent: handleChatEvent,
   });
 
   useEffect(() => { sendReadRef.current = sendRead; }, [sendRead]);
 
-  // ── WebRTC ─────────────────────────────────────────────────────────────────
-  const onSignal = useCallback(
-    (type: string, data: object, callType: 'audio' | 'video') =>
-      sendCallSignal(type as 'call_offer', data, callType),
-    [sendCallSignal],
-  );
-
+  // ── Multi-party calls (LiveKit SFU) ────────────────────────────────────────
   const {
-    callState, callType, localStream, remoteStream,
-    isMuted, isRemoteMuted, isCameraOff, isSharingScreen, isRecording, cameraError, floatingReactions,
-    startCall, acceptIncomingCall, declineCall, hangUp,
-    toggleMute, toggleCamera, toggleScreenShare, toggleRecording, sendReaction, handleSignal: handleWebRTCSignal,
-  } = useWebRTC({ onSignal });
+    callState, callType, tiles, cameraError, myUserId,
+    join: joinCall, leave: leaveCall,
+    toggleMute: lkToggleMute, toggleCamera: lkToggleCamera, toggleScreenShare: lkToggleScreenShare,
+  } = useLiveKitCall(activeConvo?.id ?? null);
+  const startCall = useCallback((type: 'audio' | 'video') => { void joinCall(type); }, [joinCall]);
+  const hangUp = useCallback(() => { void leaveCall(); }, [leaveCall]);
 
+  // Accepted an incoming invite from the overlay → join that conversation's room.
+  const acceptedInvite = useCallStore((s) => s.acceptedInvite);
+  const setAcceptedInvite = useCallStore((s) => s.setAcceptedInvite);
   useEffect(() => {
-    handleWebRTCSignalRef.current = (type: string, data: Record<string, unknown>) => {
-      handleWebRTCSignal(type, data);
-    };
-  }, [handleWebRTCSignal]);
+    if (!acceptedInvite || !activeConvo) return;
+    if (acceptedInvite.conversation_id !== activeConvo.id) return;
+    const type = acceptedInvite.call_type;
+    setAcceptedInvite(null);
+    void joinCall(type);
+  }, [acceptedInvite, activeConvo, joinCall, setAcceptedInvite]);
+
+  useEffect(() => { lkLeaveRef.current = leaveCall; }, [leaveCall]);
 
   // ── Fetch conversations ────────────────────────────────────────────────────
   const fetchConversations = useCallback(async () => {
@@ -689,15 +700,10 @@ export default function Messages() {
   const filteredConvos = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
     const q = searchQuery.toLowerCase();
-    return conversations.filter((c) => {
-      const partner = c.participants_data.find((p) => p.user_id !== profile?.user_id) ?? c.participants_data[0];
-      const name = (partner?.display_name ?? c.group_name ?? '').toLowerCase();
-      return name.includes(q);
-    });
+    return conversations.filter((c) => conversationSearchText(c).includes(q));
   }, [conversations, searchQuery, profile?.user_id]);
 
   // Determine if I'm the callee (received the call)
-  const isCallee = callState === 'ringing';
 
   // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
@@ -707,32 +713,18 @@ export default function Messages() {
         <CallRoom
           callState={callState}
           callType={callType}
-          isMuted={isMuted}
-          isRemoteMuted={isRemoteMuted}
-          isCameraOff={isCameraOff}
-          isSharingScreen={isSharingScreen}
-          isRecording={isRecording}
           cameraError={cameraError}
-          localStream={localStream}
-          remoteStream={remoteStream}
-          floatingReactions={floatingReactions}
-          otherParticipant={other ? {
-            username: other.username,
-            display_name: other.display_name,
-            avatar_url: other.avatar_url,
-            verification_status: other.verification_status,
-          } : null}
-          activeConvo={activeConvo}
-          isCallee={isCallee}
-          isGroupCall={activeConvo?.is_group ?? false}
-          onAccept={acceptIncomingCall}
-          onDecline={declineCall}
-          onHangUp={() => hangUp()}
-          onToggleMute={toggleMute}
-          onToggleCamera={toggleCamera}
-          onToggleScreenShare={toggleScreenShare}
-          onToggleRecording={toggleRecording}
-          onSendReaction={sendReaction}
+          tiles={tiles}
+          myUserId={myUserId}
+          identityName={activeIdentity?.name ?? 'Conversation'}
+          identityAvatar={activeIdentity?.avatarUrl}
+          isCallee={callState === 'ringing'}
+          onAccept={() => { void joinCall(callType); }}
+          onDecline={hangUp}
+          onHangUp={hangUp}
+          onToggleMute={() => { void lkToggleMute(); }}
+          onToggleCamera={() => { void lkToggleCamera(); }}
+          onToggleScreenShare={lkToggleScreenShare}
         />
       )}
 
@@ -782,9 +774,9 @@ export default function Messages() {
         ) : (
           <div className="flex-1 overflow-y-auto divide-y divide-buddy-surface/40">
             {filteredConvos.map((convo) => {
-              const partner = convo.participants_data.find((p) => p.user_id !== profile?.user_id) ?? convo.participants_data[0];
-              const name = partner?.display_name ?? convo.group_name ?? 'Group';
-              const avatarUrl = partner?.avatar_url ?? convo.group_avatar_url;
+              const identity = getConversationIdentity(convo, profile?.user_id);
+              const name = identity.name;
+              const avatarUrl = identity.avatarUrl;
               const isActive = activeConvo?.id === convo.id;
 
               return (
@@ -794,8 +786,8 @@ export default function Messages() {
                   className={`w-full flex items-center gap-3 px-4 py-3.5 hover:bg-buddy-surface/50 transition-colors text-left ${isActive ? 'bg-buddy-surface/60' : ''}`}
                 >
                   <div className="relative shrink-0">
-                    <Avatar src={avatarUrl} alt={name} size="md" verificationStatus={partner?.verification_status || ''} />
-                    {partner?.user_id && presence[partner.user_id]?.online && (
+                    <Avatar src={avatarUrl} alt={name} size="md" verificationStatus={identity.verificationStatus} />
+                    {!identity.isGroup && identity.partner?.user_id && presence[identity.partner.user_id]?.online && (
                       <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-buddy-green rounded-full border-2 border-buddy-black" />
                     )}
                     {convo.unread_count > 0 && (
@@ -868,10 +860,10 @@ export default function Messages() {
             </button>
             <div className="relative">
               <Avatar
-                src={other?.avatar_url ?? activeConvo.group_avatar_url}
-                alt={other?.display_name ?? activeConvo.group_name ?? 'Group'}
+                src={activeIdentity?.avatarUrl ?? ''}
+                alt={activeIdentity?.name ?? 'Conversation'}
                 size="md"
-                verificationStatus={other?.verification_status || ''}
+                verificationStatus={activeIdentity?.verificationStatus || ''}
               />
               {presenceInfo?.online && (
                 <span className="absolute bottom-0 right-0 w-3 h-3 bg-buddy-green rounded-full border-2 border-buddy-black" />
@@ -879,11 +871,13 @@ export default function Messages() {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-heading font-bold text-sm truncate leading-tight">
-                {other?.display_name ?? activeConvo.group_name}
+                {activeIdentity?.name}
               </h3>
               <p className="text-[11px] truncate leading-tight mt-0.5">
                 {typingNames.length > 0 ? (
                   <span className="text-buddy-green font-medium animate-pulse">typing…</span>
+                ) : activeIdentity?.isGroup ? (
+                  <span className="text-buddy-text-secondary">{activeConvo?.participants_data.length ?? 0} members</span>
                 ) : presenceInfo?.online ? (
                   <span className="text-buddy-green">Online</span>
                 ) : presenceInfo?.last_seen ? (
@@ -979,9 +973,9 @@ export default function Messages() {
               </div>
             ) : messages.length === 0 && (
               <div className="flex flex-col items-center justify-center py-24 gap-4">
-                <Avatar src={other?.avatar_url} alt={other?.display_name ?? 'User'} size="xl" className="ring-2 ring-buddy-surface" verificationStatus={other?.verification_status} />
+                <Avatar src={activeIdentity?.avatarUrl ?? ''} alt={activeIdentity?.name ?? 'User'} size="xl" className="ring-2 ring-buddy-surface" verificationStatus={activeIdentity?.verificationStatus} />
                 <div className="text-center">
-                  <p className="font-semibold text-buddy-text-primary">{other?.display_name ?? 'Group'}</p>
+                  <p className="font-semibold text-buddy-text-primary">{activeIdentity?.name}</p>
                   <p className="text-sm text-buddy-text-secondary mt-1">Say hi to start the conversation! 👋</p>
                 </div>
               </div>
@@ -1604,8 +1598,7 @@ export default function Messages() {
               {conversations
                 .filter((c) => c.id !== activeConvo?.id)
                 .map((convo) => {
-                  const partner = convo.participants_data.find((p) => p.user_id !== profile?.user_id) ?? convo.participants_data[0];
-                  const name = partner?.display_name ?? convo.group_name ?? 'Conversation';
+                  const identity = getConversationIdentity(convo, profile?.user_id);
                   return (
                     <button
                       key={convo.id}
@@ -1618,8 +1611,8 @@ export default function Messages() {
                       }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-buddy-surface transition-colors text-left"
                     >
-                      <Avatar src={partner?.avatar_url} alt={name} size="sm" verificationStatus={partner?.verification_status} />
-                      <span className="text-sm font-medium truncate">{name}</span>
+                      <Avatar src={identity.avatarUrl} alt={identity.name} size="sm" verificationStatus={identity.verificationStatus} />
+                      <span className="text-sm font-medium truncate">{identity.name}</span>
                     </button>
                   );
                 })}

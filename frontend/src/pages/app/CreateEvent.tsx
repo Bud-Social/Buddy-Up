@@ -9,9 +9,7 @@ import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { marketplaceApi } from '@/api';
 import type { MarketplaceEvent } from '@/api/marketplace';
 
-const EVENT_CATEGORIES = [
-  'fitness', 'wellness', 'nutrition', 'mindfulness', 'challenge', 'community', 'other',
-];
+import { EVENT_CATEGORIES } from '@/config/eventCategories';
 
 const PRICE_ARTIFACTS = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'] as const;
 
@@ -230,16 +228,24 @@ export default function CreateEvent() {
             </div>
 
             <div>
-              <label className="text-sm font-semibold mb-1 block">Category</label>
-              <select
-                className="w-full rounded-xl bg-buddy-surface border border-buddy-surface-raised px-3 py-2 text-sm focus:outline-none focus:border-buddy-green"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              >
-                {EVENT_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>{category.replace('_', ' ').replace(/\b\w/g, (c) => c.toUpperCase())}</option>
+              <label className="text-sm font-semibold mb-1.5 block">Category</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-56 overflow-y-auto p-1 bg-buddy-surface-raised rounded-xl border border-buddy-border">
+                {EVENT_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, category: cat.key })}
+                    className={`flex items-center gap-2 p-2 rounded-lg text-left text-xs font-medium transition-all ${
+                      formData.category === cat.key
+                        ? 'bg-buddy-green text-buddy-black shadow-sm font-bold'
+                        : 'hover:bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+                    }`}
+                  >
+                    <span className="text-base">{cat.icon}</span>
+                    <span className="truncate">{cat.label}</span>
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
             <div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useBlocker } from 'react-router-dom';
+import { PipChatPanel } from '@/components/live/PipChatPanel';
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, Users, Copy, Check,
   MessageCircle, MessageCircleOff, Send,
@@ -116,6 +117,7 @@ export default function LiveRoom() {
   const localAudioTrackRef = useRef<MediaStreamTrack | null>(null);
   const [pipDragPos, setPipDragPos] = useState<{ x: number; y: number } | null>(null);
   const [isPipActive, setIsPipActive] = useState(false);
+  const [showPipChatPanel, setShowPipChatPanel] = useState(false);
   const pipWindowRef = useRef<Window | null>(null);
   const isPipSupported = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
 
@@ -168,6 +170,51 @@ export default function LiveRoom() {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [chatMessages, showChat]);
+
+  // T1.6 — Intercept route navigation while connected; show PipChatPanel fallback
+  // so the viewer can keep chatting without returning to the full LiveRoom.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      connectionState === 'connected' &&
+      !showPipChatPanel &&
+      currentLocation.pathname !== nextLocation.pathname
+  );
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      // Try native PiP first; if unavailable or user is on an audio-only live,
+      // fall back to in-page PipChatPanel overlay.
+      const videoEl = localVideoRef.current || document.querySelector('video');
+      const canNativePip =
+        videoEl &&
+        'requestPictureInPicture' in videoEl &&
+        !isAudioLive &&
+        connectionState === 'connected';
+
+      if (canNativePip && videoEl) {
+        (videoEl as HTMLVideoElement)
+          .requestPictureInPicture()
+          .then(() => {
+            setIsPipActive(true);
+            (videoEl as HTMLVideoElement).addEventListener(
+              'leavepictureinpicture',
+              () => setIsPipActive(false),
+              { once: true }
+            );
+            blocker.proceed?.();
+          })
+          .catch(() => {
+            // Native PiP rejected — show chat panel fallback
+            setShowPipChatPanel(true);
+            blocker.reset?.();
+          });
+      } else {
+        // No native PiP support or audio-only — show PipChatPanel
+        setShowPipChatPanel(true);
+        blocker.reset?.();
+      }
+    }
+  }, [blocker, connectionState, isAudioLive]);
 
   const addFloatingGift = useCallback((artifactType: string) => {
     const id = Date.now() + Math.random();
@@ -523,45 +570,78 @@ export default function LiveRoom() {
   const togglePictureInPicture = useCallback(async () => {
     if (pipWindowRef.current) {
       pipWindowRef.current.close();
+      pipWindowRef.current = null;
+      setIsPipActive(false);
+      return;
+    }
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture().catch(() => {});
+      setIsPipActive(false);
       return;
     }
     const localStream = localVideoRef.current?.srcObject;
-    if (!localStream) return;
-    try {
-      const pipWin = await (window as unknown as { documentPictureInPicture: { requestWindow: (opts: Record<string, unknown>) => Promise<Window> } }).documentPictureInPicture.requestWindow({
-        width: 420, height: 340, copyStyleSheets: true,
-      });
-      pipWindowRef.current = pipWin;
-      setIsPipActive(true);
+    if ('documentPictureInPicture' in window && localStream) {
+      try {
+        const pipWin = await (window as unknown as { documentPictureInPicture: { requestWindow: (opts: Record<string, unknown>) => Promise<Window> } }).documentPictureInPicture.requestWindow({
+          width: 420, height: 340, copyStyleSheets: true,
+        });
+        pipWindowRef.current = pipWin;
+        setIsPipActive(true);
 
-      pipWin.document.body.innerHTML = `
-        <div style="width:100%;height:100%;position:relative;background:#000;display:flex;flex-direction:column;overflow:hidden;">
-          <video id="pip-video" autoplay muted playsinline style="flex:1;width:100%;object-fit:contain;min-height:0;"></video>
-          <div style="display:flex;justify-content:center;gap:16px;padding:10px 8px;background:rgba(0,0,0,0.85);">
-            <button id="pip-mic" style="width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;background:#1E1E1E;color:#fff;">${isMicOn ? '🎤' : '🔇'}</button>
-            <button id="pip-cam" style="width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;background:#1E1E1E;color:#fff;">${isCamOn ? '📷' : '📵'}</button>
-            <button id="pip-fullscreen" style="width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;background:#1E1E1E;color:#fff;">⛶</button>
+        pipWin.document.body.innerHTML = `
+          <div style="width:100%;height:100%;position:relative;background:#000;display:flex;flex-direction:column;overflow:hidden;">
+            <video id="pip-video" autoplay muted playsinline style="flex:1;width:100%;object-fit:contain;min-height:0;"></video>
+            <div style="display:flex;justify-content:center;gap:16px;padding:10px 8px;background:rgba(0,0,0,0.85);">
+              <button id="pip-mic" style="width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;background:#1E1E1E;color:#fff;">${isMicOn ? '🎤' : '🔇'}</button>
+              <button id="pip-cam" style="width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;background:#1E1E1E;color:#fff;">${isCamOn ? '📷' : '📵'}</button>
+              <button id="pip-fullscreen" style="width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;background:#1E1E1E;color:#fff;">⛶</button>
+            </div>
           </div>
-        </div>
-      `;
+        `;
 
-      const pipVideo = pipWin.document.getElementById('pip-video') as HTMLVideoElement;
-      pipVideo.srcObject = localStream;
+        const pipVideo = pipWin.document.getElementById('pip-video') as HTMLVideoElement;
+        pipVideo.srcObject = localStream;
 
-      pipWin.document.getElementById('pip-mic')!.onclick = toggleMic;
-      pipWin.document.getElementById('pip-cam')!.onclick = toggleCam;
-      pipWin.document.getElementById('pip-fullscreen')!.onclick = () => {
-        pipWin.document.documentElement.requestFullscreen().catch(() => {});
-      };
+        pipWin.document.getElementById('pip-mic')!.onclick = toggleMic;
+        pipWin.document.getElementById('pip-cam')!.onclick = toggleCam;
+        pipWin.document.getElementById('pip-fullscreen')!.onclick = () => {
+          pipWin.document.documentElement.requestFullscreen().catch(() => {});
+        };
 
-      pipWin.addEventListener('pagehide', () => {
-        pipWindowRef.current = null;
-        setIsPipActive(false);
-      });
-    } catch {
-      // PiP not supported or user cancelled
+        pipWin.addEventListener('pagehide', () => {
+          pipWindowRef.current = null;
+          setIsPipActive(false);
+        });
+        return;
+      } catch {
+        // Document PiP failed or cancelled, fall through to video PiP
+      }
+    }
+
+    const videoEl = localVideoRef.current || document.querySelector('video');
+    if (videoEl && 'requestPictureInPicture' in videoEl) {
+      try {
+        await videoEl.requestPictureInPicture();
+        setIsPipActive(true);
+        videoEl.addEventListener('leavepictureinpicture', () => {
+          setIsPipActive(false);
+        }, { once: true });
+      } catch {
+        // Standard PiP rejected
+      }
     }
   }, [isMicOn, isCamOn, toggleMic, toggleCam]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const videoEl = localVideoRef.current || document.querySelector('video');
+      if (videoEl && 'requestPictureInPicture' in videoEl && !document.pictureInPictureElement) {
+        videoEl.requestPictureInPicture().catch(() => {});
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   const leaveRoom = async () => {
     if (pipWindowRef.current) {
@@ -1414,6 +1494,24 @@ export default function LiveRoom() {
           </div>
         )}
       </div>
+
+      {/* T1.8/T1.9 — PiP Chat Panel fallback overlay (shown when native PiP is unavailable / audio-only) */}
+      {showPipChatPanel && liveId && (
+        <PipChatPanel
+          liveId={liveId}
+          roomTitle={roomData?.title}
+          hostName={roomData?.host_name}
+          viewerCount={viewerCount}
+          isAudioOnly={isAudioLive}
+          messages={chatMessages}
+          onSendMessage={(text) => sendChat(text)}
+          onSendReaction={(emoji) => sendReaction(emoji)}
+          onClose={async () => {
+            setShowPipChatPanel(false);
+            await leaveRoom();
+          }}
+        />
+      )}
 
       {/* END CONFIRM */}
       {showEndConfirm && (

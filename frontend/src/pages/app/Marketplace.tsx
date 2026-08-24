@@ -8,6 +8,7 @@ import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 import { useToast } from '@/components/ui/Toast';
 import { marketplaceApi } from '@/api/marketplace';
 import type { MealPlan, TrainingProgrammeMP, ProductMP } from '@/api/marketplace';
+import { EVENT_CATEGORIES } from '@/config/eventCategories';
 
 const ARTIFACT_USD_VALUES: Record<string, number> = {
   dumbbell: 0.10, barbell: 0.50, burpee: 1.00,
@@ -353,6 +354,7 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
   const [scope, setScope] = useState<'upcoming' | 'past' | 'all'>('upcoming');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -371,9 +373,14 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
   const headerTitle =
     scope === 'past' ? 'Past Events' : scope === 'all' ? 'All Events' : 'Upcoming Events';
 
+  const filteredEvents = events.filter((e) => {
+    if (categoryFilter === 'all') return true;
+    return (e.category || '').toLowerCase() === categoryFilter.toLowerCase();
+  });
+
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-3">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-buddy-text-secondary">{headerTitle}</h2>
           <div className="flex items-center gap-1 bg-buddy-surface-raised rounded-lg p-0.5">
@@ -398,19 +405,47 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
         </div>
       </div>
 
+      {/* Category Filter Pill Bar */}
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-3 scrollbar-hide snap-x snap-mandatory">
+        <button
+          onClick={() => setCategoryFilter('all')}
+          className={`flex-shrink-0 px-3 py-1 rounded-full text-xs whitespace-nowrap transition-colors snap-start font-medium ${
+            categoryFilter === 'all'
+              ? 'bg-buddy-green text-buddy-black'
+              : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+          }`}
+        >
+          All Categories
+        </button>
+        {EVENT_CATEGORIES.map((cat) => (
+          <button
+            key={cat.key}
+            onClick={() => setCategoryFilter(categoryFilter === cat.key ? 'all' : cat.key)}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-full text-xs whitespace-nowrap transition-colors snap-start font-medium ${
+              categoryFilter === cat.key
+                ? 'bg-buddy-green text-buddy-black'
+                : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+            }`}
+          >
+            <span>{cat.icon}</span>
+            <span>{cat.label}</span>
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i} className="p-4 animate-pulse"><div className="h-32 bg-buddy-surface-raised rounded-xl" /></Card>
           ))}
         </div>
-      ) : events.length === 0 ? (
+      ) : filteredEvents.length === 0 ? (
         <div className="text-center py-20 text-buddy-text-secondary">
-          {scope === 'past' ? 'No past events.' : scope === 'all' ? 'No events yet.' : 'No upcoming events.'}
+          No events found in this category.
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-          {events.map((e) => (
+          {filteredEvents.map((e) => (
             <Card key={e.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/events/${e.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center relative overflow-hidden">
                 {e.cover_image_url ? (

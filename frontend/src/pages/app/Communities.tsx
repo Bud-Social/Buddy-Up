@@ -8,8 +8,12 @@ function CommunityCard({ community, onOpen }: { community: Community; onOpen: ()
   return (
     <Card className="p-4 cursor-pointer hover:border-buddy-green/40 transition-colors" onClick={onOpen}>
       <div className="flex items-center gap-3">
-        {community.cover_url ? (
-          <img src={community.cover_url} alt="" className="w-14 h-14 rounded-xl object-cover" />
+        {community.group_avatar_url || community.cover_url ? (
+          <img
+            src={community.group_avatar_url || community.cover_url}
+            alt={community.group_name}
+            className="w-14 h-14 rounded-xl object-cover"
+          />
         ) : (
           <div className="w-14 h-14 rounded-xl bg-buddy-surface-raised flex items-center justify-center">
             <Users size={22} className="text-buddy-green" />
@@ -52,8 +56,23 @@ export default function Communities() {
   const [createName, setCreateName] = useState('');
   const [createDesc, setCreateDesc] = useState('');
   const [createPublic, setCreatePublic] = useState(true);
+  const [createAvatarUrl, setCreateAvatarUrl] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const handleAvatarPicked = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const res = await messagingApi.uploadAttachment(file);
+      setCreateAvatarUrl(res.data?.url ?? '');
+    } catch {
+      alert('Image upload failed');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const fetchCommunities = useCallback(() => {
     messagingApi.getCommunities()
@@ -75,10 +94,12 @@ export default function Communities() {
         name: createName.trim(),
         description: createDesc.trim(),
         is_public: createPublic,
+        ...(createAvatarUrl ? { group_avatar_url: createAvatarUrl } : {}),
       });
       setShowCreate(false);
       setCreateName('');
       setCreateDesc('');
+      setCreateAvatarUrl('');
       navigate(`/communities/${community.id}`);
     } catch {
       alert('Failed to create community');
@@ -192,9 +213,17 @@ export default function Communities() {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-lg bg-buddy-surface-raised flex items-center justify-center shrink-0">
-                          <Users size={18} className="text-buddy-green" />
-                        </div>
+                        {c.group_avatar_url || c.cover_url ? (
+                          <img
+                            src={c.group_avatar_url || c.cover_url}
+                            alt={c.group_name}
+                            className="w-10 h-10 rounded-lg object-cover shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-buddy-surface-raised flex items-center justify-center shrink-0">
+                            <Users size={18} className="text-buddy-green" />
+                          </div>
+                        )}
                         <div className="min-w-0">
                           <p className="font-semibold truncate">{c.group_name}</p>
                           <p className="text-xs text-buddy-text-secondary truncate">
@@ -248,6 +277,25 @@ export default function Communities() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-lg font-bold">Create Community</h2>
               <button onClick={() => setShowCreate(false)} className="text-buddy-text-secondary hover:text-buddy-text-primary"><X size={20} /></button>
+            </div>
+            <div className="flex items-center gap-4 mb-4">
+              {createAvatarUrl ? (
+                <img src={createAvatarUrl} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-buddy-surface-raised flex items-center justify-center shrink-0">
+                  <Users size={26} className="text-buddy-green" />
+                </div>
+              )}
+              <label className="flex-1 cursor-pointer text-sm text-buddy-green font-medium hover:underline">
+                {uploadingAvatar ? 'Uploading…' : createAvatarUrl ? 'Change picture' : 'Add a community picture'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  disabled={uploadingAvatar}
+                  onChange={(e) => { handleAvatarPicked(e.target.files?.[0]); e.target.value = ''; }}
+                />
+              </label>
             </div>
             <label className="block text-xs font-medium text-buddy-text-secondary mb-1">Name</label>
             <input

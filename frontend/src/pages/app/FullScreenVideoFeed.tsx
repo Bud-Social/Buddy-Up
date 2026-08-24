@@ -159,10 +159,33 @@ export default function FullScreenVideoFeed() {
   const handleRepost = async (idx: number) => {
     const item = items[idx];
     if (!item) return;
+    const wasReposted = item.post.is_reposted_by_me ?? false;
+    // Optimistic update
+    setItems((prev) => prev.map((it, i) =>
+      i === idx ? { ...it, post: { ...it.post,
+        is_reposted_by_me: !wasReposted,
+        repost_count: wasReposted ? Math.max(0, (it.post.repost_count || 0) - 1) : (it.post.repost_count || 0) + 1,
+      }} : it
+    ));
     try {
-      await feedApi.repost(item.post.id);
-      setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, post: { ...it.post, repost_count: (it.post.repost_count || 0) + 1 } } : it)));
-    } catch {}
+      const res = await feedApi.repost(item.post.id);
+      if (res.data) {
+        setItems((prev) => prev.map((it, i) =>
+          i === idx ? { ...it, post: { ...it.post,
+            is_reposted_by_me: res.data!.action === 'reposted',
+            repost_count: res.data!.repost_count,
+          }} : it
+        ));
+      }
+    } catch {
+      // Rollback
+      setItems((prev) => prev.map((it, i) =>
+        i === idx ? { ...it, post: { ...it.post,
+          is_reposted_by_me: wasReposted,
+          repost_count: wasReposted ? (it.post.repost_count || 0) + 1 : Math.max(0, (it.post.repost_count || 0) - 1),
+        }} : it
+      ));
+    }
   };
 
   const toggleFullscreen = () => {
@@ -288,8 +311,8 @@ export default function FullScreenVideoFeed() {
                   <span className="text-[11px] font-medium">{post.comment_count || ''}</span>
                 </button>
 
-                <button onClick={(e) => { e.stopPropagation(); handleRepost(idx); }} className="flex flex-col items-center gap-0.5 text-white">
-                  <Repeat2 size={26} className="drop-shadow" />
+                <button onClick={(e) => { e.stopPropagation(); handleRepost(idx); }} className="flex flex-col items-center gap-0.5 text-white" title={post.is_reposted_by_me ? 'Tap to undo repost' : 'Repost'}>
+                  <Repeat2 size={26} className={`drop-shadow ${post.is_reposted_by_me ? 'text-buddy-electric' : ''}`} />
                   <span className="text-[11px] font-medium">{post.repost_count || ''}</span>
                 </button>
 

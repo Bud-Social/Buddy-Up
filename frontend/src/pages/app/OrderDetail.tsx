@@ -30,6 +30,29 @@ const STATUS_LABELS: Record<string, string> = {
 
 const SELLER_STATUS_FLOW = ['processing', 'shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered'];
 
+const BUYER_TRACK_STEPS = [
+  { key: 'paid', label: 'Paid' },
+  { key: 'processing', label: 'Processing' },
+  { key: 'shipped', label: 'Shipped' },
+  { key: 'transit', label: 'In Transit' },
+  { key: 'delivered', label: 'Delivered' },
+];
+
+function stepIndexFor(status: string): number {
+  switch (status) {
+    case 'pending': return -1;
+    case 'paid': return 0;
+    case 'processing': return 1;
+    case 'shipped': return 2;
+    case 'out_for_delivery': return 3;
+    case 'ready_for_pickup': return 3;
+    case 'delivered':
+    case 'completed':
+    case 'cancelled': return 4;
+    default: return 0;
+  }
+}
+
 function artifactDisplay(artifacts: Record<string, number> | null | undefined): string {
   if (!artifacts || Object.keys(artifacts).length === 0) return '';
   return Object.entries(artifacts)
@@ -91,6 +114,24 @@ export default function OrderDetail() {
     }
   };
 
+  const handleConfirmDelivery = async () => {
+    if (!orderId) return;
+    setUpdating(true);
+    try {
+      const res = await marketplaceApi.updateOrderFulfillment(orderId, {
+        status: 'delivered',
+        note: 'Confirmed by buyer',
+      });
+      setOrder(res.data);
+      setStatus(res.data.status);
+      toast('success', 'Thanks! Order marked as delivered');
+    } catch (err: any) {
+      toast('error', err.response?.data?.message || 'Could not confirm delivery');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
@@ -103,6 +144,9 @@ export default function OrderDetail() {
 
   const timeline = [...(order.status_history || [])].reverse();
   const canFulfill = isSeller && SELLER_STATUS_FLOW.includes(order.status);
+  const canConfirmDelivery = !isSeller
+    && ['shipped', 'out_for_delivery', 'ready_for_pickup'].includes(order.status);
+  const currentStep = stepIndexFor(order.status);
 
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 space-y-4">
@@ -115,6 +159,34 @@ export default function OrderDetail() {
           <p className="text-xs text-buddy-text-secondary font-mono">{order.order_number}</p>
         </div>
       </div>
+
+      {/* Progress tracker */}
+      {order.status !== 'cancelled' && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            {BUYER_TRACK_STEPS.map((step, i) => {
+              const done = i <= currentStep;
+              return (
+                <div key={step.key} className="flex-1 flex items-center last:flex-none">
+                  <div className="flex flex-col items-center gap-1">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-colors ${
+                      done ? 'bg-buddy-green border-buddy-green text-buddy-black' : 'bg-buddy-surface-raised border-buddy-surface-raised text-transparent'
+                    }`}>
+                      ✓
+                    </div>
+                    <span className={`text-[10px] font-medium whitespace-nowrap ${done ? 'text-buddy-green' : 'text-buddy-text-secondary'}`}>
+                      {step.label}
+                    </span>
+                  </div>
+                  {i < BUYER_TRACK_STEPS.length - 1 && (
+                    <div className={`flex-1 h-0.5 mx-1 mb-4 ${i < currentStep ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Status banner */}
       <div className="rounded-2xl bg-buddy-surface p-5 flex items-center justify-between">
@@ -199,6 +271,19 @@ export default function OrderDetail() {
           )}
         </div>
       </Card>
+
+      {/* Buyer: confirm receipt */}
+      {canConfirmDelivery && (
+        <Card className="p-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Received your order?</p>
+            <p className="text-xs text-buddy-text-secondary mt-0.5">Confirm delivery to let the seller know it arrived.</p>
+          </div>
+          <Button size="sm" onClick={handleConfirmDelivery} isLoading={updating} disabled={updating}>
+            Confirm delivered
+          </Button>
+        </Card>
+      )}
 
       {/* Seller fulfillment panel */}
       {canFulfill && (

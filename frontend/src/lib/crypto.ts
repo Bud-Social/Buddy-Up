@@ -107,15 +107,46 @@ export async function encryptMessage(plaintext: string, sharedKey: CryptoKey): P
   return btoa(String.fromCharCode(...combined));
 }
 
-export async function decryptMessage(cipherB64: string, sharedKey: CryptoKey): Promise<string> {
+/** Sentinel prefix marking payloads that could not be decrypted. */
+export const UNDECRYPTABLE = '\u200E[encrypted]';
+
+export function isUndecryptable(text: string): boolean {
+  return text === UNDECRYPTABLE;
+}
+
+export async function decryptMessage(cipherB64: string, sharedKey: CryptoKey | null): Promise<string> {
+  if (!sharedKey) return UNDECRYPTABLE;
   try {
     const bytes = Uint8Array.from(atob(cipherB64), (c) => c.charCodeAt(0));
+    if (bytes.length <= 12) return cipherB64;
     const iv = bytes.slice(0, 12);
     const data = bytes.slice(12);
     const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, sharedKey, data);
     return new TextDecoder().decode(plaintext);
   } catch {
-    // If decryption fails (e.g. no shared key yet), return as-is (unencrypted fallback)
-    return cipherB64;
+    // Never render raw ciphertext as message content.
+    return UNDECRYPTABLE;
   }
+}
+
+// ---------- Safety numbers (out-of-band key verification) ----------
+
+/**
+ * Deterministic human-verifiable safety number for a pair of public keys,
+ * analogous to Signal's. Both devices compute the same 60-bit grouping
+ * (12 digits in 3 blocks of 4) from the sorted key material via SHA-256 —
+ * users compare it out-of-band to detect man-in-the-middle key swaps.
+ */
+export async function getSafetyNumber(
+  myPublicJWK: ExportedPublicKey,
+  theirPublicJWK: ExportedPublicKey,
+): Promise<string> {
+  const norm = (k: ExportedPublicKey) => `${k.crv}|${(k.x || '').replace(/=+$/, '')}|${(k.y || '').replace(/=+$/, '')}`;
+  const material = [norm(myPublicJWK), norm(theirPublicJWK)].sort().join('#');
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(material));
+  const bytes = new Uint8Array(digest);
+  let acc = 0n;
+  for (let i = 0; i < 8; i += 1) acc = (acc << 8n) | BigInt(bytes[i]);
+  const digits = acc.toString().padStart(20, '0').slice(-12);
+  return digits.replace(/(\d{4})(?=\d)/g, '$1 ');
 }

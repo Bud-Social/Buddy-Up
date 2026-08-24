@@ -1,7 +1,7 @@
 import { apiClient } from './client';
 import type { ApiResponse, Post, Comment } from '@/types';
 
-export type FeedTab = 'for_you' | 'following' | 'videos' | 'meals';
+export type FeedTab = 'for_you' | 'following' | 'videos' | 'meals' | 'communities';
 
 export const feedApi = {
   getFeed: (tab: FeedTab = 'for_you', cursor?: string) =>
@@ -43,7 +43,7 @@ export const feedApi = {
     apiClient.delete(`/feed/${postId}/comments/${commentId}/`).then((r) => r.data),
 
   repost: (postId: string, quote_body?: string) =>
-    apiClient.post<ApiResponse<Post>>(`/feed/${postId}/repost/`, { quote_body }).then((r) => r.data),
+    apiClient.post<ApiResponse<{ action: 'reposted' | 'unreposted'; repost_count: number }>>(`/feed/${postId}/repost/`, { quote_body }).then((r) => r.data),
 
   save: (postId: string, collection?: string) =>
     apiClient.post<ApiResponse<null>>(`/feed/${postId}/save/`, { collection }).then((r) => r.data),

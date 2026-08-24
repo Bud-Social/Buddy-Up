@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users, ArrowRight } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
+import { Card } from '@/components/ui/Card';
 import { feedApi } from '@/api';
+import { messagingApi, type Community } from '@/api/messaging';
 import type { FeedTab } from '@/api/feed';
 import type { Post } from '@/types';
 
 const TAB_ROUTES: Record<string, FeedTab> = {
   '/feed': 'for_you',
   '/feed/following': 'following',
+  '/feed/communities': 'communities',
   '/feed/bud-press': 'videos',
   '/feed/meals': 'meals',
 };
@@ -21,10 +24,17 @@ export default function Feed() {
   const [activeTab, setActiveTab] = useState<FeedTab>(TAB_ROUTES[location.pathname] || 'for_you');
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [myCommunities, setMyCommunities] = useState<Community[]>([]);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const cursorRef = useRef<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    messagingApi.getCommunities()
+      .then((data) => setMyCommunities(data.mine || []))
+      .catch(() => {});
+  }, []);
 
   // Meal prefill coming from the Food Scanner ("Share as Meal Post")
   const locationState = location.state as { mealData?: { food_name?: string; calories?: number; protein_g?: number; carbs_g?: number; fat_g?: number; meal_type?: string } } | null;
@@ -37,6 +47,7 @@ export default function Feed() {
   const tabs: { key: FeedTab; label: string; to: string }[] = [
     { key: 'for_you', label: 'For You', to: '/feed' },
     { key: 'following', label: 'Following', to: '/feed/following' },
+    ...(myCommunities.length > 0 ? [{ key: 'communities' as FeedTab, label: 'Communities', to: '/feed/communities' }] : []),
     { key: 'videos', label: 'Bud Press', to: '/feed/bud-press' },
     { key: 'meals', label: 'Meals', to: '/feed/meals' },
   ];
@@ -108,43 +119,87 @@ export default function Feed() {
         </div>
       </div>
 
-      {/* Composer */}
-      <div className="px-4 pt-4 pb-2">
-        <PostComposer
-          placeholder="Share your workout, meal, or progress..."
-          onPost={handleNewPost}
-          initialMeal={initialMeal}
-          initialMealPhotoDataUrl={initialMealPhoto}
-        />
-      </div>
-
-      {/* Feed */}
-      <div className="px-4 space-y-3 pb-8 pt-2">
-        {posts.length === 0 && !isLoading && (
-          <div className="text-center py-20">
-            <p className="text-buddy-text-secondary text-lg">No posts yet</p>
-            <p className="text-buddy-text-secondary/50 text-sm mt-1">
-              Buddy up with some people to see their posts here.
-            </p>
+      {activeTab === 'communities' ? (
+        <div className="px-4 space-y-3 pb-8 pt-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-buddy-text-primary">Your Communities ({myCommunities.length})</h2>
+            <button
+              onClick={() => navigate('/communities')}
+              className="text-xs text-buddy-green font-semibold hover:underline flex items-center gap-1"
+            >
+              Discover More <ArrowRight size={12} />
+            </button>
           </div>
-        )}
-
-        {posts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            onComment={(id) => setCommentPostId(id)}
-          />
-        ))}
-
-        {isLoading && (
-          <div className="flex justify-center py-8">
-            <Loader2 size={24} className="animate-spin text-buddy-green" />
+          <div className="grid gap-3">
+            {myCommunities.map((c) => (
+              <Card
+                key={c.id}
+                onClick={() => navigate(`/communities/${c.id}`)}
+                className="p-4 flex items-center justify-between gap-3 hover:border-buddy-green/50 cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {c.group_avatar_url ? (
+                    <img src={c.group_avatar_url} alt="" className="w-11 h-11 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-11 h-11 rounded-full bg-buddy-surface-raised flex items-center justify-center">
+                      <Users size={20} className="text-buddy-green" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{c.group_name || 'Community'}</p>
+                    <p className="text-xs text-buddy-text-secondary truncate">
+                      {c.description || c.last_message?.body || 'Open community feed & chat'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center text-xs text-buddy-green font-medium shrink-0">
+                  Open <ArrowRight size={14} className="ml-1" />
+                </div>
+              </Card>
+            ))}
           </div>
-        )}
+        </div>
+      ) : (
+        <>
+          {/* Composer */}
+          <div className="px-4 pt-4 pb-2">
+            <PostComposer
+              placeholder="Share your workout, meal, or progress..."
+              onPost={handleNewPost}
+              initialMeal={initialMeal}
+              initialMealPhotoDataUrl={initialMealPhoto}
+            />
+          </div>
 
-        <div ref={observerRef} className="h-4" />
-      </div>
+          {/* Feed */}
+          <div className="px-4 space-y-3 pb-8 pt-2">
+            {posts.length === 0 && !isLoading && (
+              <div className="text-center py-20">
+                <p className="text-buddy-text-secondary text-lg">No posts yet</p>
+                <p className="text-buddy-text-secondary/50 text-sm mt-1">
+                  Buddy up with some people to see their posts here.
+                </p>
+              </div>
+            )}
+
+            {posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onComment={(id) => setCommentPostId(id)}
+              />
+            ))}
+
+            {isLoading && (
+              <div className="flex justify-center py-8">
+                <Loader2 size={24} className="animate-spin text-buddy-green" />
+              </div>
+            )}
+
+            <div ref={observerRef} className="h-4" />
+          </div>
+        </>
+      )}
 
       {commentPostId && (
         <CommentSheet

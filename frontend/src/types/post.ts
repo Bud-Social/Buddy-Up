@@ -49,6 +49,7 @@ export interface Post {
   comment_count: number;
   repost_count: number;
   is_repost: boolean;
+  is_reposted_by_me: boolean;
   original_post_id: string | null;
   quote_body: string;
   is_saved: boolean;

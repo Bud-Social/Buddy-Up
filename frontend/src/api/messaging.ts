@@ -13,6 +13,7 @@ export interface ParticipantData {
 export interface Conversation {
   id: string;
   is_group: boolean;
+  is_community?: boolean;
   group_name: string;
   group_avatar_url: string;
   group_gym_id: string | null;
@@ -65,6 +66,34 @@ export interface CallLog {
   callee_data: { username: string; display_name: string; avatar_url: string };
   created_at: string;
   ended_at: string | null;
+}
+
+export interface CallParticipantInfo {
+  user_id: string;
+  display_name: string;
+  username: string;
+  avatar_url: string;
+  joined_at: string | null;
+}
+
+export interface CallSessionCredentials {
+  session_id: string;
+  status: string;
+  call_type: 'audio' | 'video';
+  livekit: {
+    url: string;
+    room: string;
+    token: string;
+    identity: string;
+  };
+  participants: CallParticipantInfo[];
+  conversation?: {
+    id: string;
+    is_group: boolean;
+    is_community?: boolean;
+    group_name: string;
+    group_avatar_url: string;
+  };
 }
 
 export interface LinkPreviewData {
@@ -214,6 +243,24 @@ export const messagingApi = {
       .post<ApiResponse<CallLog>>(`/messaging/conversations/${conversationId}/calls/`, data)
       .then((r) => r.data),
 
+  // ── Multi-party LiveKit calls ────────────────────────────────────────────
+  startOrJoinCall: (conversationId: string, callType: 'audio' | 'video') =>
+    apiClient
+      .post<ApiResponse<CallSessionCredentials>>(`/messaging/conversations/${conversationId}/calls/session/`, {
+        call_type: callType,
+      })
+      .then((r) => r.data),
+
+  getActiveCallSession: (conversationId: string) =>
+    apiClient
+      .get<ApiResponse<CallSessionCredentials | null>>(`/messaging/conversations/${conversationId}/calls/session/`)
+      .then((r) => r.data),
+
+  leaveCall: (conversationId: string) =>
+    apiClient
+      .delete<ApiResponse<{ ended: boolean }>>(`/messaging/conversations/${conversationId}/calls/session/`)
+      .then((r) => r.data),
+
   forwardMessage: (messageId: string, targetConversationId: string) =>
     apiClient
       .post<ApiResponse<Message>>(`/messaging/messages/${messageId}/forward/`, { conversation_id: targetConversationId })
@@ -230,7 +277,7 @@ export const messagingApi = {
   getCommunities: () =>
     apiClient.get<ApiResponse<CommunityListData>>('/messaging/communities/').then((r) => r.data.data),
 
-  createCommunity: (data: { name: string; description?: string; cover_url?: string; is_public?: boolean }) =>
+  createCommunity: (data: { name: string; description?: string; cover_url?: string; group_avatar_url?: string; is_public?: boolean }) =>
     apiClient.post<ApiResponse<Community>>('/messaging/communities/', data).then((r) => r.data.data),
 
   getCommunity: (id: string) =>
@@ -238,7 +285,7 @@ export const messagingApi = {
 
   updateCommunity: (
     id: string,
-    data: Partial<{ name: string; description: string; cover_url: string; is_public: boolean }>,
+    data: Partial<{ name: string; description: string; cover_url: string; group_avatar_url: string; is_public: boolean }>,
   ) => apiClient.patch<ApiResponse<Community>>(`/messaging/communities/${id}/`, data).then((r) => r.data.data),
 
   joinCommunityByCode: (inviteCode: string) =>

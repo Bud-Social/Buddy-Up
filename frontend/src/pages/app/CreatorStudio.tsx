@@ -4,16 +4,21 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { marketplaceApi } from '@/api/marketplace';
-import type { CreatorAnalytics, DiscountAnalytics, ProductMP } from '@/api/marketplace';
+import type { CreatorAnalytics, DiscountAnalytics, ProductMP, Order } from '@/api/marketplace';
+import { walletApi } from '@/api/wallet';
+import type { BalanceResponse, BankInfo } from '@/api/wallet';
+import type { ArtifactTransaction } from '@/types';
 import { useToast } from '@/components/ui/Toast';
 import BuddyUpCertification from './BuddyUpCertification';
 
-type Tab = 'analytics' | 'services' | 'discounts' | 'shop';
+type Tab = 'analytics' | 'orders' | 'services' | 'payouts' | 'shop' | 'discounts';
 
 const TAB_STYLES: Record<Tab, { active: string; dot: string; label: string }> = {
   analytics: { active: 'bg-buddy-electric text-buddy-black shadow-lg', dot: 'bg-buddy-electric', label: 'Analytics' },
-  services: { active: 'bg-buddy-green text-buddy-black shadow-lg', dot: 'bg-buddy-green', label: 'Services' },
-  shop: { active: 'bg-buddy-gold text-buddy-black shadow-lg', dot: 'bg-buddy-gold', label: 'My Shops' },
+  orders: { active: 'bg-buddy-green text-buddy-black shadow-lg', dot: 'bg-buddy-green', label: 'Orders' },
+  services: { active: 'bg-buddy-gold text-buddy-black shadow-lg', dot: 'bg-buddy-gold', label: 'Services' },
+  payouts: { active: 'bg-purple-500 text-white shadow-lg', dot: 'bg-purple-500', label: 'Payouts' },
+  shop: { active: 'bg-blue-500 text-white shadow-lg', dot: 'bg-blue-500', label: 'My Shops' },
   discounts: { active: 'bg-buddy-orange text-buddy-black shadow-lg', dot: 'bg-buddy-orange', label: 'Discounts' },
 };
 
@@ -26,6 +31,15 @@ const TYPE_COLORS: Record<string, string> = {
 
 const ARTIFACT_VALUES: Record<string, number> = { dumbbell: 0.10, barbell: 0.50, burpee: 1.00, squat: 2.50, sprint: 5.00, pr: 10.00, champion: 25.00 };
 
+/** Allowed forward transitions for bulk seller updates (mirrors backend). */
+const SELLER_FORWARD_OK: Record<string, string[]> = {
+  paid: ['processing', 'shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered', 'cancelled'],
+  processing: ['shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered'],
+  shipped: ['out_for_delivery', 'ready_for_pickup', 'delivered'],
+  out_for_delivery: ['ready_for_pickup', 'delivered'],
+  ready_for_pickup: ['delivered'],
+};
+
 function artifactUsd(artifacts: Record<string, number> | undefined): number {
   if (!artifacts) return 0;
   return Object.entries(artifacts).reduce((s, [k, v]) => s + (ARTIFACT_VALUES[k] || 0) * (v || 0), 0);
@@ -35,15 +49,48 @@ export default function CreatorStudio() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>('analytics');
+
+  // Analytics
   const [analytics, setAnalytics] = useState<CreatorAnalytics | null>(null);
-  const [services, setServices] = useState<any>(null);
-  const [shops, setShops] = useState<any[]>([]);
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+  // Services
+  const [services, setServices] = useState<any>(null);
   const [loadingServices, setLoadingServices] = useState(true);
+
+  // Shops
+  const [shops, setShops] = useState<any[]>([]);
   const [loadingShops, setLoadingShops] = useState(true);
-  const [certifyingShop, setCertifyingShop] = useState<{id: string, name: string} | null>(null);
+  const [certifyingShop, setCertifyingShop] = useState<{ id: string; name: string } | null>(null);
+
+  // Orders
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<string>('');
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [updatingOrderStatus, setUpdatingOrderStatus] = useState<string | null>(null);
+  const [statusNote, setStatusNote] = useState('');
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [bulkUpdating, setBulkUpdating] = useState(false);
+
+  // Payouts
+  const [walletBalance, setWalletBalance] = useState<BalanceResponse | null>(null);
+  const [payouts, setPayouts] = useState<ArtifactTransaction[]>([]);
+  const [loadingPayouts, setLoadingPayouts] = useState(false);
+  const [showPayoutModal, setShowPayoutModal] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [payoutMethod, setPayoutMethod] = useState<'mpesa' | 'bank_transfer'>('mpesa');
+  const [payoutPhone, setPayoutPhone] = useState('');
+  const [payoutBankCode, setPayoutBankCode] = useState('');
+  const [payoutBankAccount, setPayoutBankAccount] = useState('');
+  const [payoutAccountName, setPayoutAccountName] = useState('');
+  const [banks, setBanks] = useState<BankInfo[]>([]);
+  const [submittingPayout, setSubmittingPayout] = useState(false);
+
+  // Menu & Panels
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [analyticsPanel, setAnalyticsPanel] = useState<DiscountAnalytics | null>(null);
+  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,18 +101,17 @@ export default function CreatorStudio() {
   }, []);
 
   useEffect(() => {
-    marketplaceApi.getMyServices()
-      .then((res) => setServices(res.data))
-      .catch(() => {})
-      .finally(() => setLoadingServices(false));
+    refreshServices();
+    loadShops();
   }, []);
 
   useEffect(() => {
-    marketplaceApi.getMyShops()
-      .then((res) => setShops(res.data || []))
-      .catch(() => {})
-      .finally(() => setLoadingShops(false));
-  }, []);
+    if (tab === 'orders') {
+      loadOrders(orderStatusFilter);
+    } else if (tab === 'payouts') {
+      loadPayoutData();
+    }
+  }, [tab, orderStatusFilter]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -103,6 +149,175 @@ export default function CreatorStudio() {
       .then((res) => setServices(res.data))
       .catch(() => {})
       .finally(() => setLoadingServices(false));
+  };
+
+  const loadOrders = (status?: string) => {
+    setLoadingOrders(true);
+    marketplaceApi.getSellerOrders(status || undefined)
+      .then((res) => setOrders(res.data || []))
+      .catch(() => {})
+      .finally(() => {
+        setLoadingOrders(false);
+        setSelectedOrderIds([]);
+      });
+  };
+
+  const exportOrdersCsv = () => {
+    if (orders.length === 0) return;
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [['order_number', 'date', 'status', 'items', 'total_usd', 'tracking_number', 'carrier']];
+    for (const o of orders) {
+      rows.push([
+        o.order_number,
+        new Date(o.created_at).toISOString(),
+        o.status,
+        o.items.map((it) => `${it.title} x${it.quantity}`).join('; '),
+        String(o.total_usd ?? ''),
+        o.fulfillment?.tracking_number || '',
+        o.fulfillment?.carrier || '',
+      ]);
+    }
+    const csv = rows.map((r) => r.map(esc).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `buddyup-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    a.remove();
+  };
+
+  const handleBulkStatus = async (newStatus: string) => {
+    const targets = selectedOrderIds.filter((id) => {
+      const order = orders.find((o) => o.id === id);
+      return order && SELLER_FORWARD_OK[order.status]?.includes(newStatus);
+    });
+    if (targets.length === 0) {
+      toast('error', 'No selected orders can move to that status');
+      return;
+    }
+    setBulkUpdating(true);
+    let ok = 0;
+    for (const id of targets) {
+      try {
+        await marketplaceApi.updateOrderStatus(id, newStatus, '');
+        ok += 1;
+      } catch { /* keep going */ }
+    }
+    setBulkUpdating(false);
+    setSelectedOrderIds([]);
+    toast(ok === targets.length ? 'success' : 'error', `Updated ${ok}/${targets.length} orders`);
+    loadOrders(orderStatusFilter);
+  };
+
+  const loadPayoutData = async () => {
+    setLoadingPayouts(true);
+    try {
+      const [balRes, histRes, banksRes] = await Promise.all([
+        walletApi.getBalance().catch(() => null),
+        walletApi.getPayoutHistory().catch(() => null),
+        walletApi.getBanks('KE').catch(() => null),
+      ]);
+      if (balRes?.data) setWalletBalance(balRes.data);
+      if (histRes?.data) setPayouts(histRes.data);
+      if (banksRes?.data) setBanks(banksRes.data);
+    } finally {
+      setLoadingPayouts(false);
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      await marketplaceApi.updateOrderStatus(orderId, newStatus, statusNote);
+      toast('success', `Order status updated to ${newStatus}`);
+      setSelectedOrder(null);
+      setUpdatingOrderStatus(null);
+      setStatusNote('');
+      loadOrders(orderStatusFilter);
+    } catch (err: any) {
+      toast('error', err.response?.data?.message || 'Failed to update order status');
+    }
+  };
+
+  const handleRequestPayout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseFloat(payoutAmount);
+    if (!amount || amount < 5) {
+      toast('error', 'Minimum payout amount is $5.00');
+      return;
+    }
+    setSubmittingPayout(true);
+    try {
+      await walletApi.requestPayout({
+        amount,
+        method: payoutMethod,
+        phone_number: payoutMethod === 'mpesa' ? payoutPhone : undefined,
+        bank_account: payoutMethod === 'bank_transfer' ? payoutBankAccount : undefined,
+        bank_code: payoutMethod === 'bank_transfer' ? payoutBankCode : undefined,
+        account_name: payoutMethod === 'bank_transfer' ? payoutAccountName : undefined,
+      });
+      toast('success', 'Payout request submitted successfully!');
+      setShowPayoutModal(false);
+      setPayoutAmount('');
+      loadPayoutData();
+    } catch (err: any) {
+      toast('error', err.response?.data?.message || 'Payout request failed');
+    } finally {
+      setSubmittingPayout(false);
+    }
+  };
+
+  const handleDuplicateService = async (type: string, item: any) => {
+    try {
+      if (type === 'meal_plan') {
+        const copy = { ...item, title: `${item.title} (Copy)`, is_published: false };
+        delete copy.id;
+        delete copy.creator_data;
+        delete copy.purchase_count;
+        await marketplaceApi.createMealPlan(copy);
+      } else if (type === 'programme') {
+        const copy = { ...item, title: `${item.title} (Copy)`, is_published: false };
+        delete copy.id;
+        delete copy.creator_data;
+        delete copy.purchase_count;
+        await marketplaceApi.createProgramme(copy);
+      } else if (type === 'event') {
+        const copy = { ...item, title: `${item.title} (Copy)`, is_published: false };
+        delete copy.id;
+        delete copy.creator_data;
+        delete copy.attendee_count;
+        await marketplaceApi.createEvent(copy);
+      } else if (type === 'product') {
+        const copy = { ...item, name: `${item.name} (Copy)` };
+        delete copy.id;
+        delete copy.click_count;
+        await marketplaceApi.createProduct(copy);
+      }
+      toast('success', 'Service duplicated as draft');
+      refreshServices();
+    } catch (err: any) {
+      toast('error', 'Failed to duplicate service');
+    }
+  };
+
+  const handleTogglePublish = async (type: string, id: string, currentlyPublished: boolean) => {
+    try {
+      if (type === 'meal_plan') {
+        await marketplaceApi.updateMealPlan(id, { is_published: !currentlyPublished });
+      } else if (type === 'programme') {
+        await marketplaceApi.updateProgramme(id, { is_published: !currentlyPublished });
+      } else if (type === 'event') {
+        await marketplaceApi.updateEvent(id, { is_published: !currentlyPublished });
+      } else if (type === 'product') {
+        await marketplaceApi.updateProduct(id, { is_active: !currentlyPublished });
+      }
+      toast('success', currentlyPublished ? 'Unpublished / Archived' : 'Published live');
+      refreshServices();
+    } catch {
+      toast('error', 'Action failed');
+    }
   };
 
   const handleDelete = async (type: string, id: string, title: string) => {
@@ -158,12 +373,22 @@ export default function CreatorStudio() {
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium truncate">{p.title ?? p.name}</p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          <Badge variant={isPublished ? 'green' : 'orange'} label={isPublished ? 'Published' : 'Draft'} size="sm" />
+          <Badge variant={isPublished ? 'green' : 'orange'} label={isPublished ? 'Live' : 'Draft'} size="sm" />
           <span className="text-[11px] text-buddy-text-secondary">{meta}</span>
           {p.abandoned_cart_count > 0 && <Badge variant="orange" label={`${p.abandoned_cart_count} in carts`} size="sm" />}
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
+        <button title={isPublished ? 'Archive / Unpublish' : 'Publish'} onClick={() => handleTogglePublish(type, p.id, isPublished)} className="p-2 rounded-lg bg-buddy-surface hover:bg-buddy-surface-raised transition-colors text-buddy-text-secondary hover:text-buddy-green">
+          {isPublished ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="m10 12 2 2 2-2"/></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          )}
+        </button>
+        <button title="Duplicate" onClick={() => handleDuplicateService(type, p)} className="p-2 rounded-lg bg-buddy-surface hover:bg-buddy-surface-raised transition-colors text-buddy-text-secondary hover:text-buddy-electric">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        </button>
         <button title="Preview" onClick={() => navigate(previewRoute)} className="p-2 rounded-lg bg-buddy-surface hover:bg-buddy-surface-raised transition-colors text-buddy-text-secondary hover:text-buddy-electric">
           <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
         </button>
@@ -259,20 +484,26 @@ export default function CreatorStudio() {
   }
 
   return (
-    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 space-y-4 pb-20">
-      <div className="flex items-center gap-3 mb-1">
-        <button onClick={() => navigate('/marketplace')} className="p-2 rounded-full hover:bg-buddy-surface">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
-        <h1 className="font-display text-2xl font-extrabold flex-1">Creator Studio</h1>
+    <div className="max-w-lg lg:max-w-3xl xl:max-w-4xl mx-auto p-4 space-y-4 pb-20">
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <div className="flex items-center gap-3">
+          <button onClick={() => navigate('/marketplace')} className="p-2 rounded-full hover:bg-buddy-surface">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <h1 className="font-display text-2xl font-extrabold">Creator Studio</h1>
+        </div>
+        <Button size="sm" onClick={() => setShowAddServiceModal(true)} className="bg-buddy-electric text-buddy-black font-bold">
+          + Add Service
+        </Button>
       </div>
 
-      <div className="flex gap-1 bg-buddy-surface rounded-xl p-1">
+      {/* 6 Tabs Navigation */}
+      <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 overflow-x-auto">
         {Object.entries(TAB_STYLES).map(([key, style]) => (
           <button
             key={key}
             onClick={() => setTab(key as Tab)}
-            className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${tab === key ? style.active : 'text-buddy-text-secondary hover:text-buddy-text'}`}
+            className={`flex-1 min-w-[75px] py-2 px-1 text-xs font-semibold rounded-lg transition-all ${tab === key ? style.active : 'text-buddy-text-secondary hover:text-buddy-text'}`}
           >
             <span className="inline-flex items-center gap-1.5">
               <span className={`w-1.5 h-1.5 rounded-full ${tab === key ? 'bg-current' : style.dot} ${tab === key ? '' : 'opacity-60'}`} />
@@ -282,6 +513,7 @@ export default function CreatorStudio() {
         ))}
       </div>
 
+      {/* TAB 1: Analytics */}
       {tab === 'analytics' && (
         loadingAnalytics ? (
           <div className="space-y-3">
@@ -350,21 +582,166 @@ export default function CreatorStudio() {
 
             {analytics.revenue_over_time.length > 0 && (
               <Card className="p-4">
-                <p className="text-xs text-buddy-text-secondary font-medium mb-2">Revenue Over Time</p>
-                <div className="space-y-1.5">
-                  {analytics.revenue_over_time.map((r) => (
-                    <div key={r.month} className="flex items-center justify-between text-xs">
-                      <span>{r.month}</span>
-                      <span className="font-medium">${r.total.toFixed(2)}</span>
-                    </div>
-                  ))}
-                </div>
+                <p className="text-xs text-buddy-text-secondary font-medium mb-3">Revenue Over Time</p>
+                {(() => {
+                  const points = analytics.revenue_over_time;
+                  const max = Math.max(...points.map((r) => r.total), 0.01);
+                  return (
+                    <>
+                      <div className="flex items-end gap-2 h-32 mb-2">
+                        {points.map((r) => {
+                          const h = Math.max(4, Math.round((r.total / max) * 100));
+                          return (
+                            <div key={r.month} className="flex-1 flex flex-col items-center justify-end h-full group">
+                              <span className="text-[9px] font-semibold text-buddy-green opacity-0 group-hover:opacity-100 transition-opacity">
+                                ${r.total.toFixed(0)}
+                              </span>
+                              <div
+                                className="w-full max-w-8 rounded-t-md bg-gradient-to-t from-buddy-green/40 to-buddy-green transition-all"
+                                style={{ height: `${h}%` }}
+                                title={`${r.month}: $${r.total.toFixed(2)}`}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between text-[10px] text-buddy-text-secondary">
+                        {points.map((r) => (
+                          <span key={r.month} className="flex-1 text-center truncate">{r.month}</span>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
               </Card>
             )}
           </section>
         )
       )}
 
+      {/* TAB 2: Orders */}
+      {tab === 'orders' && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="text-sm font-bold text-buddy-text-secondary uppercase">Creator Orders ({orders.length})</h2>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1 overflow-x-auto">
+                {['', 'paid', 'shipped', 'delivered', 'cancelled'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setOrderStatusFilter(st)}
+                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-colors ${orderStatusFilter === st ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-surface hover:bg-buddy-surface-raised text-buddy-text-secondary'}`}
+                  >
+                    {st === '' ? 'All' : st.replace('_', ' ').toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={exportOrdersCsv}
+                disabled={orders.length === 0}
+                className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-buddy-surface hover:bg-buddy-surface-raised text-buddy-green disabled:opacity-40 shrink-0"
+                title="Export orders as CSV"
+              >
+                Export CSV
+              </button>
+            </div>
+          </div>
+
+          {/* Bulk actions */}
+          {selectedOrderIds.length > 0 && (
+            <Card className="p-3 flex items-center justify-between flex-wrap gap-2 border-buddy-green/40">
+              <span className="text-xs font-semibold">{selectedOrderIds.length} selected</span>
+              <div className="flex flex-wrap gap-1.5">
+                {['processing', 'shipped', 'delivered'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => handleBulkStatus(st)}
+                    disabled={bulkUpdating}
+                    className="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-buddy-green text-buddy-black hover:bg-buddy-green-deep disabled:opacity-40"
+                  >
+                    Mark {st.replace('_', ' ')}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setSelectedOrderIds([])}
+                  className="px-3 py-1.5 text-[11px] font-semibold rounded-lg bg-buddy-surface hover:bg-buddy-surface-raised"
+                >
+                  Clear
+                </button>
+              </div>
+            </Card>
+          )}
+
+          {loadingOrders ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i} className="p-4 animate-pulse"><div className="h-16 bg-buddy-surface-raised rounded-xl" /></Card>
+              ))}
+            </div>
+          ) : orders.length === 0 ? (
+            <Card className="p-8 text-center text-buddy-text-secondary space-y-2">
+              <p className="text-sm">No orders found.</p>
+              <p className="text-xs">When buyers purchase your products or services, orders appear here.</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {orders.map((order) => {
+                const statusColors: Record<string, string> = {
+                  paid: 'green',
+                  pending: 'orange',
+                  shipped: 'blue',
+                  delivered: 'green',
+                  cancelled: 'red',
+                };
+                return (
+                  <Card key={order.id} className="p-4 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={selectedOrderIds.includes(order.id)}
+                          onChange={(e) => setSelectedOrderIds((prev) => e.target.checked ? [...prev, order.id] : prev.filter((x) => x !== order.id))}
+                          className="mt-1 accent-buddy-green shrink-0"
+                          title="Select for bulk update"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold">{order.order_number}</span>
+                            <Badge variant={(statusColors[order.status] || 'silver') as any} label={order.status_label || order.status} size="sm" />
+                          </div>
+                          <p className="text-[11px] text-buddy-text-secondary mt-0.5">
+                            {new Date(order.created_at).toLocaleString()} · Total: ${order.total_usd?.toFixed(2) || '0.00'}
+                          </p>
+                        </div>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => setSelectedOrder(order)}>
+                        Manage Status
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1.5 border-t border-buddy-surface-raised pt-2">
+                      {order.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-xs">
+                          <span className="truncate flex-1">{item.title} (x{item.quantity})</span>
+                          <span className="text-buddy-text-secondary capitalize text-[11px]">{item.item_type.replace('_', ' ')}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {order.fulfillment?.tracking_number && (
+                      <div className="text-xs bg-buddy-surface-raised p-2 rounded-lg text-buddy-text-secondary">
+                        Tracking: <span className="font-mono text-buddy-text">{order.fulfillment.tracking_number}</span> ({order.fulfillment.carrier || 'Standard'})
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* TAB 3: Services */}
       {tab === 'services' && (
         loadingServices ? (
           <div className="space-y-3">
@@ -382,6 +759,7 @@ export default function CreatorStudio() {
                 <Button onClick={handleRegisterCreator} className="bg-buddy-electric text-buddy-black font-bold">Register as Creator</Button>
               </Card>
             )}
+
             <section>
               <div className="flex items-center justify-between mb-2">
                 <h3 className={`text-xs font-bold uppercase px-2 py-1 rounded-lg border ${TYPE_COLORS.meal_plan}`}>Meal Plans ({services.meal_plans.length})</h3>
@@ -423,12 +801,12 @@ export default function CreatorStudio() {
               </div>
               <div className="space-y-2">
                 {services.events.length === 0 && <p className="text-xs text-buddy-text-secondary px-1">No events created yet.</p>}
-                {services.events.map((p: any) => renderServiceCard(
-                  p, 'event', p.cover_image_url,
-                  `/marketplace/events/${p.id}`,
-                  `/marketplace/events/create?edit=${p.id}`,
-                  `${p.attendee_count} attending · ${new Date(p.start_datetime).toLocaleDateString()}`,
-                  p.is_published,
+                {services.events.map((e: any) => renderServiceCard(
+                  e, 'event', e.cover_image_url,
+                  `/marketplace/events/${e.id}`,
+                  `/marketplace/events/create?edit=${e.id}`,
+                  `${e.attendee_count} attending · ${new Date(e.start_datetime).toLocaleDateString()}`,
+                  e.is_published,
                 ))}
               </div>
             </section>
@@ -453,6 +831,64 @@ export default function CreatorStudio() {
         )
       )}
 
+      {/* TAB 4: Payouts */}
+      {tab === 'payouts' && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-buddy-text-secondary uppercase">Payouts & Earnings</h2>
+            <Button size="sm" onClick={() => setShowPayoutModal(true)} className="bg-purple-500 hover:bg-purple-600 text-white font-bold">
+              Request Payout
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Card className="p-4 bg-gradient-to-br from-purple-500/20 to-transparent border-purple-500/30">
+              <p className="text-xs text-buddy-text-secondary font-medium">Creator Balance</p>
+              <p className="text-2xl font-display font-extrabold mt-1">
+                ${walletBalance?.creator_total_fiat?.toFixed(2) || '0.00'}
+              </p>
+              <p className="text-[10px] text-purple-400 mt-1">Available for withdrawal</p>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs text-buddy-text-secondary font-medium">Total Balance</p>
+              <p className="text-2xl font-display font-extrabold mt-1">
+                ${walletBalance?.total_fiat?.toFixed(2) || '0.00'}
+              </p>
+              <p className="text-[10px] text-buddy-green mt-1">All wallets combined</p>
+            </Card>
+          </div>
+
+          <Card className="p-4 space-y-3">
+            <h3 className="text-xs font-bold text-buddy-text-secondary uppercase">Payout History</h3>
+            {loadingPayouts ? (
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-10 bg-buddy-surface-raised animate-pulse rounded-lg" />
+                ))}
+              </div>
+            ) : payouts.length === 0 ? (
+              <p className="text-xs text-buddy-text-secondary text-center py-4">No payout transactions recorded yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {payouts.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between p-2.5 rounded-lg bg-buddy-surface-raised text-xs">
+                    <div>
+                      <p className="font-semibold">{tx.description || 'Payout Withdrawal'}</p>
+                      <p className="text-[10px] text-buddy-text-secondary">{new Date(tx.created_at).toLocaleDateString()} · {tx.reference_id || tx.id}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm">${tx.fiat_amount ? parseFloat(tx.fiat_amount).toFixed(2) : (tx.quantity * 1.0).toFixed(2)}</p>
+                      <Badge variant={tx.status === 'completed' ? 'green' : tx.status === 'pending' ? 'orange' : 'red'} label={tx.status} size="sm" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </section>
+      )}
+
+      {/* TAB 5: My Shops */}
       {tab === 'shop' && (
         loadingShops ? (
           <div className="space-y-3">
@@ -472,7 +908,7 @@ export default function CreatorStudio() {
             <div className="flex justify-end">
               <Button size="sm" onClick={() => navigate('/marketplace/shops/create')} className="bg-buddy-electric text-buddy-black font-bold">+ New Shop</Button>
             </div>
-            {shops.map(shop => (
+            {shops.map((shop) => (
               <Card key={shop.id} className="p-4 border-none shadow-md bg-buddy-surface/50 backdrop-blur-md">
                 <div className="flex items-start justify-between mb-3 border-b border-buddy-surface-raised pb-3">
                   <div>
@@ -502,6 +938,7 @@ export default function CreatorStudio() {
         )
       )}
 
+      {/* TAB 6: Discounts */}
       {tab === 'discounts' && (
         loadingServices ? (
           <div className="space-y-3">
@@ -523,6 +960,215 @@ export default function CreatorStudio() {
             </div>
           </section>
         )
+      )}
+
+      {/* MODAL: Update Order Status */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-5 space-y-4 bg-buddy-surface">
+            <h3 className="font-bold text-base">Update Order Status</h3>
+            <p className="text-xs text-buddy-text-secondary">Order #{selectedOrder.order_number}</p>
+
+            <div className="space-y-2">
+              <label className="text-xs font-medium">Select Status</label>
+              <div className="grid grid-cols-2 gap-2">
+                {['pending_fulfillment', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setUpdatingOrderStatus(st)}
+                    className={`p-2 text-xs font-semibold rounded-lg border transition-colors ${updatingOrderStatus === st ? 'border-buddy-green bg-buddy-green/20 text-buddy-green' : 'border-buddy-surface-raised hover:bg-buddy-surface-raised'}`}
+                  >
+                    {st.replace(/_/g, ' ').toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium">Note / Tracking info (Optional)</label>
+              <textarea
+                value={statusNote}
+                onChange={(e) => setStatusNote(e.target.value)}
+                placeholder="e.g. Dispatched via DHL. Tracking #12345"
+                rows={2}
+                className="w-full p-2.5 bg-buddy-surface-raised rounded-xl text-xs outline-none border border-buddy-surface-raised focus:border-buddy-green"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedOrder(null)}>Cancel</Button>
+              <Button
+                size="sm"
+                disabled={!updatingOrderStatus}
+                onClick={() => updatingOrderStatus && handleUpdateOrderStatus(selectedOrder.id, updatingOrderStatus)}
+                className="bg-buddy-green text-buddy-black font-bold"
+              >
+                Confirm Update
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* MODAL: Request Payout */}
+      {showPayoutModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-5 space-y-4 bg-buddy-surface">
+            <h3 className="font-bold text-base">Request Creator Payout</h3>
+            <p className="text-xs text-buddy-text-secondary">Available balance: ${walletBalance?.creator_total_fiat?.toFixed(2) || '0.00'}</p>
+
+            <form onSubmit={handleRequestPayout} className="space-y-3">
+              <div>
+                <label className="text-xs font-medium block mb-1">Amount (USD)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="5"
+                  max={walletBalance?.creator_total_fiat || 10000}
+                  value={payoutAmount}
+                  onChange={(e) => setPayoutAmount(e.target.value)}
+                  placeholder="Min $5.00"
+                  required
+                  className="w-full p-2.5 bg-buddy-surface-raised rounded-xl text-sm outline-none border border-buddy-surface-raised focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-medium block mb-1">Payout Method</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPayoutMethod('mpesa')}
+                    className={`flex-1 p-2 text-xs font-bold rounded-lg border transition-colors ${payoutMethod === 'mpesa' ? 'border-buddy-green bg-buddy-green/20 text-buddy-green' : 'border-buddy-surface-raised'}`}
+                  >
+                    M-Pesa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPayoutMethod('bank_transfer')}
+                    className={`flex-1 p-2 text-xs font-bold rounded-lg border transition-colors ${payoutMethod === 'bank_transfer' ? 'border-purple-500 bg-purple-500/20 text-purple-400' : 'border-buddy-surface-raised'}`}
+                  >
+                    Bank Transfer
+                  </button>
+                </div>
+              </div>
+
+              {payoutMethod === 'mpesa' ? (
+                <div>
+                  <label className="text-xs font-medium block mb-1">M-Pesa Phone Number</label>
+                  <input
+                    type="tel"
+                    value={payoutPhone}
+                    onChange={(e) => setPayoutPhone(e.target.value)}
+                    placeholder="+254 7XX XXX XXX"
+                    required
+                    className="w-full p-2.5 bg-buddy-surface-raised rounded-xl text-sm outline-none border border-buddy-surface-raised focus:border-buddy-green"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-xs font-medium block mb-1">Bank</label>
+                    <select
+                      value={payoutBankCode}
+                      onChange={(e) => setPayoutBankCode(e.target.value)}
+                      required
+                      className="w-full p-2.5 bg-buddy-surface-raised rounded-xl text-xs outline-none border border-buddy-surface-raised"
+                    >
+                      <option value="">Select Bank</option>
+                      {banks.map((b) => (
+                        <option key={b.code} value={b.code}>{b.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium block mb-1">Account Number</label>
+                    <input
+                      type="text"
+                      value={payoutBankAccount}
+                      onChange={(e) => setPayoutBankAccount(e.target.value)}
+                      placeholder="e.g. 1234567890"
+                      required
+                      className="w-full p-2.5 bg-buddy-surface-raised rounded-xl text-xs outline-none border border-buddy-surface-raised"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium block mb-1">Account Name</label>
+                    <input
+                      type="text"
+                      value={payoutAccountName}
+                      onChange={(e) => setPayoutAccountName(e.target.value)}
+                      placeholder="Account holder name"
+                      required
+                      className="w-full p-2.5 bg-buddy-surface-raised rounded-xl text-xs outline-none border border-buddy-surface-raised"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end pt-2">
+                <Button variant="ghost" size="sm" type="button" onClick={() => setShowPayoutModal(false)}>Cancel</Button>
+                <Button type="submit" size="sm" disabled={submittingPayout} className="bg-purple-500 hover:bg-purple-600 text-white font-bold">
+                  {submittingPayout ? 'Submitting...' : 'Submit Request'}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* MODAL: Add Service Picker */}
+      {showAddServiceModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-sm p-5 space-y-4 bg-buddy-surface">
+            <h3 className="font-bold text-base">Create New Service</h3>
+            <div className="space-y-2">
+              <button
+                onClick={() => { setShowAddServiceModal(false); navigate('/marketplace/meal-plans/create'); }}
+                className="w-full p-3 text-left rounded-xl bg-buddy-surface-raised hover:bg-buddy-green/20 hover:text-buddy-green flex items-center gap-3 transition-colors"
+              >
+                <span className="text-lg">🥗</span>
+                <div>
+                  <p className="font-bold text-sm">Meal Plan</p>
+                  <p className="text-[11px] text-buddy-text-secondary">Custom nutrition and diet guides</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowAddServiceModal(false); navigate('/marketplace/programmes/create'); }}
+                className="w-full p-3 text-left rounded-xl bg-buddy-surface-raised hover:bg-buddy-electric/20 hover:text-buddy-electric flex items-center gap-3 transition-colors"
+              >
+                <span className="text-lg">🏋️</span>
+                <div>
+                  <p className="font-bold text-sm">Training Programme</p>
+                  <p className="text-[11px] text-buddy-text-secondary">Structured workout routines & schedules</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowAddServiceModal(false); navigate('/marketplace/events/create'); }}
+                className="w-full p-3 text-left rounded-xl bg-buddy-surface-raised hover:bg-buddy-gold/20 hover:text-buddy-gold flex items-center gap-3 transition-colors"
+              >
+                <span className="text-lg">🎟️</span>
+                <div>
+                  <p className="font-bold text-sm">Event / Workshop</p>
+                  <p className="text-[11px] text-buddy-text-secondary">Tickets for in-person or live events</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowAddServiceModal(false); navigate('/marketplace/products/create'); }}
+                className="w-full p-3 text-left rounded-xl bg-buddy-surface-raised hover:bg-buddy-orange/20 hover:text-buddy-orange flex items-center gap-3 transition-colors"
+              >
+                <span className="text-lg">🛍️</span>
+                <div>
+                  <p className="font-bold text-sm">Product</p>
+                  <p className="text-[11px] text-buddy-text-secondary">Affiliate or direct merchandise item</p>
+                </div>
+              </button>
+            </div>
+            <div className="flex justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setShowAddServiceModal(false)}>Cancel</Button>
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   );

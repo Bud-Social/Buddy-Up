@@ -41,9 +41,12 @@ export function IncomingCallOverlay() {
 
   const handleAccept = () => {
     stopRing();
-    // Store the incoming offer so Messages.tsx WebRTC can pick it up
-    (window as any).__buddyup_pending_offer = pendingCall.data?.sdp;
-    (window as any).__buddyup_call_type = pendingCall.call_type;
+    // LiveKit flow: record the accepted invite; Messages.tsx joins the room.
+    useCallStore.getState().setAcceptedInvite({
+      conversation_id: pendingCall.conversation_id,
+      session_id: pendingCall.session_id,
+      call_type: pendingCall.call_type,
+    });
     setPendingCall(null);
     navigate(`/messages?c=${pendingCall.conversation_id}`);
   };

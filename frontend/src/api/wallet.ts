@@ -95,4 +95,11 @@ export const walletApi = {
 
   updateCreatorProfile: (data: { creator_display_name?: string }) =>
     apiClient.patch<ApiResponse<{ creator_display_name: string; creator_balance: Record<string, number> }>>('/wallet/creator/profile/', data).then((r) => r.data),
+
+  requestPayout: (data: { amount?: number; artifact_type?: string; quantity?: number; method: string; phone_number?: string; bank_account?: string; bank_code?: string; account_name?: string }) =>
+    apiClient.post<ApiResponse<ArtifactTransaction>>('/wallet/payout-request/', data).then((r) => r.data),
+
+  getPayoutHistory: () =>
+    apiClient.get<ApiResponse<ArtifactTransaction[]>>('/wallet/payout-history/').then((r) => r.data),
 };
+

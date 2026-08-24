@@ -5,6 +5,7 @@ import {
   Shield, ShieldCheck, MoreHorizontal, Send, Settings2, X,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import { PostComposer } from '@/components/features/feed/PostComposer';
 import { messagingApi, type Community, type CommunityPost } from '@/api/messaging';
 import { useAuthStore } from '@/store/authStore';
 
@@ -167,7 +168,6 @@ export default function CommunityDetail() {
   const [community, setCommunity] = useState<Community | null>(null);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [postBody, setPostBody] = useState('');
   const [tab, setTab] = useState<'feed' | 'members'>('feed');
   const [showSettings, setShowSettings] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
@@ -175,7 +175,15 @@ export default function CommunityDetail() {
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editPublic, setEditPublic] = useState(false);
+  const [editAvatar, setEditAvatar] = useState('');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const [searchMember, setSearchMember] = useState('');
+
+  const filteredMembers = (community?.members ?? []).filter((m) => {
+    const q = searchMember.toLowerCase();
+    return m.display_name.toLowerCase().includes(q) || m.username.toLowerCase().includes(q);
+  });
 
   const canManage = community?.membership_role === 'owner' || community?.membership_role === 'admin';
   const isOwner = community?.membership_role === 'owner';
@@ -236,17 +244,6 @@ export default function CommunityDetail() {
     } catch { /* noop */ }
   };
 
-  const createPost = async () => {
-    if (!communityId || !postBody.trim()) return;
-    try {
-      await messagingApi.createCommunityPost(communityId, { body: postBody.trim() });
-      setPostBody('');
-      fetchAll();
-    } catch {
-      alert('Failed to post');
-    }
-  };
-
   const saveSettings = async () => {
     if (!communityId) return;
     try {
@@ -254,6 +251,7 @@ export default function CommunityDetail() {
         name: editName,
         description: editDesc,
         is_public: editPublic,
+        ...(editAvatar ? { group_avatar_url: editAvatar } : {}),
       });
       setShowSettings(false);
       fetchAll();
@@ -262,11 +260,25 @@ export default function CommunityDetail() {
     }
   };
 
+  const handleAvatarPicked = async (file: File | undefined) => {
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const res = await messagingApi.uploadAttachment(file);
+      setEditAvatar(res.data?.url ?? '');
+    } catch {
+      alert('Image upload failed');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
   const openSettings = () => {
     if (!community) return;
     setEditName(community.group_name);
     setEditDesc(community.description);
     setEditPublic(community.is_public);
+    setEditAvatar(community.group_avatar_url || '');
     setShowSettings(true);
   };
 
@@ -338,9 +350,16 @@ export default function CommunityDetail() {
           </div>
         )}
         <div className="p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-display text-lg font-bold">{community.group_name}</span>
-            <span className="text-[11px] text-buddy-text-secondary">{community.is_public ? 'Public' : 'Private'}</span>
+          <div className="flex items-center gap-3 mb-1">
+            {community.group_avatar_url ? (
+              <img src={community.group_avatar_url} alt={community.group_name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+            ) : (
+              <div className="w-12 h-12 rounded-xl bg-buddy-surface-raised flex items-center justify-center shrink-0">
+                <Users size={20} className="text-buddy-green" />
+              </div>
+            )}
+            <span className="font-display text-lg font-bold truncate">{community.group_name}</span>
+            <span className="text-[11px] text-buddy-text-secondary shrink-0">{community.is_public ? 'Public' : 'Private'}</span>
           </div>
           {community.description && <p className="text-sm text-buddy-text-secondary mb-2">{community.description}</p>}
           <div className="flex items-center justify-between">
@@ -381,24 +400,12 @@ export default function CommunityDetail() {
       {tab === 'feed' && (
         <>
           {isMember && (
-            <Card className="p-3 mb-3">
-              <textarea
-                value={postBody}
-                onChange={(e) => setPostBody(e.target.value)}
-                placeholder="Share something with the community…"
-                rows={2}
-                className="w-full bg-transparent text-sm focus:outline-none resize-none text-buddy-text-primary placeholder:text-buddy-text-secondary/50"
+            <div className="mb-4">
+              <PostComposer
+                placeholder="Share your workout, question, or update with the community..."
+                onPost={() => fetchAll()}
               />
-              <div className="flex justify-end">
-                <button
-                  onClick={createPost}
-                  disabled={!postBody.trim()}
-                  className="px-4 py-1.5 rounded-lg bg-buddy-green text-buddy-black text-xs font-semibold disabled:opacity-40"
-                >
-                  Post
-                </button>
-              </div>
-            </Card>
+            </div>
           )}
           <div className="space-y-3">
             {posts.length === 0 ? (
@@ -424,8 +431,15 @@ export default function CommunityDetail() {
       )}
 
       {tab === 'members' && (
-        <div className="space-y-2">
-          {(community.members ?? []).map((m) => (
+        <div className="space-y-3">
+          <input
+            type="text"
+            placeholder="Search members…"
+            value={searchMember}
+            onChange={(e) => setSearchMember(e.target.value)}
+            className="w-full px-3.5 py-2.5 rounded-xl bg-buddy-surface-raised border border-buddy-border text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40"
+          />
+          {filteredMembers.map((m) => (
             <Card key={m.user_id} className="p-3 flex items-center gap-3">
               {m.avatar_url ? (
                 <img src={m.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
@@ -478,6 +492,25 @@ export default function CommunityDetail() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-lg font-bold">Community Settings</h2>
               <button onClick={() => setShowSettings(false)} className="text-buddy-text-secondary hover:text-buddy-text-primary"><Settings2 size={20} /></button>
+            </div>
+            <div className="flex items-center gap-4 mb-4">
+              {editAvatar ? (
+                <img src={editAvatar} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0" />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-buddy-surface-raised flex items-center justify-center shrink-0">
+                  <Users size={26} className="text-buddy-green" />
+                </div>
+              )}
+              <label className="flex-1 cursor-pointer text-sm text-buddy-green font-medium hover:underline">
+                {uploadingAvatar ? 'Uploading…' : editAvatar ? 'Change picture' : 'Add a community picture'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  disabled={uploadingAvatar}
+                  onChange={(e) => { handleAvatarPicked(e.target.files?.[0]); e.target.value = ''; }}
+                />
+              </label>
             </div>
             <label className="block text-xs font-medium text-buddy-text-secondary mb-1">Name</label>
             <input value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full px-3 py-2.5 rounded-xl bg-buddy-surface-raised text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40 mb-3" />

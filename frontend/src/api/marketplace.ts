@@ -450,6 +450,10 @@ export const marketplaceApi = {
   updateOrderFulfillment: (orderId: string, data: Record<string, unknown>) =>
     apiClient.patch<ApiResponse<Order>>(`/marketplace/orders/${orderId}/fulfillment/`, data).then((r) => r.data),
 
+  updateOrderStatus: (orderId: string, status: string, note?: string) =>
+    apiClient.patch<ApiResponse<Order>>(`/marketplace/orders/${orderId}/status/`, { status, note }).then((r) => r.data),
+
+
   applyDiscount: (code: string) =>
     apiClient.post<ApiResponse<any>>('/marketplace/cart/discount/', { code }).then((r) => r.data),
 

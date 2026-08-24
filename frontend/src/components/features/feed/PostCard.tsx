@@ -279,6 +279,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
   const [userReaction, setUserReaction] = useState(post.user_reaction);
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [repostCount, setRepostCount] = useState(post.repost_count || 0);
+  const [isRepostedByMe, setIsRepostedByMe] = useState(post.is_reposted_by_me ?? false);
   const [heartPop, setHeartPop] = useState<{ show: boolean; x: number; y: number } | null>(null);
 
   const reactionsArr = Object.entries(reactionCounts)
@@ -321,11 +322,21 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
 
   const handleRepost = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    // Optimistic update
+    const wasReposted = isRepostedByMe;
+    setIsRepostedByMe(!wasReposted);
+    setRepostCount(c => wasReposted ? Math.max(0, c - 1) : c + 1);
     try {
       const res = await feedApi.repost(post.id);
-      if (res.data) setPost(res.data);
-      setRepostCount(c => c + 1);
-    } catch {}
+      if (res.data) {
+        setRepostCount(res.data.repost_count);
+        setIsRepostedByMe(res.data.action === 'reposted');
+      }
+    } catch {
+      // Rollback on error
+      setIsRepostedByMe(wasReposted);
+      setRepostCount(c => wasReposted ? c + 1 : Math.max(0, c - 1));
+    }
   };
 
   const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -516,7 +527,9 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           <ActionBtn icon={MessageCircle} count={displayPost.comment_count || 0} onClick={() => onComment?.(displayPost.id)} />
 
           {/* Repost */}
-          <ActionBtn icon={Repeat2} count={repostCount} onClick={handleRepost} color="text-buddy-electric" />
+          <div title={isRepostedByMe ? 'Tap to undo repost' : 'Repost'}>
+            <ActionBtn icon={Repeat2} count={repostCount} active={isRepostedByMe} onClick={handleRepost} color="text-buddy-electric" />
+          </div>
 
           {/* Save */}
           <button onClick={handleSave}

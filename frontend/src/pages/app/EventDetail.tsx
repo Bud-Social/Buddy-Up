@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { marketplaceApi } from '@/api/marketplace';
+import { EVENT_CATEGORIES } from '@/config/eventCategories';
 
 export default function EventDetail() {
   const { eventId } = useParams();
@@ -123,7 +124,15 @@ export default function EventDetail() {
             )}
 
             <div className="absolute bottom-4 left-4 right-4">
-              <Badge variant="blue" label={event.event_type.replace('_', ' ')} size="sm" className="mb-2 shadow-lg capitalize" />
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="blue" label={event.event_type.replace('_', ' ')} size="sm" className="shadow-lg capitalize" />
+                {event.category && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-buddy-green/90 text-buddy-black shadow-lg flex items-center gap-1">
+                    <span>{EVENT_CATEGORIES.find(c => c.key === event.category)?.icon || '📌'}</span>
+                    <span>{EVENT_CATEGORIES.find(c => c.key === event.category)?.label || event.category}</span>
+                  </span>
+                )}
+              </div>
               <h1 className="text-2xl font-bold text-white leading-tight">{event.title}</h1>
             </div>
             
