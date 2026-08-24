@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'dart:async';
 import '../providers/live_provider.dart';
@@ -28,8 +27,6 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   final bool _showGiftPicker = false;
 
   // Agora
-  RtcEngine? _agoraEngine;
-  bool _isUsingAgora = false;
 
   // LiveKit
   Room? _liveKitRoom;
@@ -85,10 +82,6 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   }
 
   Future<void> _cleanup() async {
-    if (_agoraEngine != null) {
-      await _agoraEngine!.leaveChannel();
-      await _agoraEngine!.release();
-    }
     if (_liveKitRoom != null) {
       await _liveKitRoom!.disconnect();
       _liveKitRoom!.dispose();
@@ -98,36 +91,10 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   Future<void> _joinWithCredentials(LiveRoomData roomData) async {
     final creds = roomData.credentials;
 
-    if (creds.agora.appId.isNotEmpty && creds.agora.channel.isNotEmpty) {
-      await _joinAgora(creds.agora);
-    } else if (creds.livekit.url.isNotEmpty && creds.livekit.room.isNotEmpty) {
+    // Agora is no longer issued by the backend; LiveKit is the only transport.
+    if (creds.livekit.url.isNotEmpty && creds.livekit.room.isNotEmpty) {
       await _joinLiveKit(creds.livekit);
     }
-  }
-
-  Future<void> _joinAgora(AgoraCredentials creds) async {
-    _agoraEngine = createAgoraRtcEngine();
-    await _agoraEngine!.initialize(RtcEngineContext(appId: creds.appId));
-
-    _agoraEngine!.registerEventHandler(RtcEngineEventHandler(
-      onJoinChannelSuccess: (_, _) {
-        setState(() => _isUsingAgora = true);
-      },
-      onUserJoined: (_, _, _) => setState(() {}),
-      onUserOffline: (_, _, _) => setState(() {}),
-    ));
-
-    await _agoraEngine!.enableVideo();
-    await _agoraEngine!.startPreview();
-    await _agoraEngine!.joinChannel(
-      token: creds.token ?? '',
-      channelId: creds.channel,
-      uid: 0,
-      options: const ChannelMediaOptions(
-        channelProfile: ChannelProfileType.channelProfileLiveBroadcasting,
-        clientRoleType: ClientRoleType.clientRoleAudience,
-      ),
-    );
   }
 
   Future<void> _joinLiveKit(LiveKitCredentials creds) async {
@@ -202,36 +169,6 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
   }
 
   Widget _buildVideoView(BuddyLive live) {
-    if (_isUsingAgora && _agoraEngine != null) {
-      return Stack(
-        children: [
-          AgoraVideoView(
-            controller: VideoViewController(
-              rtcEngine: _agoraEngine!,
-              canvas: const VideoCanvas(uid: 0),
-            ),
-          ),
-          Positioned(
-              top: 60,
-              right: 12,
-              child: SizedBox(
-                width: 100,
-                height: 140,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: AgoraVideoView(
-                    controller: VideoViewController(
-                      rtcEngine: _agoraEngine!,
-                      canvas: const VideoCanvas(uid: 1),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
-      );
-    }
-
     if (_isUsingLiveKit && _liveKitRoom != null) {
       final remoteParticipants = _liveKitRoom!.remoteParticipants.values.toList();
       return Stack(
