@@ -270,22 +270,22 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         break;
       case 'file':
       case 'document':
-        final result = await FilePicker.platform.pickFiles(
-          allowMultiple: true,
+        final result = await FilePicker.pickFiles(
           type: FileType.custom,
           allowedExtensions: _docExtensions,
         );
-        if (result != null) {
-          for (final f in result.files.take(remaining)) {
-            setState(() {
-              _media.add(ComposerMedia(
-                path: f.path ?? '',
-                name: f.name,
-                type: f.path == null ? 'document' : _mediaKind,
-                bytes: f.bytes,
-              ));
-            });
-          }
+        for (final f in result.take(remaining)) {
+          // file_picker v3 platform interface exposes content via xFile.
+          final bytes = await f.xFile.readAsBytes();
+          if (!mounted) return;
+          setState(() {
+            _media.add(ComposerMedia(
+              path: f.path ?? '',
+              name: f.name,
+              type: f.path == null ? 'document' : _mediaKind,
+              bytes: bytes,
+            ));
+          });
         }
         break;
       default: // image
