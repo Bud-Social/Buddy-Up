@@ -12,6 +12,7 @@ abstract class FeedRepository {
   Future<Map<String, dynamic>> getFeed({
     @Query('tab') String? tab,
     @Query('cursor') String? cursor,
+    @Query('exclude_post_types') String? excludePostTypes,
   });
 
   @GET('/feed/{id}/')

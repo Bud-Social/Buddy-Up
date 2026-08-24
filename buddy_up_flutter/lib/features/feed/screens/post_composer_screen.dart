@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -73,6 +74,9 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   final TextEditingController _pollQuestionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   final List<TextEditingController> _pollOptionControllers = [];
+  bool _pollAllowMultiple = false;
+  int _pollMinSelections = 1;
+  int _pollMaxSelections = 2;
 
   static const int _maxMedia = 12;
 
@@ -102,14 +106,118 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
 
   bool _isSubmitting = false;
 
+  String? _serverDraftId;
+  Timer? _draftDebounce;
+
   @override
   void initState() {
     super.initState();
     _pollOptionControllers.addAll([TextEditingController(), TextEditingController()]);
+    _restoreServerDraftIfAny();
+    // Per-account draft sync (mirrors the web composer).
+    _bodyController.addListener(_scheduleDraftSave);
+    _pollQuestionController.addListener(_scheduleDraftSave);
+  }
+
+  Future<void> _restoreServerDraftIfAny() async {
+    try {
+      final repo = ref.read(feedRepositoryProvider);
+      final raw = await repo.getDrafts();
+      final drafts = (raw['data'] as List? ?? []);
+      if (drafts.isEmpty) return;
+      final latest = Draft.fromJson(drafts.first as Map<String, dynamic>);
+      if (!mounted) return;
+      final hasContent = (latest.body.trim()).isNotEmpty ||
+          latest.pollQuestion.trim().isNotEmpty ||
+          latest.locationLabel.trim().isNotEmpty ||
+          latest.mediaUrls.isNotEmpty;
+      if (!hasContent) return;
+      final restore = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: BuddyColors.surface,
+          title: const Text('Restore draft?'),
+          content: Text(
+            'You have an unfinished ${latest.postType == 'poll' ? 'poll' : latest.postType} post'
+            '${latest.body.isNotEmpty ? ': "${latest.body.characters.take(60)}"' : '.'}',
+            style: const TextStyle(color: BuddyColors.textSecondary),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Discard')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Restore'),
+            ),
+          ],
+        ),
+      );
+      if (restore != true || !mounted) {
+        if (latest.id != null) await repo.deleteDraft(latest.id!);
+        return;
+      }
+      _serverDraftId = latest.id;
+      setState(() {
+        _postType = latest.postType;
+        _bodyController.text = latest.body;
+        _visibility = latest.visibility;
+        _locationLabel = latest.locationLabel;
+        _locationLat = latest.locationLat?.toString();
+        _locationLng = latest.locationLng?.toString();
+        _pollAllowMultiple = latest.pollAllowMultiple;
+        _pollMinSelections = latest.pollMinSelections;
+        _pollMaxSelections = latest.pollMaxSelections < 2 ? 2 : latest.pollMaxSelections;
+        if (latest.pollQuestion.isNotEmpty) {
+          _pollQuestionController.text = latest.pollQuestion;
+        }
+        // Rebuild option controllers to match the saved poll shape.
+        for (final c in _pollOptionControllers) { c.dispose(); }
+        _pollOptionControllers
+          ..clear()
+          ..addAll(latest.pollOptions.map((t) => TextEditingController(text: t)));
+        while (_pollOptionControllers.length < 2) {
+          _pollOptionControllers.add(TextEditingController());
+        }
+      });
+    } catch (_) {}
+  }
+
+  void _scheduleDraftSave() {
+    _draftDebounce?.cancel();
+    _draftDebounce = Timer(const Duration(seconds: 2), () async {
+      try {
+        final filledOptions = _pollOptionControllers
+            .where((c) => c.text.trim().isNotEmpty)
+            .map((c) => c.text.trim())
+            .toList();
+        final hasContent = _bodyController.text.trim().isNotEmpty ||
+            _pollQuestionController.text.trim().isNotEmpty;
+        if (!hasContent) return;
+        final repo = ref.read(feedRepositoryProvider);
+        final res = await repo.saveDraft(Draft(
+          id: _serverDraftId,
+          postType: _postType,
+          body: _bodyController.text.trim(),
+          visibility: _visibility,
+          locationLabel: _locationLabel,
+          locationLat: double.tryParse(_locationLat ?? ''),
+          locationLng: double.tryParse(_locationLng ?? ''),
+          pollQuestion: _pollQuestionController.text.trim(),
+          pollOptions: filledOptions,
+          pollAllowMultiple: _pollAllowMultiple,
+          pollMinSelections: _pollMinSelections,
+          pollMaxSelections: _pollMaxSelections,
+        ));
+        final savedId = (res['data'] as Map<String, dynamic>?)?['id'] as String?;
+        if (savedId != null) _serverDraftId = savedId;
+      } catch (_) {}
+    });
   }
 
   @override
   void dispose() {
+    _draftDebounce?.cancel();
+    _bodyController.removeListener(_scheduleDraftSave);
     _bodyController.dispose();
     _foodController.dispose();
     _mealDescController.dispose();
@@ -334,10 +442,17 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     }
 
     if (_postType == 'poll') {
+      final filled = _pollOptionControllers.where((c) => c.text.trim().isNotEmpty).length;
       data['poll_question'] = _pollQuestionController.text.trim();
       data['poll_options'] =
           _pollOptionControllers.where((c) => c.text.trim().isNotEmpty).map((c) => c.text.trim()).toList();
-      data['poll_allow_multiple'] = 'false';
+      data['poll_allow_multiple'] = '$_pollAllowMultiple';
+      if (_pollAllowMultiple) {
+        final maxSel = _pollMaxSelections < 2 ? 2 : (_pollMaxSelections > filled ? filled : _pollMaxSelections);
+        data['poll_min_selections'] =
+            '${_pollMinSelections < 1 ? 1 : (_pollMinSelections > maxSel ? maxSel : _pollMinSelections)}';
+        data['poll_max_selections'] = '$maxSel';
+      }
     } else if (_postType == 'meal') {
       data['meal_data'] = jsonEncode({
         'meal_type': _mealType,
@@ -379,6 +494,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       final post = Post.fromJson(raw['data'] as Map<String, dynamic>);
       ref.read(feedProvider.notifier).addPostToTop(post);
       widget.onPostCreated?.call();
+      if (_serverDraftId != null) {
+        try { await repo.deleteDraft(_serverDraftId!); } catch (_) {}
+        _serverDraftId = null;
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -599,6 +718,64 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Add option'),
           ),
+        CheckboxListTile(
+          value: _pollAllowMultiple,
+          activeColor: BuddyColors.green,
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          dense: true,
+          title: const Text('Allow multiple selections',
+              style: TextStyle(color: BuddyColors.textPrimary, fontSize: 14)),
+          onChanged: (on) {
+            setState(() {
+              _pollAllowMultiple = on ?? false;
+              if (_pollAllowMultiple) {
+                if (_pollMaxSelections < 2) _pollMaxSelections = 2;
+                _pollMinSelections = 1;
+              }
+            });
+          },
+        ),
+        if (_pollAllowMultiple) ...[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: BuddyColors.surfaceRaised.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Column(
+              children: [
+                _buildPollBoundStepper('Minimum choices', _pollMinSelections, 1,
+                    (v) => setState(() => _pollMinSelections = v)),
+                const SizedBox(height: 8),
+                _buildPollBoundStepper('Maximum choices', _pollMaxSelections, 2,
+                    (v) => setState(() => _pollMaxSelections = v)),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildPollBoundStepper(String label, int value, int floor, void Function(int) onChanged) {
+    final filled = _pollOptionControllers.where((c) => c.text.trim().isNotEmpty).length;
+    final ceiling = filled > floor ? filled : floor;
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13))),
+        IconButton(
+          icon: const Icon(Icons.remove_circle_outline, size: 20),
+          color: value <= floor ? BuddyColors.textSecondary : BuddyColors.green,
+          onPressed: value <= floor ? null : () => onChanged(value - 1),
+        ),
+        Text('$value',
+            style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 15, fontWeight: FontWeight.bold)),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, size: 20),
+          color: value >= ceiling ? BuddyColors.textSecondary : BuddyColors.green,
+          onPressed: value >= ceiling ? null : () => onChanged(value + 1),
+        ),
       ],
     );
   }

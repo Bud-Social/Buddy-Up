@@ -20,7 +20,7 @@ class PostCard extends StatelessWidget {
   final void Function(String postId)? onPin;
   final void Function(String postId, String reaction)? onReact;
   final void Function(String? username)? onProfileTap;
-  final void Function(String postId)? onPollVote;
+  final void Function(String postId, List<String> optionIds)? onPollVote;
 
   const PostCard({
     super.key,
@@ -69,9 +69,8 @@ class PostCard extends StatelessWidget {
             PollWidget(
               poll: post.poll!,
               postId: post.id,
-              onVote: onPollVote != null
-                  ? (postId, optionIds) => onPollVote!(postId)
-                  : null,
+              onVote: onPollVote,
+
             ),
           ],
           if (post.workoutLogData != null) ...[

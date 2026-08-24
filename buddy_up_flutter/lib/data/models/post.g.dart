@@ -45,6 +45,8 @@ _Poll _$PollFromJson(Map<String, dynamic> json) => _Poll(
   question: json['question'] as String,
   closesAt: json['closesAt'] as String?,
   allowMultiple: json['allowMultiple'] as bool? ?? false,
+  minSelections: (json['min_selections'] as num?)?.toInt() ?? 1,
+  maxSelections: (json['max_selections'] as num?)?.toInt() ?? 1,
   totalVotes: (json['totalVotes'] as num?)?.toInt() ?? 0,
   isClosed: json['isClosed'] as bool? ?? false,
   options: (json['options'] as List<dynamic>)
@@ -62,6 +64,8 @@ Map<String, dynamic> _$PollToJson(_Poll instance) => <String, dynamic>{
   'question': instance.question,
   'closesAt': instance.closesAt,
   'allowMultiple': instance.allowMultiple,
+  'min_selections': instance.minSelections,
+  'max_selections': instance.maxSelections,
   'totalVotes': instance.totalVotes,
   'isClosed': instance.isClosed,
   'options': instance.options,
@@ -335,44 +339,54 @@ Map<String, dynamic> _$SavePayloadToJson(_SavePayload instance) =>
 
 _Draft _$DraftFromJson(Map<String, dynamic> json) => _Draft(
   id: json['id'] as String?,
-  postType: json['postType'] as String? ?? 'text',
+  postType: json['post_type'] as String? ?? 'text',
   body: json['body'] as String? ?? '',
   visibility: json['visibility'] as String? ?? 'public',
-  gymTag: json['gymTag'] as String?,
-  locationLabel: json['locationLabel'] as String?,
+  gymTag: json['gym_tag'] as String?,
+  locationLabel: json['location_label'] as String? ?? '',
+  locationLat: (json['location_lat'] as num?)?.toDouble(),
+  locationLng: (json['location_lng'] as num?)?.toDouble(),
   mediaUrls:
-      (json['mediaUrls'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      (json['media_urls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
       const <String>[],
   tags:
       (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const <String>[],
-  pollQuestion: json['pollQuestion'] as String? ?? '',
+  pollQuestion: json['poll_question'] as String? ?? '',
   pollOptions:
-      (json['pollOptions'] as List<dynamic>?)
+      (json['poll_options'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
-  pollAllowMultiple: json['pollAllowMultiple'] as bool? ?? false,
+  pollAllowMultiple: json['poll_allow_multiple'] as bool? ?? false,
+  pollMinSelections: (json['poll_min_selections'] as num?)?.toInt() ?? 1,
+  pollMaxSelections: (json['poll_max_selections'] as num?)?.toInt() ?? 1,
   mentionedUserIds:
-      (json['mentionedUserIds'] as List<dynamic>?)
+      (json['mentioned_user_ids'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
-  isAnonymous: json['isAnonymous'] as bool? ?? false,
+  isAnonymous: json['is_anonymous'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$DraftToJson(_Draft instance) => <String, dynamic>{
   'id': instance.id,
-  'postType': instance.postType,
+  'post_type': instance.postType,
   'body': instance.body,
   'visibility': instance.visibility,
-  'gymTag': instance.gymTag,
-  'locationLabel': instance.locationLabel,
-  'mediaUrls': instance.mediaUrls,
+  'gym_tag': instance.gymTag,
+  'location_label': instance.locationLabel,
+  'location_lat': instance.locationLat,
+  'location_lng': instance.locationLng,
+  'media_urls': instance.mediaUrls,
   'tags': instance.tags,
-  'pollQuestion': instance.pollQuestion,
-  'pollOptions': instance.pollOptions,
-  'pollAllowMultiple': instance.pollAllowMultiple,
-  'mentionedUserIds': instance.mentionedUserIds,
-  'isAnonymous': instance.isAnonymous,
+  'poll_question': instance.pollQuestion,
+  'poll_options': instance.pollOptions,
+  'poll_allow_multiple': instance.pollAllowMultiple,
+  'poll_min_selections': instance.pollMinSelections,
+  'poll_max_selections': instance.pollMaxSelections,
+  'mentioned_user_ids': instance.mentionedUserIds,
+  'is_anonymous': instance.isAnonymous,
 };

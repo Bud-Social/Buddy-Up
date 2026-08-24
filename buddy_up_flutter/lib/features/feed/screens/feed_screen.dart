@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,12 +25,66 @@ class FeedScreen extends ConsumerStatefulWidget {
 
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   final ScrollController _scrollController = ScrollController();
+  Timer? _newPostsTimer;
+  final Set<String> _knownPostIds = <String>{};
+  List<Post> _pendingNewPosts = <Post>[];
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    Future.microtask(() => ref.read(feedProvider.notifier).loadFeed(tab: widget.initialTab));
+    Future.microtask(() {
+      ref.read(feedProvider.notifier).loadFeed(tab: widget.initialTab);
+      _startNewPostsPolling();
+    });
+  }
+
+  void _startNewPostsPolling() {
+    _newPostsTimer?.cancel();
+    // X-style silent polling: detect fresh posts but never auto-insert them —
+    // a pill lets the user jump to the newest when they choose to.
+    _newPostsTimer = Timer.periodic(const Duration(seconds: 45), (_) async {
+      if (!mounted) return;
+      final tab = ref.read(feedProvider).activeTab;
+      if (tab == 'videos' || tab == 'communities') return;
+      try {
+        final repo = ref.read(feedRepositoryProvider);
+        final raw = await repo.getFeed(
+          tab: tab,
+          excludePostTypes: tab == 'for_you' ? 'meal' : null,
+        );
+        final incoming = (raw['data'] as List? ?? [])
+            .map((e) => Post.fromJson(e as Map<String, dynamic>))
+            .where((p) => !_knownPostIds.contains(p.id))
+            .toList();
+        if (incoming.isNotEmpty && mounted) {
+          setState(() => _pendingNewPosts = [...incoming, ..._pendingNewPosts]);
+        }
+      } catch (_) {}
+    });
+  }
+
+  void _showPendingNewPosts() {
+    final notifier = ref.read(feedProvider.notifier);
+    for (final p in _pendingNewPosts) {
+      notifier.updatePostInList(p); // ensure known
+    }
+    notifier.prependPosts(_pendingNewPosts);
+    _pendingNewPosts = [];
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+    setState(() {});
+  }
+
+  void _syncKnownIds(List<Post> posts) {
+    for (final p in posts) {
+      _knownPostIds.add(p.id);
+    }
   }
 
   String _pathForTab(String tab) {
@@ -39,6 +95,10 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         return '/feed/following';
       case 'communities':
         return '/feed/communities';
+      case 'meals':
+        return '/feed/meals';
+      case 'progress':
+        return '/feed/progress';
       default:
         return '/feed';
     }
@@ -50,6 +110,7 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
 
   @override
   void dispose() {
+    _newPostsTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
@@ -74,6 +135,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       'following',
       if (hasCommunities) 'communities',
       'videos',
+      'meals',
+      'progress',
     ];
 
     return Scaffold(
@@ -198,30 +261,54 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       );
     }
 
+    _syncKnownIds(state.posts);
+
     return RefreshIndicator(
       color: BuddyColors.green,
       onRefresh: () => notifier.refresh(),
-      child: ListView.builder(
-        controller: _scrollController,
-        itemCount: state.posts.length + (state.isLoadingMore ? 1 : 0),
-        itemBuilder: (_, i) {
-          if (i == state.posts.length) {
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final post = state.posts[i];
-          return PostCard(
-            post: post,
-            onComment: (id) => _navigateToPostDetail(id),
-            onReact: (id, reaction) => _handleReact(id, reaction),
-            onSave: (id) => _handleSave(id),
-            onRepost: (id) => _handleRepost(id),
-            onProfileTap: (username) => _navigateToProfile(username),
-            onPollVote: (id) => _handlePollVote(id),
-          );
-        },
+      child: Column(
+        children: [
+          if (_pendingNewPosts.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  backgroundColor: BuddyColors.green.withValues(alpha: 0.15),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                onPressed: _showPendingNewPosts,
+                icon: const Icon(Icons.arrow_upward, size: 14, color: BuddyColors.green),
+                label: Text(
+                  '${_pendingNewPosts.length} new post${_pendingNewPosts.length == 1 ? '' : 's'}',
+                  style: const TextStyle(color: BuddyColors.green, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              itemCount: state.posts.length + (state.isLoadingMore ? 1 : 0),
+              itemBuilder: (_, i) {
+                if (i == state.posts.length) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final post = state.posts[i];
+                return PostCard(
+                  post: post,
+                  onComment: (id) => _navigateToPostDetail(id),
+                  onReact: (id, reaction) => _handleReact(id, reaction),
+                  onSave: (id) => _handleSave(id),
+                  onRepost: (id) => _handleRepost(id),
+                  onProfileTap: (username) => _navigateToProfile(username),
+                  onPollVote: (id, optionIds) => _handlePollVote(id, optionIds),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -270,10 +357,11 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     ref.read(feedProvider.notifier).toggleRepost(postId);
   }
 
-  void _handlePollVote(String postId) async {
+  void _handlePollVote(String postId, List<String> optionIds) async {
+    if (optionIds.isEmpty) return;
     final repo = ref.read(feedRepositoryProvider);
     try {
-      final raw = await repo.voteOnPoll(postId, {});
+      final raw = await repo.voteOnPoll(postId, {'option_ids': optionIds});
       if (raw['data'] != null) {
         final updated = Post.fromJson(raw['data'] as Map<String, dynamic>);
         ref.read(feedProvider.notifier).updatePostInList(updated);

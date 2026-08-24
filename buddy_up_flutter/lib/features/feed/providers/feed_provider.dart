@@ -67,7 +67,10 @@ class FeedNotifier extends Notifier<FeedState> {
     state = state.copyWith(isLoading: true, error: null, activeTab: t);
     try {
       final cacheKey = 'feed_$t';
-      final raw = await withCache(ref as dynamic, cacheKey, () => _repository.getFeed(tab: t));
+      final raw = await withCache(ref as dynamic, cacheKey, () => _repository.getFeed(
+        tab: t,
+        excludePostTypes: t == 'for_you' ? 'meal' : null,
+      ));
       final data = raw['data'];
       final pagination = raw['pagination'] as Map<String, dynamic>?;
       state = state.copyWith(
@@ -85,7 +88,11 @@ class FeedNotifier extends Notifier<FeedState> {
     if (state.isLoadingMore || !state.hasMore) return;
     state = state.copyWith(isLoadingMore: true);
     try {
-      final raw = await _repository.getFeed(tab: state.activeTab, cursor: state.cursor);
+      final raw = await _repository.getFeed(
+        tab: state.activeTab,
+        cursor: state.cursor,
+        excludePostTypes: state.activeTab == 'for_you' ? 'meal' : null,
+      );
       final data = raw['data'];
       final pagination = raw['pagination'] as Map<String, dynamic>?;
       state = state.copyWith(
@@ -115,6 +122,16 @@ class FeedNotifier extends Notifier<FeedState> {
     state = state.copyWith(
       posts: state.posts.map((p) => p.id == updated.id ? updated : p).toList(),
     );
+  }
+
+  /// Insert fresh posts at the top of the feed (deduplicated), used by the
+  /// "N new posts" pill so reading position is never disturbed automatically.
+  void prependPosts(List<Post> incoming) {
+    if (incoming.isEmpty) return;
+    final known = state.posts.map((p) => p.id).toSet();
+    final fresh = incoming.where((p) => !known.contains(p.id)).toList();
+    if (fresh.isEmpty) return;
+    state = state.copyWith(posts: [...fresh, ...state.posts]);
   }
 
   void removePostFromList(String postId) {

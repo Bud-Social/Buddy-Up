@@ -20,9 +20,17 @@ class _FeedRepository implements FeedRepository {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<Map<String, dynamic>> getFeed({String? tab, String? cursor}) async {
+  Future<Map<String, dynamic>> getFeed({
+    String? tab,
+    String? cursor,
+    String? excludePostTypes,
+  }) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{r'tab': tab, r'cursor': cursor};
+    final queryParameters = <String, dynamic>{
+      r'tab': tab,
+      r'cursor': cursor,
+      r'exclude_post_types': excludePostTypes,
+    };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
