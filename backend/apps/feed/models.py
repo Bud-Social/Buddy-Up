@@ -60,6 +60,7 @@ class Post(TimestampedModel, SoftDeleteModel):
 
     class Meta:
         db_table = 'feed_post'
+        unique_together = [('author', 'original_post')]
         indexes = [
             models.Index(fields=['author', '-created_at']),
             models.Index(fields=['post_type']),

@@ -299,6 +299,50 @@ def cleanup_old_notifications():
 
 
 @shared_task
+def batch_notification_cleanup():
+    """Archive/delete read notifications older than 90 days."""
+    cleanup_old_notifications()
+
+
+@shared_task
+def send_session_reminder(session_id: str, participant_profile_id: str):
+    """Send reminder 1 hour before booked session starts."""
+    from apps.profiles.models import Profile
+    from .models import Notification
+    try:
+        participant = Profile.objects.get(user_id=participant_profile_id)
+    except Profile.DoesNotExist:
+        return
+
+    n = Notification.objects.create(
+        recipient=participant,
+        notification_type='session_reminder',
+        title='Upcoming Session in 1 Hour! ⏰',
+        body='Your workout session starts soon. Get ready to sweat!',
+        metadata={'session_id': str(session_id)},
+    )
+    try:
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        async_to_sync(get_channel_layer().group_send)(
+            f'user_{participant.user_id}',
+            {
+                'type': 'event_notification',
+                'data': {
+                    'id': str(n.id),
+                    'type': n.notification_type,
+                    'title': n.title,
+                    'body': n.body,
+                    'metadata': n.metadata,
+                    'created_at': n.created_at.isoformat(),
+                },
+            },
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
+@shared_task
 def send_live_started_notification(live_id: str, host_profile_id: str):
     from apps.profiles.models import Profile
     from .models import Notification

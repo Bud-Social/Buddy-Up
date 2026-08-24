@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from datetime import timedelta
 
@@ -27,6 +28,8 @@ from .utils import (
     deduct_creator_artifacts, credit_creator_artifacts,
     platform_cut, calculate_fiat,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class WalletBalanceView(views.APIView):
@@ -423,9 +426,19 @@ class FlutterwaveWebhookView(views.APIView):
     permission_classes = []
 
     def post(self, request):
+        import hmac as hmac_module
         from django.conf import settings
+        from django.db import transaction as db_transaction
+
+        expected_hash = getattr(settings, 'FLUTTERWAVE_WEBHOOK_HASH', '')
         signature = request.headers.get('verif-hash', '')
-        if settings.FLUTTERWAVE_WEBHOOK_HASH and signature != settings.FLUTTERWAVE_WEBHOOK_HASH:
+        # Fail closed: an unconfigured webhook secret must never accept events,
+        # otherwise anyone could credit themselves free artifacts.
+        if not expected_hash:
+            logger.warning('Flutterwave webhook rejected: FLUTTERWAVE_WEBHOOK_HASH not configured')
+            return Response(status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        if not signature or not hmac_module.compare_digest(str(signature), str(expected_hash)):
+            logger.warning('Flutterwave webhook rejected: bad verif-hash')
             return Response(status=status.HTTP_403_FORBIDDEN)
 
         try:
@@ -434,28 +447,51 @@ class FlutterwaveWebhookView(views.APIView):
             event = request.data
 
         event_type = event.get('event', '')
-        event_data = event.get('data', {})
+        event_data = event.get('data', {}) if isinstance(event.get('data'), dict) else {}
 
         if event_type == 'charge.completed':
+            # Only credit payments Flutterwave marked successful and whose
+            # amount matches the pending ledger entry.
+            if str(event_data.get('status', '')).lower() != 'successful':
+                return Response({'status': 'ignored'})
             tx_ref = event_data.get('tx_ref', '')
             flutterwave_id = str(event_data.get('id', ''))
             try:
-                tx = ArtifactTransaction.objects.get(tx_ref=tx_ref, status='pending')
-                tx.status = 'completed'
-                tx.flutterwave_id = flutterwave_id
-                tx.flutterwave_response = event_data
-                tx.save(update_fields=['status', 'flutterwave_id', 'flutterwave_response'])
-                credit_artifacts(tx.user, tx.artifact_type, tx.quantity)
+                with db_transaction.atomic():
+                    tx = ArtifactTransaction.objects.select_for_update().get(tx_ref=tx_ref, status='pending')
+                    charged_amount = event_data.get('amount')
+                    currency = event_data.get('currency')
+                    amount_ok = True
+                    try:
+                        if charged_amount is not None and tx.fiat_amount is not None:
+                            amount_ok = abs(float(charged_amount) - float(tx.fiat_amount)) < 0.01 \
+                                and (not currency or not tx.fiat_currency or str(currency) == str(tx.fiat_currency))
+                    except (TypeError, ValueError):
+                        amount_ok = False
+                    if not amount_ok:
+                        logger.warning(
+                            'Flutterwave webhook amount mismatch tx=%s charged=%s %s',
+                            tx_ref, charged_amount, currency,
+                        )
+                        return Response({'status': 'mismatch'}, status=400)
+                    tx.status = 'completed'
+                    tx.flutterwave_id = flutterwave_id
+                    tx.flutterwave_response = event_data
+                    tx.save(update_fields=['status', 'flutterwave_id', 'flutterwave_response'])
+                    credit_artifacts(tx.user, tx.artifact_type, tx.quantity)
             except ArtifactTransaction.DoesNotExist:
                 pass
 
         elif event_type == 'transfer.completed':
             flutterwave_id = str(event_data.get('id', ''))
             try:
-                tx = ArtifactTransaction.objects.get(flutterwave_id=flutterwave_id, status='pending')
-                tx.status = 'completed'
-                tx.flutterwave_response = event_data
-                tx.save(update_fields=['status', 'flutterwave_response'])
+                with db_transaction.atomic():
+                    tx = ArtifactTransaction.objects.select_for_update().get(
+                        flutterwave_id=flutterwave_id, status='pending'
+                    )
+                    tx.status = 'completed'
+                    tx.flutterwave_response = event_data
+                    tx.save(update_fields=['status', 'flutterwave_response'])
             except ArtifactTransaction.DoesNotExist:
                 pass
 
@@ -620,7 +656,7 @@ class WithdrawView(views.APIView):
 
         profile = request.user.profile
 
-        if profile.verification_status not in ('id', 'trainer', 'practitioner'):
+        if profile.verification_status not in ('id', 'trainer', 'practitioner', 'shop', 'gym'):
             return Response({
                 'success': False, 'data': None,
                 'message': 'ID verification is required before withdrawing.',
@@ -782,3 +818,118 @@ class ExchangeRateView(views.APIView):
             'errors': None,
             'pagination': None,
         })
+
+
+class PayoutRequestView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+
+        if profile.verification_status not in ('id', 'trainer', 'practitioner', 'shop', 'gym'):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'ID verification is required before requesting payouts.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        method = request.data.get('method', 'mpesa')
+        phone_number = request.data.get('phone_number', '')
+        bank_account = request.data.get('bank_account', '')
+        bank_code = request.data.get('bank_code', '')
+        account_name = request.data.get('account_name', '')
+        source = request.data.get('source', 'creator')
+
+        amount_usd = request.data.get('amount')
+        artifact_type = request.data.get('artifact_type')
+        quantity = request.data.get('quantity')
+
+        if amount_usd is not None:
+            try:
+                amount_usd = float(amount_usd)
+                if amount_usd < 5.0:
+                    return Response({'success': False, 'message': 'Minimum payout amount is $5.00.'}, status=400)
+            except (ValueError, TypeError):
+                return Response({'success': False, 'message': 'Invalid payout amount.'}, status=400)
+        elif artifact_type and quantity:
+            try:
+                quantity = int(quantity)
+                val = ARTIFACT_VALUES.get(artifact_type, 0)
+                amount_usd = round(val * quantity, 2)
+            except (ValueError, TypeError):
+                return Response({'success': False, 'message': 'Invalid quantity.'}, status=400)
+        else:
+            return Response({'success': False, 'message': 'Amount or artifact details required.'}, status=400)
+
+        creator_bal = _get_creator_balance(profile)
+        total_creator_fiat = calculate_fiat(creator_bal)['amount']
+        if total_creator_fiat < amount_usd:
+            return Response({
+                'success': False,
+                'message': f'Insufficient creator balance. Available: ${total_creator_fiat:.2f}',
+            }, status=400)
+
+        # Deduct artifacts
+        remaining_needed = amount_usd
+        primary_artifact = 'buddy_token'
+        for art_key in sorted(creator_bal.keys(), key=lambda k: ARTIFACT_VALUES.get(k, 0), reverse=True):
+            if remaining_needed <= 0:
+                break
+            art_val = ARTIFACT_VALUES.get(art_key, 1.0)
+            avail_qty = creator_bal.get(art_key, 0)
+            if avail_qty <= 0 or art_val <= 0:
+                continue
+            qty_to_take = min(avail_qty, int(remaining_needed // art_val) + (1 if remaining_needed % art_val > 0 else 0))
+            if qty_to_take > 0:
+                if deduct_creator_artifacts(profile, art_key, qty_to_take):
+                    primary_artifact = art_key
+                    remaining_needed -= (qty_to_take * art_val)
+
+        tx_ref = f'po-{uuid.uuid4().hex[:12]}'
+        tx = ArtifactTransaction.objects.create(
+            user=profile,
+            transaction_type='withdrawal',
+            artifact_type=primary_artifact,
+            quantity=int(amount_usd),
+            direction='debit',
+            status='pending' if method == 'bank_transfer' else 'completed',
+            fiat_amount=amount_usd,
+            fiat_currency='USD',
+            phone_number=phone_number,
+            bank_account=bank_account,
+            tx_ref=tx_ref,
+            description=f'Creator payout of ${amount_usd:.2f} via {method.upper()}',
+        )
+
+        return Response({
+            'success': True,
+            'data': ArtifactTransactionSerializer(tx).data,
+            'message': f'Payout of ${amount_usd:.2f} requested successfully.',
+        }, status=201)
+
+
+class PayoutHistoryView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        qs = ArtifactTransaction.objects.filter(
+            user=request.user.profile,
+            transaction_type__in=['withdrawal', 'payout'],
+        ).order_by('-created_at')
+
+        paginator = CursorPagination()
+        count = qs.count()
+        page = paginator.paginate_queryset(qs, request)
+        serializer = ArtifactTransactionSerializer(page, many=True)
+
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'message': 'OK',
+            'pagination': {
+                'count': count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
+        })
+

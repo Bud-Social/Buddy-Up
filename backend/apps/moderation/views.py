@@ -28,7 +28,29 @@ class ModerationReportViewSet(
     search_fields = ['description', 'resolution_note']
 
     def perform_create(self, serializer):
-        serializer.save(reporter=self.request.user)
+        from datetime import timedelta
+        report = serializer.save(reporter=self.request.user)
+
+        # Auto-flag threshold: if >= 3 reports for the same target user in 15 minutes, auto-flag
+        recent_cutoff = timezone.now() - timedelta(minutes=15)
+        recent_count = ModerationReport.objects.filter(
+            target_user=report.target_user,
+            created_at__gte=recent_cutoff,
+        ).count()
+
+        if recent_count >= 3:
+            ContentFlag.objects.get_or_create(
+                flag_reason='toxic',
+                content_type='user.profile',
+                content_id=str(report.target_user.id),
+                defaults={
+                    'severity': 'high',
+                    'confidence': 0.95,
+                    'source': 'auto_report_threshold',
+                    'content_preview': f'Multiple user reports ({recent_count}) received within 15 minutes.',
+                    'is_actioned': False,
+                },
+            )
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def handle(self, request, pk=None):

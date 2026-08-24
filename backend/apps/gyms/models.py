@@ -261,6 +261,7 @@ class GymDonation(TimestampedModel):
 class GymMembershipException(TimestampedModel):
     """Owner-granted exception overriding subscription fees for a specific member."""
 
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='membership_exceptions')
     member = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='gym_membership_exceptions')
     discount_pct = models.IntegerField(default=100)  # 100 = full discount (free), 0 = no discount

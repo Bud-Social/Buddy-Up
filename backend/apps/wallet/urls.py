@@ -16,5 +16,7 @@ urlpatterns = [
     path('withdraw/bank-resolve/', views.BankResolveView.as_view(), name='bank_resolve'),
     path('bundles/', views.BundleListView.as_view(), name='bundles'),
     path('exchange-rates/', views.ExchangeRateView.as_view(), name='exchange_rates'),
+    path('payout-request/', views.PayoutRequestView.as_view(), name='payout_request'),
+    path('payout-history/', views.PayoutHistoryView.as_view(), name='payout_history'),
     path('flutterwave-webhook/', views.FlutterwaveWebhookView.as_view(), name='flutterwave_webhook'),
 ]

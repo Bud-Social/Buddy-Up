@@ -661,33 +661,42 @@ class RepostView(views.APIView):
             root = root.original_post
         original = root
 
-        repost = Post.objects.create(
-            author=request.user.profile,
-            post_type='text',
-            body='',
-            is_repost=True,
-            original_post=original,
-            quote_body=quote_body[:500],
-            visibility='public',
-        )
+        # Toggle logic
+        existing = Post.objects.filter(author=request.user.profile, original_post=original, is_repost=True).first()
+        
+        if existing:
+            existing.delete()
+            action = 'unreposted'
+        else:
+            repost = Post.objects.create(
+                author=request.user.profile,
+                post_type='text',
+                body='',
+                is_repost=True,
+                original_post=original,
+                quote_body=quote_body[:500],
+                visibility='public',
+            )
+            action = 'reposted'
 
-        # Notify the original author their post was reposted
-        try:
-            from apps.notifications.tasks import send_repost_notification
-            send_repost_notification.delay(str(request.user.profile.user_id), str(original.id))
-        except Exception:  # noqa: BLE001
-            pass
+            # Notify the original author their post was reposted
+            try:
+                from apps.notifications.tasks import send_repost_notification
+                send_repost_notification.delay(str(request.user.profile.user_id), str(original.id))
+            except Exception:  # noqa: BLE001
+                pass
 
-        ai_ranking.send_feedback(str(request.user.profile.user_id), original, 1.0)
+            ai_ranking.send_feedback(str(request.user.profile.user_id), original, 1.0)
 
-        serializer = PostSerializer(repost, context={'request': request})
+        count = Post.objects.filter(original_post=original, is_repost=True).count()
         return Response({
             'success': True,
-            'data': serializer.data,
-            'message': 'Reposted.',
+            'action': action,
+            'repost_count': count,
+            'message': 'OK',
             'errors': None,
             'pagination': None,
-        }, status=status.HTTP_201_CREATED)
+        }, status=status.HTTP_200_OK if action == 'unreposted' else status.HTTP_201_CREATED)
 
 
 class SaveView(views.APIView):

@@ -62,8 +62,10 @@ urlpatterns = [
     # --- Orders & Tracking ---
     path('orders/', views.OrderListView.as_view(), name='orders'),
     path('orders/seller/', views.SellerOrdersView.as_view(), name='seller_orders'),
+    path('creator/orders/', views.SellerOrdersView.as_view(), name='creator_orders'),
     path('orders/<uuid:order_id>/', views.OrderDetailView.as_view(), name='order_detail'),
     path('orders/<uuid:order_id>/fulfillment/', views.OrderFulfillmentView.as_view(), name='order_fulfillment'),
+    path('orders/<uuid:order_id>/status/', views.OrderFulfillmentView.as_view(), name='order_status'),
 
     # --- Discount Codes ---
     path('discount-codes/', views.DiscountCodeManageView.as_view(), name='discount_codes'),

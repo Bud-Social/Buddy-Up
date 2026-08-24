@@ -9,6 +9,7 @@ urlpatterns = [
     path('conversations/<uuid:conversation_id>/messages/', views.MessageListView.as_view(), name='messages'),
     path('conversations/<uuid:conversation_id>/read/', views.MarkReadView.as_view(), name='mark_read'),
     path('conversations/<uuid:conversation_id>/calls/', views.CallLogView.as_view(), name='call_logs'),
+    path('conversations/<uuid:conversation_id>/calls/session/', views.ConversationCallSessionView.as_view(), name='call_session'),
     path('messages/<uuid:message_id>/react/', views.MessageReactionView.as_view(), name='message_react'),
     path('messages/<uuid:message_id>/delete/', views.DeleteMessageView.as_view(), name='message_delete'),
     path('messages/<uuid:message_id>/serve/', views.ServeMessageFileView.as_view(), name='serve_message_file'),

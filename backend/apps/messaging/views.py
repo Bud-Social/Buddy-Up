@@ -4,11 +4,12 @@ import os
 import uuid
 import ipaddress
 import socket
+from datetime import timedelta
 from pathlib import PurePosixPath
 from urllib.parse import unquote, urlparse
 
 from django.shortcuts import get_object_or_404
-from django.db import models as db_models
+from django.db import models as db_models, transaction
 from django.http import FileResponse, Http404
 from django.utils import timezone
 from django.core.files.storage import default_storage
@@ -22,6 +23,7 @@ from common.utils import validate_file_signature
 from .models import (
     Conversation, Message, MessageReaction, CallLog,
     ConversationMembership, CommunityPost, CommunityPostLike, CommunityPostComment,
+    CallSession, CallParticipant,
 )
 from .serializers import (
     ConversationSerializer, MessageSerializer,
@@ -32,6 +34,21 @@ from .serializers import (
 from apps.profiles.models import BuddyRelationship, Profile
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_media_url(value) -> str:
+    """Normalise a client-supplied media URL: only http(s), no credentials."""
+    if not value or not isinstance(value, str):
+        return ''
+    cleaned = value.strip()
+    if not cleaned:
+        return ''
+    parsed = urlparse(cleaned)
+    if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+        return ''
+    if parsed.username or parsed.password:
+        return ''
+    return cleaned[:1000]
 
 
 def _allowed_to_message(requester: Profile, other: Profile) -> bool:
@@ -507,6 +524,198 @@ class CallLogView(views.APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+class ConversationCallSessionView(views.APIView):
+    """Secure multi-party LiveKit calls for a conversation.
+
+    POST   – start or join the conversation's live call; returns short-lived
+             LiveKit credentials scoped to this room and membership-verified.
+    GET    – fetch the current live session + fresh credentials (rejoin/refresh).
+    DELETE – leave the call; ends the session when the last participant leaves.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    MAX_SESSION_AGE = timedelta(hours=6)
+
+    def _active_session(self, conv):
+        cutoff = timezone.now() - self.MAX_SESSION_AGE
+        return (
+            CallSession.objects
+            .filter(conversation=conv, status__in=('ringing', 'active'), created_at__gte=cutoff)
+            .select_related('initiated_by')
+            .first()
+        )
+
+    @staticmethod
+    def _notify_members(conv, payload, exclude_user_id=None):
+        """Push a call event to every member's personal user channel."""
+        from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
+        try:
+            layer = get_channel_layer()
+            recipients = conv.participants.all()
+            if exclude_user_id:
+                recipients = recipients.exclude(user_id=exclude_user_id)
+            for participant in recipients:
+                async_to_sync(layer.group_send)(
+                    f'user_{participant.user_id}',
+                    {'type': 'event_notification', 'data': payload},
+                )
+        except Exception:  # noqa: BLE001
+            logger.exception('call notify failed for conversation=%s', conv.id)
+
+    def _credentials(self, profile, session, conv):
+        from apps.lives.provider_service import generate_livekit_token, get_livekit_url
+        token = generate_livekit_token(
+            session.room_name,
+            identity=str(profile.user_id),
+            display_name=profile.display_name,
+            avatar_url=getattr(profile, 'avatar_url', '') or '',
+            can_publish=True,
+            token_expire_sec=600,
+        )
+        participants = (
+            session.participants.filter(left_at__isnull=True)
+            .select_related('profile')
+        )
+        return {
+            'session_id': str(session.id),
+            'status': session.status,
+            'call_type': session.call_type,
+            'livekit': {
+                'url': get_livekit_url(),
+                'room': session.room_name,
+                'token': token,
+                'identity': str(profile.user_id),
+            },
+            'participants': [
+                {
+                    'user_id': str(p.profile.user_id),
+                    'display_name': p.profile.display_name,
+                    'username': p.profile.username,
+                    'avatar_url': p.profile.avatar_url or '',
+                    'joined_at': p.joined_at.isoformat() if p.joined_at else None,
+                }
+                for p in participants
+            ],
+            'conversation': {
+                'id': str(conv.id),
+                'is_group': conv.is_group,
+                'is_community': conv.is_community,
+                'group_name': conv.group_name,
+                'group_avatar_url': conv.group_avatar_url,
+            },
+        }
+
+    def post(self, request, conversation_id):
+        conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
+        requested_type = request.data.get('call_type')
+        call_type = requested_type if requested_type in ('audio', 'video') else 'audio'
+
+        session = self._active_session(conv)
+        is_new = session is None
+        if is_new:
+            session = CallSession.objects.create(
+                conversation=conv,
+                initiated_by=request.user.profile,
+                call_type=call_type,
+                status='ringing',
+                room_name=f'convo_{conv.id}',
+            )
+            conv.call_in_progress = True
+            conv.save(update_fields=['call_in_progress'])
+
+        participant, created = CallParticipant.objects.get_or_create(
+            session=session, profile=request.user.profile,
+        )
+        if created or participant.joined_at is None:
+            participant.joined_at = timezone.now()
+            participant.left_at = None
+            participant.declined = False
+            participant.save(update_fields=['joined_at', 'left_at', 'declined'])
+
+        # A second active participant promotes ringing → active.
+        active_count = session.participants.filter(left_at__isnull=True).count()
+        if session.status == 'ringing' and active_count >= 2:
+            session.status = 'active'
+            session.started_at = session.started_at or timezone.now()
+            session.save(update_fields=['status', 'started_at'])
+
+        data = self._credentials(request.user.profile, session, conv)
+        data['created'] = is_new
+
+        # Ring everyone else (new session) or announce the join.
+        self._notify_members(conv, {
+            'type': 'incoming_call' if is_new else 'call_participant_joined',
+            'session_id': str(session.id),
+            'conversation_id': str(conv.id),
+            'call_type': session.call_type,
+            'from_user_id': str(request.user.profile.user_id),
+            'from_username': request.user.profile.username,
+            'from_display_name': request.user.profile.display_name,
+            'from_avatar_url': getattr(request.user.profile, 'avatar_url', '') or '',
+            'participant_count': active_count,
+        }, exclude_user_id=request.user.profile.user_id)
+
+        return Response({'success': True, 'data': data, 'message': 'Joined call.',
+                         'errors': None, 'pagination': None})
+
+    def get(self, request, conversation_id):
+        conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
+        session = self._active_session(conv)
+        if not session:
+            return Response({
+                'success': True, 'data': None, 'message': 'No live call.',
+                'errors': None, 'pagination': None,
+            })
+        return Response({
+            'success': True,
+            'data': self._credentials(request.user.profile, session, conv),
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    @transaction.atomic
+    def delete(self, request, conversation_id):
+        conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
+        session = self._active_session(conv)
+        if not session:
+            return Response({'success': True, 'data': None, 'message': 'No live call.',
+                             'errors': None, 'pagination': None})
+        now = timezone.now()
+        CallParticipant.objects.filter(session=session, profile=request.user.profile).update(left_at=now)
+
+        remaining = session.participants.filter(left_at__isnull=True).count()
+        ended = remaining == 0
+        if ended:
+            session.status = 'ended'
+            session.ended_at = now
+            session.save(update_fields=['status', 'ended_at'])
+            conv.call_in_progress = False
+            conv.save(update_fields=['call_in_progress'])
+            # Summary row so call history keeps working for DMs and groups alike.
+            initiator_id = session.initiated_by_id
+            CallLog.objects.create(
+                conversation=conv,
+                caller=session.initiated_by or request.user.profile,
+                callee=(session.participants.exclude(profile_id=initiator_id)
+                        .select_related('profile').first().profile
+                        if session.participants.exclude(profile_id=initiator_id).exists()
+                        else request.user.profile),
+                call_type=session.call_type,
+                status='answered' if session.started_at else ('missed' if not session.participants.exclude(profile_id=initiator_id).exists() else 'ended'),
+                duration_seconds=session.duration_seconds,
+                ended_at=now,
+            )
+        self._notify_members(conv, {
+            'type': 'call_ended' if ended else 'call_participant_left',
+            'session_id': str(session.id),
+            'conversation_id': str(conv.id),
+            'from_user_id': str(request.user.profile.user_id),
+            'participant_count': remaining,
+        })
+        return Response({'success': True, 'data': {'ended': ended}, 'message': 'Left call.',
+                         'errors': None, 'pagination': None})
+
+
 class LinkPreviewView(views.APIView):
     """Fetch Open Graph metadata for a URL to generate link previews."""
     permission_classes = [permissions.IsAuthenticated]
@@ -719,7 +928,8 @@ class CommunityListView(views.APIView):
     def post(self, request):
         name = (request.data.get('name') or '').strip()
         description = (request.data.get('description') or '').strip()
-        cover_url = (request.data.get('cover_url') or '').strip()
+        cover_url = _safe_media_url(request.data.get('cover_url'))
+        group_avatar_url = _safe_media_url(request.data.get('group_avatar_url'))
         group_gym_id = request.data.get('group_gym_id') or request.data.get('gym_id')
         is_public = bool(request.data.get('is_public'))
 
@@ -742,6 +952,7 @@ class CommunityListView(views.APIView):
             group_name=name[:100],
             description=description,
             cover_url=cover_url,
+            group_avatar_url=group_avatar_url,
             group_gym=gym,
             is_public=is_public,
             invite_code=_generate_invite_code(),
@@ -811,7 +1022,7 @@ class CommunityDetailView(views.APIView):
         if 'description' in request.data:
             conv.description = (request.data.get('description') or '').strip()
         if 'cover_url' in request.data:
-            conv.cover_url = (request.data.get('cover_url') or '').strip()
+            conv.cover_url = _safe_media_url(request.data.get('cover_url'))
         if 'is_public' in request.data:
             conv.is_public = bool(request.data.get('is_public'))
         if 'group_gym_id' in request.data:
@@ -819,7 +1030,7 @@ class CommunityDetailView(views.APIView):
             gym_id = request.data.get('group_gym_id')
             conv.group_gym = Gym.objects.filter(id=gym_id).first() if gym_id else None
         if 'group_avatar_url' in request.data:
-            conv.group_avatar_url = (request.data.get('group_avatar_url') or '').strip()
+            conv.group_avatar_url = _safe_media_url(request.data.get('group_avatar_url'))
         conv.save()
 
         return Response({

@@ -42,6 +42,14 @@ class Notification(TimestampedModel):
         ('community_post', 'Community Post'),
         ('community_comment', 'Community Comment'),
         ('community_reaction', 'Community Reaction'),
+        ('community_join_request', 'Community Join Request'),
+        ('community_join_approved', 'Community Join Approved'),
+        # Events & Commerce & Social
+        ('repost', 'Post Repost'),
+        ('mention', 'Mention'),
+        ('event_ticket_purchased', 'Event Ticket Purchased'),
+        ('order_status_changed', 'Order Status Changed'),
+        ('payout_processed', 'Payout Processed'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)

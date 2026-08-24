@@ -1,6 +1,7 @@
 import requests
 from uuid import uuid4
 from django.conf import settings
+from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
 from django.utils import timezone
@@ -9,6 +10,7 @@ from rest_framework import views, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
+from rest_framework.throttling import ScopedRateThrottle
 
 from common.pagination import PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
@@ -1694,8 +1696,13 @@ class CartView(views.APIView):
     def post(self, request):
         cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
         item_type = request.data.get('item_type')
-        quantity = int(request.data.get('quantity', 1))
-        
+        try:
+            quantity = int(request.data.get('quantity', 1))
+        except (TypeError, ValueError):
+            return Response({'success': False, 'message': 'Quantity must be an integer.'}, status=400)
+        # Clamp server-side: negative or absurd quantities would corrupt totals.
+        quantity = max(1, min(quantity, 99))
+
         # Determine the target ID key
         target_id_map = {
             'meal_plan': ('meal_plan_id', MealPlan),
@@ -1740,9 +1747,19 @@ class CartView(views.APIView):
 
 class CheckoutCartView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'checkout'
+    throttle_classes = [ScopedRateThrottle]
 
     @transaction.atomic
     def post(self, request):
+        # Idempotency guard: replaying the same checkout key is a no-op.
+        idempotency_key = str(request.data.get('idempotency_key') or '')[:128]
+        if idempotency_key:
+            cache_key = f'checkout_idem:{request.user.profile.id}:{idempotency_key}'
+            if not cache.add(cache_key, '1', timeout=300):
+                return Response({'success': False, 'message': 'Checkout already in progress for this request.'},
+                                status=status.HTTP_409_CONFLICT)
+
         cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
         items = list(cart.items.all())
         if not items:
@@ -2185,18 +2202,33 @@ class OrderFulfillmentView(views.APIView):
             order = Order.objects.get(id=order_id)
         except Order.DoesNotExist:
             return Response({'success': False, 'message': 'Order not found.'}, status=404)
-        if not _is_order_seller(order, profile):
+        is_seller = _is_order_seller(order, profile)
+        is_buyer = order.buyer == profile
+        if not is_seller and not is_buyer:
             return Response({'success': False, 'message': 'Permission denied.'}, status=403)
 
         fulfillment = order.fulfillment
-        carrier = request.data.get('carrier')
-        if carrier is not None:
+        new_status = request.data.get('status')
+        note = request.data.get('note', '')
+
+        if is_buyer and not is_seller:
+            # Buyers may only confirm receipt — nothing else.
+            if new_status != 'delivered' or order.status not in ('shipped', 'out_for_delivery', 'ready_for_pickup'):
+                return Response({'success': False,
+                                 'message': 'Buyers can only confirm delivery of an en-route order.'}, status=403)
+            if any(request.data.get(f) is not None for f in ('carrier', 'tracking_number', 'tracking_url', 'pickup_location')):
+                return Response({'success': False, 'message': 'Only sellers can edit shipping details.'}, status=403)
+            _apply_fulfillment_status(order, fulfillment, 'delivered', note or 'Confirmed by buyer')
+            fulfillment.save()
+            order.refresh_from_db()
+            return Response({'success': True,
+                             'data': OrderSerializer(order, context={'request': request, 'viewer': profile}).data})
+
+        if carrier := request.data.get('carrier'):
             fulfillment.carrier = carrier
-        tracking_number = request.data.get('tracking_number')
-        if tracking_number is not None:
+        if tracking_number := request.data.get('tracking_number'):
             fulfillment.tracking_number = tracking_number
-        tracking_url = request.data.get('tracking_url')
-        if tracking_url is not None:
+        if tracking_url := request.data.get('tracking_url'):
             fulfillment.tracking_url = tracking_url
         pickup_location = request.data.get('pickup_location')
         if pickup_location is not None:
@@ -2205,8 +2237,6 @@ class OrderFulfillmentView(views.APIView):
         if notes is not None:
             fulfillment.notes = notes
 
-        new_status = request.data.get('status')
-        note = request.data.get('note', '')
         if new_status and new_status != order.status:
             if new_status not in ORDER_FORWARD_STATES.get(order.status, []):
                 return Response({'success': False, 'message': f'Cannot move order from {order.status} to {new_status}.'}, status=400)

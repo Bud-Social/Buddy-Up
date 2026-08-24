@@ -6,6 +6,41 @@ from cloudinary.models import CloudinaryField
 from common.models import TimestampedModel
 from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
 
+EVENT_CATEGORIES_CHOICES = [
+    ("fitness", "Fitness"),
+    ("weightlifting", "Weightlifting"),
+    ("hiit", "HIIT"),
+    ("crossfit", "CrossFit"),
+    ("calisthenics", "Calisthenics"),
+    ("bodybuilding", "Bodybuilding"),
+    ("running", "Running"),
+    ("cycling", "Cycling"),
+    ("hiking", "Hiking"),
+    ("climbing", "Climbing"),
+    ("water_sports", "Water Sports"),
+    ("swimming", "Swimming"),
+    ("outdoor", "Outdoor"),
+    ("yoga", "Yoga"),
+    ("pilates", "Pilates"),
+    ("meditation", "Meditation"),
+    ("wellness", "Wellness"),
+    ("mental_health", "Mental Health"),
+    ("competition", "Competition"),
+    ("tournament", "Tournament"),
+    ("race", "Race"),
+    ("boxing", "Boxing & MMA"),
+    ("football", "Football"),
+    ("basketball", "Basketball"),
+    ("social", "Social"),
+    ("food_drink", "Food & Drink"),
+    ("networking", "Networking"),
+    ("nutrition", "Nutrition"),
+    ("workshop", "Workshop"),
+    ("seminar", "Seminar"),
+    ("party", "Party"),
+    ("other", "Other"),
+]
+
 
 # ---------------------------------------------------------------------------
 # Shop ecosystem
@@ -458,7 +493,7 @@ class MarketplaceEvent(TimestampedModel):
     is_cancelled = models.BooleanField(default=False)
     attendee_count = models.IntegerField(default=0)
     tags = models.JSONField(default=list)
-    category = models.CharField(max_length=50, blank=True)
+    category = models.CharField(max_length=50, choices=EVENT_CATEGORIES_CHOICES, blank=True)
     content_rating = models.CharField(
         max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
     )

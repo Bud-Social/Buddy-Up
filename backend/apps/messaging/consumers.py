@@ -16,6 +16,39 @@ from apps.wallet.utils import deduct_artifacts, credit_artifacts
 _viewer_sets: dict[str, set] = {}
 logger = logging.getLogger(__name__)
 
+# ─── Per-connection rate limiting (in-memory token bucket) ──────────────────
+RATE_LIMITS = {
+    'message': (30, 10),          # 30 messages per 10s window
+    'call_signal': (60, 10),      # signaling is chatty during ICE negotiation
+    'react': (20, 10),
+    'read': (30, 10),
+    'typing': (20, 10),
+}
+
+
+class _RateLimiter:
+    """Sliding-window limiter scoped to a single socket connection."""
+
+    def __init__(self):
+        self._events: dict[str, list[float]] = {}
+
+    def allow(self, key: str) -> bool:
+        limit, window = RATE_LIMITS.get(key, (60, 10))
+        import time as _time
+        now = _time.monotonic()
+        bucket = [t for t in self._events.get(key, []) if now - t < window]
+        if len(bucket) >= limit:
+            self._events[key] = bucket
+            return False
+        bucket.append(now)
+        self._events[key] = bucket
+        return True
+
+
+MAX_BODY_LEN = 4000
+MAX_METADATA_BYTES = 8192
+ALLOWED_MESSAGE_TYPES = {'text', 'photo', 'video', 'voice', 'document', 'location', 'poll', 'event'}
+
 
 # ─── Viewer helpers ───────────────────────────────────────────────────────────
 
@@ -133,6 +166,7 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
         self.group_name = f'conversation_{self.conversation_id}'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        self._limiter = _RateLimiter()
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -152,33 +186,49 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         msg_type = content.get('type', 'message')
 
         if msg_type == 'message':
-            await self._handle_message(content)
+            await self._guarded('message', self._handle_message, content)
         elif msg_type == 'typing_start':
-            await self._handle_typing(True)
+            await self._guarded('typing', self._handle_typing, True)
         elif msg_type == 'typing_stop':
-            await self._handle_typing(False)
+            await self._guarded('typing', self._handle_typing, False)
         elif msg_type == 'read':
-            await self._handle_read(content)
+            await self._guarded('read', self._handle_read, content)
         elif msg_type == 'react':
-            await self._handle_react(content)
+            await self._guarded('react', self._handle_react, content)
         elif msg_type in ('call_offer', 'call_answer', 'call_ice', 'call_end', 'call_decline', 'call_ringing'):
-            await self._handle_call_signal(msg_type, content)
+            await self._guarded('call_signal', self._handle_call_signal, msg_type, content)
+
+    async def _guarded(self, limit_key: str, handler, *args):
+        """Run a receive handler under the per-connection rate limiter."""
+        if not self._limiter.allow(limit_key):
+            logger.warning('Rate limited %s from user=%s in conversation=%s',
+                           limit_key, getattr(self.profile, 'user_id', '?'), self.conversation_id)
+            return
+        try:
+            await handler(*args)
+        except Exception:  # noqa: BLE001
+            logger.exception('Error in %s handler for conversation=%s', limit_key, self.conversation_id)
 
     # ── Message handling ──────────────────────────────────────────────────────
 
     async def _handle_message(self, content):
         data = content.get('data', {})
-        body = (data.get('body') or '').strip()
+        if not isinstance(data, dict):
+            return
+        body = (data.get('body') or '').strip()[:MAX_BODY_LEN]
         message_type = data.get('message_type', 'text')
         # Validate message_type to allowed values
-        allowed_types = {'text', 'photo', 'video', 'voice', 'document', 'location', 'poll', 'event'}
-        if message_type not in allowed_types:
+        if message_type not in ALLOWED_MESSAGE_TYPES:
             message_type = 'text'
-        media_url = data.get('media_url', '')
-        media_mime = data.get('media_mime', '')
-        file_name = data.get('file_name', '')
+        media_url = str(data.get('media_url') or '')[:1000]
+        media_mime = str(data.get('media_mime') or '')[:100]
+        file_name = str(data.get('file_name') or '')[:255]
         reply_to_id = data.get('reply_to_id') or None
         metadata = data.get('metadata', {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+        if len(str(metadata)) > MAX_METADATA_BYTES:
+            metadata = {}
 
         if not body and not media_url:
             return
@@ -251,6 +301,19 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def _handle_call_signal(self, signal_type: str, content: dict):
         """Relay WebRTC signaling data to all other members of the conversation."""
+        data = content.get('data', {})
+        if not isinstance(data, dict):
+            return
+        # Cap and sanity-check signaling payloads (SDP offers/answers, ICE).
+        sdp = data.get('sdp')
+        if sdp is not None:
+            if not isinstance(sdp, dict) or 'type' not in sdp or len(str(sdp.get('sdp', ''))) > 32_000:
+                return
+        candidate = data.get('candidate')
+        if candidate is not None:
+            if isinstance(candidate, dict) and len(str(candidate)) > 2_000:
+                return
+
         payload = {
             'type': signal_type,
             'conversation_id': self.conversation_id,
@@ -258,8 +321,8 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
             'from_username': self.profile.username,
             'from_display_name': self.profile.display_name,
             'from_avatar_url': getattr(self.profile, 'avatar_url', ''),
-            'data': content.get('data', {}),
-            'call_type': content.get('call_type', 'audio'),
+            'data': data,
+            'call_type': content.get('call_type') if content.get('call_type') in ('audio', 'video') else 'audio',
         }
         await self.channel_layer.group_send(self.group_name, {
             'type': 'call_signal',
@@ -638,23 +701,60 @@ class GymChatConsumer(AsyncJsonWebsocketConsumer):
         if not user or user.is_anonymous:
             await self.close(code=4001)
             return
+        self.user_id = str(user.id)
+        self.profile = await database_sync_to_async(lambda: getattr(user, 'profile', None))()
+        if not self.profile:
+            await self.close(code=4001)
+            return
         self.gym_id = self.scope['url_route']['kwargs']['gym_id']
+        # Authorization: only gym members may read/write gym chat.
+        if not await database_sync_to_async(self._is_gym_member)():
+            await self.close(code=4003)
+            return
         self.group_name = f'gym_chat_{self.gym_id}'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        self._limiter = _RateLimiter()
         await self.accept()
+
+    def _is_gym_member(self):
+        from apps.gyms.models import Gym, GymMembership
+        try:
+            gym = Gym.objects.get(id=self.gym_id)
+        except Exception:  # noqa: BLE001
+            return False
+        return GymMembership.objects.filter(
+            gym=gym, member=self.profile, subscription_active=True,
+        ).exists()
 
     async def disconnect(self, close_code):
         if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive_json(self, content, **kwargs):
-        await self.channel_layer.group_send(self.group_name, {'type': 'gym_message', 'data': content})
+        if not self._limiter.allow('message'):
+            logger.warning('Rate limited gym chat from user=%s gym=%s', self.user_id, self.gym_id)
+            return
+        # Sanitise relayed content: cap sizes and strip unknown fields.
+        safe = {
+            'type': 'gym_message',
+            'data': {
+                'user_id': self.user_id,
+                'display_name': getattr(self.profile, 'display_name', ''),
+                'avatar_url': getattr(self.profile, 'avatar_url', ''),
+                'message': str(content.get('data', {}).get('message', ''))[:MAX_BODY_LEN]
+                            if isinstance(content.get('data'), dict) else '',
+            },
+        }
+        await self.channel_layer.group_send(self.group_name, {'type': 'gym_message', 'data': safe})
 
     async def gym_message(self, event):
         await self.send_json(event['data'])
 
 
 # ─── Random drop pool consumer ───────────────────────────────────────────────
+
+RANDOM_DROP_EVENTS = {'join_pool', 'leave_pool', 'ready', 'match_found'}
+
 
 class RandomDropConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
@@ -663,8 +763,10 @@ class RandomDropConsumer(AsyncJsonWebsocketConsumer):
         if not user or user.is_anonymous:
             await self.close(code=4001)
             return
+        self.user_id = str(user.id)
         self.group_name = 'random_drop_pool'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
+        self._limiter = _RateLimiter()
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -673,6 +775,15 @@ class RandomDropConsumer(AsyncJsonWebsocketConsumer):
 
     async def receive_json(self, content, **kwargs):
         event_type = content.get('type', 'join_pool')
+        if event_type not in RANDOM_DROP_EVENTS:
+            return  # ignore unexpected event types
+        if not self._limiter.allow('call_signal'):
+            return
+        content.setdefault('data', {})
+        if isinstance(content['data'], dict):
+            content['data'].setdefault('user_id', self.user_id)
+        else:
+            content['data'] = {'user_id': self.user_id}
         await self.channel_layer.group_send(self.group_name, {
             'type': f'random_drop_{event_type}', 'data': content,
         })
