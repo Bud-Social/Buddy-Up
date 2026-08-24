@@ -6,7 +6,7 @@
 |---|---|
 | Candidate | [Full legal name], ID/Passport No. [●] |
 | Role | Cofounder — Security Engineering & Trust |
-| Proposed equity | [●]% of fully-diluted share capital at grant, subject to the vesting terms in Annex A |
+| Proposed equity | **19%** of fully-diluted share capital at grant, subject to the vesting terms in Annex A |
 | Vesting | 4 years monthly, 1-year cliff (Annex A) |
 | Start date | [●] |
 | Reporting line | CEO / Board of BuddyUp Ltd. |
@@ -17,6 +17,22 @@
 > Shareholders' Agreement (Kenyan law) that all founders will sign together.
 
 ---
+
+## Founding team & ownership
+
+The founding team holds 97% of BuddyUp Ltd. at incorporation, split as follows:
+
+| Seat | Holder | Equity |
+|---|---|---|
+| Cofounder & CEO — Engineering | Peter Mbugua | **21%** |
+| Cofounder — Security Engineering & Trust | *(this offer — [Full legal name])* | **19%** |
+| Cofounder — Marketing, Sales & Partnerships | [●] | 19% |
+| Cofounder — Finance, Strategy & Controller | [●] | 19% |
+| Unallocated reserve (future hires / option pool) | held for unanimous founder decision | 3% |
+| **Total** | | **100%** |
+
+All founder equity vests on identical terms (Annex A). No seat carries special
+voting or economic rights beyond the shareholders' agreement.
 
 ## 1. Why this seat exists
 
@@ -81,7 +97,7 @@ bureaucracy. The veto exists so you can say "not yet" and be thanked for it.
 
 ## 5. Equity — summary
 
-Grant [●]% fully-diluted at grant; vesting and leaver terms per Annex A.
+Grant of **19%** fully-diluted at grant; vesting and leaver terms per Annex A.
 Equity subject to IP assignment (clause 7) and execution of the shareholders'
 agreement.
 
@@ -115,8 +131,8 @@ agreement.
 
 | For BuddyUp Ltd. | Candidate |
 |---|---|
-| Name: [●] | Name: [Full legal name] |
-| Title: Founder/CEO | ID/Passport: [●] |
+| Name: Peter Mbugua | Name: [Full legal name] |
+| Title: Cofounder & CEO | ID/Passport: [●] |
 | Signature: ________________ Date: ______ | Signature: ________________ Date: ______ |
 
 ---
@@ -125,7 +141,8 @@ agreement.
 
 *(Identical across all founder agreements.)*
 
-1. Grant of [●]% fully-diluted at grant, recorded in the share register.
+1. Grant of 19% of the fully-diluted capital of BuddyUp Ltd. as at the start date,
+   recorded in the share register.
 2. 12-month cliff (25% retroactive), then monthly vesting over 36 months.
 3. Good leaver / bad leaver provisions per the shareholders' agreement;
    unvested shares cancel on departure.

@@ -1,21 +1,41 @@
 # Cofounder Agreements — BuddyUp Ltd.
 
-Offer-ready cofounder agreements for the four open founding seats. Each document is a
-personalised heads-of-terms: it sets out the role, equity framework, commitments and
-conditions before a formal shareholders' agreement is signed.
+Offer-ready cofounder agreements for the four founding seats alongside the CEO.
+Each document is a personalised heads-of-terms: it sets out the role, equity,
+commitments and conditions before a formal shareholders' agreement is signed.
+
+## Founding team & ownership (consolidated)
+
+| Seat | Holder | Equity |
+|---|---|---|
+| **Cofounder & CEO — Engineering** | **Peter Mbugua** | **21%** |
+| Cofounder — Legal, Compliance & Research | *(open — this offer)* | 19% |
+| Cofounder — Marketing, Sales & Partnerships | *(open — this offer)* | 19% |
+| Cofounder — Security Engineering & Trust | *(open — this offer)* | 19% |
+| Cofounder — Finance, Strategy & Controller | *(open — this offer)* | 19% |
+| Unallocated reserve (future hires / option pool) | held for unanimous founder decision | 3% |
+| **Total** | | **100%** |
+
+- Every founder's equity vests on identical terms: 4 years monthly, 1-year cliff
+  (25% retroactive), good/bad leaver provisions, double-trigger acceleration only.
+- The CEO holds an additional 2 points in recognition of pre-founding work:
+  the entire platform (web, Flutter, backend, LiveKit media, payments, AI services)
+  was built before these offers are extended.
+- The unallocated 3% is reserved for early key hires; releasing it requires the
+  unanimous consent of all five founders.
 
 ## Documents
 
 | Seat | File | One-line mandate |
 |---|---|---|
-| Legal & Research | [`legal-research.md`](legal-research.md) | Keep BuddyUp inside Kenya's fitness/wellness regulatory lines and turn research into product decisions |
-| Marketing & Sales | [`marketing-sales.md`](marketing-sales.md) | Own demand: design partners, paying gyms/coaches, member activation |
-| Security | [`security.md`](security.md) | Own trust: platform, payment and data security end-to-end |
-| Finance & Strategy | [`finance-strategy.md`](finance-strategy.md) | Own the money and the plan: burn, reconciliation, fundraising readiness |
+| Legal & Research | [`legal-research.md`](legal-research.md) / [.docx](Bud_Cofounder_Agreement_Legal_and_Research.docx) | Keep BuddyUp inside Kenya's fitness/wellness regulatory lines and turn research into product decisions |
+| Marketing & Sales | [`marketing-sales.md`](marketing-sales.md) / [.docx](Bud_Cofounder_Agreement_Marketing_and_Sales.docx) | Own demand: design partners, paying gyms/coaches, member activation |
+| Security | [`security.md`](security.md) / [.docx](Bud_Cofounder_Agreement_Security.docx) | Own trust: platform, payment and data security end-to-end |
+| Finance & Strategy | [`finance-strategy.md`](finance-strategy.md) / [.docx](Bud_Cofounder_Agreement_Finance_and_Strategy.docx) | Own the money and the plan: burn, reconciliation, fundraising readiness |
 
 ## How to use these documents
 
-1. Fill every `[●]` placeholder (name, ID/passport, equity %, start date, notice details).
+1. Fill every remaining `[●]` placeholder (candidate name, ID/passport, start date).
 2. Send the relevant file together with the latest business model doc
    (`../buddyup_regulated_business_model_2026.md`) so the candidate sees the same reality you see.
 3. Give candidates at least one week and access to counsel before signing.

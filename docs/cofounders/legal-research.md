@@ -6,7 +6,7 @@
 |---|---|
 | Candidate | [Full legal name], ID/Passport No. [●] |
 | Role | Cofounder — Legal, Compliance & Research |
-| Proposed equity | [●]% of fully-diluted share capital at grant, subject to the vesting terms in Annex A |
+| Proposed equity | **19%** of fully-diluted share capital at grant, subject to the vesting terms in Annex A |
 | Vesting | 4 years monthly, 1-year cliff (Annex A) |
 | Start date | [●] |
 | Reporting line | CEO / Board of BuddyUp Ltd. |
@@ -17,6 +17,23 @@
 > Agreement (Kenyan law) that all founders will sign together.
 
 ---
+
+## Founding team & ownership
+
+The founding team holds 97% of BuddyUp Ltd. at incorporation, split as follows:
+
+| Seat | Holder | Equity |
+|---|---|---|
+| Cofounder & CEO — Engineering | Peter Mbugua | **21%** |
+| Cofounder — Legal, Compliance & Research | *(this offer — [Full legal name])* | **19%** |
+| Cofounder — Marketing, Sales & Partnerships | [●] | 19% |
+| Cofounder — Security Engineering & Trust | [●] | 19% |
+| Cofounder — Finance, Strategy & Controller | [●] | 19% |
+| Unallocated reserve (future hires / option pool) | held for unanimous founder decision | 3% |
+| **Total** | | **100%** |
+
+All founder equity vests on identical terms (Annex A). No seat carries special
+voting or economic rights beyond the shareholders' agreement.
 
 ## 1. Why this seat exists
 
@@ -79,7 +96,7 @@ fast *and* survives scrutiny — not paperwork for its own sake.
 
 Full mechanics in **Annex A**; headline terms:
 
-- Grant: [●]% fully-diluted at grant.
+- Grant: **19%** fully-diluted at grant.
 - 4-year vesting, 1-year cliff, monthly thereafter; leaver provisions apply
   (unvested reverts; vested treatment per good/bad leaver definitions).
 - Standard dilution in future rounds; no anti-dilution for founders.
@@ -118,16 +135,16 @@ complete within 60 days:
 
 | For BuddyUp Ltd. | Candidate |
 |---|---|
-| Name: [●] | Name: [Full legal name] |
-| Title: Founder/CEO | ID/Passport: [●] |
+| Name: Peter Mbugua | Name: [Full legal name] |
+| Title: Cofounder & CEO | ID/Passport: [●] |
 | Signature: ________________ Date: ______ | Signature: ________________ Date: ______ |
 
 ---
 
 ## Annex A — Vesting schedule (applies to all founder grants)
 
-1. **Grant:** [●]% of the fully-diluted capital of BuddyUp Ltd. as at [date],
-   recorded in the share register.
+1. **Grant:** 19% of the fully-diluted capital of BuddyUp Ltd. as at the start
+   date, recorded in the share register.
 2. **Cliff:** no shares vest before the 12-month anniversary of the start date.
    On passing the cliff, 25% vests retroactively; the remainder vests monthly
    over the following 36 months.
