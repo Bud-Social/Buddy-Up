@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/messaging.dart';
+import '../../messaging/providers/messaging_provider.dart';
 import '../providers/community_provider.dart';
 
 class CommunitiesScreen extends ConsumerStatefulWidget {
@@ -25,6 +28,8 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
     final name = TextEditingController();
     final desc = TextEditingController();
     var isPublic = true;
+    String? avatarUrl;
+    var uploadingAvatar = false;
     final ok = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -45,6 +50,60 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
                 const Text('Create Community',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: BuddyColors.surfaceRaised,
+                      backgroundImage: (avatarUrl?.isNotEmpty ?? false)
+                          ? NetworkImage(avatarUrl!)
+                          : null,
+                      child: (avatarUrl?.isEmpty ?? true)
+                          ? const Icon(Icons.group, color: BuddyColors.green)
+                          : null,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: uploadingAvatar
+                            ? null
+                            : () async {
+                                final picked = await ImagePicker().pickImage(
+                                  source: ImageSource.gallery,
+                                  imageQuality: 85,
+                                  maxWidth: 1024,
+                                );
+                                if (picked == null) return;
+                                setSheetState(() => uploadingAvatar = true);
+                                try {
+                                  final dio = ref.read(apiClientProvider4).dio;
+                                  final form = FormData.fromMap({
+                                    'file': await MultipartFile.fromFile(picked.path, filename: picked.name),
+                                  });
+                                  final res = await dio.post('/messaging/upload/', data: form);
+                                  final url = (res.data['data'] as Map<String, dynamic>)['url'] as String;
+                                  setSheetState(() => avatarUrl = url);
+                                } catch (_) {
+                                  if (ctx.mounted) {
+                                    ScaffoldMessenger.of(ctx).showSnackBar(
+                                      const SnackBar(content: Text('Image upload failed')),
+                                    );
+                                  }
+                                } finally {
+                                  setSheetState(() => uploadingAvatar = false);
+                                }
+                              },
+                        icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                        label: Text(uploadingAvatar
+                            ? 'Uploading...'
+                            : (avatarUrl?.isNotEmpty ?? false)
+                                ? 'Change picture'
+                                : 'Add a community picture'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: name,
                   decoration: const InputDecoration(labelText: 'Name'),
@@ -92,7 +151,7 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
     try {
       final created = await ref
           .read(communitiesListProvider.notifier)
-          .create(name.text.trim(), description: desc.text.trim(), isPublic: isPublic);
+          .create(name.text.trim(), description: desc.text.trim(), isPublic: isPublic, groupAvatarUrl: avatarUrl);
       if (created != null && mounted) context.push('/communities/${created.id}');
     } catch (e) {
       if (mounted) {
@@ -148,14 +207,15 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
 
   Widget _communityCard(Conversation c) {
     final isManager = c.membershipRole == 'owner' || c.membershipRole == 'admin';
+    final imageUrl = c.groupAvatarUrl.isNotEmpty ? c.groupAvatarUrl : c.coverUrl;
     return Card(
       color: BuddyColors.surfaceRaised,
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        leading: c.coverUrl.isNotEmpty
+        leading: imageUrl.isNotEmpty
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.network(c.coverUrl, width: 48, height: 48, fit: BoxFit.cover),
+                child: Image.network(imageUrl, width: 48, height: 48, fit: BoxFit.cover),
               )
             : Container(
                 width: 48,

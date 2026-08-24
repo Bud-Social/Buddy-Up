@@ -70,11 +70,17 @@ class CommunitiesListNotifier extends AsyncNotifier<CommunitiesListState> {
     return CommunityDetail.fromJson(raw['data'] as Map<String, dynamic>);
   }
 
-  Future<CommunityDetail?> create(String name, {String description = '', bool isPublic = true}) async {
+  Future<CommunityDetail?> create(
+    String name, {
+    String description = '',
+    bool isPublic = true,
+    String? groupAvatarUrl,
+  }) async {
     final raw = await ref.read(communityRepositoryProvider).createCommunity({
       'name': name,
       'description': description,
       'is_public': isPublic,
+      if (groupAvatarUrl != null && groupAvatarUrl.isNotEmpty) 'group_avatar_url': groupAvatarUrl,
     });
     await refresh();
     return CommunityDetail.fromJson(raw['data'] as Map<String, dynamic>);
@@ -155,11 +161,17 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
     await loadPosts();
   }
 
-  Future<void> updateSettings(String name, String description, bool isPublic) async {
+  Future<void> updateSettings(
+    String name,
+    String description,
+    bool isPublic, {
+    String? groupAvatarUrl,
+  }) async {
     await ref.read(communityRepositoryProvider).updateCommunity(communityId, {
       'name': name,
       'description': description,
       'is_public': isPublic,
+      if (groupAvatarUrl != null && groupAvatarUrl.isNotEmpty) 'group_avatar_url': groupAvatarUrl,
     });
     await refresh();
   }

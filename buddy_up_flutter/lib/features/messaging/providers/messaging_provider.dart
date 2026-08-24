@@ -1,11 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import '../../../data/repositories/messaging_repository.dart';
 import '../../../data/models/messaging.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/chat/chat_socket.dart';
-import '../services/call_engine.dart';
 import '../services/user_channel_socket.dart';
 
 final messagingRepositoryProvider = Provider<MessagingRepository>((ref) {
@@ -235,81 +235,32 @@ final chatSocketProvider = Provider.family<ChatSocket?, String>((ref, conversati
   return socket;
 });
 
-/// Snapshot of the call state, kept in sync with the [CallEngine] so widgets
-/// rebuild whenever anything call-related changes (phase, streams, mute...).
-class CallSnapshot {
-  final CallPhase phase;
-  final String callType;
-  final bool isMuted;
-  final bool isCameraOff;
-  final bool isInitiator;
-  final bool didDecline;
-  final String conversationId;
-  final String peerName;
-  final String peerAvatar;
-  final DateTime? startedAt;
-  final MediaStream? localStream;
-  final MediaStream? remoteStream;
-  final bool renderersReady;
-  final RTCVideoRenderer localRenderer;
-  final RTCVideoRenderer remoteRenderer;
+/// Snapshot of an incoming call invite awaiting the user's decision.
+/// Auto-dismisses after 30 seconds if unanswered.
+final pendingInviteProvider =
+    NotifierProvider<PendingInviteNotifier, IncomingCallDetails?>(PendingInviteNotifier.new);
 
-  const CallSnapshot({
-    required this.phase,
-    required this.callType,
-    required this.isMuted,
-    required this.isCameraOff,
-    required this.isInitiator,
-    required this.didDecline,
-    required this.conversationId,
-    required this.peerName,
-    required this.peerAvatar,
-    required this.startedAt,
-    required this.localStream,
-    required this.remoteStream,
-    required this.renderersReady,
-    required this.localRenderer,
-    required this.remoteRenderer,
-  });
+class PendingInviteNotifier extends Notifier<IncomingCallDetails?> {
+  Timer? _dismissTimer;
 
-  factory CallSnapshot.from(CallEngine engine) => CallSnapshot(
-        phase: engine.phase,
-        callType: engine.callType,
-        isMuted: engine.isMuted,
-        isCameraOff: engine.isCameraOff,
-        isInitiator: engine.isInitiator,
-        didDecline: engine.didDecline,
-        conversationId: engine.conversationId,
-        peerName: engine.peerName,
-        peerAvatar: engine.peerAvatar,
-        startedAt: engine.startedAt,
-        localStream: engine.localStream,
-        remoteStream: engine.remoteStream,
-        renderersReady: engine.renderersReady,
-        localRenderer: engine.localRenderer,
-        remoteRenderer: engine.remoteRenderer,
-      );
-}
-
-final callEngineProvider = Provider<CallEngine>((ref) {
-  final engine = CallEngine();
-  ref.onDispose(engine.dispose);
-  return engine;
-});
-
-class CallSnapshotNotifier extends Notifier<CallSnapshot> {
   @override
-  CallSnapshot build() {
-    final engine = ref.watch(callEngineProvider);
-    void onEngineChanged() => state = CallSnapshot.from(engine);
-    engine.addListener(onEngineChanged);
-    ref.onDispose(() => engine.removeListener(onEngineChanged));
-    return CallSnapshot.from(engine);
+  IncomingCallDetails? build() {
+    ref.onDispose(() => _dismissTimer?.cancel());
+    return null;
+  }
+
+  void set(IncomingCallDetails? details) {
+    _dismissTimer?.cancel();
+    state = details;
+    if (details != null) {
+      _dismissTimer = Timer(const Duration(seconds: 30), () {
+        if (state != null && state!.conversationId == details.conversationId) {
+          state = null;
+        }
+      });
+    }
   }
 }
-
-final callSnapshotProvider =
-    NotifierProvider<CallSnapshotNotifier, CallSnapshot>(CallSnapshotNotifier.new);
 
 final userChannelSocketProvider = Provider.family<UserChannelSocket?, String>((ref, userId) {
   final token = ref.watch(accessTokenProvider);
@@ -318,14 +269,8 @@ final userChannelSocketProvider = Provider.family<UserChannelSocket?, String>((r
     userId: userId,
     token: token,
     onIncomingCall: (details) {
-      ref.read(callEngineProvider).incomingCall(
-        conversationId: details.conversationId,
-        callType: details.callType,
-        data: details.data,
-        fromUserId: details.fromUserId,
-        fromName: details.fromName,
-        fromAvatar: details.fromAvatar,
-      );
+      // Surface ringing/late-join invites; the overlay decides what to show.
+      ref.read(pendingInviteProvider.notifier).set(details);
     },
   );
   ref.onDispose(socket.dispose);

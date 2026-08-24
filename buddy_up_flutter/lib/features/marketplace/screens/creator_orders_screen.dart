@@ -1,9 +1,22 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../shared/widgets/page_loader.dart';
+
+/// Allowed forward transitions for bulk seller updates (mirrors backend).
+const Map<String, List<String>> _sellerForwardOk = {
+  'paid': ['processing', 'shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered', 'cancelled'],
+  'pending_fulfillment': ['processing', 'shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered', 'cancelled'],
+  'processing': ['shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered'],
+  'shipped': ['out_for_delivery', 'ready_for_pickup', 'delivered'],
+  'out_for_delivery': ['ready_for_pickup', 'delivered'],
+  'ready_for_pickup': ['delivered'],
+};
 
 class CreatorOrdersScreen extends ConsumerStatefulWidget {
   const CreatorOrdersScreen({super.key});
@@ -14,6 +27,8 @@ class CreatorOrdersScreen extends ConsumerStatefulWidget {
 
 class _CreatorOrdersScreenState extends ConsumerState<CreatorOrdersScreen> {
   String? _selectedStatus;
+  final Set<String> _selectedOrderIds = <String>{};
+  bool _bulkUpdating = false;
 
   final _statusFilters = const [
     {'label': 'All', 'value': null},
@@ -24,6 +39,76 @@ class _CreatorOrdersScreenState extends ConsumerState<CreatorOrdersScreen> {
     {'label': 'Cancelled', 'value': 'cancelled'},
   ];
 
+  Future<void> _exportCsv(List<Order> orders) async {
+    if (orders.isEmpty) return;
+    String esc(Object? v) => '"${'$v'.replaceAll('"', '""')}"';
+    final rows = <List<String>>[
+      ['order_number', 'date', 'status', 'items', 'total_usd', 'tracking_number', 'carrier'],
+    ];
+    for (final o in orders) {
+      rows.add([
+        o.orderNumber,
+        DateTime.tryParse(o.createdAt ?? '')?.toIso8601String() ?? '',
+        o.status,
+        o.items.map((it) => '${it.title} x${it.quantity}').join('; '),
+        o.spentUsd.toStringAsFixed(2),
+        o.fulfillment?.trackingNumber ?? '',
+        o.fulfillment?.carrier ?? '',
+      ]);
+    }
+    final csv = rows.map((r) => r.map(esc).join(',')).join('\n');
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final stamp = DateTime.now().toIso8601String().substring(0, 10);
+      final file = File('${dir.path}/buddyup-orders-$stamp.csv');
+      await file.writeAsString(csv);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Exported ${orders.length} orders to ${file.path}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Export failed: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _bulkUpdate(String newStatus) async {
+    final orders =
+        (ref.read(creatorOrdersProvider(_selectedStatus)).value ?? const <Order>[]);
+    final targets = _selectedOrderIds.where((id) {
+      final order = orders.where((o) => o.id == id).firstOrNull;
+      return order != null && (_sellerForwardOk[order.status] ?? const []).contains(newStatus);
+    }).toList();
+    if (targets.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No selected orders can move to that status')),
+      );
+      return;
+    }
+    setState(() => _bulkUpdating = true);
+    var ok = 0;
+    for (final id in targets) {
+      try {
+        await ref.read(marketplaceRepositoryProvider).updateOrderStatus(id, {'status': newStatus});
+        ok++;
+      } catch (_) {}
+    }
+    setState(() {
+      _bulkUpdating = false;
+      _selectedOrderIds.clear();
+    });
+    ref.invalidate(creatorOrdersProvider);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Updated $ok/${targets.length} orders to ${newStatus.replaceAll('_', ' ')}')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -33,36 +118,48 @@ class _CreatorOrdersScreenState extends ConsumerState<CreatorOrdersScreen> {
 
     return Column(
       children: [
-        // Filter Chips Row
+        // Filter Chips Row + export
         Container(
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _statusFilters.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final filter = _statusFilters[index];
-              final isSelected = _selectedStatus == filter['value'];
-              return ChoiceChip(
-                label: Text(filter['label']!),
-                selected: isSelected,
-                selectedColor: BuddyColors.green.withValues(alpha: 0.2),
-                labelStyle: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? BuddyColors.green : theme.colorScheme.onSurfaceVariant,
+          child: Row(
+            children: [
+              Expanded(
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _statusFilters.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final filter = _statusFilters[index];
+                    final isSelected = _selectedStatus == filter['value'];
+                    return ChoiceChip(
+                      label: Text(filter['label']!),
+                      selected: isSelected,
+                      selectedColor: BuddyColors.green.withValues(alpha: 0.2),
+                      labelStyle: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected ? BuddyColors.green : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      side: BorderSide(
+                        color: isSelected ? BuddyColors.green : theme.colorScheme.outline.withValues(alpha: 0.3),
+                      ),
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedStatus = selected ? filter['value'] : null;
+                        });
+                      },
+                    );
+                  },
                 ),
-                side: BorderSide(
-                  color: isSelected ? BuddyColors.green : theme.colorScheme.outline.withValues(alpha: 0.3),
-                ),
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedStatus = selected ? filter['value'] : null;
-                  });
-                },
-              );
-            },
+              ),
+              TextButton.icon(
+                onPressed: () => _exportCsv(ordersAsync.value ?? const <Order>[]),
+                icon: const Icon(Icons.file_download_outlined, size: 16),
+                label: const Text('CSV', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                style: TextButton.styleFrom(foregroundColor: BuddyColors.green),
+              ),
+            ],
           ),
         ),
 
@@ -101,17 +198,60 @@ class _CreatorOrdersScreenState extends ConsumerState<CreatorOrdersScreen> {
 
               return RefreshIndicator(
                 onRefresh: () async => ref.refresh(creatorOrdersProvider(_selectedStatus)),
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: orders.length,
-                  itemBuilder: (context, index) {
-                    final order = orders[index];
-                    return _OrderCard(
-                      order: order,
-                      cardBg: cardBg,
-                      onUpdateStatus: () => _showUpdateStatusSheet(order),
-                    );
-                  },
+                child: Column(
+                  children: [
+                    if (_selectedOrderIds.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: BuddyColors.green.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: BuddyColors.green.withValues(alpha: 0.4)),
+                        ),
+                        child: Row(
+                          children: [
+                            Text('${_selectedOrderIds.length} selected',
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            const Spacer(),
+                            for (final st in const ['processing', 'shipped', 'delivered'])
+                              Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: ActionChip(
+                                  label: Text('Mark ${st.replaceAll('_', ' ')}',
+                                      style: const TextStyle(fontSize: 11)),
+                                  onPressed: _bulkUpdating ? null : () => _bulkUpdate(st),
+                                ),
+                              ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 16),
+                              tooltip: 'Clear selection',
+                              onPressed: () => setState(() => _selectedOrderIds.clear()),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: orders.length,
+                        itemBuilder: (context, index) {
+                          final order = orders[index];
+                          return _OrderCard(
+                            order: order,
+                            cardBg: cardBg,
+                            isSelected: _selectedOrderIds.contains(order.id),
+                            onToggleSelect: () => setState(() {
+                              _selectedOrderIds.contains(order.id)
+                                  ? _selectedOrderIds.remove(order.id)
+                                  : _selectedOrderIds.add(order.id);
+                            }),
+                            onUpdateStatus: () => _showUpdateStatusSheet(order),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
@@ -154,11 +294,15 @@ class _CreatorOrdersScreenState extends ConsumerState<CreatorOrdersScreen> {
 class _OrderCard extends StatelessWidget {
   final Order order;
   final Color cardBg;
+  final bool isSelected;
+  final VoidCallback onToggleSelect;
   final VoidCallback onUpdateStatus;
 
   const _OrderCard({
     required this.order,
     required this.cardBg,
+    required this.isSelected,
+    required this.onToggleSelect,
     required this.onUpdateStatus,
   });
 
@@ -172,7 +316,10 @@ class _OrderCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.15)),
+        side: BorderSide(
+          color: isSelected ? BuddyColors.green : theme.colorScheme.outline.withValues(alpha: 0.15),
+          width: isSelected ? 1.5 : 1,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -181,6 +328,13 @@ class _OrderCard extends StatelessWidget {
           children: [
             Row(
               children: [
+                Checkbox(
+                  value: isSelected,
+                  activeColor: BuddyColors.green,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                  onChanged: (_) => onToggleSelect(),
+                ),
                 Text(
                   order.orderNumber,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'monospace'),

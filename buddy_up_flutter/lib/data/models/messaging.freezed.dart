@@ -5061,30 +5061,6 @@ ChatEvent _$ChatEventFromJson(
           return ChatEventReact.fromJson(
             json
           );
-                case 'callOffer':
-          return ChatEventCallOffer.fromJson(
-            json
-          );
-                case 'callAnswer':
-          return ChatEventCallAnswer.fromJson(
-            json
-          );
-                case 'callIce':
-          return ChatEventCallIce.fromJson(
-            json
-          );
-                case 'callEnd':
-          return ChatEventCallEnd.fromJson(
-            json
-          );
-                case 'callDecline':
-          return ChatEventCallDecline.fromJson(
-            json
-          );
-                case 'callRinging':
-          return ChatEventCallRinging.fromJson(
-            json
-          );
         
           default:
             throw CheckedFromJsonException(
@@ -5143,7 +5119,7 @@ extension ChatEventPatterns on ChatEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ChatEventMessage value)?  message,TResult Function( ChatEventTypingStart value)?  typingStart,TResult Function( ChatEventTypingStop value)?  typingStop,TResult Function( ChatEventRead value)?  read,TResult Function( ChatEventReact value)?  react,TResult Function( ChatEventCallOffer value)?  callOffer,TResult Function( ChatEventCallAnswer value)?  callAnswer,TResult Function( ChatEventCallIce value)?  callIce,TResult Function( ChatEventCallEnd value)?  callEnd,TResult Function( ChatEventCallDecline value)?  callDecline,TResult Function( ChatEventCallRinging value)?  callRinging,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ChatEventMessage value)?  message,TResult Function( ChatEventTypingStart value)?  typingStart,TResult Function( ChatEventTypingStop value)?  typingStop,TResult Function( ChatEventRead value)?  read,TResult Function( ChatEventReact value)?  react,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case ChatEventMessage() when message != null:
@@ -5151,13 +5127,7 @@ return message(_that);case ChatEventTypingStart() when typingStart != null:
 return typingStart(_that);case ChatEventTypingStop() when typingStop != null:
 return typingStop(_that);case ChatEventRead() when read != null:
 return read(_that);case ChatEventReact() when react != null:
-return react(_that);case ChatEventCallOffer() when callOffer != null:
-return callOffer(_that);case ChatEventCallAnswer() when callAnswer != null:
-return callAnswer(_that);case ChatEventCallIce() when callIce != null:
-return callIce(_that);case ChatEventCallEnd() when callEnd != null:
-return callEnd(_that);case ChatEventCallDecline() when callDecline != null:
-return callDecline(_that);case ChatEventCallRinging() when callRinging != null:
-return callRinging(_that);case _:
+return react(_that);case _:
   return orElse();
 
 }
@@ -5175,7 +5145,7 @@ return callRinging(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ChatEventMessage value)  message,required TResult Function( ChatEventTypingStart value)  typingStart,required TResult Function( ChatEventTypingStop value)  typingStop,required TResult Function( ChatEventRead value)  read,required TResult Function( ChatEventReact value)  react,required TResult Function( ChatEventCallOffer value)  callOffer,required TResult Function( ChatEventCallAnswer value)  callAnswer,required TResult Function( ChatEventCallIce value)  callIce,required TResult Function( ChatEventCallEnd value)  callEnd,required TResult Function( ChatEventCallDecline value)  callDecline,required TResult Function( ChatEventCallRinging value)  callRinging,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ChatEventMessage value)  message,required TResult Function( ChatEventTypingStart value)  typingStart,required TResult Function( ChatEventTypingStop value)  typingStop,required TResult Function( ChatEventRead value)  read,required TResult Function( ChatEventReact value)  react,}){
 final _that = this;
 switch (_that) {
 case ChatEventMessage():
@@ -5183,13 +5153,7 @@ return message(_that);case ChatEventTypingStart():
 return typingStart(_that);case ChatEventTypingStop():
 return typingStop(_that);case ChatEventRead():
 return read(_that);case ChatEventReact():
-return react(_that);case ChatEventCallOffer():
-return callOffer(_that);case ChatEventCallAnswer():
-return callAnswer(_that);case ChatEventCallIce():
-return callIce(_that);case ChatEventCallEnd():
-return callEnd(_that);case ChatEventCallDecline():
-return callDecline(_that);case ChatEventCallRinging():
-return callRinging(_that);}
+return react(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -5203,7 +5167,7 @@ return callRinging(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ChatEventMessage value)?  message,TResult? Function( ChatEventTypingStart value)?  typingStart,TResult? Function( ChatEventTypingStop value)?  typingStop,TResult? Function( ChatEventRead value)?  read,TResult? Function( ChatEventReact value)?  react,TResult? Function( ChatEventCallOffer value)?  callOffer,TResult? Function( ChatEventCallAnswer value)?  callAnswer,TResult? Function( ChatEventCallIce value)?  callIce,TResult? Function( ChatEventCallEnd value)?  callEnd,TResult? Function( ChatEventCallDecline value)?  callDecline,TResult? Function( ChatEventCallRinging value)?  callRinging,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ChatEventMessage value)?  message,TResult? Function( ChatEventTypingStart value)?  typingStart,TResult? Function( ChatEventTypingStop value)?  typingStop,TResult? Function( ChatEventRead value)?  read,TResult? Function( ChatEventReact value)?  react,}){
 final _that = this;
 switch (_that) {
 case ChatEventMessage() when message != null:
@@ -5211,13 +5175,7 @@ return message(_that);case ChatEventTypingStart() when typingStart != null:
 return typingStart(_that);case ChatEventTypingStop() when typingStop != null:
 return typingStop(_that);case ChatEventRead() when read != null:
 return read(_that);case ChatEventReact() when react != null:
-return react(_that);case ChatEventCallOffer() when callOffer != null:
-return callOffer(_that);case ChatEventCallAnswer() when callAnswer != null:
-return callAnswer(_that);case ChatEventCallIce() when callIce != null:
-return callIce(_that);case ChatEventCallEnd() when callEnd != null:
-return callEnd(_that);case ChatEventCallDecline() when callDecline != null:
-return callDecline(_that);case ChatEventCallRinging() when callRinging != null:
-return callRinging(_that);case _:
+return react(_that);case _:
   return null;
 
 }
@@ -5234,20 +5192,14 @@ return callRinging(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Map<String, dynamic> data)?  message,TResult Function( String userId,  String username,  String displayName,  String avatarUrl)?  typingStart,TResult Function( String userId,  String username)?  typingStop,TResult Function( String conversationId,  String readerId,  String? messageId,  int count)?  read,TResult Function( String conversationId,  String messageId,  Map<String, int> reactions)?  react,TResult Function( String callType,  Map<String, dynamic> data)?  callOffer,TResult Function( String callType,  Map<String, dynamic> data)?  callAnswer,TResult Function( Map<String, dynamic> data)?  callIce,TResult Function()?  callEnd,TResult Function()?  callDecline,TResult Function( Map<String, dynamic> data)?  callRinging,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( Map<String, dynamic> data)?  message,TResult Function( String userId,  String username,  String displayName,  String avatarUrl)?  typingStart,TResult Function( String userId,  String username)?  typingStop,TResult Function( String conversationId,  String readerId,  String? messageId,  int count)?  read,TResult Function( String conversationId,  String messageId,  Map<String, int> reactions)?  react,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ChatEventMessage() when message != null:
 return message(_that.data);case ChatEventTypingStart() when typingStart != null:
 return typingStart(_that.userId,_that.username,_that.displayName,_that.avatarUrl);case ChatEventTypingStop() when typingStop != null:
 return typingStop(_that.userId,_that.username);case ChatEventRead() when read != null:
 return read(_that.conversationId,_that.readerId,_that.messageId,_that.count);case ChatEventReact() when react != null:
-return react(_that.conversationId,_that.messageId,_that.reactions);case ChatEventCallOffer() when callOffer != null:
-return callOffer(_that.callType,_that.data);case ChatEventCallAnswer() when callAnswer != null:
-return callAnswer(_that.callType,_that.data);case ChatEventCallIce() when callIce != null:
-return callIce(_that.data);case ChatEventCallEnd() when callEnd != null:
-return callEnd();case ChatEventCallDecline() when callDecline != null:
-return callDecline();case ChatEventCallRinging() when callRinging != null:
-return callRinging(_that.data);case _:
+return react(_that.conversationId,_that.messageId,_that.reactions);case _:
   return orElse();
 
 }
@@ -5265,20 +5217,14 @@ return callRinging(_that.data);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Map<String, dynamic> data)  message,required TResult Function( String userId,  String username,  String displayName,  String avatarUrl)  typingStart,required TResult Function( String userId,  String username)  typingStop,required TResult Function( String conversationId,  String readerId,  String? messageId,  int count)  read,required TResult Function( String conversationId,  String messageId,  Map<String, int> reactions)  react,required TResult Function( String callType,  Map<String, dynamic> data)  callOffer,required TResult Function( String callType,  Map<String, dynamic> data)  callAnswer,required TResult Function( Map<String, dynamic> data)  callIce,required TResult Function()  callEnd,required TResult Function()  callDecline,required TResult Function( Map<String, dynamic> data)  callRinging,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( Map<String, dynamic> data)  message,required TResult Function( String userId,  String username,  String displayName,  String avatarUrl)  typingStart,required TResult Function( String userId,  String username)  typingStop,required TResult Function( String conversationId,  String readerId,  String? messageId,  int count)  read,required TResult Function( String conversationId,  String messageId,  Map<String, int> reactions)  react,}) {final _that = this;
 switch (_that) {
 case ChatEventMessage():
 return message(_that.data);case ChatEventTypingStart():
 return typingStart(_that.userId,_that.username,_that.displayName,_that.avatarUrl);case ChatEventTypingStop():
 return typingStop(_that.userId,_that.username);case ChatEventRead():
 return read(_that.conversationId,_that.readerId,_that.messageId,_that.count);case ChatEventReact():
-return react(_that.conversationId,_that.messageId,_that.reactions);case ChatEventCallOffer():
-return callOffer(_that.callType,_that.data);case ChatEventCallAnswer():
-return callAnswer(_that.callType,_that.data);case ChatEventCallIce():
-return callIce(_that.data);case ChatEventCallEnd():
-return callEnd();case ChatEventCallDecline():
-return callDecline();case ChatEventCallRinging():
-return callRinging(_that.data);}
+return react(_that.conversationId,_that.messageId,_that.reactions);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -5292,20 +5238,14 @@ return callRinging(_that.data);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Map<String, dynamic> data)?  message,TResult? Function( String userId,  String username,  String displayName,  String avatarUrl)?  typingStart,TResult? Function( String userId,  String username)?  typingStop,TResult? Function( String conversationId,  String readerId,  String? messageId,  int count)?  read,TResult? Function( String conversationId,  String messageId,  Map<String, int> reactions)?  react,TResult? Function( String callType,  Map<String, dynamic> data)?  callOffer,TResult? Function( String callType,  Map<String, dynamic> data)?  callAnswer,TResult? Function( Map<String, dynamic> data)?  callIce,TResult? Function()?  callEnd,TResult? Function()?  callDecline,TResult? Function( Map<String, dynamic> data)?  callRinging,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( Map<String, dynamic> data)?  message,TResult? Function( String userId,  String username,  String displayName,  String avatarUrl)?  typingStart,TResult? Function( String userId,  String username)?  typingStop,TResult? Function( String conversationId,  String readerId,  String? messageId,  int count)?  read,TResult? Function( String conversationId,  String messageId,  Map<String, int> reactions)?  react,}) {final _that = this;
 switch (_that) {
 case ChatEventMessage() when message != null:
 return message(_that.data);case ChatEventTypingStart() when typingStart != null:
 return typingStart(_that.userId,_that.username,_that.displayName,_that.avatarUrl);case ChatEventTypingStop() when typingStop != null:
 return typingStop(_that.userId,_that.username);case ChatEventRead() when read != null:
 return read(_that.conversationId,_that.readerId,_that.messageId,_that.count);case ChatEventReact() when react != null:
-return react(_that.conversationId,_that.messageId,_that.reactions);case ChatEventCallOffer() when callOffer != null:
-return callOffer(_that.callType,_that.data);case ChatEventCallAnswer() when callAnswer != null:
-return callAnswer(_that.callType,_that.data);case ChatEventCallIce() when callIce != null:
-return callIce(_that.data);case ChatEventCallEnd() when callEnd != null:
-return callEnd();case ChatEventCallDecline() when callDecline != null:
-return callDecline();case ChatEventCallRinging() when callRinging != null:
-return callRinging(_that.data);case _:
+return react(_that.conversationId,_that.messageId,_that.reactions);case _:
   return null;
 
 }
@@ -5702,404 +5642,6 @@ conversationId: null == conversationId ? _self.conversationId : conversationId /
 as String,messageId: null == messageId ? _self.messageId : messageId // ignore: cast_nullable_to_non_nullable
 as String,reactions: null == reactions ? _self._reactions : reactions // ignore: cast_nullable_to_non_nullable
 as Map<String, int>,
-  ));
-}
-
-
-}
-
-/// @nodoc
-@JsonSerializable()
-
-class ChatEventCallOffer implements ChatEvent {
-  const ChatEventCallOffer({required this.callType, required final  Map<String, dynamic> data, final  String? $type}): _data = data,$type = $type ?? 'callOffer';
-  factory ChatEventCallOffer.fromJson(Map<String, dynamic> json) => _$ChatEventCallOfferFromJson(json);
-
- final  String callType;
- final  Map<String, dynamic> _data;
- Map<String, dynamic> get data {
-  if (_data is EqualUnmodifiableMapView) return _data;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableMapView(_data);
-}
-
-
-@JsonKey(name: 'runtimeType')
-final String $type;
-
-
-/// Create a copy of ChatEvent
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$ChatEventCallOfferCopyWith<ChatEventCallOffer> get copyWith => _$ChatEventCallOfferCopyWithImpl<ChatEventCallOffer>(this, _$identity);
-
-@override
-Map<String, dynamic> toJson() {
-  return _$ChatEventCallOfferToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatEventCallOffer&&(identical(other.callType, callType) || other.callType == callType)&&const DeepCollectionEquality().equals(other._data, _data));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,callType,const DeepCollectionEquality().hash(_data));
-
-@override
-String toString() {
-  return 'ChatEvent.callOffer(callType: $callType, data: $data)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $ChatEventCallOfferCopyWith<$Res> implements $ChatEventCopyWith<$Res> {
-  factory $ChatEventCallOfferCopyWith(ChatEventCallOffer value, $Res Function(ChatEventCallOffer) _then) = _$ChatEventCallOfferCopyWithImpl;
-@useResult
-$Res call({
- String callType, Map<String, dynamic> data
-});
-
-
-
-
-}
-/// @nodoc
-class _$ChatEventCallOfferCopyWithImpl<$Res>
-    implements $ChatEventCallOfferCopyWith<$Res> {
-  _$ChatEventCallOfferCopyWithImpl(this._self, this._then);
-
-  final ChatEventCallOffer _self;
-  final $Res Function(ChatEventCallOffer) _then;
-
-/// Create a copy of ChatEvent
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? callType = null,Object? data = null,}) {
-  return _then(ChatEventCallOffer(
-callType: null == callType ? _self.callType : callType // ignore: cast_nullable_to_non_nullable
-as String,data: null == data ? _self._data : data // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>,
-  ));
-}
-
-
-}
-
-/// @nodoc
-@JsonSerializable()
-
-class ChatEventCallAnswer implements ChatEvent {
-  const ChatEventCallAnswer({required this.callType, required final  Map<String, dynamic> data, final  String? $type}): _data = data,$type = $type ?? 'callAnswer';
-  factory ChatEventCallAnswer.fromJson(Map<String, dynamic> json) => _$ChatEventCallAnswerFromJson(json);
-
- final  String callType;
- final  Map<String, dynamic> _data;
- Map<String, dynamic> get data {
-  if (_data is EqualUnmodifiableMapView) return _data;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableMapView(_data);
-}
-
-
-@JsonKey(name: 'runtimeType')
-final String $type;
-
-
-/// Create a copy of ChatEvent
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$ChatEventCallAnswerCopyWith<ChatEventCallAnswer> get copyWith => _$ChatEventCallAnswerCopyWithImpl<ChatEventCallAnswer>(this, _$identity);
-
-@override
-Map<String, dynamic> toJson() {
-  return _$ChatEventCallAnswerToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatEventCallAnswer&&(identical(other.callType, callType) || other.callType == callType)&&const DeepCollectionEquality().equals(other._data, _data));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,callType,const DeepCollectionEquality().hash(_data));
-
-@override
-String toString() {
-  return 'ChatEvent.callAnswer(callType: $callType, data: $data)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $ChatEventCallAnswerCopyWith<$Res> implements $ChatEventCopyWith<$Res> {
-  factory $ChatEventCallAnswerCopyWith(ChatEventCallAnswer value, $Res Function(ChatEventCallAnswer) _then) = _$ChatEventCallAnswerCopyWithImpl;
-@useResult
-$Res call({
- String callType, Map<String, dynamic> data
-});
-
-
-
-
-}
-/// @nodoc
-class _$ChatEventCallAnswerCopyWithImpl<$Res>
-    implements $ChatEventCallAnswerCopyWith<$Res> {
-  _$ChatEventCallAnswerCopyWithImpl(this._self, this._then);
-
-  final ChatEventCallAnswer _self;
-  final $Res Function(ChatEventCallAnswer) _then;
-
-/// Create a copy of ChatEvent
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? callType = null,Object? data = null,}) {
-  return _then(ChatEventCallAnswer(
-callType: null == callType ? _self.callType : callType // ignore: cast_nullable_to_non_nullable
-as String,data: null == data ? _self._data : data // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>,
-  ));
-}
-
-
-}
-
-/// @nodoc
-@JsonSerializable()
-
-class ChatEventCallIce implements ChatEvent {
-  const ChatEventCallIce({required final  Map<String, dynamic> data, final  String? $type}): _data = data,$type = $type ?? 'callIce';
-  factory ChatEventCallIce.fromJson(Map<String, dynamic> json) => _$ChatEventCallIceFromJson(json);
-
- final  Map<String, dynamic> _data;
- Map<String, dynamic> get data {
-  if (_data is EqualUnmodifiableMapView) return _data;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableMapView(_data);
-}
-
-
-@JsonKey(name: 'runtimeType')
-final String $type;
-
-
-/// Create a copy of ChatEvent
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$ChatEventCallIceCopyWith<ChatEventCallIce> get copyWith => _$ChatEventCallIceCopyWithImpl<ChatEventCallIce>(this, _$identity);
-
-@override
-Map<String, dynamic> toJson() {
-  return _$ChatEventCallIceToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatEventCallIce&&const DeepCollectionEquality().equals(other._data, _data));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_data));
-
-@override
-String toString() {
-  return 'ChatEvent.callIce(data: $data)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $ChatEventCallIceCopyWith<$Res> implements $ChatEventCopyWith<$Res> {
-  factory $ChatEventCallIceCopyWith(ChatEventCallIce value, $Res Function(ChatEventCallIce) _then) = _$ChatEventCallIceCopyWithImpl;
-@useResult
-$Res call({
- Map<String, dynamic> data
-});
-
-
-
-
-}
-/// @nodoc
-class _$ChatEventCallIceCopyWithImpl<$Res>
-    implements $ChatEventCallIceCopyWith<$Res> {
-  _$ChatEventCallIceCopyWithImpl(this._self, this._then);
-
-  final ChatEventCallIce _self;
-  final $Res Function(ChatEventCallIce) _then;
-
-/// Create a copy of ChatEvent
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? data = null,}) {
-  return _then(ChatEventCallIce(
-data: null == data ? _self._data : data // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>,
-  ));
-}
-
-
-}
-
-/// @nodoc
-@JsonSerializable()
-
-class ChatEventCallEnd implements ChatEvent {
-  const ChatEventCallEnd({final  String? $type}): $type = $type ?? 'callEnd';
-  factory ChatEventCallEnd.fromJson(Map<String, dynamic> json) => _$ChatEventCallEndFromJson(json);
-
-
-
-@JsonKey(name: 'runtimeType')
-final String $type;
-
-
-
-@override
-Map<String, dynamic> toJson() {
-  return _$ChatEventCallEndToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatEventCallEnd);
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => runtimeType.hashCode;
-
-@override
-String toString() {
-  return 'ChatEvent.callEnd()';
-}
-
-
-}
-
-
-
-
-/// @nodoc
-@JsonSerializable()
-
-class ChatEventCallDecline implements ChatEvent {
-  const ChatEventCallDecline({final  String? $type}): $type = $type ?? 'callDecline';
-  factory ChatEventCallDecline.fromJson(Map<String, dynamic> json) => _$ChatEventCallDeclineFromJson(json);
-
-
-
-@JsonKey(name: 'runtimeType')
-final String $type;
-
-
-
-@override
-Map<String, dynamic> toJson() {
-  return _$ChatEventCallDeclineToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatEventCallDecline);
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => runtimeType.hashCode;
-
-@override
-String toString() {
-  return 'ChatEvent.callDecline()';
-}
-
-
-}
-
-
-
-
-/// @nodoc
-@JsonSerializable()
-
-class ChatEventCallRinging implements ChatEvent {
-  const ChatEventCallRinging({required final  Map<String, dynamic> data, final  String? $type}): _data = data,$type = $type ?? 'callRinging';
-  factory ChatEventCallRinging.fromJson(Map<String, dynamic> json) => _$ChatEventCallRingingFromJson(json);
-
- final  Map<String, dynamic> _data;
- Map<String, dynamic> get data {
-  if (_data is EqualUnmodifiableMapView) return _data;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableMapView(_data);
-}
-
-
-@JsonKey(name: 'runtimeType')
-final String $type;
-
-
-/// Create a copy of ChatEvent
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$ChatEventCallRingingCopyWith<ChatEventCallRinging> get copyWith => _$ChatEventCallRingingCopyWithImpl<ChatEventCallRinging>(this, _$identity);
-
-@override
-Map<String, dynamic> toJson() {
-  return _$ChatEventCallRingingToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatEventCallRinging&&const DeepCollectionEquality().equals(other._data, _data));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_data));
-
-@override
-String toString() {
-  return 'ChatEvent.callRinging(data: $data)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $ChatEventCallRingingCopyWith<$Res> implements $ChatEventCopyWith<$Res> {
-  factory $ChatEventCallRingingCopyWith(ChatEventCallRinging value, $Res Function(ChatEventCallRinging) _then) = _$ChatEventCallRingingCopyWithImpl;
-@useResult
-$Res call({
- Map<String, dynamic> data
-});
-
-
-
-
-}
-/// @nodoc
-class _$ChatEventCallRingingCopyWithImpl<$Res>
-    implements $ChatEventCallRingingCopyWith<$Res> {
-  _$ChatEventCallRingingCopyWithImpl(this._self, this._then);
-
-  final ChatEventCallRinging _self;
-  final $Res Function(ChatEventCallRinging) _then;
-
-/// Create a copy of ChatEvent
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') $Res call({Object? data = null,}) {
-  return _then(ChatEventCallRinging(
-data: null == data ? _self._data : data // ignore: cast_nullable_to_non_nullable
-as Map<String, dynamic>,
   ));
 }
 

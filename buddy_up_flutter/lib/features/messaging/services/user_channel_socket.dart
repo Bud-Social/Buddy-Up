@@ -5,19 +5,19 @@ import '../../../core/env/env.dart';
 
 class IncomingCallDetails {
   final String conversationId;
+  final String sessionId;
   final String callType;
   final String fromUserId;
   final String fromName;
   final String fromAvatar;
-  final Map<String, dynamic> data;
 
   const IncomingCallDetails({
     required this.conversationId,
+    required this.sessionId,
     required this.callType,
     required this.fromUserId,
     required this.fromName,
     required this.fromAvatar,
-    required this.data,
   });
 }
 
@@ -66,14 +66,16 @@ class UserChannelSocket {
         (data) {
           try {
             final decoded = jsonDecode(data as String) as Map<String, dynamic>;
-            if (decoded['type'] == 'incoming_call' && !_disposed) {
+            if ((decoded['type'] == 'incoming_call' ||
+                    decoded['type'] == 'call_participant_joined') &&
+                !_disposed) {
               onIncomingCall(IncomingCallDetails(
                 conversationId: decoded['conversation_id'] as String? ?? '',
+                sessionId: decoded['session_id'] as String? ?? '',
                 callType: decoded['call_type'] as String? ?? 'audio',
                 fromUserId: decoded['from_user_id'] as String? ?? '',
                 fromName: decoded['from_display_name'] as String? ?? '',
                 fromAvatar: decoded['from_avatar_url'] as String? ?? '',
-                data: decoded['data'] as Map<String, dynamic>? ?? {},
               ));
             }
           } catch (_) {}

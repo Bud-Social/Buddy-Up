@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/messaging_provider.dart';
+import '../providers/livekit_call_provider.dart';
+import '../utils/conversation_identity.dart';
 import '../widgets/message_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import '../widgets/reply_preview.dart';
@@ -97,46 +99,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         react: (conversationId, messageId, reactions) {
           ref.read(messagesProvider(widget.conversationId).notifier).updateMessage(messageId, reactions);
         },
-        callOffer: (callType, data) => _forwardCall('callOffer', data: data, callType: callType),
-        callAnswer: (callType, data) => _forwardCall('callAnswer', data: data, callType: callType),
-        callIce: (data) => _forwardCall('callIce', data: data),
-        callEnd: () => _forwardCall('callEnd'),
-        callDecline: () => _forwardCall('callDecline'),
-        callRinging: (data) => _forwardCall('callRinging', data: data),
       );
     });
   }
 
-  void _forwardCall(String kind, {Map<String, dynamic>? data, String? callType}) {
-    final engine = ref.read(callEngineProvider);
-    if (kind == 'callOffer') {
-      final convoState = ref.read(conversationsProvider);
-      final convo = convoState.conversations.where((c) => c.id == widget.conversationId).firstOrNull;
-      final other = convo?.participantsData.where((p) => p.userId != _myUserId).firstOrNull;
-      if (other != null) {
-        engine.setPeer(userId: other.userId, name: other.displayName, avatar: other.avatarUrl);
-      }
-    }
-    engine.handleSignal(kind, data: data, callTypeFromEvent: callType);
-  }
-
   Future<void> _startCall(String callType) async {
-    final engine = ref.read(callEngineProvider);
-    if (engine.isActive) return;
-    final socket = ref.read(chatSocketProvider(widget.conversationId));
-    if (socket == null) return;
-    final convoState = ref.read(conversationsProvider);
-    final convo = convoState.conversations.where((c) => c.id == widget.conversationId).firstOrNull;
-    final other = convo?.participantsData.where((p) => p.userId != _myUserId).firstOrNull;
-    if (other == null) return;
-    await engine.startCall(
-      socket: socket,
-      conversationId: widget.conversationId,
-      callType: callType,
-      peerName: other.displayName,
-      peerAvatar: other.avatarUrl,
-      peerUserId: other.userId,
-    );
+    await ref.read(liveKitCallProvider.notifier).join(widget.conversationId, callType);
   }
 
   void _onScroll() {
@@ -281,9 +249,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final convo = conversationsState.conversations.where((c) => c.id == widget.conversationId).firstOrNull;
 
     final other = convo?.participantsData.where((p) => p.userId != _myUserId).firstOrNull;
-    final title = convo?.isGroup == true
-        ? ((convo?.groupName ?? '').isNotEmpty ? convo?.groupName ?? 'Group' : 'Group')
-        : (other?.displayName ?? 'Chat');
+    final identity = ConversationIdentity.of(convo, _myUserId);
+    final title = identity.name;
+    final isGroupChat = identity.isGroup;
 
     final displayMessages = messagesState.messages.reversed.toList();
 
@@ -299,8 +267,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             CircleAvatar(
               radius: 18,
               backgroundColor: BuddyColors.surfaceRaised,
-              backgroundImage: other?.avatarUrl.isNotEmpty == true ? NetworkImage(other!.avatarUrl) : null,
-              child: other?.avatarUrl.isNotEmpty != true
+              backgroundImage: identity.avatarUrl.isNotEmpty ? NetworkImage(identity.avatarUrl) : null,
+              child: identity.avatarUrl.isEmpty
                   ? Text((title.isNotEmpty ? title[0] : '?').toUpperCase(),
                       style: const TextStyle(color: BuddyColors.textPrimary))
                   : null,
@@ -313,6 +281,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                   if (messagesState.isTyping)
                     const Text('typing...', style: TextStyle(fontSize: 11, color: BuddyColors.green))
+                  else if (isGroupChat)
+                    Text('${convo?.participantsData.length ?? 0} members',
+                        style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary))
                   else
                     Text(other?.username ?? '', style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
                 ],
@@ -321,18 +292,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ],
         ),
         actions: [
-          if (convo?.isGroup != true && other != null) ...[
-            IconButton(
-              icon: const Icon(Icons.call),
-              tooltip: 'Audio call',
-              onPressed: () => _startCall('audio'),
-            ),
-            IconButton(
-              icon: const Icon(Icons.videocam_outlined),
-              tooltip: 'Video call',
-              onPressed: () => _startCall('video'),
-            ),
-          ],
+          IconButton(
+            icon: const Icon(Icons.call),
+            tooltip: 'Audio call',
+            onPressed: () => _startCall('audio'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.videocam_outlined),
+            tooltip: 'Video call',
+            onPressed: () => _startCall('video'),
+          ),
           IconButton(
             icon: const Icon(Icons.palette_outlined),
             tooltip: 'Chat theme',

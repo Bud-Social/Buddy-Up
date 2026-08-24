@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/auth/auth_provider.dart';
 import '../providers/messaging_provider.dart';
 import '../widgets/conversation_tile.dart';
+import '../utils/conversation_identity.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/messaging.dart';
 import '../../../shared/navigation/app_nav.dart';
@@ -16,6 +18,8 @@ class ConversationListScreen extends ConsumerStatefulWidget {
 
 class _ConversationListScreenState extends ConsumerState<ConversationListScreen> {
   final _searchController = TextEditingController();
+
+  String? get _myUserId => ref.read(authProvider).user?.id;
 
   @override
   void initState() {
@@ -39,14 +43,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
 
     final filtered = query.isEmpty
         ? conversations
-        : conversations.where((c) {
-            final name = c.isGroup
-                ? c.groupName.toLowerCase()
-                : (c.participantsData.isNotEmpty
-                    ? c.participantsData.first.displayName.toLowerCase()
-                    : '');
-            return name.contains(query);
-          }).toList();
+        : conversations.where((c) => conversationSearchText(c).contains(query)).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -134,6 +131,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                                 final convo = filtered[i];
                                 return ConversationTile(
                                   conversation: convo,
+                                  myUserId: _myUserId,
                                   onTap: () => context.push('/messages/${convo.id}'),
                                 );
                               },

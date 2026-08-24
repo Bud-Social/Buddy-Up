@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/auth/auth_provider.dart';
-import '../services/call_engine.dart';
+import '../providers/livekit_call_provider.dart';
 import '../providers/messaging_provider.dart';
 import '../screens/call_room_screen.dart';
 import 'incoming_call_overlay.dart';
@@ -20,13 +20,15 @@ class CallHost extends ConsumerWidget {
       ref.watch(userChannelSocketProvider(authState.user!.id));
     }
 
-    final call = ref.watch(callSnapshotProvider);
-    final overlay = switch (call.phase) {
-      CallPhase.ringing => const IncomingCallOverlay(),
-      CallPhase.calling || CallPhase.inCall =>
-        const Positioned.fill(child: CallRoomScreen()),
-      _ => null,
-    };
+    final callState = ref.watch(liveKitCallProvider);
+    final invite = ref.watch(pendingInviteProvider);
+
+    Widget? overlay;
+    if (callState.phase == LkCallPhase.calling || callState.phase == LkCallPhase.inCall) {
+      overlay = const Positioned.fill(child: CallRoomScreen());
+    } else if (invite != null && callState.phase == LkCallPhase.idle) {
+      overlay = const Positioned.fill(child: IncomingCallOverlay());
+    }
 
     if (overlay == null) return child;
 

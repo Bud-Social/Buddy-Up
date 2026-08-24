@@ -1,18 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_provider.dart';
-import '../../../shared/widgets/avatar.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/avatar.dart';
+import '../providers/livekit_call_provider.dart';
 import '../providers/messaging_provider.dart';
 
-/// Full-screen incoming call prompt shown while a call is ringing
-/// (phase = ringing). Accept answers the call; decline rejects it.
+/// Full-screen incoming call prompt shown while an invite is pending.
+/// Accept joins the conversation's LiveKit session; decline dismisses it.
 class IncomingCallOverlay extends ConsumerWidget {
   const IncomingCallOverlay({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final call = ref.watch(callSnapshotProvider);
+    final invite = ref.watch(pendingInviteProvider);
+    if (invite == null) return const SizedBox.shrink();
+
+    Future<void> accept() async {
+      final details = invite;
+      ref.read(pendingInviteProvider.notifier).set(null);
+      await ref.read(liveKitCallProvider.notifier).join(
+            details.conversationId,
+            details.callType,
+          );
+    }
+
+    void decline() => ref.read(pendingInviteProvider.notifier).set(null);
+
     return Positioned.fill(
       child: Material(
         color: BuddyColors.black.withValues(alpha: 0.96),
@@ -20,14 +33,10 @@ class IncomingCallOverlay extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Avatar(
-                src: call.peerAvatar,
-                alt: call.peerName,
-                size: AvatarSize.xl,
-              ),
+              Avatar(src: invite.fromAvatar, alt: invite.fromName, size: AvatarSize.xl),
               const SizedBox(height: 20),
               Text(
-                call.peerName,
+                invite.fromName,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 22,
@@ -36,9 +45,7 @@ class IncomingCallOverlay extends ConsumerWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                call.callType == 'video'
-                    ? 'Incoming video call...'
-                    : 'Incoming audio call...',
+                'Incoming ${invite.callType == 'video' ? 'video' : 'audio'} call...',
                 style: const TextStyle(
                   color: BuddyColors.textSecondary,
                   fontSize: 14,
@@ -49,22 +56,17 @@ class IncomingCallOverlay extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _ActionButton(
-                    icon: call.callType == 'video'
-                        ? Icons.videocam
-                        : Icons.phone,
+                    icon: invite.callType == 'video' ? Icons.videocam : Icons.phone,
                     label: 'Accept',
                     color: BuddyColors.green,
-                    onTap: () =>
-                        ref.read(callEngineProvider).answerCall(
-                              token: ref.read(accessTokenProvider),
-                            ),
+                    onTap: () => accept(),
                   ),
                   const SizedBox(width: 48),
                   _ActionButton(
                     icon: Icons.phone_disabled,
                     label: 'Decline',
                     color: BuddyColors.red,
-                    onTap: () => ref.read(callEngineProvider).declineIncoming(),
+                    onTap: decline,
                   ),
                 ],
               ),

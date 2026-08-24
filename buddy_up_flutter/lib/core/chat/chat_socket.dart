@@ -108,24 +108,6 @@ class ChatSocket {
             (k, v) => MapEntry(k, (v as num).toInt()),
           ) ?? {},
         );
-      case 'call_offer':
-        return ChatEvent.callOffer(
-          callType: data['call_type'] as String? ?? 'audio',
-          data: data['data'] as Map<String, dynamic>? ?? {},
-        );
-      case 'call_answer':
-        return ChatEvent.callAnswer(
-          callType: data['call_type'] as String? ?? 'audio',
-          data: data['data'] as Map<String, dynamic>? ?? {},
-        );
-      case 'call_ice':
-        return ChatEvent.callIce(data: data['data'] as Map<String, dynamic>? ?? {});
-      case 'call_end':
-        return const ChatEvent.callEnd();
-      case 'call_decline':
-        return const ChatEvent.callDecline();
-      case 'call_ringing':
-        return ChatEvent.callRinging(data: data['data'] as Map<String, dynamic>? ?? {});
       default:
         return null;
     }

@@ -3,26 +3,26 @@ import 'package:intl/intl.dart';
 import '../../../data/models/messaging.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../core/theme/app_theme.dart';
+import '../utils/conversation_identity.dart';
 
 class ConversationTile extends StatelessWidget {
   final Conversation conversation;
+  final String? myUserId;
   final VoidCallback? onTap;
 
-  const ConversationTile({super.key, required this.conversation, this.onTap});
+  const ConversationTile({
+    super.key,
+    required this.conversation,
+    this.myUserId,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isGroup = conversation.isGroup;
-    final displayName = isGroup
-        ? (conversation.groupName.isNotEmpty ? conversation.groupName : 'Group')
-        : (conversation.participantsData.isNotEmpty
-            ? conversation.participantsData.first.displayName
-            : 'Unknown');
-    final avatarUrl = isGroup
-        ? conversation.groupAvatarUrl
-        : (conversation.participantsData.isNotEmpty
-            ? conversation.participantsData.first.avatarUrl
-            : null);
+    final identity = ConversationIdentity.of(conversation, myUserId);
+    final isGroup = identity.isGroup;
+    final displayName = identity.name;
+    final avatarUrl = identity.avatarUrl;
     final lastMsg = conversation.lastMessage;
 
     return GestureDetector(

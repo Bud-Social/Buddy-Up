@@ -319,28 +319,6 @@ sealed class ChatEvent with _$ChatEvent {
     @Default(<String, int>{}) Map<String, int> reactions,
   }) = ChatEventReact;
 
-  const factory ChatEvent.callOffer({
-    required String callType,
-    required Map<String, dynamic> data,
-  }) = ChatEventCallOffer;
-
-  const factory ChatEvent.callAnswer({
-    required String callType,
-    required Map<String, dynamic> data,
-  }) = ChatEventCallAnswer;
-
-  const factory ChatEvent.callIce({
-    required Map<String, dynamic> data,
-  }) = ChatEventCallIce;
-
-  const factory ChatEvent.callEnd() = ChatEventCallEnd;
-
-  const factory ChatEvent.callDecline() = ChatEventCallDecline;
-
-  const factory ChatEvent.callRinging({
-    required Map<String, dynamic> data,
-  }) = ChatEventCallRinging;
-
   factory ChatEvent.fromJson(Map<String, dynamic> json) =>
       _$ChatEventFromJson(json);
 }

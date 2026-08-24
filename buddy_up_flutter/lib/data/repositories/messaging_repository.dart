@@ -57,6 +57,19 @@ abstract class MessagingRepository {
     @Body() Map<String, dynamic> body,
   );
 
+  // ── Multi-party LiveKit calls ────────────────────────────────────────────
+  @POST('/messaging/conversations/{id}/calls/session/')
+  Future<Map<String, dynamic>> startOrJoinCallSession(
+    @Path('id') String conversationId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @GET('/messaging/conversations/{id}/calls/session/')
+  Future<Map<String, dynamic>> getActiveCallSession(@Path('id') String conversationId);
+
+  @DELETE('/messaging/conversations/{id}/calls/session/')
+  Future<Map<String, dynamic>> leaveCallSession(@Path('id') String conversationId);
+
   @POST('/messaging/messages/{mid}/forward/')
   Future<Map<String, dynamic>> forwardMessage(
     @Path('mid') String messageId,

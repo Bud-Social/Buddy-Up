@@ -1,7 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../messaging/providers/messaging_provider.dart';
 import '../providers/community_provider.dart';
 
 class CommunitySettingsScreen extends ConsumerStatefulWidget {
@@ -30,6 +33,8 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
   late final TextEditingController _nameController;
   late final TextEditingController _descController;
   late bool _isPublic;
+  String? _avatarUrl;
+  bool _uploadingAvatar = false;
   bool _groupChatEnabled = true;
   bool _isSaving = false;
 
@@ -39,6 +44,7 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
     _nameController = TextEditingController(text: widget.initialName);
     _descController = TextEditingController(text: widget.initialDescription);
     _isPublic = widget.initialIsPublic;
+    _avatarUrl = widget.initialAvatarUrl;
   }
 
   @override
@@ -46,6 +52,33 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
     _nameController.dispose();
     _descController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1024,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _uploadingAvatar = true);
+    try {
+      final dio = ref.read(apiClientProvider4).dio;
+      final form = FormData.fromMap({
+        'file': await MultipartFile.fromFile(picked.path, filename: picked.name),
+      });
+      final res = await dio.post('/messaging/upload/', data: form);
+      final url = (res.data['data'] as Map<String, dynamic>)['url'] as String;
+      setState(() => _avatarUrl = url);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Image upload failed')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
   }
 
   Future<void> _save() async {
@@ -58,6 +91,7 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
         name,
         _descController.text.trim(),
         _isPublic,
+        groupAvatarUrl: _avatarUrl,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,23 +188,35 @@ class _CommunitySettingsScreenState extends ConsumerState<CommunitySettingsScree
 
           // Profile picture
           Center(
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: cs.surfaceContainerHighest,
-                  child: Icon(Icons.groups, size: 40, color: cs.onSurface.withValues(alpha: 0.6)),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(color: BuddyColors.green, shape: BoxShape.circle),
-                    child: const Icon(Icons.camera_alt, size: 16, color: BuddyColors.black),
+            child: GestureDetector(
+              onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
+              child: Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: cs.surfaceContainerHighest,
+                    backgroundImage: (_avatarUrl?.isNotEmpty ?? false) ? NetworkImage(_avatarUrl!) : null,
+                    child: (_avatarUrl?.isEmpty ?? true)
+                        ? Icon(Icons.groups, size: 40, color: cs.onSurface.withValues(alpha: 0.6))
+                        : _uploadingAvatar
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : null,
                   ),
-                ),
-              ],
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(color: BuddyColors.green, shape: BoxShape.circle),
+                      child: const Icon(Icons.camera_alt, size: 16, color: BuddyColors.black),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 24),

@@ -5,24 +5,96 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../data/models/marketplace.dart';
 
-class OrderDetailScreen extends ConsumerWidget {
+class OrderDetailScreen extends ConsumerStatefulWidget {
   final String orderId;
   const OrderDetailScreen({super.key, required this.orderId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final orderAsync = ref.watch(orderDetailProvider(orderId));
+  ConsumerState<OrderDetailScreen> createState() => _OrderDetailScreenState();
+}
+
+class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
+  bool _confirming = false;
+
+  static const _trackSteps = ['Paid', 'Processing', 'Shipped', 'In Transit', 'Delivered'];
+
+  int get _currentStep {
+    switch (_statusOf) {
+      case 'pending':
+        return -1;
+      case 'paid':
+        return 0;
+      case 'processing':
+        return 1;
+      case 'shipped':
+        return 2;
+      case 'out_for_delivery':
+      case 'ready_for_pickup':
+        return 3;
+      case 'delivered':
+      case 'completed':
+        return 4;
+      default:
+        return -1;
+    }
+  }
+
+  String? _status;
+  String get _statusOf => _status ?? '';
+
+  Future<void> _confirmDelivery(String orderId) async {
+    setState(() => _confirming = true);
+    try {
+      await ref.read(marketplaceRepositoryProvider).updateOrderFulfillment(orderId, {
+        'status': 'delivered',
+        'note': 'Confirmed by buyer',
+      });
+      ref.invalidate(orderDetailProvider(orderId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Thanks! Order marked as delivered')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not confirm delivery: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _confirming = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
+    // Keep local status in sync once the order loads.
+    final currentStatus = orderAsync.value?.status;
+    if (currentStatus != null && currentStatus != _status) {
+      _status = currentStatus;
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Order Tracking')),
       body: orderAsync.when(
         data: (order) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            if (order.status != 'cancelled') ...[
+              _progressTracker(),
+              const SizedBox(height: 12),
+            ],
             _statusBanner(order),
             const SizedBox(height: 12),
             _fulfillmentCard(order),
             const SizedBox(height: 12),
             _itemsCard(order),
+            if (!order.isSeller &&
+                const ['shipped', 'out_for_delivery', 'ready_for_pickup'].contains(order.status)) ...[
+              const SizedBox(height: 12),
+              _confirmDeliveryCard(order),
+            ],
             if (order.statusHistory.isNotEmpty) ...[
               const SizedBox(height: 12),
               _timelineCard(order),
@@ -31,6 +103,88 @@ class OrderDetailScreen extends ConsumerWidget {
         ),
         loading: () => const PageLoader(),
         error: (e, _) => Center(child: Text('$e')),
+      ),
+    );
+  }
+
+  Widget _progressTracker() {
+    final step = _currentStep;
+    return _sectionCard([
+      Row(
+        children: List.generate(_trackSteps.length * 2 - 1, (i) {
+          if (i.isOdd) {
+            return Expanded(
+              child: Container(
+                height: 2,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                color: (i ~/ 2) < step ? BuddyColors.green : BuddyColors.surfaceRaised,
+              ),
+            );
+          }
+          final idx = i ~/ 2;
+          final done = idx <= step;
+          return Column(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: done ? BuddyColors.green : BuddyColors.surfaceRaised,
+                ),
+                child: done
+                    ? const Icon(Icons.check, size: 14, color: BuddyColors.black)
+                    : null,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _trackSteps[idx],
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: done ? BuddyColors.green : BuddyColors.textSecondary,
+                ),
+              ),
+            ],
+          );
+        }),
+      ),
+    ]);
+  }
+
+  Widget _confirmDeliveryCard(Order order) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: BuddyColors.green.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BuddyColors.green.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Received your order?',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text('Confirm delivery to let the seller know it arrived.',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade400)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
+            onPressed: _confirming ? null : () => _confirmDelivery(order.id),
+            child: _confirming
+                ? const SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Confirm'),
+          ),
+        ],
       ),
     );
   }
