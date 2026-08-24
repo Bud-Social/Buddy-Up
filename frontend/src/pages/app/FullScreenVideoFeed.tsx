@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api/feed';
+import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { useAuthStore } from '@/store/authStore';
 import { toEmoji } from '@/utils/emojiUtils';
 import type { Post } from '@/types/post';
@@ -36,6 +37,7 @@ export default function FullScreenVideoFeed() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -306,7 +308,7 @@ export default function FullScreenVideoFeed() {
                   <span className="text-[11px] font-medium">{totalReactions(post) || ''}</span>
                 </button>
 
-                <button onClick={(e) => { e.stopPropagation(); navigate('/feed'); }} className="flex flex-col items-center gap-0.5 text-white">
+                <button onClick={(e) => { e.stopPropagation(); setCommentPostId(post.id); }} className="flex flex-col items-center gap-0.5 text-white">
                   <MessageCircle size={26} className="drop-shadow" />
                   <span className="text-[11px] font-medium">{post.comment_count || ''}</span>
                 </button>
@@ -371,6 +373,14 @@ export default function FullScreenVideoFeed() {
         <div className="h-16 flex items-center justify-center text-buddy-text-secondary">
           <Loader2 size={22} className="animate-spin text-buddy-green" />
         </div>
+      )}
+
+      {commentPostId && (
+        <CommentSheet
+          postId={commentPostId}
+          isOpen={!!commentPostId}
+          onClose={() => setCommentPostId(null)}
+        />
       )}
     </div>
   );

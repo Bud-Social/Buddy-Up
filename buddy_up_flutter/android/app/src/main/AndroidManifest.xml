@@ -18,6 +18,8 @@
     <!-- Notifications: firebase_messaging push -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- local_auth: fingerprint / face unlock for the biometric app lock -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
 
     <!-- Maps SDK key placeholder: replaced from a Gradle property so the key
          stays out of source control. -->

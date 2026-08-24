@@ -147,6 +147,7 @@ export const router = createBrowserRouter([
           { path: '/feed/following', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/bud-press', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/meals', element: <SWrapper><Feed /></SWrapper> },
+          { path: '/feed/progress', element: <SWrapper><Feed /></SWrapper> },
           { path: '/videos', element: <SWrapper><FullScreenVideoFeed /></SWrapper> },
           { path: '/discover', element: <SWrapper><Discover /></SWrapper> },
           { path: '/lives', element: <SWrapper><Lives /></SWrapper> },

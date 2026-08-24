@@ -33,21 +33,21 @@ export function Sidebar({ inDrawer = false }: { inDrawer?: boolean }) {
       </div>
       <nav className="flex-1 overflow-y-auto py-3 px-3 scrollbar-hide">
         {navItems.map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} className={({ isActive }) => `flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 rounded-xl mb-1 text-sm font-medium transition-colors ${isActive ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised'}`}>
-            <Icon size={18} /><span className={`${labelCls} transition-all duration-300`}>{label}</span>
+          <NavLink key={to} to={to} className={({ isActive }) => `flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl mb-1 text-sm font-medium transition-colors ${isActive ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised'}`}>
+            <span className="w-[18px] shrink-0 flex justify-center"><Icon size={18} /></span><span className={`${labelCls} transition-all duration-300`}>{label}</span>
             {!isCollapsed && label === 'Notifications' && unread > 0 && <span className="ml-auto bg-buddy-red text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{unread > 99 ? '99+' : unread}</span>}
           </NavLink>
         ))}
       </nav>
       <div className="p-3 border-t border-buddy-surface-raised">
         {bottom.map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} className={({ isActive }) => `flex items-center justify-center lg:justify-start gap-3 px-3 py-2.5 rounded-xl mb-1 text-sm font-medium transition-colors ${isActive ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised'}`}>
-            <Icon size={18} /><span className={`${labelCls} transition-all duration-300`}>{label}</span>
+          <NavLink key={to} to={to} className={({ isActive }) => `flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl mb-1 text-sm font-medium transition-colors ${isActive ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised'}`}>
+            <span className="w-[18px] shrink-0 flex justify-center"><Icon size={18} /></span><span className={`${labelCls} transition-all duration-300`}>{label}</span>
           </NavLink>
         ))}
         {!inDrawer && (
           <button onClick={toggle} className="flex items-center justify-center lg:justify-start gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised transition-colors mt-1">
-            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}<span className={`${labelCls} transition-all duration-300`}>{collapsed ? 'Expand' : 'Collapse'}</span>
+            <span className="w-[18px] shrink-0 flex justify-center">{collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}</span><span className={`${labelCls} transition-all duration-300`}>{collapsed ? 'Expand' : 'Collapse'}</span>
           </button>
         )}
       </div>

@@ -19,7 +19,7 @@ export function BottomNav() {
         {items.map(({ to, icon: Icon, label, center }) => {
           const active = loc.pathname.startsWith(to);
           return (
-            <NavLink key={to} to={to} className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[48px] min-h-[48px] ${center ? 'relative -mt-5' : ''}`}>
+            <NavLink key={to} to={to} className={`relative flex flex-col items-center justify-center gap-0.5 min-w-[48px] min-h-[48px] ${center ? 'relative -mt-3' : ''}`}>
               {center ? (
                 <div className={`flex items-center justify-center w-12 h-12 rounded-full ${active ? 'bg-buddy-green' : 'bg-buddy-green/80'} text-buddy-white shadow-lg shadow-buddy-green/25`}>
                   <Icon size={22} strokeWidth={2.5} />
@@ -28,7 +28,7 @@ export function BottomNav() {
                 <Icon size={22} strokeWidth={active ? 2.5 : 1.5} className={active ? 'text-buddy-green' : 'text-buddy-text-secondary'} />
               )}
               {label === 'Notif.' && unread > 0 && <span className="absolute top-1 right-1/4 w-4 h-4 rounded-full bg-buddy-red text-white text-[10px] font-bold flex items-center justify-center">{unread > 9 ? '9+' : unread}</span>}
-              {!center && <span className={`text-[10px] font-medium ${active ? 'text-buddy-green' : 'text-buddy-text-secondary'}`}>{label}</span>}
+              <span className={`text-[10px] font-medium ${center ? 'mt-0.5' : ''} ${active ? 'text-buddy-green' : 'text-buddy-text-secondary'}`}>{label}</span>
             </NavLink>
           );
         })}

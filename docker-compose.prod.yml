@@ -241,6 +241,8 @@ services:
       - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
+      - ./nginx/admin_allowlist.conf:/etc/nginx/admin_allowlist.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - backend_static:/var/www/static:ro
       - frontend_build:/var/www/frontend:ro

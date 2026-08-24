@@ -301,13 +301,17 @@ class AnalyticsReportShareView(views.APIView):
                 f"{summary['nutrition']['total_calories']:.0f} kcal logged."
             )
 
+        requested_visibility = request.data.get('visibility', 'public')
+        if requested_visibility not in ('public', 'buddies', 'gym_members', 'private'):
+            requested_visibility = 'public'
+
         post = Post.objects.create(
             author=profile,
             post_type='progress',
             body=body,
             media_urls=[image_url] if image_url else [],
             progress_data={'report_period': period, 'summary': summary},
-            visibility='public',
+            visibility=requested_visibility,
         )
 
         report, _ = AnalyticsReport.objects.update_or_create(

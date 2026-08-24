@@ -216,7 +216,7 @@ class MealPlanSerializer(serializers.ModelSerializer):
             'calorie_range', 'macro_targets', 'allergen_flags',
             'content_rating',
             'price_artifacts', 'preview_day', 'purchase_count', 'average_rating',
-            'review_count', 'reminder_settings', 'is_published', 'is_draft',
+            'review_count', 'reminder_settings', 'is_published', 'is_draft', 'visibility',
             'creator_data', 'shop_data', 'is_purchased', 'created_at',
         ]
 
@@ -384,6 +384,9 @@ class UpdateMealPlanSerializer(serializers.Serializer):
     shopping_list = serializers.ListField(child=serializers.CharField(), required=False)
     content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     is_published = serializers.BooleanField(required=False)
+    visibility = serializers.ChoiceField(
+        choices=['public', 'buddies', 'private'], required=False,
+    )
 
 
 class CreateTrainingProgrammeSerializer(serializers.Serializer):
@@ -601,6 +604,9 @@ class CreateEventSerializer(serializers.Serializer):
     early_bird_price_artifacts = serializers.JSONField(required=False, default=dict)
     cancellation_policy = serializers.CharField(required=False, allow_blank=True, max_length=2000, default='')
     is_draft = serializers.BooleanField(required=False, default=False)
+    visibility = serializers.ChoiceField(
+        choices=['public', 'buddies', 'private'], required=False, default='public',
+    )
     gallery_urls = serializers.ListField(child=serializers.CharField(), required=False, default=list)
     promo_video_url = serializers.URLField(required=False, allow_blank=True)
 

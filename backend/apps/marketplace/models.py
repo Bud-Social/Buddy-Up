@@ -262,6 +262,12 @@ class MealPlan(TimestampedModel):
     reminder_settings = models.JSONField(default=dict)   # {enabled, time_of_day, message_template}
     is_published = models.BooleanField(default=True)
     is_draft = models.BooleanField(default=False)
+    VISIBILITY_CHOICES = [
+        ('public', 'Public'),
+        ('buddies', 'Buddies Only'),
+        ('private', 'Only Me'),
+    ]
+    visibility = models.CharField(max_length=15, choices=VISIBILITY_CHOICES, default='public')
     purchase_count = models.IntegerField(default=0)
     average_rating = models.FloatField(default=0.0)
     review_count = models.IntegerField(default=0)

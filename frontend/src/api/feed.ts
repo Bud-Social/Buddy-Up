@@ -1,14 +1,22 @@
 import { apiClient } from './client';
 import type { ApiResponse, Post, Comment } from '@/types';
 
-export type FeedTab = 'for_you' | 'following' | 'videos' | 'meals' | 'communities';
+export type FeedTab = 'for_you' | 'following' | 'videos' | 'videos_following' | 'meals' | 'progress' | 'communities';
 
 export const feedApi = {
-  getFeed: (tab: FeedTab = 'for_you', cursor?: string) =>
-    apiClient.get<ApiResponse<Post[]>>('/feed/', { params: { tab, cursor } }).then((r) => r.data),
+  getFeed: (tab: FeedTab = 'for_you', cursor?: string, opts?: { excludePostTypes?: string[] }) =>
+    apiClient.get<ApiResponse<Post[]>>('/feed/', {
+      params: {
+        tab,
+        cursor,
+        ...(opts?.excludePostTypes?.length ? { exclude_post_types: opts.excludePostTypes.join(',') } : {}),
+      },
+    }).then((r) => r.data),
 
-  getVideoFeed: () =>
-    apiClient.get<ApiResponse<Post[]>>('/feed/', { params: { tab: 'videos' } }).then((r) => r.data),
+  getVideoFeed: (variant: 'fyp' | 'following' = 'fyp') =>
+    apiClient
+      .get<ApiResponse<Post[]>>('/feed/', { params: { tab: variant === 'following' ? 'videos_following' : 'videos' } })
+      .then((r) => r.data),
 
   getPost: (postId: string) =>
     apiClient.get<ApiResponse<Post>>(`/feed/${postId}/`).then((r) => r.data),
@@ -68,6 +76,19 @@ export const feedApi = {
 
   deleteDraft: (draftId: string) =>
     apiClient.delete(`/feed/drafts/${draftId}/`).then((r) => r.data),
+
+  /** Upload composer media immediately so drafts can reference stable URLs. */
+  uploadPostMedia: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return apiClient
+      .post<ApiResponse<{ url: string; mime: string; file_name: string; size: number }>>(
+        '/messaging/upload/',
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
+      .then((r) => r.data);
+  },
 
   analyzeWorkout: () =>
     apiClient.get<ApiResponse<any>>('/feed/workout/analyze/').then((r) => r.data),

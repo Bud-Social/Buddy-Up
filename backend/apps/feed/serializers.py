@@ -56,7 +56,8 @@ class PollSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Poll
-        fields = ['id', 'question', 'closes_at', 'allow_multiple', 'total_votes', 'is_closed', 'options', 'user_voted_option_ids']
+        fields = ['id', 'question', 'closes_at', 'allow_multiple', 'min_selections',
+                  'max_selections', 'total_votes', 'is_closed', 'options', 'user_voted_option_ids']
 
     def get_user_voted_option_ids(self, obj):
         request = self.context.get('request')
@@ -294,9 +295,11 @@ class DraftSerializer(serializers.ModelSerializer):
         model = Draft
         fields = [
             'id', 'post_type', 'body', 'visibility', 'gym_tag',
-            'location_label', 'media_urls', 'tags', 'poll_question',
-            'poll_options', 'poll_allow_multiple', 'mentioned_user_ids',
-            'is_anonymous', 'created_at', 'updated_at',
+            'location_label', 'location_lat', 'location_lng',
+            'media_urls', 'tags', 'poll_question',
+            'poll_options', 'poll_allow_multiple', 'poll_min_selections',
+            'poll_max_selections', 'meal_data', 'progress_data',
+            'mentioned_user_ids', 'is_anonymous', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

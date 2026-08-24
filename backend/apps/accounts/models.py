@@ -86,6 +86,24 @@ class OTPToken(TimestampedModel):
         return not self.is_used and self.attempts < 3 and self.expires_at > timezone.now()
 
 
+class RecoveryCode(TimestampedModel):
+    """Single-use backup code for 2FA recovery. Only the hash is stored."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='recovery_codes')
+    code_hash = models.CharField(max_length=64, db_index=True)
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'accounts_recovery_code'
+        indexes = [
+            models.Index(fields=['user', 'is_used']),
+        ]
+
+    @staticmethod
+    def hash_code(code: str) -> str:
+        import hashlib
+        return hashlib.sha256(code.strip().upper().encode()).hexdigest()
+
+
 class DeviceSession(TimestampedModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='device_sessions')
     refresh_token_hash = models.CharField(max_length=64, unique=True)
@@ -141,3 +159,16 @@ class AccountEvent(TimestampedModel):
             models.Index(fields=['user', '-created_at']),
             models.Index(fields=['event_type']),
         ]
+
+
+class WebAuthnCredential(TimestampedModel):
+    """A registered passkey (WebAuthn platform/roaming authenticator)."""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='webauthn_credentials')
+    credential_id = models.CharField(max_length=512, unique=True)  # base64url
+    public_key = models.BinaryField()
+    sign_count = models.BigIntegerField(default=0)
+    transports = models.JSONField(default=list)
+    device_name = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        db_table = 'accounts_webauthn_credential'

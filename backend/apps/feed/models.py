@@ -134,6 +134,11 @@ class Poll(TimestampedModel):
     question = models.CharField(max_length=300)
     closes_at = models.DateTimeField(null=True, blank=True)
     allow_multiple = models.BooleanField(default=False)
+    # Multi-select bounds. When allow_multiple is False both are 1 and the
+    # voter UI renders radios; otherwise checkboxes with min/max enforced
+    # server-side at vote time.
+    min_selections = models.PositiveSmallIntegerField(default=1)
+    max_selections = models.PositiveSmallIntegerField(default=1)
 
     class Meta:
         db_table = 'feed_poll'
@@ -178,11 +183,17 @@ class Draft(TimestampedModel):
     visibility = models.CharField(max_length=15, choices=Post.VISIBILITY_CHOICES, default='public')
     gym_tag = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='drafts')
     location_label = models.CharField(max_length=200, blank=True)
+    location_lat = models.FloatField(null=True, blank=True)
+    location_lng = models.FloatField(null=True, blank=True)
     media_urls = models.JSONField(default=list)
     tags = models.JSONField(default=list)
     poll_question = models.CharField(max_length=300, blank=True)
     poll_options = models.JSONField(default=list)
     poll_allow_multiple = models.BooleanField(default=False)
+    poll_min_selections = models.PositiveSmallIntegerField(default=1)
+    poll_max_selections = models.PositiveSmallIntegerField(default=1)
+    meal_data = models.JSONField(default=dict, blank=True)
+    progress_data = models.JSONField(default=dict, blank=True)
     mentioned_user_ids = models.JSONField(default=list)
     is_anonymous = models.BooleanField(default=False)
 

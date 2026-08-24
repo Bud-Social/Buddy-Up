@@ -5,7 +5,7 @@ import uuid
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
-from django.db import models as db_models
+from django.db import models as db_models, transaction
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -48,6 +48,83 @@ def _looks_like_video(url: str) -> bool:
     if lower.rsplit('.', 1)[-1] in ('mp4', 'mov', 'webm', 'm4v', 'mpeg', 'mkv'):
         return True
     return 'video/' in lower or 'videos' in lower
+
+
+def _audience_q(user_profile):
+    """Q-filter matching every post the viewer is allowed to see.
+
+    public            — everyone
+    author's own      — always
+    buddies           — confirmed buddies (or the author)
+    gym_members       — anyone sharing an active gym membership with the author
+                        (or, for gym-tagged posts, members of that gym)
+    """
+    from apps.gyms.models import GymMembership
+
+    buddy_ids = set(
+        BuddyRelationship.objects.filter(
+            (db_models.Q(from_user=user_profile) | db_models.Q(to_user=user_profile)),
+            status='confirmed',
+        ).values_list(
+            db_models.Case(db_models.When(from_user=user_profile, then='to_user_id'), default='from_user_id'),
+            flat=True,
+        )
+    )
+    my_gym_ids = set(
+        GymMembership.objects.filter(member=user_profile, subscription_active=True)
+        .values_list('gym_id', flat=True)
+    )
+    shared_gym = GymMembership.objects.filter(
+        member=db_models.OuterRef('author_id'),
+        subscription_active=True,
+        gym_id__in=my_gym_ids,
+    )
+    return (
+        db_models.Q(visibility='public')
+        | db_models.Q(author=user_profile)
+        | (
+            db_models.Q(visibility='buddies')
+            & (db_models.Q(author_id__in=buddy_ids) | db_models.Q(author=user_profile))
+        )
+        | (
+            db_models.Q(visibility='gym_members')
+            & (
+                db_models.Exists(shared_gym)
+                | (db_models.Q(gym_tag_id__isnull=False) & db_models.Q(gym_tag_id__in=my_gym_ids))
+            )
+        )
+    )
+
+
+def _can_view_post(post, user_profile) -> bool:
+    """Object-level visibility check used by detail/comments surfaces."""
+    if not post.visibility or post.visibility == 'public':
+        return True
+    if not user_profile:
+        return False
+    if post.author_id == user_profile.user_id:
+        return True
+    if post.visibility == 'private':
+        return False
+    if post.visibility == 'buddies':
+        return BuddyRelationship.objects.filter(
+            (db_models.Q(from_user=user_profile) | db_models.Q(to_user=user_profile)),
+            status='confirmed',
+        ).filter(
+            db_models.Q(from_user_id=post.author_id) | db_models.Q(to_user_id=post.author_id)
+        ).exists()
+    if post.visibility == 'gym_members':
+        from apps.gyms.models import GymMembership
+        my_gym_ids = set(
+            GymMembership.objects.filter(member=user_profile, subscription_active=True)
+            .values_list('gym_id', flat=True)
+        )
+        if post.gym_tag_id and post.gym_tag_id in my_gym_ids:
+            return True
+        return GymMembership.objects.filter(
+            profile_id=post.author_id, subscription_active=True, gym_id__in=my_gym_ids,
+        ).exists()
+    return False
 
 
 def _handle_media_uploads(request_files):
@@ -148,19 +225,46 @@ class FeedView(views.APIView):
 
         user_profile = request.user.profile
 
-        if tab == 'videos':
-            # TikTok-style video feed — recent public posts carrying video media.
-            queryset = FeedPost.objects.filter(
+        if tab in ('videos', 'videos_following'):
+            # TikTok-style video feed. DB-level filtering (post_type) keeps it
+            # paginated; legacy photo posts carrying video URLs still match.
+            base = FeedPost.objects.filter(
                 moderation_status='clean',
                 visibility='public',
             ).exclude(
                 db_models.Q(media_urls=[]) | db_models.Q(media_urls__isnull=True),
-            ).select_related('author', 'gym_tag').order_by('-created_at')
+            )
+            if tab == 'videos_following':
+                followed_ids = list(user_profile.following.values_list('followee_id', flat=True))
+                base = base.filter(author_id__in=followed_ids)
+
+            buddy_ids = set(
+                BuddyRelationship.objects.filter(
+                    (db_models.Q(from_user=user_profile) | db_models.Q(to_user=user_profile)),
+                    status='confirmed',
+                ).values_list(
+                    db_models.Case(db_models.When(from_user=user_profile, then='to_user_id'), default='from_user_id'),
+                    flat=True,
+                )
+            )
+            gym_ids = set(user_profile.gym_memberships.filter(subscription_active=True).values_list('gym_id', flat=True))
+            followed_set = set(user_profile.following.values_list('followee_id', flat=True))
+
+            queryset = base.select_related('author', 'gym_tag').annotate(
+                rank=db_models.Case(
+                    db_models.When(author_id__in=buddy_ids, then=db_models.Value(100)),
+                    db_models.When(author_id__in=followed_set, then=db_models.Value(50)),
+                    db_models.When(gym_tag_id__in=gym_ids, then=db_models.Value(75)),
+                    default=db_models.Value(10),
+                ),
+            ).order_by('-rank', '-created_at')
             queryset = gate_mature_queryset(request, queryset)
-            videos = []
-            for post in queryset[:150]:
-                if any(_looks_like_video(u) for u in (post.media_urls or [])):
-                    videos.append(post)
+            # Video-ness is verified in Python over the page only — the pool
+            # itself is already narrowed by post_type below.
+            video_types = ['short_video', 'long_video']
+            typed_pool = queryset.filter(post_type__in=video_types)
+            page_posts = list(typed_pool[:60])
+            videos = [p for p in page_posts if any(_looks_like_video(u) for u in (p.media_urls or []))]
             serializer = FeedPostSerializer(videos, many=True, context={'request': request})
             return Response({
                 'success': True,
@@ -174,20 +278,22 @@ class FeedView(views.APIView):
             followed_ids = user_profile.following.values_list('followee_id', flat=True)
             queryset = FeedPost.objects.filter(
                 author_id__in=followed_ids,
-                visibility='public',
                 moderation_status='clean',
-            ).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
+            ).filter(_audience_q(user_profile)).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
         elif tab == 'meals':
             queryset = FeedPost.objects.filter(
                 post_type='meal',
-                visibility='public',
                 moderation_status='clean',
-            ).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
+            ).filter(_audience_q(user_profile)).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
+        elif tab == 'progress':
+            queryset = FeedPost.objects.filter(
+                post_type='progress',
+                moderation_status='clean',
+            ).filter(_audience_q(user_profile)).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
         elif tab == 'nearby':
             queryset = FeedPost.objects.filter(
-                visibility='public',
                 moderation_status='clean',
-            )
+            ).filter(_audience_q(user_profile))
             if user_profile.location_city:
                 queryset = queryset.filter(location_label__icontains=user_profile.location_city)
             queryset = queryset.select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
@@ -206,10 +312,14 @@ class FeedView(views.APIView):
 
             queryset = FeedPost.objects.filter(
                 moderation_status='clean',
-                visibility__in=['public'],
-            )
+            ).filter(_audience_q(user_profile))
             if post_type and post_type in dict(Post.POST_TYPES):
                 queryset = queryset.filter(post_type=post_type)
+            # Meals own their tab — keep For You general unless asked otherwise.
+            exclude_raw = request.query_params.get('exclude_post_types', '')
+            exclude_types = [t.strip() for t in exclude_raw.split(',') if t.strip() in dict(Post.POST_TYPES)]
+            if exclude_types:
+                queryset = queryset.exclude(post_type__in=exclude_types)
             queryset = queryset.select_related('author', 'gym_tag').annotate(
                 rank=db_models.Case(
                     db_models.When(author_id__in=buddy_ids, then=db_models.Value(100)),
@@ -265,9 +375,10 @@ class PostDetailView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_410_GONE)
 
-        if post.visibility == 'private' and (
-            not request.user.is_authenticated or post.author_id != request.user.profile.user_id
-        ):
+        viewer_profile = request.user.profile if request.user.is_authenticated else None
+        # Enforce the full audience scope (private / buddies / gym_members),
+        # not just private. Unauthenticated viewers only ever see public.
+        if not _can_view_post(post, viewer_profile):
             return Response({
                 'success': False, 'data': None,
                 'message': 'Not found.',
@@ -339,8 +450,20 @@ class CreatePostView(views.APIView):
         # Merge uploaded URLs with any pre-existing media_urls (e.g. from mobile)
         existing_urls = request.data.getlist('media_urls') if hasattr(request.data, 'getlist') else (request.data.get('media_urls') or [])
         if isinstance(existing_urls, str):
-            existing_urls = [existing_urls]
-        all_media_urls = list(existing_urls) + media_urls
+            # Clients may send a JSON array in a single form field.
+            try:
+                parsed = json.loads(existing_urls)
+                existing_urls = parsed if isinstance(parsed, list) else [existing_urls]
+            except (ValueError, TypeError):
+                existing_urls = [existing_urls]
+        elif isinstance(existing_urls, list) and len(existing_urls) == 1 and isinstance(existing_urls[0], str):
+            try:
+                parsed = json.loads(existing_urls[0])
+                if isinstance(parsed, list):
+                    existing_urls = parsed
+            except (ValueError, TypeError):
+                pass
+        all_media_urls = [str(u) for u in existing_urls if u] + media_urls
 
         # Build mutable data dict
         data = request.data.dict() if hasattr(request.data, 'dict') else dict(request.data)
@@ -404,11 +527,24 @@ class CreatePostView(views.APIView):
         if poll_question and len(poll_options_raw) >= 2:
             closes_at = poll_data.get('poll_closes_at') or None
             allow_multiple = poll_data.get('poll_allow_multiple', False)
+            try:
+                min_sel = int(poll_data.get('poll_min_selections') or 1)
+                max_sel = int(poll_data.get('poll_max_selections') or 1)
+            except (TypeError, ValueError):
+                min_sel, max_sel = 1, 1
+            option_count = min(len([o for o in poll_options_raw if o.strip()]), 10)
+            if not allow_multiple:
+                min_sel = max_sel = 1
+            else:
+                max_sel = max(2, min(max_sel, option_count))
+                min_sel = max(1, min(min_sel, max_sel))
             poll = Poll.objects.create(
                 post=post,
                 question=poll_question,
                 closes_at=closes_at,
                 allow_multiple=allow_multiple,
+                min_selections=min_sel,
+                max_selections=max_sel,
             )
             for i, opt_text in enumerate(poll_options_raw[:10]):
                 if opt_text.strip():
@@ -477,16 +613,33 @@ class PollVoteView(views.APIView):
         if not option_ids:
             return Response({'success': False, 'message': 'No option selected.'}, status=400)
 
-        if not poll.allow_multiple and len(option_ids) > 1:
-            return Response({'success': False, 'message': 'This poll only allows one vote.'}, status=400)
+        # Deduplicate while preserving order.
+        seen_ids = set()
+        option_ids = [oid for oid in option_ids if not (oid in seen_ids or seen_ids.add(oid))]
 
-        # Remove previous votes if not multi-select
+        max_sel = max(1, int(poll.max_selections or 1))
+        min_sel = max(1, int(poll.min_selections or 1))
         if not poll.allow_multiple:
-            PollVote.objects.filter(poll=poll, voter=request.user.profile).delete()
+            min_sel = max_sel = 1
 
-        for option_id in option_ids:
-            option = get_object_or_404(PollOption, id=option_id, poll=poll)
-            PollVote.objects.get_or_create(poll=poll, option=option, voter=request.user.profile)
+        if len(option_ids) > max_sel:
+            return Response({
+                'success': False,
+                'message': f'You can select at most {max_sel} option{"s" if max_sel != 1 else ""} in this poll.',
+            }, status=400)
+        if len(option_ids) < min_sel:
+            return Response({
+                'success': False,
+                'message': f'Select at least {min_sel} option{"s" if min_sel != 1 else ""} to vote in this poll.',
+            }, status=400)
+
+        # Each submission is the voter's full ballot: replace whatever was
+        # stored before so unchecking an option actually removes the vote.
+        with transaction.atomic():
+            PollVote.objects.filter(poll=poll, voter=request.user.profile).delete()
+            for option_id in option_ids:
+                option = get_object_or_404(PollOption, id=option_id, poll=poll)
+                PollVote.objects.create(poll=poll, option=option, voter=request.user.profile)
 
         serializer = PollSerializer(poll, context={'request': request})
         return Response({'success': True, 'data': serializer.data, 'message': 'Vote recorded.', 'errors': None, 'pagination': None})
@@ -497,6 +650,13 @@ class CommentsView(views.APIView):
 
     def get(self, request, post_id):
         post = get_object_or_404(Post, id=post_id)
+        viewer_profile = request.user.profile if request.user.is_authenticated else None
+        # Comments inherit the parent post's audience scope.
+        if not _can_view_post(post, viewer_profile):
+            return Response({
+                'success': False, 'data': None, 'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
         sort = request.query_params.get('sort', 'newest')
 
         comments = post.comments.filter(parent__isnull=True).select_related('author')
@@ -521,6 +681,11 @@ class CommentsView(views.APIView):
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
         post = get_object_or_404(Post, id=post_id)
+        if not _can_view_post(post, request.user.profile):
+            return Response({
+                'success': False, 'data': None, 'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
         serializer = CommentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data

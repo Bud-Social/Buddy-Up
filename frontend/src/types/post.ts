@@ -15,6 +15,8 @@ export interface Poll {
   question: string;
   closes_at: string | null;
   allow_multiple: boolean;
+  min_selections?: number;
+  max_selections?: number;
   total_votes: number;
   is_closed: boolean;
   options: PollOption[];

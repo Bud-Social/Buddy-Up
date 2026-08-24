@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/auth/biometric_provider.dart';
 import '../../../core/api/api_client.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/profile_repository.dart';
@@ -285,6 +286,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildBiometricSection() {
+    final biometric = ref.watch(biometricProvider);
+    if (!biometric.available) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: BuddyColors.surface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        secondary: const Icon(Icons.fingerprint, size: 22, color: BuddyColors.green),
+        title: const Text('Biometric App Lock', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+        subtitle: const Text(
+          'Require fingerprint or face unlock when opening BuddyUp.',
+          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+        ),
+        value: biometric.enabled,
+        activeThumbColor: BuddyColors.green,
+        onChanged: (on) async {
+          final ok = await ref.read(biometricProvider.notifier).setEnabled(on);
+          if (!ok && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Biometric authentication failed — lock not enabled')),
+            );
+          }
+        },
+      ),
+    );
+  }
+
   Widget _buildVerificationSection(String verificationStatus) {
     final labels = <String, String>{
       'none': 'Not verified',
@@ -397,6 +430,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const Text('Security', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             _buildSecuritySection(totpEnabled),
+            const SizedBox(height: 12),
+            _buildBiometricSection(),
             const SizedBox(height: 32),
             const Text('Verification', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
   MoreHorizontal, Dumbbell, Utensils, TrendingUp, MapPin, BarChart2,
-  Maximize2, FileText,
+  Maximize2, FileText, CheckSquare, CircleDot,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api';
@@ -133,15 +133,42 @@ function ProgressCard({ data, mediaUrls = [] }: { data: Record<string, unknown>;
 
 function PollCard({ poll, postId }: { poll: NonNullable<Post['poll']>; postId: string }) {
   const [localPoll, setLocalPoll] = useState(poll);
+  const [pendingSelections, setPendingSelections] = useState<string[]>([]);
+  const [isSubmittingVote, setIsSubmittingVote] = useState(false);
   const hasVoted = localPoll.user_voted_option_ids && localPoll.user_voted_option_ids.length > 0;
   const total = localPoll.total_votes || 0;
+  const isMulti = !!localPoll.allow_multiple;
+  const minSel = Math.max(1, localPoll.min_selections ?? 1);
+  const maxSel = Math.max(isMulti ? 2 : 1, localPoll.max_selections ?? 1);
+  const canReceiveVotes = !hasVoted && !localPoll.is_closed;
+  const selectionValid = pendingSelections.length >= minSel && pendingSelections.length <= maxSel;
 
-  const handleVote = async (optionId: string) => {
-    if (hasVoted || localPoll.is_closed) return;
+  const handleSingleVote = async (optionId: string) => {
+    if (!canReceiveVotes) return;
     try {
       const res = await feedApi.voteOnPoll(postId, [optionId]);
       if (res.data) setLocalPoll(res.data);
     } catch {}
+  };
+
+  const togglePending = (optionId: string) => {
+    if (!canReceiveVotes) return;
+    setPendingSelections(prev => {
+      if (prev.includes(optionId)) return prev.filter(id => id !== optionId);
+      if (prev.length >= maxSel) return prev;
+      return [...prev, optionId];
+    });
+  };
+
+  const submitMultiVote = async () => {
+    if (!canReceiveVotes || !selectionValid) return;
+    setIsSubmittingVote(true);
+    try {
+      const res = await feedApi.voteOnPoll(postId, pendingSelections);
+      if (res.data) setLocalPoll(res.data);
+    } catch {} finally {
+      setIsSubmittingVote(false);
+    }
   };
 
   return (
@@ -150,28 +177,52 @@ function PollCard({ poll, postId }: { poll: NonNullable<Post['poll']>; postId: s
         <BarChart2 size={14} className="text-buddy-electric" />
         <p className="text-sm font-medium">{localPoll.question}</p>
       </div>
-      <div className="space-y-2">
+      {isMulti && canReceiveVotes && (
+        <p className="text-[11px] text-buddy-text-secondary mb-2">
+          Select {minSel === maxSel ? minSel : `${minSel}–${maxSel}`} options
+        </p>
+      )}
+      <div className="space-y-2" role={isMulti ? 'group' : 'radiogroup'}>
         {localPoll.options.map(opt => {
           const voted = localPoll.user_voted_option_ids?.includes(opt.id);
           const pct = total > 0 ? Math.round((opt.vote_count / total) * 100) : 0;
+          const pending = pendingSelections.includes(opt.id);
+          const disabled = localPoll.is_closed || (!!hasVoted && !voted) || (!hasVoted && isMulti && !pending && pendingSelections.length >= maxSel);
           return (
             <button
               key={opt.id}
-              onClick={() => handleVote(opt.id)}
-              disabled={!!hasVoted || localPoll.is_closed}
-              className={`w-full relative overflow-hidden rounded-lg border text-left text-sm transition-all ${voted ? 'border-buddy-green bg-buddy-green/10 text-buddy-green' : 'border-buddy-surface text-buddy-text-primary hover:border-buddy-green/40'} disabled:cursor-default`}
+              onClick={() => (isMulti ? togglePending(opt.id) : handleSingleVote(opt.id))}
+              disabled={disabled}
+              className={`w-full relative overflow-hidden rounded-lg border text-left text-sm transition-all ${voted || (canReceiveVotes && pending) ? 'border-buddy-green bg-buddy-green/10 text-buddy-green' : 'border-buddy-surface text-buddy-text-primary hover:border-buddy-green/40'} disabled:cursor-default`}
             >
               {hasVoted && (
                 <div className="absolute inset-0 rounded-lg bg-buddy-green/5" style={{ width: `${pct}%` }} />
               )}
-              <div className="relative flex items-center justify-between px-3 py-2">
-                <span>{opt.text}</span>
+              <div className="relative flex items-center gap-2.5 px-3 py-2">
+                {/* Radio for single-choice, checkbox for multi-select */}
+                {(() => {
+                  const checked = voted || pending;
+                  const Icon = isMulti ? CheckSquare : CircleDot;
+                  return (
+                    <Icon size={15} className={`shrink-0 transition-colors ${checked ? 'text-buddy-green' : 'text-buddy-text-secondary'}`} fill={checked ? 'currentColor' : 'none'} />
+                  );
+                })()}
+                <span className="flex-1">{opt.text}</span>
                 {hasVoted && <span className="text-xs font-mono font-bold">{pct}%</span>}
               </div>
             </button>
           );
         })}
       </div>
+      {isMulti && canReceiveVotes && (
+        <button
+          onClick={submitMultiVote}
+          disabled={!selectionValid || isSubmittingVote}
+          className="mt-3 w-full py-2 rounded-lg bg-buddy-green text-buddy-black text-sm font-bold disabled:opacity-40 hover:bg-buddy-green/90 transition-colors"
+        >
+          {isSubmittingVote ? 'Voting…' : `Vote${pendingSelections.length > 0 ? ` (${pendingSelections.length})` : ''}`}
+        </button>
+      )}
       <p className="text-xs text-buddy-text-secondary mt-2">{total} vote{total !== 1 ? 's' : ''}{localPoll.is_closed ? ' · Closed' : ''}</p>
     </div>
   );

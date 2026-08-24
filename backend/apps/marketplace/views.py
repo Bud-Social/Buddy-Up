@@ -13,6 +13,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.throttling import ScopedRateThrottle
 
 from common.pagination import PageNumberPagination
+from apps.profiles.models import BuddyRelationship
 from common.age_gating import gate_mature_queryset, can_view_content
 from .models import (
     Shop, ShopMembership, ShopGymLink, ShopVerificationApplication, PushDevice,
@@ -662,7 +663,25 @@ class MealPlanListView(views.APIView):
 
     def get(self, request):
         diet_type = request.query_params.get('diet_type', '')
+        profile = request.user.profile
         qs = MealPlan.objects.filter(is_published=True).select_related('creator')
+        # Audience scope: public plans for discovery; buddies/private plans
+        # only surface to their intended audience (creator sees their own).
+        buddy_ids = set(
+            BuddyRelationship.objects.filter(
+                (db_models.Q(from_user=profile) | db_models.Q(to_user=profile)),
+                status='confirmed',
+            ).values_list(
+                db_models.Case(db_models.When(from_user=profile, then='to_user_id'), default='from_user_id'),
+                flat=True,
+            )
+        )
+        audience_q = (
+            db_models.Q(visibility='public')
+            | db_models.Q(creator=profile)
+            | (db_models.Q(visibility='buddies') & db_models.Q(creator_id__in=buddy_ids))
+        )
+        qs = qs.filter(audience_q)
         if diet_type:
             qs = qs.filter(diet_type=diet_type)
         qs = gate_mature_queryset(request, qs)
@@ -710,6 +729,26 @@ class MealPlanDetailView(views.APIView):
         profile = request.user.profile
         is_owner = profile == plan.creator
         is_purchased = MealPlanPurchase.objects.filter(meal_plan=plan, buyer=profile).exists()
+
+        if not is_owner:
+            # Audience scope check before any other logic.
+            if plan.visibility == 'private':
+                return Response({
+                    'success': False, 'data': None, 'message': 'Not found.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_404_NOT_FOUND)
+            if plan.visibility == 'buddies':
+                is_buddy = BuddyRelationship.objects.filter(
+                    (db_models.Q(from_user=profile) | db_models.Q(to_user=profile)),
+                    status='confirmed',
+                ).filter(
+                    db_models.Q(from_user=plan.creator) | db_models.Q(to_user=plan.creator)
+                ).exists()
+                if not is_buddy and not is_purchased:
+                    return Response({
+                        'success': False, 'data': None, 'message': 'Not found.',
+                        'errors': None, 'pagination': None,
+                    }, status=status.HTTP_404_NOT_FOUND)
 
         if not is_owner and not can_view_content(request, plan):
             return Response({

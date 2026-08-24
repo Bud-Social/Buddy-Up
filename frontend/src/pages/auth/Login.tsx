@@ -138,9 +138,21 @@ export default function Login() {
     setIsLoading(true);
     try {
       const res = await authApi.googleLogin(credential);
+      const data = res.data as typeof res.data & { require_totp?: boolean; temp_token?: string; require_age_setup?: boolean };
+      if (data.require_totp && data.temp_token) {
+        setTempToken(data.temp_token);
+        setStep('totp');
+        return;
+      }
       setTokens(res.data.access, res.data.refresh);
       setUser(res.data.user, res.data.profile);
-      navigate('/feed');
+      // New social accounts must complete age verification before mature content.
+      if (data.require_age_setup) {
+        try { sessionStorage.setItem('buddyup-age-setup', '1'); } catch {}
+        navigate('/settings?open=verifications');
+      } else {
+        navigate('/feed');
+      }
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string } } } })?.response?.data;
       if (data?.message?.toLowerCase().includes('verify your email') && data?.data?.registration_token) {

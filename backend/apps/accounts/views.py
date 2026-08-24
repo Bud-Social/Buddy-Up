@@ -1,5 +1,6 @@
 import uuid
 import hashlib
+import json
 import secrets
 import io
 import base64
@@ -14,6 +15,8 @@ from jwt.algorithms import RSAAlgorithm
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from django.conf import settings
+from django.core.cache import cache
+from django.db import transaction
 from rest_framework import status, views, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -547,11 +550,29 @@ class TOTPVerifyView(views.APIView):
         request.user.totp_enabled = True
         request.user.save(update_fields=['totp_secret', 'totp_enabled'])
 
+        # Generate 10 single-use recovery codes (shown exactly once).
+        from .models import RecoveryCode
+        RecoveryCode.objects.filter(user=request.user).delete()
+        alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+        plain_codes = [
+            '-'.join(''.join(secrets.choice(alphabet) for _ in range(5)) for _ in range(2))
+            for _ in range(10)
+        ]
+        RecoveryCode.objects.bulk_create([
+            RecoveryCode(user=request.user, code_hash=RecoveryCode.hash_code(c))
+            for c in plain_codes
+        ])
+
         _log_event(request.user, '2fa_enabled', request)
 
         return Response({
             'success': True,
-            'data': None,
+            'data': {
+                'recovery_codes': plain_codes,
+                'recovery_codes_note': 'Store these somewhere safe. Each code works once '
+                                       'if you lose your authenticator device. They are '
+                                       'shown only this one time.',
+            },
             'message': 'Two-factor authentication enabled successfully.',
             'errors': None,
             'pagination': None,
@@ -603,6 +624,7 @@ class TOTPChallengeView(views.APIView):
         serializer.is_valid(raise_exception=True)
         temp_token = serializer.validated_data['temp_token']
         code = serializer.validated_data['code']
+        recovery_code = (request.data.get('recovery_code') or '').strip()
 
         user = _verify_temp_token(temp_token, 'totp_challenge')
         if not user:
@@ -619,19 +641,39 @@ class TOTPChallengeView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        totp = pyotp.TOTP(user.totp_secret)
-        if not totp.verify(code):
-            return Response({
-                'success': False, 'data': None,
-                'message': 'Invalid authenticator code.',
-                'errors': None, 'pagination': None,
-            }, status=status.HTTP_400_BAD_REQUEST)
+        used_recovery = False
+        if recovery_code:
+            # Recovery-code path: single use, hashed lookup.
+            from .models import RecoveryCode
+            rc = RecoveryCode.objects.filter(
+                user=user,
+                code_hash=RecoveryCode.hash_code(recovery_code),
+                is_used=False,
+            ).first()
+            if not rc:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Invalid or already-used recovery code.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            rc.is_used = True
+            rc.save(update_fields=['is_used'])
+            used_recovery = True
+            _log_event(user, '2fa_recovery_used', request)
+        else:
+            totp = pyotp.TOTP(user.totp_secret)
+            if not totp.verify(code):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Invalid authenticator code.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         tokens = _get_tokens_for_user(user)
         _create_device_session(user, tokens['refresh'], request)
 
         from apps.profiles.serializers import ProfileSerializer
-        profile = ProfileSerializer(user.profile).data
+        profile = ProfileSerializer(_ensure_social_profile(user)).data
 
         return Response({
             'success': True,
@@ -649,11 +691,108 @@ class TOTPChallengeView(views.APIView):
                     'is_staff': user.is_staff,
                 },
                 'profile': profile,
+                **({'recovery_code_used': True} if used_recovery else {}),
             },
-            'message': 'TOTP verified. Login successful.',
+            'message': 'Two-factor verified. Login successful.',
             'errors': None,
             'pagination': None,
         })
+
+
+def _generate_username(base: str) -> str:
+    """Collision-safe username derived from a display name or email prefix."""
+    import re as re_module
+    base = re_module.sub(r'[^a-zA-Z0-9_]', '', base).lower()[:24] or 'buddy'
+    if not Profile.objects.filter(username=base).exists():
+        return base
+    for i in range(2, 100):
+        candidate = f'{base}{i}'
+        if not Profile.objects.filter(username=candidate).exists():
+            return candidate
+    return f'{base}_{secrets.token_hex(2)}'
+
+
+def _ensure_social_profile(user, display_name='', avatar_url=''):
+    """Self-heal: guarantee every social-login user has a usable profile."""
+    try:
+        return getattr(user, 'profile')
+    except Profile.DoesNotExist:
+        base = display_name or user.email.split('@')[0]
+        return Profile.objects.create(
+            user=user,
+            username=_generate_username(base),
+            display_name=display_name or base,
+            role='user',
+            privacy_level='private',
+            avatar_url=avatar_url or '',
+        )
+
+
+@transaction.atomic
+def _provision_social_user(email, provider_field, provider_id, name='', picture=''):
+    """Find-or-create the account for a verified social identity.
+
+    Atomic: either both User and Profile rows land, or neither — no more
+    half-registered accounts that 500 on every later login attempt.
+    Social providers verify EMAIL but not AGE, so is_adult stays False for
+    new users until they submit a date of birth (SocialAgeSetupView).
+    """
+    try:
+        user = User.objects.select_for_update().get(email=email)
+        updates = {'email_verified': True}
+        if provider_id and not getattr(user, provider_field, ''):
+            updates[provider_field] = provider_id
+        for k, v in updates.items():
+            setattr(user, k, v)
+        user.save(update_fields=list(updates.keys()))
+        created = False
+    except User.DoesNotExist:
+        user = User.objects.create_user(
+            email=email,
+            password=None,
+            email_verified=True,
+            **{provider_field: provider_id},
+        )
+        created = True
+    _ensure_social_profile(user, name, picture)
+    return user, created
+
+
+def _finalize_social_login(user, method, request):
+    """Build the login payload; TOTP-enabled users get a challenge instead.
+
+    Returns (data_dict, challenged_bool).
+    """
+    if user.totp_enabled:
+        temp_token = _generate_temp_token(user, 'totp_challenge', expiry_minutes=5)
+        return ({
+            'require_totp': True,
+            'temp_token': temp_token,
+            'message': 'Enter your authenticator code.',
+        }, True)
+
+    tokens = _get_tokens_for_user(user)
+    _create_device_session(user, tokens['refresh'], request)
+    _log_event(user, 'login', request, metadata={'method': method})
+    profile = _ensure_social_profile(user)
+
+    from apps.profiles.serializers import ProfileSerializer
+    return ({
+        'access': tokens['access'],
+        'refresh': tokens['refresh'],
+        'user': {
+            'id': str(user.id),
+            'email': user.email,
+            'email_verified': user.email_verified,
+            'phone_verified': user.phone_verified,
+            'is_adult': user.is_adult,
+            'totp_enabled': user.totp_enabled,
+            'created_at': user.created_at.isoformat(),
+            'is_staff': user.is_staff,
+        },
+        'profile': ProfileSerializer(profile).data,
+        'require_age_setup': not user.is_adult,
+    }, False)
 
 
 class GoogleLoginView(views.APIView):
@@ -726,56 +865,18 @@ class GoogleLoginView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        user = None
-        try:
-            user = User.objects.get(email=email)
-            user.google_id = google_id
-            user.email_verified = True
-            user.save(update_fields=['google_id', 'email_verified'])
-        except User.DoesNotExist:
-            user = User.objects.create_user(
-                email=email,
-                password=None,
-                google_id=google_id,
-                email_verified=True,
-                is_adult=True,
-                last_login_ip=_get_client_ip(request),
-            )
-            from apps.profiles.models import Profile
-            Profile.objects.create(
-                user=user,
-                username=email.split('@')[0],
-                display_name=name,
-                role='user',
-                privacy_level='private',
-                avatar_url=picture,
-            )
+        user, created = _provision_social_user(email, 'google_id', google_id, name=name, picture=picture)
+        if created:
+            _log_event(user, 'registered', request, metadata={'method': 'google'})
 
-        tokens = _get_tokens_for_user(user)
-        _create_device_session(user, tokens['refresh'], request)
-        _log_event(user, 'login', request, metadata={'method': 'google'})
-
-        from apps.profiles.serializers import ProfileSerializer
-        profile = ProfileSerializer(user.profile).data
-
+        data, challenged = _finalize_social_login(user, 'google', request)
+        message = 'Additional verification required.' if challenged else (
+            'Account created. Please complete age verification to finish setting up.'
+            if data.get('require_age_setup') else 'Google login successful.')
         return Response({
             'success': True,
-            'data': {
-                'access': tokens['access'],
-                'refresh': tokens['refresh'],
-                'user': {
-                    'id': str(user.id),
-                    'email': user.email,
-                    'email_verified': user.email_verified,
-                    'phone_verified': user.phone_verified,
-                    'is_adult': user.is_adult,
-                    'totp_enabled': user.totp_enabled,
-                    'created_at': user.created_at.isoformat(),
-                    'is_staff': user.is_staff,
-                },
-                'profile': profile,
-            },
-            'message': 'Google login successful.',
+            'data': data,
+            'message': message,
             'errors': None,
             'pagination': None,
         })
@@ -827,53 +928,20 @@ class AppleLoginView(views.APIView):
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            user = None
-            try:
-                user = User.objects.get(email=email)
-                user.email_verified = True
-                user.save(update_fields=['email_verified'])
-            except User.DoesNotExist:
-                user = User.objects.create_user(
-                    email=email,
-                    password=None,
-                    email_verified=True,
-                    is_adult=True,
-                    last_login_ip=_get_client_ip(request),
-                )
-                from apps.profiles.models import Profile
-                Profile.objects.create(
-                    user=user,
-                    username=email.split('@')[0],
-                    display_name=name or email.split('@')[0],
-                    role='user',
-                    privacy_level='private',
-                )
+            user, created = _provision_social_user(
+                email, 'apple_id', decoded.get('sub', ''), name=name,
+            )
+            if created:
+                _log_event(user, 'registered', request, metadata={'method': 'apple'})
 
-            tokens = _get_tokens_for_user(user)
-            _create_device_session(user, tokens['refresh'], request)
-            _log_event(user, 'login', request, metadata={'method': 'apple'})
-
-            from apps.profiles.serializers import ProfileSerializer
-            profile_data = ProfileSerializer(user.profile).data
-
+            data, challenged = _finalize_social_login(user, 'apple', request)
+            message = 'Additional verification required.' if challenged else (
+                'Account created. Please complete age verification to finish setting up.'
+                if data.get('require_age_setup') else 'Apple login successful.')
             return Response({
                 'success': True,
-                'data': {
-                    'access': tokens['access'],
-                    'refresh': tokens['refresh'],
-                    'user': {
-                        'id': str(user.id),
-                        'email': user.email,
-                        'email_verified': user.email_verified,
-                        'phone_verified': user.phone_verified,
-                        'is_adult': user.is_adult,
-                        'totp_enabled': user.totp_enabled,
-                        'created_at': user.created_at.isoformat(),
-                        'is_staff': user.is_staff,
-                    },
-                    'profile': profile_data,
-                },
-                'message': 'Apple login successful.',
+                'data': data,
+                'message': message,
                 'errors': None,
                 'pagination': None,
             })
@@ -1277,6 +1345,328 @@ class ChangePasswordView(views.APIView):
         return Response({
             'success': True, 'data': None,
             'message': 'Password changed successfully.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class RecoveryCodesRegenerateView(views.APIView):
+    """Replace recovery codes. Requires a fresh valid TOTP code (not a code)."""
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'otp'
+
+    def post(self, request):
+        if not request.user.totp_enabled:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Enable two-factor authentication first.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        code = (request.data.get('code') or '').strip()
+        if not pyotp.TOTP(request.user.totp_secret).verify(code):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid authenticator code.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from .models import RecoveryCode
+        RecoveryCode.objects.filter(user=request.user).delete()
+        alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+        plain_codes = [
+            '-'.join(''.join(secrets.choice(alphabet) for _ in range(5)) for _ in range(2))
+            for _ in range(10)
+        ]
+        RecoveryCode.objects.bulk_create([
+            RecoveryCode(user=request.user, code_hash=RecoveryCode.hash_code(c))
+            for c in plain_codes
+        ])
+        _log_event(request.user, '2fa_recovery_regenerated', request)
+
+        remaining = RecoveryCode.objects.filter(user=request.user, is_used=False).count()
+        return Response({
+            'success': True,
+            'data': {'recovery_codes': plain_codes, 'active_count': remaining},
+            'message': 'New recovery codes generated. Previous codes are now invalid.',
+            'errors': None, 'pagination': None,
+        })
+
+
+def _webauthn_rp():
+    """Relying-party configuration for passkeys."""
+    rp_id = os.environ.get('WEBAUTHN_RP_ID', 'buddyup.app')
+    origin = os.environ.get('WEBAUTHN_ORIGIN', f'https://{rp_id}')
+    return rp_id, 'BuddyUp', origin
+
+
+def _b64url_decode(data):
+    import base64
+    padded = data + '=' * (-len(data) % 4)
+    return base64.urlsafe_b64decode(padded)
+
+
+def _b64url_encode(raw):
+    import base64
+    return base64.urlsafe_b64encode(raw).rstrip(b'=').decode()
+
+
+class PasskeyRegisterBeginView(views.APIView):
+    """Start passkey registration (authenticated users only)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            from webauthn import generate_registration_options, options_to_json
+        except ImportError:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Passkeys are temporarily unavailable.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        rp_id, rp_name, _origin = _webauthn_rp()
+        existing_ids = [
+            {'type': 'public-key', 'id': c.credential_id}
+            for c in request.user.webauthn_credentials.all()
+        ]
+        options = generate_registration_options(
+            rp_id=rp_id,
+            rp_name=rp_name,
+            user_id=str(request.user.id).encode(),
+            user_name=request.user.email,
+            user_display_name=getattr(getattr(request.user, 'profile', None), 'display_name', '') or request.user.email,
+            exclude_credentials=existing_ids,
+        )
+        cache.set(f'webauthn_reg:{request.user.id}', options.challenge, timeout=300)
+        return Response({
+            'success': True, 'data': {'options': json.loads(options_to_json(options))},
+            'message': 'Registration options generated.', 'errors': None, 'pagination': None,
+        })
+
+
+class PasskeyRegisterFinishView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            from webauthn import verify_registration_response
+        except ImportError:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Passkeys are temporarily unavailable.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        rp_id, _name, origin = _webauthn_rp()
+        expected_challenge = cache.get(f'webauthn_reg:{request.user.id}')
+        if not expected_challenge:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Registration session expired. Try again.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        credential = request.data.get('credential') if isinstance(request.data, dict) else None
+        device_name = (request.data.get('device_name') or '').strip()[:120] if isinstance(request.data, dict) else ''
+        if not credential:
+            return Response({'success': False, 'data': None, 'message': 'Missing credential.',
+                             'errors': None, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            verification = verify_registration_response(
+                credential=json.dumps(credential) if isinstance(credential, dict) else credential,
+                expected_challenge=expected_challenge,
+                expected_origin=origin,
+                expected_rp_id=rp_id,
+                require_user_verification=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Passkey registration failed: {e}',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from .models import WebAuthnCredential
+        WebAuthnCredential.objects.update_or_create(
+            credential_id=_b64url_encode(verification.credential_id),
+            defaults={
+                'user': request.user,
+                'public_key': verification.credential_public_key,
+                'sign_count': verification.sign_count,
+                'transports': list(getattr(verification, 'credential_transports', []) or []),
+                'device_name': device_name or (credential.get('response', {}).get('authenticatorAttachment') or 'passkey'),
+            },
+        )
+        cache.delete(f'webauthn_reg:{request.user.id}')
+        _log_event(request.user, 'passkey_registered', request)
+        return Response({
+            'success': True, 'data': {'registered': True},
+            'message': 'Passkey registered.', 'errors': None, 'pagination': None,
+        })
+
+
+class PasskeyLoginBeginView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        try:
+            from webauthn import generate_authentication_options, options_to_json
+        except ImportError:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Passkeys are temporarily unavailable.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        rp_id, _name, _origin = _webauthn_rp()
+        email = (request.data.get('email') or '').strip().lower() if isinstance(request.data, dict) else ''
+        allow_credentials = []
+        if email:
+            user = User.objects.filter(email=email, is_active=True).first()
+            if user:
+                allow_credentials = [
+                    {'type': 'public-key', 'id': c.credential_id, 'transports': c.transports or []}
+                    for c in user.webauthn_credentials.all()
+                ]
+        options = generate_authentication_options(
+            rp_id=rp_id,
+            allow_credentials=allow_credentials,
+            user_verification='preferred',
+        )
+        # Challenge keyed per-session-ish random token returned to the client.
+        challenge_key = f"webauthn_auth:{secrets.token_hex(16)}"
+        cache.set(challenge_key, options.challenge, timeout=300)
+        return Response({
+            'success': True,
+            'data': {'options': json.loads(options_to_json(options)), 'challenge_key': challenge_key},
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+
+class PasskeyLoginFinishView(views.APIView):
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'login'
+
+    def post(self, request):
+        try:
+            from webauthn import verify_authentication_response
+        except ImportError:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Passkeys are temporarily unavailable.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        rp_id, _name, origin = _webauthn_rp()
+        data = request.data if isinstance(request.data, dict) else {}
+        challenge_key = data.get('challenge_key', '')
+        expected_challenge = cache.get(challenge_key) if challenge_key else None
+        cache.delete(challenge_key)
+        if not expected_challenge:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Login session expired. Try again.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        credential = data.get('credential') or {}
+        raw_id = credential.get('id', '')
+        from .models import WebAuthnCredential
+        cred = WebAuthnCredential.objects.filter(credential_id=raw_id).select_related('user').first()
+        if not cred or not cred.user.is_active:
+            return Response({
+                'success': False, 'data': None, 'message': 'Unknown passkey.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            verification = verify_authentication_response(
+                credential=json.dumps(credential),
+                expected_challenge=expected_challenge,
+                expected_origin=origin,
+                expected_rp_id=rp_id,
+                credential_public_key=bytes(cred.public_key),
+                credential_current_sign_count=cred.sign_count,
+                require_user_verification=False,
+            )
+        except Exception as e:  # noqa: BLE001
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Passkey verification failed: {e}',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        cred.sign_count = verification.new_sign_count
+        cred.save(update_fields=['sign_count'])
+
+        payload, challenged = _finalize_social_login(cred.user, 'passkey', request)
+        message = 'Additional verification required.' if challenged else (
+            'Please complete age verification to finish setting up.'
+            if payload.get('require_age_setup') else 'Passkey login successful.')
+        return Response({
+            'success': True, 'data': payload, 'message': message,
+            'errors': None, 'pagination': None,
+        })
+
+
+class SocialAgeSetupView(views.APIView):
+    """Complete social signup by recording date of birth (age gate).
+
+    Google/Apple verify email but never age; new social accounts receive
+    require_age_setup=True from login and must POST here with the temp
+    token before they can use mature content or the full platform.
+    """
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'otp'
+
+    def post(self, request):
+        data = request.data if isinstance(request.data, dict) else {}
+        # Two paths: unauthenticated (temp_token from social login) or an
+        # already signed-in session completing their age setup later.
+        temp_token = data.get('temp_token', '')
+        if request.user.is_authenticated:
+            user = request.user
+        elif temp_token:
+            user = _verify_temp_token(temp_token, 'social_age_setup')
+        else:
+            user = None
+        if user is None:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Session expired. Please sign in again.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        dob = data.get('date_of_birth', '')
+        if not dob:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Date of birth is required.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            from datetime import datetime
+            dob_date = datetime.strptime(str(dob)[:10], '%Y-%m-%d').date()
+        except (ValueError, IndexError):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid date format. Use YYYY-MM-DD.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        age = calculate_age(dob_date)
+        user.dob_hash = hash_dob(dob)
+        user.is_adult = age >= 18
+        user.save(update_fields=['dob_hash', 'is_adult'])
+        _log_event(user, 'age_verified', request, metadata={'method': 'social_signup'})
+
+        payload, challenged = _finalize_social_login(user, f'{request.data.get("provider", "social")}', request)
+        return Response({
+            'success': True,
+            'data': {**payload, 'age': age, 'is_adult': user.is_adult},
+            'message': 'Age verified. Welcome to BuddyUp!',
             'errors': None, 'pagination': None,
         })
 

@@ -12,6 +12,8 @@ import { useThemeStore } from '@/store/themeStore';
 import { profilesApi, authApi, notificationsApi, activityApi } from '@/api';
 import type { NotificationPreferences } from '@/api/notifications';
 import type { ActivityEvent } from '@/api/activity';
+import { AgeVerificationCard, BadgeApplicationForm } from '@/components/settings/VerificationCards';
+import { PasskeyCard, RecoveryCodesCard } from '@/components/settings/SecurityExtras';
 
 const sections = [
   { id: 'account', label: 'Account', icon: User, desc: 'Profile, email, phone, linked accounts' },
@@ -366,16 +368,12 @@ export default function Settings() {
       {activeSection === 'verifications' && (
         <div className="space-y-4">
           <h2 className="font-heading text-xl font-semibold">Verifications</h2>
+          <AgeVerificationCard />
           <Card className="p-4 space-y-4">
             <div>
-              <p className="text-sm font-medium">Age Verification</p>
-              <p className="text-xs text-buddy-text-secondary mb-2">Required for accessing mature content and gyms.</p>
-              <Button size="sm" variant="outline" onClick={() => toast('info', 'Age verification coming soon.')}>Verify Age with ID</Button>
-            </div>
-            <div className="border-t border-buddy-surface pt-4">
               <p className="text-sm font-medium">Professional Verification</p>
               <p className="text-xs text-buddy-text-secondary mb-2">Apply for a Trainer or Practitioner badge. Required for hosting paid sessions.</p>
-              <Button size="sm" variant="outline" onClick={() => toast('info', 'Professional applications coming soon.')}>Apply for Badge</Button>
+              <BadgeApplicationForm />
             </div>
           </Card>
         </div>
@@ -443,6 +441,9 @@ export default function Settings() {
       {activeSection === 'security' && (
         <div className="space-y-4">
           <h2 className="font-heading text-xl font-semibold">Security</h2>
+
+          <PasskeyCard />
+          {totpEnabled && <RecoveryCodesCard />}
 
           <Card className="p-4">
             <div className="flex items-start gap-3">

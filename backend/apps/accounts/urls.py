@@ -28,6 +28,12 @@ urlpatterns = [
     path('logout-all/', views.LogoutAllSessionsView.as_view(), name='logout_all'),
     path('activity-log/', views.ActivityLogView.as_view(), name='activity_log'),
     path('verify-age/', views.VerifyAgeView.as_view(), name='verify_age'),
+    path('social/age-setup/', views.SocialAgeSetupView.as_view(), name='social_age_setup'),
+    path('recovery-codes/regenerate/', views.RecoveryCodesRegenerateView.as_view(), name='recovery_codes_regenerate'),
+    path('passkeys/register/begin/', views.PasskeyRegisterBeginView.as_view(), name='passkey_register_begin'),
+    path('passkeys/register/finish/', views.PasskeyRegisterFinishView.as_view(), name='passkey_register_finish'),
+    path('passkeys/login/begin/', views.PasskeyLoginBeginView.as_view(), name='passkey_login_begin'),
+    path('passkeys/login/finish/', views.PasskeyLoginFinishView.as_view(), name='passkey_login_finish'),
     path('policies/', views.PolicyVersionsView.as_view(), name='policy_versions'),
     path('consent-status/', views.ConsentStatusView.as_view(), name='consent_status'),
 ]
