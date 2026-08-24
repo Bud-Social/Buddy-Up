@@ -46,8 +46,9 @@ fun hasSigningConfig(): Boolean =
 android {
     namespace = "com.buddyup.buddy_up_flutter"
     // Pinned floor: older Flutter SDK caches default to android-31, which fails
-    // AAR metadata checks against androidx libraries requiring compileSdk 34+.
-    compileSdk = maxOf(flutter.compileSdkVersion, 36)
+    // AAR metadata checks against androidx dependencies requiring 34+.
+    val flutterSdk = flutter.compileSdkVersion as? Int ?: 0
+    compileSdk = if (flutterSdk > 36) flutterSdk else 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
