@@ -8,22 +8,22 @@ abstract class WalletRepository {
   factory WalletRepository(Dio dio, {String baseUrl}) = _WalletRepository;
 
   @GET('/wallet/balance/')
-  Future<Map<String, dynamic>> getBalance();
+  Future<dynamic> getBalance();
 
   @GET('/wallet/transactions/')
-  Future<Map<String, dynamic>> getTransactions({
+  Future<dynamic> getTransactions({
     @Query('type') String? type,
     @Query('direction') String? direction,
     @Query('cursor') String? cursor,
   });
 
   @POST('/wallet/purchase/initialize/')
-  Future<Map<String, dynamic>> initializePurchase(
+  Future<dynamic> initializePurchase(
     @Body() Map<String, dynamic> data,
   );
 
   @POST('/wallet/purchase/confirm/')
-  Future<Map<String, dynamic>> confirmPurchase(
+  Future<dynamic> confirmPurchase(
     @Body() Map<String, dynamic> data,
   );
 
@@ -34,29 +34,29 @@ abstract class WalletRepository {
   Future<void> gift(@Body() Map<String, dynamic> data);
 
   @POST('/wallet/withdraw/')
-  Future<Map<String, dynamic>> withdraw(@Body() Map<String, dynamic> data);
+  Future<dynamic> withdraw(@Body() Map<String, dynamic> data);
 
   @GET('/wallet/withdraw/banks/')
-  Future<Map<String, dynamic>> getBanks({@Query('country') String? country});
+  Future<dynamic> getBanks({@Query('country') String? country});
 
   @POST('/wallet/withdraw/bank-resolve/')
-  Future<Map<String, dynamic>> resolveBank(@Body() Map<String, dynamic> data);
+  Future<dynamic> resolveBank(@Body() Map<String, dynamic> data);
 
   @GET('/wallet/bundles/')
-  Future<Map<String, dynamic>> getBundles();
+  Future<dynamic> getBundles();
 
   @GET('/wallet/exchange-rates/')
-  Future<Map<String, dynamic>> getExchangeRates();
+  Future<dynamic> getExchangeRates();
 
   @POST('/wallet/creator/transfer/')
-  Future<Map<String, dynamic>> transferFromCreator(@Body() Map<String, dynamic> data);
+  Future<dynamic> transferFromCreator(@Body() Map<String, dynamic> data);
 
   @PATCH('/wallet/creator/profile/')
-  Future<Map<String, dynamic>> updateCreatorProfile(@Body() Map<String, dynamic> data);
+  Future<dynamic> updateCreatorProfile(@Body() Map<String, dynamic> data);
 
   @POST('/wallet/payout-request/')
-  Future<Map<String, dynamic>> requestPayout(@Body() Map<String, dynamic> data);
+  Future<dynamic> requestPayout(@Body() Map<String, dynamic> data);
 
   @GET('/wallet/payout-history/')
-  Future<Map<String, dynamic>> getPayoutHistory();
+  Future<dynamic> getPayoutHistory();
 }

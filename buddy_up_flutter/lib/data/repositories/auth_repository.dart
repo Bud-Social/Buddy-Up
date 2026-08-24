@@ -29,7 +29,7 @@ abstract class AuthRepository {
   Future<LoginOTPResponse> verifyLoginOtp(@Body() LoginOTPSerializer payload);
 
   @POST('/auth/token/refresh/')
-  Future<Map<String, dynamic>> refreshToken(@Body() Map<String, dynamic> body);
+  Future<dynamic> refreshToken(@Body() Map<String, dynamic> body);
 
   @POST('/auth/logout/')
   Future<void> logout();

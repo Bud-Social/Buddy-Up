@@ -785,7 +785,7 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
           if (_method == 'mpesa') ...[
             BuddyInput(label: 'Phone number (Flutterwave)', controller: _phoneCtrl, hint: '+254...'),
           ] else ...[
-            FutureBuilder<Map<String, dynamic>>(
+            FutureBuilder<dynamic>(
               future: ref.read(walletRepositoryProvider).getBanks(),
               builder: (context, snapshot) {
                 final banks = ((snapshot.data?['data'] ?? snapshot.data?['banks']) as List?) ?? const [];

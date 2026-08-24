@@ -20,7 +20,7 @@ class _FeedRepository implements FeedRepository {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<Map<String, dynamic>> getFeed({
+  Future<dynamic> getFeed({
     String? tab,
     String? cursor,
     String? excludePostTypes,
@@ -34,7 +34,7 @@ class _FeedRepository implements FeedRepository {
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -44,27 +44,18 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> getPost(String postId) async {
+  Future<dynamic> getPost(String postId) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -74,27 +65,18 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> createPost(Map<String, dynamic> data) async {
+  Future<dynamic> createPost(Map<String, dynamic> data) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = FormData.fromMap(data);
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(
             method: 'POST',
             headers: _headers,
@@ -109,17 +91,8 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
@@ -143,12 +116,12 @@ class _FeedRepository implements FeedRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> react(String postId, ReactionInput input) async {
+  Future<dynamic> react(String postId, ReactionInput input) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = input;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -158,17 +131,8 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
@@ -192,12 +156,12 @@ class _FeedRepository implements FeedRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> getComments(String postId) async {
+  Future<dynamic> getComments(String postId) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -207,30 +171,18 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> addComment(
-    String postId,
-    CommentCreateInput input,
-  ) async {
+  Future<dynamic> addComment(String postId, CommentCreateInput input) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = input;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -240,17 +192,8 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
@@ -274,15 +217,12 @@ class _FeedRepository implements FeedRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> repost(
-    String postId,
-    RepostPayload payload,
-  ) async {
+  Future<dynamic> repost(String postId, RepostPayload payload) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = payload;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -292,27 +232,18 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> save(String postId, SavePayload payload) async {
+  Future<dynamic> save(String postId, SavePayload payload) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = payload;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -322,17 +253,8 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
@@ -356,16 +278,13 @@ class _FeedRepository implements FeedRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> voteOnPoll(
-    String postId,
-    Map<String, dynamic> body,
-  ) async {
+  Future<dynamic> voteOnPoll(String postId, Map<String, dynamic> body) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = <String, dynamic>{};
     _data.addAll(body);
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -375,27 +294,18 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> pin(String postId) async {
+  Future<dynamic> pin(String postId) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -405,28 +315,19 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> getSavedPosts({String? collection}) async {
+  Future<dynamic> getSavedPosts({String? collection}) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'collection': collection};
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -436,27 +337,18 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> getDrafts() async {
+  Future<dynamic> getDrafts() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -466,27 +358,18 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> saveDraft(Draft draft) async {
+  Future<dynamic> saveDraft(Draft draft) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = draft;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -496,17 +379,8 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
@@ -530,12 +404,12 @@ class _FeedRepository implements FeedRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> analyzeWorkout() async {
+  Future<dynamic> analyzeWorkout() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -545,28 +419,19 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> getHealthInsights({String? period}) async {
+  Future<dynamic> getHealthInsights({String? period}) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'period': period};
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(method: 'GET', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -576,29 +441,18 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 
   @override
-  Future<Map<String, dynamic>> analyzeWorkoutForm(
-    Map<String, dynamic> data,
-  ) async {
+  Future<dynamic> analyzeWorkoutForm(Map<String, dynamic> data) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = FormData.fromMap(data);
-    final _options = _setStreamType<Map<String, dynamic>>(
+    final _options = _setStreamType<dynamic>(
       Options(
             method: 'POST',
             headers: _headers,
@@ -613,17 +467,8 @@ class _FeedRepository implements FeedRepository {
           )
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
-    final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late Map<String, dynamic> _value;
-    try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
-    } on Object catch (e, s) {
-      errorLogger?.logError(e, s, _options, response: _result);
-      rethrow;
-    }
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
     return _value;
   }
 

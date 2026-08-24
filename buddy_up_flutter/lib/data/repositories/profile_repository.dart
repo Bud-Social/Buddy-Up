@@ -17,13 +17,13 @@ abstract class ProfileRepository {
   Future<Profile> updateProfile(@Body() ProfileUpdatePayload payload);
 
   @POST('/profiles/me/avatar/')
-  Future<Map<String, dynamic>> uploadAvatar(@Body() FormData formData);
+  Future<dynamic> uploadAvatar(@Body() FormData formData);
 
   @POST('/profiles/me/cover/')
-  Future<Map<String, dynamic>> uploadCover(@Body() FormData formData);
+  Future<dynamic> uploadCover(@Body() FormData formData);
 
   @GET('/profiles/search/')
-  Future<Map<String, dynamic>> searchProfiles(
+  Future<dynamic> searchProfiles(
     @Query('q') String query,
     @Query('role') String? role,
     @Query('page') int? page,
@@ -39,7 +39,7 @@ abstract class ProfileRepository {
   Future<Profile> getProfile(@Path('username') String username);
 
   @GET('/profiles/{username}/posts/')
-  Future<Map<String, dynamic>> getUserPosts(
+  Future<dynamic> getUserPosts(
     @Path('username') String username,
     @Query('page') int? page,
   );
@@ -66,29 +66,29 @@ abstract class ProfileRepository {
   );
 
   @GET('/profiles/{username}/buddies/')
-  Future<Map<String, dynamic>> getBuddies(@Path('username') String username);
+  Future<dynamic> getBuddies(@Path('username') String username);
 
   @GET('/profiles/{username}/followers/')
-  Future<Map<String, dynamic>> getFollowers(
+  Future<dynamic> getFollowers(
     @Path('username') String username,
     @Query('page') int? page,
   );
 
   @GET('/profiles/{username}/following/')
-  Future<Map<String, dynamic>> getFollowing(
+  Future<dynamic> getFollowing(
     @Path('username') String username,
     @Query('page') int? page,
   );
 
   @GET('/profiles/blocked/')
-  Future<Map<String, dynamic>> getBlockedList();
+  Future<dynamic> getBlockedList();
 
   @GET('/profiles/pending-requests/')
-  Future<Map<String, dynamic>> getPendingBuddyRequests();
+  Future<dynamic> getPendingBuddyRequests();
 
   @GET('/profiles/recommendations/')
-  Future<Map<String, dynamic>> getBuddyRecommendations();
+  Future<dynamic> getBuddyRecommendations();
 
   @GET('/profiles/discover/trending/')
-  Future<Map<String, dynamic>> getDiscoverTrending();
+  Future<dynamic> getDiscoverTrending();
 }

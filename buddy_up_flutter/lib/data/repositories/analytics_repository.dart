@@ -8,17 +8,17 @@ abstract class AnalyticsRepository {
   factory AnalyticsRepository(Dio dio, {String baseUrl}) = _AnalyticsRepository;
 
   @GET('/analytics/summary/')
-  Future<Map<String, dynamic>> getSummary({@Query('period') String? period});
+  Future<dynamic> getSummary({@Query('period') String? period});
 
   @GET('/analytics/activities/')
-  Future<Map<String, dynamic>> getActivities({
+  Future<dynamic> getActivities({
     @Query('activity_type') String? activityType,
     @Query('start') String? start,
     @Query('end') String? end,
   });
 
   @POST('/analytics/activities/')
-  Future<Map<String, dynamic>> createActivity(
+  Future<dynamic> createActivity(
     @Body() Map<String, dynamic> data,
   );
 
@@ -26,29 +26,29 @@ abstract class AnalyticsRepository {
   Future<void> deleteActivity(@Path('id') String id);
 
   @GET('/analytics/workouts/')
-  Future<Map<String, dynamic>> getWorkouts();
+  Future<dynamic> getWorkouts();
 
   @POST('/analytics/workouts/')
-  Future<Map<String, dynamic>> createWorkout(@Body() Map<String, dynamic> data);
+  Future<dynamic> createWorkout(@Body() Map<String, dynamic> data);
 
   @DELETE('/analytics/workouts/{id}/')
   Future<void> deleteWorkout(@Path('id') String id);
 
   @GET('/analytics/meals/')
-  Future<Map<String, dynamic>> getMeals();
+  Future<dynamic> getMeals();
 
   @POST('/analytics/meals/')
-  Future<Map<String, dynamic>> createMeal(@Body() Map<String, dynamic> data);
+  Future<dynamic> createMeal(@Body() Map<String, dynamic> data);
 
   @POST('/analytics/meals/')
   @MultiPart()
-  Future<Map<String, dynamic>> createMealWithPhoto(
+  Future<dynamic> createMealWithPhoto(
     @Part() Map<String, dynamic> data,
   );
 
   @POST('/analytics/meals/analyze/')
   @MultiPart()
-  Future<Map<String, dynamic>> analyzeMealPhoto(
+  Future<dynamic> analyzeMealPhoto(
     @Part() Map<String, dynamic> data,
   );
 
@@ -56,17 +56,17 @@ abstract class AnalyticsRepository {
   Future<void> deleteMeal(@Path('id') String id);
 
   @GET('/analytics/body/')
-  Future<Map<String, dynamic>> getBodyMetrics();
+  Future<dynamic> getBodyMetrics();
 
   @POST('/analytics/body/')
   @MultiPart()
-  Future<Map<String, dynamic>> createBodyMetric(
+  Future<dynamic> createBodyMetric(
     @Part() Map<String, dynamic> data,
   );
 
   @POST('/analytics/body/read-weight/')
   @MultiPart()
-  Future<Map<String, dynamic>> readBodyWeight(
+  Future<dynamic> readBodyWeight(
     @Part() Map<String, dynamic> data,
   );
 
@@ -74,16 +74,16 @@ abstract class AnalyticsRepository {
   Future<void> deleteBodyMetric(@Path('id') String id);
 
   @GET('/analytics/report/')
-  Future<Map<String, dynamic>> generateReport({
+  Future<dynamic> generateReport({
     @Query('period') String? period,
   });
 
   @GET('/analytics/report/download/')
-  Future<Map<String, dynamic>> downloadReport({
+  Future<dynamic> downloadReport({
     @Query('period') String? period,
     @Query('id') String? id,
   });
 
   @POST('/analytics/report/share/')
-  Future<Map<String, dynamic>> shareReport(@Body() Map<String, dynamic> data);
+  Future<dynamic> shareReport(@Body() Map<String, dynamic> data);
 }
