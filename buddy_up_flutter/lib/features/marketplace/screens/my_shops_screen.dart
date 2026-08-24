@@ -61,7 +61,7 @@ class MyShopsScreen extends ConsumerWidget {
             children: [
               const Icon(Icons.error_outline, size: 48, color: BuddyColors.textSecondary),
               const SizedBox(height: 12),
-              Text('Failed to load shops', style: TextStyle(color: BuddyColors.textSecondary)),
+              const Text('Failed to load shops', style: TextStyle(color: BuddyColors.textSecondary)),
               const SizedBox(height: 8),
               ElevatedButton(
                 onPressed: () => ref.invalidate(myShopsProvider),
@@ -124,11 +124,11 @@ class _ShopCard extends StatelessWidget {
                               color: BuddyColors.green.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.verified, size: 12, color: BuddyColors.green),
-                                const SizedBox(width: 4),
+                                SizedBox(width: 4),
                                 Text('Certified',
                                     style: TextStyle(
                                         fontSize: 10,
@@ -179,7 +179,7 @@ class _EmptyShopsState extends StatelessWidget {
                 color: BuddyColors.green.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.storefront_outlined, size: 48, color: BuddyColors.green),
+              child: const Icon(Icons.storefront_outlined, size: 48, color: BuddyColors.green),
             ),
             const SizedBox(height: 24),
             const Text('No Shops Yet',

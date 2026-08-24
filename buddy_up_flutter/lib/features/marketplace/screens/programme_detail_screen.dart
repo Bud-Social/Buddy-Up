@@ -237,11 +237,11 @@ class _CreatorRow extends StatelessWidget {
             color: BuddyColors.green.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Row(
+          child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.verified, size: 12, color: BuddyColors.green),
-              const SizedBox(width: 4),
+              SizedBox(width: 4),
               Text('Verified', style: TextStyle(fontSize: 10, color: BuddyColors.green, fontWeight: FontWeight.bold)),
             ],
           ),

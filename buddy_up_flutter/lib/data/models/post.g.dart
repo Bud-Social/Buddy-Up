@@ -147,6 +147,7 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
   repostCount: (json['repostCount'] as num?)?.toInt() ?? 0,
   isRepost: json['isRepost'] as bool? ?? false,
+  isRepostedByMe: json['isRepostedByMe'] as bool? ?? false,
   originalPostId: json['originalPostId'] as String?,
   quoteBody: json['quoteBody'] as String? ?? '',
   reposters:
@@ -192,6 +193,7 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'commentCount': instance.commentCount,
   'repostCount': instance.repostCount,
   'isRepost': instance.isRepost,
+  'isRepostedByMe': instance.isRepostedByMe,
   'originalPostId': instance.originalPostId,
   'quoteBody': instance.quoteBody,
   'reposters': instance.reposters,

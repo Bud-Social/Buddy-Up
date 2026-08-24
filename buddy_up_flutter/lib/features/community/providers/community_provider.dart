@@ -138,8 +138,10 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
     }
   }
 
-  Future<void> createPost(String body) async {
-    await ref.read(communityRepositoryProvider).createCommunityPost(communityId, {'body': body});
+  Future<void> createPost(String body, {String mediaUrl = ''}) async {
+    final payload = <String, dynamic>{'body': body};
+    if (mediaUrl.isNotEmpty) payload['media_url'] = mediaUrl;
+    await ref.read(communityRepositoryProvider).createCommunityPost(communityId, payload);
     await loadPosts();
   }
 

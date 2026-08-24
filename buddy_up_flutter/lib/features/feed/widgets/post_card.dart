@@ -202,6 +202,7 @@ class PostCard extends StatelessWidget {
         ),
         _ActionButton(
           icon: Icons.repeat,
+          color: post.isRepostedByMe ? BuddyColors.green : BuddyColors.textSecondary,
           label: _formatCount(post.repostCount),
           onTap: () => onRepost?.call(post.id),
         ),

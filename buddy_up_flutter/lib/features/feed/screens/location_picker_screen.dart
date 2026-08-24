@@ -127,7 +127,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         throw Exception('location permission denied');
       }
       final pos = await Geolocator.getCurrentPosition(
-        timeLimit: const Duration(seconds: 8),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
+        ),
       );
       if (!mounted) return;
       final l = LatLng(pos.latitude, pos.longitude);

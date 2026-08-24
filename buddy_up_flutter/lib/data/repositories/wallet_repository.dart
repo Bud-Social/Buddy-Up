@@ -53,4 +53,10 @@ abstract class WalletRepository {
 
   @PATCH('/wallet/creator/profile/')
   Future<Map<String, dynamic>> updateCreatorProfile(@Body() Map<String, dynamic> data);
+
+  @POST('/wallet/payout-request/')
+  Future<Map<String, dynamic>> requestPayout(@Body() Map<String, dynamic> data);
+
+  @GET('/wallet/payout-history/')
+  Future<Map<String, dynamic>> getPayoutHistory();
 }

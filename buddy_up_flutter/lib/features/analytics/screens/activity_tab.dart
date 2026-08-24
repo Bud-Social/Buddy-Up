@@ -89,6 +89,8 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
       );
     }
 
+    final cs = Theme.of(context).colorScheme;
+
     return RefreshIndicator(
       onRefresh: () => ref.read(analyticsSummaryProvider.notifier).refresh(),
       child: ListView(
@@ -157,10 +159,10 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
                     label: Text(
                       '${t.label} · ${formatNumber(t.distanceKm, decimals: 1)}km',
                     ),
-                    backgroundColor: BuddyColors.surface,
-                    side: const BorderSide(color: BuddyColors.surfaceRaised),
-                    labelStyle: const TextStyle(
-                      color: BuddyColors.textPrimary,
+                    backgroundColor: cs.surface,
+                    side: BorderSide(color: cs.outlineVariant),
+                    labelStyle: TextStyle(
+                      color: cs.onSurface,
                       fontSize: 12,
                     ),
                   ),
@@ -179,12 +181,13 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
   }
 
   Widget _buildLogForm() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: BuddyColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BuddyColors.border),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Form(
         key: _formKey,
@@ -215,12 +218,12 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
                         labelStyle: TextStyle(
                           color: _activityType == t.key
                               ? BuddyColors.green
-                              : BuddyColors.textPrimary,
+                              : cs.onSurface,
                           fontSize: 12,
                         ),
-                        backgroundColor: BuddyColors.surfaceRaised,
-                        side: const BorderSide(
-                          color: BuddyColors.surfaceRaised,
+                        backgroundColor: cs.surfaceContainerHighest,
+                        side: BorderSide(
+                          color: cs.outlineVariant,
                         ),
                       ),
                     ),
@@ -233,7 +236,7 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _durationController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Minutes'),
                     validator: (v) =>
@@ -244,7 +247,7 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _distanceController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -256,7 +259,7 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _caloriesController,
-              style: const TextStyle(color: BuddyColors.textPrimary),
+              style: TextStyle(color: cs.onSurface),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
@@ -279,6 +282,7 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
   }
 
   Widget _activityTile(ActivityRecent a) {
+    final cs = Theme.of(context).colorScheme;
     final type = _activityTypes.firstWhere(
       (t) => t.key == a.activityType,
       orElse: () => (
@@ -291,9 +295,9 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: BuddyColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: BuddyColors.border),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
         children: [
@@ -305,8 +309,8 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
               children: [
                 Text(
                   type.label,
-                  style: const TextStyle(
-                    color: BuddyColors.textPrimary,
+                  style: TextStyle(
+                    color: cs.onSurface,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -314,8 +318,8 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
                 const SizedBox(height: 2),
                 Text(
                   '${formatNumber(a.distanceKm, decimals: 1)} km · ${formatDuration(a.durationSeconds)}',
-                  style: const TextStyle(
-                    color: BuddyColors.textSecondary,
+                  style: TextStyle(
+                    color: cs.onSurface.withValues(alpha: 0.6),
                     fontSize: 12,
                   ),
                 ),
@@ -324,8 +328,8 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
           ),
           Text(
             formatDate(a.startedAt),
-            style: const TextStyle(
-              color: BuddyColors.textSecondary,
+            style: TextStyle(
+              color: cs.onSurface.withValues(alpha: 0.6),
               fontSize: 12,
             ),
           ),

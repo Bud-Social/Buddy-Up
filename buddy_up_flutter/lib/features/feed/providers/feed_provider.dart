@@ -132,6 +132,31 @@ class FeedNotifier extends Notifier<FeedState> {
     final uri = Uri.tryParse(url);
     return uri?.queryParameters['cursor'];
   }
+
+  Future<void> toggleRepost(String postId) async {
+    final idx = state.posts.indexWhere((p) => p.id == postId);
+    if (idx == -1) return;
+    
+    final post = state.posts[idx];
+    final isReposted = post.isRepostedByMe;
+    
+    // Optimistic update
+    final updated = post.copyWith(
+      isRepostedByMe: !isReposted,
+      repostCount: (post.repostCount + (isReposted ? -1 : 1)).clamp(0, 999999),
+    );
+    updatePostInList(updated);
+    
+    try {
+      final res = await _repository.repost(postId, const RepostPayload());
+      if (res['repost_count'] != null) {
+        updatePostInList(updated.copyWith(repostCount: res['repost_count'] as int));
+      }
+    } catch (e) {
+      // Rollback
+      updatePostInList(post);
+    }
+  }
 }
 
 final feedProvider = NotifierProvider<FeedNotifier, FeedState>(FeedNotifier.new);

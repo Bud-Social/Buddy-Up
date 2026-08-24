@@ -172,6 +172,7 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
     try {
       final raw = await ref.read(marketplaceRepositoryProvider).shareDiscountCode(code.id);
       final result = DiscountShareResult.fromJson(raw['data'] as Map<String, dynamic>);
+      if (!mounted) return;
       if (result.qrCode != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('QR code shared (save from gallery)')),
@@ -185,7 +186,9 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
       }
       ref.invalidate(discountCodesProvider);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Share failed: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Share failed: $e')));
+      }
     }
   }
 
@@ -194,6 +197,34 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
       final raw = await ref.read(marketplaceRepositoryProvider).getDiscountCodeAnalytics(id);
       setState(() => _analytics = DiscountAnalytics.fromJson(raw['data'] as Map<String, dynamic>));
     } catch (_) {}
+  }
+
+  Future<void> _pickValidFrom() async {
+    final dt = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (dt == null || !mounted) return;
+    final tm = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    if (tm != null) {
+      setState(() => _validFrom = DateTime(dt.year, dt.month, dt.day, tm.hour, tm.minute).toIso8601String());
+    }
+  }
+
+  Future<void> _pickValidUntil() async {
+    final dt = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 30)),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (dt == null || !mounted) return;
+    final tm = await showTimePicker(context: context, initialTime: TimeOfDay.now());
+    if (tm != null) {
+      setState(() => _validUntil = DateTime(dt.year, dt.month, dt.day, tm.hour, tm.minute).toIso8601String());
+    }
   }
 
   @override
@@ -252,7 +283,7 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _discountType,
+                    initialValue: _discountType,
                     decoration: const InputDecoration(labelText: 'Discount Type'),
                     items: const [DropdownMenuItem(value: 'percentage', child: Text('Percentage')), DropdownMenuItem(value: 'fixed_artifacts', child: Text('Fixed Artifacts'))],
                     onChanged: (v) => setState(() => _discountType = v!),
@@ -261,7 +292,7 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _codeType,
+                    initialValue: _codeType,
                     decoration: const InputDecoration(labelText: 'Code Type'),
                     items: const [DropdownMenuItem(value: 'text', child: Text('Text')), DropdownMenuItem(value: 'qr', child: Text('QR Code'))],
                     onChanged: (v) => setState(() => _codeType = v!),
@@ -289,15 +320,7 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
                     decoration: const InputDecoration(labelText: 'Valid From'),
                     readOnly: true,
                     controller: TextEditingController(text: _validFrom),
-                    onTap: () async {
-                      final dt = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
-                      if (dt != null) {
-                        final tm = await showTimePicker(context: context, initialTime: TimeOfDay.now());
-                        if (tm != null) {
-                          setState(() => _validFrom = DateTime(dt.year, dt.month, dt.day, tm.hour, tm.minute).toIso8601String());
-                        }
-                      }
-                    },
+                    onTap: _pickValidFrom,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -306,15 +329,7 @@ class _DiscountCodesScreenState extends ConsumerState<DiscountCodesScreen> {
                     decoration: const InputDecoration(labelText: 'Valid Until'),
                     readOnly: true,
                     controller: TextEditingController(text: _validUntil),
-                    onTap: () async {
-                      final dt = await showDatePicker(context: context, initialDate: DateTime.now().add(const Duration(days: 30)), firstDate: DateTime(2020), lastDate: DateTime(2030));
-                      if (dt != null) {
-                        final tm = await showTimePicker(context: context, initialTime: TimeOfDay.now());
-                        if (tm != null) {
-                          setState(() => _validUntil = DateTime(dt.year, dt.month, dt.day, tm.hour, tm.minute).toIso8601String());
-                        }
-                      }
-                    },
+                    onTap: _pickValidUntil,
                   ),
                 ),
               ],

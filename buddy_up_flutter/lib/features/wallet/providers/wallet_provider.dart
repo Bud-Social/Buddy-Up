@@ -144,3 +144,13 @@ final banksProvider = FutureProvider<List<BankInfo>>((ref) async {
       .map((e) => BankInfo.fromJson(e as Map<String, dynamic>))
       .toList();
 });
+
+// -- Creator Payouts Provider --
+final creatorPayoutsProvider = FutureProvider<List<ArtifactTransaction>>((ref) async {
+  final repo = ref.watch(walletRepositoryProvider);
+  final raw = await repo.getPayoutHistory();
+  return (raw['data'] as List)
+      .map((e) => ArtifactTransaction.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
+

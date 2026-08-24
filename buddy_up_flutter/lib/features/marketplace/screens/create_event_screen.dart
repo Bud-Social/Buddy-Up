@@ -7,6 +7,7 @@ import '../../../shared/widgets/wizard_widgets.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import '../utils/event_categories.dart';
 
 class CreateEventScreen extends ConsumerStatefulWidget {
   final String? shopHandle;
@@ -35,12 +36,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
   DateTime _endDate = DateTime.now().add(const Duration(days: 7));
   TimeOfDay _endTime = const TimeOfDay(hour: 11, minute: 0);
   bool _isFree = false;
-  Map<String, int> _ticketPrices = {'dumbbell': 5};
+  final Map<String, int> _ticketPrices = {'dumbbell': 5};
   XFile? _coverFile;
   String? _uploadedCoverUrl;
 
   final List<String> _eventTypes = ['in_person', 'online', 'hybrid'];
-  final List<String> _categories = ['fitness', 'nutrition', 'wellness', 'workshop', 'seminar'];
 
   @override
   void dispose() {
@@ -153,11 +153,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
               controller: _pageController,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                _StepDetails(),
-                _StepDateTime(),
-                _StepLocation(),
-                _StepTickets(),
-                _StepReview(),
+                _stepDetails(),
+                _stepDateTime(),
+                _stepLocation(),
+                _stepTickets(),
+                _stepReview(),
               ],
             ),
           ),
@@ -175,7 +175,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
-  Widget _StepDetails() {
+  Widget _stepDetails() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -196,41 +196,43 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             clipBehavior: Clip.antiAlias,
             child: _coverFile != null
                 ? Image.file(File(_coverFile!.path), fit: BoxFit.cover)
-                : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                : const Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(Icons.add_photo_alternate_outlined,
                         size: 36, color: BuddyColors.textSecondary),
-                    const SizedBox(height: 6),
-                    const Text('Upload event cover',
+                    SizedBox(height: 6),
+                    Text('Upload event cover',
                         style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
                   ]),
           ),
         ),
         const SizedBox(height: 20),
-        _Field('Title', _titleController, hint: 'e.g. Morning HIIT Bootcamp'),
+        _field('Title', _titleController, hint: 'e.g. Morning HIIT Bootcamp'),
         const SizedBox(height: 14),
-        _Field('Description', _descriptionController,
+        _field('Description', _descriptionController,
             hint: 'Describe the event...', maxLines: 4),
         const SizedBox(height: 14),
         const Text('Category', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
-          children: _categories
+          runSpacing: 8,
+          children: kEventCategories
               .map((c) => ChoiceChip(
-                    label: Text(c),
-                    selected: _category == c,
-                    onSelected: (_) => setState(() => _category = c),
+                    avatar: Icon(c.icon, size: 16, color: _category == c.key ? BuddyColors.black : BuddyColors.green),
+                    label: Text(c.label),
+                    selected: _category == c.key,
+                    onSelected: (_) => setState(() => _category = c.key),
                     selectedColor: BuddyColors.green,
                   ))
               .toList(),
         ),
         const SizedBox(height: 14),
-        _Field('Tags', _tagsController, hint: 'hiit, cardio, beginners (comma separated)'),
+        _field('Tags', _tagsController, hint: 'hiit, cardio, beginners (comma separated)'),
       ]),
     );
   }
 
-  Widget _StepDateTime() {
+  Widget _stepDateTime() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -286,30 +288,30 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           },
         ),
         const SizedBox(height: 20),
-        _Field('Capacity (max attendees)', _capacityController,
+        _field('Capacity (max attendees)', _capacityController,
             hint: '50', inputType: TextInputType.number),
       ]),
     );
   }
 
-  Widget _StepLocation() {
+  Widget _stepLocation() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('Location', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 20),
         if (_eventType == 'in_person' || _eventType == 'hybrid') ...[
-          _Field('Venue / Address', _locationController, hint: 'e.g. 123 Fitness St, Nairobi'),
+          _field('Venue / Address', _locationController, hint: 'e.g. 123 Fitness St, Nairobi'),
           const SizedBox(height: 16),
         ],
         if (_eventType == 'online' || _eventType == 'hybrid') ...[
-          _Field('Online Meeting URL', _onlineUrlController, hint: 'https://zoom.us/j/...'),
+          _field('Online Meeting URL', _onlineUrlController, hint: 'https://zoom.us/j/...'),
         ],
       ]),
     );
   }
 
-  Widget _StepTickets() {
+  Widget _stepTickets() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -320,7 +322,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           onChanged: (v) => setState(() => _isFree = v),
           title: const Text('Free Event'),
           subtitle: const Text('No tickets required'),
-          activeColor: BuddyColors.green,
+          activeThumbColor: BuddyColors.green,
           contentPadding: EdgeInsets.zero,
         ),
         if (!_isFree) ...[
@@ -352,7 +354,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
             label: const Text('Add Ticket Tier'),
             onPressed: () => _showAddTierDialog(),
             style: OutlinedButton.styleFrom(
-              side: BorderSide(color: BuddyColors.green),
+              side: const BorderSide(color: BuddyColors.green),
               foregroundColor: BuddyColors.green,
             ),
           ),
@@ -361,7 +363,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
-  Widget _StepReview() {
+  Widget _stepReview() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -380,15 +382,15 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(children: [
-              _ReviewRow('Title', _titleController.text),
-              _ReviewRow('Type', _eventType),
-              _ReviewRow('Category', _category),
-              _ReviewRow('Start', '${_startDate.day}/${_startDate.month}/${_startDate.year} at ${_startTime.format(context)}'),
-              _ReviewRow('End', '${_endDate.day}/${_endDate.month}/${_endDate.year} at ${_endTime.format(context)}'),
-              _ReviewRow('Capacity', _capacityController.text),
-              _ReviewRow('Pricing', _isFree ? 'Free' : '${_ticketPrices}'),
+              _reviewRow('Title', _titleController.text),
+              _reviewRow('Type', _eventType),
+              _reviewRow('Category', _category),
+              _reviewRow('Start', '${_startDate.day}/${_startDate.month}/${_startDate.year} at ${_startTime.format(context)}'),
+              _reviewRow('End', '${_endDate.day}/${_endDate.month}/${_endDate.year} at ${_endTime.format(context)}'),
+              _reviewRow('Capacity', _capacityController.text),
+              _reviewRow('Pricing', _isFree ? 'Free' : '$_ticketPrices'),
               if (_locationController.text.isNotEmpty)
-                _ReviewRow('Location', _locationController.text),
+                _reviewRow('Location', _locationController.text),
             ]),
           ),
         ),
@@ -396,7 +398,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
-  Widget _ReviewRow(String label, String value) {
+  Widget _reviewRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -412,7 +414,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen> {
     );
   }
 
-  Widget _Field(String label, TextEditingController ctrl,
+  Widget _field(String label, TextEditingController ctrl,
       {String? hint, int maxLines = 1, TextInputType? inputType}) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),

@@ -57,10 +57,10 @@ class _ProgrammeActivityFocusScreenState
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                         color: BuddyColors.green.withValues(alpha: 0.15),
-                        child: Row(
+                        child: const Row(
                           children: [
                             Icon(Icons.check_circle, color: BuddyColors.green, size: 20),
-                            const SizedBox(width: 8),
+                            SizedBox(width: 8),
                             Text('Activity completed! Great work! 💪',
                                 style: TextStyle(
                                     color: BuddyColors.green, fontWeight: FontWeight.w600)),
@@ -184,12 +184,12 @@ class _ProgrammeActivityFocusScreenState
             ? Stack(fit: StackFit.expand, children: [
                 Container(
                   color: BuddyColors.surfaceRaised,
-                  child: Column(
+                  child: const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.play_circle_outline, size: 56, color: BuddyColors.green),
-                      const SizedBox(height: 8),
-                      const Text('Tap to play video',
+                      SizedBox(height: 8),
+                      Text('Tap to play video',
                           style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
                     ],
                   ),
@@ -215,7 +215,7 @@ class _ProgrammeActivityFocusScreenState
                     ],
                   ),
                 ),
-                child: Center(
+                child: const Center(
                   child: Icon(Icons.fitness_center, size: 48, color: BuddyColors.textSecondary),
                 ),
               ),

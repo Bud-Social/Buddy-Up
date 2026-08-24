@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/feed_tab_bar.dart';
 import '../widgets/post_card.dart';
+import '../../community/providers/community_provider.dart';
+import '../../../data/models/messaging.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../core/theme/app_theme.dart';
@@ -35,6 +37,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         return '/feed/bud-press';
       case 'following':
         return '/feed/following';
+      case 'communities':
+        return '/feed/communities';
       default:
         return '/feed';
     }
@@ -62,6 +66,15 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(feedProvider);
     final notifier = ref.read(feedProvider.notifier);
+    final communitiesAsync = ref.watch(communitiesListProvider);
+    final myCommunities = communitiesAsync.value?.mine ?? [];
+    final hasCommunities = myCommunities.isNotEmpty;
+    final tabs = [
+      'for_you',
+      'following',
+      if (hasCommunities) 'communities',
+      'videos',
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -85,10 +98,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         children: [
           FeedTabBar(
             activeTab: state.activeTab,
+            tabs: tabs,
             onTabChanged: _onTabChanged,
           ),
           Expanded(
-            child: _buildBody(state, notifier),
+            child: state.activeTab == 'communities'
+                ? _buildCommunitiesTab(myCommunities)
+                : _buildBody(state, notifier),
           ),
         ],
       ),
@@ -97,6 +113,76 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         onPressed: () => _navigateToComposer(),
         child: const Icon(Icons.edit, color: BuddyColors.black),
       ),
+    );
+  }
+
+  Widget _buildCommunitiesTab(List<Conversation> communities) {
+    final cs = Theme.of(context).colorScheme;
+    if (communities.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.groups_outlined, size: 64, color: BuddyColors.textSecondary),
+            const SizedBox(height: 16),
+            const Text('No Communities Joined Yet', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            const Text('Join a community to see posts and connect with peers.', style: TextStyle(color: BuddyColors.textSecondary)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => context.push('/communities'),
+              child: const Text('Discover Communities'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Your Communities (${communities.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            TextButton(
+              onPressed: () => context.push('/communities'),
+              child: const Text('View All', style: TextStyle(color: BuddyColors.green)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...communities.map((c) => Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          color: cs.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(color: cs.outlineVariant),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            leading: CircleAvatar(
+              radius: 24,
+              backgroundColor: cs.surfaceContainerHighest,
+              backgroundImage: c.groupAvatarUrl.isNotEmpty ? NetworkImage(c.groupAvatarUrl) : null,
+              child: c.groupAvatarUrl.isEmpty ? const Icon(Icons.groups, color: BuddyColors.green) : null,
+            ),
+            title: Text(c.groupName.isEmpty ? 'Community' : c.groupName, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text(
+              c.description.isNotEmpty
+                  ? c.description
+                  : (c.lastMessage?.body.isNotEmpty == true
+                      ? c.lastMessage!.body
+                      : 'Tap to open community feed & chat'),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.6)),
+            ),
+            trailing: const Icon(Icons.chevron_right, color: BuddyColors.green),
+            onTap: () => context.push('/communities/${c.id}'),
+          ),
+        )),
+      ],
     );
   }
 
@@ -180,13 +266,8 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
     } catch (_) {}
   }
 
-  void _handleRepost(String postId) async {
-    final repo = ref.read(feedRepositoryProvider);
-    try {
-      final raw = await repo.repost(postId, const RepostPayload());
-      final newPost = Post.fromJson(raw['data'] as Map<String, dynamic>);
-      ref.read(feedProvider.notifier).addPostToTop(newPost);
-    } catch (_) {}
+  void _handleRepost(String postId) {
+    ref.read(feedProvider.notifier).toggleRepost(postId);
   }
 
   void _handlePollVote(String postId) async {

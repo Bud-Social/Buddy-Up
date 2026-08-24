@@ -64,7 +64,8 @@ import 'features/community/screens/communities_screen.dart';
 import 'features/community/screens/community_detail_screen.dart';
 import 'shared/navigation/app_nav.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+final _rootNavigatorKey = rootNavigatorKey;
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 GoRouter buildRouter(WidgetRef ref, AuthState authState) {
@@ -469,6 +470,10 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           GoRoute(
             path: '/feed/bud-press',
             builder: (_, _) => const FeedScreen(initialTab: 'videos'),
+          ),
+          GoRoute(
+            path: '/feed/communities',
+            builder: (_, _) => const FeedScreen(initialTab: 'communities'),
           ),
           GoRoute(
             path: '/discover',

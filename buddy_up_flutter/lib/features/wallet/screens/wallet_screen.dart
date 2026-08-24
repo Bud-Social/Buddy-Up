@@ -246,7 +246,7 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
               );
             },
             loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: 8),
           const Text('Quick Actions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -747,8 +747,8 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
         children: [
           const Text('Withdraw Artifacts', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          Text('Withdraw from',
-              style: const TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
+          const Text('Withdraw from',
+              style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -771,8 +771,8 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
           const SizedBox(height: 12),
           BuddyInput(label: 'Quantity', controller: _qtyCtrl, keyboardType: TextInputType.number),
           const SizedBox(height: 16),
-          Text('Payout method',
-              style: const TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
+          const Text('Payout method',
+              style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -798,8 +798,8 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Bank',
-                        style: const TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
+                    const Text('Bank',
+                        style: TextStyle(fontSize: 13, color: BuddyColors.textSecondary)),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       initialValue: _bankCode.isEmpty ? null : _bankCode,
@@ -862,7 +862,7 @@ class _WithdrawTabState extends ConsumerState<_WithdrawTab> {
 
   Widget _methodChip(String value, String label) {
     final active = _method == value;
-    final accent = BuddyColors.green;
+    const accent = BuddyColors.green;
     return InkWell(
       onTap: () => setState(() => _method = value),
       borderRadius: BorderRadius.circular(12),

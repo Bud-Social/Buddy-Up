@@ -11,6 +11,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/constants.dart';
 import '../../../data/models/post.dart';
+import '../../community/providers/community_provider.dart';
 import '../../marketplace/providers/marketplace_provider.dart';
 import '../providers/feed_provider.dart';
 import 'location_picker_screen.dart';
@@ -45,7 +46,16 @@ class ComposerMedia {
 }
 
 class PostComposerScreen extends ConsumerStatefulWidget {
-  const PostComposerScreen({super.key});
+  final String? communityId;
+  final String? communityName;
+  final VoidCallback? onPostCreated;
+
+  const PostComposerScreen({
+    super.key,
+    this.communityId,
+    this.communityName,
+    this.onPostCreated,
+  });
 
   @override
   ConsumerState<PostComposerScreen> createState() => _PostComposerScreenState();
@@ -353,10 +363,22 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     }
 
     try {
+      if (widget.communityId != null && widget.communityId!.isNotEmpty) {
+        String mediaUrl = '';
+        if (_media.isNotEmpty) {
+          mediaUrl = _media.first.path;
+        }
+        await ref.read(communityFeedProvider(widget.communityId!).notifier).createPost(body, mediaUrl: mediaUrl);
+        widget.onPostCreated?.call();
+        if (mounted) Navigator.of(context).pop();
+        return;
+      }
+
       final repo = ref.read(feedRepositoryProvider);
       final raw = await repo.createPost(data);
       final post = Post.fromJson(raw['data'] as Map<String, dynamic>);
       ref.read(feedProvider.notifier).addPostToTop(post);
+      widget.onPostCreated?.call();
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
@@ -385,7 +407,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Post'),
+        title: Text(widget.communityName != null ? 'Post to ${widget.communityName}' : 'Create Post'),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
@@ -859,7 +881,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         width: 100,
         height: 100,
         color: BuddyColors.surfaceRaised,
-        child: Center(child: Icon(Icons.play_circle_outline, color: BuddyColors.textSecondary, size: 36)),
+        child: const Center(child: Icon(Icons.play_circle_outline, color: BuddyColors.textSecondary, size: 36)),
       );
     } else {
       preview = _fileThumb(m);

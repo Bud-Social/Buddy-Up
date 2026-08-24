@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
+import '../utils/event_categories.dart';
 
 class MarketplaceScreen extends ConsumerStatefulWidget {
   const MarketplaceScreen({super.key});
@@ -251,27 +252,32 @@ class _GridCard extends StatelessWidget {
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
 
-class _EventsTab extends ConsumerWidget {
+class _EventsTab extends ConsumerStatefulWidget {
   const _EventsTab();
 
-  void _addToCart(WidgetRef ref, BuildContext context, MarketplaceEvent event) {
+  @override
+  ConsumerState<_EventsTab> createState() => _EventsTabState();
+}
+
+class _EventsTabState extends ConsumerState<_EventsTab> {
+  String _selectedCategory = 'all';
+
+  void _addToCart(MarketplaceEvent event) {
     ref.read(cartProvider.notifier).addToCart('event_ticket', {'event_id': event.id});
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('Added to cart'), duration: Duration(seconds: 1)));
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final scope = ref.watch(eventsScopeProvider);
     final eventsAsync = ref.watch(eventsProvider);
     final scopes = [('upcoming', 'Upcoming'), ('past', 'Past'), ('all', 'All')];
-    final emptyText = switch (scope) {
-      'past' => 'No past events',
-      'all' => 'No events yet',
-      _ => 'No upcoming events',
-    };
+    final cs = Theme.of(context).colorScheme;
+
     return Column(
       children: [
+        // Scope selector
         SizedBox(
           height: 40,
           child: ListView(
@@ -290,34 +296,87 @@ class _EventsTab extends ConsumerWidget {
                   labelStyle: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: selected ? Colors.white : null,
+                    color: selected ? BuddyColors.black : cs.onSurface,
                   ),
-                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  selectedColor: Colors.blue,
+                  backgroundColor: cs.surfaceContainerHighest,
+                  selectedColor: BuddyColors.green,
                   onSelected: (_) => ref.read(eventsProvider.notifier).setScope(key),
                 ),
               );
             }).toList(),
           ),
         ),
+
+        // Category filter chips
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: FilterChip(
+                  label: const Text('All Categories'),
+                  selected: _selectedCategory == 'all',
+                  showCheckmark: false,
+                  selectedColor: BuddyColors.green.withValues(alpha: 0.25),
+                  labelStyle: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _selectedCategory == 'all' ? BuddyColors.green : cs.onSurface.withValues(alpha: 0.7),
+                  ),
+                  onSelected: (_) => setState(() => _selectedCategory = 'all'),
+                ),
+              ),
+              ...kEventCategories.map((cat) {
+                final selected = _selectedCategory == cat.key;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    avatar: Icon(cat.icon, size: 14, color: selected ? BuddyColors.green : cs.onSurface.withValues(alpha: 0.6)),
+                    label: Text(cat.label),
+                    selected: selected,
+                    showCheckmark: false,
+                    selectedColor: BuddyColors.green.withValues(alpha: 0.25),
+                    labelStyle: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: selected ? BuddyColors.green : cs.onSurface.withValues(alpha: 0.7),
+                    ),
+                    onSelected: (selected) => setState(() => _selectedCategory = selected ? cat.key : 'all'),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+
         Expanded(
           child: eventsAsync.when(
-            data: (events) => events.isEmpty
-                ? _emptyState(emptyText)
-                : Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: GridView.builder(
-                      itemCount: events.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 0.7,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                      ),
-                      itemBuilder: (_, i) {
-                        final e = events[i];
-                        final start =
-                            DateTime.tryParse(e.startDatetime) ?? DateTime.fromMillisecondsSinceEpoch(0);
+            data: (allEvents) {
+              final events = _selectedCategory == 'all'
+                  ? allEvents
+                  : allEvents.where((e) => e.category.toLowerCase() == _selectedCategory.toLowerCase()).toList();
+
+              if (events.isEmpty) {
+                return _emptyState('No events in this category');
+              }
+
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: GridView.builder(
+                  itemCount: events.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.7,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemBuilder: (_, i) {
+                    final e = events[i];
+                    final start =
+                        DateTime.tryParse(e.startDatetime) ?? DateTime.fromMillisecondsSinceEpoch(0);
                         final isPast = start.isBefore(DateTime.now());
                         return _GridCard(
                           imageUrl: e.coverImageUrl,
@@ -329,13 +388,14 @@ class _EventsTab extends ConsumerWidget {
                           isPast: isPast,
                           onTap: () => context.push('/marketplace/events/${e.id}'),
                           onAddToCart:
-                              e.isRegistered || isPast
+                               e.isRegistered || isPast
                                   ? null
-                                  : () => _addToCart(ref, context, e),
+                                  : () => _addToCart(e),
                         );
                       },
                     ),
-                  ),
+                  );
+                },
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('$e')),
           ),

@@ -126,8 +126,8 @@ class _MealsTabState extends ConsumerState<MealsTab> {
         filename: _photo!.name,
       );
       created = await ref
-          .read(analyticsLogProvider.notifier)
-          .logMealWithPhoto(data);
+        .read(analyticsLogProvider.notifier)
+        .logMealWithPhoto(data);
     } else {
       created = await ref.read(analyticsLogProvider.notifier).logMeal(data);
     }
@@ -161,6 +161,8 @@ class _MealsTabState extends ConsumerState<MealsTab> {
         title: 'No nutrition data',
       );
     }
+
+    final cs = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
       onRefresh: () => ref.read(analyticsSummaryProvider.notifier).refresh(),
@@ -202,8 +204,8 @@ class _MealsTabState extends ConsumerState<MealsTab> {
             icon: Icons.pie_chart_outline,
             trailing: Text(
               '${formatNumber(s.totalCalories)} kcal',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: cs.onSurface.withValues(alpha: 0.6),
                 fontSize: 13,
               ),
             ),
@@ -212,9 +214,9 @@ class _MealsTabState extends ConsumerState<MealsTab> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BuddyColors.surface,
+              color: cs.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: BuddyColors.border),
+              border: Border.all(color: cs.outlineVariant),
             ),
             child: Column(
               children: [
@@ -264,10 +266,10 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                     label: Text(
                       '${t.label} · ${formatNumber(t.calories)} kcal',
                     ),
-                    backgroundColor: BuddyColors.surface,
-                    side: const BorderSide(color: BuddyColors.surfaceRaised),
-                    labelStyle: const TextStyle(
-                      color: BuddyColors.textPrimary,
+                    backgroundColor: cs.surface,
+                    side: BorderSide(color: cs.outlineVariant),
+                    labelStyle: TextStyle(
+                      color: cs.onSurface,
                       fontSize: 12,
                     ),
                   ),
@@ -286,12 +288,13 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   }
 
   Widget _buildLogForm() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: BuddyColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BuddyColors.border),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Form(
         key: _formKey,
@@ -311,18 +314,18 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                     labelStyle: TextStyle(
                       color: _mealType == t.key
                           ? BuddyColors.green
-                          : BuddyColors.textPrimary,
+                          : cs.onSurface,
                       fontSize: 12,
                     ),
-                    backgroundColor: BuddyColors.surfaceRaised,
-                    side: const BorderSide(color: BuddyColors.surfaceRaised),
+                    backgroundColor: cs.surfaceContainerHighest,
+                    side: BorderSide(color: cs.outlineVariant),
                   ),
               ],
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _foodController,
-              style: const TextStyle(color: BuddyColors.textPrimary),
+              style: TextStyle(color: cs.onSurface),
               decoration: const InputDecoration(labelText: 'Food'),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -341,11 +344,11 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                       fit: BoxFit.cover,
                       errorBuilder: (_, _, _) => Container(
                         height: 120,
-                        color: BuddyColors.surfaceRaised,
-                        child: const Center(
+                        color: cs.surfaceContainerHighest,
+                        child: Center(
                           child: Icon(
                             Icons.broken_image,
-                            color: BuddyColors.textSecondary,
+                            color: cs.onSurface.withValues(alpha: 0.6),
                             size: 32,
                           ),
                         ),
@@ -411,23 +414,23 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                 child: Container(
                   height: 80,
                   decoration: BoxDecoration(
-                    color: BuddyColors.surfaceRaised,
+                    color: cs.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: BuddyColors.border),
+                    border: Border.all(color: cs.outlineVariant),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
                         Icons.photo_camera_outlined,
-                        color: BuddyColors.textSecondary,
+                        color: cs.onSurface.withValues(alpha: 0.6),
                         size: 22,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
                         'Snap a photo to auto-fill nutrition',
                         style: TextStyle(
-                          color: BuddyColors.textSecondary,
+                          color: cs.onSurface.withValues(alpha: 0.6),
                           fontSize: 13,
                         ),
                       ),
@@ -438,7 +441,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _caloriesController,
-              style: const TextStyle(color: BuddyColors.textPrimary),
+              style: TextStyle(color: cs.onSurface),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
@@ -450,7 +453,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _proteinController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -461,7 +464,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _carbsController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -472,7 +475,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _fatController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -496,6 +499,7 @@ class _MealsTabState extends ConsumerState<MealsTab> {
   }
 
   Widget _mealTile(MealRecent m) {
+    final cs = Theme.of(context).colorScheme;
     final macroParts = <String>[
       if (m.proteinG != null) '${formatNumber(m.proteinG!)}g P',
       if (m.carbsG != null) '${formatNumber(m.carbsG!)}g C',
@@ -505,9 +509,9 @@ class _MealsTabState extends ConsumerState<MealsTab> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: BuddyColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: BuddyColors.border),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
         children: [
@@ -519,8 +523,8 @@ class _MealsTabState extends ConsumerState<MealsTab> {
               children: [
                 Text(
                   m.foodName.isEmpty ? titleCase(m.mealType) : m.foodName,
-                  style: const TextStyle(
-                    color: BuddyColors.textPrimary,
+                  style: TextStyle(
+                    color: cs.onSurface,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -535,8 +539,8 @@ class _MealsTabState extends ConsumerState<MealsTab> {
                                 ? '${formatNumber(m.calories!)} kcal · '
                                 : '') +
                             macroParts.join(' · '),
-                  style: const TextStyle(
-                    color: BuddyColors.textSecondary,
+                  style: TextStyle(
+                    color: cs.onSurface.withValues(alpha: 0.6),
                     fontSize: 12,
                   ),
                 ),
@@ -545,8 +549,8 @@ class _MealsTabState extends ConsumerState<MealsTab> {
           ),
           Text(
             formatDate(m.loggedAt),
-            style: const TextStyle(
-              color: BuddyColors.textSecondary,
+            style: TextStyle(
+              color: cs.onSurface.withValues(alpha: 0.6),
               fontSize: 12,
             ),
           ),

@@ -108,6 +108,7 @@ abstract class Post with _$Post {
     @Default(0) int commentCount,
     @Default(0) int repostCount,
     @Default(false) bool isRepost,
+    @Default(false) bool isRepostedByMe,
     String? originalPostId,
     @Default('') String quoteBody,
     @Default(<ReposterData>[]) List<ReposterData> reposters,

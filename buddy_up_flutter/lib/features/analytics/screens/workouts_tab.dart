@@ -100,6 +100,8 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
       );
     }
 
+    final cs = Theme.of(context).colorScheme;
+
     return RefreshIndicator(
       onRefresh: () => ref.read(analyticsSummaryProvider.notifier).refresh(),
       child: ListView(
@@ -149,14 +151,14 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: BuddyColors.surface,
+                color: cs.surface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: BuddyColors.border),
+                border: Border.all(color: cs.outlineVariant),
               ),
               child: Text(
                 s.mostTrained!,
-                style: const TextStyle(
-                  color: BuddyColors.textPrimary,
+                style: TextStyle(
+                  color: cs.onSurface,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -177,10 +179,10 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
                 for (final t in s.byType)
                   Chip(
                     label: Text('${titleCase(t.label)} · ${t.count}'),
-                    backgroundColor: BuddyColors.surface,
-                    side: const BorderSide(color: BuddyColors.surfaceRaised),
-                    labelStyle: const TextStyle(
-                      color: BuddyColors.textPrimary,
+                    backgroundColor: cs.surface,
+                    side: BorderSide(color: cs.outlineVariant),
+                    labelStyle: TextStyle(
+                      color: cs.onSurface,
                       fontSize: 12,
                     ),
                   ),
@@ -199,12 +201,13 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
   }
 
   Widget _buildLogForm() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: BuddyColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BuddyColors.border),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Form(
         key: _formKey,
@@ -224,18 +227,18 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
                     labelStyle: TextStyle(
                       color: _workoutType == t.key
                           ? BuddyColors.green
-                          : BuddyColors.textPrimary,
+                          : cs.onSurface,
                       fontSize: 12,
                     ),
-                    backgroundColor: BuddyColors.surfaceRaised,
-                    side: const BorderSide(color: BuddyColors.surfaceRaised),
+                    backgroundColor: cs.surfaceContainerHighest,
+                    side: BorderSide(color: cs.outlineVariant),
                   ),
               ],
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _exerciseController,
-              style: const TextStyle(color: BuddyColors.textPrimary),
+              style: TextStyle(color: cs.onSurface),
               decoration: const InputDecoration(labelText: 'Exercise'),
             ),
             const SizedBox(height: 12),
@@ -244,7 +247,7 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _setsController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Sets'),
                   ),
@@ -253,7 +256,7 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _repsController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Reps'),
                   ),
@@ -262,7 +265,7 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _weightController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -277,7 +280,7 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _durationController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: 'Minutes'),
                   ),
@@ -286,7 +289,7 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _caloriesController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -310,14 +313,15 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
   }
 
   Widget _workoutTile(WorkoutRecent w) {
+    final cs = Theme.of(context).colorScheme;
     final title = w.exercise.isNotEmpty ? w.exercise : titleCase(w.workoutType);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: BuddyColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: BuddyColors.border),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
         children: [
@@ -329,8 +333,8 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: BuddyColors.textPrimary,
+                  style: TextStyle(
+                    color: cs.onSurface,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -338,8 +342,8 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
                 const SizedBox(height: 2),
                 Text(
                   '${w.durationMinutes}m${w.caloriesBurned != null ? ' · ${formatNumber(w.caloriesBurned!)} kcal' : ''}',
-                  style: const TextStyle(
-                    color: BuddyColors.textSecondary,
+                  style: TextStyle(
+                    color: cs.onSurface.withValues(alpha: 0.6),
                     fontSize: 12,
                   ),
                 ),
@@ -348,8 +352,8 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
           ),
           Text(
             formatDate(w.performedAt),
-            style: const TextStyle(
-              color: BuddyColors.textSecondary,
+            style: TextStyle(
+              color: cs.onSurface.withValues(alpha: 0.6),
               fontSize: 12,
             ),
           ),

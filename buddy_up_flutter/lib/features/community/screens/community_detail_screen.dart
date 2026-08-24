@@ -1,8 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/messaging.dart';
+import '../../../data/models/post.dart';
+import '../../feed/widgets/post_card.dart';
+import '../../feed/screens/post_composer_screen.dart';
 import '../providers/community_provider.dart';
+import 'community_settings_screen.dart';
+import 'community_members_screen.dart';
+
+extension CommunityPostToPost on CommunityPost {
+  Post toPost() {
+    return Post(
+      id: id,
+      authorData: AuthorData(
+        userId: authorId,
+        username: authorData.username,
+        displayName: authorData.displayName.isNotEmpty ? authorData.displayName : authorData.username,
+        avatarUrl: authorData.avatarUrl,
+        verificationStatus: authorData.role,
+      ),
+      body: body,
+      mediaUrls: mediaUrl.isNotEmpty ? [mediaUrl] : const [],
+      reactionCounts: isLiked ? {'heart': likeCount} : (likeCount > 0 ? {'heart': likeCount} : const {}),
+      userReaction: isLiked ? 'heart' : null,
+      commentCount: commentCount,
+      isPinned: isPinned,
+      createdAt: createdAt,
+    );
+  }
+}
 
 class CommunityDetailScreen extends ConsumerStatefulWidget {
   const CommunityDetailScreen({super.key, required this.communityId});
@@ -14,7 +42,6 @@ class CommunityDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
-  final _postController = TextEditingController();
   int _tab = 0;
   bool _joining = false;
 
@@ -25,12 +52,6 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
       final notifier = ref.read(communityFeedProvider(widget.communityId).notifier);
       notifier.loadPosts();
     });
-  }
-
-  @override
-  void dispose() {
-    _postController.dispose();
-    super.dispose();
   }
 
   void _refresh() {
@@ -47,12 +68,185 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     await ref.read(communityFeedProvider(widget.communityId).notifier).addComment(postId, body);
   }
 
+  Future<void> _openPostComposer(String communityName) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PostComposerScreen(
+          communityId: widget.communityId,
+          communityName: communityName,
+          onPostCreated: _refresh,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showJoinDialog() async {
+    final codeController = TextEditingController();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Join Community'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Enter the community invite code or tap Join to proceed:'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: codeController,
+              textCapitalization: TextCapitalization.characters,
+              decoration: const InputDecoration(
+                hintText: 'Invite Code (e.g. FIT99X)',
+                labelText: 'Invite Code',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Join'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true && mounted) {
+      setState(() => _joining = true);
+      try {
+        final code = codeController.text.trim();
+        if (code.isNotEmpty) {
+          await ref.read(communitiesListProvider.notifier).joinByCode(code);
+        } else {
+          await ref.read(communityFeedProvider(widget.communityId).notifier).join();
+        }
+        _refresh();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Join failed: $e')),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _joining = false);
+      }
+    }
+  }
+
+  Future<void> _showInviteSheet(CommunityDetail detail) async {
+    final inviteLink = 'buddyup://join/community/${widget.communityId}';
+    final cs = Theme.of(context).colorScheme;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: cs.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: cs.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Invite to Community', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(
+              'Share this code or link with friends to let them join ${detail.groupName}.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6), fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+
+            // Large 6-8 Char Monospace Code Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cs.outlineVariant),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'INVITE CODE',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: cs.onSurface.withValues(alpha: 0.5)),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    detail.inviteCode.isNotEmpty ? detail.inviteCode : 'BUDDY26',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 6,
+                      fontFamily: 'monospace',
+                      color: BuddyColors.green,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Copy Link & Copy Code buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('Copy Code'),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: detail.inviteCode));
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Invite code copied to clipboard!')),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.share, size: 16),
+                    label: const Text('Share Link'),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: inviteLink));
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Community invite link copied!')),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+
   Future<void> _commentSheet(CommunityPost post) async {
     final controller = TextEditingController();
+    final cs = Theme.of(context).colorScheme;
+
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: BuddyColors.surface,
+      backgroundColor: cs.surface,
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           left: 16,
@@ -64,18 +258,20 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text('Comments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 12),
             ...post.comments.map(
               (c) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.person_outline, size: 18, color: BuddyColors.textSecondary),
+                    Icon(Icons.person_outline, size: 18, color: cs.onSurface.withValues(alpha: 0.6)),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         '${c.authorData.displayName}: ${c.body}',
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13, color: cs.onSurface),
                       ),
                     ),
                   ],
@@ -98,6 +294,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                     if (controller.text.trim().isNotEmpty) {
                       _addComment(post.id, controller.text.trim());
                       controller.clear();
+                      Navigator.pop(ctx);
                     }
                   },
                 ),
@@ -109,294 +306,26 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     );
   }
 
-  Widget _postCard(CommunityPost post, bool canManage) {
-    return Card(
-      color: BuddyColors.surfaceRaised,
-      margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: BuddyColors.surface,
-                  backgroundImage: post.authorData.avatarUrl.isNotEmpty
-                      ? NetworkImage(post.authorData.avatarUrl)
-                      : null,
-                  child: post.authorData.avatarUrl.isEmpty
-                      ? const Icon(Icons.person, size: 18, color: BuddyColors.green)
-                      : null,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(post.authorData.displayName,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                      Text('@${post.authorData.username}',
-                          style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
-                    ],
-                  ),
-                ),
-                if (post.isPinned)
-                  const Icon(Icons.push_pin, size: 16, color: BuddyColors.gold),
-              ],
-            ),
-            if (post.body.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(post.body, style: const TextStyle(fontSize: 14)),
-            ],
-            if (post.mediaUrl.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(post.mediaUrl,
-                    height: 180, width: double.infinity, fit: BoxFit.cover),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                IconButton(
-                  iconSize: 20,
-                  onPressed: () => _toggleLike(post.id),
-                  icon: Icon(
-                    post.isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: post.isLiked ? BuddyColors.red : BuddyColors.textSecondary,
-                  ),
-                ),
-                Text('${post.likeCount}'),
-                const SizedBox(width: 20),
-                IconButton(
-                  iconSize: 20,
-                  onPressed: () => _commentSheet(post),
-                  icon: const Icon(Icons.chat_bubble_outline, color: BuddyColors.textSecondary),
-                ),
-                Text('${post.commentCount}'),
-                const Spacer(),
-                if (canManage)
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, size: 18, color: BuddyColors.textSecondary),
-                    onSelected: (v) async {
-                      if (v == 'pin') {
-                        await ref
-                            .read(communityFeedProvider(widget.communityId).notifier)
-                            .updatePost(post.id, {'is_pinned': !post.isPinned});
-                      } else if (v == 'delete') {
-                        await ref
-                            .read(communityFeedProvider(widget.communityId).notifier)
-                            .deletePost(post.id);
-                      }
-                    },
-                    itemBuilder: (_) => [
-                      PopupMenuItem(
-                        value: 'pin',
-                        child: Text(post.isPinned ? 'Unpin' : 'Pin post'),
-                      ),
-                      const PopupMenuItem(value: 'delete', child: Text('Delete post')),
-                    ],
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _settingsSheet(CommunityDetail detail) async {
-    final name = TextEditingController(text: detail.groupName);
-    final desc = TextEditingController(text: detail.description);
-    var isPublic = detail.isPublic;
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: BuddyColors.surface,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) => Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 20,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Community Settings',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: desc,
-                  maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Description'),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: isPublic,
-                      onChanged: (v) => setSheetState(() => isPublic = v ?? true),
-                    ),
-                    const Text('Public community'),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
-                    onPressed: () {
-                      ref.read(communityFeedProvider(widget.communityId).notifier).updateSettings(
-                            name.text.trim(),
-                            desc.text.trim(),
-                            isPublic,
-                          );
-                      Navigator.pop(ctx);
-                    },
-                    child: const Text('Save Changes'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    _refresh();
-  }
-
-  Future<void> _inviteSheet(CommunityDetail detail) async {
-    final messenger = ScaffoldMessenger.of(context);
-    await showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: BuddyColors.surface,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Invite Members',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: BuddyColors.surfaceRaised,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                detail.inviteCode,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 4,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextButton.icon(
-              onPressed: () {
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Invite code copied')),
-                );
-                Navigator.pop(ctx);
-              },
-              icon: const Icon(Icons.copy, size: 18),
-              label: const Text('Copy code'),
-            ),
-            if (detail.myRole == 'owner' || detail.myRole == 'admin') ...[
-              const SizedBox(height: 4),
-              TextButton(
-                onPressed: () {
-                  ref.read(communityFeedProvider(widget.communityId).notifier).rotateInvite();
-                  Navigator.pop(ctx);
-                },
-                child: const Text('Generate new code'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _membersList(CommunityDetail detail) {
-    return ListView(
-      children: detail.members.map((m) {
-        final isOwner = detail.myRole == 'owner';
-        return Card(
-          color: BuddyColors.surfaceRaised,
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: CircleAvatar(
-              radius: 18,
-              backgroundColor: BuddyColors.surface,
-              backgroundImage: m.avatarUrl.isNotEmpty ? NetworkImage(m.avatarUrl) : null,
-              child: m.avatarUrl.isEmpty
-                  ? const Icon(Icons.person, color: BuddyColors.green)
-                  : null,
-            ),
-            title: Text(m.displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            subtitle: Text('@${m.username}', style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (m.role == 'owner')
-                  const Icon(Icons.shield_outlined, size: 18, color: BuddyColors.gold)
-                else if (m.role == 'admin')
-                  const Icon(Icons.shield_outlined, size: 18, color: BuddyColors.green)
-                else
-                  const Text('Member', style: TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
-                if (isOwner && m.role != 'owner')
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, size: 18, color: BuddyColors.textSecondary),
-                    onSelected: (v) {
-                      final n = ref.read(communityFeedProvider(widget.communityId).notifier);
-                      if (v == 'promote') n.setRole(m.userId, 'admin');
-                      if (v == 'demote') n.setRole(m.userId, 'member');
-                      if (v == 'transfer') n.transferOwnership(m.userId);
-                      if (v == 'remove') n.removeMember(m.userId);
-                    },
-                    itemBuilder: (_) => [
-                      if (m.role == 'member')
-                        const PopupMenuItem(value: 'promote', child: Text('Make admin'))
-                      else
-                        const PopupMenuItem(value: 'demote', child: Text('Demote to member')),
-                      const PopupMenuItem(value: 'transfer', child: Text('Transfer ownership')),
-                      const PopupMenuItem(value: 'remove', child: Text('Remove member')),
-                    ],
-                  ),
-              ],
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final asyncState = ref.watch(communityFeedProvider(widget.communityId));
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Community', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
+      floatingActionButton: asyncState.value?.detail?.myRole != null && _tab == 0
+          ? FloatingActionButton(
+              backgroundColor: BuddyColors.green,
+              foregroundColor: BuddyColors.black,
+              onPressed: () => _openPostComposer(asyncState.value?.detail?.groupName ?? 'Community'),
+              child: const Icon(Icons.add),
+            )
+          : null,
       body: asyncState.when(
         loading: () => const Center(child: CircularProgressIndicator(color: BuddyColors.green)),
-        error: (e, _) => Center(child: Text('$e', style: const TextStyle(color: BuddyColors.textSecondary))),
+        error: (e, _) => Center(child: Text('$e', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6)))),
         data: (state) {
           final detail = state.detail;
           if (detail == null) {
@@ -405,12 +334,13 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           final role = detail.myRole;
           final canManage = role == 'owner' || role == 'admin';
           final isMember = detail.myRole != null;
+
           return Column(
             children: [
               Container(
                 height: 130,
                 width: double.infinity,
-                color: BuddyColors.surfaceRaised,
+                color: cs.surfaceContainerHighest,
                 child: detail.coverUrl.isNotEmpty
                     ? Image.network(detail.coverUrl, fit: BoxFit.cover)
                     : const Icon(Icons.groups_outlined, size: 56, color: BuddyColors.green),
@@ -424,50 +354,68 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                       children: [
                         Expanded(
                           child: Text(detail.groupName,
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: cs.onSurface)),
                         ),
                         if (canManage)
                           IconButton(
                             icon: const Icon(Icons.settings_outlined, size: 20),
-                            onPressed: () => _settingsSheet(detail),
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => CommunitySettingsScreen(
+                                  communityId: widget.communityId,
+                                  initialName: detail.groupName,
+                                  initialDescription: detail.description,
+                                  initialIsPublic: detail.isPublic,
+                                  initialCoverUrl: detail.coverUrl,
+                                ),
+                              ),
+                            ),
                           ),
                         if (isMember)
                           IconButton(
-                            icon: const Icon(Icons.link, size: 20),
-                            onPressed: () => _inviteSheet(detail),
+                            icon: const Icon(Icons.share_outlined, size: 20),
+                            onPressed: () => _showInviteSheet(detail),
                           ),
                       ],
                     ),
                     if (detail.description.isNotEmpty)
                       Text(detail.description,
-                          style: const TextStyle(color: BuddyColors.textSecondary)),
+                          style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6))),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Text('${detail.memberCount} members',
-                            style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
-                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => CommunityMembersScreen(
+                                communityId: widget.communityId,
+                                canManage: canManage,
+                              ),
+                            ),
+                          ),
+                          child: Text('${detail.memberCount} members · View All',
+                              style: const TextStyle(fontSize: 12, color: BuddyColors.green, fontWeight: FontWeight.w600)),
+                        ),
+                        const Spacer(),
                         if (detail.myRole != null)
-                          Text(detail.myRole!.toUpperCase(),
-                              style: const TextStyle(
-                                  fontSize: 11, color: BuddyColors.green, fontWeight: FontWeight.bold)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: BuddyColors.green.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(detail.myRole!.toUpperCase(),
+                                style: const TextStyle(
+                                    fontSize: 10, color: BuddyColors.green, fontWeight: FontWeight.bold)),
+                          ),
                       ],
                     ),
                     if (!isMember) ...[
                       const SizedBox(height: 14),
                       SizedBox(
                         width: double.infinity,
-                        child: FilledButton(
-                          style: FilledButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
-                          onPressed: _joining
-                              ? null
-                              : () async {
-                                  setState(() => _joining = true);
-                                  await ref
-                                      .read(communityFeedProvider(widget.communityId).notifier)
-                                      .join();
-                                  if (mounted) setState(() => _joining = false);
-                                },
+                        child: ElevatedButton(
+                          onPressed: _joining ? null : _showJoinDialog,
                           child: Text(_joining ? 'Joining...' : 'Join Community'),
                         ),
                       ),
@@ -476,7 +424,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 ),
               ),
               Container(
-                decoration: const BoxDecoration(color: BuddyColors.surface),
+                decoration: BoxDecoration(color: cs.surface),
                 child: Row(
                   children: [
                     _tabButton(0, 'Feed', detail, canManage),
@@ -486,7 +434,12 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: _tab == 0 ? _feedTab(state, canManage) : _membersList(detail),
+                child: _tab == 0
+                    ? _feedTab(state, canManage)
+                    : CommunityMembersScreen(
+                        communityId: widget.communityId,
+                        canManage: canManage,
+                      ),
               ),
             ],
           );
@@ -496,6 +449,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   }
 
   Widget _tabButton(int index, String label, CommunityDetail detail, bool canManage) {
+    final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: InkWell(
         onTap: () => setState(() => _tab = index),
@@ -515,7 +469,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: _tab == index ? BuddyColors.green : BuddyColors.textSecondary,
+                color: _tab == index ? BuddyColors.green : cs.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -525,67 +479,47 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   }
 
   Widget _feedTab(CommunityFeedState state, bool canManage) {
-    final isMember = state.detail?.myRole != null;
-    return Column(
-      children: [
-        if (isMember)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: Row(
+    final cs = Theme.of(context).colorScheme;
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        await ref.read(communityFeedProvider(widget.communityId).notifier).refresh();
+        await ref.read(communityFeedProvider(widget.communityId).notifier).loadPosts();
+      },
+      child: state.posts.isEmpty
+          ? ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _postController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      hintText: 'Share something with the community...',
-                      filled: true,
-                      fillColor: BuddyColors.surfaceRaised,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  style: IconButton.styleFrom(backgroundColor: BuddyColors.green, foregroundColor: BuddyColors.black),
-                  icon: const Icon(Icons.send, size: 18),
-                  onPressed: () async {
-                    if (_postController.text.trim().isEmpty) return;
-                    await ref
-                        .read(communityFeedProvider(widget.communityId).notifier)
-                        .createPost(_postController.text.trim());
-                    _postController.clear();
-                  },
-                ),
+                const SizedBox(height: 80),
+                Icon(Icons.forum_outlined, size: 48, color: cs.onSurface.withValues(alpha: 0.4)),
+                const SizedBox(height: 8),
+                Center(child: Text('No posts yet in this community', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6)))),
               ],
+            )
+          : ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: state.posts.map((p) {
+                return PostCard(
+                  post: p.toPost(),
+                  onLike: (_) => _toggleLike(p.id),
+                  onComment: (_) => _commentSheet(p),
+                  onPin: canManage
+                      ? (_) async {
+                          await ref
+                              .read(communityFeedProvider(widget.communityId).notifier)
+                              .updatePost(p.id, {'is_pinned': !p.isPinned});
+                        }
+                      : null,
+                  onDelete: canManage
+                      ? (_) async {
+                          await ref
+                              .read(communityFeedProvider(widget.communityId).notifier)
+                              .deletePost(p.id);
+                        }
+                      : null,
+                );
+              }).toList(),
             ),
-          ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              await ref.read(communityFeedProvider(widget.communityId).notifier).refresh();
-              await ref.read(communityFeedProvider(widget.communityId).notifier).loadPosts();
-            },
-            child: state.posts.isEmpty
-                ? ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: const [
-                      SizedBox(height: 80),
-                      Icon(Icons.forum_outlined, size: 48, color: BuddyColors.textSecondary),
-                      SizedBox(height: 8),
-                      Center(child: Text('No posts yet', style: TextStyle(color: BuddyColors.textSecondary))),
-                    ],
-                  )
-                : ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    children: state.posts.map((p) => _postCard(p, canManage)).toList(),
-                  ),
-          ),
-        ),
-      ],
     );
   }
 }

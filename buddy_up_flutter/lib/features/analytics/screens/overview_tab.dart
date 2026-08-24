@@ -32,7 +32,7 @@ class OverviewTab extends ConsumerWidget {
         children: [
           Row(
             children: [
-              _userCard(s.user),
+              _userCard(s.user, context),
               const SizedBox(width: 12),
               Expanded(
                 child: StatCard(
@@ -76,7 +76,6 @@ class OverviewTab extends ConsumerWidget {
                     ? '${formatNumber(weight, decimals: 1)} kg'
                     : '—',
                 icon: Icons.monitor_weight_outlined,
-                accent: BuddyColors.textSecondary,
               ),
             ],
           ),
@@ -86,8 +85,8 @@ class OverviewTab extends ConsumerWidget {
             icon: Icons.pie_chart_outline,
             trailing: Text(
               '${formatNumber(s.nutrition.totalCalories)} kcal',
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 13,
               ),
             ),
@@ -96,9 +95,9 @@ class OverviewTab extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BuddyColors.surface,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: BuddyColors.border),
+              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
             ),
             child: Column(
               children: [
@@ -198,14 +197,15 @@ class OverviewTab extends ConsumerWidget {
     );
   }
 
-  Widget _userCard(AnalyticsUserInfo user) {
+  Widget _userCard(AnalyticsUserInfo user, BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: BuddyColors.surface,
+          color: cs.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: BuddyColors.border),
+          border: Border.all(color: cs.outlineVariant),
         ),
         child: Row(
           children: [
@@ -217,14 +217,14 @@ class OverviewTab extends ConsumerWidget {
                     ? Image.network(
                         user.avatarUrl,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const Icon(
+                        errorBuilder: (_, _, _) => Icon(
                           Icons.person,
-                          color: BuddyColors.textSecondary,
+                          color: cs.onSurface.withValues(alpha: 0.6),
                         ),
                       )
-                    : const Icon(
+                    : Icon(
                         Icons.person,
-                        color: BuddyColors.textSecondary,
+                        color: cs.onSurface.withValues(alpha: 0.6),
                       ),
               ),
             ),
@@ -235,8 +235,8 @@ class OverviewTab extends ConsumerWidget {
                 children: [
                   Text(
                     user.displayName.isEmpty ? user.username : user.displayName,
-                    style: const TextStyle(
-                      color: BuddyColors.textPrimary,
+                    style: TextStyle(
+                      color: cs.onSurface,
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
                     ),
@@ -244,10 +244,10 @@ class OverviewTab extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
-                  const Text(
+                  Text(
                     'Your progress',
                     style: TextStyle(
-                      color: BuddyColors.textSecondary,
+                      color: cs.onSurface.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                   ),

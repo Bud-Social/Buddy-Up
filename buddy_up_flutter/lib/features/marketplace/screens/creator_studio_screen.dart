@@ -6,6 +6,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../shared/widgets/page_loader.dart';
 import 'my_shops_screen.dart';
+import 'creator_orders_screen.dart';
+import 'creator_services_screen.dart';
+import 'creator_payouts_screen.dart';
 
 class CreatorStudioScreen extends ConsumerStatefulWidget {
   const CreatorStudioScreen({super.key});
@@ -20,7 +23,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
   }
 
   @override
@@ -39,9 +42,12 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
         title: const Text('Creator Studio'),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
           tabs: const [
             Tab(text: 'Analytics', icon: Icon(Icons.analytics, size: 18)),
-            Tab(text: 'Services', icon: Icon(Icons.list_alt, size: 18)),
+            Tab(text: 'Orders', icon: Icon(Icons.shopping_bag, size: 18)),
+            Tab(text: 'Services', icon: Icon(Icons.inventory_2, size: 18)),
+            Tab(text: 'Payouts', icon: Icon(Icons.payments, size: 18)),
             Tab(text: 'My Shops', icon: Icon(Icons.storefront, size: 18)),
             Tab(text: 'Discounts', icon: Icon(Icons.discount, size: 18)),
           ],
@@ -55,7 +61,9 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
         controller: _tabController,
         children: [
           _buildAnalyticsTab(analyticsAsync),
-          _buildServicesTab(servicesAsync),
+          const CreatorOrdersScreen(),
+          const CreatorServicesScreen(),
+          const CreatorPayoutsScreen(),
           const MyShopsScreen(),
           _buildDiscountsTab(servicesAsync),
         ],
@@ -139,7 +147,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
                       children: [
                         Text(_formatCategory(entry.key), style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
                         const Spacer(),
-                        Text('$count sales (${pct}%)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        Text('$count sales ($pct%)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -240,169 +248,6 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
       case 'event': return 'Event';
       default: return key.replaceAll('_', ' ').split(' ').map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
     }
-  }
-
-  Widget _buildServicesTab(AsyncValue<CreatorServices> servicesAsync) {
-    return servicesAsync.when(
-      data: (services) => SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _serviceSection(
-              title: 'Meal Plans (${services.mealPlans.length})',
-              icon: Icons.restaurant,
-              color: BuddyColors.green,
-              onCreate: () => context.push('/marketplace/meal-plans/create'),
-              children: services.mealPlans.map((p) => _serviceTile(
-                title: p.title,
-                subtitle: '${p.purchaseCount} sold · ~\$${_artifactUsd(p.priceArtifacts).toStringAsFixed(2)}',
-                imageUrl: p.coverImageUrl,
-                isPublished: p.isPublished,
-                onTap: () => context.push('/marketplace/meal-plans/${p.id}'),
-              )).toList(),
-            ),
-            const SizedBox(height: 24),
-            _serviceSection(
-              title: 'Programmes (${services.programmes.length})',
-              icon: Icons.fitness_center,
-              color: const Color(0xFF60A5FA),
-              onCreate: () => context.push('/marketplace/programmes/create'),
-              children: services.programmes.map((p) => _serviceTile(
-                title: p.title,
-                subtitle: '${p.purchaseCount} enrollments · ~\$${_artifactUsd(p.priceArtifacts).toStringAsFixed(2)}',
-                imageUrl: p.coverImageUrl,
-                isPublished: p.isPublished,
-                onTap: () => context.push('/marketplace/programmes/${p.id}'),
-              )).toList(),
-            ),
-            const SizedBox(height: 24),
-            _serviceSection(
-              title: 'Events (${services.events.length})',
-              icon: Icons.event,
-              color: const Color(0xFFFBBF24),
-              onCreate: () => context.push('/marketplace/events/create'),
-              children: services.events.map((e) => _serviceTile(
-                title: e.title,
-                subtitle: '${e.attendeeCount} attendees · ${e.startDatetime.length >= 10 ? e.startDatetime.substring(0, 10) : e.startDatetime}',
-                imageUrl: e.coverImageUrl,
-                isPublished: e.isPublished,
-                onTap: () => context.push('/marketplace/events/${e.id}'),
-              )).toList(),
-            ),
-            const SizedBox(height: 24),
-            _serviceSection(
-              title: 'Products (${services.products.length})',
-              icon: Icons.shopping_bag,
-              color: const Color(0xFFF97316),
-              onCreate: null,
-              children: services.products.map((p) => _serviceTile(
-                title: p.name,
-                subtitle: '${p.clickCount} clicks',
-                imageUrl: p.imageUrl,
-                isPublished: p.isActive,
-                onTap: () => context.push('/marketplace/products/${p.id}'),
-              )).toList(),
-            ),
-          ],
-        ),
-      ),
-      loading: () => const PageLoader(),
-      error: (e, _) => Center(child: Text('Error: $e')),
-    );
-  }
-
-  Widget _serviceSection({
-    required String title,
-    required IconData icon,
-    required Color color,
-    required VoidCallback? onCreate,
-    required List<Widget> children,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(6)),
-              child: Row(
-                children: [
-                  Icon(icon, size: 16, color: color),
-                  const SizedBox(width: 6),
-                  Text(title, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
-                ],
-              ),
-            ),
-            const Spacer(),
-            if (onCreate != null)
-              TextButton.icon(
-                onPressed: onCreate,
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text('New'),
-                style: TextButton.styleFrom(foregroundColor: color, visualDensity: VisualDensity.compact),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (children.isEmpty)
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 4),
-            child: Text('Nothing here yet.', style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary.withValues(alpha: 0.8))),
-          )
-        else
-          ...children,
-      ],
-    );
-  }
-
-  Widget _serviceTile({
-    required String title,
-    required String subtitle,
-    required String imageUrl,
-    required bool isPublished,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      color: BuddyColors.surface,
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        onTap: onTap,
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(imageUrl, width: 48, height: 48, fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(width: 48, height: 48, color: BuddyColors.surfaceRaised)),
-        ),
-        title: Row(
-          children: [
-            Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis)),
-            const SizedBox(width: 8),
-            _publishBadge(isPublished),
-          ],
-        ),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right, size: 20, color: BuddyColors.textSecondary),
-      ),
-    );
-  }
-
-  Widget _publishBadge(bool isPublished) {
-    final color = isPublished ? BuddyColors.green : Colors.orange;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
-      child: Text(
-        isPublished ? 'Live' : 'Draft',
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color),
-      ),
-    );
-  }
-
-  double _artifactUsd(Map<String, int> artifacts) {
-    const values = {'gym_day_pass': 5.0, 'gym_week_pass': 25.0, 'gym_month_pass': 75.0, 'buddy_token': 1.0};
-    return artifacts.entries.fold(0.0, (sum, e) => sum + (values[e.key] ?? 0.0) * e.value);
   }
 
   Widget _buildDiscountsTab(AsyncValue<CreatorServices> servicesAsync) {

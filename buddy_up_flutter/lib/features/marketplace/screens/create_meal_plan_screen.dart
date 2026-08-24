@@ -106,7 +106,7 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
           'weekly_reminder': _weeklyReminders,
           'reminder_times': _reminderTimes,
         },
-        if (coverUrl != null) 'cover_image_url': coverUrl,
+        'cover_image_url': ?coverUrl,
         if (widget.shopHandle != null) 'shop_handle': widget.shopHandle,
       };
 

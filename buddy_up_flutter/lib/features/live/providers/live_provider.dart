@@ -144,3 +144,10 @@ final randomDropStatusProvider = FutureProvider<RandomDropStatus?>((ref) async {
     return null;
   }
 });
+
+final liveRoomProvider = FutureProvider.family<LiveRoomData, String>((ref, liveId) async {
+  final repo = ref.watch(liveRepositoryProvider);
+  final raw = await repo.joinLive(liveId);
+  return LiveRoomData.fromJson(raw['data'] as Map<String, dynamic>);
+});
+

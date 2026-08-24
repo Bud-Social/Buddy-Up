@@ -16,7 +16,7 @@ void main() async {
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    print('Firebase initialization failed: $e');
+    debugPrint('Firebase initialization failed: $e');
   }
   runApp(const ProviderScope(child: BuddyUpApp()));
 }

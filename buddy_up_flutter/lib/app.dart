@@ -6,6 +6,17 @@ import 'features/notifications/services/push_notification_service.dart';
 import 'features/messaging/widgets/call_host.dart';
 import 'router.dart';
 
+// ── Simple theme-mode notifier ─────────────────────────────────────────────────
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => ThemeMode.dark;
+
+  void setThemeMode(ThemeMode mode) => state = mode;
+  void toggle() => state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+}
+
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+
 class BuddyUpApp extends ConsumerStatefulWidget {
   const BuddyUpApp({super.key});
 
@@ -25,12 +36,15 @@ class _BuddyUpAppState extends ConsumerState<BuddyUpApp> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return CallHost(
       child: MaterialApp.router(
         title: 'Buddy-Up',
         debugShowCheckedModeBanner: false,
-        theme: buildBuddyTheme(),
+        theme: buildBuddyLightTheme(),
+        darkTheme: buildBuddyTheme(),
+        themeMode: themeMode,
         routerConfig: buildRouter(ref, authState),
       ),
     );

@@ -154,7 +154,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       // final GoogleSignInAuthentication auth = await account.authentication;
       // final credential = auth.idToken ?? auth.accessToken;
       // if (credential == null) throw Exception('Failed to get Google authentication token');
-      final String credential = 'dummy_token_to_fix_compile';
+      const String credential = 'dummy_token_to_fix_compile';
 
       final res = await _authRepo.googleLogin({'credential': credential});
       await ref.read(authProvider.notifier).handleLoginSuccess(res);

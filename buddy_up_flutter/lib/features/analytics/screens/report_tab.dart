@@ -72,12 +72,14 @@ class _ReportTabState extends ConsumerState<ReportTab> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     if (_isGenerating) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(
+            const SizedBox(
               width: 28,
               height: 28,
               child: CircularProgressIndicator(
@@ -85,10 +87,13 @@ class _ReportTabState extends ConsumerState<ReportTab> {
                 color: BuddyColors.green,
               ),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
               'Generating report…',
-              style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+              style: TextStyle(
+                color: cs.onSurface.withValues(alpha: 0.6),
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -99,9 +104,9 @@ class _ReportTabState extends ConsumerState<ReportTab> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Could not generate report',
-              style: TextStyle(color: BuddyColors.textSecondary),
+              style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6)),
             ),
             const SizedBox(height: 12),
             TextButton.icon(
@@ -128,9 +133,9 @@ class _ReportTabState extends ConsumerState<ReportTab> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: BuddyColors.surface,
+              color: cs.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: BuddyColors.border),
+              border: Border.all(color: cs.outlineVariant),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,10 +144,10 @@ class _ReportTabState extends ConsumerState<ReportTab> {
                   children: [
                     const Icon(Icons.insights, color: BuddyColors.green),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Progress Report',
                       style: TextStyle(
-                        color: BuddyColors.textPrimary,
+                        color: cs.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -150,8 +155,8 @@ class _ReportTabState extends ConsumerState<ReportTab> {
                     const Spacer(),
                     Text(
                       titleCase(widget.period),
-                      style: const TextStyle(
-                        color: BuddyColors.textSecondary,
+                      style: TextStyle(
+                        color: cs.onSurface.withValues(alpha: 0.6),
                         fontSize: 12,
                       ),
                     ),
@@ -189,7 +194,7 @@ class _ReportTabState extends ConsumerState<ReportTab> {
                   if (progress == null) return child;
                   return Container(
                     height: 240,
-                    color: BuddyColors.surface,
+                    color: cs.surface,
                     child: const Center(
                       child: CircularProgressIndicator(
                         color: BuddyColors.green,
@@ -199,11 +204,13 @@ class _ReportTabState extends ConsumerState<ReportTab> {
                 },
                 errorBuilder: (_, _, _) => Container(
                   height: 200,
-                  color: BuddyColors.surface,
-                  child: const Center(
+                  color: cs.surface,
+                  child: Center(
                     child: Text(
                       'Report image unavailable',
-                      style: TextStyle(color: BuddyColors.textSecondary),
+                      style: TextStyle(
+                        color: cs.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
                   ),
                 ),
@@ -242,25 +249,26 @@ class _ReportTabState extends ConsumerState<ReportTab> {
   }
 
   Widget _reportStat(String label, String value) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
         children: [
           Text(
             label,
-            style: const TextStyle(
-              color: BuddyColors.textSecondary,
+            style: TextStyle(
+              color: cs.onSurface.withValues(alpha: 0.6),
               fontSize: 13,
             ),
           ),
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(
-              color: BuddyColors.textPrimary,
+            style: TextStyle(
+              color: cs.onSurface,
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              fontFeatures: [FontFeature.tabularFigures()],
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ],

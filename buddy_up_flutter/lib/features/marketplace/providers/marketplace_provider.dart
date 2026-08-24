@@ -217,3 +217,12 @@ final orderDetailProvider = FutureProvider.family<Order, String>((ref, orderId) 
   final raw = await repo.getOrder(orderId);
   return Order.fromJson(raw['data'] as Map<String, dynamic>);
 });
+
+final creatorOrdersProvider = FutureProvider.family<List<Order>, String?>((ref, status) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getSellerOrders(status: status);
+  return (raw['data'] as List)
+      .map((e) => Order.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
+

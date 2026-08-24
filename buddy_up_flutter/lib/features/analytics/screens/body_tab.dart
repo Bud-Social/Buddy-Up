@@ -216,12 +216,13 @@ class _BodyTabState extends ConsumerState<BodyTab> {
   }
 
   Widget _buildLogForm() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: BuddyColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BuddyColors.border),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Form(
         key: _formKey,
@@ -233,7 +234,7 @@ class _BodyTabState extends ConsumerState<BodyTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _weightController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -246,7 +247,7 @@ class _BodyTabState extends ConsumerState<BodyTab> {
                 Expanded(
                   child: TextFormField(
                     controller: _bodyFatController,
-                    style: const TextStyle(color: BuddyColors.textPrimary),
+                    style: TextStyle(color: cs.onSurface),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -293,6 +294,7 @@ class _BodyTabState extends ConsumerState<BodyTab> {
     required VoidCallback onTap,
     VoidCallback? onClear,
   }) {
+    final cs = Theme.of(context).colorScheme;
     if (file != null) {
       return Stack(
         clipBehavior: Clip.none,
@@ -306,11 +308,11 @@ class _BodyTabState extends ConsumerState<BodyTab> {
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => Container(
                 height: 140,
-                color: BuddyColors.surfaceRaised,
-                child: const Center(
+                color: cs.surfaceContainerHighest,
+                child: Center(
                   child: Icon(
                     Icons.broken_image,
-                    color: BuddyColors.textSecondary,
+                    color: cs.onSurface.withValues(alpha: 0.6),
                     size: 32,
                   ),
                 ),
@@ -341,24 +343,24 @@ class _BodyTabState extends ConsumerState<BodyTab> {
       child: Container(
         height: 140,
         decoration: BoxDecoration(
-          color: BuddyColors.surfaceRaised,
+          color: cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: BuddyColors.border),
+          border: Border.all(color: cs.outlineVariant),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.add_a_photo,
-              color: BuddyColors.textSecondary,
+              color: cs.onSurface.withValues(alpha: 0.6),
               size: 28,
             ),
             const SizedBox(height: 6),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: cs.onSurface.withValues(alpha: 0.6),
                 fontSize: 12,
               ),
             ),
@@ -369,6 +371,7 @@ class _BodyTabState extends ConsumerState<BodyTab> {
   }
 
   Widget _buildScaleSlot() {
+    final cs = Theme.of(context).colorScheme;
     if (_scalePhoto != null) {
       return Stack(
         clipBehavior: Clip.none,
@@ -382,11 +385,11 @@ class _BodyTabState extends ConsumerState<BodyTab> {
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => Container(
                 height: 140,
-                color: BuddyColors.surfaceRaised,
-                child: const Center(
+                color: cs.surfaceContainerHighest,
+                child: Center(
                   child: Icon(
                     Icons.broken_image,
-                    color: BuddyColors.textSecondary,
+                    color: cs.onSurface.withValues(alpha: 0.6),
                     size: 32,
                   ),
                 ),
@@ -445,19 +448,19 @@ class _BodyTabState extends ConsumerState<BodyTab> {
       child: Container(
         height: 140,
         decoration: BoxDecoration(
-          color: BuddyColors.surfaceRaised,
+          color: cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: BuddyColors.border),
+          border: Border.all(color: cs.outlineVariant),
         ),
-        child: const Column(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.scale, color: BuddyColors.textSecondary, size: 28),
-            SizedBox(height: 6),
+            Icon(Icons.scale, color: cs.onSurface.withValues(alpha: 0.6), size: 28),
+            const SizedBox(height: 6),
             Text(
               'Scale snap\n(auto-reads weight)',
               textAlign: TextAlign.center,
-              style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6), fontSize: 12),
             ),
           ],
         ),
@@ -466,6 +469,7 @@ class _BodyTabState extends ConsumerState<BodyTab> {
   }
 
   Widget _buildTrend(List<BodySeriesPoint> series) {
+    final cs = Theme.of(context).colorScheme;
     final weights = series.map((p) => p.weightKg).toList();
     final minW = weights.reduce((a, b) => a < b ? a : b);
     final maxW = weights.reduce((a, b) => a > b ? a : b);
@@ -474,9 +478,9 @@ class _BodyTabState extends ConsumerState<BodyTab> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: BuddyColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BuddyColors.border),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,16 +489,16 @@ class _BodyTabState extends ConsumerState<BodyTab> {
             children: [
               Text(
                 minW.toStringAsFixed(1),
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
+                style: TextStyle(
+                  color: cs.onSurface.withValues(alpha: 0.6),
                   fontSize: 11,
                 ),
               ),
               const Spacer(),
               Text(
                 maxW.toStringAsFixed(1),
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
+                style: TextStyle(
+                  color: cs.onSurface.withValues(alpha: 0.6),
                   fontSize: 11,
                 ),
               ),
@@ -517,16 +521,16 @@ class _BodyTabState extends ConsumerState<BodyTab> {
             children: [
               Text(
                 formatDate(series.first.measuredAt, includeTime: false),
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
+                style: TextStyle(
+                  color: cs.onSurface.withValues(alpha: 0.6),
                   fontSize: 11,
                 ),
               ),
               const Spacer(),
               Text(
                 formatDate(series.last.measuredAt, includeTime: false),
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
+                style: TextStyle(
+                  color: cs.onSurface.withValues(alpha: 0.6),
                   fontSize: 11,
                 ),
               ),
@@ -538,6 +542,7 @@ class _BodyTabState extends ConsumerState<BodyTab> {
   }
 
   Widget _buildSnaps(List<BodySeriesPoint> series) {
+    final cs = Theme.of(context).colorScheme;
     final snaps = series.reversed.toList();
     return SizedBox(
       height: 120,
@@ -559,11 +564,11 @@ class _BodyTabState extends ConsumerState<BodyTab> {
                           ? Container(
                               width: 60,
                               height: 90,
-                              color: BuddyColors.surfaceRaised,
-                              child: const Center(
+                              color: cs.surfaceContainerHighest,
+                              child: Center(
                                 child: Icon(
                                   Icons.person_outline,
-                                  color: BuddyColors.textSecondary,
+                                  color: cs.onSurface.withValues(alpha: 0.6),
                                   size: 20,
                                 ),
                               ),
@@ -576,10 +581,10 @@ class _BodyTabState extends ConsumerState<BodyTab> {
                               errorBuilder: (_, _, _) => Container(
                                 width: 60,
                                 height: 90,
-                                color: BuddyColors.surfaceRaised,
-                                child: const Icon(
+                                color: cs.surfaceContainerHighest,
+                                child: Icon(
                                   Icons.broken_image,
-                                  color: BuddyColors.textSecondary,
+                                  color: cs.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                             ),
@@ -591,11 +596,11 @@ class _BodyTabState extends ConsumerState<BodyTab> {
                           ? Container(
                               width: 60,
                               height: 90,
-                              color: BuddyColors.surfaceRaised,
-                              child: const Center(
+                              color: cs.surfaceContainerHighest,
+                              child: Center(
                                 child: Icon(
                                   Icons.scale,
-                                  color: BuddyColors.textSecondary,
+                                  color: cs.onSurface.withValues(alpha: 0.6),
                                   size: 20,
                                 ),
                               ),
@@ -608,10 +613,10 @@ class _BodyTabState extends ConsumerState<BodyTab> {
                               errorBuilder: (_, _, _) => Container(
                                 width: 60,
                                 height: 90,
-                                color: BuddyColors.surfaceRaised,
-                                child: const Icon(
+                                color: cs.surfaceContainerHighest,
+                                child: Icon(
                                   Icons.broken_image,
-                                  color: BuddyColors.textSecondary,
+                                  color: cs.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                             ),
@@ -622,8 +627,8 @@ class _BodyTabState extends ConsumerState<BodyTab> {
               const SizedBox(height: 4),
               Text(
                 '${p.weightKg.toStringAsFixed(1)}kg',
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
+                style: TextStyle(
+                  color: cs.onSurface.withValues(alpha: 0.6),
                   fontSize: 11,
                 ),
               ),

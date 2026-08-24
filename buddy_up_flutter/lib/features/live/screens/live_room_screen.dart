@@ -6,11 +6,13 @@ import 'dart:async';
 import '../providers/live_provider.dart';
 import '../widgets/live_chat_overlay.dart';
 import '../widgets/reaction_overlay.dart';
+import '../widgets/pip_live_overlay.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/live.dart';
+import '../../../router.dart';
 
 class LiveRoomScreen extends ConsumerStatefulWidget {
   final String liveId;
@@ -21,7 +23,7 @@ class LiveRoomScreen extends ConsumerStatefulWidget {
   ConsumerState<LiveRoomScreen> createState() => _LiveRoomScreenState();
 }
 
-class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> {
+class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBindingObserver {
   final bool _showChat = true;
   final bool _showGiftPicker = false;
 
@@ -33,10 +35,53 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> {
   Room? _liveKitRoom;
   bool _isUsingLiveKit = false;
 
+  // Room data cache for PiP
+  LiveRoomData? _roomData;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _cleanup();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused && _roomData != null) {
+      _activatePip();
+    } else if (state == AppLifecycleState.resumed) {
+      // If PiP is showing and user returns to app, hide the overlay
+      if (PipLiveOverlayManager.isShowing) {
+        PipLiveOverlayManager.hide();
+      }
+    }
+  }
+
+  void _activatePip() {
+    if (_roomData == null) return;
+    final overlayContext = rootNavigatorKey.currentContext;
+    if (overlayContext == null) return;
+
+    PipLiveOverlayManager.show(
+      overlayContext,
+      PipSessionData(
+        liveId: widget.liveId,
+        title: _roomData!.title,
+        hostName: _roomData!.hostName,
+        hostAvatarUrl: _roomData!.hostAvatar,
+        viewerCount: _roomData!.viewerCount,
+        isAudioOnly: _roomData!.liveType == 'audio',
+        onClose: () {
+          _cleanup();
+        },
+      ),
+    );
   }
 
   Future<void> _cleanup() async {
@@ -108,27 +153,48 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> {
         loading: () => const PageLoader(),
         error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(liveDetailProvider(widget.liveId))),
         data: (live) {
-          return Scaffold(
-            body: Column(
-              children: [
-                Expanded(
-                  child: ReactionOverlay(
-                    child: Stack(
-                      children: [
-                        _buildVideoView(live),
-                        _buildOverlay(live),
-                      ],
+          // Store credentials-carrying RoomData for PiP use
+          ref.listen(liveRoomProvider(widget.liveId), (_, next) {
+            next.whenData((roomData) {
+              if (_roomData == null) {
+                _roomData = roomData;
+                _joinWithCredentials(roomData);
+              }
+            });
+          });
+
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) {
+                if (_roomData != null) {
+                  _activatePip();
+                }
+                Navigator.of(context).pop();
+              }
+            },
+            child: Scaffold(
+              body: Column(
+                children: [
+                  Expanded(
+                    child: ReactionOverlay(
+                      child: Stack(
+                        children: [
+                          _buildVideoView(live),
+                          _buildOverlay(live),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                if (_showChat)
-                  SizedBox(
-                    height: 250,
-                    child: LiveChatOverlay(liveId: widget.liveId, token: ''),
-                  ),
-              ],
+                  if (_showChat)
+                    SizedBox(
+                      height: 250,
+                      child: LiveChatOverlay(liveId: widget.liveId, token: ''),
+                    ),
+                ],
+              ),
+              floatingActionButton: _showGiftPicker ? null : null,
             ),
-            floatingActionButton: _showGiftPicker ? null : null,
           );
         },
       ),

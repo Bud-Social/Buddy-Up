@@ -12,6 +12,15 @@ class BuddyColors {
   static const Color border = Color(0xFF333333);
 }
 
+class BuddyLightColors {
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color surfaceRaised = Color(0xFFF4F4F5);
+  static const Color surfaceCard = Color(0xFFF0FDF4);
+  static const Color textPrimary = Color(0xFF111827);
+  static const Color textSecondary = Color(0xFF6B7280);
+  static const Color border = Color(0xFFE5E7EB);
+}
+
 ThemeData buildBuddyTheme() {
   return ThemeData(
     brightness: Brightness.dark,
@@ -101,6 +110,109 @@ ThemeData buildBuddyTheme() {
     ),
     snackBarTheme: SnackBarThemeData(
       backgroundColor: BuddyColors.surfaceRaised,
+      contentTextStyle: const TextStyle(color: BuddyColors.textPrimary),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+
+ThemeData buildBuddyLightTheme() {
+  return ThemeData(
+    brightness: Brightness.light,
+    scaffoldBackgroundColor: BuddyLightColors.surfaceRaised,
+    colorScheme: const ColorScheme.light(
+      primary: BuddyColors.green,
+      secondary: BuddyColors.green,
+      surface: BuddyLightColors.surface,
+      surfaceContainerHighest: BuddyLightColors.surfaceRaised,
+      error: BuddyColors.red,
+      onPrimary: BuddyLightColors.textPrimary,
+      onSecondary: BuddyLightColors.textPrimary,
+      onSurface: BuddyLightColors.textPrimary,
+      onError: BuddyLightColors.surface,
+    ),
+    appBarTheme: const AppBarTheme(
+      backgroundColor: BuddyLightColors.surface,
+      foregroundColor: BuddyLightColors.textPrimary,
+      elevation: 0,
+      centerTitle: true,
+    ),
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: BuddyLightColors.surface,
+      selectedItemColor: BuddyColors.green,
+      unselectedItemColor: BuddyLightColors.textSecondary,
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: BuddyLightColors.surfaceRaised,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: BuddyColors.green, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: BuddyColors.red, width: 1),
+      ),
+      labelStyle: const TextStyle(color: BuddyLightColors.textSecondary),
+      hintStyle: const TextStyle(color: BuddyLightColors.textSecondary),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: BuddyColors.green,
+        foregroundColor: BuddyColors.black,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        textStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: BuddyColors.green,
+        side: const BorderSide(color: BuddyColors.green),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: BuddyColors.green,
+      ),
+    ),
+    dividerTheme: const DividerThemeData(
+      color: BuddyLightColors.border,
+      thickness: 1,
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: BuddyLightColors.surface,
+      selectedColor: BuddyColors.green.withValues(alpha: 0.2),
+      labelStyle: const TextStyle(color: BuddyLightColors.textPrimary),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      side: const BorderSide(color: BuddyLightColors.border),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: BuddyLightColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      backgroundColor: BuddyColors.black,
       contentTextStyle: const TextStyle(color: BuddyColors.textPrimary),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),

@@ -33,7 +33,7 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
     try {
       await _authRepo.verifyAge({
         'dob': _selectedDate!.toIso8601String().split('T')[0],
-        if (country != null) 'location_country': country,
+        'location_country': ?country,
       });
       if (!mounted) return;
       Navigator.of(context).pop({

@@ -10,71 +10,315 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/shimmer_loader.dart';
 
-class NotificationsScreen extends ConsumerWidget {
+class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  static const _socialTypes = {
+    'like', 'post_reaction', 'comment', 'comment_reply',
+    'follow', 'new_follower', 'buddy_request', 'buddy_accepted',
+    'mention', 'repost', 'post_repost', 'post_quote', 'community_post',
+    'community_comment', 'community_reaction',
+  };
+
+  static const _liveTypes = {
+    'live_start', 'live_starting', 'live_reminder',
+  };
+
+  static const _commerceTypes = {
+    'event_ticket_purchased', 'order_status_changed', 'payout_processed',
+    'payment_received', 'withdrawal_processed', 'new_purchase',
+    'session_booked', 'session_reminder', 'session_cancelled',
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  List<BuddyNotification> _filterList(List<BuddyNotification> list, int tabIndex) {
+    switch (tabIndex) {
+      case 1:
+        return list.where((n) => _socialTypes.contains(n.notificationType)).toList();
+      case 2:
+        return list.where((n) => _liveTypes.contains(n.notificationType)).toList();
+      case 3:
+        return list.where((n) => _commerceTypes.contains(n.notificationType)).toList();
+      case 0:
+      default:
+        return list;
+    }
+  }
+
+  Map<String, List<BuddyNotification>> _groupByDate(List<BuddyNotification> list) {
+    final Map<String, List<BuddyNotification>> groups = {
+      'Today': [],
+      'Yesterday': [],
+      'Earlier': [],
+    };
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    for (final n in list) {
+      final dt = DateTime.tryParse(n.createdAt);
+      if (dt == null) {
+        groups['Earlier']!.add(n);
+        continue;
+      }
+      final dateOnly = DateTime(dt.year, dt.month, dt.day);
+      if (dateOnly.isAtSameMomentAs(today)) {
+        groups['Today']!.add(n);
+      } else if (dateOnly.isAtSameMomentAs(yesterday)) {
+        groups['Yesterday']!.add(n);
+      } else {
+        groups['Earlier']!.add(n);
+      }
+    }
+
+    // Remove empty groups
+    groups.removeWhere((_, items) => items.isEmpty);
+    return groups;
+  }
+
+  Future<void> _markAllRead() async {
+    try {
+      await ref.read(notificationRepositoryProvider).markAllRead();
+      ref.invalidate(notificationsProvider);
+      ref.invalidate(unreadCountProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('All notifications marked as read.')),
+        );
+      }
+    } catch (_) {}
+  }
+
+  void _handleNotificationTap(BuddyNotification n) async {
+    await ref.read(notificationRepositoryProvider).markRead(n.id);
+    ref.invalidate(notificationsProvider);
+    ref.invalidate(unreadCountProvider);
+
+    if (!mounted) return;
+
+    final type = n.notificationType;
+    final meta = n.metadata ?? {};
+
+    if (type == 'live_starting' || type == 'live_reminder' || type == 'live_start') {
+      final liveId = meta['live_id']?.toString() ?? '';
+      if (liveId.isNotEmpty) {
+        context.push('/lives/$liveId');
+        return;
+      }
+    }
+
+    if (type == 'event_ticket_purchased') {
+      final eventId = meta['event_id']?.toString() ?? '';
+      if (eventId.isNotEmpty) {
+        context.push('/marketplace/events/$eventId');
+        return;
+      }
+    }
+
+    if (type == 'order_status_changed') {
+      final orderId = meta['order_id']?.toString() ?? '';
+      if (orderId.isNotEmpty) {
+        context.push('/orders/$orderId');
+      } else {
+        context.push('/orders');
+      }
+      return;
+    }
+
+    if (type == 'payout_processed' || type == 'withdrawal_processed' || type == 'payment_received') {
+      context.push('/wallet');
+      return;
+    }
+
+    if (type == 'community_join_approved' || type == 'community_post') {
+      final commId = meta['community_id']?.toString() ?? '';
+      if (commId.isNotEmpty) {
+        context.push('/community/$commId');
+        return;
+      }
+    }
+
+    if (type == 'repost' || type == 'post_repost' || type == 'mention' || type == 'post_reaction' || type == 'comment') {
+      final postId = meta['post_id']?.toString() ?? '';
+      if (postId.isNotEmpty) {
+        context.push('/feed/post/$postId');
+        return;
+      }
+    }
+
+    if (type == 'session_booked' || type == 'session_reminder') {
+      context.push('/sessions/my-sessions');
+      return;
+    }
+
+    // Default to feed
+    context.push('/feed');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final notificationsAsync = ref.watch(notificationsProvider);
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: AppBar(
+        title: const Text('Notifications'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.done_all),
+            tooltip: 'Mark all as read',
+            onPressed: _markAllRead,
+          ),
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Preferences',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen()),
+            ),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: BuddyColors.green,
+          labelColor: cs.onSurface,
+          unselectedLabelColor: cs.onSurface.withValues(alpha: 0.6),
+          tabs: const [
+            Tab(text: 'All'),
+            Tab(text: 'Social'),
+            Tab(text: 'Live'),
+            Tab(text: 'Commerce'),
+          ],
+          onTap: (_) => setState(() {}),
+        ),
+      ),
       body: notificationsAsync.when(
-        data: (notifications) {
+        data: (allNotifications) {
+          final notifications = _filterList(allNotifications, _tabController.index);
           if (notifications.isEmpty) {
             return const EmptyState(
               icon: Icons.notifications_outlined,
-              title: 'No notifications yet',
+              title: 'No notifications',
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: notifications.length,
-            separatorBuilder: (_, _) => const Divider(height: 1),
-            itemBuilder: (_, i) {
-              final n = notifications[i];
-              final isLive = n.notificationType == 'live_starting' || n.notificationType == 'live_reminder';
-              final liveId = n.metadata?['live_id']?.toString();
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: n.isRead ? BuddyColors.surfaceRaised : BuddyColors.green.withValues(alpha: 0.2),
-                  child: Icon(_notificationIcon(n.notificationType), color: n.isRead ? BuddyColors.textSecondary : BuddyColors.green, size: 20),
-                ),
-                title: Text(n.title, style: TextStyle(fontWeight: n.isRead ? FontWeight.normal : FontWeight.w600)),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(n.body, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13)),
-                    if (isLive && liveId != null) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          _LiveCountdown(scheduledFor: n.metadata?['scheduled_for'] as String?),
-                          const Spacer(),
-                          GestureDetector(
-                            onTap: () => _openLive(context, ref, n),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.videocam, size: 14, color: BuddyColors.green),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Open Live',
-                                  style: TextStyle(color: BuddyColors.green, fontSize: 12, fontWeight: FontWeight.w600),
-                                ),
-                              ],
+
+          final grouped = _groupByDate(notifications);
+
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: grouped.length,
+            itemBuilder: (context, groupIdx) {
+              final groupKey = grouped.keys.elementAt(groupIdx);
+              final items = grouped[groupKey]!;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+                    child: Text(
+                      groupKey,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: cs.onSurface.withValues(alpha: 0.5),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  ...items.map((n) {
+                    final isLive = n.notificationType == 'live_starting' ||
+                        n.notificationType == 'live_reminder';
+
+                    return Dismissible(
+                      key: ValueKey(n.id),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        color: cs.surfaceContainerHighest,
+                        child: Icon(
+                          Icons.done,
+                          color: cs.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      onDismissed: (_) async {
+                        await ref.read(notificationRepositoryProvider).markRead(n.id);
+                        ref.invalidate(notificationsProvider);
+                        ref.invalidate(unreadCountProvider);
+                      },
+                      child: Container(
+                        color: n.isRead ? Colors.transparent : BuddyColors.green.withValues(alpha: 0.05),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: n.isRead
+                                ? cs.surfaceContainerHighest
+                                : BuddyColors.green.withValues(alpha: 0.2),
+                            child: Icon(
+                              _notificationIcon(n.notificationType),
+                              color: n.isRead ? cs.onSurface.withValues(alpha: 0.6) : BuddyColors.green,
+                              size: 20,
                             ),
                           ),
-                        ],
+                          title: Text(
+                            n.title,
+                            style: TextStyle(
+                              fontWeight: n.isRead ? FontWeight.normal : FontWeight.w600,
+                              color: cs.onSurface,
+                            ),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                n.body,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: cs.onSurface.withValues(alpha: 0.7),
+                                ),
+                              ),
+                              if (isLive) ...[
+                                const SizedBox(height: 6),
+                                _LiveCountdown(
+                                  scheduledFor: n.metadata?['scheduled_for'] as String?,
+                                ),
+                              ],
+                            ],
+                          ),
+                          trailing: Text(
+                            _timeAgo(n.createdAt),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: cs.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          onTap: () => _handleNotificationTap(n),
+                        ),
                       ),
-                    ],
-                  ],
-                ),
-                trailing: Text(_timeAgo(n.createdAt), style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
-                onTap: () async {
-                  await ref.read(notificationRepositoryProvider).markRead(n.id);
-                  ref.invalidate(notificationsProvider);
-                  ref.invalidate(unreadCountProvider);
-                },
+                    );
+                  }),
+                ],
               );
             },
           );
@@ -85,30 +329,56 @@ class NotificationsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _openLive(BuildContext context, WidgetRef ref, BuddyNotification n) async {
-    final liveId = n.metadata?['live_id']?.toString() ?? '';
-    await ref.read(notificationRepositoryProvider).markRead(n.id);
-    ref.invalidate(notificationsProvider);
-    ref.invalidate(unreadCountProvider);
-    if (liveId.isNotEmpty && context.mounted) {
-      context.push('/lives/$liveId');
-    }
-  }
-
   IconData _notificationIcon(String type) {
     switch (type) {
-      case 'like': return Icons.favorite;
-      case 'comment': return Icons.comment;
-      case 'follow': return Icons.person_add;
-      case 'buddy_request': return Icons.handshake;
-      case 'message': return Icons.message;
+      case 'like':
+      case 'post_reaction':
+        return Icons.favorite;
+      case 'comment':
+      case 'comment_reply':
+        return Icons.comment;
+      case 'follow':
+      case 'new_follower':
+        return Icons.person_add;
+      case 'buddy_request':
+      case 'buddy_accepted':
+        return Icons.handshake;
+      case 'repost':
+      case 'post_repost':
+      case 'post_quote':
+        return Icons.repeat;
+      case 'mention':
+        return Icons.alternate_email;
       case 'live_start':
       case 'live_starting':
-      case 'live_reminder': return Icons.videocam;
-      case 'gym_update': return Icons.fitness_center;
-      case 'tip': return Icons.card_giftcard;
-      case 'marketing': return Icons.campaign;
-      default: return Icons.notifications;
+      case 'live_reminder':
+        return Icons.videocam;
+      case 'community_invite':
+      case 'community_member':
+      case 'community_join_request':
+      case 'community_join_approved':
+        return Icons.groups;
+      case 'event_ticket_purchased':
+        return Icons.confirmation_number;
+      case 'order_status_changed':
+      case 'new_purchase':
+        return Icons.shopping_bag;
+      case 'payout_processed':
+      case 'withdrawal_processed':
+      case 'payment_received':
+        return Icons.payments;
+      case 'session_booked':
+      case 'session_reminder':
+      case 'session_cancelled':
+        return Icons.calendar_month;
+      case 'streak_milestone':
+      case 'streak_reminder':
+        return Icons.whatshot;
+      case 'gym_update':
+      case 'gym_invite':
+        return Icons.fitness_center;
+      default:
+        return Icons.notifications;
     }
   }
 

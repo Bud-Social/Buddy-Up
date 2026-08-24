@@ -4,26 +4,30 @@ import '../../../core/utils/constants.dart';
 
 class FeedTabBar extends StatelessWidget {
   final String activeTab;
+  final List<String>? tabs;
   final void Function(String tab)? onTabChanged;
 
   const FeedTabBar({
     super.key,
     required this.activeTab,
+    this.tabs,
     this.onTabChanged,
   });
 
   static const _tabLabels = {
     'for_you': 'For You',
     'following': 'Following',
+    'communities': 'Communities',
     'videos': 'Bud Press',
   };
 
   @override
   Widget build(BuildContext context) {
+    final effectiveTabs = tabs ?? feedTabs;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        children: feedTabs.map((tab) {
+        children: effectiveTabs.map((tab) {
           final isActive = tab == activeTab;
           return Expanded(
             child: GestureDetector(

@@ -17,13 +17,14 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final color = accent ?? BuddyColors.green;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: BuddyColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BuddyColors.border),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,18 +40,18 @@ class StatCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
-              color: BuddyColors.textPrimary,
+            style: TextStyle(
+              color: cs.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              fontFeatures: [FontFeature.tabularFigures()],
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              color: BuddyColors.textSecondary,
+            style: TextStyle(
+              color: cs.onSurface.withValues(alpha: 0.6),
               fontSize: 12,
             ),
             maxLines: 1,
@@ -76,14 +77,15 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Row(
       children: [
         Icon(icon, size: 18, color: BuddyColors.green),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
-            color: BuddyColors.textPrimary,
+          style: TextStyle(
+            color: cs.onSurface,
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
@@ -111,6 +113,7 @@ class MacroBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final pct = max <= 0 ? 0.0 : (value / max).clamp(0.0, 1.0);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,19 +122,19 @@ class MacroBar extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
-                color: BuddyColors.textSecondary,
+              style: TextStyle(
+                color: cs.onSurface.withValues(alpha: 0.6),
                 fontSize: 12,
               ),
             ),
             const Spacer(),
             Text(
               '${value.toStringAsFixed(0)}g',
-              style: const TextStyle(
-                color: BuddyColors.textPrimary,
+              style: TextStyle(
+                color: cs.onSurface,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                fontFeatures: [FontFeature.tabularFigures()],
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ],
@@ -142,7 +145,7 @@ class MacroBar extends StatelessWidget {
           child: LinearProgressIndicator(
             value: pct,
             minHeight: 6,
-            backgroundColor: BuddyColors.surfaceRaised,
+            backgroundColor: cs.surfaceContainerHighest,
             valueColor: AlwaysStoppedAnimation(color),
           ),
         ),

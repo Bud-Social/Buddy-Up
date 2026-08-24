@@ -160,6 +160,12 @@ abstract class MarketplaceRepository {
     @Body() Map<String, dynamic> data,
   );
 
+  @PATCH('/marketplace/orders/{id}/status/')
+  Future<Map<String, dynamic>> updateOrderStatus(
+    @Path('id') String orderId,
+    @Body() Map<String, dynamic> data,
+  );
+
   @GET('/marketplace/discount-codes/')
   Future<Map<String, dynamic>> getDiscountCodes();
 

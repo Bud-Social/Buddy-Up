@@ -340,7 +340,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     isLoading: _isCheckingOut,
                     onPressed: _isCheckingOut
                         ? null
-                        : () => _doCheckout(sheetCtx),
+                        : () => _doCheckout(),
                   ),
                 ),
               ],
@@ -352,7 +352,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     if (confirmed == true && mounted) setState(() => _isCheckingOut = false);
   }
 
-  Future<void> _doCheckout(BuildContext context) async {
+  Future<void> _doCheckout() async {
     setState(() => _isCheckingOut = true);
     try {
       final payload = <String, dynamic>{
@@ -579,7 +579,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
               const Divider(color: BuddyColors.border, height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

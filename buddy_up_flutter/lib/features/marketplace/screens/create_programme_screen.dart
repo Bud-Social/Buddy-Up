@@ -105,7 +105,7 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
         'duration_weeks': _durationWeeks,
         'price_artifacts': _priceArtifacts,
         'schedule': mergedSchedule,
-        if (coverUrl != null) 'cover_image_url': coverUrl,
+        'cover_image_url': ?coverUrl,
         if (widget.shopHandle != null) 'shop_handle': widget.shopHandle,
       };
 
@@ -269,7 +269,7 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
                                 fontSize: 12, color: BuddyColors.textSecondary))),
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: current,
+                        initialValue: current,
                         decoration: InputDecoration(
                           filled: true,
                           fillColor: BuddyColors.surfaceRaised,

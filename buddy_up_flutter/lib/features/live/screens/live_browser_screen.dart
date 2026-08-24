@@ -202,7 +202,7 @@ class _LiveBrowserScreenState extends ConsumerState<LiveBrowserScreen> {
           (e.response?.statusMessage ?? 'Failed to RSVP.');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$message')),
+        SnackBar(content: Text(message)),
       );
     } catch (_) {
       if (!mounted) return;

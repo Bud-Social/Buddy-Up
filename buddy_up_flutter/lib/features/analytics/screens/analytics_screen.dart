@@ -58,16 +58,16 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
     final period = ref.watch(analyticsPeriodProvider);
 
     return Scaffold(
-      backgroundColor: BuddyColors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Analytics'),
         actions: [
           PopupMenuButton<String>(
-            color: BuddyColors.surface,
+            color: Theme.of(context).colorScheme.surface,
             icon: const Icon(Icons.date_range),
             onSelected: (p) =>
                 ref.read(analyticsSummaryProvider.notifier).setPeriod(p),
-            itemBuilder: (_) => [
+            itemBuilder: (ctx) => [
               for (final p in _periods)
                 PopupMenuItem(
                   value: p.key,
@@ -76,7 +76,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                     children: [
                       Text(
                         p.label,
-                        style: const TextStyle(color: BuddyColors.textPrimary),
+                        style: TextStyle(
+                          color: Theme.of(ctx).colorScheme.onSurface,
+                        ),
                       ),
                       if (p.key == period)
                         const Icon(
@@ -96,7 +98,8 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
           tabAlignment: TabAlignment.start,
           indicatorColor: BuddyColors.green,
           labelColor: BuddyColors.green,
-          unselectedLabelColor: BuddyColors.textSecondary,
+          unselectedLabelColor:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
           labelStyle: const TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,

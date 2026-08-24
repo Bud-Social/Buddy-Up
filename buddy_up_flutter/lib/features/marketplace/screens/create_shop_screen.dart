@@ -168,10 +168,10 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
               controller: _pageController,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                _Step1BasicInfo(),
-                _Step2Branding(),
-                _Step3ShopType(),
-                _Step4Review(),
+                _step1BasicInfo(),
+                _step2Branding(),
+                _step3ShopType(),
+                _step4Review(),
               ],
             ),
           ),
@@ -186,7 +186,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
                       child: OutlinedButton(
                         onPressed: _prevStep,
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: BuddyColors.green),
+                          side: const BorderSide(color: BuddyColors.green),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
@@ -227,7 +227,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     );
   }
 
-  Widget _Step1BasicInfo() {
+  Widget _step1BasicInfo() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -260,7 +260,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     );
   }
 
-  Widget _Step2Branding() {
+  Widget _step2Branding() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -287,13 +287,13 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
               clipBehavior: Clip.antiAlias,
               child: _coverFile != null
                   ? Image.file(File(_coverFile!.path), fit: BoxFit.cover)
-                  : Column(
+                  : const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.add_photo_alternate_outlined,
                             size: 40, color: BuddyColors.textSecondary),
-                        const SizedBox(height: 8),
-                        const Text('Tap to upload cover image',
+                        SizedBox(height: 8),
+                        Text('Tap to upload cover image',
                             style: TextStyle(color: BuddyColors.textSecondary)),
                       ],
                     ),
@@ -329,7 +329,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     );
   }
 
-  Widget _Step3ShopType() {
+  Widget _step3ShopType() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -350,7 +350,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     );
   }
 
-  Widget _Step4Review() {
+  Widget _step4Review() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -369,15 +369,15 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ReviewRow('Name', _nameController.text),
-                  _ReviewRow('Handle', '@${_handleController.text}'),
-                  _ReviewRow('Type', _shopType),
+                  _reviewRow('Name', _nameController.text),
+                  _reviewRow('Handle', '@${_handleController.text}'),
+                  _reviewRow('Type', _shopType),
                   if (_emailController.text.isNotEmpty)
-                    _ReviewRow('Email', _emailController.text),
+                    _reviewRow('Email', _emailController.text),
                   if (_descriptionController.text.isNotEmpty)
-                    _ReviewRow('Description', _descriptionController.text),
-                  _ReviewRow('Logo', _logoFile != null ? '✅ Uploaded' : '⚠️ Not set'),
-                  _ReviewRow('Cover', _coverFile != null ? '✅ Uploaded' : '⚠️ Not set'),
+                    _reviewRow('Description', _descriptionController.text),
+                  _reviewRow('Logo', _logoFile != null ? '✅ Uploaded' : '⚠️ Not set'),
+                  _reviewRow('Cover', _coverFile != null ? '✅ Uploaded' : '⚠️ Not set'),
                 ],
               ),
             ),
@@ -390,11 +390,11 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: BuddyColors.green.withValues(alpha: 0.3)),
             ),
-            child: Row(
+            child: const Row(
               children: [
                 Icon(Icons.info_outline, color: BuddyColors.green, size: 18),
-                const SizedBox(width: 8),
-                const Expanded(
+                SizedBox(width: 8),
+                Expanded(
                   child: Text(
                     'You can apply for certification after creating your shop to unlock more features.',
                     style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
@@ -408,7 +408,7 @@ class _CreateShopScreenState extends ConsumerState<CreateShopScreen> {
     );
   }
 
-  Widget _ReviewRow(String label, String value) {
+  Widget _reviewRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -547,7 +547,7 @@ class _ShopTypeOption extends StatelessWidget {
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle, color: BuddyColors.green, size: 22),
+              const Icon(Icons.check_circle, color: BuddyColors.green, size: 22),
           ],
         ),
       ),

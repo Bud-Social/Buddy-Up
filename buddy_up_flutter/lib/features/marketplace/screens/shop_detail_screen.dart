@@ -92,7 +92,7 @@ class ShopDetailScreen extends ConsumerWidget {
                                             fontSize: 18)),
                                     if (shop.isCertified) ...[
                                       const SizedBox(width: 6),
-                                      Icon(Icons.verified,
+                                      const Icon(Icons.verified,
                                           color: BuddyColors.green, size: 18),
                                     ],
                                   ],
