@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Maximize2, X, Send, Users, Mic, MicOff, Volume2, VolumeX, MessageCircle } from 'lucide-react';
+import { Maximize2, X, Send, Users, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import type { ChatMessage } from '@/hooks/useLiveWebSocket';
@@ -22,7 +22,7 @@ export const PipChatPanel: React.FC<PipChatPanelProps> = ({
   roomTitle,
   hostName,
   viewerCount = 1,
-  isAudioOnly = false,
+  isAudioOnly: _isAudioOnly = false,
   messages,
   onSendMessage,
   onSendReaction,
@@ -31,7 +31,6 @@ export const PipChatPanel: React.FC<PipChatPanelProps> = ({
   const navigate = useNavigate();
   const [inputText, setInputText] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

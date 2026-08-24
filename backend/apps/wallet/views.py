@@ -836,9 +836,6 @@ class PayoutRequestView(views.APIView):
         method = request.data.get('method', 'mpesa')
         phone_number = request.data.get('phone_number', '')
         bank_account = request.data.get('bank_account', '')
-        bank_code = request.data.get('bank_code', '')
-        account_name = request.data.get('account_name', '')
-        source = request.data.get('source', 'creator')
 
         amount_usd = request.data.get('amount')
         artifact_type = request.data.get('artifact_type')

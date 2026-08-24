@@ -324,7 +324,7 @@ interface PostCardProps {
 
 export function PostCard({ post: initialPost, onComment }: PostCardProps) {
   const navigate = useNavigate();
-  const [post, setPost] = useState(initialPost);
+  const [post] = useState(initialPost);
   const [isSaved, setIsSaved] = useState(post.is_saved ?? false);
   const [reactionCounts, setReactionCounts] = useState(post.reaction_counts || {});
   const [userReaction, setUserReaction] = useState(post.user_reaction);

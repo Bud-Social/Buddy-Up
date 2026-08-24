@@ -70,6 +70,10 @@ jobs:
           java-version: '17'
       - uses: subosito/flutter-action@v2
         with:
+          # Pinned to the locally verified toolchain; `channel: stable` alone
+          # can resolve a cached SDK whose compileSdk default breaks plugin
+          # AAR metadata checks.
+          flutter-version: 3.44.8
           channel: stable
           cache: true
       - name: Flutter doctor

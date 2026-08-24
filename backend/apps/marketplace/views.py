@@ -37,7 +37,7 @@ from .serializers import (
     EventTicketSerializer, CreateMealPlanSerializer, CreateTrainingProgrammeSerializer,
     CreateEventSerializer, ReviewInputSerializer,
     DiscountCodeSerializer, DiscountCodeWriteSerializer,
-    OrderSerializer, OrderItemSerializer, OrderFulfillmentSerializer,
+    OrderSerializer, OrderFulfillmentSerializer,
 )
 from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator_artifacts, platform_cut
 from apps.wallet.models import ArtifactTransaction

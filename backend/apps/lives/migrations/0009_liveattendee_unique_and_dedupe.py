@@ -1,4 +1,4 @@
-from django.db import migrations, models
+from django.db import migrations
 
 
 def dedupe_live_attendees(apps, schema_editor):

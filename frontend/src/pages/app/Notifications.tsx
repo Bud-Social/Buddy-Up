@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Bell, UserPlus, Users, Zap, Heart, MessageCircle, RefreshCcw, Radio,
+  Bell, UserPlus, Users, Zap, Heart, MessageCircle, Radio,
   ShoppingBag, CreditCard, Repeat, AtSign, Ticket, Calendar, Dumbbell,
   CheckCircle2, CheckCheck,
 } from 'lucide-react';
@@ -78,7 +78,7 @@ function LiveCountdown({ scheduledFor }: { scheduledFor?: string | null }) {
 }
 
 export default function Notifications() {
-  const { notifications, unreadCount, setNotifications, markAllRead } = useNotificationStore();
+  const { notifications, setNotifications, markAllRead } = useNotificationStore();
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<FilterTab>('all');
   const navigate = useNavigate();

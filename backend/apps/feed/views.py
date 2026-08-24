@@ -833,7 +833,7 @@ class RepostView(views.APIView):
             existing.delete()
             action = 'unreposted'
         else:
-            repost = Post.objects.create(
+            _repost = Post.objects.create(
                 author=request.user.profile,
                 post_type='text',
                 body='',

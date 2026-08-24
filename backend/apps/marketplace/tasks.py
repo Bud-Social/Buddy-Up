@@ -446,7 +446,7 @@ def send_event_ticket_reminders():
     already started, and avoids duplicate reminders via a matching Notification.
     """
     from datetime import timedelta
-    from .models import EventTicket, MarketplaceEvent
+    from .models import MarketplaceEvent
     from apps.notifications.models import Notification
 
     now = timezone.now()
