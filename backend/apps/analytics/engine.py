@@ -202,19 +202,50 @@ def summarize_nutrition(profile, cutoff):
 
 
 def summarize_body(profile, cutoff=None):
-    """Weight / body-composition progress."""
+    """Weight / body-composition progress, including weights shared in
+    progress-type feed posts (progress_data.weight_kg)."""
     metrics = BodyMetric.objects.filter(user=profile).order_by('measured_at')
     first = metrics.first()
     latest = metrics.last()
 
+    # Feed progress posts carry the user's shared weight — fold them into the
+    # series so "share progress" posts are first-class body data.
+    progress_points = []
+    progress_posts = _period_filter(
+        Post.objects.filter(author=profile, post_type='progress', progress_data__isnull=False),
+        cutoff,
+    ).order_by('created_at').values('created_at', 'progress_data')
+    for p in progress_posts:
+        data = p.get('progress_data') or {}
+        weight = data.get('weight_kg') or data.get('weight') or (data.get('summary') or {}).get('weight_kg')
+        try:
+            weight = float(weight) if weight is not None else None
+        except (TypeError, ValueError):
+            weight = None
+        if weight and weight > 0:
+            progress_points.append({
+                'weight_kg': weight,
+                'measured_at': p['created_at'],
+                'source': 'feed_progress_post',
+            })
+
     series = list(metrics.values('id', 'weight_kg', 'body_fat_pct', 'measured_at', 'photo_url', 'scale_photo_url'))
-    weight_change = round((latest.weight_kg - first.weight_kg), 1) if first and latest else None
+    series += [{'id': None, 'weight_kg': pp['weight_kg'], 'body_fat_pct': None,
+                'measured_at': pp['measured_at'], 'photo_url': None,
+                'scale_photo_url': None} for pp in progress_points]
+    series.sort(key=lambda s: s['measured_at'])
+
+    weighted = [s for s in series if s.get('weight_kg')]
+    first = weighted[0] if weighted else first
+    latest = weighted[-1] if weighted else latest
+
+    weight_change = round((latest['weight_kg'] - first['weight_kg']), 1) if first and latest else None
     return {
-        'count': metrics.count(),
-        'start_weight_kg': first.weight_kg if first else None,
-        'latest_weight_kg': latest.weight_kg if latest else None,
+        'count': metrics.count() + len(progress_points),
+        'start_weight_kg': (first or {}).get('weight_kg'),
+        'latest_weight_kg': (latest or {}).get('weight_kg'),
         'weight_change_kg': weight_change,
-        'latest_body_fat_pct': latest.body_fat_pct if latest else None,
+        'latest_body_fat_pct': (latest or {}).get('body_fat_pct'),
         'series': series,
     }
 

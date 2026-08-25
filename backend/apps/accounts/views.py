@@ -759,9 +759,12 @@ def _provision_social_user(email, provider_field, provider_id, name='', picture=
             **{provider_field: provider_id},
         )
         created = True
-        user.profile.onboarding_completed = False
-        user.profile.save(update_fields=['onboarding_completed'])
     _ensure_social_profile(user, name, picture)
+    if created:
+        # New accounts must complete the onboarding pipeline.
+        profile = _ensure_social_profile(user, name, picture)
+        profile.onboarding_completed = False
+        profile.save(update_fields=['onboarding_completed'])
     return user, created
 
 
