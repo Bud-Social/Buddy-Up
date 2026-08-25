@@ -45,6 +45,28 @@ export function SvgRouteMap({ route, height = 220 }: RouteMapProps) {
     };
   }, [route, height]);
 
+  if (points.length === 1) {
+    // Zero-movement session: still show where the user was.
+    return (
+      <div className="relative rounded-xl overflow-hidden border border-buddy-surface-raised bg-[#101418]" style={{ height }}>
+        <svg viewBox={`0 0 640 ${height}`} preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+          <defs>
+            <pattern id="grid-single" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1E262E" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="640" height={height} fill="url(#grid-single)" />
+          <circle cx={320} cy={height / 2} r={10} fill="#00C896">
+            <animate attributeName="r" values="8;14;8" dur="2s" repeatCount="indefinite" />
+          </circle>
+          <text x={320} y={height / 2 + 34} textAnchor="middle" fill="#A0A0A0" fontSize="12">
+            Start position — no movement recorded
+          </text>
+        </svg>
+      </div>
+    );
+  }
+
   if (points.length < 2) {
     return (
       <div className="flex items-center justify-center h-40 rounded-xl bg-buddy-surface-raised border border-buddy-surface-raised text-sm text-buddy-text-secondary">
