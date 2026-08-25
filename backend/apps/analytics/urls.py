@@ -5,6 +5,7 @@ app_name = 'analytics'
 
 urlpatterns = [
     path('summary/', views.AnalyticsSummaryView.as_view(), name='summary'),
+    path('achievements/', views.AchievementsView.as_view(), name='achievements'),
     path('activities/', views.ActivityRecordView.as_view(), name='activities'),
     path('activities/<uuid:pk>/', views.ActivityRecordView.as_view(), name='activity_detail'),
     path('workouts/', views.WorkoutLogView.as_view(), name='workouts'),
