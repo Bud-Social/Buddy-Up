@@ -67,6 +67,21 @@ class VerificationSubmission(TimestampedModel):
         ('rejected', 'Rejected'),
         ('expired', 'Expired'),
     ]
+    # Wizard steps — only used by the multistep 'id' flow.
+    STEPS = [
+        ('id_document', 'ID Document'),
+        ('selfie_liveness', 'Selfie / Liveness Check'),
+        ('face_match', 'Face Match'),
+        ('review', 'Review & Submit'),
+        ('done', 'Done'),
+    ]
+    FACE_MATCH_STATUSES = [
+        ('pending', 'Pending'),
+        ('auto_matched', 'Auto Matched'),
+        ('manual_review', 'Manual Review'),
+        ('failed', 'Failed'),
+        ('skipped', 'Skipped'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     profile = models.ForeignKey(
@@ -77,6 +92,16 @@ class VerificationSubmission(TimestampedModel):
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='draft')
     documents = models.ManyToManyField(VerificationDocument, related_name='submissions')
     notes = models.TextField(blank=True, max_length=1000)
+
+    # ── Multistep wizard state (type='id') ────────────────────────────────
+    current_step = models.CharField(max_length=20, choices=STEPS, blank=True)
+    completed_steps = models.JSONField(default=list, blank=True)
+    face_match_status = models.CharField(
+        max_length=15, choices=FACE_MATCH_STATUSES, default='pending',
+    )
+    face_match_score = models.FloatField(
+        null=True, blank=True, help_text='Similarity confidence from the face-match backend (0-100)',
+    )
     reviewed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='verification_reviews',

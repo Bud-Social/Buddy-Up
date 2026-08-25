@@ -24,6 +24,10 @@ export interface VerificationSubmission {
   reviewed_at: string | null;
   submitted_at: string | null;
   created_at: string;
+  current_step: string;
+  completed_steps: string[];
+  face_match_status: 'pending' | 'auto_matched' | 'manual_review' | 'failed' | 'skipped';
+  face_match_score: number | null;
   credential_title: string;
   credential_issuer: string;
   credential_id: string;
@@ -57,6 +61,20 @@ export const verificationApi = {
 
   submitDraft: (id: string) =>
     apiClient.post<ApiResponse<VerificationSubmission>>(`/verification/submissions/${id}/submit/`).then((r) => r.data),
+
+  startIdWizard: (id: string) =>
+    apiClient.post<ApiResponse<VerificationSubmission>>(`/verification/submissions/${id}/start/`).then((r) => r.data),
+
+  uploadStep: (id: string, step: 'id_document' | 'selfie_liveness', file: Blob, filename: string, documentType?: string) => {
+    const form = new FormData();
+    form.append('step', step);
+    form.append('file', file, filename);
+    if (documentType) form.append('document_type', documentType);
+    return apiClient.post<ApiResponse<VerificationSubmission & { uploaded_document: VerificationDocument; face_match: { status: string; score: number | null } | null }>>(
+      `/verification/submissions/${id}/upload_step/`, form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    ).then((r) => r.data);
+  },
 
   reviewSubmission: (id: string, action: 'approve' | 'reject', rejectionReason?: string, documentIds?: string[]) =>
     apiClient.post<ApiResponse<VerificationSubmission>>(`/verification/submissions/${id}/review/`, {

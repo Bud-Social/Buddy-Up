@@ -23,10 +23,14 @@ class VerificationSubmissionSerializer(serializers.ModelSerializer):
         fields = ['id', 'profile', 'verification_type', 'status', 'documents',
                    'document_ids', 'notes', 'reviewed_by', 'reviewed_at',
                    'submitted_at', 'created_at',
+                   'current_step', 'completed_steps', 'face_match_status',
+                   'face_match_score',
                    'credential_title', 'credential_issuer', 'credential_id',
                    'issued_date', 'scope_of_practice']
         read_only_fields = ['id', 'profile', 'status', 'documents',
-                            'reviewed_by', 'reviewed_at', 'created_at']
+                            'reviewed_by', 'reviewed_at', 'created_at',
+                            'current_step', 'completed_steps', 'face_match_status',
+                            'face_match_score']
 
 
 class VerificationReviewSerializer(serializers.Serializer):

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { verificationApi, type VerificationSubmission } from '@/api/verification';
+import { IdVerificationWizard } from '@/components/verification/IdVerificationWizard';
 
 const VERIFICATION_TYPES = [
   { value: 'id', label: 'ID Verification', desc: 'Verify your identity with a government-issued ID' },
@@ -33,6 +34,7 @@ export default function Verification() {
   const [submissions, setSubmissions] = useState<VerificationSubmission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [showIdWizard, setShowIdWizard] = useState(false);
   const [selectedType, setSelectedType] = useState('');
   const [documentUrl, setDocumentUrl] = useState('');
   const [notes, setNotes] = useState('');
@@ -107,10 +109,16 @@ export default function Verification() {
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <div className="flex items-center justify-between mb-4">
         <h1 className="font-display text-2xl font-extrabold">Verification</h1>
-        <Button size="sm" onClick={() => setShowSubmitModal(true)}>
+        <Button size="sm" onClick={() => setShowIdWizard(true)}>
           <Plus size={14} className="mr-1" /> New Request
         </Button>
       </div>
+
+      {showIdWizard && (
+        <div className="mb-4">
+          <IdVerificationWizard onDone={() => { setShowIdWizard(false); fetchSubmissions(); }} />
+        </div>
+      )}
 
       <Card className="p-4 mb-4">
         <div className="flex items-start gap-3">
@@ -189,7 +197,14 @@ export default function Verification() {
             <label className="text-sm font-medium block mb-2">Verification Type</label>
             <div className="space-y-2">
               {VERIFICATION_TYPES.map((t) => (
-                <button key={t.value} onClick={() => setSelectedType(t.value)}
+                <button key={t.value} onClick={() => {
+                  if (t.value === 'id') {
+                    setShowSubmitModal(false);
+                    setShowIdWizard(true);
+                    return;
+                  }
+                  setSelectedType(t.value);
+                }}
                   className={`w-full text-left p-3 rounded-xl border transition-colors ${selectedType === t.value ? 'border-buddy-green bg-buddy-green/10' : 'border-buddy-surface hover:border-buddy-green/40'}`}>
                   <p className="text-sm font-medium capitalize">{t.label}</p>
                   <p className="text-xs text-buddy-text-secondary mt-0.5">{t.desc}</p>
