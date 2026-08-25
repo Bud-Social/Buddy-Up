@@ -66,9 +66,9 @@ export default function Marketplace() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="font-display text-2xl font-extrabold">Marketplace</h1>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => navigate('/marketplace/creator')} className="flex items-center gap-1">
+            <Button variant="secondary" size="sm" onClick={() => navigate('/marketplace/creator')} className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1">
               <BarChart2 size={14} />
-              <span className="hidden sm:inline">Creator</span>
+              <span className="text-[10px] sm:text-xs leading-none">{hasShop ? 'Creator' : 'Become a Creator'}</span>
             </Button>
             <Button variant="secondary" size="sm" onClick={() => navigate('/marketplace/orders')} className="flex items-center gap-1">
               <Package size={14} />
@@ -94,11 +94,11 @@ export default function Marketplace() {
             { key: 'products' as const, label: 'Products', icon: ShoppingBag },
           ].map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setTab(key)}
-              className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1 ${
+              className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors flex flex-col items-center justify-center gap-0.5 sm:flex-row sm:gap-1 ${
                 tab === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
               }`}>
               <Icon size={14} className="flex-shrink-0" />
-              <span className="hidden sm:inline truncate">{label}</span>
+              <span className="truncate max-w-full">{label}</span>
             </button>
           ))}
         </div>
@@ -370,9 +370,6 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
     { key: 'past', label: 'Past' },
     { key: 'all', label: 'All' },
   ];
-  const headerTitle =
-    scope === 'past' ? 'Past Events' : scope === 'all' ? 'All Events' : 'Upcoming Events';
-
   const filteredEvents = events.filter((e) => {
     if (categoryFilter === 'all') return true;
     return (e.category || '').toLowerCase() === categoryFilter.toLowerCase();
@@ -380,9 +377,8 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex items-center mb-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-buddy-text-secondary">{headerTitle}</h2>
           <div className="flex items-center gap-1 bg-buddy-surface-raised rounded-lg p-0.5">
             {SCOPE_OPTIONS.map((opt) => (
               <button
@@ -427,7 +423,7 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
                 : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
             }`}
           >
-            <span>{cat.icon}</span>
+            {cat.Icon ? <cat.Icon size={13} /> : <span>{cat.icon}</span>}
             <span>{cat.label}</span>
           </button>
         ))}

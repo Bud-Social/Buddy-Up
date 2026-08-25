@@ -133,7 +133,7 @@ export default function Notifications() {
     }
 
     if (type === 'order_status_changed' || type === 'new_purchase') {
-      navigate('/creator-studio');
+      navigate('/marketplace/creator');
       return;
     }
 
