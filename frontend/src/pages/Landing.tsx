@@ -132,7 +132,7 @@ export default function Landing() {
       {/* ── 2. VALUE PROPS ── */}
       <section className="max-w-6xl mx-auto px-6 py-24">
         <h2 className="font-display text-3xl font-extrabold text-center mb-16">Why <span className="text-buddy-green">BuddyUp</span>?</h2>
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-3 gap-8 min-w-0 [&>div]:min-w-0">
           {[
             { icon: Handshake, title: 'Find Your Buddy', desc: 'Connect with people who match your fitness level, goals, and schedule.' },
             { icon: Radio, title: 'Live Workouts, Anytime', desc: 'Drop into a live HIIT class, run a yoga session, or join a random workout at any time.' },
@@ -176,7 +176,7 @@ export default function Landing() {
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">Everything in <span className="text-buddy-green">One Place</span></h2>
         <p className="text-buddy-text-secondary text-center mb-12">All the tools you need to reach your fitness goals.</p>
 
-        <div className="flex overflow-x-auto gap-2 mb-8 scrollbar-hide justify-center">
+        <div className="flex flex-wrap sm:flex-nowrap sm:overflow-x-auto gap-2 mb-8 scrollbar-hide sm:justify-center justify-center px-2 [scroll-padding-left:0.5rem]">
           {['live', 'gyms', 'trainers', 'mealPlans', 'buddyFeed'].map((key) => {
             const tabIcons: Record<string, React.ReactNode> = {
               live: <Radio size={16} />,
@@ -194,10 +194,10 @@ export default function Landing() {
           })}
         </div>
 
-        <Card className="p-8 md:p-12">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <h3 className="font-heading text-2xl font-semibold mb-4">{features[activeFeature as keyof typeof features].title}</h3>
+        <Card className="p-6 sm:p-8 md:p-12 overflow-hidden">
+          <div className="grid md:grid-cols-2 gap-8 items-center min-w-0">
+            <div className="min-w-0">
+              <h3 className="font-heading text-2xl font-semibold mb-4 break-words">{features[activeFeature as keyof typeof features].title}</h3>
               <p className="text-buddy-text-secondary mb-6">{features[activeFeature as keyof typeof features].desc}</p>
               <ul className="space-y-3">
                 {features[activeFeature as keyof typeof features].points.map((point) => (
@@ -279,7 +279,7 @@ export default function Landing() {
       <section className="max-w-5xl mx-auto px-6 py-24">
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">Simple <span className="text-buddy-green">Pricing</span></h2>
         <p className="text-buddy-text-secondary text-center mb-16">Start free. Upgrade when you're ready.</p>
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-6 min-w-0 [&>div]:min-w-0">
           {pricingTiers.map((tier) => (
             <Card key={tier.name}
               className={`p-8 relative ${tier.popular ? `border-2 ${tier.color} bg-buddy-surface-raised` : 'bg-buddy-surface'}`}
