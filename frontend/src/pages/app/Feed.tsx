@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Loader2, Users, ArrowRight, ArrowUp, Plus, Search, Flame, UserCheck, PenLine,
+  Loader2, Users, ArrowRight, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp,
 } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { VideoFeed } from '@/components/features/feed/VideoFeed';
 import { Card } from '@/components/ui/Card';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { feedApi } from '@/api';
 import { messagingApi, type Community } from '@/api/messaging';
 import type { FeedTab } from '@/api/feed';
@@ -31,16 +30,17 @@ export default function Feed() {
   const [activeTab, setActiveTab] = useState<FeedTab>(TAB_ROUTES[location.pathname] || 'for_you');
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [myCommunities, setMyCommunities] = useState<Community[]>([]);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
 
   // Bud Press
   const [videoVariant, setVideoVariant] = useState<'fyp' | 'following'>('fyp');
-  const [showBudPressCreate, setShowBudPressCreate] = useState(false);
 
-  // Phones open the composer as a full-screen sheet so it always fits.
-  const isPhone = useMediaQuery('(max-width: 767px)');
-  const [showMobileComposer, setShowMobileComposer] = useState(false);
+  // The collapsed prompt expands IN PLACE into the full composer — no page,
+  // no overlay. Works identically on phone, tablet and desktop.
+  const [composerExpanded, setComposerExpanded] = useState(false);
+  const composerRef = useRef<HTMLDivElement | null>(null);
 
   // "New posts" pill (X-style) — never auto-inserts while the user reads.
   const [newPostsCount, setNewPostsCount] = useState(0);
@@ -57,6 +57,17 @@ export default function Feed() {
       .then((data) => setMyCommunities(data.mine || []))
       .catch(() => {});
   }, []);
+
+  // Deep-link: Bud Press "Create" expands the inline composer on /feed.
+  useEffect(() => {
+    const st = location.state as { expandComposer?: boolean } | null;
+    if (st?.expandComposer && location.pathname === '/feed') {
+      setComposerExpanded(true);
+      requestAnimationFrame(() =>
+        composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
+      );
+    }
+  }, [location]);
 
   // Meal prefill coming from the Food Scanner ("Share as Meal Post")
   const locationState = location.state as { mealData?: { food_name?: string; calories?: number; protein_g?: number; carbs_g?: number; fat_g?: number; meal_type?: string } } | null;
@@ -80,7 +91,12 @@ export default function Feed() {
   ), []);
 
   const fetchPosts = useCallback(async (tab: FeedTab, reset = false) => {
-    setIsLoading(true);
+    // Silent loading: when we already have content, refresh in the background
+    // (slim top bar only) instead of flashing a spinner and blanking the list.
+    const hasContent = posts.length > 0;
+    if (!hasContent || !reset) setIsLoading(true);
+    else setIsRefreshing(true);
+
     const c = reset ? undefined : cursorRef.current;
     try {
       const res = await feedApi.getFeed(tab, c, fetchOpts(tab));
@@ -98,8 +114,9 @@ export default function Feed() {
       setHasMore(!!res.pagination?.next);
     } catch {} finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, [fetchOpts]);
+  }, [fetchOpts, posts.length]);
 
   useEffect(() => {
     setActiveTab(TAB_ROUTES[location.pathname] || 'for_you');
@@ -157,6 +174,8 @@ export default function Feed() {
   const handleNewPost = (post: Post) => {
     knownIdsRef.current.add(post.id);
     setPosts(prev => [post, ...prev]);
+    setComposerExpanded(false);
+    setPendingNewPosts([]); // our own post IS the fresh content
   };
 
   return (
@@ -226,7 +245,7 @@ export default function Feed() {
           {/* Create + search row */}
           <div className="flex items-center gap-2 mb-3">
             <button
-              onClick={() => setShowBudPressCreate(true)}
+              onClick={() => navigate('/feed', { state: { expandComposer: true } })}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-buddy-green text-buddy-black text-sm font-bold hover:bg-buddy-green/90 transition-colors"
               title="Create a video post"
             >
@@ -264,71 +283,52 @@ export default function Feed() {
 
           <VideoFeed variant={videoVariant} />
 
-          {showBudPressCreate && (
-            <div className="fixed inset-0 z-[80] bg-buddy-black/95 overflow-y-auto" onClick={(e) => { if (e.target === e.currentTarget) setShowBudPressCreate(false); }}>
-              <div className="min-h-full flex flex-col max-w-lg mx-auto" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center justify-between p-4 border-b border-buddy-surface sticky top-0 bg-buddy-black z-10">
-                  <h2 className="font-bold">Create Video Post</h2>
-                  <button onClick={() => setShowBudPressCreate(false)} className="p-2 rounded-full hover:bg-buddy-surface text-buddy-text-secondary">✕</button>
-                </div>
-                <div className="flex-1">
-                  <PostComposer
-                    fullScreen
-                    placeholder="Describe your clip..."
-                    onPost={() => { setShowBudPressCreate(false); if (videoVariant === 'fyp') setVideoVariant('fyp'); }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       ) : (
         <>
-          {/* Composer: inline card on ≥tablet, full-screen sheet on phones */}
-          <div className="px-4 pt-4 pb-2">
-            {isPhone ? (
-              <>
+          {/* Composer: collapsed prompt expands in place — never a separate page */}
+          <div className="px-4 pt-4 pb-2" ref={composerRef}>
+            {composerExpanded ? (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-200 relative">
                 <button
-                  onClick={() => setShowMobileComposer(true)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl bg-buddy-surface text-buddy-text-secondary hover:bg-buddy-surface-raised transition-colors"
+                  onClick={() => setComposerExpanded(false)}
+                  className="absolute right-3 top-3 z-10 p-1.5 rounded-full bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
+                  title="Collapse composer"
                 >
-                  <span className="p-1.5 rounded-full bg-buddy-green/15 text-buddy-green">
-                    <PenLine size={16} />
-                  </span>
-                  Share your workout, meal, or progress...
+                  <ChevronUp size={16} />
                 </button>
-                {showMobileComposer && (
-                  <div className="fixed inset-0 z-[80] bg-buddy-black overflow-y-auto">
-                    <div className="sticky top-0 z-10 flex items-center justify-between p-3 border-b border-buddy-surface bg-buddy-black">
-                      <h2 className="font-bold">Create post</h2>
-                      <button
-                        onClick={() => setShowMobileComposer(false)}
-                        className="p-2 rounded-full hover:bg-buddy-surface text-buddy-text-secondary"
-                        title="Close composer"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <PostComposer
-                      fullScreen
-                      placeholder="Share your workout, meal, or progress..."
-                      onPost={handleNewPost}
-                      initialMeal={initialMeal}
-                      initialMealPhotoDataUrl={initialMealPhoto}
-                      onClose={() => setShowMobileComposer(false)}
-                    />
-                  </div>
-                )}
-              </>
+                <PostComposer
+                  placeholder="Share your workout, meal, or progress..."
+                  onPost={handleNewPost}
+                  initialMeal={initialMeal}
+                  initialMealPhotoDataUrl={initialMealPhoto}
+                  onClose={() => setComposerExpanded(false)}
+                />
+              </div>
             ) : (
-              <PostComposer
-                placeholder="Share your workout, meal, or progress..."
-                onPost={handleNewPost}
-                initialMeal={initialMeal}
-                initialMealPhotoDataUrl={initialMealPhoto}
-              />
+              <button
+                onClick={() => {
+                  setComposerExpanded(true);
+                  requestAnimationFrame(() =>
+                    composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }),
+                  );
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-buddy-surface text-buddy-text-secondary hover:bg-buddy-surface-raised transition-all hover:ring-1 hover:ring-buddy-green/30"
+              >
+                <span className="p-1.5 rounded-full bg-buddy-green/15 text-buddy-green">
+                  <PenLine size={16} />
+                </span>
+                Share your workout, meal, or progress...
+              </button>
             )}
           </div>
+
+          {/* Background-refresh indicator */}
+          {isRefreshing && (
+            <div className="sticky top-[7.25rem] lg:top-[3.75rem] z-20 h-0.5 overflow-hidden">
+              <div className="h-full w-1/3 bg-buddy-green animate-pulse" style={{ animation: 'slide 1s ease-in-out infinite alternate' }} />
+            </div>
+          )}
 
           {/* New posts pill (X-style) */}
           <div ref={feedTopRef} />

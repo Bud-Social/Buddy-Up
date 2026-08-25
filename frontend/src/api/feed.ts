@@ -24,6 +24,9 @@ export const feedApi = {
   createPost: (data: FormData) =>
     apiClient.post<ApiResponse<Post>>('/feed/create/', data, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      // Large media payloads routinely exceed the default 15s client timeout;
+      // the server may still complete the post, so give uploads real headroom.
+      timeout: 120_000,
     }).then((r) => r.data),
 
   deletePost: (postId: string) =>
@@ -85,7 +88,10 @@ export const feedApi = {
       .post<ApiResponse<{ url: string; mime: string; file_name: string; size: number }>>(
         '/messaging/upload/',
         form,
-        { headers: { 'Content-Type': 'multipart/form-data' } },
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 60_000,
+        },
       )
       .then((r) => r.data);
   },
