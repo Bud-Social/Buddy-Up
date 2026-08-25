@@ -278,6 +278,17 @@ SPECTACULAR_SETTINGS = {
 }
 
 # Email (SMTP)
+# Transactional email. SendGrid is wired automatically when SENDGRID_API_KEY
+# is set (SMTP relay: user 'apikey', key as password); otherwise generic SMTP.
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
+if not os.environ.get('EMAIL_BACKEND'):
+    if SENDGRID_API_KEY:
+        os.environ.setdefault('EMAIL_HOST', 'smtp.sendgrid.net')
+        os.environ.setdefault('EMAIL_HOST_USER', 'apikey')
+        os.environ.setdefault('EMAIL_HOST_PASSWORD', SENDGRID_API_KEY)
+        os.environ.setdefault('EMAIL_PORT', '587')
+        os.environ.setdefault('EMAIL_USE_TLS', 'True')
+
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))

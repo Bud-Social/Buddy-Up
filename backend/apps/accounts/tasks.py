@@ -18,9 +18,11 @@ def sms_delivery_configured() -> bool:
     )
 
 
-@shared_task
-def send_otp_email(user_id: str, otp: str, purpose: str = 'registration'):
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
     from .models import User
+    import logging
+    logger = logging.getLogger(__name__)
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
@@ -33,21 +35,33 @@ def send_otp_email(user_id: str, otp: str, purpose: str = 'registration'):
         'password_reset': 'Reset your BuddyUp password',
     }.get(purpose, 'Your BuddyUp verification code')
 
+    logo_url = getattr(settings, 'EMAIL_LOGO_URL', '') or (
+        f"{getattr(settings, 'PUBLIC_FRONTEND_URL', 'https://buddyup.app').rstrip('/')}"
+        "/icons/icon-512.png"
+    )
+
     html = render_to_string('emails/otp.html', {
         'username': username,
         'otp': otp,
+        'otp_digits': list(otp),
         'purpose': purpose,
+        'logo_url': logo_url,
     })
     plain = strip_tags(html)
 
-    send_mail(
-        subject=subject,
-        message=plain,
-        html_message=html,
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            subject=subject,
+            message=plain,
+            html_message=html,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        logger.info('OTP email sent user=%s purpose=%s', user.id, purpose)
+    except Exception as exc:  # noqa: BLE001 — retry transient SMTP/provider errors
+        logger.exception('OTP email delivery failed user=%s purpose=%s', user.id, purpose)
+        raise self.retry(exc=exc)
 
 
 @shared_task

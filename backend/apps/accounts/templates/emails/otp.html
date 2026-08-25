@@ -1,27 +1,91 @@
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="margin:0;padding:0;background:#0A0A0A;font-family:Inter,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 20px;">
-    <table width="480" cellpadding="0" cellspacing="0" style="background:#141414;border-radius:16px;padding:40px;">
-      <tr><td align="center" style="padding-bottom:24px;">
-        <h1 style="font-family:Syne,sans-serif;font-size:28px;font-weight:800;color:#00C896;margin:0;">BuddyUp</h1>
-        <p style="color:#A0A0A0;font-size:14px;margin:4px 0 0;">Find your fitness family.</p>
-      </td></tr>
-      <tr><td style="padding-bottom:8px;">
-        <p style="color:#F8F8F8;font-size:16px;margin:0;">Hi {{ username }},</p>
-        <p style="color:#A0A0A0;font-size:14px;margin:16px 0;">Use the code below to {% if purpose == "login" %}verify your login{% elif purpose == "password_reset" %}reset your password{% else %}verify your email{% endif %}.</p>
-      </td></tr>
-      <tr><td align="center" style="padding:24px 0;">
-        <div style="background:#1E1E1E;border-radius:12px;padding:20px 40px;display:inline-block;letter-spacing:8px;font-size:32px;font-weight:700;color:#00C896;font-family:'JetBrains Mono',monospace;">{{ otp }}</div>
-      </td></tr>
-      <tr><td>
-        <p style="color:#A0A0A0;font-size:12px;margin:0;">This code expires in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
-      </td></tr>
-      <tr><td style="padding-top:24px;border-top:1px solid #1E1E1E;margin-top:24px;">
-        <p style="color:#5A5A5A;font-size:11px;margin:0;text-align:center;">&copy; 2025 BuddyUp. All rights reserved.</p>
-      </td></tr>
-    </table>
-  </td></tr></table>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your BuddyUp verification code</title>
+</head>
+<body style="margin:0;padding:0;background:#0A0A0A;-webkit-font-smoothing:antialiased;">
+  <!-- Preheader: invisible summary text -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
+    {{ otp }} — your BuddyUp verification code (expires in 10 minutes)
+  </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#0A0A0A;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <!-- Logo -->
+        <table cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:28px;">
+          <tr>
+            <td align="center">
+              {% if logo_url %}
+              <img src="{{ logo_url }}" width="56" height="56" alt="BuddyUp"
+                   style="display:block;border-radius:14px;border:2px solid #00C89622;" />
+              {% endif %}
+              <p style="font-family:'Syne','Segoe UI',Arial,sans-serif;font-size:24px;font-weight:800;
+                        color:#F8F8F8;letter-spacing:0.5px;margin:12px 0 0;">
+                Buddy<span style="color:#00C896;">Up</span>
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Card -->
+        <table width="480" cellpadding="0" cellspacing="0" role="presentation"
+               style="background:#141414;border-radius:20px;border:1px solid #232323;max-width:480px;">
+          <tr>
+            <td style="padding:36px 36px 8px;">
+              <h2 style="font-family:'Syne','Segoe UI',Arial,sans-serif;font-size:20px;color:#F8F8F8;margin:0 0 10px;">
+                {% if purpose == "login" %}Confirm your login{% elif purpose == "password_reset" %}Reset your password{% else %}Verify your email{% endif %}
+              </h2>
+              <p style="color:#A0A0A0;font-size:15px;line-height:1.6;margin:0;">
+                Hi {{ username }}, enter this code to
+                {% if purpose == "login" %}finish signing in{% elif purpose == "password_reset" %}set a new password{% else %}confirm it's you{% endif %}.
+              </p>
+            </td>
+          </tr>
+
+          <!-- OTP block -->
+          <tr>
+            <td align="center" style="padding:28px 36px;">
+              <table cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  {% for digit in otp_digits %}
+                  <td align="center"
+                      style="background:#1E1E1E;border:1px solid #2E2E2E;border-radius:12px;
+                             width:52px;height:60px;padding-top:14px;margin-right:8px;
+                             font-family:'JetBrains Mono','SF Mono',Consolas,monospace;
+                             font-size:30px;font-weight:700;color:#00C896;">{{ digit }}</td>
+                  <td width="8">&nbsp;</td>
+                  {% endfor %}
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 36px 32px;">
+              <p style="color:#A0A0A0;font-size:13px;line-height:1.6;margin:0;">
+                This code expires in <strong style="color:#F8F8F8;">10 minutes</strong>.
+                If you didn't request it, you can safely ignore this email —
+                your account stays secure.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 36px 26px;border-top:1px solid #1E1E1E;">
+              <p style="color:#5A5A5A;font-size:11px;margin:0;text-align:center;">
+                Move together, get stronger together.<br>
+                &copy; 2026 BuddyUp Ltd. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
