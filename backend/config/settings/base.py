@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'apps.verification',
     'apps.ai',
     'apps.analytics',
+    'apps.gamification',
 ]
 
 MIDDLEWARE = [

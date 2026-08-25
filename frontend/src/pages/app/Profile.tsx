@@ -18,6 +18,7 @@ import type { BuddyLive } from '@/types/live';
 import type { Post } from '@/types';
 import type { Gym } from '@/types';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { AchievementsTab } from '@/components/profile/AchievementsTab';
 
 type ProfileTab = 'posts' | 'lives' | 'gyms' | 'achievements';
 
@@ -331,9 +332,7 @@ export default function Profile() {
             </div>
           )
         ) : (
-          <div className="col-span-3 text-center py-20">
-            <p className="text-buddy-text-secondary">Achievements coming soon</p>
-          </div>
+          <AchievementsTab />
         )}
       </div>
 
