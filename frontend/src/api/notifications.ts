@@ -8,6 +8,7 @@ export interface Notification {
   body: string;
   metadata: Record<string, unknown>;
   is_read: boolean;
+  is_pinned?: boolean;
   created_at: string;
 }
 
@@ -39,6 +40,14 @@ export const notificationsApi = {
 
   markRead: (notificationId: string) =>
     apiClient.post<ApiResponse<null>>(`/notifications/${notificationId}/read/`).then((r) => r.data),
+
+  action: (
+    notificationId: string,
+    action: 'read' | 'unread' | 'pin' | 'unpin' | 'dismiss',
+  ) =>
+    apiClient
+      .patch<ApiResponse<Partial<Notification>>>(`/notifications/${notificationId}/read/`, { action })
+      .then((r) => r.data),
 
   getUnreadCount: () =>
     apiClient.get<ApiResponse<{ unread_count: number }>>('/notifications/unread-count/').then((r) => r.data),

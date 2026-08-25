@@ -12,7 +12,8 @@ class NotificationListView(views.APIView):
     def get(self, request):
         notifications = Notification.objects.filter(
             recipient=request.user.profile,
-        ).order_by('-created_at')
+            is_dismissed=False,
+        ).order_by('-is_pinned', '-created_at')
 
         unread_only = request.query_params.get('unread') == 'true'
         if unread_only:
@@ -51,6 +52,12 @@ class NotificationListView(views.APIView):
 class NotificationDetailView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    def _get(self, request, notification_id):
+        from django.shortcuts import get_object_or_404
+        return get_object_or_404(
+            Notification, id=notification_id, recipient=request.user.profile,
+        )
+
     def post(self, request, notification_id):
         Notification.objects.filter(
             id=notification_id,
@@ -62,6 +69,46 @@ class NotificationDetailView(views.APIView):
             'message': 'Marked as read',
             'errors': None,
             'pagination': None,
+        })
+
+    ACTIONS = {
+        'read': {'is_read': True},
+        'unread': {'is_read': False},
+        'pin': {'is_pinned': True},
+        'unpin': {'is_pinned': False},
+        'dismiss': {'is_dismissed': True},
+    }
+
+    def patch(self, request, notification_id):
+        """POST /notifications/<id>/read/ stays for compatibility; new client
+        actions go through PATCH {action: read|unread|pin|unpin|dismiss}."""
+        notification = self._get(request, notification_id)
+        action = (request.data.get('action') or '').strip() if isinstance(request.data, dict) else ''
+        if action not in self.ACTIONS:
+            return Response({
+                'success': False, 'data': None,
+                'message': "action must be one of: read, unread, pin, unpin, dismiss",
+                'errors': None, 'pagination': None,
+            }, status=400)
+        for field, value in self.ACTIONS[action].items():
+            setattr(notification, field, value)
+        notification.save(update_fields=list(self.ACTIONS[action].keys()))
+
+        # Dismissing a pinned note unpins it first so the list stays clean.
+        if action == 'dismiss' and notification.is_pinned:
+            notification.is_pinned = False
+            notification.save(update_fields=['is_pinned'])
+
+        return Response({
+            'success': True,
+            'data': {
+                'id': str(notification.id),
+                'is_read': notification.is_read,
+                'is_pinned': notification.is_pinned,
+                'is_dismissed': notification.is_dismissed,
+            },
+            'message': f'Notification {action}ned.' if action != 'read' and action != 'unread' else f'Marked as {action}.',
+            'errors': None, 'pagination': None,
         })
 
 

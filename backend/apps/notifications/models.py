@@ -60,6 +60,10 @@ class Notification(TimestampedModel):
     metadata = models.JSONField(default=dict)
     is_read = models.BooleanField(default=False)
     is_pushed = models.BooleanField(default=False)
+    # Pinned notifications float to the top of the list; dismissed ones are
+    # hidden (soft-delete) so accidental swipes are recoverable.
+    is_pinned = models.BooleanField(default=False)
+    is_dismissed = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'notifications_notification'

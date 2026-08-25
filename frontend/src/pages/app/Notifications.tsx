@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Bell, UserPlus, Users, Zap, Heart, MessageCircle, Radio,
   ShoppingBag, CreditCard, Repeat, AtSign, Ticket, Calendar, Dumbbell,
-  CheckCircle2, CheckCheck,
+  CheckCircle2, CheckCheck, FileText, Utensils, Monitor, CalendarX2,
+  ShieldCheck, BadgeCheck, Flame, Pin, PinOff, Trash2, MailOpen,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -42,6 +43,19 @@ const iconMap: Record<string, typeof Bell> = {
   session_booked: Calendar,
   session_reminder: Calendar,
   gym_invite: Dumbbell,
+  community_comment: MessageCircle,
+  community_post: FileText,
+  community_reaction: Heart,
+  meal_reminder: Utensils,
+  programme_reminder: Calendar,
+  new_device_login: Monitor,
+  session_cancelled: CalendarX2,
+  shop_created: ShoppingBag,
+  shop_invite: ShoppingBag,
+  shop_verified: ShieldCheck,
+  shop_cert_status: BadgeCheck,
+  streak_reminder: Flame,
+  verification_update: ShieldCheck,
   default: Bell,
 };
 
@@ -98,6 +112,32 @@ export default function Notifications() {
     try {
       await notificationsApi.markRead(id);
       useNotificationStore.getState().markRead(id);
+    } catch {}
+  };
+
+  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
+
+  const handleAction = async (id: string, action: 'read' | 'unread' | 'pin' | 'unpin' | 'dismiss') => {
+    setActionMenuId(null);
+    try {
+      await notificationsApi.action(id, action);
+      if (action === 'dismiss') {
+        useNotificationStore.setState((st) => ({
+          notifications: st.notifications.filter((n) => n.id !== id),
+        }));
+        return;
+      }
+      useNotificationStore.setState((st) => ({
+        notifications: st.notifications.map((n) =>
+          n.id === id
+            ? {
+                ...n,
+                is_read: action === 'read' ? true : action === 'unread' ? false : n.is_read,
+                is_pinned: action === 'pin' ? true : action === 'unpin' ? false : n.is_pinned,
+              }
+            : n,
+        ),
+      }));
     } catch {}
   };
 
@@ -232,7 +272,7 @@ export default function Notifications() {
             </Card>
           ))}
         </div>
-      ) : groupedNotifications.length === 0 ? (
+      ) : groupedNotifications.length === 0 && !notifications.some((n) => n.is_pinned) ? (
         <div className="text-center py-20">
           <Bell size={48} className="mx-auto text-buddy-text-secondary/30 mb-4" />
           <p className="text-buddy-text-secondary text-lg">No notifications</p>
@@ -240,6 +280,45 @@ export default function Notifications() {
         </div>
       ) : (
         <div className="space-y-6 pt-1">
+          {notifications.some((n) => n.is_pinned) && (
+            <div className="space-y-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-buddy-green/80 px-1 flex items-center gap-1">
+                <Pin size={11} /> Pinned
+              </h2>
+              <div className="space-y-2">
+                {notifications.filter((n) => n.is_pinned).map((n) => {
+                  const Icon = iconMap[n.notification_type] || iconMap.default;
+                  const username = (n.metadata as { from_username?: string })?.from_username;
+                  return (
+                    <Card
+                      key={`pin-${n.id}`}
+                      className="group relative p-4 pl-4 pr-4 flex items-start gap-3 border-buddy-green/30 bg-buddy-green/5 cursor-pointer hover:border-buddy-green/50"
+                      onClick={() => handleNotificationClick(n)}
+                    >
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-buddy-green/10">
+                        <Icon size={18} className="text-buddy-green" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-buddy-text-primary">{n.title}</p>
+                        {n.body && <p className="text-xs text-buddy-text-secondary mt-0.5">{n.body}</p>}
+                        <p className="text-[11px] text-buddy-text-secondary/50 mt-1">
+                          {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {username ? ` · @${username}` : ''}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleAction(n.id, 'unpin'); }}
+                        className="absolute top-2 right-2 p-1.5 rounded-full text-buddy-green bg-buddy-green/10"
+                        title="Unpin"
+                      >
+                        <Pin size={12} className="fill-current" />
+                      </button>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {groupedNotifications.map((group) => (
             <div key={group.label} className="space-y-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-buddy-text-secondary/70 px-1">
@@ -257,7 +336,7 @@ export default function Notifications() {
                   return (
                     <Card
                       key={n.id}
-                      className={`p-4 flex items-start gap-3 transition-colors cursor-pointer hover:border-buddy-green/30 ${
+                      className={`group relative p-4 pl-4 pr-4 flex items-start gap-3 transition-colors cursor-pointer hover:border-buddy-green/30 ${
                         n.is_read ? 'opacity-65' : 'bg-buddy-surface-raised border-buddy-green/20'
                       }`}
                       onClick={() => handleNotificationClick(n)}
@@ -275,7 +354,54 @@ export default function Notifications() {
                         <p className="text-[11px] text-buddy-text-secondary/50 mt-1">
                           {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
-                        {isBuddyRequest && !n.is_read && username && (
+                        {/* Pin indicator + actions row */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleAction(n.id, n.is_pinned ? 'unpin' : 'pin'); }}
+                        className={`absolute top-2 right-9 p-1.5 rounded-full transition-colors ${
+                          n.is_pinned ? 'text-buddy-green bg-buddy-green/10' : 'text-buddy-text-secondary/50 opacity-0 hover:bg-buddy-surface group-hover:opacity-100'
+                        }`}
+                        title={n.is_pinned ? 'Unpin' : 'Pin'}
+                      >
+                        <Pin size={13} className={n.is_pinned ? 'fill-current' : ''} />
+                      </button>
+                      <div className="flex gap-1.5 mt-2">
+                        {!n.is_read && (
+                          <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleAction(n.id, 'read'); }}
+                            className="text-xs px-2 py-1" title="Mark as read">
+                            <MailOpen size={12} />
+                          </Button>
+                        )}
+                        {n.is_read && (
+                          <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); handleAction(n.id, 'unread'); }}
+                            className="text-xs px-2 py-1 text-buddy-text-secondary" title="Mark as unread">
+                            <MailOpen size={12} className="opacity-60" />
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost"
+                          onClick={(e) => { e.stopPropagation(); setActionMenuId(actionMenuId === n.id ? null : n.id); }}
+                          className="text-xs px-2 py-1 text-buddy-text-secondary" title="More actions">
+                          ⋯
+                        </Button>
+                        {actionMenuId === n.id && (
+                          <div className="relative">
+                            <div className="absolute left-0 top-0 z-10 flex gap-1 bg-buddy-surface-raised border border-buddy-surface rounded-lg p-1 shadow-lg">
+                              <button onClick={(e) => { e.stopPropagation(); handleAction(n.id, n.is_read ? 'unread' : 'read'); }}
+                                className="px-2 py-1 rounded hover:bg-buddy-surface text-xs flex items-center gap-1">
+                                <MailOpen size={11} /> {n.is_read ? 'Unread' : 'Read'}
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleAction(n.id, n.is_pinned ? 'unpin' : 'pin'); }}
+                                className="px-2 py-1 rounded hover:bg-buddy-surface text-xs flex items-center gap-1">
+                                <PinOff size={11} /> {n.is_pinned ? 'Unpin' : 'Pin'}
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleAction(n.id, 'dismiss'); }}
+                                className="px-2 py-1 rounded hover:bg-buddy-red/20 text-xs text-buddy-red flex items-center gap-1">
+                                <Trash2 size={11} /> Delete
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      {isBuddyRequest && !n.is_read && username && (
                           <div className="flex gap-2 mt-2">
                             <Button size="sm" onClick={(e) => { e.stopPropagation(); handleAcceptBuddy(username, n.id); }}>
                               Accept

@@ -5,7 +5,8 @@ from .models import Notification, NotificationPreference
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'notification_type', 'title', 'body', 'metadata', 'is_read', 'created_at']
+        fields = ['id', 'notification_type', 'title', 'body', 'metadata', 'is_read',
+                  'is_pinned', 'created_at']
 
 
 class NotificationPreferenceSerializer(serializers.ModelSerializer):
