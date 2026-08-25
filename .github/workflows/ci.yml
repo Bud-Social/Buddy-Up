@@ -17,6 +17,15 @@ jobs:
           POSTGRES_USER: buddyup
           POSTGRES_PASSWORD: testpass
         ports: ['5432:5432']
+      # CACHES + channels now use REDIS_URL in settings; tests exercise it.
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
