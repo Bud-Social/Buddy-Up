@@ -180,21 +180,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _statItem('${p.streakDays}', 'Day Streak'),
-          _statItem('${p.buddyCount}', 'Buddies'),
-          _statItem('${p.followerCount}', 'Followers'),
-          _statItem('${p.followingCount}', 'Following'),
+          // Parity with web P7: stats are tappable.
+          _statItem('${p.buddyCount}', 'Buddies',
+              onTap: () => context.push('/buddies')),
+          _statItem('${p.followerCount}', 'Followers',
+              onTap: () => context.push('/buddies')),
+          _statItem('${p.followingCount}', 'Following',
+              onTap: () => context.push('/buddies')),
         ],
       ),
     );
   }
 
-  Widget _statItem(String value, String label) {
-    return Column(
+  Widget _statItem(String value, String label, {VoidCallback? onTap}) {
+    final content = Column(
       children: [
         Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: BuddyColors.textPrimary)),
         const SizedBox(height: 2),
         Text(label, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
       ],
+    );
+    if (onTap == null) return content;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        child: content,
+      ),
     );
   }
 

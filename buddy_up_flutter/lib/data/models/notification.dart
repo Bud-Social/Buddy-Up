@@ -11,6 +11,7 @@ abstract class BuddyNotification with _$BuddyNotification {
     required String title,
     required String body,
     @JsonKey(name: 'is_read') @Default(false) bool isRead,
+    @JsonKey(name: 'is_pinned') @Default(false) bool isPinned,
     @JsonKey(name: 'sender_username') String? senderUsername,
     @JsonKey(name: 'sender_avatar') String? senderAvatar,
     @JsonKey(name: 'action_link') String? actionLink,

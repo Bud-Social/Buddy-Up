@@ -51,17 +51,24 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
   }
 
   List<BuddyNotification> _filterList(List<BuddyNotification> list, int tabIndex) {
+    List<BuddyNotification> result;
     switch (tabIndex) {
       case 1:
-        return list.where((n) => _socialTypes.contains(n.notificationType)).toList();
+        result = list.where((n) => _socialTypes.contains(n.notificationType)).toList();
       case 2:
-        return list.where((n) => _liveTypes.contains(n.notificationType)).toList();
+        result = list.where((n) => _liveTypes.contains(n.notificationType)).toList();
       case 3:
-        return list.where((n) => _commerceTypes.contains(n.notificationType)).toList();
+        result = list.where((n) => _commerceTypes.contains(n.notificationType)).toList();
       case 0:
       default:
-        return list;
+        result = list;
     }
+    // Pinned notifications float to the top of each tab.
+    result.sort((a, b) {
+      if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
+      return 0;
+    });
+    return result;
   }
 
   Map<String, List<BuddyNotification>> _groupByDate(List<BuddyNotification> list) {
@@ -107,6 +114,64 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
         );
       }
     } catch (_) {}
+  }
+
+  /// P8 parity with web: pin / unpin, mark read/unread and dismiss (delete)
+  /// via PATCH /notifications/{id}/read/ { action }.
+  Future<void> _runAction(BuddyNotification n, String action) async {
+    try {
+      await ref
+          .read(notificationRepositoryProvider)
+          .notificationAction(n.id, {'action': action});
+      ref.invalidate(notificationsProvider);
+      ref.invalidate(unreadCountProvider);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Action failed. Please try again.')),
+        );
+      }
+    }
+  }
+
+  void _showActionsSheet(BuddyNotification n) {
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(n.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                  color: cs.onSurface),
+              title: Text(n.isPinned ? 'Unpin' : 'Pin'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _runAction(n, n.isPinned ? 'unpin' : 'pin');
+              },
+            ),
+            ListTile(
+              leading: Icon(n.isRead ? Icons.mark_email_unread : Icons.done_all,
+                  color: cs.onSurface),
+              title: Text(n.isRead ? 'Mark as unread' : 'Mark as read'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _runAction(n, n.isRead ? 'unread' : 'read');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: BuddyColors.red),
+              title: const Text('Delete'),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _runAction(n, 'dismiss');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _handleNotificationTap(BuddyNotification n) async {
@@ -306,14 +371,24 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
                               ],
                             ],
                           ),
-                          trailing: Text(
-                            _timeAgo(n.createdAt),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: cs.onSurface.withValues(alpha: 0.5),
-                            ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (n.isPinned)
+                                const Icon(Icons.push_pin,
+                                    size: 13, color: BuddyColors.gold),
+                              const SizedBox(width: 4),
+                              Text(
+                                _timeAgo(n.createdAt),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: cs.onSurface.withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ],
                           ),
                           onTap: () => _handleNotificationTap(n),
+                          onLongPress: () => _showActionsSheet(n),
                         ),
                       ),
                     );

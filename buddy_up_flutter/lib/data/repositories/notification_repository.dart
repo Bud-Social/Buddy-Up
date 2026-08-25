@@ -22,6 +22,12 @@ abstract class NotificationRepository {
   @POST('/notifications/{id}/read/')
   Future<void> markRead(@Path('id') String notificationId);
 
+  @PATCH('/notifications/{id}/read/')
+  Future<dynamic> notificationAction(
+    @Path('id') String notificationId,
+    @Body() Map<String, dynamic> data,
+  );
+
   @POST('/notifications/')
   Future<dynamic> markAllRead();
 }

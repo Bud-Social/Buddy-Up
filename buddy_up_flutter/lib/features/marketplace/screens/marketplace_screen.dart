@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
+import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import '../utils/event_categories.dart';
@@ -31,6 +32,13 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Creator gating parity (web P6): existing creators see 'Creator',
+    // everyone else sees 'Become a Creator'.
+    final profile = ref.watch(authProvider).profile;
+    final isCreator =
+        profile != null && profile.role != 'user' && profile.role.isNotEmpty;
+    final creatorLabel = isCreator ? 'Creator' : 'Become a Creator';
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Marketplace', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -43,9 +51,10 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
             icon: const Icon(Icons.receipt_long_outlined),
             onPressed: () => context.push('/marketplace/orders'),
           ),
-          IconButton(
-            icon: const Icon(Icons.dashboard_outlined),
+          TextButton.icon(
             onPressed: () => context.push('/marketplace/creator-studio'),
+            icon: const Icon(Icons.storefront_outlined, size: 18),
+            label: Text(creatorLabel),
           ),
         ],
       ),
@@ -53,11 +62,13 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
         children: [
           TabBar(
             controller: _tabController,
+            // Stacked icon + label tabs — parity with web P6 (labels always
+            // visible instead of disappearing on narrow screens).
             tabs: const [
-              Tab(text: 'Events'),
-              Tab(text: 'Meal Plans'),
-              Tab(text: 'Programmes'),
-              Tab(text: 'Products'),
+              Tab(icon: Icon(Icons.event_outlined, size: 18), text: 'Events'),
+              Tab(icon: Icon(Icons.restaurant_menu_outlined, size: 18), text: 'Meal Plans'),
+              Tab(icon: Icon(Icons.fitness_center_outlined, size: 18), text: 'Programmes'),
+              Tab(icon: Icon(Icons.shopping_bag_outlined, size: 18), text: 'Products'),
             ],
             indicatorColor: BuddyColors.green,
             labelColor: BuddyColors.green,
