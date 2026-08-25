@@ -191,12 +191,15 @@ class AvatarUploadView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         import os
+        import uuid
         from django.core.files.storage import default_storage
         from django.core.files.base import ContentFile
         ext = os.path.splitext(file.name)[1].lower() or '.jpg'
-        filename = f'avatars/{request.user.profile.user_id}{ext}'
+        # Unique key per upload: identical URLs across uploads make browsers
+        # serve a stale cached avatar (the 'success but no change' bug).
+        filename = f'avatars/{request.user.profile.user_id}_{uuid.uuid4().hex[:8]}{ext}'
         saved_name = default_storage.save(filename, ContentFile(file.read()))
-        url = default_storage.url(saved_name)
+        url = request.build_absolute_uri(default_storage.url(saved_name))
 
         request.user.profile.avatar_url = url
         request.user.profile.save(update_fields=['avatar_url'])
@@ -207,7 +210,7 @@ class AvatarUploadView(views.APIView):
             'message': 'Avatar updated.',
             'errors': None,
             'pagination': None,
-        })
+        }, headers={'Cache-Control': 'no-store'})
 
 
 class CoverUploadView(views.APIView):

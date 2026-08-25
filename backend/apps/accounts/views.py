@@ -12,6 +12,8 @@ import requests
 from datetime import timedelta
 from jwt.algorithms import RSAAlgorithm
 
+import logging
+
 from django.utils import timezone
 from django.contrib.auth import authenticate
 from django.conf import settings
@@ -38,6 +40,8 @@ from apps.profiles.models import Profile
 from .tasks import (
     send_otp_email, send_otp_sms, sms_delivery_configured,
 )
+
+logger = logging.getLogger(__name__)
 
 try:
     from google.oauth2 import id_token
@@ -1425,10 +1429,18 @@ class PasskeyRegisterBeginView(views.APIView):
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         rp_id, rp_name, _origin = _webauthn_rp()
-        existing_ids = [
-            {'type': 'public-key', 'id': c.credential_id}
-            for c in request.user.webauthn_credentials.all()
-        ]
+        # py-webauthn expects base64url-decoded bytes for credential ids.
+        import base64
+        existing_ids = []
+        try:
+            for c in request.user.webauthn_credentials.all():
+                padded = c.credential_id + '=' * (-len(c.credential_id) % 4)
+                existing_ids.append({
+                    'type': 'public-key',
+                    'id': base64.urlsafe_b64decode(padded),
+                })
+        except Exception:  # noqa: BLE001 — exclude list is an optimisation
+            logger.warning('Failed to build passkey exclusion list', exc_info=True)
         options = generate_registration_options(
             rp_id=rp_id,
             rp_name=rp_name,

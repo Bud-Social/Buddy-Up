@@ -126,6 +126,22 @@ CHANNEL_LAYERS = {
     },
 }
 
+# Shared cache. Redis when available (multi-worker safe: passkey challenges,
+# rate limits), otherwise local memory for dev.
+if os.environ.get('REDIS_URL'):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': REDIS_URL,
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    }
+
 # Celery
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = 'django-db'
@@ -372,6 +388,13 @@ if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY:
 else:
     # Fall back to local Django media when no Cloudinary credentials are configured
     STORAGES['default'] = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}
+    # Local media must be addressed absolutely in deployed environments:
+    # a relative '/media/…' URL resolves against whichever frontend origin
+    # rendered it (e.g. Vercel), which serves no media. PUBLIC_API_URL lets
+    # ops point clients at the API domain; nginx serves /media/ there.
+    _public_api_url = os.environ.get('PUBLIC_API_URL', '').rstrip('/')
+    if _public_api_url:
+        MEDIA_URL = f'{_public_api_url}/media/'
 
 # ---------------------------------------------------------------------------
 # FCM / Firebase push notifications

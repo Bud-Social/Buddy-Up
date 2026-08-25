@@ -52,7 +52,12 @@ class WsManager {
     ws.onmessage = (e) => { try { const d = JSON.parse(e.data); this.handlers.get(path)?.forEach((h) => h(d)); } catch {} };
     ws.onclose = (evt) => {
       this.sockets.delete(path);
-      if (!this.disconnecting.has(path) && evt.code !== 4001 && evt.code !== 4003) {
+      // Auth rejections (4001 unauthenticated / 4003 forbidden) and logouts
+      // must not loop: reconnect only after a fresh token arrives via
+      // setAccessToken(). Generic 1006-without-handshake also stops after
+      // the attempt cap below.
+      const authRejected = evt.code === 4001 || evt.code === 4003;
+      if (!this.disconnecting.has(path) && !authRejected && this.accessToken) {
         this.reconnect(path);
       }
       this.disconnecting.delete(path);

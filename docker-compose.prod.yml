@@ -245,6 +245,7 @@ services:
       - ./nginx/admin_allowlist.conf:/etc/nginx/admin_allowlist.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - backend_static:/var/www/static:ro
+      - backend_media:/media:ro
       - frontend_build:/var/www/frontend:ro
     networks:
       - buddyup_internal
