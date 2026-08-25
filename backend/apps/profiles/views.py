@@ -814,6 +814,7 @@ class DiscoverTrendingView(views.APIView):
         from apps.feed.serializers import FeedPostSerializer
         from apps.marketplace.models import DiscountCode, MarketplaceEvent
         from apps.marketplace.serializers import DiscountCodeSerializer, MarketplaceEventSerializer
+        from apps.messaging.serializers import ConversationSerializer
 
         mature_allowed = request_can_access_mature(request)
 
@@ -889,11 +890,86 @@ class DiscoverTrendingView(views.APIView):
                 'data': MarketplaceEventSerializer(event, context={'request': request}).data,
             })
 
+        # Trending discussions: posts with the most comments in the window.
+        discussions_qs = FeedPost.objects.filter(
+            created_at__gte=since,
+            moderation_status='clean',
+            visibility='public',
+        )
+        if not mature_allowed:
+            discussions_qs = discussions_qs.exclude(content_rating='mature')
+        trending_discussions = FeedPostSerializer(
+            discussions_qs.select_related('author', 'gym_tag')
+            .annotate(comment_total=Count('comments', distinct=True))
+            .filter(comment_total__gt=0)
+            .order_by('-comment_total', '-created_at')[:8],
+            many=True,
+            context={'request': request},
+        ).data
+
+        # Trending communities by recent public post activity.
+        from apps.messaging.models import Conversation
+        trending_communities = Conversation.objects.filter(
+            is_community=True, is_public=True, is_deleted=False,
+        ).annotate(
+            recent_posts=Count('community_posts', distinct=True),
+        ).order_by('-recent_posts', '-last_message_at')[:8]
+        communities_data = ConversationSerializer(trending_communities, many=True, context={'request': request}).data
+
+        # Upcoming lives (public).
+        from apps.lives.models import BuddyLive
+        upcoming_lives = BuddyLive.objects.filter(
+            status__in=('scheduled', 'live'),
+        ).exclude(content_rating='mature') if hasattr(BuddyLive, 'content_rating') else             BuddyLive.objects.filter(status__in=('scheduled', 'live'))
+        lives_data = []
+        try:
+            from apps.lives.serializers import BuddyLiveSerializer
+            upcoming_lives = list(upcoming_lives.select_related('host').order_by('start_time')[:8])
+            lives_data = BuddyLiveSerializer(upcoming_lives, many=True, context={'request': request}).data
+        except Exception:  # noqa: BLE001 — lives section degrades gracefully
+            pass
+
+        # Trending meal plans (published, top-rated/purchased).
+        from apps.marketplace.models import MealPlan
+        meal_plans = MealPlan.objects.filter(
+            is_published=True, visibility='public',
+        ).order_by('-purchase_count', '-average_rating')[:8]
+        try:
+            from apps.marketplace.serializers import MealPlanSerializer as _MPS
+            meal_plans_data = _MPS(meal_plans, many=True, context={'request': request}).data
+        except Exception:  # noqa: BLE001
+            meal_plans_data = []
+
+        # Challenges: events tagged/keyworded as challenges or competitions.
+        challenge_events = MarketplaceEvent.objects.filter(
+            is_published=True, is_draft=False, is_cancelled=False,
+            start_datetime__gte=now,
+        )
+        challenge_q = (
+            db_models.Q(title__icontains='challenge')
+            | db_models.Q(title__icontains='competition')
+            | db_models.Q(category='challenge')
+            | db_models.Q(category='competition')
+        )
+        if not mature_allowed:
+            challenge_events = challenge_events.exclude(content_rating='mature')
+        challenges_data = MarketplaceEventSerializer(
+            challenge_events.filter(challenge_q)
+            .select_related('creator').order_by('-attendee_count', 'start_datetime')[:8],
+            many=True,
+            context={'request': request},
+        ).data
+
         return Response({
             'success': True,
             'data': {
                 'hashtags': trending_hashtags,
                 'posts': trending_posts,
+                'discussions': trending_discussions,
+                'communities': communities_data,
+                'lives': lives_data,
+                'meal_plans': meal_plans_data,
+                'challenges': challenges_data,
                 'offers': trending_offers,
             },
             'message': 'OK',

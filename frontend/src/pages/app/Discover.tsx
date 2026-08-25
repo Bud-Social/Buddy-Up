@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Users, Dumbbell, Radio, TrendingUp, X, Hash, Ticket, Tag } from 'lucide-react';
+import {MessageCircle,Trophy,Utensils, Search, Users, Dumbbell, Radio, TrendingUp, X, Hash, Ticket, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -185,6 +185,108 @@ export default function Discover() {
                     </div>
                   </Card>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {(trending.discussions?.length ?? 0) > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <MessageCircle className="w-4 h-4 text-buddy-green" /> Hot Discussions
+              </p>
+              <div className="space-y-2">
+                {trending.discussions!.slice(0, 3).map((post) => (
+                  <Card key={post.id} className="p-4 cursor-pointer hover:border-buddy-green/30 transition-colors"
+                    onClick={() => navigate(`/feed/${post.id}`)}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Avatar src={post.author_data?.avatar_url} alt="" size="xs" />
+                      <span className="text-xs font-medium">@{post.author_data?.username}</span>
+                      <span className="text-xs text-buddy-text-secondary ml-auto">{post.comment_count || 0} comments</span>
+                    </div>
+                    <p className="text-sm line-clamp-2">{post.body}</p>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(trending.communities?.length ?? 0) > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <Users className="w-4 h-4 text-buddy-green" /> Active Communities
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {trending.communities!.map((c) => (
+                  <button key={c.id} onClick={() => navigate(`/communities/${c.id}`)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-buddy-surface hover:bg-buddy-surface-raised transition-colors">
+                    {c.group_avatar_url ? (
+                      <img src={c.group_avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <span className="w-6 h-6 rounded-full bg-buddy-green/15 flex items-center justify-center text-[10px] font-bold text-buddy-green">
+                        {c.group_name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="text-sm max-w-[140px] truncate">{c.group_name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(trending.challenges?.length ?? 0) > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <Trophy className="w-4 h-4 text-buddy-gold" /> Challenges & Competitions
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {(trending.challenges as Array<Record<string, unknown>>).slice(0, 4).map((ev) => {
+                  const id = String(ev.id ?? '');
+                  const title = String(ev.title ?? 'Challenge');
+                  const attendees = Number(ev.attendee_count ?? 0);
+                  return (
+                    <Card key={id} className="p-3 cursor-pointer hover:border-buddy-green/30 transition-colors"
+                      onClick={() => navigate(`/marketplace/events/${id}`)}>
+                      <p className="text-sm font-medium truncate">{title}</p>
+                      <p className="text-xs text-buddy-text-secondary mt-0.5">{attendees} joined</p>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {(trending.lives?.length ?? 0) > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <Radio className="w-4 h-4 text-buddy-red" /> Lives Now & Upcoming
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {trending.lives!.slice(0, 5).map((lv) => (
+                  <button key={lv.id} onClick={() => navigate(`/lives/${lv.id}`)}
+                    className="px-3 py-1.5 rounded-full bg-buddy-surface text-sm hover:bg-buddy-surface-raised transition-colors max-w-[220px] truncate">
+                    {lv.status === 'live' ? '🔴 ' : ''}{lv.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {(trending.meal_plans?.length ?? 0) > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <Utensils className="w-4 h-4 text-buddy-green" /> Popular Meal Plans
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {(trending.meal_plans as Array<Record<string, unknown>>).slice(0, 5).map((mp) => {
+                  const id = String(mp.id ?? '');
+                  const title = String(mp.title ?? 'Meal plan');
+                  return (
+                    <button key={id} onClick={() => navigate(`/marketplace/meal-plans/${id}`)}
+                      className="px-3 py-1.5 rounded-full bg-buddy-surface text-sm hover:bg-buddy-surface-raised transition-colors max-w-[240px] truncate">
+                      {title}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

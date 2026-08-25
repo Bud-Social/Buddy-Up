@@ -1,9 +1,16 @@
 import { apiClient } from './client';
 import type { ApiResponse, Profile, Post } from '@/types';
+import type { BuddyLive } from '@/types/live';
+import type { Community } from './messaging';
 
 export interface DiscoverTrending {
   hashtags: { tag: string; count: number }[];
   posts: Post[];
+  discussions?: Post[];
+  communities?: Community[];
+  lives?: BuddyLive[];
+  meal_plans?: Record<string, unknown>[];
+  challenges?: Record<string, unknown>[];
   offers: { type: 'discount_code' | 'free_event'; data: any }[];
 }
 

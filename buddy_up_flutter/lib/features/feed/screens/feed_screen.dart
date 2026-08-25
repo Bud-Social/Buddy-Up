@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/feed_tab_bar.dart';
 import '../widgets/post_card.dart';
+import 'post_composer_screen.dart';
 import '../../community/providers/community_provider.dart';
 import '../../../data/models/messaging.dart';
 import '../../../shared/widgets/page_loader.dart';
@@ -25,6 +26,7 @@ class FeedScreen extends ConsumerStatefulWidget {
 
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   final ScrollController _scrollController = ScrollController();
+  bool _composerExpanded = false;
   Timer? _newPostsTimer;
   final Set<String> _knownPostIds = <String>{};
   List<Post> _pendingNewPosts = <Post>[];
@@ -167,14 +169,35 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
           Expanded(
             child: state.activeTab == 'communities'
                 ? _buildCommunitiesTab(myCommunities)
-                : _buildBody(state, notifier),
+                : Column(
+                    children: [
+                      if (_composerExpanded) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                          child: PostComposerScreen(
+                            communityId: null,
+                            onPostCreated: () =>
+                                setState(() => _composerExpanded = false),
+                          ),
+                        ),
+                      ],
+                      Expanded(child: _buildBody(state, notifier)),
+                    ],
+                  ),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: BuddyColors.green,
-        onPressed: () => _navigateToComposer(),
-        child: const Icon(Icons.edit, color: BuddyColors.black),
+        onPressed: () {
+          setState(() => _composerExpanded = !_composerExpanded);
+          if (_composerExpanded && _scrollController.hasClients) {
+            _scrollController.animateTo(0,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut);
+          }
+        },
+        child: Icon(_composerExpanded ? Icons.close : Icons.edit, color: BuddyColors.black),
       ),
     );
   }
@@ -311,10 +334,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         ],
       ),
     );
-  }
-
-  void _navigateToComposer() {
-    context.push('/feed/post');
   }
 
   void _navigateToPostDetail(String postId) {
