@@ -7,44 +7,41 @@ import { Card } from '@/components/ui/Card';
 import { getPasswordStrength } from '@/utils/passwordStrength';
 import { calculateAge } from '@/utils/ageCheck';
 import { authApi } from '@/api';
+import { useAuthStore } from '@/store/authStore';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
-function GoogleSignUpButton({ onError }: { onError: (msg: string) => void }) {
-  const handleClick = useCallback(() => {
-    if (!window.google?.accounts?.oauth2) {
-      onError('Google Sign-In is not available. Please try again later.');
-      return;
-    }
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: GOOGLE_CLIENT_ID!,
-      scope: 'openid profile email',
-      callback: (response) => {
-        if (response.id_token) {
-          window.location.href = `/signup?google_token=${encodeURIComponent(response.id_token)}`;
-        } else if (response.access_token) {
-          window.location.href = `/signup?google_token=${encodeURIComponent(response.access_token)}`;
-        } else {
-          onError('Google sign-in failed: no ID token received.');
-        }
-      },
-      error_callback: () => onError('Google sign-in failed.'),
-    });
-    client.requestAccessToken();
-  }, [onError]);
-
-  return (
-    <button type="button" onClick={handleClick}
-      className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-buddy-surface-raised hover:bg-buddy-surface transition-colors text-sm font-medium text-buddy-text-primary"
-    >
-      <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-      Sign up with Google
-    </button>
-  );
-}
-
 export default function Register() {
   const navigate = useNavigate();
+  const setTokens = useAuthStore((s) => s.setTokens);
+  const setUserStore = useAuthStore((s) => s.setUser);
+
+  // Social sign-up shares the login flow: the backend provisions or links
+  // the account, then the onboarding pipeline collects anything missing.
+  const handleGoogleSuccess = useCallback(async (credential: string) => {
+    setError('');
+    setIsLoading(true);
+    try {
+      const res = await authApi.googleLogin(credential);
+      const data = res.data as typeof res.data & { require_totp?: boolean; temp_token?: string; require_age_setup?: boolean; onboarding_required?: boolean };
+      if (data.require_totp && data.temp_token) {
+        navigate(`/login?totp=${encodeURIComponent(data.temp_token)}`);
+        return;
+      }
+      setTokens(res.data.access, res.data.refresh);
+      setUserStore(res.data.user, res.data.profile);
+      if (data.require_age_setup || data.onboarding_required) {
+        navigate(data.require_age_setup ? '/onboarding?step=age' : '/onboarding');
+      } else {
+        navigate('/feed');
+      }
+    } catch (err: unknown) {
+      setError('Google sign-up failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [navigate, setTokens, setUserStore]);
 
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
@@ -132,7 +129,7 @@ export default function Register() {
         {ageError && <div className="bg-buddy-red/10 border border-buddy-red/30 text-buddy-red rounded-xl p-3 text-sm mb-4">{ageError}</div>}
 
         <div className="space-y-3 mb-6">
-          {GOOGLE_CLIENT_ID && <GoogleSignUpButton onError={setError} />}
+          {GOOGLE_CLIENT_ID && <GoogleAuthButton label="Sign up with Google" onSuccess={handleGoogleSuccess} onError={setError} />}
           <div className="relative flex items-center gap-3">
             <div className="flex-1 border-t border-buddy-surface-raised" />
             <span className="text-xs text-buddy-text-secondary">or</span>

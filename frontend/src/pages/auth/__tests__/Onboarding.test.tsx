@@ -16,10 +16,17 @@ const createWrapper = () => {
 };
 
 describe('Onboarding', () => {
-  it('renders step 1 with goal options', () => {
+  it('starts on the terms & consents step', () => {
     render(<Onboarding />, { wrapper: createWrapper() });
-    expect(screen.getByText(/What are your primary fitness goals/i)).toBeDefined();
-    expect(screen.getByText(/Weight Loss/i)).toBeDefined();
-    expect(screen.getByText(/Muscle Gain/i)).toBeDefined();
+    expect(screen.getByText(/Before you start/i)).toBeDefined();
+    expect(screen.getByText(/I accept the Terms of Service/i)).toBeDefined();
+    expect(screen.getByText(/Privacy Policy/i)).toBeDefined();
+    expect(screen.getByText(/Community Guidelines/i)).toBeDefined();
+  });
+
+  it('terms step requires all three acceptances before continuing', () => {
+    render(<Onboarding />, { wrapper: createWrapper() });
+    const next = screen.getByRole('button', { name: /next/i }) as HTMLButtonElement;
+    expect(next.disabled).toBe(true);
   });
 });

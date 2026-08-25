@@ -43,6 +43,13 @@ class Profile(TimestampedModel):
     creator_display_name = models.CharField(max_length=50, blank=True)
     verification_status = models.CharField(max_length=20, choices=VERIFICATION_CHOICES, default='none')
     privacy_level = models.CharField(max_length=10, choices=PRIVACY_CHOICES, default='public')
+    # Onboarding & consent. onboarding_completed defaults True so accounts
+    # created before the pipeline existed are never gated; registration and
+    # social-provisioning set it False for new users.
+    onboarding_completed = models.BooleanField(default=True)
+    terms_version = models.CharField(max_length=20, blank=True)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    marketing_consent = models.BooleanField(default=False)
     external_link = models.URLField(blank=True)
     content_rating = models.CharField(
         max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,

@@ -161,6 +161,7 @@ class RegisterView(views.APIView):
         )
 
         Profile.objects.create(
+            onboarding_completed=False,
             user=user,
             username=data['username'],
             display_name=data['display_name'],
@@ -758,6 +759,8 @@ def _provision_social_user(email, provider_field, provider_id, name='', picture=
             **{provider_field: provider_id},
         )
         created = True
+        user.profile.onboarding_completed = False
+        user.profile.save(update_fields=['onboarding_completed'])
     _ensure_social_profile(user, name, picture)
     return user, created
 
@@ -796,6 +799,7 @@ def _finalize_social_login(user, method, request):
         },
         'profile': ProfileSerializer(profile).data,
         'require_age_setup': not user.is_adult,
+        'onboarding_required': not getattr(profile, 'onboarding_completed', True),
     }, False)
 
 

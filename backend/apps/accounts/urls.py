@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from apps.profiles import views as profiles_views
 
 app_name = 'accounts'
 urlpatterns = [
@@ -28,6 +29,8 @@ urlpatterns = [
     path('logout-all/', views.LogoutAllSessionsView.as_view(), name='logout_all'),
     path('activity-log/', views.ActivityLogView.as_view(), name='activity_log'),
     path('verify-age/', views.VerifyAgeView.as_view(), name='verify_age'),
+    # Alias: the web client posts the onboarding payload here.
+    path('onboarding/', profiles_views.OnboardingView.as_view(), name='onboarding_alias'),
     path('social/age-setup/', views.SocialAgeSetupView.as_view(), name='social_age_setup'),
     path('recovery-codes/regenerate/', views.RecoveryCodesRegenerateView.as_view(), name='recovery_codes_regenerate'),
     path('passkeys/register/begin/', views.PasskeyRegisterBeginView.as_view(), name='passkey_register_begin'),

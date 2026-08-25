@@ -24,6 +24,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             'artifact_balance', 'external_link', 'content_rating',
             'workout_schedule',
             'show_active_status', 'is_anonymous_posting',
+            'onboarding_completed', 'terms_accepted_at', 'marketing_consent',
             'buddy_count', 'following_count', 'follower_count', 'gym_count', 'post_count',
             'is_buddy', 'is_following', 'buddy_status', 'is_blocked',
             'creator_balance', 'creator_display_name',
@@ -129,6 +130,17 @@ class OnboardingSerializer(serializers.Serializer):
         'early_morning', 'morning', 'afternoon', 'evening', 'night', 'flexible',
     ])
     discovery_source = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    # Consent — required; recorded on the profile with a version + timestamp.
+    terms_version = serializers.CharField(max_length=20, min_length=3)
+    marketing_consent = serializers.BooleanField(required=False, default=False)
+    # Profile essentials collected during onboarding.
+    display_name = serializers.CharField(min_length=2, max_length=50, required=False)
+    username = serializers.RegexField(
+        r'^[a-zA-Z0-9_]{3,30}$', required=False,
+        error_messages={'invalid': '3–30 characters; letters, numbers and underscores only.'},
+    )
+    location_city = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    bio = serializers.CharField(max_length=200, required=False, allow_blank=True)
 
 
 class BuddyRequestSerializer(serializers.Serializer):

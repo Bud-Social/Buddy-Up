@@ -34,6 +34,9 @@ export interface Profile {
   role: UserRole;
   verification_status: VerificationStatus;
   privacy_level: PrivacyLevel;
+  onboarding_completed?: boolean;
+  terms_accepted_at?: string | null;
+  marketing_consent?: boolean;
   streak_days: number;
   artifact_balance: Record<string, number>;
   buddy_count: number;

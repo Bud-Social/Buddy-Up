@@ -16,10 +16,23 @@ const PUBLIC_ROUTES = [
 function AuthGuard() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const profile = useAuthStore((s) => s.profile);
+  const user = useAuthStore((s) => s.user);
   const location = useLocation();
 
   if (isLoading) return <PageLoader />;
   if (!isAuthenticated && !PUBLIC_ROUTES.includes(location.pathname)) return <Navigate to="/login" replace />;
+  // Required-once onboarding: incomplete accounts are routed through the
+  // pipeline (DOB → terms → profile → interests) before anything else.
+  if (
+    isAuthenticated &&
+    profile &&
+    profile.onboarding_completed === false &&
+    location.pathname !== '/onboarding' &&
+    !location.pathname.startsWith('/settings')
+  ) {
+    return <Navigate to={user && user.is_adult === false ? '/onboarding?step=age' : '/onboarding'} replace />;
+  }
   return <Outlet />;
 }
 

@@ -119,23 +119,54 @@ class UserProfileView(generics.RetrieveAPIView):
 class OnboardingView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    CURRENT_TERMS_VERSION = '2026-08-v1'
+
     def post(self, request):
         serializer = OnboardingSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
+
+        terms_version = data.pop('terms_version', '')
+        marketing_consent = data.pop('marketing_consent', False)
 
         profile = request.user.profile
         user = request.user
-        user.preferences = serializer.validated_data
+
+        # Profile essentials (validated above); username uniqueness enforced by DB.
+        for field in ('display_name', 'username', 'location_city', 'bio'):
+            if field in data:
+                setattr(profile, field, data[field])
+        try:
+            profile.save(update_fields=[
+                f for f in ('display_name', 'username', 'location_city', 'bio') if f in data
+            ] or None)
+        except Exception:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'That username is already taken.',
+                'errors': {'username': ['Already taken.']}, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user.preferences = {k: v for k, v in data.items() if k not in ('display_name', 'username', 'location_city', 'bio')}
         user.save(update_fields=['preferences'])
+
+        from django.utils import timezone
+        profile.terms_version = terms_version
+        profile.terms_accepted_at = timezone.now()
+        profile.marketing_consent = bool(marketing_consent)
+        profile.onboarding_completed = True
+        profile.save(update_fields=[
+            'terms_version', 'terms_accepted_at', 'marketing_consent', 'onboarding_completed',
+        ])
 
         onboarding_plan = None
         import requests as http_requests
         try:
             ai_url = f'{settings.AI_SERVICE_URL}/api/v1/onboarding/personalise'
-            resp = http_requests.post(ai_url, json=serializer.validated_data, timeout=15)
+            resp = http_requests.post(ai_url, json=data, timeout=15)
             resp.raise_for_status()
             onboarding_plan = resp.json()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 — plan is best-effort; never block entry
             pass
 
         return Response({

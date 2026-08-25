@@ -15,6 +15,12 @@ export interface TokenResponse { access: string; refresh: string; user: User; pr
 export interface OnboardingPayload {
   primary_goal: string[]; activity_level: string; preferred_workouts: string[];
   dietary_preference: string; preferred_time: string; discovery_source?: string;
+  terms_version?: string;
+  marketing_consent?: boolean;
+  display_name?: string;
+  username?: string;
+  location_city?: string;
+  bio?: string;
 }
 
 export interface RegisterResponse {
@@ -91,6 +97,13 @@ export const authApi = {
   resendRegistrationOtp: (registration_token: string, channel: 'email' | 'phone') =>
     apiClient.post<ApiResponse<null>>('/auth/resend-registration-otp/', { registration_token, channel }).then((r) => r.data),
   completeOnboarding: (data: OnboardingPayload) => apiClient.post<ApiResponse<Profile>>('/auth/onboarding/', data).then((r) => r.data),
+
+  /** Authenticated DOB submission (social signups / age setup). */
+  socialAgeSetup: (date_of_birth: string) =>
+    apiClient.post<ApiResponse<{ profile: Profile; age: number; is_adult: boolean }>>(
+      '/auth/social/age-setup/',
+      { date_of_birth },
+    ).then((r) => r.data),
   forgotPassword: (email: string) => apiClient.post<ApiResponse<null>>('/auth/forgot-password/', { email }).then((r) => r.data),
   resetPassword: (email: string, token: string, new_password: string) => apiClient.post<ApiResponse<null>>('/auth/reset-password/', { email, token, new_password }).then((r) => r.data),
   googleLogin: (credential: string) => apiClient.post<ApiResponse<TokenResponse>>('/auth/google/', { credential }).then((r) => r.data),
