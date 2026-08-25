@@ -21,6 +21,14 @@ const GoogleMapsRouteMap = lazy(() =>
 );
 
 /**
+ * Keyless OpenStreetMap route renderer (Leaflet + free tile failover).
+ * Loaded lazily so Leaflet is never bundled unless actually rendered.
+ */
+const OsmRouteMap = lazy(() =>
+  import('./OsmRouteMap').then((m) => ({ default: m.OsmRouteMap })),
+);
+
+/**
  * SVG route map used when a Google Maps API key is unavailable.
  * Auto-fits the polyline, applies a grid/streets backdrop, and is fully
  * self-contained (no network, no key). Swapped for Google Maps when the
@@ -111,6 +119,14 @@ export function RouteMap({ route, height = 220 }: RouteMapProps) {
 
   const points = useMemo(() => toLatLngs(route), [route]);
   if (!hasKey || points.length < 2) {
+    if (points.length >= 2) {
+      // No Google key but a real route — render keyless OSM tiles.
+      return (
+        <Suspense fallback={<SvgRouteMap route={route} height={height} />}>
+          <OsmRouteMap route={route} height={height} />
+        </Suspense>
+      );
+    }
     return <SvgRouteMap route={route} height={height} />;
   }
 

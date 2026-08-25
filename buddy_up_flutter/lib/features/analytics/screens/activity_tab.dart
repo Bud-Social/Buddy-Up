@@ -6,6 +6,7 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../providers/analytics_provider.dart';
 import '../utils/analytics_format.dart';
 import '../widgets/analytics_widgets.dart';
+import 'gps_tracker_screen.dart';
 
 const List<({String key, String label, IconData icon})> _activityTypes = [
   (key: 'walk', label: 'Walk', icon: Icons.directions_walk),
@@ -96,6 +97,29 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // GPS tracker entry — hybrid keyless tracking, parity with web.
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: FilledButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<bool>(
+                  builder: (_) => GpsTrackerScreen(initialActivityType: _activityType),
+                ),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: cs.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              icon: const Icon(Icons.gps_fixed, size: 18, color: Colors.black),
+              label: Text(
+                'Track with GPS',
+                style: TextStyle(
+                  color: cs.onPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
           GridView.count(
             crossAxisCount: 2,
             shrinkWrap: true,
