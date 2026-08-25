@@ -22,6 +22,7 @@ export interface AchievementItem {
 export interface AchievementsPayload {
   items: AchievementItem[];
   summary: { total: number; earned: number };
+  period?: string;
 }
 
 const TIER_STYLES: Record<AchievementItem['tier'], { ring: string; text: string; bg: string; label: string }> = {
@@ -33,7 +34,19 @@ const TIER_STYLES: Record<AchievementItem['tier'], { ring: string; text: string;
 
 export const achievementTierStyle = (tier: AchievementItem['tier']) => TIER_STYLES[tier] ?? TIER_STYLES.bronze;
 
+export const ACHIEVEMENT_PERIODS = [
+  { key: 'daily', label: 'Daily' },
+  { key: 'weekly', label: 'Weekly' },
+  { key: 'monthly', label: 'Monthly' },
+  { key: 'quarterly', label: 'Quarterly' },
+  { key: 'yearly', label: 'Yearly' },
+] as const;
+
 export const achievementsApi = {
-  list: () =>
-    apiClient.get<ApiResponse<AchievementsPayload>>('/achievements/').then((r) => r.data),
+  list: (period?: string) =>
+    apiClient
+      .get<ApiResponse<AchievementsPayload>>('/achievements/', {
+        params: period && period !== 'all_time' ? { period } : {},
+      })
+      .then((r) => r.data),
 };

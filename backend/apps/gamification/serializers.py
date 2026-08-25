@@ -11,7 +11,7 @@ class AchievementDefinitionSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'code', 'title', 'description', 'icon', 'tier',
             'category', 'metric', 'metric_label', 'threshold', 'sort_order',
-        ]
+            'period',
         read_only_fields = fields
 
     def get_metric_label(self, obj) -> str:

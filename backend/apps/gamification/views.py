@@ -15,7 +15,11 @@ class AchievementsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        payload = services.profile_achievement_payload(request.user.profile)
+        period = request.query_params.get('period') or None
+        if period not in (None, 'all_time', 'daily', 'weekly', 'monthly', 'quarterly', 'yearly'):
+            period = None
+        payload = services.profile_achievement_payload(request.user.profile, period=period)
+        payload['period'] = period or 'all_time'
         return Response({
             'success': True,
             'data': payload,

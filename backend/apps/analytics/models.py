@@ -174,39 +174,3 @@ class AnalyticsReport(TimestampedModel):
     def __str__(self):
         return f'Report {self.period} @ {self.created_at:%Y-%m-%d}'
 
-
-class Achievement(models.Model):
-    """Declared goal in the achievements catalog; progress computed live."""
-
-    METRICS = [
-        ('workouts_logged', 'Workouts logged'),
-        ('meals_logged', 'Meals logged'),
-        ('activities_distance_km', 'GPS activity distance (km)'),
-        ('posts_shared', 'Posts shared'),
-        ('streak_days', 'Current streak (days)'),
-        ('buddies_made', 'Confirmed buddies'),
-    ]
-    PERIODS = [
-        ('daily', 'Daily'),
-        ('weekly', 'Weekly'),
-        ('monthly', 'Monthly'),
-        ('quarterly', 'Quarterly'),
-        ('yearly', 'Yearly'),
-    ]
-
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    key = models.CharField(max_length=60, unique=True)
-    title = models.CharField(max_length=100)
-    description = models.CharField(max_length=200)
-    icon = models.CharField(max_length=30, default='trophy')
-    metric = models.CharField(max_length=30, choices=METRICS)
-    threshold = models.PositiveIntegerField()
-    period = models.CharField(max_length=12, choices=PERIODS)
-
-    class Meta:
-        db_table = 'analytics_achievement'
-        ordering = ['period', 'threshold']
-        unique_together = ('metric', 'threshold', 'period')
-
-    def __str__(self):
-        return f'{self.title} ({self.threshold} {self.metric}/{self.period})'

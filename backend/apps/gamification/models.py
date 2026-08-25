@@ -41,6 +41,18 @@ class AchievementDefinition(TimestampedModel):
     metric = models.CharField(max_length=50, help_text='Metric key evaluated by services.py')
     threshold = models.FloatField(help_text='Value the metric must reach to unlock')
     sort_order = models.PositiveIntegerField(default=0)
+    # Evaluation window. 'all_time' is the classic forever badge; windowed
+    # achievements reset naturally with their calendar bucket (e.g. a
+    # 'weekly' achievement re-earns every ISO week).
+    PERIODS = [
+        ('all_time', 'All Time'),
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('quarterly', 'Quarterly'),
+        ('yearly', 'Yearly'),
+    ]
+    period = models.CharField(max_length=12, choices=PERIODS, default='all_time')
     is_active = models.BooleanField(default=True)
 
     class Meta:

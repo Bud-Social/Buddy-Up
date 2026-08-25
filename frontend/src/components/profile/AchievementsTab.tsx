@@ -33,16 +33,25 @@ function AchievementCard({ item }: { item: AchievementItem }) {
   );
 }
 
+const PERIODS = [
+  { key: 'daily', label: 'Daily' },
+  { key: 'weekly', label: 'Weekly' },
+  { key: 'monthly', label: 'Monthly' },
+  { key: 'quarterly', label: 'Quarterly' },
+  { key: 'yearly', label: 'Yearly' },
+] as const;
+
 export function AchievementsTab() {
   const [items, setItems] = useState<AchievementItem[]>([]);
   const [summary, setSummary] = useState<{ total: number; earned: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [period, setPeriod] = useState<string>('weekly');
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    achievementsApi.list()
+    achievementsApi.list(period)
       .then((res) => {
         if (cancelled) return;
         setItems(res.data?.items || []);
@@ -51,7 +60,7 @@ export function AchievementsTab() {
       .catch(() => !cancelled && setError(true))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, []);
+  }, [period]);
 
   if (loading) {
     return (
@@ -75,6 +84,19 @@ export function AchievementsTab() {
 
   return (
     <div className="col-span-3 space-y-6">
+      <div className="flex flex-wrap justify-center gap-1 bg-buddy-surface rounded-xl p-1">
+        {PERIODS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setPeriod(key)}
+            className={`flex-1 min-w-[72px] px-3 py-2 text-xs sm:text-sm font-medium rounded-lg transition-colors ${
+              period === key ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       {summary && (
         <Card className="p-4 flex items-center gap-3">
           <Trophy size={20} className="text-buddy-gold" />
