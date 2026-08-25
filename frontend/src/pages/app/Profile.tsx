@@ -25,7 +25,6 @@ export default function Profile() {
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
   const setProfile = useAuthStore((s) => s.setProfile);
-  const logout = useAuthStore((s) => s.logout);
   const theme = useThemeStore((s) => s.theme);
   const toggleTheme = useThemeStore((s) => s.toggle);
   const { toast } = useToast();
@@ -70,8 +69,13 @@ export default function Profile() {
     try {
       const res = await profilesApi.getProfilePosts(profile.username);
       setPosts(res.data || []);
-    } catch {
-      toast('error', 'Failed to load posts');
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (!status || status >= 500) {
+        toast('error', 'Could not load posts — tap to retry');
+      } else {
+        toast('error', 'Failed to load posts');
+      }
     } finally {
       setPostsLoading(false);
     }
@@ -108,8 +112,12 @@ export default function Profile() {
     setUploadingAvatar(true);
     try {
       const res = await profilesApi.uploadAvatar(file);
-      setAvatarUrl(res.data.avatar_url);
-      setProfile({ ...profile!, avatar_url: res.data.avatar_url });
+      // Cache-bust so any deterministic legacy URL still refreshes visually.
+      const fresh = res.data.avatar_url.includes('?')
+        ? res.data.avatar_url
+        : `${res.data.avatar_url}?v=${Date.now()}`;
+      setAvatarUrl(fresh);
+      setProfile({ ...profile!, avatar_url: fresh });
       toast('success', 'Avatar updated');
     } catch {
       toast('error', 'Failed to upload avatar');
@@ -118,11 +126,6 @@ export default function Profile() {
       setCropImage(null);
       URL.revokeObjectURL(cropImage || '');
     }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
   };
 
   const handleSave = async () => {
@@ -184,17 +187,22 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="flex gap-3 mb-4">
-          {[
-            { value: profile.buddy_count, label: 'Buddies' },
-            { value: profile.following_count, label: 'Following' },
-            { value: profile.follower_count, label: 'Followers' },
-            { value: profile.gym_count, label: 'Gyms' },
-          ].map(({ value, label }) => (
-            <div key={label} className="flex-1 text-center bg-buddy-surface-raised rounded-xl py-2">
+        <div className="grid grid-cols-4 gap-2 mb-4">
+          {([
+            { value: profile.buddy_count, label: 'Buddies', to: '/buddies' },
+            { value: profile.following_count, label: 'Following', to: `/${profile.username}/following` },
+            { value: profile.follower_count, label: 'Followers', to: `/${profile.username}/followers` },
+            { value: profile.gym_count, label: 'Gyms', to: '/gyms?mine=1' },
+          ] as { value: number; label: string; to: string }[]).map(({ value, label, to }) => (
+            <button
+              key={label}
+              onClick={() => navigate(to)}
+              className="text-center bg-buddy-surface-raised hover:bg-buddy-surface rounded-xl py-2 transition-colors"
+              title={`View ${label.toLowerCase()}`}
+            >
               <p className="font-mono font-bold text-lg">{value}</p>
               <p className="text-xs text-buddy-text-secondary">{label}</p>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -213,7 +221,7 @@ export default function Profile() {
               <Shield size={16} />
               Verify
             </Button>
-            <Button variant="outline" onClick={() => navigate('/settings')}>
+            <Button variant="outline" onClick={() => navigate('/settings')} aria-label="Settings">
               <Settings size={16} />
             </Button>
           </div>
@@ -225,7 +233,6 @@ export default function Profile() {
             {theme === 'high-contrast' && <><Contrast size={14} /> High Contrast</>}
             {theme === 'ambient' && <><Monitor size={14} /> Ambient</>}
           </Button>
-          <Button variant="ghost" size="sm" className="flex-1 text-buddy-red hover:text-buddy-red" onClick={handleLogout}>Sign Out</Button>
         </div>
       </Card>
 

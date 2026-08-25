@@ -330,6 +330,17 @@ export default function Settings() {
             <Input type="password" value={changePwForm.confirm} onChange={(e) => setChangePwForm(p => ({ ...p, confirm: e.target.value }))} placeholder="Confirm new password" />
             <Button variant="outline" className="w-full" size="sm" onClick={handleChangePassword} isLoading={changePwLoading}>Change Password</Button>
           </div>
+          <Card className="p-4">
+            <button
+              onClick={() => { logout(); navigate('/login'); }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border border-buddy-red/40 text-buddy-red hover:bg-buddy-red/10 transition-colors text-sm font-semibold"
+            >
+              <LogOut size={15} /> Sign Out
+            </button>
+            <p className="text-[11px] text-buddy-text-secondary mt-2 text-center">
+              You can also sign out of every device from Security → Sessions.
+            </p>
+          </Card>
         </div>
       )}
 
