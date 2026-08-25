@@ -2,7 +2,6 @@ import os
 import uuid
 
 from django.core.files.storage import default_storage
-from django.db import models as db_models
 from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
 

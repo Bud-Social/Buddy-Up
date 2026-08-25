@@ -1,6 +1,8 @@
+import os
 import re
 from datetime import date
 from hashlib import sha256
+from urllib.parse import urlparse
 
 
 def format_phone(phone: str, country_code: str = '+254') -> str:
@@ -63,3 +65,24 @@ def validate_mime_from_bytes(file_bytes: bytes, declared_mime: str) -> bool:
     if declared_mime == 'application/pdf':
         return validate_file_signature(file_bytes, '.pdf')
     return True
+
+
+def absolute_media_url(request, url):
+    """Return an absolute URL for a stored media path.
+
+    Relative '/media/…' paths resolve against whichever frontend origin
+    rendered them (e.g. Vercel), which serves no media — a guaranteed 404.
+    Preference order: PUBLIC_API_URL env, then the incoming request, then
+    the path unchanged (dev).
+    """
+    if not url:
+        return url
+    parsed = urlparse(str(url))
+    if parsed.scheme in ('http', 'https'):
+        return url
+    base = (os.environ.get('PUBLIC_API_URL') or '').rstrip('/')
+    if base:
+        return f"{base}{url if url.startswith('/') else '/' + url}"
+    if request is not None:
+        return request.build_absolute_uri(url)
+    return url

@@ -31,7 +31,27 @@ CORS_ALLOWED_ORIGINS = [
     'https://www.buddyup.app',
     'http://localhost:3002',
     'http://localhost:5173',
-] + [o.strip() for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
+]
+# Env-supplied origins must never crash deploys (corsheaders.E013 turns a
+# single malformed entry into SystemCheckError → container unhealthy →
+# every fix stops shipping). Sanitise instead: prepend https:// to bare
+# hostnames, drop anything still unusable.
+import logging as _logging  # noqa: E402
+
+_logging.basicConfig(level=_logging.INFO)
+_cors_logger = _logging.getLogger(__name__)
+for _origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(','):
+    _origin = _origin.strip().rstrip('/')
+    if not _origin:
+        continue
+    if '://' not in _origin:
+        _fixed = f'https://{_origin}'
+        _cors_logger.warning(
+            'CORS_ALLOWED_ORIGINS entry %r had no scheme — using %r', _origin, _fixed,
+        )
+        _origin = _fixed
+    if _origin not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(_origin)
 
 SECRET_KEY = os.environ['SECRET_KEY']
 

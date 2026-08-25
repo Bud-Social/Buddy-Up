@@ -8,7 +8,7 @@ relevant events.
 """
 import logging
 
-from django.db.models import Avg, Count, Sum
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.db import models as db_models
 from django.utils import timezone
@@ -139,7 +139,7 @@ def profile_achievement_payload(profile, period: str | None = None) -> dict:
 
     ``period`` filters to one window ('daily'…'yearly'); None returns all.
     """
-    from .serializers import AchievementDefinitionSerializer, UserAchievementSerializer
+    from .serializers import AchievementDefinitionSerializer
 
     evaluate_profile(profile)
 

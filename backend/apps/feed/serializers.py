@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from collections import Counter
+from common.utils import absolute_media_url
 from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, Draft
 from apps.gyms.models import Gym
 from common.age_gating import CONTENT_RATING_CHOICES
@@ -82,11 +83,12 @@ class CommentSerializer(serializers.ModelSerializer):
     def get_author_data(self, obj):
         if obj.is_anonymous:
             return {'display_name': 'Anonymous BuddyUp Member', 'username': '', 'avatar_url': ''}
+        request = self.context.get('request')
         return {
             'user_id': str(obj.author.user_id),
             'username': obj.author.username,
             'display_name': obj.author.display_name,
-            'avatar_url': obj.author.avatar_url,
+            'avatar_url': absolute_media_url(request, obj.author.avatar_url),
             'verification_status': obj.author.verification_status,
         }
 
@@ -140,11 +142,12 @@ class PostSerializer(serializers.ModelSerializer):
     def get_author_data(self, obj):
         if obj.is_anonymous:
             return {'display_name': 'Anonymous BuddyUp Member', 'username': '', 'avatar_url': ''}
+        request = self.context.get('request')
         return {
             'user_id': str(obj.author.user_id),
             'username': obj.author.username,
             'display_name': obj.author.display_name,
-            'avatar_url': obj.author.avatar_url,
+            'avatar_url': absolute_media_url(request, obj.author.avatar_url),
             'verification_status': obj.author.verification_status,
         }
 
@@ -190,6 +193,7 @@ class PostSerializer(serializers.ModelSerializer):
 
     def get_original_post_data(self, obj):
         if obj.is_repost and obj.original_post:
+            request = self.context.get('request')
             orig = obj.original_post
             return {
                 'id': str(orig.id),
@@ -198,7 +202,7 @@ class PostSerializer(serializers.ModelSerializer):
                     'user_id': str(orig.author.user_id),
                     'username': orig.author.username,
                     'display_name': orig.author.display_name,
-                    'avatar_url': orig.author.avatar_url,
+                    'avatar_url': absolute_media_url(request, orig.author.avatar_url),
                     'verification_status': orig.author.verification_status,
                 },
                 'body': orig.body,
@@ -216,8 +220,10 @@ class PostSerializer(serializers.ModelSerializer):
         return None
 
     def get_reposters(self, obj):
+        request = self.context.get('request')
         if not obj.is_repost or not obj.original_post_id:
             return []
+        request = self.context.get('request')
         reposts = Post.objects.filter(
             original_post_id=obj.original_post_id,
             is_repost=True,
@@ -226,7 +232,7 @@ class PostSerializer(serializers.ModelSerializer):
             {
                 'user_id': str(r.author.user_id),
                 'display_name': r.author.display_name,
-                'avatar_url': r.author.avatar_url,
+                'avatar_url': absolute_media_url(request, r.author.avatar_url),
             }
             for r in reposts
         ]

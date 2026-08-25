@@ -32,6 +32,17 @@ class ProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['user_id', 'streak_days', 'artifact_balance', 'creator_balance', 'created_at', 'updated_at']
 
+    def to_representation(self, instance):
+        """Absolutise media URLs so clients never resolve '/media/…'
+        against their own origin (Vercel) — a guaranteed 404."""
+        from common.utils import absolute_media_url
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        for field in ('avatar_url', 'cover_url'):
+            if data.get(field):
+                data[field] = absolute_media_url(request, data[field])
+        return data
+
     def get_buddy_count(self, obj):
         return BuddyRelationship.objects.filter(
             (Q(from_user=obj) | Q(to_user=obj)),

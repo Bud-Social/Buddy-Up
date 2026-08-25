@@ -1,5 +1,4 @@
 """Tests for the multistep ID + selfie verification wizard."""
-import io
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
@@ -9,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.profiles.models import Profile
-from apps.verification.models import VerificationDocument, VerificationSubmission
+from apps.verification.models import VerificationDocument
 from .services import run_face_match
 
 
@@ -33,7 +32,7 @@ class IdWizardFlowTests(TestCase):
         self.profile = _make_user('wizard@test.com')
         refresh = RefreshToken.for_user(self.profile.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
-        self.base = f'/api/v1/verification/submissions'
+        self.base = '/api/v1/verification/submissions'
 
     def _create_draft(self):
         res = self.client.post(f'{self.base}/', {'verification_type': 'id'}, format='json')
