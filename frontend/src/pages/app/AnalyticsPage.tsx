@@ -56,17 +56,17 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 overflow-x-auto">
+      {/* Tabs — wrap to two centred rows on narrow screens */}
+      <div className="flex flex-wrap justify-center gap-1 bg-buddy-surface rounded-xl p-1">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs sm:text-sm sm:px-4 font-medium rounded-lg whitespace-nowrap transition-colors ${
               tab === key ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
             }`}
           >
-            <Icon size={16} />
+            <Icon size={15} />
             {label}
           </button>
         ))}
