@@ -1,22 +1,21 @@
-"""Pose-keypoint sequence processing for the form analyzer (Phase B).
+"""Pose-keypoint manifest processing for the form analyzer (Phase B).
 
-Consumes raw keypoint sequences + trainer quality labels and writes a
-normalized manifest under ``data/processed/forms``. Normalisation follows the
-serving contract (shoulder-width + hip-centre, joints as x/y/score) so train
-and serve agree on input layout.
+CONTRACT NOTE (smallest-correct-fix): training/process_workout_videos.py
+normalises frames *during extraction* (shoulder-width = 1, origin = hip
+midpoint) and writes data/processed/forms/normalised.json directly — there is
+no separate raw manifest.json step, so this script no longer re-normalises
+(which would double-scale the coordinates). It now consumes that processed
+output via buddy_data.keypoints(), validates the 17-joint contract, and
+(re)publishes the manifest views (manifest.csv + joint_spec.json).
+
+LABEL CAVEAT: extraction writes the placeholder label 'good' for every video —
+the current data is exercise-class, not form-quality. Real form training needs
+trainer labels ('good' / 'slight_misalignment' / 'bad'); this script warns when
+only placeholders are present.
 
 DVC stage (dvc.yaml -> process-forms)::
 
     dvc repro process-forms   # or: python training/process_form_data.py
-
-Raw input contract (data/raw/keypoints/manifest.json)
------------------------------------------------------
-[
-  {"video_id": "...", "exercise": "squat",
-   "joints": 17,
-   "frames": [[[x,y,score], ...x17] x N],   # N frames per video
-   "label": "good" | "slight_misalignment" | "bad"}
-]
 """
 import argparse
 import csv
@@ -33,46 +32,24 @@ JOINT_NAMES = [
     'r_ankle', 'l_ankle', 'r_heel', 'l_heel', 'r_foot',
 ]
 
-
-def _normalise_frames(frames, joints: int) -> list:
-    """Scale/centre each frame: shoulder width = 1, origin at hip midpoint."""
-    import math
-
-    out = []
-    for frame in frames:
-        coords = [(j[0], j[1]) for j in frame] if len(frame[0]) >= 2 else list(frame)
-        try:
-            rs = coords[joints - 9]
-            ls = coords[joints - 10]
-            rhip = coords[joints - 4]
-            lhip = coords[joints - 3]
-        except IndexError:
-            continue
-        width = math.dist(rs, ls) or 1.0
-        cx = (rhip[0] + lhip[0]) / 2.0
-        cy = (rhip[1] + lhip[1]) / 2.0
-        norm = [((x - cx) / width, (y - cy) / width, s) for (x, y, *s) in frame]
-        out.append(norm)
-    return out
+VALID_LABELS = {'good', 'slight_misalignment', 'bad'}
 
 
-def process(root: Path, dry_run: bool = False):
-    manifest_file = root / 'manifest.json'
-    if not manifest_file.exists():
-        raise SystemExit(f'Missing {manifest_file} — see data/README.md keypoints contract')
-
-    records = json.loads(manifest_file.read_text())
+def process(records, dry_run: bool = False):
+    """Validate processed keypoint sequences + (re)write the manifest views."""
     if not records:
-        raise SystemExit('Empty keypoint manifest')
+        raise SystemExit('Empty keypoint sequence set')
 
     rows = []
     for rec in records:
-        joints = rec.get('joints', len(rec['frames'][0]))
-        if joints != 17:
-            raise SystemExit(f'{rec["video_id"]}: expected 17 joints, got {joints}')
-        if not rec.get('frames'):
-            raise SystemExit(f'{rec["video_id"]}: no frames')
-        norm = _normalise_frames(rec['frames'], joints)
+        norm = rec.get('normalised') or []
+        if not norm:
+            print(f"  !! {rec.get('video_id')}: no frames — skipping")
+            continue
+        if any(len(frame) != 17 for frame in norm):
+            raise SystemExit(f'{rec["video_id"]}: expected 17 joints per frame')
+        if rec.get('label') not in VALID_LABELS:
+            raise SystemExit(f'{rec["video_id"]}: invalid label {rec.get("label")!r}')
         rows.append({
             'video_id': rec['video_id'],
             'exercise': rec['exercise'],
@@ -82,9 +59,16 @@ def process(root: Path, dry_run: bool = False):
         })
 
     exercises = {r['exercise'] for r in rows}
+    labels = {r['label'] for r in rows}
     if dry_run:
-        print(f'Keypoints OK: {len(rows)} videos, exercises={sorted(exercises)}')
+        print(f'Keypoints OK: {len(rows)} videos, exercises={sorted(exercises)}, '
+              f'labels={sorted(labels)}')
         return
+
+    if labels == {'good'}:
+        print('WARNING: all labels are the extraction placeholder "good" — '
+              'this is exercise-class data, not form-quality. Trainer labels '
+              'are required before training a real form scorer.')
 
     PROCESSED.mkdir(parents=True, exist_ok=True)
     (PROCESSED / 'joint_spec.json').write_text(json.dumps({
@@ -99,11 +83,8 @@ def process(root: Path, dry_run: bool = False):
         for r in rows:
             writer.writerow({k: r[k] for k in ('video_id', 'exercise', 'label', 'num_frames')})
 
-    with open(PROCESSED / 'normalised.json', 'w') as fh:
-        json.dump(rows, fh)
-
-    print(f'Wrote {PROCESSED}')
-    print(f'  videos: {len(rows)}, exercises={sorted(exercises)}')
+    print(f'Wrote {PROCESSED} manifest views '
+          f'({len(rows)} videos, exercises={sorted(exercises)})')
 
 
 def main():

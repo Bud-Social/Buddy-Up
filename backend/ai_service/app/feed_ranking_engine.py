@@ -90,12 +90,30 @@ def rank_feed(user_id: str, candidates: list[dict], bandit: bool = True) -> list
 
 def record_feedback(user_id: str, arm_key: str, context: dict, reward: float) -> dict:
     """Update bandit matrices and the user preference vector from a reward."""
-    feat = _features(context)
-    update_bandit(user_id, arm_key, feat, reward)
+    from .redis_bandit import _user_lock
 
-    prefs = get_user_prefs(user_id)
-    new_prefs = prefs + PREF_LR * (float(np.clip(reward, 0.0, 1.0)) - 0.5) * feat
-    save_user_prefs(user_id, new_prefs)
+    feat = _features(context)
+    lock = _user_lock(user_id)
+    try:
+        acquired = lock.acquire(blocking=True)
+    except Exception:  # noqa: BLE001 — Redis lock unavailable: degrade to best-effort
+        acquired = True
+    try:
+        update_bandit(user_id, arm_key, feat, reward)
+        prefs = get_user_prefs(user_id)
+        new_prefs = prefs + PREF_LR * (float(np.clip(reward, 0.0, 1.0)) - 0.5) * feat
+        # Bound preference drift: L2-normalise scale so repeated rewards
+        # cannot push the vector into an uninterpretable regime.
+        norm = float(np.linalg.norm(new_prefs))
+        if norm > 10.0:
+            new_prefs = new_prefs * (10.0 / norm)
+        save_user_prefs(user_id, new_prefs)
+    finally:
+        if acquired:
+            try:
+                lock.release()
+            except Exception:  # noqa: BLE001
+                pass
 
     stats = get_bandit_stats(user_id, arm_key)
     return {

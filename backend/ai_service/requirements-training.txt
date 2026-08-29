@@ -1,3 +1,18 @@
+# ── PyTorch (CPU) ────────────────────────────────────────────────────────────
+# torch/torchvision are NOT installed from this file — scripts/setup_ml_env.sh
+# installs the CPU wheels from the PyTorch index (the current env has
+# torch==2.13.0+cpu / torchvision==0.28.0+cpu):
+#
+#   pip install torch==2.13.0+cpu torchvision==0.28.0+cpu \
+#       --index-url https://download.pytorch.org/whl/cpu
+#
+# Kaggle/Colab alternative (GPU wheels are preinstalled there; pin only to
+# match local versions, using the extra-index form):
+#
+#   pip install torch==2.13.0 torchvision==0.28.0 \
+#       --extra-index-url https://download.pytorch.org/whl/cpu
+#
+# faiss-cpu (below) backs the matching_embeddings notebook FAISS index.
 tensorflow==2.20.0
 tensorflow-text==2.20.1
 keras==3.15.1

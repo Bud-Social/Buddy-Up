@@ -1,20 +1,26 @@
 # DVC pipeline for Buddy-Up datasets.
-# Stages are no-op until datasets are added under data/raw.
+# Stage deps match what the scripts actually consume:
+#   process-food  loads Food-101 from the HF Hub (buddy_data.food101()) —
+#                 no repo-side raw data dep, the scripts are the inputs.
+#   process-forms scans every "Work out vids dataset *" dir under data/
+#                 (DVC has no glob-safe way to spell the space-separated
+#                 dataset dirs, so the whole data/ tree is the dep).
 
 stages:
   process-food:
     cmd: python training/process_food_data.py
     deps:
-      - data/raw
+      - training/buddy_data.py
+      - training/food101_labels.py
+      - training/process_food_data.py
     outs:
       - data/processed/food
   process-forms:
-    cmd: python training/process_workout_videos.py
+    cmd: python training/process_workout_videos.py && python training/process_form_data.py
     deps:
-      - data/Work out vids dataset 2
-      - data/Work out vids dataset 3
-      - data/Work out vids dataset 4
-      - data/Work out vids dataset 5
-      - data/Work out vids dataset 6
+      - data/
+      - training/buddy_data.py
+      - training/process_form_data.py
+      - training/process_workout_videos.py
     outs:
       - data/processed/forms

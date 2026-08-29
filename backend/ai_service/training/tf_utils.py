@@ -140,11 +140,20 @@ def build_two_tower(embed_dim: int = 128, n_users: int = 10_000, n_items: int = 
 # --- export -----------------------------------------------------------------
 
 
-def export_keras_onnx(model, out_dir: Path, name: str, version: str, input_signature=None):
+def export_keras_onnx(model, out_dir: Path, name: str, version: str,
+                      input_signature=None, classes=None, preprocessing: str = ''):
     """Export Keras -> ONNX (+ dynamic-int8 quantized copy) for the AI service.
 
-    The service looks for `<name>_int8.onnx` first (see app/ml/serving.py).
+    Writes the versioned artifact `<name>-<version>.onnx` (the service also
+    accepts the unversioned `<name>.onnx` / `<name>_int8.onnx` aliases and the
+    `<name>/<version>/model.onnx` layout — see app/ml/serving.py::artifact_path).
+
+    Also drops a `metadata.json` (plus a `<name>.metadata.json` copy for shared
+    flat output dirs) next to the artifact: {name, version, classes,
+    input_shape, preprocessing, artifact_sha256}. Best-effort — never raises.
     """
+    import hashlib
+
     import tf2onnx
     import tensorflow as tf
 
@@ -153,6 +162,24 @@ def export_keras_onnx(model, out_dir: Path, name: str, version: str, input_signa
     spec = input_signature or [tf.TensorSpec(model.inputs[0].shape, tf.float32, name='input')]
     onnx_path = out_dir / f'{name}-{version}.onnx'
     tf2onnx.convert.from_keras(model, input_signature=spec, output_path=str(onnx_path))
+
+    # metadata contract for the serving layer / model-ci promotion gate
+    try:
+        shape = spec[0].shape if spec else model.inputs[0].shape
+        input_shape = [d if isinstance(d, int) else None for d in tuple(shape)]
+        sha = hashlib.sha256(onnx_path.read_bytes()).hexdigest()
+        meta = {
+            'name': name,
+            'version': version,
+            'classes': list(classes) if classes is not None else None,
+            'input_shape': input_shape,
+            'preprocessing': preprocessing or 'float32, model-defined; see model card',
+            'artifact_sha256': sha,
+        }
+        (out_dir / 'metadata.json').write_text(json.dumps(meta, indent=2))
+        (out_dir / f'{name}.metadata.json').write_text(json.dumps(meta, indent=2))
+    except Exception as e:  # noqa: BLE001 — metadata must never break an export
+        print(f'[export] metadata.json skipped: {e}')
     return onnx_path
 
 

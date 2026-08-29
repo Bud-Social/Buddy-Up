@@ -323,6 +323,25 @@ def form_sequences():
     return json.loads(path.read_text())
 
 
+def keypoints():
+    """Processed 17-joint keypoint sequences (data/processed/forms/normalised.json,
+    produced by training/process_workout_videos.py — that script normalises
+    frames during extraction, so there is no separate raw manifest step).
+
+    Each record: {video_id, exercise, label, num_frames, normalised}. NOTE:
+    `label` is the extraction placeholder ('good') until trainer form-quality
+    labels exist — today the data is exercise-class, not form-quality.
+    """
+    import json
+
+    path = DATA / 'processed' / 'forms' / 'normalised.json'
+    if not path.exists():
+        raise FileNotFoundError(
+            f'Missing {path} — run: python training/process_workout_videos.py'
+        )
+    return json.loads(path.read_text())
+
+
 def reddit_jokes():
     import pandas as pd
 
@@ -348,10 +367,30 @@ def hf_recipe_nlg():
 
 
 def hf_food101():
-    """Food-101 images straight from the HF Hub."""
+    """Food-101 train split straight from the HF Hub."""
     from datasets import load_dataset
 
     return load_dataset('ethz/food101', split='train')
+
+
+def food101():
+    """Food-101 from the HF Hub (ethz/food101) as a DatasetDict.
+
+    Splits: train / validation / test. Each example is
+    ``{'image': PIL.Image, 'label': int}`` with a ClassLabel feature (use
+    ``ds['train'].features['label'].names`` for class names). Replaces the old
+    local-images-only loader: DVC's process-food stage materialises whatever
+    it needs to disk via training/process_food_data.py.
+    """
+    from datasets import load_dataset
+
+    return load_dataset('ethz/food101')
+
+
+def food101_splits():
+    """Food-101 splits as {'train': Dataset, 'validation': Dataset, 'test': Dataset}."""
+    ds = food101()
+    return {s: ds[s] for s in ('train', 'validation', 'test')}
 
 
 def hf_toxicity():

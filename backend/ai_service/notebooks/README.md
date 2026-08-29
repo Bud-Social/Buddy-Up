@@ -11,6 +11,36 @@ One notebook per model, following the shared template:
 artifacts the AI service lazy-loads. PyTorch is used only in the JEPA research
 lane. Run in Colab or Kaggle (GPU).
 
+## Shared bootstrap (`../training/bootstrap.py`)
+
+Every notebook's first code cell now runs:
+
+```python
+from training.bootstrap import *   # sets thread env BEFORE TF loads
+CFG = init()                       # seeds RNGs, ensures output dirs
+SCALE = CFG.get('scale', ...)      # resolved BUDDY_SCALE
+```
+
+It reads the `BUDDY_*` env vars, caps CPU threads (before TensorFlow is
+imported), seeds python/numpy/TF/torch, and exposes the resolved run paths:
+
+| Env var | Default (local) | Default (Kaggle) |
+|---|---|---|
+| `BUDDY_ENV` | `local` | `kaggle` (auto-detected via `/kaggle`) |
+| `BUDDY_SCALE` | `smoke` (`smoke` / `demo` / `full`) | same |
+| `BUDDY_SEED` | `42` | same |
+| `BUDDY_DETERMINISTIC` | `1` (TF deterministic ops on) | same |
+| `BUDDY_DATA_ROOT` | `<ai_service>/data` | `/kaggle/input/buddy-up-data` when present |
+| `BUDDY_OUTPUT_ROOT` | `<ai_service>/outputs` | `/kaggle/working/buddyup-output` (writable) |
+| `BUDDY_MODEL_ROOT` | `<ai_service>/models` | `<output_root>/models` |
+
+`/kaggle/input` mounts are read-only — put datasets in a Kaggle dataset named
+`buddy-up-data` and write all artifacts under `/kaggle/working/buddyup-output`.
+`bootstrap.environment()` snapshots platform/library versions and
+`bootstrap.save_run_metadata(extra)` persists `environment.json` +
+`run-metadata.json` under `OUTPUT_ROOT` (the model-ci promotion gate accepts a
+`run-metadata.json` next to the artifact as the metric source).
+
 ## Running locally
 
 The cell-1 bootstrap of every notebook is kernel-location independent: it walks
@@ -49,7 +79,7 @@ BUDDY_SCALE=demo jupyter nbconvert --execute --inplace --to notebook \
 |---|---|---|---|---|
 | `moderation_text` | Reddit IRL (chunked) + profanity + Gen-Z slang | BiLSTM toxicity | AUC / AP / P / R / F1 + threshold calibration | `toxicity_classifier` ONNX + `toxicity_vectorizer.json` |
 | `moderation_image` | `data/nsfw/out/{train,val,test}` | MobileNetV3Small head + fine-tune, class-weighted | test AUC / AP / confusion | `nsfw_classifier` ONNX INT8 |
-| `matching_embeddings` | Food.com `RAW_interactions.csv` (rating ≥ 4) | two-tower w/ random negatives | HR@10 / MRR | user-tower ONNX + `matching_items.faiss` + ID maps |
+| `matching_embeddings` | Food.com `RAW_interactions.csv` (rating ≥ 4) | two-tower, user-level split (held-out users; val negatives filtered against known positives) | HR@10 / MRR | user-tower ONNX + `matching_items.faiss` + ID maps |
 | `feed_ranking` | `../data/user/engagement.csv` or synthetic fallback | two-tower + LinUCB alpha sweep | CTR by alpha | `feed_ranker` ONNX INT8 |
 | `workout_time_series` | `../data/user/workouts.csv` or synthetic progression | LSTM forecast | MAE / MAPE | `workout_forecast` ONNX INT8 |
 | `food_recognition` | Food-101 images (gated) + 231k Food.com recipes | MobileNet fine-tune (gated) + ingredient→calorie regressor | calorie MAE / median AE | `food_classifier` (gated) + `food_calorie_regressor` ONNX + vectorizer JSON |
@@ -57,12 +87,30 @@ BUDDY_SCALE=demo jupyter nbconvert --execute --inplace --to notebook \
 Notes:
 - Artifacts land in `../models/` — dev compose bind-mounts that dir to the AI
   service's `/models` (`AI_MODEL_CACHE_DIR`), so
-  `app/ml/serving.py::load_preferred(name)` picks up `name_int8.onnx` on reload.
+  `app/ml/serving.py::load_preferred(name)` picks up the best artifact on
+  reload. **Artifact naming contract** (see `app/ml/serving.py::artifact_path`):
+  exports are versioned (`<name>-<semver>.onnx` + dynamic-INT8
+  `<name>-<semver>_int8.onnx`); serving prefers the highest version (INT8 over
+  plain within a version), then the versioned-dir layout
+  `<model_root>/<name>/<version>/model[_int8].onnx`, then the legacy
+  unversioned `<name>_int8.onnx` / `<name>.onnx` aliases. Every export also
+  writes a `metadata.json` (+ `<name>.metadata.json`) next to the artifact:
+  `{name, version, classes, input_shape, preprocessing, artifact_sha256}` —
+  `food_engine` decodes class indices from it when a `classes` list is present.
   `feed_ranking` / `workout_time_series` print a banner and fall back to
   deterministic synthetic data when `export_ai_training_data` hasn't been run;
   `food_recognition`'s image branch needs Food-101 (`dvc pull` or
   `BUDDY_FOOD_IMAGES=1` for a tiny HF sample) and otherwise runs the local
   calorie-regression path.
+- `workout_time_series` epoch defaults are now `{'smoke': 1, 'demo': 30,
+  'full': 120}` with `EarlyStopping(patience=5, restore_best_weights=True)` +
+  `ReduceLROnPlateau` — the old 700/2500-epoch sweeps just overfit CPU smoke
+  boxes.
+- **Form notebook caveat**: `form_analyzer` trains on `normalised.json`, whose
+  labels are the extraction placeholder `good` — the current data is
+  exercise-class, **not** form-quality. Real form scoring needs trainer labels
+  (`good` / `slight_misalignment` / `bad`); `process_form_data.py` warns when
+  only placeholders are present.
 - `../data/` is DVC-tracked (see `../data/README.md`); `ml-env` itself lives in
   `~/Desktop/ml-env` and is not part of the repo. Rebuild it anytime with the
   same script (pins live in `backend/ai_service/requirements-training.txt`).
@@ -83,9 +131,12 @@ Notes:
   calorie-rich proxy used by the food notebook.
 - **First-party data**: Django command `export_ai_training_data` writes
   de-identified `engagement.csv` + `workouts.csv` into `../data/user/`.
-- **Patching scripts**: `../training/process_food_data.py` (Food-101 label patch)
-  and `../training/process_form_data.py` (keypoint normalisation). These are the
-  DVC stages declared in `../dvc.yaml`.
+- **Patching scripts**: `../training/process_food_data.py` (Food-101 label
+  patch; loads Food-101 from HF `ethz/food101` and materialises split images +
+  manifests under `data/processed/food`) and `../training/process_form_data.py`
+  (validates the processed keypoint sequences from
+  `process_workout_videos.py` and republishes the manifest views). These are
+  the DVC stages declared in `../dvc.yaml`.
 
 ## Notebook status
 

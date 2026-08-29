@@ -17,7 +17,28 @@ class FormAnalysisResult(BaseModel):
     issues: list[str]
 
 
-@router.post('/analyze', response_model=FormAnalysisResult)
+class VideoFormAnalysisResult(BaseModel):
+    """Video analysis schema — mirrors analyze_form_video's aggregate output.
+
+    `form_score` is the image-schema alias of `avg_form_score` so clients can
+    read one field across image and video responses.
+    """
+
+    exercise: str
+    video: bool = True
+    frames_analyzed: int
+    avg_form_score: int
+    min_form_score: int
+    max_form_score: int
+    best_frame: int
+    worst_frame: int
+    top_issues: list[dict]
+    feedback: list[str]
+    issues: list[str]
+    form_score: int
+
+
+@router.post('/analyze', response_model=FormAnalysisResult | VideoFormAnalysisResult)
 async def analyze_workout_form(
     file: UploadFile = File(...),
     exercise: str = Form('auto'),
@@ -37,4 +58,6 @@ async def analyze_workout_form(
     if 'error' in result:
         raise HTTPException(status_code=400, detail=result.get('error', 'Analysis failed'))
 
-    return result
+    if result.get('video'):
+        return VideoFormAnalysisResult(**result, form_score=result['avg_form_score'])
+    return FormAnalysisResult(**result)

@@ -134,13 +134,31 @@ def predict_bandit(user_id: str, arm_key: str, context: np.ndarray, alpha: float
     return float(np.clip(mean + bonus, 0.0, 1.0))
 
 
+def _user_lock(user_id: str):
+    """Distributed lock so concurrent feedback can't clobber RMW state."""
+    r = _get_redis()
+    return r.lock(f"lock:bandit:{user_id}", timeout=5, blocking_timeout=2)
+
+
 def update_bandit(user_id: str, arm_key: str, context: np.ndarray, reward: float) -> None:
-    """Update LinUCB matrices with observed reward."""
-    state = get_bandit_state(user_id, arm_key)
-    state['A'] = state['A'] + np.outer(context, context)
-    state['b'] = state['b'] + float(np.clip(reward, 0.0, 1.0)) * context
-    state['count'] += 1
-    save_bandit_state(user_id, arm_key, state)
+    """Update LinUCB matrices with observed reward (locked read-modify-write)."""
+    lock = _user_lock(user_id)
+    try:
+        acquired = lock.acquire(blocking=True)
+    except Exception:  # noqa: BLE001 — Redis lock unavailable: degrade to best-effort
+        acquired = True
+    try:
+        state = get_bandit_state(user_id, arm_key)
+        state['A'] = state['A'] + np.outer(context, context)
+        state['b'] = state['b'] + float(np.clip(reward, 0.0, 1.0)) * context
+        state['count'] += 1
+        save_bandit_state(user_id, arm_key, state)
+    finally:
+        if acquired:
+            try:
+                lock.release()
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def get_bandit_stats(user_id: str, arm_key: str) -> dict[str, Any]:

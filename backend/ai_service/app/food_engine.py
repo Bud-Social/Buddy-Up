@@ -1,5 +1,7 @@
+import json
 import logging
 from io import BytesIO
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -105,6 +107,37 @@ def _load_imagenet_categories(model: Any) -> list[str] | None:
             return categories
     except Exception:  # noqa: BLE001
         pass
+    return None
+
+
+def _read_artifact_metadata(artifact: Path, name: str) -> dict:
+    """metadata.json shipped next to an exported ONNX artifact (tf_utils.export).
+
+    Checks the namespaced copy first (shared flat dirs), then the plain
+    metadata.json; the `name` field must match to avoid cross-model mixups.
+    """
+    for cand in (artifact.parent / f'{name}.metadata.json',
+                 artifact.parent / 'metadata.json'):
+        try:
+            if not cand.exists():
+                continue
+            data = json.loads(cand.read_text())
+            if data.get('name') == name:
+                return data
+        except Exception:  # noqa: BLE001
+            continue
+    return {}
+
+
+def _load_artifact_classes() -> list[str] | None:
+    """Class names for the loaded ONNX food_classifier from its metadata.json."""
+    model = ModelRegistry.get('food_classifier')
+    path = getattr(model, 'path', None)
+    if not path:
+        return None
+    classes = _read_artifact_metadata(Path(path), 'food_classifier').get('classes')
+    if isinstance(classes, list) and classes and all(isinstance(c, str) for c in classes):
+        return classes
     return None
 
 
@@ -398,16 +431,21 @@ async def recognize_food(image_bytes: bytes) -> list[dict]:
         probs = torch.softmax(device_out, dim=1)
         top_probs, top_indices = torch.topk(probs, TOP_K, dim=1)
 
-        categories = _load_imagenet_categories(model) or []
+        # Exported Food-101 artifacts carry their class list in metadata.json;
+        # the raw torchvision fallback decodes via ImageNet-1k labels.
+        categories = _load_artifact_classes() or (_load_imagenet_categories(model) or [])
         results = []
         for i in range(TOP_K):
             idx = top_indices[0, i].item()
             conf = round(float(top_probs[0, i].item()), 4)
             category = categories[idx] if idx < len(categories) else ''
 
-            food_name = _imagenet_to_food(category) if category else None
-            if food_name is None and category:
-                food_name, _ = _match_food_by_text(category)
+            # Food-101 metadata classes use underscores ('apple_pie'); ImageNet
+            # categories use spaces ('hot dog') — match on the spaced form.
+            match_key = category.replace('_', ' ')
+            food_name = _imagenet_to_food(match_key) if match_key else None
+            if food_name is None and match_key:
+                food_name, _ = _match_food_by_text(match_key)
 
             display_name = food_name.replace('_', ' ').title() if food_name else (
                 category.replace('_', ' ').title() if category else 'Unknown Food'

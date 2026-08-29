@@ -24,7 +24,7 @@ jobs:
         run: |
           pip install --upgrade pip
           # Light install for static checks + import graph without heavy ML deps.
-          pip install fastapi uvicorn pydantic pydantic-settings httpx
+          pip install fastapi uvicorn pydantic pydantic-settings httpx redis
           pip install onnxruntime numpy
       - name: Compile all modules
         run: python -m compileall -q backend/ai_service/app backend/ai_service/training
@@ -48,10 +48,141 @@ jobs:
   model-training-gate:
     runs-on: ubuntu-latest
     # Fires on tags like model-v* to promote a trained artifact.
+    # Inputs (fail-closed — the job fails when anything is missing):
+    #   MODEL_MANIFEST repo variable: path to a filled-in promotion manifest
+    #     (template: backend/ai_service/model_promotion.json).
+    #   The .onnx artifact itself: attached to the tag's GitHub release
+    #     assets, or present at manifest.artifact_path in the checkout.
     if: startsWith(github.ref, 'refs/tags/model-')
+    env:
+      MODEL_MANIFEST: ${{ vars.MODEL_MANIFEST || 'backend/ai_service/model_promotion.json' }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
-      - name: Artifact present
+      - name: Resolve manifest + artifact (fail-closed)
         run: |
-          echo "Promoting model tag $GITHUB_REF"
-          echo "TODO: verify artifact in MinIO bucket buddyup-models and flip ModelMetadata.is_active"
+          set -euo pipefail
+          echo "Promoting model tag ${GITHUB_REF_NAME}"
+          if [ ! -f "$MODEL_MANIFEST" ]; then
+            echo "::error::Model promotion manifest not found at '$MODEL_MANIFEST'."
+            echo "Set the MODEL_MANIFEST repo variable to a filled-in manifest"
+            echo "(template: backend/ai_service/model_promotion.json) and push the tag again."
+            exit 1
+          fi
+          # Best effort: pull the artifact from the tag's GitHub release assets.
+          mkdir -p model_assets
+          gh release download "$GITHUB_REF_NAME" --dir model_assets --clobber \
+            || echo "::warning::no release assets found for ${GITHUB_REF_NAME}"
+      - name: Install onnxruntime (load test)
+        run: pip install --upgrade pip && pip install onnxruntime numpy
+      - name: Promotion gate (sha256, onnx load, metadata, metric)
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import sys
+          from pathlib import Path
+
+          manifest = json.loads(Path(os.environ['MODEL_MANIFEST']).read_text())
+          required = ('name', 'version', 'artifact_path', 'sha256',
+                      'metric_name', 'min_metric')
+          missing = [k for k in required if not manifest.get(k)]
+          if missing:
+              sys.exit(f'::error::manifest missing/unset keys: {missing}')
+
+          def fail(msg):
+              print(f'::error::{msg}')
+              sys.exit(1)
+
+          artifact = Path(manifest['artifact_path'])
+          if not artifact.exists():
+              candidate = Path('model_assets') / artifact.name
+              if candidate.exists():
+                  artifact = candidate
+          if not artifact.exists():
+              fail(f'artifact {manifest["artifact_path"]!r} not found (checked '
+                   'repo path and model_assets/). Attach the .onnx (and '
+                   'metadata.json) to the model-v* tag release.')
+
+          actual_sha = hashlib.sha256(artifact.read_bytes()).hexdigest()
+          if manifest['sha256'].lower() != actual_sha:
+              fail(f'sha256 mismatch for {artifact}: '
+                   f"manifest={manifest['sha256']} actual={actual_sha}")
+
+          import onnxruntime as ort
+
+          sess = ort.InferenceSession(str(artifact),
+                                      providers=['CPUExecutionProvider'])
+          print(f'ONNX loads OK: {artifact.name}')
+          for i in sess.get_inputs():
+              print(f'  input  {i.name} {i.shape} {i.type}')
+          for o in sess.get_outputs():
+              print(f'  output {o.name} {o.shape} {o.type}')
+
+          metadata_path = artifact.parent / f'{manifest["name"]}.metadata.json'
+          if not metadata_path.exists():
+              metadata_path = artifact.parent / 'metadata.json'
+          if not metadata_path.exists():
+              fail('metadata.json not found next to the artifact — re-export via '
+                   'training/tf_utils.export_keras_onnx (writes metadata.json).')
+          metadata = json.loads(metadata_path.read_text())
+          required_md = ('name', 'version', 'input_shape', 'preprocessing',
+                         'artifact_sha256')
+          missing_md = [k for k in required_md if k not in metadata]
+          if missing_md:
+              fail(f'metadata.json missing required keys: {missing_md}')
+          if metadata['name'] != manifest['name']:
+              fail(f"metadata name {metadata['name']!r} != manifest name "
+                   f"{manifest['name']!r}")
+          if metadata['version'] != manifest['version']:
+              fail(f"metadata version {metadata['version']!r} != manifest version "
+                   f"{manifest['version']!r}")
+
+          metric_name = manifest['metric_name']
+          value = manifest.get('metric_value')
+          if value is None:
+              run_meta = artifact.parent / 'run-metadata.json'
+              if run_meta.exists():
+                  value = (json.loads(run_meta.read_text()).get('metrics')
+                           or {}).get(metric_name)
+          if value is None:
+              fail(f'no value for metric {metric_name!r}: set metric_value in '
+                   'the manifest or ship run-metadata.json with a '
+                   f'{{"metrics": {{"{metric_name}": ...}}}} entry.')
+          value = float(value)
+          min_metric = float(manifest['min_metric'])
+          higher = bool(manifest.get('metric_higher_is_better', True))
+          ok = value >= min_metric if higher else value <= min_metric
+          op = '>=' if higher else '<='
+          if not ok:
+              fail(f'metric gate failed: {metric_name}={value} not {op} '
+                   f'min_metric={min_metric}')
+          print(f'metric gate OK: {metric_name}={value} {op} {min_metric}')
+
+          payload = {
+              'name': manifest['name'],
+              'version': manifest['version'],
+              'artifact_path': str(artifact),
+              'metrics': {metric_name: value},
+              'is_active': True,
+          }
+          print('ModelMetadata update payload:')
+          print(json.dumps(payload, indent=2))
+          print(
+              'Gate PASSED. Promotion (MinIO upload + DB flip) is an operator '
+              'step — run from the backend/ Django checkout:\n'
+              f'  1. mc cp {artifact} buddyup-models/\n'
+              '  2. python manage.py shell  # then:\n'
+              '     from apps.ai.models import ModelMetadata\n'
+              f"     ModelMetadata.objects.filter(name='{manifest['name']}')\n"
+              f"        .exclude(version='{manifest['version']}').update(is_active=False)\n"
+              '     ModelMetadata.objects.update_or_create(\n'
+              f"         name='{manifest['name']}', version='{manifest['version']}',\n"
+              "         defaults={'artifact_path': <s3://bucket/key>,\n"
+              "                   'metrics': <payload['metrics']>,\n"
+              "                   'framework': 'tensorflow', 'is_active': True})\n"
+              '  3. python manage.py sync_model_metadata  # push to the AI service'
+          )
+          PY

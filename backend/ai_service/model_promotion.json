@@ -1,0 +1,11 @@
+{
+  "_comment": "Model promotion gate manifest (TEMPLATE). Fill in every field, then either commit it at the MODEL_MANIFEST path (repo variable, default backend/ai_service/model_promotion.json) or attach the artifact + metadata.json to the model-v* tag's GitHub release. artifact_path is repo-relative or a bare filename resolved against the downloaded release assets. metric gates as metric >= min_metric when metric_higher_is_better=true, else metric <= min_metric.",
+  "name": "workout_forecast",
+  "version": "1.0.0",
+  "artifact_path": "models/workout_forecast-1.0.0_int8.onnx",
+  "sha256": "REPLACE_WITH_ARTIFACT_SHA256",
+  "metric_name": "val_mae_kg",
+  "metric_value": null,
+  "metric_higher_is_better": false,
+  "min_metric": 6.0
+}
