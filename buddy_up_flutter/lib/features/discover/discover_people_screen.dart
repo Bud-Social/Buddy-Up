@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/repositories/profile_repository.dart';
@@ -199,7 +200,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
                                   icon: const Icon(Icons.person_add, color: BuddyColors.green),
                                   onPressed: () => _sendBuddyRequest(username),
                                 ),
-                                onTap: () => Navigator.of(context).pushNamed('/$username'),
+                                onTap: () => context.push('/$username'),
                               );
                             },
                           ),
@@ -370,7 +371,7 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
           icon: const Icon(Icons.person_add, color: BuddyColors.green),
           onPressed: () => _sendBuddyRequest(username),
         ),
-        onTap: () => Navigator.of(context).pushNamed('/$username'),
+        onTap: () => context.push('/$username'),
       ),
     );
   }

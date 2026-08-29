@@ -108,7 +108,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.settings_outlined),
-          onPressed: () => Navigator.of(context).pushNamed('/settings'),
+          onPressed: () => context.push('/settings'),
         ),
       ],
     );

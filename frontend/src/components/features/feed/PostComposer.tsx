@@ -138,6 +138,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   const [locationLng, setLocationLng] = useState<number | null>(null);
   const [showLocation, setShowLocation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitIdempotencyKeyRef = useRef<string | null>(null);
   const [showDraftRestore, setShowDraftRestore] = useState(false);
 
   // Meal-log state
@@ -632,8 +633,11 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
 
       taggedUsers.forEach(u => formData.append('mentioned_users', u.user_id));
 
-      const res = await feedApi.createPost(formData);
+      const idempotencyKey = submitIdempotencyKeyRef.current ?? crypto.randomUUID();
+      submitIdempotencyKeyRef.current = idempotencyKey;
+      const res = await feedApi.createPost(formData, idempotencyKey);
       if (res.data) onPost?.(res.data);
+      submitIdempotencyKeyRef.current = null;
 
       clearDraft();
       if (serverDraftIdRef.current) {

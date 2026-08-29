@@ -472,6 +472,14 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
             builder: (_, _) => const FeedScreen(initialTab: 'videos'),
           ),
           GoRoute(
+            path: '/feed/meals',
+            builder: (_, _) => const FeedScreen(initialTab: 'meals'),
+          ),
+          GoRoute(
+            path: '/feed/progress',
+            builder: (_, _) => const FeedScreen(initialTab: 'progress'),
+          ),
+          GoRoute(
             path: '/feed/communities',
             builder: (_, _) => const FeedScreen(initialTab: 'communities'),
           ),
@@ -569,6 +577,12 @@ class _AppShellState extends State<_AppShell> {
       Icons.chat_bubble_outline,
       Icons.chat_bubble,
       'Messages',
+    ),
+    _NavDestination(
+      '/communities',
+      Icons.groups_outlined,
+      Icons.groups,
+      'Communities',
     ),
     _NavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
     _NavDestination(
@@ -680,6 +694,27 @@ class _AppShellState extends State<_AppShell> {
     );
   }
 
+  /// Top-level route prefixes known to the router. Any single-segment path
+  /// outside this set is a username profile route (GoRoute `/:username`).
+  static const _knownTopLevelRoutes = <String>{
+    '/login', '/signup', '/verify-registration-otp', '/verify-age',
+    '/forgot-password', '/reset-password', '/totp-setup', '/totp-challenge',
+    '/onboarding', '/terms', '/privacy', '/cookie-policy',
+    '/community-guidelines', '/medical-disclaimer', '/sponsorship-policy',
+    '/adult-content-policy', '/feed', '/health-insights', '/workout-form',
+    '/gyms', '/lives', '/marketplace', '/wallet', '/analytics',
+    '/notifications', '/verification', '/trainers', '/book', '/sessions',
+    '/my-enrollments', '/programmes', '/discover', '/messages',
+    '/communities', '/profile', '/settings', '/buddies',
+  };
+
+  bool _isUsernameRoute(String location) {
+    if (!location.startsWith('/') || location == '/') return false;
+    final segments = location.substring(1).split('/');
+    if (segments.length != 1 || segments.first.isEmpty) return false;
+    return !_knownTopLevelRoutes.contains('/${segments.first}');
+  }
+
   int _calculateIndex(
     BuildContext context,
     List<_NavDestination> destinations,
@@ -689,10 +724,11 @@ class _AppShellState extends State<_AppShell> {
       if (location.startsWith(destinations[i].route)) return i;
     }
     final profileIndex = destinations.indexWhere((d) => d.route == '/profile');
-    if (location.startsWith('/buddies') ||
-        location.startsWith('/settings') ||
-        location.startsWith('/:username')) {
-      if (profileIndex >= 0) return profileIndex;
+    if (profileIndex >= 0 &&
+        (location.startsWith('/buddies') ||
+            location.startsWith('/settings') ||
+            _isUsernameRoute(location))) {
+      return profileIndex;
     }
     return 0;
   }

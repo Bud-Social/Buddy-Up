@@ -21,9 +21,12 @@ export const feedApi = {
   getPost: (postId: string) =>
     apiClient.get<ApiResponse<Post>>(`/feed/${postId}/`).then((r) => r.data),
 
-  createPost: (data: FormData) =>
+  createPost: (data: FormData, idempotencyKey?: string) =>
     apiClient.post<ApiResponse<Post>>('/feed/create/', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+      },
       // Large media payloads routinely exceed the default 15s client timeout;
       // the server may still complete the post, so give uploads real headroom.
       timeout: 120_000,

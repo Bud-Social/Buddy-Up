@@ -25,6 +25,9 @@ class Env {
   static String get agoraAppId => _get('AGORA_APP_ID', '');
   static String get livekitUrl => _pick('LIVEKIT_URL', prodLivekitUrl, localLivekitUrl);
   static String get googleMapsKey => _get('GOOGLE_MAPS_KEY', '');
+  /// Web client id for Google Sign-In (audience of the issued ID token).
+  /// Required on Android when no google-services.json ships with the build.
+  static String get googleServerClientId => _get('GOOGLE_SERVER_CLIENT_ID', '');
   static String get cloudinaryCloudName => _get('CLOUDINARY_CLOUD_NAME', '');
   static String get firebaseConfig => _get('FIREBASE_CONFIG', '');
 

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { feedApi } from '@/api';
 import type { Post } from '@/types';
 
@@ -23,6 +24,8 @@ interface VideoFeedProps {
 export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
@@ -36,12 +39,13 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
     setIsLoading(true);
     setPosts([]);
     setActiveIndex(0);
+    setFetchError('');
     feedApi.getVideoFeed(variant)
       .then((res) => { if (!cancelled) setPosts(res.data || []); })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) setFetchError('Could not load videos. Check your connection.'); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, [variant]);
+  }, [variant, reloadKey]);
 
   // Play only the active index.
   useEffect(() => {
@@ -97,6 +101,10 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
         <Loader2 size={28} className="animate-spin text-buddy-green" />
       </div>
     );
+  }
+
+  if (fetchError) {
+    return <ErrorBanner message={fetchError} onRetry={() => setReloadKey((k) => k + 1)} />;
   }
 
   if (posts.length === 0) {

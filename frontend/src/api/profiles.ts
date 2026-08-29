@@ -14,6 +14,14 @@ export interface DiscoverTrending {
   offers: { type: 'discount_code' | 'free_event'; data: any }[];
 }
 
+export type RecommendationFeedback = 'not_interested' | 'irrelevant' | 'already_connected' | 'helpful';
+
+export interface ProfileRecommendation {
+  profile: Profile;
+  match_score: number | null;
+  explanation: { code: string; text: string };
+}
+
 export const profilesApi = {
   getProfile: (username: string) =>
     apiClient.get<ApiResponse<Profile>>(`/profiles/${username}/`).then((r) => r.data),
@@ -70,8 +78,14 @@ export const profilesApi = {
     apiClient.get<ApiResponse<Profile[]>>('/profiles/search/', { params }).then((r) => r.data),
 
   getRecommendations: () =>
-    apiClient.get<ApiResponse<{ profile: Profile; match_score: number | null }[]>>('/profiles/recommendations/')
+    apiClient.get<ApiResponse<ProfileRecommendation[]>>('/profiles/recommendations/')
       .then((r) => r.data),
+
+  sendRecommendationFeedback: (targetUserId: string, feedback: RecommendationFeedback) =>
+    apiClient.post<ApiResponse<{ target_user_id: string; feedback: RecommendationFeedback }>>(
+      '/profiles/recommendations/feedback/',
+      { target_user_id: targetUserId, feedback },
+    ).then((r) => r.data),
 
   getDiscoverTrending: () =>
     apiClient.get<ApiResponse<DiscoverTrending>>('/profiles/discover/trending/').then((r) => r.data),

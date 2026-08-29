@@ -203,9 +203,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     if (type == 'order_status_changed') {
       final orderId = meta['order_id']?.toString() ?? '';
       if (orderId.isNotEmpty) {
-        context.push('/orders/$orderId');
+        context.push('/marketplace/orders/$orderId');
       } else {
-        context.push('/orders');
+        context.push('/marketplace/orders');
       }
       return;
     }
@@ -218,7 +218,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     if (type == 'community_join_approved' || type == 'community_post') {
       final commId = meta['community_id']?.toString() ?? '';
       if (commId.isNotEmpty) {
-        context.push('/community/$commId');
+        context.push('/communities/$commId');
         return;
       }
     }
@@ -226,13 +226,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     if (type == 'repost' || type == 'post_repost' || type == 'mention' || type == 'post_reaction' || type == 'comment') {
       final postId = meta['post_id']?.toString() ?? '';
       if (postId.isNotEmpty) {
-        context.push('/feed/post/$postId');
+        context.push('/feed/$postId');
         return;
       }
     }
 
     if (type == 'session_booked' || type == 'session_reminder') {
-      context.push('/sessions/my-sessions');
+      context.push('/sessions');
       return;
     }
 

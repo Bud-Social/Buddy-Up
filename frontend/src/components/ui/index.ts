@@ -7,3 +7,4 @@ export { Modal } from './Modal';
 export { Input } from './Input';
 export { RepRing } from './RepRing';
 export { ArtifactIcon } from './ArtifactIcon';
+export { ErrorBanner } from './ErrorBanner';

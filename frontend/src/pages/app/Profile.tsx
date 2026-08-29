@@ -320,7 +320,7 @@ export default function Profile() {
             <div className="col-span-3 space-y-2">
               {gyms.map((gym) => (
                 <Card key={gym.id} className="p-3 flex items-center gap-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer"
-                  onClick={() => navigate(`/gym/${gym.handle}`)}>
+                  onClick={() => navigate(`/gyms/${gym.handle}`)}>
                   <Avatar src={gym.logo_url} alt={gym.name} size="md" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{gym.name}</p>

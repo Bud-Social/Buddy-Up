@@ -113,7 +113,10 @@ class ShopDetailScreen extends ConsumerWidget {
                     icon: const Icon(Icons.more_vert),
                     onSelected: (value) {
                       if (value == 'certify') {
-                        context.push('/marketplace/shops/$handle/certify');
+                        // No dedicated certify route exists in the app; web
+                        // handles certification from Creator Studio, so send
+                        // the user there instead.
+                        context.push('/marketplace/creator-studio');
                       }
                     },
                     itemBuilder: (_) => [

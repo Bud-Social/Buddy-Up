@@ -184,7 +184,7 @@ export default function Notifications() {
 
     if (type === 'community_join_approved' || type === 'community_post') {
       const commId = meta.community_id;
-      if (commId) navigate(`/community/${commId}`);
+      if (commId) navigate(`/communities/${commId}`);
       return;
     }
 

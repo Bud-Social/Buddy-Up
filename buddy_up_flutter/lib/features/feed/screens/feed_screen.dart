@@ -11,6 +11,7 @@ import '../../community/providers/community_provider.dart';
 import '../../../data/models/messaging.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/navigation/app_nav.dart';
 import '../../../data/models/post.dart';
@@ -27,6 +28,7 @@ class FeedScreen extends ConsumerStatefulWidget {
 class _FeedScreenState extends ConsumerState<FeedScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _composerExpanded = false;
+  bool _feedLoadedTracked = false;
   Timer? _newPostsTimer;
   final Set<String> _knownPostIds = <String>{};
   List<Post> _pendingNewPosts = <Post>[];
@@ -107,6 +109,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 
   void _onTabChanged(String tab) {
+    AnalyticsService.instance.track(
+      'feed.tab_selected',
+      surface: 'feed',
+      objectType: 'feed_tab',
+      objectId: tab,
+      properties: {'feed_tab': tab},
+    );
     context.go(_pathForTab(tab));
   }
 
@@ -129,6 +138,17 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(feedProvider);
     final notifier = ref.read(feedProvider.notifier);
+    if (!_feedLoadedTracked && !state.isLoading && state.error == null) {
+      // First frame after the initial load resolves successfully.
+      _feedLoadedTracked = true;
+      AnalyticsService.instance.track(
+        'feed.loaded',
+        surface: 'feed',
+        objectType: 'feed_tab',
+        objectId: state.activeTab,
+        properties: {'feed_tab': state.activeTab, 'post_count': state.posts.length},
+      );
+    }
     final communitiesAsync = ref.watch(communitiesListProvider);
     final myCommunities = communitiesAsync.value?.mine ?? [];
     final hasCommunities = myCommunities.isNotEmpty;
@@ -337,6 +357,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
   }
 
   void _navigateToPostDetail(String postId) {
+    AnalyticsService.instance.track(
+      'feed.post_opened',
+      surface: 'feed',
+      objectType: 'post',
+      objectId: postId,
+      properties: {'feed_tab': ref.read(feedProvider).activeTab},
+    );
     context.push('/feed/$postId');
   }
 

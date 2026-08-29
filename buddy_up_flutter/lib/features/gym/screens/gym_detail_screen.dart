@@ -12,7 +12,10 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/input.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../live/providers/live_provider.dart';
+import '../../feed/providers/feed_provider.dart';
+import '../../feed/widgets/post_card.dart';
 import '../../../data/models/gym.dart';
+import '../../../data/models/post.dart';
 
 class GymDetailScreen extends ConsumerStatefulWidget {
   final String slug;
@@ -26,11 +29,56 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   int _tabIndex = 0;
   final _reviewController = TextEditingController();
   double _reviewRating = 5;
+  Future<List<Post>>? _gymFeedFuture;
+  List<Post>? _gymFeedPosts;
 
   @override
   void dispose() {
     _reviewController.dispose();
     super.dispose();
+  }
+
+  Future<List<Post>> _loadGymFeed() {
+    return _gymFeedFuture ??= ref
+        .read(gymRepositoryProvider)
+        .getGymFeed(widget.slug)
+        .then((raw) => (raw['data'] as List? ?? [])
+            .map((e) => Post.fromJson(e as Map<String, dynamic>))
+            .toList());
+  }
+
+  void _updateGymPost(Post updated) {
+    setState(() {
+      _gymFeedPosts = [
+        for (final p in _gymFeedPosts ?? const <Post>[])
+          p.id == updated.id ? updated : p,
+      ];
+    });
+  }
+
+  Future<void> _handleGymReact(String postId, String reaction) async {
+    if (reaction.isEmpty) return;
+    try {
+      final raw = await ref
+          .read(feedRepositoryProvider)
+          .react(postId, ReactionInput(reactionType: reaction));
+      _updateGymPost(Post.fromJson(raw['data'] as Map<String, dynamic>));
+    } catch (_) {}
+  }
+
+  Future<void> _handleGymSave(String postId) async {
+    final posts = _gymFeedPosts;
+    if (posts == null || !posts.any((p) => p.id == postId)) return;
+    final post = posts.firstWhere((p) => p.id == postId);
+    final repo = ref.read(feedRepositoryProvider);
+    try {
+      if (post.isSaved) {
+        await repo.unsave(postId);
+      } else {
+        await repo.save(postId, const SavePayload());
+      }
+      _updateGymPost(post.copyWith(isSaved: !post.isSaved));
+    } catch (_) {}
   }
 
   @override
@@ -193,13 +241,34 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   }
 
   Widget _buildFeedTab(Gym gym) {
-    return FutureBuilder(
-      future: ref.read(gymRepositoryProvider).getGymFeed(widget.slug),
+    return FutureBuilder<List<Post>>(
+      future: _loadGymFeed(),
       builder: (_, snap) {
-        if (snap.connectionState == ConnectionState.waiting) return const PageLoader();
-        if (snap.hasError) return ErrorView(message: snap.error.toString(), onRetry: () => setState(() {}));
-        return const Center(
-          child: Text('Gym feed coming soon', style: TextStyle(color: BuddyColors.textSecondary)),
+        if (snap.connectionState == ConnectionState.waiting && _gymFeedPosts == null) {
+          return const PageLoader();
+        }
+        if (snap.hasError && _gymFeedPosts == null) {
+          return ErrorView(
+            message: snap.error.toString(),
+            onRetry: () => setState(() {
+              _gymFeedFuture = null;
+              _gymFeedPosts = null;
+            }),
+          );
+        }
+        final posts = _gymFeedPosts ?? snap.data ?? const <Post>[];
+        if (posts.isEmpty) {
+          return const Center(child: Text('No gym posts yet', style: TextStyle(color: BuddyColors.textSecondary)));
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 8),
+          itemCount: posts.length,
+          itemBuilder: (_, i) => PostCard(
+            post: posts[i],
+            onComment: (id) => context.push('/feed/$id'),
+            onReact: _handleGymReact,
+            onSave: _handleGymSave,
+          ),
         );
       },
     );

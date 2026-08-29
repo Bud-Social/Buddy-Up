@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   Loader2, Users, ArrowRight, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp,
 } from 'lucide-react';
@@ -8,8 +8,10 @@ import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { VideoFeed } from '@/components/features/feed/VideoFeed';
 import { Card } from '@/components/ui/Card';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { feedApi } from '@/api';
 import { messagingApi, type Community } from '@/api/messaging';
+import { track } from '@/lib/analytics';
 import type { FeedTab } from '@/api/feed';
 import type { Post } from '@/types';
 
@@ -33,6 +35,7 @@ export default function Feed() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [myCommunities, setMyCommunities] = useState<Community[]>([]);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<{ msg: string; reset: boolean } | null>(null);
 
   // Bud Press
   const [videoVariant, setVideoVariant] = useState<'fyp' | 'following'>('fyp');
@@ -48,9 +51,12 @@ export default function Feed() {
   const feedTopRef = useRef<HTMLDivElement | null>(null);
 
   const cursorRef = useRef<string | undefined>(undefined);
+  const loadingPageRef = useRef(false);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef<HTMLDivElement | null>(null);
   const knownIdsRef = useRef<Set<string>>(new Set());
+  const postsCountRef = useRef(0);
+  useEffect(() => { postsCountRef.current = posts.length; }, [posts.length]);
 
   useEffect(() => {
     messagingApi.getCommunities()
@@ -91,11 +97,14 @@ export default function Feed() {
   ), []);
 
   const fetchPosts = useCallback(async (tab: FeedTab, reset = false) => {
+    if (loadingPageRef.current && !reset) return;
+    loadingPageRef.current = true;
     // Silent loading: when we already have content, refresh in the background
     // (slim top bar only) instead of flashing a spinner and blanking the list.
-    const hasContent = posts.length > 0;
+    const hasContent = postsCountRef.current > 0;
     if (!hasContent || !reset) setIsLoading(true);
     else setIsRefreshing(true);
+    setFetchError(null);
 
     const c = reset ? undefined : cursorRef.current;
     try {
@@ -105,18 +114,33 @@ export default function Feed() {
         setPosts(newPosts);
         knownIdsRef.current = new Set(newPosts.map(p => p.id));
       } else {
-        newPosts.forEach(p => knownIdsRef.current.add(p.id));
-        setPosts((prev) => [...prev, ...newPosts]);
+        const unseenPosts = newPosts.filter(p => !knownIdsRef.current.has(p.id));
+        unseenPosts.forEach(p => knownIdsRef.current.add(p.id));
+        setPosts((prev) => [...prev, ...unseenPosts]);
       }
       cursorRef.current = res.pagination?.next
         ? new URLSearchParams(res.pagination.next.split('?')[1]).get('cursor') || undefined
         : undefined;
       setHasMore(!!res.pagination?.next);
-    } catch {} finally {
+      if (reset) {
+        track('feed.loaded', {
+          surface: 'feed',
+          properties: { feed_tab: tab, count: newPosts.length },
+        });
+      }
+    } catch {
+      // A failed continuation must not leave the observer in an automatic retry loop.
+      if (!reset) setHasMore(false);
+      setFetchError({
+        msg: reset ? 'Could not load your feed. Check your connection.' : 'Could not load more posts.',
+        reset,
+      });
+    } finally {
+      loadingPageRef.current = false;
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [fetchOpts, posts.length]);
+  }, [fetchOpts]);
 
   useEffect(() => {
     setActiveTab(TAB_ROUTES[location.pathname] || 'for_you');
@@ -128,6 +152,23 @@ export default function Feed() {
     setNewPostsCount(0);
     fetchPosts(activeTab === 'videos' ? 'for_you' : activeTab, true);
   }, [activeTab, fetchPosts]);
+
+  // Deep-link from notifications: /feed?post=:id opens that post's comments.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const postId = searchParams.get('post');
+    if (!postId) return;
+    setSearchParams({}, { replace: true });
+    feedApi.getPost(postId)
+      .then((res) => {
+        const post = res.data;
+        if (!post) return;
+        knownIdsRef.current.add(post.id);
+        setPosts((prev) => (prev.some((p) => p.id === post.id) ? prev : [post, ...prev]));
+        setCommentPostId(post.id);
+      })
+      .catch(() => {});
+  }, [searchParams, setSearchParams]);
 
   // ── Silent polling for fresh posts (text tabs only) ────────────────────────
   const isVideoTab = activeTab === 'videos';
@@ -171,6 +212,47 @@ export default function Feed() {
     return () => obs.disconnect();
   }, [hasMore, isLoading, activeTab, isVideoTab, fetchPosts]);
 
+  // ── Post impression tracking (50% visible for ≥1s, once per post) ──────────
+  const activeTabRef = useRef(activeTab);
+  activeTabRef.current = activeTab;
+  const visibleSinceRef = useRef(new Map<string, number>());
+  const firedImpressionsRef = useRef(new Set<string>());
+  const impressionObserverRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const postId = (entry.target as HTMLElement).dataset.postId;
+        if (!postId || firedImpressionsRef.current.has(postId)) continue;
+        if (entry.intersectionRatio >= 0.5) {
+          if (!visibleSinceRef.current.has(postId)) {
+            visibleSinceRef.current.set(postId, Date.now());
+            window.setTimeout(() => {
+              const since = visibleSinceRef.current.get(postId);
+              if (since && Date.now() - since >= 900) {
+                firedImpressionsRef.current.add(postId);
+                track('feed.post_impression', {
+                  surface: 'feed',
+                  object_type: 'post',
+                  object_id: postId,
+                  properties: { feed_tab: activeTabRef.current },
+                });
+              }
+            }, 1000);
+          }
+        } else {
+          visibleSinceRef.current.delete(postId);
+        }
+      }
+    }, { threshold: [0.5] });
+    impressionObserverRef.current = obs;
+    return () => obs.disconnect();
+  }, []);
+
+  const registerPostCard = useCallback((el: HTMLDivElement | null) => {
+    if (el?.dataset.postId) impressionObserverRef.current?.observe(el);
+  }, []);
+
   const handleNewPost = (post: Post) => {
     knownIdsRef.current.add(post.id);
     setPosts(prev => [post, ...prev]);
@@ -186,7 +268,12 @@ export default function Feed() {
           {tabs.map(({ key, label }) => (
             <button
               key={key}
-              onClick={() => navigate(tabs.find(t => t.key === key)!.to)}
+              onClick={() => {
+                if (key !== activeTab) {
+                  track('feed.tab_selected', { surface: 'feed', properties: { feed_tab: key } });
+                }
+                navigate(tabs.find(t => t.key === key)!.to);
+              }}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap px-3 ${
                 activeTab === key
                   ? 'bg-buddy-green text-buddy-black'
@@ -346,9 +433,18 @@ export default function Feed() {
 
           {/* Feed */}
           <div className="px-4 space-y-3 pb-8 pt-2">
-            {posts.length === 0 && !isLoading && (
+            {!isLoading && fetchError && (
+              <ErrorBanner
+                message={fetchError.msg}
+                onRetry={() => fetchPosts(activeTab, fetchError.reset)}
+              />
+            )}
+
+            {posts.length === 0 && !isLoading && !fetchError && (
               <div className="text-center py-20">
-                <p className="text-buddy-text-secondary text-lg">No posts yet</p>
+                <p className="text-buddy-text-secondary text-lg">
+                  {activeTab === 'meals' ? 'No meal posts yet' : activeTab === 'progress' ? 'No progress posts yet' : 'No posts yet'}
+                </p>
                 <p className="text-buddy-text-secondary/50 text-sm mt-1">
                   Buddy up with some people to see their posts here.
                 </p>
@@ -356,11 +452,20 @@ export default function Feed() {
             )}
 
             {posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onComment={(id) => setCommentPostId(id)}
-              />
+              <div key={post.id} data-post-id={post.id} ref={registerPostCard}>
+                <PostCard
+                  post={post}
+                  onComment={(id) => {
+                    track('feed.post_opened', {
+                      surface: 'feed',
+                      object_type: 'post',
+                      object_id: id,
+                      properties: { feed_tab: activeTab, via: 'comments' },
+                    });
+                    setCommentPostId(id);
+                  }}
+                />
+              </div>
             ))}
 
             {isLoading && (

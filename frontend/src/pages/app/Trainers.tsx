@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Star, MapPin, Award } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { sessionsApi } from '@/api/sessions';
 import type { TrainerProfile } from '@/api/sessions';
 
@@ -13,16 +14,24 @@ export default function Trainers() {
   const navigate = useNavigate();
   const [trainers, setTrainers] = useState<TrainerProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [specialty, setSpecialty] = useState('');
 
-  useEffect(() => {
+  const fetchTrainers = useCallback(async () => {
     setIsLoading(true);
-    sessionsApi.getTrainers(specialty || undefined)
-      .then((res) => setTrainers(res.data || []))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    setError('');
+    try {
+      const res = await sessionsApi.getTrainers(specialty || undefined);
+      setTrainers(res.data || []);
+    } catch {
+      setError('Could not load trainers. Check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [specialty]);
+
+  useEffect(() => { fetchTrainers(); }, [fetchTrainers]);
 
   const filtered = search
     ? trainers.filter((t) =>
@@ -54,9 +63,15 @@ export default function Trainers() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-20 text-buddy-text-secondary">No trainers found.</div>
+        error ? (
+          <ErrorBanner message={error} onRetry={fetchTrainers} />
+        ) : (
+          <div className="text-center py-20 text-buddy-text-secondary">No trainers found.</div>
+        )
       ) : (
-        <div className="space-y-3">
+        <>
+          {error && <ErrorBanner message={error} onRetry={fetchTrainers} className="mb-3" />}
+          <div className="space-y-3">
           {filtered.map((t) => (
             <Card key={t.profile_id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer"
               onClick={() => navigate(`/trainers/${t.profile_data.username}`)}>
@@ -89,7 +104,8 @@ export default function Trainers() {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

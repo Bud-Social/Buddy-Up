@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../core/api/api_client.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/auth/google_auth.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -143,22 +144,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     try {
-      // final GoogleSignIn googleSignIn = GoogleSignIn(
-      //   scopes: ['email', 'profile'],
-      // );
-      // final GoogleSignInAccount? account = await googleSignIn.signIn();
-      // if (account == null) {
-      //   setState(() => _isLoading = false);
-      //   return; // User canceled
-      // }
-      // final GoogleSignInAuthentication auth = await account.authentication;
-      // final credential = auth.idToken ?? auth.accessToken;
-      // if (credential == null) throw Exception('Failed to get Google authentication token');
-      const String credential = 'dummy_token_to_fix_compile';
+      final String? credential = await GoogleAuth.getIdToken();
+      if (credential == null) {
+        return; // User cancelled the Google flow — no error UI.
+      }
 
       final res = await _authRepo.googleLogin({'credential': credential});
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
     } catch (e) {
+      if (GoogleAuth.isCancelled(e)) {
+        return; // User cancelled mid-flow.
+      }
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';

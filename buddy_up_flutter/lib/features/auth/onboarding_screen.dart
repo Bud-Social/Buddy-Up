@@ -27,11 +27,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   late ProfileRepository _profileRepo;
 
-  final _goals = ['Lose Weight', 'Build Muscle', 'Improve Endurance', 'General Fitness', 'Flexibility', 'Sports Performance'];
-  final _levels = ['Sedentary', 'Lightly Active', 'Moderately Active', 'Very Active', 'Extremely Active'];
-  final _workouts = ['Running', 'Weightlifting', 'Yoga', 'Swimming', 'Cycling', 'HIIT', 'Boxing', 'Pilates', 'Dance', 'Calisthenics'];
-  final _diets = ['None', 'Vegetarian', 'Vegan', 'Keto', 'Paleo', 'Mediterranean', 'Halal'];
-  final _times = ['Early Morning', 'Morning', 'Afternoon', 'Evening', 'Late Night'];
+  // Display labels the user taps, with parallel snake_case values the
+  // backend expects. Chips render labels; _submit() maps to values.
+  static const _goalLabels = ['Lose Weight', 'Build Muscle', 'Improve Endurance', 'General Fitness', 'Flexibility', 'Sports Performance'];
+  static const _goalValues = ['lose_weight', 'muscle_gain', 'improve_endurance', 'general_fitness', 'flexibility', 'sports_performance'];
+  static const _levelLabels = ['Sedentary', 'Lightly Active', 'Moderately Active', 'Very Active', 'Extremely Active'];
+  static const _levelValues = ['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extremely_active'];
+  final _workoutLabels = const ['Running', 'Weightlifting', 'Yoga', 'Swimming', 'Cycling', 'HIIT', 'Boxing', 'Pilates', 'Dance', 'Calisthenics'];
+  final _workoutValues = const ['running', 'weights', 'yoga', 'swimming', 'cycling', 'hiit', 'martial_arts', 'pilates', 'other', 'other'];
+  final _dietLabels = const ['None', 'Vegetarian', 'Vegan', 'Keto', 'Paleo', 'Mediterranean', 'Halal'];
+  final _dietValues = const ['none', 'vegetarian', 'vegan', 'keto', 'paleo', 'other', 'halal'];
+  static const _timeLabels = ['Early Morning', 'Morning', 'Afternoon', 'Evening', 'Late Night'];
+  static const _timeValues = ['early_morning', 'morning', 'afternoon', 'evening', 'late_night'];
 
   @override
   void initState() {
@@ -39,16 +46,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _profileRepo = ProfileRepository(ApiClient().dio);
   }
 
+  String _toValue(String label, List<String> labels, List<String> values) {
+    final i = labels.indexOf(label);
+    return i >= 0 ? values[i] : label;
+  }
+
   Future<void> _submit() async {
     setState(() => _isLoading = true);
     try {
       await _profileRepo.saveOnboarding(
         OnboardingPayload(
-          primaryGoal: _selectedGoals,
-          activityLevel: _activityLevel,
-          preferredWorkouts: _selectedWorkouts,
-          dietaryPreference: _dietaryPreference,
-          preferredTime: _preferredTime,
+          primaryGoal: _selectedGoals
+              .map((l) => _toValue(l, _goalLabels, _goalValues))
+              .toList(),
+          activityLevel: _toValue(_activityLevel, _levelLabels, _levelValues),
+          preferredWorkouts: _selectedWorkouts
+              .map((l) => _toValue(l, _workoutLabels, _workoutValues))
+              .toList(),
+          dietaryPreference: _toValue(_dietaryPreference, _dietLabels, _dietValues),
+          preferredTime: _toValue(_preferredTime, _timeLabels, _timeValues),
           discoverySource: _discoverySource.isNotEmpty ? _discoverySource : null,
         ),
       );
@@ -106,15 +122,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildStep() {
     switch (_step) {
       case 0:
-        return _buildMultiSelect('What are your fitness goals?', _goals, _selectedGoals);
+        return _buildMultiSelect('What are your fitness goals?', _goalLabels, _selectedGoals);
       case 1:
-        return _buildSingleSelect('What\'s your activity level?', _levels, _activityLevel, (v) => _activityLevel = v);
+        return _buildSingleSelect('What\'s your activity level?', _levelLabels, _activityLevel, (v) => _activityLevel = v);
       case 2:
-        return _buildMultiSelect('Preferred workouts', _workouts, _selectedWorkouts);
+        return _buildMultiSelect('Preferred workouts', _workoutLabels, _selectedWorkouts);
       case 3:
-        return _buildSingleSelect('Dietary preference', _diets, _dietaryPreference, (v) => _dietaryPreference = v);
+        return _buildSingleSelect('Dietary preference', _dietLabels, _dietaryPreference, (v) => _dietaryPreference = v);
       case 4:
-        return _buildSingleSelect('Preferred workout time', _times, _preferredTime, (v) => _preferredTime = v);
+        return _buildSingleSelect('Preferred workout time', _timeLabels, _preferredTime, (v) => _preferredTime = v);
       default:
         return const SizedBox();
     }

@@ -63,7 +63,7 @@ export default function CreateShop() {
       // Cast as any since our API type currently says Record<string, unknown> but we're passing FormData
       const res = await marketplaceApi.createShop(data as any);
       if (res.success) {
-        navigate('/marketplace/my-services');
+        navigate('/marketplace/creator');
       } else {
         setError(res.message || 'Failed to create shop');
       }

@@ -4,6 +4,7 @@ import { Search, Plus, Users, Star, Lock, Globe, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { gymsApi } from '@/api/gyms';
 import type { Gym } from '@/types';
 
@@ -11,6 +12,7 @@ export default function Gyms() {
   const navigate = useNavigate();
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'discover' | 'my_gyms'>('discover');
   const [category, setCategory] = useState('');
@@ -19,6 +21,7 @@ export default function Gyms() {
 
   const fetchGyms = useCallback(async () => {
     setIsLoading(true);
+    setError('');
     try {
       const res = await gymsApi.list({
         q: search || undefined,
@@ -26,7 +29,9 @@ export default function Gyms() {
         my: tab === 'my_gyms',
       });
       setGyms(res.data || []);
-    } catch {} finally {
+    } catch {
+      setError('Could not load gyms. Check your connection.');
+    } finally {
       setIsLoading(false);
     }
   }, [search, category, tab]);
@@ -87,15 +92,21 @@ export default function Gyms() {
           ))}
         </div>
       ) : gyms.length === 0 ? (
-        <div className="text-center py-20">
-          <Users size={48} className="mx-auto text-buddy-text-secondary/30 mb-4" />
-          <p className="text-buddy-text-secondary text-lg">
-            {tab === 'discover' ? 'No gyms found' : 'You haven\'t joined any gyms yet'}
-          </p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate('/gyms/create')}>Create a Gym</Button>
-        </div>
+        error ? (
+          <ErrorBanner message={error} onRetry={fetchGyms} />
+        ) : (
+          <div className="text-center py-20">
+            <Users size={48} className="mx-auto text-buddy-text-secondary/30 mb-4" />
+            <p className="text-buddy-text-secondary text-lg">
+              {tab === 'discover' ? 'No gyms found' : 'You haven\'t joined any gyms yet'}
+            </p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate('/gyms/create')}>Create a Gym</Button>
+          </div>
+        )
       ) : (
-        <div className="space-y-3">
+        <>
+          {error && <ErrorBanner message={error} onRetry={fetchGyms} className="mb-3" />}
+          <div className="space-y-3">
           {gyms.map((gym) => (
             <Card key={gym.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer"
               onClick={() => navigate(`/gyms/${gym.handle}`)}>
@@ -124,7 +135,8 @@ export default function Gyms() {
               </div>
             </Card>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );

@@ -169,8 +169,8 @@ export const messagingApi = {
   getConversations: () =>
     apiClient.get<ApiResponse<Conversation[]>>('/messaging/conversations/').then((r) => r.data),
 
-  startConversation: (userIds: string[], groupName?: string) =>
-    apiClient.post<ApiResponse<Conversation>>('/messaging/conversations/start/', { participants: userIds, group_name: groupName }).then((r) => r.data),
+  startConversation: (participants: string[], groupName?: string) =>
+    apiClient.post<ApiResponse<Conversation>>('/messaging/conversations/start/', { participants, group_name: groupName }).then((r) => r.data),
 
   getConversation: (id: string) =>
     apiClient.get<ApiResponse<Conversation>>(`/messaging/conversations/${id}/`).then((r) => r.data),

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { useToast } from '@/components/ui/Toast';
 import { marketplaceApi } from '@/api/marketplace';
 import type { MealPlan, TrainingProgrammeMP, ProductMP } from '@/api/marketplace';
@@ -150,14 +151,20 @@ function MealPlansTab({ hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [dietFilter, setDietFilter] = useState('');
 
   const fetchPlans = useCallback(async () => {
     setIsLoading(true);
-    marketplaceApi.getMealPlans(dietFilter || undefined)
-      .then((res) => setPlans(res.data || []))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    setError('');
+    try {
+      const res = await marketplaceApi.getMealPlans(dietFilter || undefined);
+      setPlans(res.data || []);
+    } catch {
+      setError('Could not load meal plans. Check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [dietFilter]);
 
   useEffect(() => { fetchPlans(); }, [fetchPlans]);
@@ -186,9 +193,15 @@ function MealPlansTab({ hasShop }: { hasShop: boolean }) {
           ))}
         </div>
       ) : plans.length === 0 ? (
-        <div className="text-center py-20 text-buddy-text-secondary">No meal plans found.</div>
+        error ? (
+          <ErrorBanner message={error} onRetry={fetchPlans} />
+        ) : (
+          <div className="text-center py-20 text-buddy-text-secondary">No meal plans found.</div>
+        )
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+        <>
+          {error && <ErrorBanner message={error} onRetry={fetchPlans} className="mb-3" />}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {plans.map((plan) => (
             <Card key={plan.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/meal-plans/${plan.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center relative overflow-hidden">
@@ -221,7 +234,8 @@ function MealPlansTab({ hasShop }: { hasShop: boolean }) {
               <AddToCartButton type="meal_plan" id={plan.id} />
             </Card>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </>
   );
@@ -231,13 +245,22 @@ function ProgrammesTab({ hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [programmes, setProgrammes] = useState<TrainingProgrammeMP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    marketplaceApi.getProgrammes()
-      .then((res) => setProgrammes(res.data || []))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+  const fetchProgrammes = useCallback(async () => {
+    setIsLoading(true);
+    setError('');
+    try {
+      const res = await marketplaceApi.getProgrammes();
+      setProgrammes(res.data || []);
+    } catch {
+      setError('Could not load programmes. Check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchProgrammes(); }, [fetchProgrammes]);
 
   if (isLoading) return <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (<Card key={i} className="p-4 animate-pulse"><div className="h-20 bg-buddy-surface-raised rounded-xl" /></Card>))}</div>;
 
@@ -248,8 +271,11 @@ function ProgrammesTab({ hasShop }: { hasShop: boolean }) {
           <button onClick={() => navigate('/marketplace/programmes/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
         </div>
       )}
+      {error && <ErrorBanner message={error} onRetry={fetchProgrammes} />}
       {programmes.length === 0 ? (
-        <div className="text-center py-20 text-buddy-text-secondary">No training programmes available yet.</div>
+        error ? null : (
+          <div className="text-center py-20 text-buddy-text-secondary">No training programmes available yet.</div>
+        )
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {programmes.map((p) => (
@@ -291,15 +317,23 @@ function ProductsTab({ hasShop }: { hasShop: boolean }) {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductMP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [category, setCategory] = useState('');
 
-  useEffect(() => {
+  const fetchProducts = useCallback(async () => {
     setIsLoading(true);
-    marketplaceApi.getProducts(category || undefined)
-      .then((res) => setProducts(res.data || []))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    setError('');
+    try {
+      const res = await marketplaceApi.getProducts(category || undefined);
+      setProducts(res.data || []);
+    } catch {
+      setError('Could not load products. Check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [category]);
+
+  useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const cats = ['supplement', 'equipment', 'gear'];
 
@@ -324,8 +358,16 @@ function ProductsTab({ hasShop }: { hasShop: boolean }) {
             <Card key={i} className="p-4 animate-pulse"><div className="h-32 bg-buddy-surface-raised rounded-xl" /></Card>
           ))}
         </div>
+      ) : products.length === 0 ? (
+        error ? (
+          <ErrorBanner message={error} onRetry={fetchProducts} />
+        ) : (
+          <div className="text-center py-20 text-buddy-text-secondary">No products found.</div>
+        )
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+        <>
+          {error && <ErrorBanner message={error} onRetry={fetchProducts} className="mb-3" />}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {products.map((p) => (
             <Card key={p.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/products/${p.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center text-3xl">
@@ -344,7 +386,8 @@ function ProductsTab({ hasShop }: { hasShop: boolean }) {
               <AddToCartButton type="product" id={p.id} />
             </Card>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </>
   );
@@ -356,14 +399,22 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
   const [scope, setScope] = useState<'upcoming' | 'past' | 'all'>('upcoming');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
+  const fetchEvents = useCallback(async () => {
     setIsLoading(true);
-    marketplaceApi.getEvents(scope)
-      .then((res) => setEvents(res.data || []))
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    setError('');
+    try {
+      const res = await marketplaceApi.getEvents(scope);
+      setEvents(res.data || []);
+    } catch {
+      setError('Could not load events. Check your connection.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [scope]);
+
+  useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
   const SCOPE_OPTIONS: { key: 'upcoming' | 'past' | 'all'; label: string }[] = [
     { key: 'upcoming', label: 'Upcoming' },
@@ -436,11 +487,17 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
           ))}
         </div>
       ) : filteredEvents.length === 0 ? (
-        <div className="text-center py-20 text-buddy-text-secondary">
-          No events found in this category.
-        </div>
+        error ? (
+          <ErrorBanner message={error} onRetry={fetchEvents} />
+        ) : (
+          <div className="text-center py-20 text-buddy-text-secondary">
+            No events found in this category.
+          </div>
+        )
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+        <>
+          {error && <ErrorBanner message={error} onRetry={fetchEvents} className="mb-3" />}
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {filteredEvents.map((e) => (
             <Card key={e.id} className="p-3 hover:bg-buddy-surface-raised transition-colors cursor-pointer flex flex-col" onClick={() => navigate(`/marketplace/events/${e.id}`)}>
               <div className="aspect-square bg-buddy-surface rounded-xl mb-2 flex items-center justify-center relative overflow-hidden">
@@ -493,7 +550,8 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
               <AddToCartButton type="event_ticket" id={e.id} />
             </Card>
           ))}
-        </div>
+          </div>
+        </>
       )}
     </>
   );

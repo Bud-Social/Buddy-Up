@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams, useLocation, NavLink } from 'react-router-dom';
+import { useNavigate, useParams, NavLink } from 'react-router-dom';
 import {
   Radio, Calendar, Play, Clock, Users, Dumbbell, Flame,
   Globe, UsersRound, Building2, Monitor, Search, X,
@@ -22,7 +22,6 @@ const CATEGORIES = ['strength', 'cardio', 'hiit', 'yoga', 'pilates', 'stretching
 export default function Lives() {
   const navigate = useNavigate();
   const { category } = useParams<{ category?: string }>();
-  const location = useLocation();
   const [tab, setTab] = useState<Tab>('live');
   const [replayScope, setReplayScope] = useState<'all' | 'mine'>('all');
   const [lives, setLives] = useState<BuddyLive[]>([]);
@@ -31,11 +30,6 @@ export default function Lives() {
   const [showRandomDrop, setShowRandomDrop] = useState(false);
   const [replayLive, setReplayLive] = useState<BuddyLive | null>(null);
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    setTab('live');
-    setReplayScope('all');
-  }, [location.pathname]);
 
   const fetchLives = useCallback(async (t: Tab) => {
     setIsLoading(true);

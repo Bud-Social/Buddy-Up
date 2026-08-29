@@ -262,7 +262,7 @@ export default function Discover() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {trending.lives!.slice(0, 5).map((lv) => (
-                  <button key={lv.id} onClick={() => navigate(`/lives/${lv.id}`)}
+                  <button key={lv.id} onClick={() => navigate(`/live/${lv.id}`)}
                     className="px-3 py-1.5 rounded-full bg-buddy-surface text-sm hover:bg-buddy-surface-raised transition-colors max-w-[220px] truncate">
                     {lv.status === 'live' ? '🔴 ' : ''}{lv.title}
                   </button>

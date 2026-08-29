@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
@@ -13,7 +13,9 @@ type ListKind = 'followers' | 'following';
  * FollowListScreen — followers / following list behind the Profile stat cards.
  */
 export default function FollowListScreen() {
-  const { username, kind = 'followers' } = useParams<{ username: string; kind: ListKind }>();
+  const { username } = useParams<{ username: string }>();
+  const location = useLocation();
+  const kind: ListKind = location.pathname.endsWith('/following') ? 'following' : 'followers';
   const navigate = useNavigate();
   const [list, setList] = useState<Profile[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);

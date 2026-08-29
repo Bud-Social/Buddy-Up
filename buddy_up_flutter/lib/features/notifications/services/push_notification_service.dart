@@ -1,8 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/api_client.dart';
 import '../../../router.dart';
+
+/// Lifecycle of the push stack. `unavailable` is a normal, non-fatal state
+/// for builds without google-services.json (local/CI) — the UI can watch it
+/// and degrade gracefully instead of failing silently.
+enum PushAvailability { unknown, available, unavailable }
 
 final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
   return PushNotificationService(ApiClient());
@@ -10,8 +16,12 @@ final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) 
 
 class PushNotificationService {
   final ApiClient _apiClient;
-  
+
   PushNotificationService(this._apiClient);
+
+  /// Observable availability; starts [PushAvailability.unknown].
+  final ValueNotifier<PushAvailability> availability =
+      ValueNotifier<PushAvailability>(PushAvailability.unknown);
 
   Future<void> initialize() async {
     try {
@@ -58,8 +68,13 @@ class PushNotificationService {
           });
         }
       }
+      availability.value = PushAvailability.available;
     } catch (e) {
-      // Ignore initialisation errors in environments without Firebase config
+      // Explicit non-fatal degradation: no Firebase config in this build
+      // (e.g. google-services.json absent on local/CI). Logged so failures
+      // are visible in console; UI can watch `availability` and ignore.
+      debugPrint('PUSH UNAVAILABLE (Firebase init failed): $e');
+      availability.value = PushAvailability.unavailable;
     }
   }
 

@@ -16,7 +16,10 @@ void main() async {
   try {
     await Firebase.initializeApp();
   } catch (e) {
-    debugPrint('Firebase initialization failed: $e');
+    // Non-fatal: builds without google-services.json (local/CI) start fine.
+    // Push notification support degrades — PushNotificationService reports
+    // PushAvailability.unavailable for the UI to handle gracefully.
+    debugPrint('FIREBASE INIT FAILED: $e');
   }
   runApp(const ProviderScope(child: BuddyUpApp()));
 }

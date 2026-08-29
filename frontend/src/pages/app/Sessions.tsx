@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
+import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { sessionsApi } from '@/api/sessions';
 import type { BookingSession } from '@/api/sessions';
 
@@ -32,6 +33,7 @@ export default function Sessions() {
   const profile = useAuthStore((s) => s.profile);
   const [bookings, setBookings] = useState<BookingSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [viewRole, setViewRole] = useState<'client' | 'trainer'>('client');
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,10 +52,11 @@ export default function Sessions() {
   const fetchBookings = () => {
     if (!profile) return;
     setIsLoading(true);
+    setError('');
     const roleParam = viewRole === 'trainer' ? 'trainer' : undefined;
     sessionsApi.getMyBookings(roleParam, tab === 'upcoming' ? 'confirmed' : 'completed')
       .then((res) => setBookings(res.data || []))
-      .catch(() => {})
+      .catch(() => setError('Could not load sessions. Check your connection.'))
       .finally(() => setIsLoading(false));
   };
 
@@ -151,14 +154,20 @@ export default function Sessions() {
           ))}
         </div>
       ) : bookings.length === 0 ? (
-        <div className="text-center py-20">
-          <Calendar size={48} className="mx-auto text-buddy-text-secondary/30 mb-4" />
-          <p className="text-buddy-text-secondary">No sessions booked yet.</p>
-          <p className="text-buddy-text-secondary/50 text-sm mt-1">Find a trainer and book your first session!</p>
-          <Button className="mt-6" onClick={() => navigate('/trainers')}>Browse Trainers</Button>
-        </div>
+        error ? (
+          <ErrorBanner message={error} onRetry={fetchBookings} />
+        ) : (
+          <div className="text-center py-20">
+            <Calendar size={48} className="mx-auto text-buddy-text-secondary/30 mb-4" />
+            <p className="text-buddy-text-secondary">No sessions booked yet.</p>
+            <p className="text-buddy-text-secondary/50 text-sm mt-1">Find a trainer and book your first session!</p>
+            <Button className="mt-6" onClick={() => navigate('/trainers')}>Browse Trainers</Button>
+          </div>
+        )
       ) : (
-        <div className="space-y-3">
+        <>
+          {error && <ErrorBanner message={error} onRetry={fetchBookings} className="mb-3" />}
+          <div className="space-y-3">
           {bookings.map((b) => {
             const otherParty = viewRole === 'trainer' ? b.client_data : b.trainer_data;
             const isRecurring = !!(b as any).recurrence_pattern;
@@ -208,7 +217,8 @@ export default function Sessions() {
               </Card>
             );
           })}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Book Session Modal */}

@@ -90,6 +90,7 @@ const Notifications = lazy(() => import('@/pages/app/Notifications'));
 const Profile = lazy(() => import('@/pages/app/Profile'));
 const EditProfile = lazy(() => import('@/pages/app/EditProfile'));
 const UserProfile = lazy(() => import('@/pages/app/UserProfile'));
+const FollowListScreen = lazy(() => import('@/pages/app/FollowListScreen'));
 const Settings = lazy(() => import('@/pages/app/Settings'));
 const BuddiesPage = lazy(() => import('@/pages/app/BuddiesPage'));
 const CreateGymPage = lazy(() => import('@/pages/app/CreateGymPage'));
@@ -161,6 +162,7 @@ export const router = createBrowserRouter([
           { path: '/feed/bud-press', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/meals', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/progress', element: <SWrapper><Feed /></SWrapper> },
+          { path: '/feed/communities', element: <SWrapper><Feed /></SWrapper> },
           { path: '/videos', element: <SWrapper><FullScreenVideoFeed /></SWrapper> },
           { path: '/discover', element: <SWrapper><Discover /></SWrapper> },
           { path: '/lives', element: <SWrapper><Lives /></SWrapper> },
@@ -209,6 +211,8 @@ export const router = createBrowserRouter([
       },
       { path: '/live/:liveId', element: <SWrapper><LiveRoom /></SWrapper> },
       { path: '/shops/:handle', element: <SWrapper><ShopDetail /></SWrapper> },
+      { path: '/:username/following', element: <SWrapper><FollowListScreen /></SWrapper> },
+      { path: '/:username/followers', element: <SWrapper><FollowListScreen /></SWrapper> },
       { path: '/:username', element: <SWrapper><UserProfile /></SWrapper> },
       {
         element: <AdminGuard />,

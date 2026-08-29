@@ -11,6 +11,7 @@ import '../../shared/widgets/button.dart';
 import '../../shared/widgets/input.dart';
 import '../../shared/widgets/toast.dart';
 import '../../core/auth/auth_provider.dart';
+import '../../core/auth/google_auth.dart';
 import 'verify_registration_otp_screen.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -103,20 +104,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     try {
-      // final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
-      // final GoogleSignInAccount? account = await googleSignIn.signIn();
-      // if (account == null) {
-      //   setState(() => _isLoading = false);
-      //   return; // User canceled
-      // }
-      // final GoogleSignInAuthentication auth = account.authentication;
-      // final credential = auth.idToken ?? auth.accessToken;
-      // if (credential == null) throw Exception('Failed to get Google authentication token');
-      const String credential = 'dummy_token_to_fix_compile';
+      final String? credential = await GoogleAuth.getIdToken();
+      if (credential == null) {
+        return; // User cancelled the Google flow — no error UI.
+      }
 
       final res = await _authRepo.googleLogin({'credential': credential});
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
     } catch (e) {
+      if (GoogleAuth.isCancelled(e)) {
+        return; // User cancelled mid-flow.
+      }
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';

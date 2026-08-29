@@ -22,7 +22,7 @@ const List<String> postTypes = [
   'poll',
 ];
 
-const List<String> feedTabs = ['for_you', 'following', 'videos'];
+const List<String> feedTabs = ['for_you', 'following', 'videos', 'meals', 'progress'];
 
 const List<String> liveCategories = [
   'strength',
