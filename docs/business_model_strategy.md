@@ -42,7 +42,7 @@ The guiding policy directly addresses the problem definition:
 - OTP-based email/phone verification (6-digit code, 10-min expiry, 3-attempt lockout)
 - JWT authentication (short-lived access + long-lived refresh tokens, HttpOnly cookies)
 - Device session management with "sign out all devices"
-- Google OAuth 2.0 and Apple Sign In
+- Google OAuth 2.0; Apple Sign In is legacy reference material, not a current production dependency
 - TOTP-based 2FA (Google Authenticator)
 - Rate limiting on login, OTP, and registration
 - Account soft-delete (30-day recoverable), hard-delete pipeline

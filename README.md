@@ -49,11 +49,13 @@ See `.env.example` for the full list of environment variables. Key variables:
 | `SECRET_KEY` | Django secret key |
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` | PostgreSQL credentials |
 | `REDIS_URL` | Redis connection string |
-| `AGORA_APP_ID` | Agora.io app ID for live streaming |
+| `LIVEKIT_URL` / `LIVEKIT_API_KEY` | LiveKit media server credentials |
 | `OPENAI_API_KEY` | OpenAI API key for AI features |
-| `STRIPE_SECRET_KEY` | Stripe payments |
+| `FLUTTERWAVE_SECRET_KEY` / `FLUTTERWAVE_WEBHOOK_HASH` | Flutterwave payments and signed webhooks |
 | `SENDGRID_API_KEY` | Transactional email |
 | `CLOUDINARY_URL` | Media storage |
+| `RELEASE_VERSION` / `RELEASE_COMMIT` | Release marker returned by readiness |
+| `METRICS_TOKEN` | Optional bearer token for the metrics endpoint |
 
 ## Development Commands
 
@@ -80,7 +82,13 @@ make shell-redis  # Open Redis shell
 make test-backend  # Run backend tests (pytest)
 make test-frontend # Run frontend tests (vitest)
 make test-e2e      # Run E2E tests (playwright)
+./scripts/check_openapi.sh  # Validate the generated API contract
+python scripts/check_api_contract.py  # Check representative routes and envelopes
 ```
+
+The web/Flutter implementation checklist is in
+[`docs/CLIENT_PARITY.md`](docs/CLIENT_PARITY.md); API contract rules are in
+[`docs/API_CONTRACT.md`](docs/API_CONTRACT.md).
 
 ## Linting
 
@@ -104,6 +112,10 @@ make seed
 ```
 
 ## Production Deployment
+
+Operations runbook: [`docs/OPERATIONS.md`](docs/OPERATIONS.md). Do not deploy
+without config validation, migrations/schema checks, smoke probes and wallet
+reconciliation as defined there.
 
 ### Self-hosted live media
 
@@ -150,7 +162,7 @@ buddyup/
 │   │   ├── components/layout/  AppShell, BottomNav, Sidebar
 │   │   ├── components/features/ Feature composites
 │   │   ├── hooks/    Custom React hooks
-│   │   ├── lib/      Utilities (wsManager, agora, etc.)
+│   │   ├── lib/      Utilities (wsManager and shared helpers)
 │   │   ├── pages/    Route-level page components
 │   │   ├── store/    Zustand stores
 │   │   ├── types/    TypeScript interfaces
@@ -159,7 +171,7 @@ buddyup/
 │
 ├── backend/         Django 5 + DRF
 │   ├── config/      Settings, URLs, ASGI, Celery
-│   ├── apps/        13 Django apps
+│   ├── apps/        Django domain apps
 │   │   ├── accounts/   Auth, KYC, age verification
 │   │   ├── profiles/   Profiles, buddy system, follows
 │   │   ├── feed/       Posts, comments, reactions

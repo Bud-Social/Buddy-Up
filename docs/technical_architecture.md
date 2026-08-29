@@ -1,5 +1,9 @@
 # BuddyUp — Technical Architecture & Platform Services
 
+| Owner | Review date | Status |
+|---|---|---|
+| Peter Mbugua (CEO / Engineering) | 2026-09-30 | Maintained |
+
 > Health & fitness social platform — "find your workout buddy, train together, earn together."
 > This document describes the overall system structure, the services the platform exposes,
 > and how the major components communicate.
@@ -56,7 +60,7 @@ Browser (React/Vite :3002)
 - **Settings**: `config/settings/base.py` + `development.py` / `production.py`.
 - **Auth**: `AUTH_USER_MODEL = apps.accounts.User` (email-based). JWT via `rest_framework_simplejwt`
   — 15-minute access tokens, 30-day rotating refresh tokens bound to `DeviceSession`, blacklisted on rotation.
-- **Auth backends**: Google OAuth2, Apple, plus Django model backend (`social_django`).
+- **Auth backends**: Google OAuth2 and the Django model backend (`social_django`). Apple Sign In is legacy reference material, not a current production claim.
 - **DRF defaults**: JWT auth, `IsAuthenticatedOrReadOnly`, cursor pagination (`common.pagination.CursorPagination`, default 20),
   Django-filter + search + ordering, JSON renderer, custom exception handler (`common.exceptions`), scoped rate throttling
   (`registration 10/h`, `login 30/h`, `otp 3/h`, `password_reset 3/h`, `upload_attachment 20/h`, `link_preview 30/h`).
@@ -65,7 +69,7 @@ Browser (React/Vite :3002)
   credentials are configured. Messaging attachments and live replay recording support self-hosted **S3-compatible** storage
   (MinIO) with presigned URLs and magic-byte validation.
 - **API docs**: `drf_spectacular` schema at `/api/schema/` + Swagger UI at `/api/schema/swagger/`.
-- **API envelope**: every endpoint returns `{ success, data, message, errors, pagination }`.
+- **API envelope**: normal application endpoints return `{ success, data, message, errors, pagination, request_id }`. Readiness is a documented flat-payload exception; see [`API_CONTRACT.md`](API_CONTRACT.md).
 
 ### 2.2 Application modules
 
@@ -147,7 +151,7 @@ Heavy models unload after an idle TTL (`model_idle_ttl = 900s`) to free RAM.
 | `components/` | Reusable UI (`ui/`), layout (`layout/`), feature components (`features/`) |
 | `pages/` | Route pages: `app/` (authenticated app screens), `auth/` (login/register/OTP/TOTP), `legal/`, `Landing.tsx` |
 | `store/` | Zustand stores: `authStore`, `notificationStore`, `presenceStore`, `callStore`, `chatPreferencesStore`, `artifactStore`, `sidebarStore`, `themeStore` |
-| `hooks/` | `useAuth`, `useChatSocket`, `useVoiceRecorder`, `useWebRTC`, etc. |
+| `hooks/` | `useAuth`, `useChatSocket`, `useVoiceRecorder`, and other active client hooks |
 | `router.tsx` | Route tree with `AuthGuard`, `AdminGuard`, lazy-loaded pages |
 | `types/` | Domain TypeScript types |
 | `lib/`, `utils/`, `styles/` | Helpers, constants, global styles (Tailwind theme tokens) |
@@ -162,7 +166,7 @@ Heavy models unload after an idle TTL (`model_idle_ttl = 900s`) to free RAM.
   a dark-first visual identity; lucide-react icons; `@radix-ui/*` primitives.
 - **Charts**: `recharts`; **maps**: `@vis.gl/react-google-maps` with an SVG fallback (`SvgRouteMap`) until
   `VITE_GOOGLE_MAPS_KEY` is configured.
-- **Real-time**: chat via WebSocket hook (`useChatSocket`); live streaming via Agora/LiveKit hooks; presence via `presenceStore`.
+- **Real-time**: chat via WebSocket hook (`useChatSocket`); live streaming via LiveKit; presence via `presenceStore`. Older Agora/`useWebRTC` code is legacy, not the production media path.
 - **Progressive Web App**: Vite PWA plugin with service-worker caching for static assets, fonts, images, and `/api/*` (NetworkFirst).
 
 ---
@@ -179,8 +183,8 @@ Heavy models unload after an idle TTL (`model_idle_ttl = 900s`) to free RAM.
 - Direct/group conversations, message reactions, read receipts, voice notes (uploaded attachments),
   polls, location sharing, and call logs — all over authenticated WebSocket channels.
 
-### 5.3 Agora (legacy RTC)
-- `AGORA_APP_ID` / certificate configured for older WebRTC flows (callStore + `useWebRTC`).
+### 5.3 Legacy RTC references
+- Agora and `useWebRTC` may appear in historical code or planning material. They are not supported production dependencies. Production live media is LiveKit.
 
 ---
 
@@ -201,7 +205,7 @@ Heavy models unload after an idle TTL (`model_idle_ttl = 900s`) to free RAM.
   plus **human-in-the-loop** (HITL): `moderation/reports`, `content-flags`, `actions` view sets
   (approve / remove / escalate), with the moderator fallback chain (content author → moderator) for action targets.
 - Content lifecycle states: `clean → flagged → reviewed / removed`; flagged media is blurred in the UI until reviewed.
-- Rate limiting, OTP (registration + login + 2FA TOTP), minimum age (16), GDPR-style account export/delete flows.
+- Rate limiting, OTP (registration + login + 2FA TOTP), an 18+ default Mature-content gate (16+ only after explicit local legal review), and GDPR-style account export/delete flows.
 
 ---
 

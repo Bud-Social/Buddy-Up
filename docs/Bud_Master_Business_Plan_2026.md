@@ -177,7 +177,7 @@ The following catalog is the detailed inventory of what the platform already bui
 
 - Email/phone + password registration with strength meter; age verification (DOB check, hard block under 16, hashed storage)
 - OTP email/phone verification (6-digit, 10-min expiry, 3-attempt lockout); JWT auth with HttpOnly cookies; device session management with "sign out all devices"
-- Google OAuth 2.0 and Apple Sign In; TOTP 2FA; rate limiting on login/OTP/registration
+- Google OAuth 2.0; Apple Sign In is legacy reference material and not a current production dependency; TOTP 2FA; rate limiting on login/OTP/registration
 - Account soft-delete (30-day recoverable) and hard-delete pipeline; async data export (Celery, JSON/ZIP); consent logging for GDPR and Kenya Data Protection Act
 
 ### 5.2 Profiles — identity, buddies and reputation
