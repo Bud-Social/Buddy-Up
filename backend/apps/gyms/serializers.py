@@ -1,5 +1,9 @@
 from rest_framework import serializers
-from .models import Gym, GymMembership, GymCategory, GymCategoryPricing, JoinRequest, GymInvite, GymSchedulePost, GymReview, GymDonation, GymMembershipException, ScheduleSlotEnrollment
+from .models import (
+    AttendanceRecord, Gym, GymMembership, GymCategory, GymCategoryPricing,
+    GymOnboardingChecklist, JoinRequest, GymInvite, GymSchedulePost, GymReview,
+    GymDonation, GymMembershipException, ScheduleSlotEnrollment, VenueLocation,
+)
 
 
 class GymCategorySerializer(serializers.ModelSerializer):
@@ -434,3 +438,28 @@ class CreateMembershipExceptionSerializer(serializers.Serializer):
 
 class MembershipCheckoutSerializer(serializers.Serializer):
     discount_code = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+
+class GymOnboardingChecklistSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GymOnboardingChecklist
+        fields = ['completed_steps', 'notes', 'completed_at', 'created_at', 'updated_at']
+        read_only_fields = ['completed_at', 'created_at', 'updated_at']
+
+
+class VenueLocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VenueLocation
+        fields = ['id', 'name', 'address', 'city', 'country', 'latitude', 'longitude',
+                  'instructions', 'is_primary', 'is_active', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+
+class AttendanceRecordSerializer(serializers.ModelSerializer):
+    member_username = serializers.CharField(source='member.username', read_only=True)
+
+    class Meta:
+        model = AttendanceRecord
+        fields = ['id', 'member', 'member_username', 'schedule_post', 'venue', 'status',
+                  'checked_in_at', 'checked_out_at', 'source', 'notes', 'created_at']
+        read_only_fields = ['id', 'created_at']

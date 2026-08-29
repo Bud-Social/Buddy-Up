@@ -3,6 +3,94 @@ from common.models import TimestampedModel
 from uuid import uuid4
 
 
+class LedgerAccount(TimestampedModel):
+    ACCOUNT_TYPES = [
+        ('platform', 'Platform'),
+        ('buyer', 'Buyer'),
+        ('seller', 'Seller'),
+        ('escrow', 'Escrow'),
+    ]
+    WALLET_BUCKETS = [
+        ('system', 'System'),
+        ('regular', 'Regular wallet'),
+        ('creator', 'Creator wallet'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    account_type = models.CharField(max_length=10, choices=ACCOUNT_TYPES)
+    profile = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True, on_delete=models.PROTECT,
+        related_name='ledger_accounts',
+    )
+    wallet_bucket = models.CharField(max_length=10, choices=WALLET_BUCKETS)
+    artifact_type = models.CharField(max_length=30)
+    name = models.CharField(max_length=120)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'wallet_ledger_account'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['account_type', 'profile', 'wallet_bucket', 'artifact_type'],
+                name='wallet_unique_profile_ledger_account',
+            ),
+            models.UniqueConstraint(
+                fields=['account_type', 'wallet_bucket', 'artifact_type'],
+                condition=models.Q(profile__isnull=True),
+                name='wallet_unique_system_ledger_account',
+            ),
+        ]
+        indexes = [models.Index(fields=['profile', 'artifact_type'], name='wallet_ledg_profile_b87592_idx')]
+
+    def __str__(self):
+        return f'{self.name} [{self.artifact_type}]'
+
+
+class JournalEntry(TimestampedModel):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    operation = models.CharField(max_length=40, db_index=True)
+    idempotency_key = models.CharField(max_length=180, unique=True)
+    request_hash = models.CharField(max_length=64)
+    description = models.CharField(max_length=255, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    posted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'wallet_journal_entry'
+        verbose_name_plural = 'journal entries'
+        ordering = ['-posted_at']
+
+    def __str__(self):
+        return f'{self.operation}:{self.idempotency_key}'
+
+
+class JournalLine(models.Model):
+    DIRECTIONS = [('debit', 'Debit'), ('credit', 'Credit')]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    journal_entry = models.ForeignKey(
+        JournalEntry, on_delete=models.PROTECT, related_name='lines',
+    )
+    account = models.ForeignKey(
+        LedgerAccount, on_delete=models.PROTECT, related_name='journal_lines',
+    )
+    direction = models.CharField(max_length=6, choices=DIRECTIONS)
+    amount = models.PositiveBigIntegerField()
+
+    class Meta:
+        db_table = 'wallet_journal_line'
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gt=0), name='wallet_line_amount_gt_zero'),
+        ]
+        indexes = [
+            models.Index(fields=['account', 'direction'], name='wallet_jour_account_9c51ce_idx'),
+            models.Index(fields=['journal_entry', 'direction'], name='wallet_jour_journal_5606f1_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.direction} {self.amount} {self.account.artifact_type}'
+
+
 class ArtifactTransaction(TimestampedModel):
     TRANSACTION_TYPES = [
         ('purchase', 'Purchase'),
@@ -51,12 +139,26 @@ class ArtifactTransaction(TimestampedModel):
     flutterwave_id = models.CharField(max_length=100, blank=True)
     flutterwave_response = models.JSONField(null=True, blank=True)
     description = models.CharField(max_length=255, blank=True)
+    journal_entry = models.ForeignKey(
+        JournalEntry, null=True, blank=True, on_delete=models.PROTECT,
+        related_name='artifact_transactions',
+    )
 
     class Meta:
         db_table = 'wallet_artifact_transaction'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tx_ref'],
+                condition=~models.Q(tx_ref=''),
+                name='wallet_unique_nonblank_tx_ref',
+            ),
+        ]
         indexes = [
             models.Index(fields=['user', '-created_at']),
             models.Index(fields=['transaction_type']),
             models.Index(fields=['status']),
             models.Index(fields=['counterparty']),
         ]
+
+    def __str__(self):
+        return f'{self.transaction_type}:{self.tx_ref or self.id} ({self.status})'

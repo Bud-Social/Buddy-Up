@@ -1,5 +1,7 @@
 from rest_framework import views, permissions
 from rest_framework.response import Response
+from django.db.models import Q
+from django.utils import timezone
 from common.pagination import CursorPagination
 from .models import Notification, NotificationPreference
 from .serializers import NotificationSerializer, NotificationPreferenceSerializer
@@ -13,7 +15,7 @@ class NotificationListView(views.APIView):
         notifications = Notification.objects.filter(
             recipient=request.user.profile,
             is_dismissed=False,
-        ).order_by('-is_pinned', '-created_at')
+        ).filter(Q(expires_at__isnull=True) | Q(expires_at__gt=timezone.now())).order_by('-is_pinned', '-created_at')
 
         unread_only = request.query_params.get('unread') == 'true'
         if unread_only:

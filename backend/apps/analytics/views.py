@@ -4,6 +4,7 @@ import uuid
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from rest_framework import views, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -63,14 +64,26 @@ class ActivityRecordView(BaseOwnedView):
     serializer_class = ActivityRecordSerializer
     date_field = 'started_at'
 
-    def post(self, request):
+    def post(self, request, pk=None):
+        if pk:
+            obj = self.get_object(pk)
+            action = request.data.get('action')
+            if action not in ('pause', 'resume'):
+                return Response({'detail': 'action must be pause or resume'}, status=400)
+            if action == 'pause' and not obj.is_paused:
+                obj.is_paused, obj.paused_at = True, timezone.now()
+            elif action == 'resume' and obj.is_paused:
+                obj.total_pause_seconds += int((timezone.now() - obj.paused_at).total_seconds())
+                obj.is_paused, obj.paused_at = False, None
+            obj.save(update_fields=['is_paused', 'paused_at', 'total_pause_seconds', 'updated_at'])
+            return Response({'success': True, 'data': ActivityRecordSerializer(obj).data})
         serializer = ActivityRecordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        obj = serializer.save(user=request.user.profile)
-        return Response({
-            'success': True, 'data': ActivityRecordSerializer(obj).data,
-            'message': 'Activity recorded.', 'errors': None, 'pagination': None,
-        }, status=status.HTTP_201_CREATED)
+        if serializer.validated_data.get('source_event_id'):
+            obj, created = ActivityRecord.objects.get_or_create(user=request.user.profile, source_event_id=serializer.validated_data['source_event_id'], defaults=serializer.validated_data)
+        else:
+            obj, created = serializer.save(user=request.user.profile), True
+        return Response({'success': True, 'data': ActivityRecordSerializer(obj).data, 'message': 'Activity recorded.', 'errors': None, 'pagination': None}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class WorkoutLogView(BaseOwnedView):
@@ -81,11 +94,15 @@ class WorkoutLogView(BaseOwnedView):
     def post(self, request):
         serializer = WorkoutLogSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        obj = serializer.save(user=request.user.profile)
+        event_id = serializer.validated_data.get('source_event_id')
+        obj, created = WorkoutLog.objects.get_or_create(
+            user=request.user.profile, source_event_id=event_id,
+            defaults=serializer.validated_data,
+        ) if event_id else (serializer.save(user=request.user.profile), True)
         return Response({
             'success': True, 'data': WorkoutLogSerializer(obj).data,
             'message': 'Workout logged.', 'errors': None, 'pagination': None,
-        }, status=status.HTTP_201_CREATED)
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class MealLogView(BaseOwnedView):
@@ -116,11 +133,15 @@ class MealLogView(BaseOwnedView):
 
         serializer = MealLogSerializer(data=data)
         serializer.is_valid(raise_exception=True)
-        obj = serializer.save(user=request.user.profile)
+        event_id = serializer.validated_data.get('source_event_id')
+        obj, created = MealLog.objects.get_or_create(
+            user=request.user.profile, source_event_id=event_id,
+            defaults=serializer.validated_data,
+        ) if event_id else (serializer.save(user=request.user.profile), True)
         return Response({
             'success': True, 'data': MealLogSerializer(obj).data,
             'message': 'Meal logged.', 'errors': None, 'pagination': None,
-        }, status=status.HTTP_201_CREATED)
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class BodyMetricView(BaseOwnedView):
@@ -234,6 +255,73 @@ class AnalyticsSummaryView(views.APIView):
         })
 
 
+class IngestEventsView(views.APIView):
+    """Behavioral-event ingestion (batch).
+
+    Authenticated or anonymous (anonymous_id required when anonymous).
+    Events lacking consent.analytics=true are skipped, never stored.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'analytics'
+
+    def post(self, request):
+        from .event_ingest import build_event_rows, record_events
+        from .models import AnalyticsEvent
+
+        events = request.data.get('events') if isinstance(request.data, dict) else None
+        if not isinstance(events, list) or not events:
+            return Response({
+                'success': False, 'data': None,
+                'message': "Body must include a non-empty 'events' list (max 50).",
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if len(events) > 50:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Too many events per batch (max 50).',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        actor = request.user.profile if request.user.is_authenticated else None
+        request_anonymous_id = str(request.data.get('anonymous_id') or '').strip()
+        if actor is None and not request_anonymous_id:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Anonymous events require an anonymous_id.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Client-level identity/session fields apply to every event in the batch.
+        defaults = {
+            'anonymous_id': request_anonymous_id,
+            'session_id': str(request.data.get('session_id') or ''),
+            'platform': str(request.data.get('platform') or ''),
+        }
+        stamped = [
+            {**defaults, **event} if isinstance(event, dict) else event
+            for event in events
+        ]
+
+        rows, skipped = build_event_rows(stamped, actor_profile=actor)
+        if rows:
+            if len(rows) >= 10:
+                record_events.delay(events, actor.user_id if actor else None)
+                accepted = len(rows)
+            else:
+                AnalyticsEvent.objects.bulk_create(rows)
+                accepted = len(rows)
+        else:
+            accepted = 0
+
+        return Response({
+            'success': True,
+            'data': {'accepted': accepted, 'skipped': skipped},
+            'message': 'Events accepted.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_202_ACCEPTED)
+
+
 class AnalyticsReportView(views.APIView):
     """Generate the comprehensive report (JSON + watermarked PNG)."""
 
@@ -324,4 +412,3 @@ class AnalyticsReportShareView(views.APIView):
             'data': {'report_id': str(report.id), 'post_id': str(post.id), 'image_url': image_url},
             'message': 'Report shared to your feed.', 'errors': None, 'pagination': None,
         }, status=status.HTTP_201_CREATED)
-

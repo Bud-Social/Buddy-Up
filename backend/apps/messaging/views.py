@@ -122,14 +122,24 @@ class StartConversationView(views.APIView):
         input_serializer.is_valid(raise_exception=True)
         participant_usernames = input_serializer.validated_data['participants']
 
-        participants = list(Profile.objects.filter(username__in=participant_usernames))
-        if len(participants) != len(participant_usernames):
+        participant_map = {}
+        for value in participant_usernames:
+            profile = Profile.objects.filter(username=value).first()
+            if profile is None:
+                try:
+                    profile = Profile.objects.filter(user_id=value).first()
+                except (TypeError, ValueError):
+                    profile = None
+            if profile is not None:
+                participant_map[str(value)] = profile
+        if len(participant_map) != len(set(participant_usernames)):
             return Response({
                 'success': False, 'data': None,
                 'message': 'One or more users not found.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        participants = [participant_map[value] for value in participant_usernames]
         all_participants = [request.user.profile] + [p for p in participants if p != request.user.profile]
 
         unauthorized = [
@@ -204,7 +214,9 @@ class MessageListView(views.APIView):
         conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
         before = request.query_params.get('before')
         attachment_type = request.query_params.get('attachment_type', '')
-        messages = conv.messages.select_related('sender', 'reply_to__sender').prefetch_related('reactions')
+        messages = conv.messages.filter(is_deleted=False).select_related(
+            'sender', 'reply_to__sender',
+        ).prefetch_related('reactions')
         if before:
             messages = messages.filter(created_at__lt=before)
         if attachment_type:
@@ -223,7 +235,10 @@ class MessageListView(views.APIView):
                 messages = messages.filter(message_type='text', media_url='', body__regex=r'https?://')
             elif mapped:
                 messages = messages.filter(message_type=mapped)
-        messages = messages.order_by('-created_at')[:50]
+        messages = [
+            message for message in messages.order_by('-created_at')
+            if str(request.user.profile.user_id) not in (message.deleted_for or [])
+        ][:50]
 
         serializer = MessageSerializer(
             list(reversed(list(messages))), many=True, context={'request': request}
@@ -786,7 +801,7 @@ class ForwardMessageView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, message_id):
-        original = get_object_or_404(Message, id=message_id)
+        original = get_object_or_404(Message, id=message_id, is_deleted=False)
         get_object_or_404(Conversation, id=original.conversation_id, participants=request.user.profile)
 
         target_conversation_id = request.data.get('conversation_id')

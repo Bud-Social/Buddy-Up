@@ -7,6 +7,7 @@ router = DefaultRouter()
 router.register(r'reports', views.ModerationReportViewSet)
 router.register(r'content-flags', views.ContentFlagViewSet)
 router.register(r'actions', views.ModerationActionViewSet)
+router.register(r'appeals', views.ModerationAppealViewSet)
 
 app_name = 'moderation'
 urlpatterns = [

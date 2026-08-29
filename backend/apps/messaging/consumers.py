@@ -1,8 +1,10 @@
 """
 Unified WebSocket consumers for BuddyUp messaging, live rooms, and gym chat.
 """
+import hashlib
 import time
 import logging
+from uuid import uuid4
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.cache import cache
@@ -23,6 +25,10 @@ RATE_LIMITS = {
     'react': (20, 10),
     'read': (30, 10),
     'typing': (20, 10),
+    'live_chat': (20, 10),
+    'live_reaction': (10, 10),
+    'live_gift': (2, 10),
+    'live_cohost': (10, 10),
 }
 
 
@@ -491,6 +497,16 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
 # ─── Live stream consumer ────────────────────────────────────────────────────
 
 class LiveConsumer(AsyncJsonWebsocketConsumer):
+    # Event types a live-room client may send. Anything else is dropped.
+    ALLOWED_EVENT_TYPES = {
+        'chat', 'reaction', 'gift', 'cohost_invite', 'cohost_request',
+        'cohost_response', 'cohost_removed',
+    }
+    # Only the live's host may broadcast these (verified against DB records).
+    HOST_ONLY_EVENT_TYPES = {'cohost_invite', 'cohost_removed'}
+    # Host or a registered co-host.
+    COHOST_EVENT_TYPES = {'cohost_response'}
+
     async def connect(self):
         self.live_id = self.scope['url_route']['kwargs']['live_id']
         self.group_name = f'live_{self.live_id}'
@@ -504,6 +520,7 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
             return
 
         self.user_id = str(self.user.id)
+        self._limiter = _RateLimiter()
         self.profile = await database_sync_to_async(lambda: getattr(self.user, 'profile', None))()
         if not await database_sync_to_async(self._may_connect)():
             await self.close(code=4003)
@@ -558,128 +575,241 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
         except BuddyLive.DoesNotExist:
             pass
 
-    async def _get_live_host(self):
-        try:
-            live = await database_sync_to_async(BuddyLive.objects.get)(id=self.live_id)
-            return await database_sync_to_async(lambda: live.host)()
-        except BuddyLive.DoesNotExist:
-            return None
+    async def _process_gift(self, artifact_type: str, quantity, gift_key=None):
+        return await database_sync_to_async(self._settle_gift)(artifact_type, quantity, gift_key)
 
-    async def _process_gift(self, artifact_type: str, quantity: int):
+    def _settle_gift(self, artifact_type: str, quantity, gift_key=None):
+        """Atomically settle a live-room gift.
+
+        Balance debit, host credit and the transaction rows all commit in a
+        single transaction. The sender's debit row carries a deterministic
+        ``tx_ref`` (unique constraint) so a replayed WebSocket event is
+        recognised and returned without charging the sender a second time.
+        """
+        from django.db import IntegrityError, transaction as db_transaction
         from apps.wallet.utils import platform_cut
         from apps.wallet.serializers import ARTIFACT_VALUES
-        host = await self._get_live_host()
-        if not host or host.user_id == self.user_id:
+
+        if not isinstance(quantity, int) or quantity <= 0 or quantity > 10000:
             return None
         if artifact_type not in ARTIFACT_VALUES:
             return None
-        if not isinstance(quantity, int) or quantity <= 0 or quantity > 10000:
+        if not self.profile:
             return None
-        ok = await database_sync_to_async(deduct_artifacts)(self.profile, artifact_type, quantity)
-        if not ok:
-            return None
-        cut = await database_sync_to_async(platform_cut)('tip', artifact_type, quantity)
-        host_credit = quantity - cut
-        if host_credit > 0:
-            await database_sync_to_async(credit_artifacts)(host, artifact_type, host_credit)
-        tx = await database_sync_to_async(ArtifactTransaction.objects.create)(
-            user=self.profile, transaction_type='tip_sent',
-            artifact_type=artifact_type, quantity=quantity,
-            direction='debit', counterparty=host,
-            status='completed', reference_id=f'live_{self.live_id}',
-        )
-        if host_credit > 0:
-            await database_sync_to_async(ArtifactTransaction.objects.create)(
-                user=host, transaction_type='tip_received',
-                artifact_type=artifact_type, quantity=host_credit,
-                direction='credit', counterparty=self.profile,
-                status='completed', reference_id=f'live_{self.live_id}',
-            )
-        if cut > 0:
-            await database_sync_to_async(ArtifactTransaction.objects.create)(
-                user=host, transaction_type='platform_cut',
-                artifact_type=artifact_type, quantity=cut,
-                direction='debit', status='completed',
-                description=f'Platform fee ({int(platform_cut("tip", artifact_type, 100))}%)',
-            )
         try:
-            total = cache.hincrby(f'live_gifts:{self.live_id}', artifact_type, quantity)
+            live = BuddyLive.objects.select_related('host').get(id=self.live_id)
+        except BuddyLive.DoesNotExist:
+            return None
+        host = live.host
+        if not host or host.user_id == self.user_id:
+            return None
+
+        # Idempotency key: client-supplied when present, otherwise this event
+        # settles exactly once under a fresh key (atomicity still guaranteed).
+        key = str(gift_key)[:64] if gift_key else uuid4().hex
+        digest = hashlib.sha256(f'{self.live_id}:{self.user_id}:{key}'.encode()).hexdigest()
+        tx_ref = f'gift:{digest}'
+
+        with db_transaction.atomic():
+            if gift_key:
+                existing = ArtifactTransaction.objects.filter(
+                    tx_ref=tx_ref, transaction_type='tip_sent',
+                ).first()
+                if existing:
+                    return self._gift_result(existing, replayed=True)
+            ok = deduct_artifacts(self.profile, artifact_type, quantity)
+            if not ok:
+                return None
+            cut = platform_cut('tip', artifact_type, quantity)
+            host_credit = quantity - cut
+            if host_credit > 0:
+                credit_artifacts(host, artifact_type, host_credit)
+            try:
+                tx = ArtifactTransaction.objects.create(
+                    user=self.profile, transaction_type='tip_sent',
+                    artifact_type=artifact_type, quantity=quantity,
+                    direction='debit', counterparty=host,
+                    status='completed', reference_id=f'live_{self.live_id}',
+                    tx_ref=tx_ref,
+                )
+            except IntegrityError:
+                # A concurrent replay of the same gift event settled first.
+                existing = ArtifactTransaction.objects.get(
+                    tx_ref=tx_ref, transaction_type='tip_sent',
+                )
+                return self._gift_result(existing, replayed=True)
+            if host_credit > 0:
+                ArtifactTransaction.objects.create(
+                    user=host, transaction_type='tip_received',
+                    artifact_type=artifact_type, quantity=host_credit,
+                    direction='credit', counterparty=self.profile,
+                    status='completed', reference_id=f'live_{self.live_id}',
+                )
+            if cut > 0:
+                ArtifactTransaction.objects.create(
+                    user=host, transaction_type='platform_cut',
+                    artifact_type=artifact_type, quantity=cut,
+                    direction='debit', status='completed',
+                    description=f'Platform fee ({int(platform_cut("tip", artifact_type, 100))}%)',
+                )
+        result = self._gift_result(tx)
+        try:
+            result['total'] = cache.hincrby(f'live_gifts:{self.live_id}', artifact_type, quantity)
         except (AttributeError, TypeError):
-            total = quantity
+            pass
+        return result
+
+    def _gift_result(self, tx, replayed=False):
+        total = tx.quantity
+        if replayed:
+            try:
+                totals = cache.hgetall(f'live_gifts:{self.live_id}')
+                if totals:
+                    raw = totals.get(tx.artifact_type, totals.get(tx.artifact_type.encode()))
+                    if raw is not None:
+                        total = int(raw)
+            except (AttributeError, TypeError):
+                total = tx.quantity
         return {
-            'tx_id': str(tx.id), 'artifact_type': artifact_type, 'quantity': quantity,
+            'tx_id': str(tx.id), 'artifact_type': tx.artifact_type, 'quantity': tx.quantity,
             'sender_id': self.user_id,
-            'sender_name': getattr(self.profile, 'display_name', 'Anonymous'), 'total': total,
+            'sender_name': getattr(self.profile, 'display_name', 'Anonymous'),
+            'total': total,
         }
+
+    def _load_live_role(self):
+        """Resolve the sender's privilege in this live from DB records."""
+        profile = getattr(self, 'profile', None)
+        if not profile:
+            return 'viewer'
+        try:
+            live = BuddyLive.objects.get(id=self.live_id)
+        except BuddyLive.DoesNotExist:
+            return 'viewer'
+        if live.host_id == profile.pk:
+            return 'host'
+        if live.co_hosts.filter(pk=profile.pk).exists():
+            return 'cohost'
+        return 'viewer'
 
     async def receive_json(self, content, **kwargs):
         event_type = content.get('type', 'chat')
+        if event_type not in self.ALLOWED_EVENT_TYPES:
+            logger.warning('Dropped unexpected live event %r from user=%s live=%s',
+                           event_type, getattr(self, 'user_id', '?'), self.live_id)
+            return
+
         if event_type == 'chat':
-            chat_data = content.get('data', {})
-            enriched = {
-                'type': 'live_chat',
-                'data': {
-                    'type': 'live_chat',
-                    'user_id': self.user_id,
-                    'display_name': getattr(self.profile, 'display_name', 'Anonymous'),
-                    'avatar_url': getattr(self.profile, 'avatar_url', ''),
-                    'message': chat_data.get('message', ''),
-                    'timestamp': time.time(),
-                },
-            }
-            # Reply-to support: attach the quoted message so UIs can render a reply thread
-            reply_to = chat_data.get('reply_to')
-            if reply_to and isinstance(reply_to, dict):
-                enriched['data']['reply_data'] = {
-                    'message': reply_to.get('message', ''),
-                    'sender_name': reply_to.get('sender_name', ''),
-                    'user_id': reply_to.get('user_id', ''),
-                }
-            gift = chat_data.get('gift')
-            if gift and isinstance(gift, dict):
-                gift_result = await self._process_gift(gift.get('artifact_type', ''), gift.get('quantity', 0))
-                if gift_result:
-                    enriched['data']['gift'] = gift_result
-                    enriched['data']['priority'] = True
-            await self.channel_layer.group_send(self.group_name, enriched)
+            if not self._limiter.allow('live_chat'):
+                logger.warning('Rate limited live chat from user=%s live=%s', self.user_id, self.live_id)
+                return
+            await self._handle_chat(content)
         elif event_type == 'reaction':
-            await self.channel_layer.group_send(self.group_name, {
-                'type': 'live_reaction',
-                'data': {
-                    'type': 'live_reaction',
-                    'user_id': self.user_id,
-                    'display_name': getattr(self.profile, 'display_name', 'Anonymous'),
-                    'emoji': content.get('data', {}).get('emoji', '🔥'),
-                    'timestamp': time.time(),
-                },
-            })
+            if not self._limiter.allow('live_reaction'):
+                logger.warning('Rate limited live reaction from user=%s live=%s', self.user_id, self.live_id)
+                return
+            await self._handle_reaction(content)
         elif event_type == 'gift':
-            gift_data = content.get('data', {})
-            if self.profile and self.live_id:
-                gift_result = await self._process_gift(gift_data.get('artifact_type', ''), gift_data.get('quantity', 0))
-                if gift_result:
-                    try:
-                        totals = cache.hgetall(f'live_gifts:{self.live_id}')
-                        totals = {k.decode(): int(v) for k, v in totals.items()} if totals else {}
-                    except (AttributeError, TypeError):
-                        totals = {}
-                    await self.channel_layer.group_send(self.group_name, {
-                        'type': 'live_gift',
-                        'data': {'type': 'live_gift', 'gift': gift_result, 'totals': totals},
-                    })
-        elif event_type in ('cohost_invite', 'cohost_request', 'cohost_response', 'cohost_removed'):
-            # Relay live cohost management events to everyone in the room so the
-            # host panel and attendee UI stay in sync in real time.
-            data = content.get('data', {})
-            data.setdefault('user_id', self.user_id)
-            await self.channel_layer.group_send(self.group_name, {
-                'type': f'live_{event_type}',
-                'data': {'type': f'live_{event_type}', **data},
-            })
+            if not self._limiter.allow('live_gift'):
+                logger.warning('Rate limited live gift from user=%s live=%s', self.user_id, self.live_id)
+                return
+            await self._handle_gift(content)
         else:
-            await self.channel_layer.group_send(self.group_name, {
-                'type': f'live_{event_type}', 'data': content,
-            })
+            if not self._limiter.allow('live_cohost'):
+                return
+            role = await database_sync_to_async(self._load_live_role)()
+            if role == 'viewer' or (
+                event_type in self.HOST_ONLY_EVENT_TYPES and role != 'host'
+            ):
+                logger.warning('Dropped cohost event %r from user=%s role=%s live=%s',
+                               event_type, self.user_id, role, self.live_id)
+                return
+            await self._handle_cohost_event(event_type, content)
+
+    async def _handle_chat(self, content):
+        chat_data = content.get('data', {})
+        if not isinstance(chat_data, dict):
+            chat_data = {}
+        enriched = {
+            'type': 'live_chat',
+            'data': {
+                'type': 'live_chat',
+                'user_id': self.user_id,
+                'display_name': getattr(self.profile, 'display_name', 'Anonymous'),
+                'avatar_url': getattr(self.profile, 'avatar_url', ''),
+                'message': str(chat_data.get('message') or '')[:MAX_BODY_LEN],
+                'timestamp': time.time(),
+            },
+        }
+        # Reply-to support: attach the quoted message so UIs can render a reply thread
+        reply_to = chat_data.get('reply_to')
+        if reply_to and isinstance(reply_to, dict):
+            enriched['data']['reply_data'] = {
+                'message': str(reply_to.get('message', ''))[:MAX_BODY_LEN],
+                'sender_name': str(reply_to.get('sender_name', ''))[:120],
+                'user_id': reply_to.get('user_id', ''),
+            }
+        gift = chat_data.get('gift')
+        if gift and isinstance(gift, dict) and self._limiter.allow('live_gift'):
+            gift_result = await self._process_gift(
+                gift.get('artifact_type', ''), gift.get('quantity', 0),
+                gift.get('gift_key') or gift.get('id') or gift.get('timestamp'),
+            )
+            if gift_result:
+                enriched['data']['gift'] = gift_result
+                enriched['data']['priority'] = True
+        await self.channel_layer.group_send(self.group_name, enriched)
+
+    async def _handle_reaction(self, content):
+        reaction_data = content.get('data', {})
+        emoji = reaction_data.get('emoji', '🔥') if isinstance(reaction_data, dict) else '🔥'
+        await self.channel_layer.group_send(self.group_name, {
+            'type': 'live_reaction',
+            'data': {
+                'type': 'live_reaction',
+                'user_id': self.user_id,
+                'display_name': getattr(self.profile, 'display_name', 'Anonymous'),
+                'emoji': str(emoji)[:10],
+                'timestamp': time.time(),
+            },
+        })
+
+    async def _handle_gift(self, content):
+        gift_data = content.get('data', {})
+        if not isinstance(gift_data, dict):
+            return
+        if self.profile and self.live_id:
+            gift_result = await self._process_gift(
+                gift_data.get('artifact_type', ''), gift_data.get('quantity', 0),
+                gift_data.get('gift_key') or gift_data.get('id') or gift_data.get('timestamp'),
+            )
+            if gift_result:
+                try:
+                    totals = cache.hgetall(f'live_gifts:{self.live_id}')
+                    totals = {k.decode(): int(v) for k, v in totals.items()} if totals else {}
+                except (AttributeError, TypeError):
+                    totals = {}
+                await self.channel_layer.group_send(self.group_name, {
+                    'type': 'live_gift',
+                    'data': {'type': 'live_gift', 'gift': gift_result, 'totals': totals},
+                })
+
+    async def _handle_cohost_event(self, event_type, content):
+        data = content.get('data', {})
+        if not isinstance(data, dict):
+            data = {}
+        # Server-side identity: a client may never claim another user's identity.
+        data['user_id'] = self.user_id
+        if 'username' in data:
+            data['username'] = getattr(self.profile, 'username', '')
+        if 'display_name' in data:
+            data['display_name'] = getattr(self.profile, 'display_name', '')
+        # Relay live cohost management events to everyone in the room so the
+        # host panel and attendee UI stay in sync in real time.
+        await self.channel_layer.group_send(self.group_name, {
+            'type': f'live_{event_type}',
+            'data': {'type': f'live_{event_type}', **data},
+        })
 
     async def live_chat(self, event): await self.send_json(event)
     async def live_reaction(self, event): await self.send_json(event)
@@ -764,6 +894,7 @@ class RandomDropConsumer(AsyncJsonWebsocketConsumer):
             await self.close(code=4001)
             return
         self.user_id = str(user.id)
+        self.profile = await database_sync_to_async(lambda: getattr(user, 'profile', None))()
         self.group_name = 'random_drop_pool'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         self._limiter = _RateLimiter()
@@ -781,7 +912,14 @@ class RandomDropConsumer(AsyncJsonWebsocketConsumer):
             return
         content.setdefault('data', {})
         if isinstance(content['data'], dict):
-            content['data'].setdefault('user_id', self.user_id)
+            # Server-side identity: a client may never broadcast another
+            # user's id, username or display name.
+            data = content['data']
+            data['user_id'] = self.user_id
+            if 'username' in data:
+                data['username'] = getattr(self.profile, 'username', '')
+            if 'display_name' in data:
+                data['display_name'] = getattr(self.profile, 'display_name', '')
         else:
             content['data'] = {'user_id': self.user_id}
         await self.channel_layer.group_send(self.group_name, {

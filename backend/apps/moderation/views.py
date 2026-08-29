@@ -5,11 +5,12 @@ from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
 
-from .models import ModerationReport, ContentFlag, ModerationAction
+from .models import ModerationReport, ContentFlag, ModerationAction, ModerationAppeal
 from .serializers import (
     ModerationReportSerializer, ModerationReportActionSerializer,
     ContentFlagSerializer, ContentFlagActionSerializer,
-    ModerationActionSerializer,
+    ModerationActionSerializer, ModerationAppealSerializer,
+    ModerationAppealReviewSerializer,
 )
 
 
@@ -265,3 +266,56 @@ class ModerationActionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAdminUser]
     filterset_fields = ['action']
     search_fields = ['reason']
+
+
+class ModerationAppealViewSet(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = ModerationAppeal.objects.select_related(
+        'action', 'appellant', 'reviewer',
+    )
+    serializer_class = ModerationAppealSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['status']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        return qs if self.request.user.is_staff else qs.filter(appellant=self.request.user)
+
+    def perform_create(self, serializer):
+        action = serializer.validated_data['action']
+        if action.target_user_id != self.request.user.id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('You may only appeal actions applied to your account.')
+        serializer.save(appellant=self.request.user)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def review(self, request, pk=None):
+        appeal = self.get_object()
+        serializer = ModerationAppealReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        decision = serializer.validated_data['decision']
+        appeal.status = {
+            'approve': 'approved', 'deny': 'denied', 'review': 'under_review',
+        }[decision]
+        appeal.reviewer = request.user
+        appeal.reviewed_at = timezone.now()
+        appeal.resolution_note = serializer.validated_data['resolution_note']
+        appeal.save(update_fields=['status', 'reviewer', 'reviewed_at', 'resolution_note'])
+
+        if decision == 'approve':
+            original = appeal.action
+            if original.action in ('user_suspended', 'user_banned'):
+                original.target_user.is_active = True
+                original.target_user.save(update_fields=['is_active'])
+            ModerationAction.objects.create(
+                action='action_reversed',
+                moderator=request.user,
+                report=appeal.action.report,
+                target_user=appeal.action.target_user,
+                reason=f'Appeal approved for action #{appeal.action_id}: {appeal.resolution_note}',
+            )
+        return Response(ModerationAppealSerializer(appeal).data)

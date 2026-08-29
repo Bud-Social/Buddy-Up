@@ -715,6 +715,8 @@ class ProfileRecommendationsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def _base_qs(self, profile):
+        from .models import RecommendationFeedback
+
         exclude_ids = {str(profile.user_id)}
         buddy_rel = BuddyRelationship.objects.filter(
             db_models.Q(from_user=profile) | db_models.Q(to_user=profile),
@@ -726,7 +728,30 @@ class ProfileRecommendationsView(views.APIView):
         )
         exclude_ids.update((str(pid) for pid in block_rel.values_list('blocker_id', flat=True)))
         exclude_ids.update((str(pid) for pid in block_rel.values_list('blocked_id', flat=True)))
+        exclude_ids.update(RecommendationFeedback.objects.filter(
+            viewer=profile,
+            feedback__in=('not_interested', 'irrelevant', 'already_connected'),
+        ).values_list('target_id', flat=True))
         return Profile.objects.filter(privacy_level='public').exclude(pk__in=list(exclude_ids))
+
+    @staticmethod
+    def _explanation(viewer, candidate, source):
+        if (viewer.location_city and candidate.location_city
+                and viewer.location_city.casefold() == candidate.location_city.casefold()):
+            return {'code': 'same_city', 'text': f'Also training in {candidate.location_city}'}
+        if candidate.role in ('trainer', 'practitioner'):
+            label = 'trainer' if candidate.role == 'trainer' else 'health practitioner'
+            return {'code': f'verified_{candidate.role}', 'text': f'Recommended {label}'}
+        if source == 'ai':
+            return {'code': 'fitness_match', 'text': 'Matches your fitness profile'}
+        return {'code': 'popular_nearby', 'text': 'Popular in the BuddyUp community'}
+
+    def _result(self, request, profile, candidate, source, score=None):
+        return {
+            'profile': ProfileSerializer(candidate, context={'request': request}).data,
+            'match_score': score,
+            'explanation': self._explanation(profile, candidate, source),
+        }
 
     def get(self, request):
         import requests as http_requests
@@ -749,7 +774,7 @@ class ProfileRecommendationsView(views.APIView):
         def _interleave(profiles):
             groups = {'trainer': [], 'practitioner': [], 'regular': []}
             for p in profiles:
-                key = p.verification_status if p.verification_status in groups else 'regular'
+                key = p.role if p.role in groups else 'regular'
                 groups[key].append(p)
             result = []
             while any(groups.values()):
@@ -770,10 +795,11 @@ class ProfileRecommendationsView(views.APIView):
                 ).order_by('-follower_total', '-post_total')[:60]
             )
             popular = _interleave(popular)[:20]
+            self._record_exposures(request, popular, source='fallback')
             return Response({
                 'success': True,
                 'data': [
-                    {'profile': ProfileSerializer(p, context={'request': request}).data, 'match_score': None}
+                    self._result(request, profile, p, 'fallback')
                     for p in popular
                 ],
                 'message': 'OK',
@@ -786,6 +812,7 @@ class ProfileRecommendationsView(views.APIView):
         profiles_qs = base_qs.filter(pk__in=matched_ids).select_related('user')
 
         profile_map = {str(p.user_id): p for p in profiles_qs}
+        score_map = {m['profile_id']: m.get('score') for m in matches}
         ordered_profiles = [
             profile_map[m['profile_id']]
             for m in matches
@@ -793,16 +820,87 @@ class ProfileRecommendationsView(views.APIView):
         ]
         ordered_profiles = _interleave(ordered_profiles)
 
+        self._record_exposures(request, ordered_profiles, source='ai')
+
         return Response({
             'success': True,
             'data': [
-                {'profile': ProfileSerializer(p, context={'request': request}).data, 'match_score': None}
+                self._result(request, profile, p, 'ai', score_map.get(str(p.user_id)))
                 for p in ordered_profiles
             ],
             'message': 'OK',
             'errors': None,
             'pagination': None,
         })
+
+    @staticmethod
+    def _record_exposures(request, profiles, source):
+        """Durable recommendation-exposure history (best-effort, never fatal)."""
+        import uuid as uuid_mod
+        try:
+            from apps.analytics.models import AnalyticsEvent
+            from apps.analytics.event_ingest import build_event_rows
+            batch_id = str(uuid_mod.uuid4())
+            events = [
+                {
+                    'event_name': 'recommendation.item_impression',
+                    'object_type': 'profile',
+                    'object_id': str(p.user_id),
+                    'properties': {'batch_id': batch_id, 'rank': rank, 'source': source},
+                    'consent': {'analytics': True},
+                }
+                for rank, p in enumerate(profiles, start=1)
+            ]
+            rows, _ = build_event_rows(events, actor_profile=request.user.profile)
+            AnalyticsEvent.objects.bulk_create(rows)
+        except Exception:  # noqa: BLE001 — exposure logging must never break serving
+            pass
+
+
+class ProfileRecommendationFeedbackView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from rest_framework import serializers
+        from .models import RecommendationFeedback
+
+        class InputSerializer(serializers.Serializer):
+            target_user_id = serializers.UUIDField()
+            feedback = serializers.ChoiceField(choices=RecommendationFeedback.FEEDBACK_CHOICES)
+
+        serializer = InputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target = get_object_or_404(Profile, user_id=serializer.validated_data['target_user_id'])
+        if target == request.user.profile:
+            return Response({
+                'success': False, 'data': None, 'message': 'You cannot rate yourself.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        feedback, created = RecommendationFeedback.objects.get_or_create(
+            viewer=request.user.profile,
+            target=target,
+            defaults={'feedback': serializer.validated_data['feedback'], 'history': [
+                {'feedback': serializer.validated_data['feedback'], 'at': timezone.now().isoformat()},
+            ]},
+        )
+        if not created and feedback.feedback != serializer.validated_data['feedback']:
+            feedback.feedback = serializer.validated_data['feedback']
+            feedback.history = [
+                *(feedback.history or []),
+                {'feedback': serializer.validated_data['feedback'], 'at': timezone.now().isoformat()},
+            ]
+            feedback.save(update_fields=['feedback', 'history', 'updated_at'])
+        return Response({
+            'success': True,
+            'data': {
+                'target_user_id': str(target.user_id),
+                'feedback': feedback.feedback,
+            },
+            'message': 'Recommendation feedback recorded.',
+            'errors': None,
+            'pagination': None,
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
 class DiscoverTrendingView(views.APIView):

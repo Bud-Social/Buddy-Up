@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from django.db import models as db_models
+from django.db import models as db_models, transaction
 from django.utils import timezone
 from django.core.cache import cache
 
@@ -400,6 +400,7 @@ class GymScheduleView(views.APIView):
 class RSVPLiveView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, live_id):
         live = get_object_or_404(BuddyLive, id=live_id, status='scheduled')
         from .models import LiveRSVP
@@ -473,7 +474,18 @@ class RefundGiftView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_403_FORBIDDEN)
 
-        tx = get_object_or_404(ArtifactTransaction, id=tx_id, status='completed')
+        # The transaction must belong to THIS live: gift settlements are keyed
+        # by reference_id=live_<id> with the live's host as counterparty, so a
+        # host can never refund a transaction from another live (or another
+        # host's revenue) by iterating transaction ids.
+        tx = get_object_or_404(
+            ArtifactTransaction,
+            id=tx_id,
+            status='completed',
+            transaction_type='tip_sent',
+            reference_id=f'live_{live_id}',
+            counterparty=live.host,
+        )
 
         counterparty = tx.counterparty
         if not counterparty:
@@ -1017,6 +1029,12 @@ class LiveAttendeesView(views.APIView):
 
     def get(self, request, live_id):
         live = get_object_or_404(BuddyLive, id=live_id)
+        if not can_access_live(live, request.user.profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You do not have access to this live session.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
         attendees = LiveAttendee.objects.filter(
             live=live, left_at__isnull=True,
         ).select_related('user').order_by('joined_at')

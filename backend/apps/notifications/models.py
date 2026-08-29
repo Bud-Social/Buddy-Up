@@ -5,6 +5,8 @@ from common.models import TimestampedModel
 
 
 class Notification(TimestampedModel):
+    PRIORITY_CHOICES = [('low', 'Low'), ('normal', 'Normal'), ('high', 'High'), ('critical', 'Critical')]
+    DELIVERY_CHOICES = [('pending', 'Pending'), ('delivered', 'Delivered'), ('failed', 'Failed'), ('skipped', 'Skipped')]
     TYPE_CHOICES = [
         ('buddy_request', 'Buddy Request'),
         ('buddy_accepted', 'Buddy Accepted'),
@@ -64,6 +66,12 @@ class Notification(TimestampedModel):
     # hidden (soft-delete) so accidental swipes are recoverable.
     is_pinned = models.BooleanField(default=False)
     is_dismissed = models.BooleanField(default=False)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
+    dedupe_key = models.CharField(max_length=200, blank=True)
+    aggregation_count = models.PositiveIntegerField(default=1)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    delivery_status = models.CharField(max_length=10, choices=DELIVERY_CHOICES, default='pending')
+    delivered_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'notifications_notification'
@@ -85,6 +93,8 @@ class NotificationPreference(TimestampedModel):
     in_app_enabled = models.BooleanField(default=True)
     quiet_hours_start = models.TimeField(null=True, blank=True)
     quiet_hours_end = models.TimeField(null=True, blank=True)
+    timezone = models.CharField(max_length=60, default='UTC')
+    category_frequency = models.JSONField(default=dict, blank=True)
 
     buddy_request_push = models.BooleanField(default=True)
     buddy_accepted_push = models.BooleanField(default=True)

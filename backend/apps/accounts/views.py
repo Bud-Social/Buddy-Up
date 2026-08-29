@@ -18,6 +18,7 @@ from django.utils import timezone
 from django.contrib.auth import authenticate
 from django.conf import settings
 from django.core.cache import cache
+from django.shortcuts import get_object_or_404
 from django.db import transaction
 from rest_framework import status, views, permissions
 from rest_framework.decorators import api_view, permission_classes
@@ -25,8 +26,9 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from common.utils import hash_dob, calculate_age
+from common.observability import prometheus_metrics
 from common.pagination import CursorPagination
-from .models import User, OTPToken, DeviceSession, AccountEvent
+from .models import User, OTPToken, DeviceSession, AccountEvent, WebAuthnCredential
 from .policy_versions import CURRENT_POLICY_VERSIONS, policy_version
 from .serializers import (
     RegisterSerializer, LoginSerializer, OTPSerializer, ResendOTPSerializer,
@@ -35,10 +37,12 @@ from .serializers import (
     ChangePasswordSerializer, TOTPVerifySerializer,
     LoginOTPSerializer, RegistrationOTPSerializer,
     TOTPChallengeSerializer, TOTPDisableSerializer, GoogleLoginSerializer,
+    PasskeyRenameSerializer, PasskeyRevokeSerializer, ConsentSerializer,
 )
 from apps.profiles.models import Profile
 from .tasks import (
     send_otp_email, send_otp_sms, sms_delivery_configured,
+    send_security_notification_email,
 )
 
 logger = logging.getLogger(__name__)
@@ -104,6 +108,18 @@ def _log_event(user, event_type, request, metadata=None):
         user_agent=_get_user_agent(request),
         metadata=metadata or {},
     )
+
+
+def _security_alert(user, action, request):
+    send_security_notification_email.delay(str(user.id), action, _get_client_ip(request))
+
+
+def _generic_reset_response():
+    return Response({
+        'success': True, 'data': None,
+        'message': 'If that email is registered, a reset link has been sent.',
+        'errors': None, 'pagination': None,
+    })
 
 
 def _generate_temp_token(user, purpose, expiry_minutes=5):
@@ -569,6 +585,7 @@ class TOTPVerifyView(views.APIView):
         ])
 
         _log_event(request.user, '2fa_enabled', request)
+        _security_alert(request.user, 'Two-factor authentication was enabled', request)
 
         return Response({
             'success': True,
@@ -610,6 +627,7 @@ class TOTPDisableView(views.APIView):
         request.user.save(update_fields=['totp_secret', 'totp_enabled'])
 
         _log_event(request.user, '2fa_disabled', request)
+        _security_alert(request.user, 'Two-factor authentication was disabled', request)
 
         return Response({
             'success': True,
@@ -906,10 +924,14 @@ class AppleLoginView(views.APIView):
         name = f"{first_name} {last_name}".strip()
 
         try:
-            # Fetch Apple's public keys
-            keys_url = 'https://appleid.apple.com/auth/keys'
-            apple_keys = requests.get(keys_url).json()['keys']
-            
+            # Fetch Apple's public keys — cached for an hour; the network
+            # fetch itself is time-boxed so a slow IdP cannot hang the worker.
+            apple_keys = cache.get('apple_jwks_keys')
+            if not apple_keys:
+                keys_url = 'https://appleid.apple.com/auth/keys'
+                apple_keys = requests.get(keys_url, timeout=5).json()['keys']
+                cache.set('apple_jwks_keys', apple_keys, timeout=3600)
+
             # Get the key ID from the token header
             header = jwt.get_unverified_header(identity_token)
             kid = header['kid']
@@ -1005,38 +1027,49 @@ class TokenRefreshView(views.APIView):
         try:
             token = RefreshToken(refresh_token)
             token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
-            session = DeviceSession.objects.filter(
-                refresh_token_hash=token_hash,
-                is_active=True,
-            ).select_related('user').first()
-            if not session or not session.user.is_active or session.user.deleted_at:
-                return Response({
-                    'success': False, 'data': None,
-                    'message': 'This session is no longer active. Please sign in again.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_401_UNAUTHORIZED)
 
-            access = str(token.access_token)
+            # Rotate under a row lock: two concurrent refreshes with the same
+            # token are serialised here, and the loser re-reads the row with
+            # the already-rotated hash and is rejected.
+            with transaction.atomic():
+                session = DeviceSession.objects.select_for_update().filter(
+                    refresh_token_hash=token_hash,
+                    is_active=True,
+                ).select_related('user').first()
+                if not session or not session.user.is_active or session.user.deleted_at:
+                    return Response({
+                        'success': False, 'data': None,
+                        'message': 'This session is no longer active. Please sign in again.',
+                        'errors': None, 'pagination': None,
+                    }, status=status.HTTP_401_UNAUTHORIZED)
 
-            new_refresh = None
-            if getattr(settings, 'SIMPLE_JWT', {}).get('ROTATE_REFRESH_TOKENS', True):
-                token.blacklist()
-                user_id = token.payload.get('user_id')
-                try:
-                    user = User.objects.get(id=user_id, is_active=True, deleted_at__isnull=True)
-                    new_token = RefreshToken.for_user(user)
+                # Guard against a rotation that committed while this request
+                # waited for the lock: the incoming hash must still match the
+                # session's CURRENT token hash before we rotate again.
+                session.refresh_from_db(fields=['refresh_token_hash', 'is_active'])
+                if not session.is_active or session.refresh_token_hash != token_hash:
+                    return Response({
+                        'success': False, 'data': None,
+                        'message': 'This session is no longer active. Please sign in again.',
+                        'errors': None, 'pagination': None,
+                    }, status=status.HTTP_401_UNAUTHORIZED)
+
+                access = str(token.access_token)
+
+                new_refresh = None
+                if getattr(settings, 'SIMPLE_JWT', {}).get('ROTATE_REFRESH_TOKENS', True):
+                    token.blacklist()
+                    new_token = RefreshToken.for_user(session.user)
                     new_token['device_id'] = token.payload.get('device_id', str(uuid.uuid4()))
                     new_refresh = str(new_token)
-                except User.DoesNotExist:
-                    new_refresh = None
 
-            if new_refresh:
-                new_hash = hashlib.sha256(new_refresh.encode()).hexdigest()
-                DeviceSession.objects.filter(id=session.id, is_active=True).update(
-                    refresh_token_hash=new_hash, last_active=timezone.now()
-                )
-            else:
-                DeviceSession.objects.filter(id=session.id, is_active=True).update(last_active=timezone.now())
+                if new_refresh:
+                    new_hash = hashlib.sha256(new_refresh.encode()).hexdigest()
+                    DeviceSession.objects.filter(id=session.id, is_active=True).update(
+                        refresh_token_hash=new_hash, last_active=timezone.now()
+                    )
+                else:
+                    DeviceSession.objects.filter(id=session.id, is_active=True).update(last_active=timezone.now())
 
             data = {'access': access}
             if new_refresh:
@@ -1310,8 +1343,10 @@ class PasswordResetConfirmView(views.APIView):
         if user.totp_enabled:
             user.totp_enabled = False
             user.totp_secret = ''
+            # Recovery path — 2FA is disabled, but the user must be told.
             _log_event(user, '2fa_disabled', request,
                        metadata={'reason': 'password_reset'})
+            _security_alert(user, 'Two-factor authentication was disabled via password reset', request)
 
         user.save()
 
@@ -1321,6 +1356,7 @@ class PasswordResetConfirmView(views.APIView):
         DeviceSession.objects.filter(user=user).update(is_active=False)
 
         _log_event(user, 'password_changed', request)
+        _security_alert(user, 'Your password was reset', request)
 
         return Response({
             'success': True, 'data': None,
@@ -1352,6 +1388,7 @@ class ChangePasswordView(views.APIView):
         DeviceSession.objects.filter(user=request.user, is_active=True).update(is_active=False)
 
         _log_event(request.user, 'password_changed', request)
+        _security_alert(request.user, 'Your password was changed', request)
 
         return Response({
             'success': True, 'data': None,
@@ -1410,6 +1447,16 @@ def _webauthn_rp():
     return rp_id, 'BuddyUp', origin
 
 
+# WebAuthn challenges live for five minutes and are single-use: the finish
+# endpoints consume (pop) them before verifying, so a captured challenge can
+# never be replayed.
+WEBAUTHN_CHALLENGE_TTL = 300
+
+
+def _webauthn_challenge_key(user_id, purpose):
+    return f'webauthn:challenge:{user_id}:{purpose}'
+
+
 def _b64url_decode(data):
     import base64
     padded = data + '=' * (-len(data) % 4)
@@ -1424,6 +1471,7 @@ def _b64url_encode(raw):
 class PasskeyRegisterBeginView(views.APIView):
     """Start passkey registration (authenticated users only)."""
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'webauthn'
 
     def post(self, request):
         try:
@@ -1456,7 +1504,10 @@ class PasskeyRegisterBeginView(views.APIView):
             user_display_name=getattr(getattr(request.user, 'profile', None), 'display_name', '') or request.user.email,
             exclude_credentials=existing_ids,
         )
-        cache.set(f'webauthn_reg:{request.user.id}', options.challenge, timeout=300)
+        cache.set(
+            _webauthn_challenge_key(request.user.id, 'registration'),
+            options.challenge, timeout=WEBAUTHN_CHALLENGE_TTL,
+        )
         return Response({
             'success': True, 'data': {'options': json.loads(options_to_json(options))},
             'message': 'Registration options generated.', 'errors': None, 'pagination': None,
@@ -1477,7 +1528,12 @@ class PasskeyRegisterFinishView(views.APIView):
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         rp_id, _name, origin = _webauthn_rp()
-        expected_challenge = cache.get(f'webauthn_reg:{request.user.id}')
+        # Challenges are keyed by (user, purpose) server-side and single-use:
+        # consume the challenge before verifying so a replayed finish call —
+        # even with a valid credential — finds nothing and fails.
+        challenge_cache_key = _webauthn_challenge_key(request.user.id, 'registration')
+        expected_challenge = cache.get(challenge_cache_key)
+        cache.delete(challenge_cache_key)
         if not expected_challenge:
             return Response({
                 'success': False, 'data': None,
@@ -1515,10 +1571,13 @@ class PasskeyRegisterFinishView(views.APIView):
                 'sign_count': verification.sign_count,
                 'transports': list(getattr(verification, 'credential_transports', []) or []),
                 'device_name': device_name or (credential.get('response', {}).get('authenticatorAttachment') or 'passkey'),
+                'expires_at': timezone.now() + timedelta(days=int(os.environ.get('PASSKEY_EXPIRY_DAYS', '365'))),
+                'last_verified_at': timezone.now(),
+                'revoked_at': None,
             },
         )
-        cache.delete(f'webauthn_reg:{request.user.id}')
         _log_event(request.user, 'passkey_registered', request)
+        _security_alert(request.user, 'A passkey was added', request)
         return Response({
             'success': True, 'data': {'registered': True},
             'message': 'Passkey registered.', 'errors': None, 'pagination': None,
@@ -1527,6 +1586,7 @@ class PasskeyRegisterFinishView(views.APIView):
 
 class PasskeyLoginBeginView(views.APIView):
     permission_classes = [permissions.AllowAny]
+    throttle_scope = 'webauthn'
 
     def post(self, request):
         try:
@@ -1551,14 +1611,22 @@ class PasskeyLoginBeginView(views.APIView):
         options = generate_authentication_options(
             rp_id=rp_id,
             allow_credentials=allow_credentials,
-            user_verification='preferred',
+            # py-webauthn expects the enum, not a raw string; the default is
+            # already UserVerificationRequirement.PREFERRED.
         )
-        # Challenge keyed per-session-ish random token returned to the client.
-        challenge_key = f"webauthn_auth:{secrets.token_hex(16)}"
-        cache.set(challenge_key, options.challenge, timeout=300)
+        # Challenge stored server-side, keyed by the challenge value itself
+        # (which the client already sees in the options and which is bound
+        # into the authenticator signature). A user binding is recorded when
+        # the email is known so another account cannot redeem the challenge.
+        challenge_hex = options.challenge.hex()
+        binding = {'challenge': challenge_hex, 'user_id': str(user.id) if user else ''}
+        cache.set(
+            f'webauthn:challenge:{challenge_hex}:authentication', json.dumps(binding),
+            timeout=WEBAUTHN_CHALLENGE_TTL,
+        )
         return Response({
             'success': True,
-            'data': {'options': json.loads(options_to_json(options)), 'challenge_key': challenge_key},
+            'data': {'options': json.loads(options_to_json(options)), 'challenge_key': challenge_hex},
             'message': 'OK', 'errors': None, 'pagination': None,
         })
 
@@ -1580,22 +1648,39 @@ class PasskeyLoginFinishView(views.APIView):
         rp_id, _name, origin = _webauthn_rp()
         data = request.data if isinstance(request.data, dict) else {}
         challenge_key = data.get('challenge_key', '')
-        expected_challenge = cache.get(challenge_key) if challenge_key else None
-        cache.delete(challenge_key)
-        if not expected_challenge:
+        binding = None
+        if challenge_key:
+            binding_raw = cache.get(f'webauthn:challenge:{challenge_key}:authentication')
+            # Single-use: consume the challenge regardless of the outcome.
+            cache.delete(f'webauthn:challenge:{challenge_key}:authentication')
+            try:
+                binding = json.loads(binding_raw) if binding_raw else None
+            except (TypeError, ValueError):
+                binding = None
+        if not binding or binding.get('challenge') != challenge_key:
             return Response({
                 'success': False, 'data': None,
                 'message': 'Login session expired. Try again.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
+        expected_challenge = bytes.fromhex(binding['challenge'])
 
         credential = data.get('credential') or {}
         raw_id = credential.get('id', '')
         from .models import WebAuthnCredential
         cred = WebAuthnCredential.objects.filter(credential_id=raw_id).select_related('user').first()
-        if not cred or not cred.user.is_active:
+        if (not cred or not cred.user.is_active or cred.revoked_at or
+                (cred.expires_at and cred.expires_at <= timezone.now())):
             return Response({
                 'success': False, 'data': None, 'message': 'Unknown passkey.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        # The challenge was bound to a specific account at begin time — a
+        # different user's credential can never redeem it.
+        if binding.get('user_id') and str(cred.user.id) != binding['user_id']:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'This challenge was issued for a different account.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1607,7 +1692,7 @@ class PasskeyLoginFinishView(views.APIView):
                 expected_rp_id=rp_id,
                 credential_public_key=bytes(cred.public_key),
                 credential_current_sign_count=cred.sign_count,
-                require_user_verification=False,
+                require_user_verification=True,
             )
         except Exception as e:  # noqa: BLE001
             return Response({
@@ -1617,7 +1702,8 @@ class PasskeyLoginFinishView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         cred.sign_count = verification.new_sign_count
-        cred.save(update_fields=['sign_count'])
+        cred.last_verified_at = timezone.now()
+        cred.save(update_fields=['sign_count', 'last_verified_at'])
 
         payload, challenged = _finalize_social_login(cred.user, 'passkey', request)
         message = 'Additional verification required.' if challenged else (
@@ -1627,6 +1713,91 @@ class PasskeyLoginFinishView(views.APIView):
             'success': True, 'data': payload, 'message': message,
             'errors': None, 'pagination': None,
         })
+
+
+class PasskeyListView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        credentials = request.user.webauthn_credentials.order_by('-created_at')
+        return Response({'success': True, 'data': [
+            {'id': c.id, 'device_name': c.device_name,
+             'created_at': c.created_at.isoformat(),
+             'last_verified_at': c.last_verified_at.isoformat() if c.last_verified_at else None,
+             'expires_at': c.expires_at.isoformat() if c.expires_at else None,
+             'revoked_at': c.revoked_at.isoformat() if c.revoked_at else None}
+            for c in credentials
+        ], 'message': 'OK', 'errors': None, 'pagination': None})
+
+
+class PasskeyRenameView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        credential = get_object_or_404(
+            WebAuthnCredential, id=pk, user=request.user, revoked_at__isnull=True,
+        )
+        serializer = PasskeyRenameSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        credential.device_name = serializer.validated_data['device_name'].strip()
+        credential.save(update_fields=['device_name', 'updated_at'])
+        _log_event(request.user, 'passkey_renamed', request, {'credential_id': credential.id})
+        _security_alert(request.user, 'A passkey was renamed', request)
+        return Response({'success': True, 'data': {'id': credential.id, 'device_name': credential.device_name}, 'message': 'Passkey renamed.', 'errors': None, 'pagination': None})
+
+
+class PasskeyRevokeView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        credential = get_object_or_404(
+            WebAuthnCredential, id=pk, user=request.user, revoked_at__isnull=True,
+        )
+        serializer = PasskeyRevokeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        proof = serializer.validated_data
+        valid = bool(proof.get('password') and request.user.check_password(proof['password']))
+        if not valid and proof.get('code') and request.user.totp_enabled:
+            valid = pyotp.TOTP(request.user.totp_secret).verify(proof['code'])
+        if not valid and proof.get('recovery_code'):
+            from .models import RecoveryCode
+            recovery = RecoveryCode.objects.filter(
+                user=request.user, is_used=False,
+                code_hash=RecoveryCode.hash_code(proof['recovery_code']),
+            ).first()
+            if recovery:
+                recovery.is_used = True
+                recovery.save(update_fields=['is_used'])
+                valid = True
+        if not valid:
+            return Response({'success': False, 'data': None, 'message': 'Re-authentication required.', 'errors': None, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
+        credential.revoked_at = timezone.now()
+        credential.save(update_fields=['revoked_at', 'updated_at'])
+        _log_event(request.user, 'passkey_revoked', request, {'credential_id': credential.id})
+        _security_alert(request.user, 'A passkey was revoked', request)
+        return Response({'success': True, 'data': None, 'message': 'Passkey revoked.', 'errors': None, 'pagination': None})
+
+
+class PasskeyReverifyView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        credential = get_object_or_404(
+            WebAuthnCredential, id=pk, user=request.user, revoked_at__isnull=True,
+        )
+        serializer = PasskeyRevokeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        proof = serializer.validated_data
+        valid = bool(proof.get('password') and request.user.check_password(proof['password']))
+        if not valid and proof.get('code') and request.user.totp_enabled:
+            valid = pyotp.TOTP(request.user.totp_secret).verify(proof['code'])
+        if not valid:
+            return Response({'success': False, 'data': None, 'message': 'Re-authentication required.', 'errors': None, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
+        now = timezone.now()
+        credential.last_verified_at = now
+        credential.expires_at = now + timedelta(days=int(os.environ.get('PASSKEY_EXPIRY_DAYS', '365')))
+        credential.save(update_fields=['last_verified_at', 'expires_at', 'updated_at'])
+        return Response({'success': True, 'data': {'id': credential.id, 'expires_at': credential.expires_at.isoformat()}, 'message': 'Passkey re-verified.', 'errors': None, 'pagination': None})
 
 
 class SocialAgeSetupView(views.APIView):
@@ -1732,21 +1903,61 @@ class VerifyAgeView(views.APIView):
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def health_check(request):
+    """Dependency-aware readiness check used by Railway and canaries."""
+    from django.core.cache import cache
     from django.db import connections
-    from django.db.utils import OperationalError
+    from django.db.migrations.executor import MigrationExecutor
 
-    db_ok = True
+    checks = {}
+
     try:
-        connections['default'].cursor()
-    except OperationalError:
-        db_ok = False
+        with connections['default'].cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+        checks['database'] = {'ok': True}
+    except Exception as exc:  # noqa: BLE001
+        checks['database'] = {'ok': False, 'error': type(exc).__name__}
 
-    return Response({
-        'status': 'ok' if db_ok else 'degraded',
+    try:
+        probe = f'health:{uuid.uuid4().hex}'
+        cache.set(probe, 'ok', timeout=10)
+        cache_ok = cache.get(probe) == 'ok'
+        cache.delete(probe)
+        checks['cache'] = {'ok': cache_ok}
+    except Exception as exc:  # noqa: BLE001
+        checks['cache'] = {'ok': False, 'error': type(exc).__name__}
+
+    try:
+        executor = MigrationExecutor(connections['default'])
+        pending = executor.migration_plan(executor.loader.graph.leaf_nodes())
+        checks['migrations'] = {
+            'ok': not pending,
+            'pending': [f'{m.app_label}.{m.name}' for m, _backward in pending[:20]],
+        }
+    except Exception as exc:  # noqa: BLE001
+        checks['migrations'] = {'ok': False, 'error': type(exc).__name__}
+
+    required_ok = all(checks[name]['ok'] for name in ('database', 'cache', 'migrations'))
+    payload = {
+        'status': 'ok' if required_ok else 'degraded',
         'service': 'buddyup-api',
-        'version': '1.0.0',
-        'database': 'connected' if db_ok else 'disconnected',
-    })
+        'release': settings.RELEASE_VERSION,
+        'commit': settings.RELEASE_COMMIT[:12],
+        'request_id': getattr(request, 'request_id', None),
+        'checks': checks,
+    }
+    return Response(payload, status=200 if required_ok else status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def metrics(request):
+    """Expose aggregate worker metrics to a configured scraper only."""
+    expected = settings.METRICS_TOKEN
+    if expected and request.headers.get('X-Metrics-Token') != expected:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+    from django.http import HttpResponse
+    return HttpResponse(prometheus_metrics(), content_type='text/plain; version=0.0.4')
 
 
 class PolicyVersionsView(views.APIView):
@@ -1799,6 +2010,31 @@ class ConsentStatusView(views.APIView):
             'errors': None,
             'pagination': None,
         })
+
+
+class ConsentUpdateView(views.APIView):
+    """Record explicit acceptance of every current policy version."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = ConsentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        log = dict(request.user.consent_log or {})
+        for key in CURRENT_POLICY_VERSIONS:
+            accepted_key = f'accepted_{key}'
+            if not data.get(accepted_key, False):
+                return Response({'success': False, 'data': None, 'message': 'All current policies must be accepted.', 'errors': {accepted_key: ['This consent is required.']}, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
+            log[f'{key}_version'] = CURRENT_POLICY_VERSIONS[key]['version']
+        log.update({'consented_at': timezone.now().isoformat(), 'consent_ip': _get_client_ip(request)})
+        request.user.consent_log = log
+        request.user.save(update_fields=['consent_log'])
+        profile = getattr(request.user, 'profile', None)
+        if profile:
+            profile.terms_version = CURRENT_POLICY_VERSIONS['terms']['version']
+            profile.terms_accepted_at = timezone.now()
+            profile.save(update_fields=['terms_version', 'terms_accepted_at'])
+        return Response({'success': True, 'data': {'policies': log}, 'message': 'Consent updated.', 'errors': None, 'pagination': None})
 
 
 class DeactivateAccountView(views.APIView):

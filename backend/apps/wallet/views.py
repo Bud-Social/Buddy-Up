@@ -3,6 +3,8 @@ import logging
 import uuid
 from datetime import timedelta
 
+from django.conf import settings
+from django.db import transaction as db_transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -24,9 +26,9 @@ from apps.profiles.models import Profile
 from .flutterwave import FlutterwaveClient
 from .utils import (
     _get_profile_balance, _get_creator_balance, _get_total_balance,
-    deduct_artifacts, credit_artifacts,
-    deduct_creator_artifacts, credit_creator_artifacts,
-    platform_cut, calculate_fiat,
+    credit_artifacts, credit_creator_artifacts,
+    platform_cut, calculate_fiat, reserve_withdrawal,
+    transfer_artifacts,
 )
 
 logger = logging.getLogger(__name__)
@@ -102,14 +104,25 @@ class CreatorWalletTransferView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if not deduct_creator_artifacts(profile, artifact_type, quantity):
+        transfer = transfer_artifacts(
+            profile, profile, artifact_type, quantity, source='creator',
+            operation='creator_transfer',
+            idempotency_key=request.headers.get('Idempotency-Key', ''),
+            reference_id=f'creator-transfer:{profile.pk}:{artifact_type}:{quantity}',
+        )
+        if transfer is None:
             return Response({
                 'success': False, 'data': None,
                 'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens in creator wallet.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        credit_artifacts(profile, artifact_type, quantity)
+        entry, created = transfer
+        if not created:
+            return Response({
+                'success': True, 'data': {'journal_entry_id': str(entry.id)},
+                'message': 'Already processed.', 'errors': None, 'pagination': None,
+            })
 
         transfer_ref = f'ct_{uuid.uuid4().hex[:12]}'
         ArtifactTransaction.objects.create(
@@ -120,7 +133,7 @@ class CreatorWalletTransferView(views.APIView):
             direction='debit',
             status='completed',
             reference_id=transfer_ref,
-            description='Transfer from creator wallet to regular wallet',
+            description='Transfer from creator wallet to regular wallet', journal_entry=entry,
         )
         ArtifactTransaction.objects.create(
             user=profile,
@@ -130,7 +143,7 @@ class CreatorWalletTransferView(views.APIView):
             direction='credit',
             status='completed',
             reference_id=transfer_ref,
-            description='Transfer received in regular wallet from creator wallet',
+            description='Transfer received in regular wallet from creator wallet', journal_entry=entry,
         )
 
         return Response({
@@ -240,7 +253,7 @@ class InitializePurchaseView(views.APIView):
             status='pending',
             fiat_amount=fiat_amount,
             fiat_currency='USD',
-            payment_provider=payment_method,
+            payment_provider='flutterwave',
             tx_ref=tx_ref,
             description=f'Purchase {quantity} {ARTIFACT_LABELS[artifact_type]}(s)',
         )
@@ -337,7 +350,11 @@ class ConfirmPurchaseView(views.APIView):
         if verification.success and verification.data:
             verified_amount = float(verification.data.get('amount', 0))
             expected_amount = float(tx.fiat_amount)
-            if abs(verified_amount - expected_amount) > 0.01:
+            verified_ref = str(verification.data.get('tx_ref', ''))
+            verified_currency = str(verification.data.get('currency', ''))
+            if (abs(verified_amount - expected_amount) > 0.01
+                    or verified_ref != tx.tx_ref
+                    or (verified_currency and verified_currency != tx.fiat_currency)):
                 tx.status = 'failed'
                 tx.flutterwave_response = verification.data
                 tx.save(update_fields=['status', 'flutterwave_response'])
@@ -347,11 +364,17 @@ class ConfirmPurchaseView(views.APIView):
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_402_PAYMENT_REQUIRED)
 
-            credit_artifacts(request.user.profile, tx.artifact_type, tx.quantity)
-            tx.status = 'completed'
-            tx.flutterwave_id = data['flutterwave_id']
-            tx.flutterwave_response = verification.data
-            tx.save(update_fields=['status', 'flutterwave_id', 'flutterwave_response'])
+            with db_transaction.atomic():
+                tx = ArtifactTransaction.objects.select_for_update().get(pk=tx.pk)
+                if tx.status != 'completed':
+                    credit_artifacts(
+                        request.user.profile, tx.artifact_type, tx.quantity,
+                        idempotency_key=f'purchase:{tx.tx_ref}', reference_id=tx.tx_ref,
+                    )
+                    tx.status = 'completed'
+                    tx.flutterwave_id = data['flutterwave_id']
+                    tx.flutterwave_response = verification.data
+                    tx.save(update_fields=['status', 'flutterwave_id', 'flutterwave_response'])
 
             return Response({
                 'success': True,
@@ -474,24 +497,44 @@ class FlutterwaveWebhookView(views.APIView):
                             tx_ref, charged_amount, currency,
                         )
                         return Response({'status': 'mismatch'}, status=400)
+                    credit_artifacts(
+                        tx.user, tx.artifact_type, tx.quantity,
+                        idempotency_key=f'purchase:{tx.tx_ref}', reference_id=tx.tx_ref,
+                    )
                     tx.status = 'completed'
                     tx.flutterwave_id = flutterwave_id
                     tx.flutterwave_response = event_data
                     tx.save(update_fields=['status', 'flutterwave_id', 'flutterwave_response'])
-                    credit_artifacts(tx.user, tx.artifact_type, tx.quantity)
             except ArtifactTransaction.DoesNotExist:
                 pass
 
         elif event_type == 'transfer.completed':
             flutterwave_id = str(event_data.get('id', ''))
             try:
+                from .tasks import _complete_withdrawal
                 with db_transaction.atomic():
                     tx = ArtifactTransaction.objects.select_for_update().get(
                         flutterwave_id=flutterwave_id, status='pending'
                     )
-                    tx.status = 'completed'
-                    tx.flutterwave_response = event_data
-                    tx.save(update_fields=['status', 'flutterwave_response'])
+                    _complete_withdrawal(tx, event_data)
+            except ArtifactTransaction.DoesNotExist:
+                pass
+
+        elif event_type in ('transfer.failed', 'transfer.cancelled', 'transfer.reversed'):
+            flutterwave_id = str(event_data.get('id', ''))
+            try:
+                from .tasks import _refund_failed_withdrawal
+                tx = ArtifactTransaction.objects.get(
+                    flutterwave_id=flutterwave_id,
+                    transaction_type='withdrawal',
+                    status='pending',
+                )
+                tx.flutterwave_response = {
+                    **(tx.flutterwave_response or {}),
+                    'provider_event': event_data,
+                }
+                tx.save(update_fields=['flutterwave_response'])
+                _refund_failed_withdrawal(tx, reason=event_type)
             except ArtifactTransaction.DoesNotExist:
                 pass
 
@@ -518,24 +561,27 @@ class TipUserView(views.APIView):
         quantity = data['quantity']
         source = data.get('source', 'regular')
 
-        if source == 'creator':
-            if not deduct_creator_artifacts(request.user.profile, artifact_type, quantity):
-                return Response({
-                    'success': False, 'data': None,
-                    'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens in creator wallet.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_400_BAD_REQUEST)
-        elif not deduct_artifacts(request.user.profile, artifact_type, quantity):
+        cut = platform_cut('tip', artifact_type, quantity)
+        creator_qty = quantity - cut
+        result = transfer_artifacts(
+            request.user.profile, target, artifact_type, quantity,
+            source=source, operation='tip',
+            idempotency_key=request.headers.get('Idempotency-Key', ''),
+            reference_id=f'tip:{request.user.profile.pk}:{target.pk}:{artifact_type}:{quantity}',
+            platform_fee=cut,
+        )
+        if result is None:
             return Response({
                 'success': False, 'data': None,
                 'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
-
-        cut = platform_cut('tip', artifact_type, quantity)
-        creator_qty = quantity - cut
-
-        credit_artifacts(target, artifact_type, creator_qty)
+        entry, created = result
+        if not created:
+            return Response({
+                'success': True, 'data': {'journal_entry_id': str(entry.id)},
+                'message': 'Already processed.', 'errors': None, 'pagination': None,
+            })
 
         ArtifactTransaction.objects.create(
             user=request.user.profile,
@@ -545,7 +591,7 @@ class TipUserView(views.APIView):
             direction='debit',
             counterparty=target,
             status='completed',
-            description=f'Tipped {ARTIFACT_LABELS[artifact_type]} to @{target.username} from {source} wallet',
+            description=f'Tipped {ARTIFACT_LABELS[artifact_type]} to @{target.username} from {source} wallet', journal_entry=entry,
         )
 
         ArtifactTransaction.objects.create(
@@ -557,7 +603,7 @@ class TipUserView(views.APIView):
             counterparty=request.user.profile,
             status='completed',
             clearance_at=timezone.now() + timedelta(days=7),
-            description=f'Tip from @{request.user.profile.username}',
+            description=f'Tip from @{request.user.profile.username}', journal_entry=entry,
         )
 
         ArtifactTransaction.objects.create(
@@ -567,7 +613,7 @@ class TipUserView(views.APIView):
             quantity=cut,
             direction='debit',
             status='completed',
-            description=f'Platform fee ({int(PLATFORM_CUTS["tip"] * 100)}%)',
+            description=f'Platform fee ({int(PLATFORM_CUTS["tip"] * 100)}%)', journal_entry=entry,
         )
 
         return Response({
@@ -599,21 +645,24 @@ class GiftArtifactsView(views.APIView):
         quantity = data['quantity']
         source = data.get('source', 'regular')
 
-        if source == 'creator':
-            if not deduct_creator_artifacts(request.user.profile, artifact_type, quantity):
-                return Response({
-                    'success': False, 'data': None,
-                    'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens in creator wallet.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_400_BAD_REQUEST)
-        elif not deduct_artifacts(request.user.profile, artifact_type, quantity):
+        result = transfer_artifacts(
+            request.user.profile, target, artifact_type, quantity,
+            source=source, operation='gift',
+            idempotency_key=request.headers.get('Idempotency-Key', ''),
+            reference_id=f'gift:{request.user.profile.pk}:{target.pk}:{artifact_type}:{quantity}',
+        )
+        if result is None:
             return Response({
                 'success': False, 'data': None,
                 'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
-
-        credit_artifacts(target, artifact_type, quantity)
+        entry, created = result
+        if not created:
+            return Response({
+                'success': True, 'data': {'journal_entry_id': str(entry.id)},
+                'message': 'Already processed.', 'errors': None, 'pagination': None,
+            })
 
         ArtifactTransaction.objects.create(
             user=request.user.profile,
@@ -623,7 +672,7 @@ class GiftArtifactsView(views.APIView):
             direction='debit',
             counterparty=target,
             status='completed',
-            description=f'Gifted {quantity} {ARTIFACT_LABELS[artifact_type]}(s) to @{target.username} from {source} wallet',
+            description=f'Gifted {quantity} {ARTIFACT_LABELS[artifact_type]}(s) to @{target.username} from {source} wallet', journal_entry=entry,
         )
 
         ArtifactTransaction.objects.create(
@@ -634,7 +683,7 @@ class GiftArtifactsView(views.APIView):
             direction='credit',
             counterparty=request.user.profile,
             status='completed',
-            description=f'Gift from @{request.user.profile.username}',
+            description=f'Gift from @{request.user.profile.username}', journal_entry=entry,
         )
 
         return Response({
@@ -686,36 +735,32 @@ class WithdrawView(views.APIView):
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-        if source == 'creator':
-            if not deduct_creator_artifacts(profile, artifact_type, quantity):
-                return Response({
-                    'success': False, 'data': None,
-                    'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens in creator wallet.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            if not deduct_artifacts(profile, artifact_type, quantity):
-                return Response({
-                    'success': False, 'data': None,
-                    'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens.',
-                    'errors': None, 'pagination': None,
-                }, status=status.HTTP_400_BAD_REQUEST)
-
         tx_ref = f'bw-{uuid.uuid4().hex[:12]}'
-        tx = ArtifactTransaction.objects.create(
-            user=profile,
-            transaction_type='withdrawal',
+        tx = reserve_withdrawal(
+            profile,
+            source=source,
             artifact_type=artifact_type,
             quantity=quantity,
-            direction='debit',
-            status='pending' if method == 'bank_transfer' else 'completed',
-            fiat_amount=fiat_value,
-            fiat_currency='USD',
+            fiat_amount=round(fiat_value * getattr(settings, 'KES_PER_USD', 129.5), 2),
+            fiat_currency='KES',
             phone_number=data.get('phone_number', ''),
             bank_account=data.get('bank_account', ''),
             tx_ref=tx_ref,
-            description=f'Withdrawal from {source} wallet via {method}',
+            idempotency_key=request.headers.get('Idempotency-Key') or tx_ref,
+            method=method,
         )
+        if tx is None:
+            wallet_label = 'creator wallet' if source == 'creator' else 'wallet'
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Insufficient {ARTIFACT_LABELS[artifact_type]} tokens in {wallet_label}.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        tx.flutterwave_response = {
+            **(tx.flutterwave_response or {}),
+            'usd_value': fiat_value,
+        }
+        tx.save(update_fields=['flutterwave_response'])
 
         if method == 'bank_transfer':
             bank_account = data.get('bank_account', '')
@@ -731,17 +776,25 @@ class WithdrawView(views.APIView):
 
             if recipient_resp.success and recipient_resp.data:
                 recipient_id = recipient_resp.data.get('id')
-                transfer_resp = fw.initiate_transfer(recipient_id, fiat_value)
+                transfer_resp = fw.initiate_transfer(recipient_id, float(tx.fiat_amount))
                 tx.flutterwave_id = transfer_resp.flutterwave_ref or ''
-                tx.flutterwave_response = transfer_resp.data
+                tx.flutterwave_response = {
+                    'wallet_source': source,
+                    'usd_value': fiat_value,
+                    'initiation': transfer_resp.data,
+                }
 
                 if transfer_resp.success:
-                    tx.status = 'completed'
-                    tx.save(update_fields=['status', 'flutterwave_id', 'flutterwave_response'])
+                    # Initiated is not settled: completion only comes from a
+                    # signed provider webhook or reconciliation result.
+                    tx.description = 'Bank withdrawal submitted; awaiting provider confirmation'
+                    tx.save(update_fields=['description', 'flutterwave_id', 'flutterwave_response'])
+                    from .tasks import process_withdrawal
+                    process_withdrawal.delay(str(tx.id))
                     return Response({
                         'success': True,
                         'data': ArtifactTransactionSerializer(tx).data,
-                        'message': f'Withdrawal of {quantity} {ARTIFACT_LABELS[artifact_type]}(s) sent to {account_name}.',
+                        'message': f'Withdrawal submitted for {account_name}; settlement is pending provider confirmation.',
                         'errors': None, 'pagination': None,
                     }, status=status.HTTP_201_CREATED)
                 else:
@@ -770,13 +823,12 @@ class WithdrawView(views.APIView):
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Defensive fallback; serializer currently permits bank transfer only.
         return Response({
-            'success': True,
-            'data': ArtifactTransactionSerializer(tx).data,
-            'message': f'Withdrawal of {quantity} {ARTIFACT_LABELS[artifact_type]}(s) processed successfully.',
-            'errors': None,
-            'pagination': None,
-        }, status=status.HTTP_201_CREATED)
+            'success': False, 'data': None,
+            'message': 'No supported payout provider was selected.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 class BundleListView(views.APIView):
@@ -833,76 +885,17 @@ class PayoutRequestView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_403_FORBIDDEN)
 
-        method = request.data.get('method', 'mpesa')
-        phone_number = request.data.get('phone_number', '')
-        bank_account = request.data.get('bank_account', '')
-
-        amount_usd = request.data.get('amount')
-        artifact_type = request.data.get('artifact_type')
-        quantity = request.data.get('quantity')
-
-        if amount_usd is not None:
-            try:
-                amount_usd = float(amount_usd)
-                if amount_usd < 5.0:
-                    return Response({'success': False, 'message': 'Minimum payout amount is $5.00.'}, status=400)
-            except (ValueError, TypeError):
-                return Response({'success': False, 'message': 'Invalid payout amount.'}, status=400)
-        elif artifact_type and quantity:
-            try:
-                quantity = int(quantity)
-                val = ARTIFACT_VALUES.get(artifact_type, 0)
-                amount_usd = round(val * quantity, 2)
-            except (ValueError, TypeError):
-                return Response({'success': False, 'message': 'Invalid quantity.'}, status=400)
-        else:
-            return Response({'success': False, 'message': 'Amount or artifact details required.'}, status=400)
-
-        creator_bal = _get_creator_balance(profile)
-        total_creator_fiat = calculate_fiat(creator_bal)['amount']
-        if total_creator_fiat < amount_usd:
-            return Response({
-                'success': False,
-                'message': f'Insufficient creator balance. Available: ${total_creator_fiat:.2f}',
-            }, status=400)
-
-        # Deduct artifacts
-        remaining_needed = amount_usd
-        primary_artifact = 'buddy_token'
-        for art_key in sorted(creator_bal.keys(), key=lambda k: ARTIFACT_VALUES.get(k, 0), reverse=True):
-            if remaining_needed <= 0:
-                break
-            art_val = ARTIFACT_VALUES.get(art_key, 1.0)
-            avail_qty = creator_bal.get(art_key, 0)
-            if avail_qty <= 0 or art_val <= 0:
-                continue
-            qty_to_take = min(avail_qty, int(remaining_needed // art_val) + (1 if remaining_needed % art_val > 0 else 0))
-            if qty_to_take > 0:
-                if deduct_creator_artifacts(profile, art_key, qty_to_take):
-                    primary_artifact = art_key
-                    remaining_needed -= (qty_to_take * art_val)
-
-        tx_ref = f'po-{uuid.uuid4().hex[:12]}'
-        tx = ArtifactTransaction.objects.create(
-            user=profile,
-            transaction_type='withdrawal',
-            artifact_type=primary_artifact,
-            quantity=int(amount_usd),
-            direction='debit',
-            status='pending' if method == 'bank_transfer' else 'completed',
-            fiat_amount=amount_usd,
-            fiat_currency='USD',
-            phone_number=phone_number,
-            bank_account=bank_account,
-            tx_ref=tx_ref,
-            description=f'Creator payout of ${amount_usd:.2f} via {method.upper()}',
-        )
-
+        # This endpoint previously deducted a mixture of creator artifacts and
+        # then marked the payout as successful without a provider settlement.
+        # Keep the unsafe legacy route closed until the payout service has a
+        # double-entry settlement account and verified provider callback.
         return Response({
-            'success': True,
-            'data': ArtifactTransactionSerializer(tx).data,
-            'message': f'Payout of ${amount_usd:.2f} requested successfully.',
-        }, status=201)
+            'success': False,
+            'data': None,
+            'message': 'Creator cash payouts are temporarily disabled while settlement reconciliation is finalized.',
+            'errors': None,
+            'pagination': None,
+        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 class PayoutHistoryView(views.APIView):
@@ -929,4 +922,3 @@ class PayoutHistoryView(views.APIView):
                 'previous': paginator.get_previous_link(),
             },
         })
-

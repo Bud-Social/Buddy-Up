@@ -7,6 +7,7 @@ from apps.accounts.models import User
 from apps.profiles.models import Profile, BuddyRelationship
 from apps.feed.models import Post, Poll, PollOption, PollVote
 from apps.accounts.views import _provision_social_user, _generate_username
+from apps.feed.ai_ranking import paginate_ranked
 
 
 def _client_for(user):
@@ -158,3 +159,36 @@ class SocialProvisioningTests(TestCase):
         )
         self.assertFalse(created)
         self.assertTrue(User.objects.get(email='orphan@example.com').profile is not None)
+
+
+class PostIdempotencyTests(TestCase):
+    def setUp(self):
+        self.user = _make_user('idempotent')
+        self.client = _client_for(self.user)
+        self.url = '/api/v1/feed/create/'
+
+    def test_repeated_idempotency_key_returns_same_post(self):
+        payload = {'post_type': 'text', 'body': 'Only once'}
+        first = self.client.post(
+            self.url, payload, format='json', HTTP_IDEMPOTENCY_KEY='request-123',
+        )
+        second = self.client.post(
+            self.url, payload, format='json', HTTP_IDEMPOTENCY_KEY='request-123',
+        )
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(first.data['data']['id'], second.data['data']['id'])
+        self.assertEqual(Post.objects.filter(author=self.user.profile).count(), 1)
+
+    def test_long_idempotency_key_is_rejected(self):
+        response = self.client.post(
+            self.url, {'post_type': 'text', 'body': 'Nope'}, format='json',
+            HTTP_IDEMPOTENCY_KEY='x' * 129,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class RankedPaginationTests(TestCase):
+    def test_stale_cursor_is_terminal_error(self):
+        with self.assertRaisesMessage(ValueError, 'Invalid or expired feed cursor.'):
+            paginate_ranked([{'post_id': 'current'}], 'stale', 20)

@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 from common.utils import hash_dob
 from apps.accounts.models import User
 from apps.profiles.models import Profile
-from apps.moderation.models import ContentFlag
+from apps.moderation.models import ContentFlag, ModerationAction, ModerationAppeal
 from apps.verification.models import VerificationSubmission, VerificationDocument
 
 
@@ -158,3 +158,44 @@ class VerificationReviewTests(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
         sub.refresh_from_db()
         self.assertEqual(sub.status, 'submitted')
+
+
+class ModerationAppealTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='appeal@example.com', password='TestPass123!')
+        Profile.objects.create(user=self.user, username='appealuser', display_name='Appeal User')
+        self.admin = User.objects.create_superuser(email='appealadmin@example.com', password='TestPass123!')
+        self.action = ModerationAction.objects.create(
+            action='user_suspended',
+            moderator=self.admin,
+            target_user=self.user,
+            reason='Automated abuse threshold',
+        )
+
+    def test_user_can_appeal_own_action_and_admin_can_reverse(self):
+        client = APIClient()
+        client.force_authenticate(self.user)
+        response = client.post('/api/v1/moderation/appeals/', {
+            'action': str(self.action.id),
+            'reason': 'This was a false positive; please review the conversation context.',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        appeal = ModerationAppeal.objects.get(id=response.data['id'])
+
+        self.user.is_active = False
+        self.user.save(update_fields=['is_active'])
+        admin_client = APIClient()
+        admin_client.force_authenticate(self.admin)
+        response = admin_client.post(
+            f'/api/v1/moderation/appeals/{appeal.id}/review/',
+            {'decision': 'approve', 'resolution_note': 'Account activity was legitimate.'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        appeal.refresh_from_db()
+        self.user.refresh_from_db()
+        self.assertEqual(appeal.status, 'approved')
+        self.assertTrue(self.user.is_active)
+        self.assertTrue(ModerationAction.objects.filter(
+            action='action_reversed', target_user=self.user,
+        ).exists())

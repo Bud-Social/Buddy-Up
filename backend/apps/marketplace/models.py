@@ -439,6 +439,12 @@ class Product(TimestampedModel):
         on_delete=models.SET_NULL, related_name='recommended_products')
     is_active = models.BooleanField(default=True)
     click_count = models.IntegerField(default=0)
+    stock_quantity = models.PositiveIntegerField(default=0)
+    stock_tracking_enabled = models.BooleanField(default=False)
+    supplement_registration_number = models.CharField(max_length=100, blank=True)
+    supplement_registration_expiry = models.DateField(null=True, blank=True)
+    supplement_claims_reviewed = models.BooleanField(default=False)
+    supplement_label_url = models.URLField(blank=True)
 
     class Meta:
         db_table = 'marketplace_product'
@@ -776,6 +782,8 @@ class OrderItem(TimestampedModel):
     quantity = models.IntegerField(default=1)
     price_artifacts = models.JSONField(default=dict)   # original per-unit price
     paid_artifacts = models.JSONField(default=dict)    # per-unit after discount
+    seller_split_artifacts = models.JSONField(default=dict)
+    fulfillment_status = models.CharField(max_length=20, default='pending')
 
     class Meta:
         db_table = 'marketplace_order_item'
@@ -804,6 +812,7 @@ class OrderFulfillment(TimestampedModel):
     out_for_delivery_at = models.DateTimeField(null=True, blank=True)
     ready_for_pickup_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
+    seller_split_artifacts = models.JSONField(default=dict)
 
     class Meta:
         db_table = 'marketplace_order_fulfillment'
@@ -820,4 +829,47 @@ class OrderFulfillment(TimestampedModel):
             self.save(update_fields=['timeline'])
 
 
+class InventoryReservation(TimestampedModel):
+    STATUS_CHOICES = [('reserved', 'Reserved'), ('released', 'Released'), ('consumed', 'Consumed'), ('expired', 'Expired')]
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='inventory_reservations')
+    order = models.ForeignKey(Order, null=True, blank=True, on_delete=models.CASCADE, related_name='inventory_reservations')
+    quantity = models.PositiveIntegerField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='reserved')
+    expires_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_inventory_reservation'
+        indexes = [models.Index(fields=['product', 'status'], name='marketplace_product_2a0f6f_idx')]
+
+
+class OrderCase(TimestampedModel):
+    CASE_TYPES = [('refund', 'Refund'), ('return', 'Return'), ('dispute', 'Dispute')]
+    STATUS_CHOICES = [('requested', 'Requested'), ('under_review', 'Under Review'), ('approved', 'Approved'), ('rejected', 'Rejected'), ('resolved', 'Resolved')]
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='cases')
+    requester = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='marketplace_cases')
+    case_type = models.CharField(max_length=10, choices=CASE_TYPES)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='requested')
+    reason = models.TextField()
+    evidence = models.JSONField(default=list)
+    resolution = models.TextField(blank=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'marketplace_order_case'
+        indexes = [
+            models.Index(fields=['order', 'status'], name='marketplace_order_i_b76ca1_idx'),
+            models.Index(fields=['requester', '-created_at'], name='marketplace_request_4b95aa_idx'),
+        ]
+
+
+class CreatorPayoutSetup(TimestampedModel):
+    profile = models.OneToOneField('profiles.Profile', on_delete=models.CASCADE, related_name='payout_setup')
+    provider = models.CharField(max_length=30, default='flutterwave')
+    account_reference = models.CharField(max_length=120, blank=True)
+    is_verified = models.BooleanField(default=False)
+    terms_accepted_at = models.DateTimeField(null=True, blank=True)
+    setup_status = models.CharField(max_length=20, default='not_started')
+
+    class Meta:
+        db_table = 'marketplace_creator_payout_setup'
 

@@ -8,10 +8,12 @@ class AIPredictionJobSerializer(serializers.ModelSerializer):
         model = AIPredictionJob
         fields = ['id', 'task', 'status', 'input_data', 'output_data',
                    'error_message', 'model_version', 'result_url',
-                   'started_at', 'completed_at', 'created_at']
+                   'started_at', 'completed_at', 'created_at', 'confidence', 'correction',
+                   'fallback_used', 'fallback_reason', 'cost_usd', 'latency_ms', 'safety_notice']
         read_only_fields = ['id', 'status', 'output_data', 'error_message',
                             'model_version', 'result_url', 'started_at',
-                            'completed_at', 'created_at']
+                             'completed_at', 'created_at', 'confidence', 'correction', 'fallback_used',
+                             'fallback_reason', 'cost_usd', 'latency_ms', 'safety_notice']
 
 
 class ModelMetadataSerializer(serializers.ModelSerializer):

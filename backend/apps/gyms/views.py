@@ -1,9 +1,12 @@
+import csv
+import io
 from datetime import timedelta
 
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models
 from django.utils import timezone
 from django.conf import settings
+from django.http import HttpResponse
 
 
 from rest_framework import views, permissions, status
@@ -13,7 +16,10 @@ import requests
 
 from common.pagination import PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
-from .models import Gym, GymMembership, GymCategory, JoinRequest, GymInvite, GymMembershipException
+from .models import (
+    Gym, GymMembership, GymCategory, GymOnboardingChecklist,
+    JoinRequest, GymInvite, GymMembershipException,
+)
 from .serializers import (
     GymSerializer, CreateGymSerializer, GymMembershipSerializer,
     GymCategorySerializer, JoinRequestSerializer, CreateJoinRequestSerializer,
@@ -21,11 +27,148 @@ from .serializers import (
     DonationInputSerializer, ReviewReplyInputSerializer, ManageMemberRoleSerializer,
     HandleCheckSerializer, GymSchedulePostSerializer, GymReviewSerializer, GymDonationSerializer,
     GymMembershipExceptionSerializer, CreateMembershipExceptionSerializer, MembershipCheckoutSerializer,
+    AttendanceRecordSerializer, GymOnboardingChecklistSerializer, VenueLocationSerializer,
 )
 from .models import GymSchedulePost, GymReview, GymDonation
 from apps.wallet.utils import deduct_artifacts
 from apps.wallet.serializers import ARTIFACT_VALUES
 from apps.marketplace.models import DiscountCode, DiscountUsage
+
+
+PARTNER_ROLES = ['owner', 'co_owner', 'moderator']
+
+
+def _require_partner_staff(gym, profile):
+    return get_object_or_404(GymMembership, gym=gym, member=profile, role__in=PARTNER_ROLES)
+
+
+class GymOnboardingChecklistView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        checklist, _ = GymOnboardingChecklist.objects.get_or_create(gym=gym)
+        return Response({'success': True, 'data': GymOnboardingChecklistSerializer(checklist).data})
+
+    def patch(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        checklist, _ = GymOnboardingChecklist.objects.get_or_create(gym=gym)
+        serializer = GymOnboardingChecklistSerializer(checklist, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        checklist = serializer.save()
+        required = {'profile', 'venue', 'schedule', 'invite_members'}
+        checklist.completed_at = timezone.now() if required.issubset(set(checklist.completed_steps)) else None
+        checklist.save(update_fields=['completed_at'])
+        return Response({'success': True, 'data': GymOnboardingChecklistSerializer(checklist).data})
+
+
+class VenueLocationListView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        GymMembership.objects.get(gym=gym, member=request.user.profile, subscription_active=True)
+        return Response({'success': True, 'data': VenueLocationSerializer(gym.venues.filter(is_active=True), many=True).data})
+
+    def post(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        serializer = VenueLocationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if serializer.validated_data.get('is_primary'):
+            gym.venues.update(is_primary=False)
+        venue = serializer.save(gym=gym)
+        return Response({'success': True, 'data': VenueLocationSerializer(venue).data}, status=status.HTTP_201_CREATED)
+
+
+class AttendanceListView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        records = gym.attendance_records.select_related('member').order_by('-checked_in_at')[:500]
+        return Response({'success': True, 'data': AttendanceRecordSerializer(records, many=True).data})
+
+    def post(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        serializer = AttendanceRecordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        member = serializer.validated_data['member']
+        if not GymMembership.objects.filter(gym=gym, member=member, subscription_active=True).exists():
+            return Response({'success': False, 'message': 'Member does not have an active gym membership.'}, status=400)
+        record = serializer.save(
+            gym=gym,
+            checked_in_at=serializer.validated_data.get('checked_in_at') or timezone.now(),
+        )
+        return Response({'success': True, 'data': AttendanceRecordSerializer(record).data}, status=status.HTTP_201_CREATED)
+
+
+class PartnerMetricsView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        since = timezone.now() - timedelta(days=30)
+        active_members = gym.memberships.filter(subscription_active=True).count()
+        checked_in = gym.attendance_records.filter(checked_in_at__gte=since)
+        unique_attendees = checked_in.values('member').distinct().count()
+        return Response({'success': True, 'data': {
+            'active_members': active_members,
+            'check_ins_30d': checked_in.count(),
+            'unique_attendees_30d': unique_attendees,
+            'activation_rate_30d': round(unique_attendees / active_members * 100, 1) if active_members else 0,
+            'scheduled_activities_30d': gym.schedule_posts.filter(start_time__gte=since).count(),
+        }})
+
+
+class GymMemberCSVView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="{gym.handle}-members.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['username', 'email', 'display_name', 'role', 'subscription_active'])
+        for membership in gym.memberships.select_related('member__user').order_by('member__username'):
+            writer.writerow([membership.member.username, membership.member.user.email,
+                             membership.member.display_name, membership.role, membership.subscription_active])
+        return response
+
+    def post(self, request, gym_slug):
+        gym = get_object_or_404(Gym, handle__iexact=gym_slug)
+        _require_partner_staff(gym, request.user.profile)
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response({'success': False, 'message': 'A CSV file is required.'}, status=400)
+        try:
+            rows = csv.DictReader(io.StringIO(upload.read().decode('utf-8-sig')))
+        except (UnicodeDecodeError, csv.Error):
+            return Response({'success': False, 'message': 'Invalid UTF-8 CSV file.'}, status=400)
+        from apps.profiles.models import Profile
+        created = 0
+        errors = []
+        for line, row in enumerate(rows, start=2):
+            profile = Profile.objects.filter(db_models.Q(username__iexact=(row.get('username') or '').strip()) |
+                                             db_models.Q(user__email__iexact=(row.get('email') or '').strip())).first()
+            role = (row.get('role') or 'member').strip()
+            if not profile or role not in dict(GymMembership.ROLE_CHOICES) or role in ('owner', 'co_owner'):
+                errors.append({'line': line, 'error': 'Unknown member or unsupported role.'})
+                continue
+            _, was_created = GymMembership.objects.update_or_create(
+                gym=gym, member=profile,
+                defaults={'role': role, 'subscription_active': True},
+            )
+            created += int(was_created)
+        gym.member_count = gym.memberships.filter(subscription_active=True).count()
+        gym.save(update_fields=['member_count'])
+        return Response({'success': True, 'data': {'created': created, 'errors': errors}})
 
 
 class GymListView(views.APIView):

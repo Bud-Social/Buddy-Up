@@ -44,4 +44,6 @@ def has_live_admission(live, profile):
     """Credentials and sockets require a completed admission, including paid entry."""
     if is_host_or_cohost(live, profile):
         return True
-    return live.attendees.filter(user=profile, left_at__isnull=True).exists()
+    # Admission is permanent for a paid live; leaving only ends the current
+    # media presence and must not charge the user again on rejoin.
+    return live.attendees.filter(user=profile).exists()

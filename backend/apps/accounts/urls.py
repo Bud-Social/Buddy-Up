@@ -37,6 +37,11 @@ urlpatterns = [
     path('passkeys/register/finish/', views.PasskeyRegisterFinishView.as_view(), name='passkey_register_finish'),
     path('passkeys/login/begin/', views.PasskeyLoginBeginView.as_view(), name='passkey_login_begin'),
     path('passkeys/login/finish/', views.PasskeyLoginFinishView.as_view(), name='passkey_login_finish'),
+    path('passkeys/', views.PasskeyListView.as_view(), name='passkey_list'),
+    path('passkeys/<int:pk>/rename/', views.PasskeyRenameView.as_view(), name='passkey_rename'),
+    path('passkeys/<int:pk>/revoke/', views.PasskeyRevokeView.as_view(), name='passkey_revoke'),
+    path('passkeys/<int:pk>/reverify/', views.PasskeyReverifyView.as_view(), name='passkey_reverify'),
     path('policies/', views.PolicyVersionsView.as_view(), name='policy_versions'),
     path('consent-status/', views.ConsentStatusView.as_view(), name='consent_status'),
+    path('consent/', views.ConsentUpdateView.as_view(), name='consent_update'),
 ]

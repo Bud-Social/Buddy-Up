@@ -62,9 +62,13 @@ def process_escrow_release(booking_id: str):
                 recipient=booking.trainer,
                 artifact_type=tx.artifact_type,
                 quantity=net_qty,
+                reference_id=f'{tx.id}:party',
             )
         if cut_qty > 0:
-            release_held_refund(booking.client, tx.artifact_type, cut_qty)
+            release_held_refund(
+                booking.client, tx.artifact_type, cut_qty,
+                reference_id=f'{tx.id}:refund',
+            )
 
         tx.status = 'completed'
         tx.description = f'Escrow released for booking {booking.id}'

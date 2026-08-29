@@ -11,7 +11,7 @@ from .models import (
     TrainingProgramme, TrainingProgrammePurchase, TrainingProgrammeReview,
     ProgrammeActivityProgress,
     Product, MarketplaceEvent, EventMedia, EventTicket, Cart, CartItem, DiscountCode, DiscountUsage,
-    Order, OrderItem, OrderFulfillment,
+    Order, OrderItem, OrderFulfillment, OrderCase, CreatorPayoutSetup,
 )
 
 ARTIFACT_TYPES = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion']
@@ -335,7 +335,10 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = ['id', 'name', 'brand', 'description', 'category', 'content_rating',
                    'image_url', 'affiliate_url', 'price_display',
-                   'recommended_by', 'recommender_data', 'shop_data', 'click_count', 'created_at']
+                   'recommended_by', 'recommender_data', 'shop_data', 'click_count',
+                   'stock_quantity', 'stock_tracking_enabled', 'supplement_registration_number',
+                   'supplement_registration_expiry', 'supplement_claims_reviewed',
+                   'supplement_label_url', 'created_at']
 
     def get_recommender_data(self, obj):
         if obj.recommended_by:
@@ -420,6 +423,12 @@ class CreateProductSerializer(serializers.Serializer):
     content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     affiliate_url = serializers.URLField()
     price_display = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    stock_quantity = serializers.IntegerField(min_value=0, required=False, default=0)
+    stock_tracking_enabled = serializers.BooleanField(required=False, default=False)
+    supplement_registration_number = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    supplement_registration_expiry = serializers.DateField(required=False, allow_null=True)
+    supplement_claims_reviewed = serializers.BooleanField(required=False, default=False)
+    supplement_label_url = serializers.URLField(required=False, allow_blank=True)
 
 
 class UpdateProductSerializer(serializers.Serializer):
@@ -433,6 +442,12 @@ class UpdateProductSerializer(serializers.Serializer):
     price_display = serializers.CharField(required=False, allow_blank=True, max_length=50)
     is_active = serializers.BooleanField(required=False)
     shop_id = serializers.UUIDField(required=False, allow_null=True)
+    stock_quantity = serializers.IntegerField(min_value=0, required=False)
+    stock_tracking_enabled = serializers.BooleanField(required=False)
+    supplement_registration_number = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    supplement_registration_expiry = serializers.DateField(required=False, allow_null=True)
+    supplement_claims_reviewed = serializers.BooleanField(required=False)
+    supplement_label_url = serializers.URLField(required=False, allow_blank=True)
 
 
 class TrainingProgrammeReviewSerializer(serializers.ModelSerializer):
@@ -819,7 +834,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = ['item_type', 'title', 'quantity', 'price_artifacts',
-                  'paid_artifacts', 'creator_name', 'created_at']
+                  'paid_artifacts', 'seller_split_artifacts', 'fulfillment_status',
+                  'creator_name', 'created_at']
 
     def get_price_artifacts(self, obj):
         return obj.price_artifacts or {}
@@ -861,3 +877,24 @@ class OrderSerializer(serializers.ModelSerializer):
             return False
         return obj.items.filter(creator=viewer).exists()
 
+
+class OrderCaseSerializer(serializers.ModelSerializer):
+    requester_name = serializers.CharField(source='requester.display_name', read_only=True)
+
+    class Meta:
+        model = OrderCase
+        fields = ['id', 'order', 'requester', 'requester_name', 'case_type', 'status',
+                  'reason', 'evidence', 'resolution', 'resolved_at', 'created_at']
+        read_only_fields = ['id', 'order', 'requester', 'requester_name', 'status',
+                            'resolution', 'resolved_at', 'created_at']
+
+
+class CreatorPayoutSetupSerializer(serializers.ModelSerializer):
+    accept_terms = serializers.BooleanField(write_only=True, required=False)
+
+    class Meta:
+        model = CreatorPayoutSetup
+        fields = ['provider', 'account_reference', 'is_verified', 'terms_accepted_at',
+                  'setup_status', 'accept_terms', 'created_at', 'updated_at']
+        read_only_fields = ['is_verified', 'terms_accepted_at', 'setup_status',
+                            'created_at', 'updated_at']

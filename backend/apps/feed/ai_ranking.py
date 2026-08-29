@@ -85,28 +85,88 @@ def paginate_ranked(candidates: list[dict], cursor: str | None, page_size: int):
             (i for i, c in enumerate(candidates) if c.get('post_id') == cursor),
             None,
         )
-        if start is not None:
-            candidates = candidates[start + 1:]
+        if start is None:
+            raise ValueError('Invalid or expired feed cursor.')
+        candidates = candidates[start + 1:]
     return candidates[:page_size]
 
 
-def send_feedback(user_id: str, post, reward: float):
-    """Fire-and-forget engagement feedback to the AI bandit (non-blocking)."""
+def _is_video(post) -> bool:
+    urls = getattr(post, 'media_urls', None) or []
+    return any(
+        u.split('?')[0].lower().rsplit('.', 1)[-1] in ('mp4', 'mov', 'webm', 'm4v', 'mpeg', 'mkv')
+        for u in urls
+    )
+
+
+def _profile(user_id):
+    from apps.profiles.models import Profile
+    return Profile.objects.filter(user_id=user_id).first()
+
+
+def _relationship_for(post, user_profile) -> str:
+    """Best-effort viewer→author relationship for feedback context."""
+    if user_profile is None:
+        return 'none'
+    try:
+        from apps.profiles.models import BuddyRelationship, FollowRelationship
+        if BuddyRelationship.objects.filter(
+            db_q_buddy(user_profile, post.author_id), status='confirmed',
+        ).exists():
+            return 'buddy'
+        if FollowRelationship.objects.filter(
+            follower=user_profile, followee_id=post.author_id,
+        ).exists():
+            return 'following'
+    except Exception:  # noqa: BLE001
+        pass
+    return 'none'
+
+
+def db_q_buddy(user_profile, author_id):
+    from django.db.models import Q
+    return Q(from_user=user_profile, to_user_id=author_id) | Q(
+        from_user_id=author_id, to_user=user_profile)
+
+
+def send_feedback(user_id: str, post, reward: float, extra: dict | None = None):
+    """Fire-and-forget engagement feedback to the AI bandit (non-blocking).
+
+    Context mirrors build_candidates() as closely as possible at feedback
+    time, plus attribution metadata (rank, feed_request_id, algorithm
+    version) when the impression context is still cached.
+    """
     if reward == 0:
         return
     try:
+        from django.utils import timezone as tz
+        from django.core.cache import cache
+
+        age_hours = max((tz.now() - post.created_at).total_seconds() / 3600.0, 0.001)
+        from .models import Reaction, Comment, Save
         context = {
             'author_id': str(post.author_id or ''),
-            'reactions': 1,
-            'comments': 0,
-            'saves': 0,
+            'reactions': Reaction.objects.filter(post=post).count(),
+            'comments': Comment.objects.filter(post=post).count(),
+            'saves': Save.objects.filter(post=post).count(),
             'is_repost': bool(post.is_repost),
-            'age_hours': 24.0,
+            'age_hours': round(age_hours, 3),
             'has_media': bool(post.media_urls),
-            'is_video': False,
+            'is_video': _is_video(post),
             'post_type': post.post_type or 'text',
             'author_trust': 0.5,
+            'relationship': _relationship_for(post, _profile(user_id)),
         }
+        ctx_cache = cache.get(f'feed_rank_ctx:{user_id}') or {}
+        if ctx_cache:
+            rank = (ctx_cache.get('ranks') or {}).get(str(post.id))
+            context.update({
+                'rank': rank,
+                'feed_request_id': ctx_cache.get('feed_request_id'),
+                'algorithm_version': ctx_cache.get('algorithm_version'),
+            })
+        if extra:
+            context.update(extra)
     except Exception:  # noqa: BLE001
         return
 

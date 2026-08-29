@@ -3,10 +3,15 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
+from unittest.mock import patch
 from common.utils import hash_dob
 from apps.accounts.models import User
 from apps.profiles.models import Profile
-from apps.wallet.models import ArtifactTransaction
+from apps.wallet.models import ArtifactTransaction, JournalEntry, JournalLine
+from apps.wallet.ledger import IdempotencyConflict, PostingLine, post_entry
+from apps.wallet.utils import hold_artifacts, release_held_to_party, transfer_artifacts
+from apps.wallet.flutterwave import FlutterwaveResponse
+from apps.wallet.tasks import _refund_failed_withdrawal
 
 
 class WalletTests(TestCase):
@@ -38,6 +43,70 @@ class WalletTests(TestCase):
         response = self.client.get('/api/v1/wallet/bundles/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsInstance(response.data['data'], list)
+
+    def test_ledger_posting_requires_balanced_lines(self):
+        with self.assertRaises(Exception):
+            post_entry(
+                operation='test', owner=self.profile, idempotency_key='unbalanced',
+                payload={'value': 1}, lines=[
+                    PostingLine('buyer', 'dumbbell', 'debit', 2, self.profile, 'regular'),
+                    PostingLine('platform', 'dumbbell', 'credit', 1),
+                ],
+            )
+
+    def test_transfer_is_atomic_and_idempotent(self):
+        recipient_user = User.objects.create_user(email='recipient@example.com', password='TestPass123!')
+        recipient = Profile.objects.create(user=recipient_user, username='recipient', display_name='Recipient')
+        self.profile.artifact_balance = {'dumbbell': 10}
+        self.profile.save(update_fields=['artifact_balance'])
+
+        result = transfer_artifacts(
+            self.profile, recipient, 'dumbbell', 5, operation='test_transfer',
+            idempotency_key='same-request', reference_id='test-transfer', platform_fee=1,
+        )
+        self.assertTrue(result[1])
+        replay = transfer_artifacts(
+            self.profile, recipient, 'dumbbell', 5, operation='test_transfer',
+            idempotency_key='same-request', reference_id='test-transfer', platform_fee=1,
+        )
+        self.assertFalse(replay[1])
+        self.profile.refresh_from_db()
+        recipient.refresh_from_db()
+        self.assertEqual(self.profile.artifact_balance['dumbbell'], 5)
+        self.assertEqual(recipient.artifact_balance['dumbbell'], 4)
+        self.assertEqual(JournalEntry.objects.filter(operation='test_transfer').count(), 1)
+        self.assertEqual(JournalLine.objects.filter(journal_entry=result[0]).count(), 3)
+
+    def test_idempotency_key_rejects_changed_payload(self):
+        lines = [
+            PostingLine('buyer', 'dumbbell', 'debit', 1, self.profile, 'regular'),
+            PostingLine('platform', 'dumbbell', 'credit', 1),
+        ]
+        post_entry(operation='test_conflict', owner=self.profile, idempotency_key='key', payload={'qty': 1}, lines=lines)
+        with self.assertRaises(IdempotencyConflict):
+            post_entry(operation='test_conflict', owner=self.profile, idempotency_key='key', payload={'qty': 2}, lines=lines)
+
+    def test_escrow_hold_and_release_are_ledger_backed_and_replay_safe(self):
+        recipient_user = User.objects.create_user(email='trainer@example.com', password='TestPass123!')
+        recipient = Profile.objects.create(user=recipient_user, username='trainer', display_name='Trainer')
+        self.profile.artifact_balance = {'dumbbell': 5}
+        self.profile.save(update_fields=['artifact_balance'])
+
+        held = hold_artifacts(self.profile, 'dumbbell', 2, recipient, 'booking-1')
+        replay = hold_artifacts(self.profile, 'dumbbell', 2, recipient, 'booking-1')
+        self.assertEqual(held.id, replay.id)
+        self.assertTrue(release_held_to_party(
+            self.profile, recipient, 'dumbbell', 2, reference_id=f'{held.id}:party',
+        ))
+        self.assertTrue(release_held_to_party(
+            self.profile, recipient, 'dumbbell', 2, reference_id=f'{held.id}:party',
+        ))
+        self.profile.refresh_from_db()
+        recipient.refresh_from_db()
+        self.assertEqual(self.profile.locked_balance.get('dumbbell', 0), 0)
+        self.assertEqual(recipient.artifact_balance['dumbbell'], 2)
+        self.assertEqual(JournalEntry.objects.filter(operation='escrow_hold').count(), 1)
+        self.assertEqual(JournalEntry.objects.filter(operation='escrow_release').count(), 1)
 
 
 class FlutterwaveWebhookSecurityTests(TestCase):
@@ -125,3 +194,87 @@ class FlutterwaveWebhookSecurityTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         self.tx.refresh_from_db()
         self.assertEqual(self.tx.status, 'pending')
+
+
+class WithdrawalSafetyTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(email='payout@example.com', password='TestPass123!')
+        self.user.email_verified = True
+        self.user.dob_hash = hash_dob(date(1990, 1, 1))
+        self.user.save()
+        self.profile = Profile.objects.create(
+            user=self.user,
+            username='payoutuser',
+            display_name='Payout User',
+            verification_status='id',
+            artifact_balance={'champion': 10},
+        )
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+
+    def test_unsupported_payout_method_rejected_before_deduction(self):
+        response = self.client.post('/api/v1/wallet/withdraw/', {
+            'artifact_type': 'champion',
+            'quantity': 1,
+            'method': 'mpesa',
+            'phone_number': '+254700000000',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.artifact_balance['champion'], 10)
+        self.assertFalse(ArtifactTransaction.objects.filter(transaction_type='withdrawal').exists())
+
+    @patch('apps.wallet.tasks.process_withdrawal.delay')
+    @patch('apps.wallet.views.FlutterwaveClient')
+    def test_bank_transfer_initiation_remains_pending(self, client_cls, delay):
+        client = client_cls.return_value
+        client.create_transfer_recipient.return_value = FlutterwaveResponse(
+            success=True, status='success', message='ok',
+            data={'id': 'recipient-1'}, flutterwave_ref='recipient-1',
+        )
+        client.initiate_transfer.return_value = FlutterwaveResponse(
+            success=True, status='success', message='queued',
+            data={'id': 'transfer-1', 'status': 'NEW'}, flutterwave_ref='transfer-1',
+        )
+
+        response = self.client.post('/api/v1/wallet/withdraw/', {
+            'artifact_type': 'champion',
+            'quantity': 1,
+            'method': 'bank_transfer',
+            'bank_account': '0011223344',
+            'bank_code': 'KE001',
+            'account_name': 'Payout User',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        tx = ArtifactTransaction.objects.get(transaction_type='withdrawal')
+        self.assertEqual(tx.status, 'pending')
+        self.assertEqual(tx.fiat_currency, 'KES')
+        self.assertEqual(tx.payment_provider, 'flutterwave')
+        self.assertEqual(tx.flutterwave_id, 'transfer-1')
+        delay.assert_called_once_with(str(tx.id))
+
+    def test_failed_withdrawal_refund_is_idempotent(self):
+        tx = ArtifactTransaction.objects.create(
+            user=self.profile,
+            transaction_type='withdrawal',
+            artifact_type='champion',
+            quantity=2,
+            direction='debit',
+            status='pending',
+            tx_ref='withdraw-test-1',
+            flutterwave_response={'wallet_source': 'regular'},
+        )
+        self.profile.artifact_balance['champion'] = 8
+        self.profile.save(update_fields=['artifact_balance'])
+
+        self.assertTrue(_refund_failed_withdrawal(tx, 'test failure'))
+        self.assertFalse(_refund_failed_withdrawal(tx, 'replayed failure'))
+        self.profile.refresh_from_db()
+        tx.refresh_from_db()
+        self.assertEqual(self.profile.artifact_balance['champion'], 10)
+        self.assertEqual(tx.status, 'failed')
+        self.assertEqual(
+            ArtifactTransaction.objects.filter(reference_id=f'withdrawal_refund:{tx.id}').count(),
+            1,
+        )

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ActivityRecord, WorkoutLog, MealLog, BodyMetric, AnalyticsReport
+from .models import ActivityRecord, WorkoutLog, MealLog, BodyMetric, AnalyticsReport, AnalyticsEvent
 
 
 @admin.register(ActivityRecord)
@@ -34,3 +34,11 @@ class AnalyticsReportAdmin(admin.ModelAdmin):
     list_display = ('id', 'user', 'period', 'created_at', 'feed_post')
     list_filter = ('period',)
     search_fields = ('user__username',)
+
+
+@admin.register(AnalyticsEvent)
+class AnalyticsEventAdmin(admin.ModelAdmin):
+    list_display = ('event_name', 'actor', 'platform', 'surface', 'object_type', 'object_id', 'received_at')
+    list_filter = ('event_name', 'platform', 'surface')
+    search_fields = ('object_id', 'anonymous_id', 'session_id')
+    readonly_fields = [f.name for f in AnalyticsEvent._meta.fields]

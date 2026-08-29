@@ -1,6 +1,8 @@
 import os
+
 from celery import Celery
 from celery.schedules import crontab
+from django.conf import settings
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
 
@@ -8,7 +10,9 @@ app = Celery('buddyup')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
-app.conf.beat_schedule = {
+# Entries defined here take precedence over settings.CELERY_BEAT_SCHEDULE
+# (base.py) when keys collide.
+CELERY_BEAT_SCHEDULE = {
     'generate-feed-cache': {
         'task': 'apps.feed.tasks.generate_feed_cache',
         'schedule': crontab(minute='*/5'),
@@ -58,3 +62,16 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),
     },
 }
+
+# Merge rather than replace: settings.CELERY_BEAT_SCHEDULE carries entries
+# such as wallet reconciliation, verification purge and visual-search
+# indexing that must keep running. Entries defined above take precedence.
+#
+# Plain assignment (app.conf.beat_schedule = {...}) is silently discarded by
+# celery's lazy configuration pipeline (PendingConfiguration) when the config
+# source is django.conf:settings, so mutate the resolved schedule dict
+# directly — the same mechanism celery's add_periodic_task() uses.
+app.conf.beat_schedule.update({
+    **getattr(settings, 'CELERY_BEAT_SCHEDULE', {}),
+    **CELERY_BEAT_SCHEDULE,
+})

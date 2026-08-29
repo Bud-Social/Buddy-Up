@@ -3,13 +3,29 @@ from rest_framework import serializers
 from .models import VerificationDocument, VerificationSubmission
 
 
+def _is_internal_file_ref(file_url):
+    """True when file_url references our own storage instead of a public URL."""
+    return bool(file_url) and not file_url.startswith(('http://', 'https://'))
+
+
 class VerificationDocumentSerializer(serializers.ModelSerializer):
+    # Legacy field kept for compatibility. New uploads store an internal
+    # storage reference which is never directly fetchable — the value points
+    # at the access-audited retrieve endpoint instead.
+    file_url = serializers.SerializerMethodField()
+
     class Meta:
         model = VerificationDocument
         fields = ['id', 'profile', 'document_type', 'file_url', 'status',
-                   'rejection_reason', 'reviewed_at', 'expires_at', 'created_at']
+                   'rejection_reason', 'reviewed_at', 'expires_at',
+                   'purge_after', 'purged_at', 'created_at']
         read_only_fields = ['id', 'profile', 'status', 'rejection_reason',
-                            'reviewed_at', 'created_at']
+                            'reviewed_at', 'purge_after', 'purged_at', 'created_at']
+
+    def get_file_url(self, obj):
+        if _is_internal_file_ref(obj.file_url):
+            return f'/api/v1/verification/documents/{obj.id}/'
+        return obj.file_url or ''
 
 
 class VerificationSubmissionSerializer(serializers.ModelSerializer):

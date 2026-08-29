@@ -73,6 +73,7 @@ class ConversationSerializer(serializers.ModelSerializer):
     unread_count = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     membership_role = serializers.SerializerMethodField()
+    invite_code = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
@@ -103,14 +104,38 @@ class ConversationSerializer(serializers.ModelSerializer):
         ).first()
         return m.role if m else None
 
+    def get_invite_code(self, obj):
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return None
+        if ConversationMembership.objects.filter(
+            conversation=obj, profile=request.user.profile,
+        ).exists():
+            return obj.invite_code
+        return None
+
     def get_unread_count(self, obj):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return 0
-        return obj.messages.filter(is_read=False).exclude(sender=request.user.profile).count()
+        return sum(
+            1 for message in obj.messages.filter(is_deleted=False, is_read=False).exclude(
+                sender=request.user.profile,
+            )
+            if str(request.user.profile.user_id) not in (message.deleted_for or [])
+        )
 
     def get_last_message(self, obj):
-        last = obj.messages.last()
+        request = self.context.get('request')
+        hidden_for = None
+        if request and request.user.is_authenticated:
+            hidden_for = str(request.user.profile.user_id)
+        messages = obj.messages.filter(is_deleted=False)
+        if hidden_for:
+            messages = [m for m in messages if hidden_for not in (m.deleted_for or [])]
+            last = messages[-1] if messages else None
+        else:
+            last = messages.last()
         if last:
             return {
                 'body': last.body[:100],

@@ -13,6 +13,7 @@ def audit_ai_call(
     output_data: dict | None = None,
     error_message: str = '',
     model_version: str = '',
+    metadata: dict | None = None,
 ):
     try:
         log_ai_prediction.delay(
@@ -21,6 +22,7 @@ def audit_ai_call(
             output_data=output_data,
             error_message=error_message,
             model_version=model_version,
+            metadata=metadata or {},
         )
     except Exception:  # noqa: BLE001
         pass

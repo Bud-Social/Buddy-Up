@@ -57,6 +57,7 @@ class Post(TimestampedModel, SoftDeleteModel):
     pinned_comment = models.ForeignKey('Comment', null=True, blank=True, on_delete=models.SET_NULL, related_name='pinned_on')
     mentioned_profiles = models.ManyToManyField('profiles.Profile', blank=True, related_name='mention_posts')
     ai_analysis = models.JSONField(default=dict, blank=True)
+    client_request_id = models.CharField(max_length=128, null=True, blank=True)
 
     class Meta:
         db_table = 'feed_post'
@@ -66,6 +67,13 @@ class Post(TimestampedModel, SoftDeleteModel):
             models.Index(fields=['post_type']),
             models.Index(fields=['visibility', 'moderation_status']),
             models.Index(fields=['gym_tag', '-created_at']),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['author', 'client_request_id'],
+                condition=models.Q(client_request_id__isnull=False),
+                name='unique_post_client_request',
+            ),
         ]
 
 class FeedPostManager(models.Manager):

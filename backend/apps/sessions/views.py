@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
-from django.db import models as db_models
+from django.db import models as db_models, transaction
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
 
@@ -99,6 +100,7 @@ class AvailabilityView(views.APIView):
 class BookingCreateView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @transaction.atomic
     def post(self, request, username):
         trainer_profile = get_object_or_404(Profile, username=username, role__in=['trainer', 'practitioner'])
         serializer = CreateBookingSerializer(data=request.data)
@@ -148,7 +150,7 @@ class BookingCreateView(views.APIView):
 
         # Handle recurring sessions
         recurrence = data.get('recurrence_pattern')
-        recurring_weeks = int(request.data.get('recurring_weeks', 0))
+        recurring_weeks = data.get('recurring_weeks', 1)
         if recurrence and recurring_weeks > 1:
             delta_map = {'daily': timedelta(days=1), 'weekly': timedelta(weeks=1), 'monthly': timedelta(days=30)}
             delta = delta_map.get(recurrence, timedelta(weeks=1))
@@ -165,8 +167,23 @@ class BookingCreateView(views.APIView):
                     recurrence_pattern=recurrence,
                     parent_series=booking,
                     escrow_tx_id='',
+                    recurring_charge_status='pending',
                 )
-                _ = child  # spawned but no separate escrow for child sessions in MVP
+                child_tx_ids = []
+                for at, qty in fee.items():
+                    child_tx = hold_artifacts(
+                        profile=request.user.profile, artifact_type=at, quantity=qty,
+                        counterparty=trainer_profile, reference_id=str(child.id),
+                    )
+                    if child_tx is None:
+                        raise ValidationError(f'Insufficient {at} balance for recurring session {i + 1}.')
+                    child_tx_ids.append(str(child_tx.id))
+                child.escrow_tx_id = ','.join(child_tx_ids)
+                child.recurring_charge_status = 'charged'
+                child.save(update_fields=['escrow_tx_id', 'recurring_charge_status'])
+
+            booking.recurring_charge_status = 'charged'
+            booking.save(update_fields=['recurring_charge_status'])
 
         from apps.notifications.tasks import create_notification
         create_notification.delay(
@@ -251,7 +268,9 @@ class BookingDetailView(views.APIView):
             if request.user.profile == booking.trainer and booking.status == 'in_progress':
                 booking.status = 'completed'
                 booking.completed_at = timezone.now()
-                booking.save(update_fields=['status', 'completed_at'])
+                booking.completed_by = request.user.profile
+                booking.completion_evidence = serializer.validated_data.get('evidence') or {}
+                booking.save(update_fields=['status', 'completed_at', 'completed_by', 'completion_evidence'])
                 from .tasks import process_escrow_release
                 process_escrow_release.delay(str(booking.id))
                 return Response({
@@ -273,9 +292,15 @@ class BookingDetailView(views.APIView):
                     refund_qty = max(1, int(tx.quantity * refund_pct))
                     trainer_qty = tx.quantity - refund_qty
                     if refund_qty > 0:
-                        release_held_refund(booking.client, tx.artifact_type, refund_qty)
+                        release_held_refund(
+                            booking.client, tx.artifact_type, refund_qty,
+                            reference_id=f'{tx.id}:refund',
+                        )
                     if trainer_qty > 0:
-                        release_held_to_party(booking.client, booking.trainer, tx.artifact_type, trainer_qty)
+                        release_held_to_party(
+                            booking.client, booking.trainer, tx.artifact_type, trainer_qty,
+                            reference_id=f'{tx.id}:party',
+                        )
                     tx.status = 'refunded'
                     tx.description = f'Client cancelled. Refund {refund_qty}/{tx.quantity}'
                     tx.save(update_fields=['status', 'description'])
@@ -294,7 +319,10 @@ class BookingDetailView(views.APIView):
                         tx = ArtifactTransaction.objects.get(id=tx_id, status='held')
                     except ArtifactTransaction.DoesNotExist:
                         continue
-                    release_held_refund(booking.client, tx.artifact_type, tx.quantity)
+                    release_held_refund(
+                        booking.client, tx.artifact_type, tx.quantity,
+                        reference_id=f'{tx.id}:refund',
+                    )
                     tx.status = 'refunded'
                     tx.description = 'Trainer cancelled. Full refund.'
                     tx.save(update_fields=['status', 'description'])
@@ -494,4 +522,3 @@ class CalendarSyncView(views.APIView):
         response = HttpResponse(ics, content_type='text/calendar; charset=utf-8')
         response['Content-Disposition'] = f'attachment; filename="buddyup-session-{booking_id}.ics"'
         return response
-

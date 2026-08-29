@@ -14,6 +14,7 @@ urlpatterns = [
 
     path('presence/', views.PresenceStatusView.as_view(), name='presence'),
     path('recommendations/', views.ProfileRecommendationsView.as_view(), name='recommendations'),
+    path('recommendations/feedback/', views.ProfileRecommendationFeedbackView.as_view(), name='recommendation_feedback'),
     path('discover/trending/', views.DiscoverTrendingView.as_view(), name='discover_trending'),
     path('<str:username>/', views.UserProfileView.as_view(), name='user_profile'),
     path('<str:username>/buddy/', views.SendBuddyRequestView.as_view(), name='buddy_request'),

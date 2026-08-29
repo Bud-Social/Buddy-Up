@@ -95,6 +95,54 @@ class GymMembership(TimestampedModel):
         ]
 
 
+class GymOnboardingChecklist(TimestampedModel):
+    """Partner launch checklist; completion is operational metadata, not access control."""
+    gym = models.OneToOneField(Gym, on_delete=models.CASCADE, related_name='onboarding_checklist')
+    completed_steps = models.JSONField(default=list)
+    notes = models.TextField(blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'gyms_onboarding_checklist'
+
+
+class VenueLocation(TimestampedModel):
+    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='venues')
+    name = models.CharField(max_length=120)
+    address = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    country = models.CharField(max_length=100, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    instructions = models.TextField(blank=True)
+    is_primary = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'gyms_venue_location'
+        indexes = [models.Index(fields=['gym', 'is_active'], name='gyms_venue_gym_id_8fe6c1_idx')]
+
+
+class AttendanceRecord(TimestampedModel):
+    STATUS_CHOICES = [('checked_in', 'Checked In'), ('checked_out', 'Checked Out'), ('absent', 'Absent')]
+    member = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='gym_attendance')
+    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='attendance_records')
+    schedule_post = models.ForeignKey('GymSchedulePost', null=True, blank=True, on_delete=models.SET_NULL, related_name='attendance_records')
+    venue = models.ForeignKey(VenueLocation, null=True, blank=True, on_delete=models.SET_NULL, related_name='attendance_records')
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='checked_in')
+    checked_in_at = models.DateTimeField(null=True, blank=True)
+    checked_out_at = models.DateTimeField(null=True, blank=True)
+    source = models.CharField(max_length=20, default='partner')
+    notes = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        db_table = 'gyms_attendance_record'
+        indexes = [
+            models.Index(fields=['gym', '-checked_in_at'], name='gyms_atten_gym_id_19e13e_idx'),
+            models.Index(fields=['member', '-checked_in_at'], name='gyms_atten_member__34012c_idx'),
+        ]
+
+
 class GymCategoryPricing(models.Model):
     gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='category_pricing')
     category = models.ForeignKey(GymCategory, on_delete=models.CASCADE)

@@ -94,7 +94,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {name} {module}:{lineno} {message}',
+            'format': '{levelname} {asctime} request_id={request_id} {name} {module}:{lineno} {message}',
             'style': '{',
         },
     },
@@ -106,11 +106,18 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
             'stream': 'ext://sys.stdout',
+            'filters': ['request_id'],
         },
         'console_err': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
             'stream': 'ext://sys.stderr',
+            'filters': ['request_id'],
+        },
+    },
+    'filters': {
+        'request_id': {
+            '()': 'common.observability.RequestIdFilter',
         },
     },
     'root': {
@@ -126,6 +133,11 @@ LOGGING = {
         'django.server': {
             'handlers': ['console'],
             'level': 'WARNING',
+            'propagate': False,
+        },
+        'buddyup.request': {
+            'handlers': ['console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },

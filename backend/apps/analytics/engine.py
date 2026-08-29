@@ -384,13 +384,15 @@ def read_weight_from_photo(request, photo) -> dict | None:
     if data is None:
         return None
     from apps.ai.audit import audit_ai_call
-    audit_ai_call('weight_read', input_data={'filename': photo.name}, output_data=data)
+    audit_ai_call('weight_read', input_data={'filename': photo.name}, output_data=data,
+                  metadata={k: data.get(k) for k in ('confidence', 'correction', 'fallback_used', 'fallback_reason', 'cost_usd', 'latency_ms')})
     return {
         'weight_kg': data.get('weight_kg'),
         'weight_lb': data.get('weight_lb'),
         'unit': data.get('unit', 'kg'),
         'confidence': data.get('confidence', 0.0),
         'method': data.get('method', ''),
+        'safety_notice': 'AI output is informational only, not medical advice.',
     }
 
 
@@ -403,7 +405,8 @@ def analyze_meal_photo(request, photo) -> dict | None:
     if data is None or not data.get('items'):
         return None
     from apps.ai.audit import audit_ai_call
-    audit_ai_call('meal_analyze', input_data={'filename': photo.name}, output_data=data)
+    audit_ai_call('meal_analyze', input_data={'filename': photo.name}, output_data=data,
+                  metadata={k: data.get(k) for k in ('confidence', 'correction', 'fallback_used', 'fallback_reason', 'cost_usd', 'latency_ms')})
 
     top = data['items'][0]
     nutrition = top.get('nutrition', {}) or {}
@@ -413,4 +416,10 @@ def analyze_meal_photo(request, photo) -> dict | None:
         'protein_g': round(float(data.get('total_protein', nutrition.get('protein', 0) or 0)), 1),
         'carbs_g': round(float(data.get('total_carbs', nutrition.get('carbs', 0) or 0)), 1),
         'fat_g': round(float(data.get('total_fat', nutrition.get('fat', 0) or 0)), 1),
+        'confidence': data.get('confidence'),
+        'correction': {},
+        'fallback_used': bool(data.get('fallback_used', False)),
+        'cost_usd': data.get('cost_usd'),
+        'latency_ms': data.get('latency_ms'),
+        'safety_notice': 'AI output is informational only, not medical advice.',
     }

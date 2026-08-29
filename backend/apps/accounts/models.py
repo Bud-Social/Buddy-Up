@@ -130,6 +130,10 @@ class AccountEvent(TimestampedModel):
         ('email_changed', 'Email Changed'),
         ('2fa_enabled', '2FA Enabled'),
         ('2fa_disabled', '2FA Disabled'),
+        ('passkey_registered', 'Passkey Registered'),
+        ('passkey_renamed', 'Passkey Renamed'),
+        ('passkey_revoked', 'Passkey Revoked'),
+        ('security_notification_sent', 'Security Notification Sent'),
         ('account_deactivated', 'Account Deactivated'),
         ('account_reactivated', 'Account Reactivated'),
         ('account_deleted', 'Account Deleted'),
@@ -169,6 +173,9 @@ class WebAuthnCredential(TimestampedModel):
     sign_count = models.BigIntegerField(default=0)
     transports = models.JSONField(default=list)
     device_name = models.CharField(max_length=120, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    last_verified_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'accounts_webauthn_credential'

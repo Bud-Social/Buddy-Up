@@ -152,6 +152,26 @@ class AppleLoginSerializer(serializers.Serializer):
     last_name = serializers.CharField(required=False, allow_blank=True)
 
 
+class PasskeyRenameSerializer(serializers.Serializer):
+    device_name = serializers.CharField(min_length=1, max_length=120)
+
+
+class PasskeyRevokeSerializer(serializers.Serializer):
+    password = serializers.CharField(required=False, write_only=True, allow_blank=True)
+    code = serializers.CharField(required=False, write_only=True, allow_blank=True)
+    recovery_code = serializers.CharField(required=False, write_only=True, allow_blank=True)
+
+
+class ConsentSerializer(serializers.Serializer):
+    accepted_terms = serializers.BooleanField()
+    accepted_privacy = serializers.BooleanField()
+    accepted_guidelines = serializers.BooleanField()
+    accepted_cookie_policy = serializers.BooleanField(required=False, default=True)
+    accepted_medical_disclaimer = serializers.BooleanField(required=False, default=True)
+    accepted_sponsorship_policy = serializers.BooleanField(required=False, default=True)
+    accepted_adult_content_policy = serializers.BooleanField(required=False, default=True)
+
+
 class DeviceSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

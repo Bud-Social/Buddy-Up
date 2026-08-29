@@ -51,7 +51,8 @@ class BankResolveSerializer(serializers.Serializer):
 class WithdrawSerializer(serializers.Serializer):
     artifact_type = serializers.ChoiceField(choices=['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'])
     quantity = serializers.IntegerField(min_value=1, max_value=100000)
-    method = serializers.ChoiceField(choices=['mpesa', 'bank_transfer', 'paypal'])
+    # Only bank transfer has a real outbound provider integration today.
+    method = serializers.ChoiceField(choices=['bank_transfer'])
     phone_number = serializers.CharField(required=False, allow_blank=True)
     bank_account = serializers.CharField(required=False, allow_blank=True)
     bank_code = serializers.CharField(required=False, allow_blank=True)

@@ -1,0 +1,27 @@
+{
+  "envelope": {
+    "required_keys": ["success", "data", "message", "errors", "pagination", "request_id"],
+    "readiness_exception": "/api/v1/health/"
+  },
+  "client_evidence": {
+    "web": ["frontend/src/api/auth.ts", "frontend/src/api/feed.ts", "frontend/src/api/lives.ts", "frontend/src/api/marketplace.ts", "frontend/src/api/wallet.ts"],
+    "flutter": ["buddy_up_flutter/lib/data/repositories/auth_repository.dart", "buddy_up_flutter/lib/data/repositories/feed_repository.dart", "buddy_up_flutter/lib/data/repositories/live_repository.dart", "buddy_up_flutter/lib/data/repositories/marketplace_repository.dart", "buddy_up_flutter/lib/data/repositories/wallet_repository.dart"]
+  },
+  "routes": [
+    {"path": "/api/v1/health/", "method": "GET", "envelope": "readiness"},
+    {"path": "/api/v1/auth/login/", "method": "POST", "envelope": "standard"},
+    {"path": "/api/v1/profiles/me/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/feed/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/gyms/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/lives/browse/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/sessions/trainers/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/messaging/conversations/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/marketplace/shops/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/wallet/balance/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/notifications/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/moderation/reports/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/verification/documents/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/analytics/summary/", "method": "GET", "envelope": "standard"},
+    {"path": "/api/v1/achievements/", "method": "GET", "envelope": "standard"}
+  ]
+}

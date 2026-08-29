@@ -39,6 +39,13 @@ class AIPredictionJob(TimestampedModel):
     result_url = models.URLField(blank=True)  # e.g. generated TTS audio
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    confidence = models.FloatField(null=True, blank=True)
+    correction = models.JSONField(default=dict, blank=True)
+    fallback_used = models.BooleanField(default=False)
+    fallback_reason = models.CharField(max_length=255, blank=True)
+    cost_usd = models.DecimalField(max_digits=10, decimal_places=6, null=True, blank=True)
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    safety_notice = models.CharField(max_length=255, default='AI output is informational only, not medical advice.')
 
     class Meta:
         db_table = 'ai_prediction_job'

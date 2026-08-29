@@ -120,6 +120,30 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         ]
 
 
+# Canonical onboarding vocabularies plus the aliases clients have shipped
+# (Flutter display labels, older snake_case variants). Both forms are accepted
+# and normalized to the canonical values before storage.
+_GOAL_ALIASES = {
+    'lose_weight': 'weight_loss', 'build_muscle': 'muscle_gain',
+    'improve_endurance': 'endurance', 'general_fitness': 'general_wellness',
+    'fitness': 'general_wellness',
+}
+_LEVEL_ALIASES = {'extremely_active': 'athlete', 'extreme': 'athlete'}
+_WORKOUT_ALIASES = {
+    'weightlifting': 'weights', 'boxing': 'martial_arts', 'dance': 'other',
+    'calisthenics': 'other', 'gym': 'weights',
+}
+_DIET_ALIASES = {'mediterranean': 'other', 'no_preference': 'none'}
+_TIME_ALIASES = {'late_night': 'night', 'anytime': 'flexible'}
+
+
+def _normalize_onboarding_value(raw, aliases):
+    """Casefold/snake-case a client value, then map known aliases to canonical."""
+    value = str(raw).strip().casefold().replace('-', '_').replace(' ', '_')
+    value = aliases.get(value, value)
+    return value
+
+
 class OnboardingSerializer(serializers.Serializer):
     primary_goal = serializers.MultipleChoiceField(choices=[
         'weight_loss', 'muscle_gain', 'endurance', 'flexibility',
@@ -152,6 +176,37 @@ class OnboardingSerializer(serializers.Serializer):
     )
     location_city = serializers.CharField(max_length=100, required=False, allow_blank=True)
     bio = serializers.CharField(max_length=200, required=False, allow_blank=True)
+
+    def to_internal_value(self, data):
+        # Accept display labels ("Lose Weight") and alias values
+        # ("lose_weight") from any client before field validation runs.
+        data = dict(data)
+        goal_aliases = {**_GOAL_ALIASES}
+        level_aliases = {**_LEVEL_ALIASES}
+        workout_aliases = {**_WORKOUT_ALIASES}
+        diet_aliases = {**_DIET_ALIASES}
+        time_aliases = {**_TIME_ALIASES}
+
+        def squash(value, aliases):
+            return _normalize_onboarding_value(value, aliases)
+
+        if 'primary_goal' in data and data['primary_goal'] is not None:
+            goals = data['primary_goal']
+            if isinstance(goals, str):
+                goals = [goals]
+            data['primary_goal'] = [squash(g, goal_aliases) for g in goals]
+        if 'activity_level' in data and data['activity_level']:
+            data['activity_level'] = squash(data['activity_level'], level_aliases)
+        if 'preferred_workouts' in data and data['preferred_workouts'] is not None:
+            workouts = data['preferred_workouts']
+            if isinstance(workouts, str):
+                workouts = [workouts]
+            data['preferred_workouts'] = [squash(w, workout_aliases) for w in workouts]
+        if 'dietary_preference' in data and data['dietary_preference']:
+            data['dietary_preference'] = squash(data['dietary_preference'], diet_aliases)
+        if 'preferred_time' in data and data['preferred_time']:
+            data['preferred_time'] = squash(data['preferred_time'], time_aliases)
+        return super().to_internal_value(data)
 
 
 class BuddyRequestSerializer(serializers.Serializer):

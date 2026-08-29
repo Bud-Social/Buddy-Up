@@ -1,3 +1,4 @@
+import os
 import requests
 from uuid import uuid4
 from django.conf import settings
@@ -22,7 +23,8 @@ from .models import (
     ProgrammeActivityProgress,
     Product, MarketplaceEvent, EventMedia, EventTicket,
     Cart, CartItem, DiscountCode, DiscountUsage,
-    Order, OrderItem, OrderFulfillment,
+    Order, OrderItem, OrderFulfillment, InventoryReservation,
+    CreatorPayoutSetup,
 )
 from .serializers import (
     ShopSerializer, ShopDetailSerializer, ShopCreateSerializer,
@@ -38,6 +40,7 @@ from .serializers import (
     CreateEventSerializer, ReviewInputSerializer,
     DiscountCodeSerializer, DiscountCodeWriteSerializer,
     OrderSerializer, OrderFulfillmentSerializer,
+    OrderCaseSerializer, CreatorPayoutSetupSerializer,
 )
 from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator_artifacts, platform_cut
 from apps.wallet.models import ArtifactTransaction
@@ -62,14 +65,24 @@ def _resolve_creator_shop(profile, shop_id=None):
             shop=shop, profile=profile, role__in=('owner', 'manager')
         ).exists():
             return None, 'You do not have permission to publish under this shop.'
-        return shop, None
+        membership_shop = shop
+    else:
+        membership = ShopMembership.objects.filter(
+            profile=profile, role__in=('owner', 'manager')
+        ).select_related('shop').first()
+        if not membership:
+            return None, 'Register as a creator before publishing content.'
+        membership_shop = membership.shop
 
-    membership = ShopMembership.objects.filter(
-        profile=profile, role__in=('owner', 'manager')
-    ).select_related('shop').first()
-    if not membership:
-        return None, 'Register as a creator before publishing content.'
-    return membership.shop, None
+    application = membership_shop.verification_applications.filter(status='approved').exists()
+    payout_ready = CreatorPayoutSetup.objects.filter(
+        profile=profile, setup_status='ready', terms_accepted_at__isnull=False,
+    ).exists()
+    if membership_shop.verification_status != 'verified' and not application:
+        return None, 'An approved creator application is required before publishing.'
+    if not payout_ready:
+        return None, 'Complete payout setup and accept the creator terms before publishing.'
+    return membership_shop, None
 
 
 def _create_order_for_purchase(buyer, item_type, item_obj, title, creator, price_artifacts):
@@ -418,7 +431,10 @@ class ShopVerificationApplicationView(views.APIView):
                 from django.core.files.storage import default_storage
                 from django.core.files.base import ContentFile
                 f = request.FILES['id_document']
-                p = default_storage.save(f'certs/id_docs/{f.name}', ContentFile(f.read()))
+                # Server-generated storage name — never persist the client's
+                # (potentially revealing or path-crafting) filename.
+                ext = os.path.splitext(f.name)[1].lower()[:10] or '.pdf'
+                p = default_storage.save(f'certs/id_docs/{uuid4().hex}{ext}', ContentFile(f.read()))
                 app.id_document_url = request.build_absolute_uri(f'{settings.MEDIA_URL}{p}')
 
         if 'professional_cert' in request.FILES:
@@ -430,7 +446,8 @@ class ShopVerificationApplicationView(views.APIView):
                 from django.core.files.storage import default_storage
                 from django.core.files.base import ContentFile
                 f = request.FILES['professional_cert']
-                p = default_storage.save(f'certs/prof_certs/{f.name}', ContentFile(f.read()))
+                ext = os.path.splitext(f.name)[1].lower()[:10] or '.pdf'
+                p = default_storage.save(f'certs/prof_certs/{uuid4().hex}{ext}', ContentFile(f.read()))
                 app.professional_cert_url = request.build_absolute_uri(f'{settings.MEDIA_URL}{p}')
 
         # If submission requested, move from draft → submitted
@@ -1141,7 +1158,15 @@ class ProductListView(views.APIView):
 
     def get(self, request):
         category = request.query_params.get('category', '')
-        qs = Product.objects.filter(is_active=True).select_related('recommended_by')
+        qs = Product.objects.filter(is_active=True).filter(
+            ~db_models.Q(category='supplement') |
+            (
+                db_models.Q(category='supplement', supplement_registration_number__gt='',
+                            supplement_claims_reviewed=True) &
+                (db_models.Q(supplement_registration_expiry__isnull=True) |
+                 db_models.Q(supplement_registration_expiry__gte=timezone.now().date()))
+            )
+        ).select_related('recommended_by')
         if category:
             qs = qs.filter(category=category)
         qs = gate_mature_queryset(request, qs)
@@ -1183,7 +1208,18 @@ class ProductDetailView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, product_id):
-        product = get_object_or_404(Product, id=product_id, is_active=True)
+        product = get_object_or_404(
+            Product.objects.filter(is_active=True).filter(
+                ~db_models.Q(category='supplement') |
+                (
+                    db_models.Q(category='supplement', supplement_registration_number__gt='',
+                                supplement_claims_reviewed=True) &
+                    (db_models.Q(supplement_registration_expiry__isnull=True) |
+                     db_models.Q(supplement_registration_expiry__gte=timezone.now().date()))
+                )
+            ),
+            id=product_id,
+        )
         if product.recommended_by != request.user.profile and not can_view_content(request, product):
             return Response({
                 'success': False, 'data': None, 'message': 'Not found.',
@@ -1824,6 +1860,8 @@ class CheckoutCartView(views.APIView):
 
         # ---- Phase 1: validate every item before any deduction ----
         event_qty = {}
+        product_qty = {}
+        locked_products = {}
         for item in items:
             price, title, creator = _item_price(item)
             if item.item_type == 'event_ticket' and item.event:
@@ -1841,6 +1879,8 @@ class CheckoutCartView(views.APIView):
                                      'message': f'You already have a ticket for "{ev.title}".',
                                      'errors': None, 'pagination': None}, status=400)
                 event_qty[str(ev.id)] = event_qty.get(str(ev.id), 0) + item.quantity
+            if item.item_type == 'product' and item.product and item.product.stock_tracking_enabled:
+                product_qty[str(item.product.id)] = product_qty.get(str(item.product.id), 0) + item.quantity
             if not price:
                 continue
 
@@ -1854,6 +1894,18 @@ class CheckoutCartView(views.APIView):
                 return Response({'success': False, 'data': None,
                                  'message': f'"{ev.title}" has insufficient remaining spots.',
                                  'errors': None, 'pagination': None}, status=400)
+        for product_id, qty in product_qty.items():
+            product = Product.objects.select_for_update().get(id=product_id)
+            locked_products[product_id] = product
+            reserved = InventoryReservation.objects.filter(product=product, status='reserved').aggregate(
+                total=db_models.Sum('quantity'))['total'] or 0
+            if product.stock_quantity - reserved < qty:
+                return Response({'success': False, 'data': None,
+                                 'message': f'{product.name} is out of stock.',
+                                 'errors': None, 'pagination': None}, status=400)
+        for item in items:
+            if item.product and str(item.product.id) in locked_products:
+                item.product = locked_products[str(item.product.id)]
 
         # ---- Phase 2: compute totals ----
         total_artifacts = {}
@@ -2017,7 +2069,12 @@ class CheckoutCartView(views.APIView):
                 item.event.save(update_fields=['attendee_count'])
             elif item.item_type == 'product' and item.product:
                 item.product.click_count += item.quantity
-                item.product.save(update_fields=['click_count'])
+                if item.product.stock_tracking_enabled:
+                    item.product.stock_quantity -= item.quantity
+                    item.product.save(update_fields=['click_count', 'stock_quantity'])
+                    InventoryReservation.objects.create(product=item.product, order=order, quantity=item.quantity, status='consumed')
+                else:
+                    item.product.save(update_fields=['click_count'])
 
             # Credit creator on the discounted amount
             if t['creator'] and t['price']:
@@ -2294,6 +2351,48 @@ class OrderFulfillmentView(views.APIView):
             _push_notification_to_profile(order.buyer, 'Order update', message)
 
         return Response({'success': True, 'data': OrderSerializer(order, context={'request': request, 'viewer': profile}).data})
+
+
+class OrderCaseView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _get_order(self, order_id, profile):
+        order = get_object_or_404(Order, id=order_id)
+        if order.buyer != profile and not _is_order_seller(order, profile):
+            return None
+        return order
+
+    def get(self, request, order_id):
+        order = self._get_order(order_id, request.user.profile)
+        if order is None:
+            return Response({'success': False, 'message': 'Permission denied.'}, status=403)
+        cases = order.cases.select_related('requester').order_by('-created_at')
+        return Response({'success': True, 'data': OrderCaseSerializer(cases, many=True).data})
+
+    def post(self, request, order_id):
+        order = self._get_order(order_id, request.user.profile)
+        if order is None:
+            return Response({'success': False, 'message': 'Permission denied.'}, status=403)
+        serializer = OrderCaseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        case = serializer.save(order=order, requester=request.user.profile)
+        return Response({'success': True, 'data': OrderCaseSerializer(case).data}, status=201)
+
+
+class CreatorPayoutSetupView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request):
+        setup, _ = CreatorPayoutSetup.objects.get_or_create(profile=request.user.profile)
+        serializer = CreatorPayoutSetupSerializer(setup, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        accept_terms = serializer.validated_data.pop('accept_terms', False)
+        if accept_terms:
+            setup.terms_accepted_at = setup.terms_accepted_at or timezone.now()
+        setup = serializer.save()
+        setup.setup_status = 'ready' if setup.account_reference and setup.terms_accepted_at else 'in_progress'
+        setup.save(update_fields=['terms_accepted_at', 'setup_status', 'updated_at'])
+        return Response({'success': True, 'data': CreatorPayoutSetupSerializer(setup).data})
 
 
 class DiscountCodeView(views.APIView):

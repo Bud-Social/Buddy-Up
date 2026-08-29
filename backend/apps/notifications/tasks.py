@@ -1,10 +1,27 @@
 from celery import shared_task
 from django.utils import timezone
 from datetime import timedelta
+from zoneinfo import ZoneInfo
+
+PRIORITY_BY_TYPE = {
+    'new_device_login': 'critical', 'payment_received': 'high',
+    'session_reminder': 'high', 'live_starting': 'high',
+}
+
+
+def _quiet_hours(prefs):
+    if not prefs.quiet_hours_start or not prefs.quiet_hours_end:
+        return False
+    try:
+        now = timezone.now().astimezone(ZoneInfo(prefs.timezone or 'UTC')).time()
+    except Exception:
+        now = timezone.now().time()
+    start, end = prefs.quiet_hours_start, prefs.quiet_hours_end
+    return start <= now <= end if start < end else now >= start or now <= end
 
 
 @shared_task
-def create_notification(recipient_id: str, notification_type: str, title: str, body: str = '', metadata: dict = None):
+def create_notification(recipient_id: str, notification_type: str, title: str, body: str = '', metadata: dict = None, dedupe_key: str = '', expires_at=None):
     from apps.profiles.models import Profile
     from .models import Notification, NotificationPreference
     try:
@@ -12,12 +29,22 @@ def create_notification(recipient_id: str, notification_type: str, title: str, b
     except Profile.DoesNotExist:
         return
 
+    metadata = metadata or {}
+    dedupe_key = dedupe_key or metadata.get('dedupe_key', '')
+    if dedupe_key:
+        existing = Notification.objects.filter(recipient=profile, dedupe_key=dedupe_key, created_at__gte=timezone.now() - timedelta(hours=24)).first()
+        if existing:
+            existing.aggregation_count += 1
+            existing.metadata = {**existing.metadata, 'latest': metadata}
+            existing.save(update_fields=['aggregation_count', 'metadata', 'updated_at'])
+            return str(existing.id)
     notification = Notification.objects.create(
         recipient=profile,
         notification_type=notification_type,
         title=title,
         body=body,
-        metadata=metadata or {},
+        metadata=metadata, dedupe_key=dedupe_key, expires_at=expires_at,
+        priority=PRIORITY_BY_TYPE.get(notification_type, 'normal'),
     )
 
     try:
@@ -25,17 +52,16 @@ def create_notification(recipient_id: str, notification_type: str, title: str, b
     except NotificationPreference.DoesNotExist:
         return
 
-    should_push = prefs.push_enabled
-    if prefs.quiet_hours_start and prefs.quiet_hours_end:
-        now = timezone.localtime().time()
-        h1, h2 = prefs.quiet_hours_start, prefs.quiet_hours_end
-        if h1 < h2 and h1 <= now <= h2:
-            should_push = False
-        elif h1 > h2 and (now >= h1 or now <= h2):
-            should_push = False
+    category_pref = getattr(prefs, f'{notification_type}_push', None)
+    frequency = (prefs.category_frequency or {}).get(notification_type)
+    if frequency in ('off', 'never'):
+        category_pref = False
+    should_push = prefs.push_enabled and category_pref is not False and not _quiet_hours(prefs)
 
     if not should_push:
-        return
+        notification.delivery_status = 'skipped'
+        notification.save(update_fields=['delivery_status', 'updated_at'])
+        return str(notification.id)
 
     from asgiref.sync import async_to_sync
     from channels.layers import get_channel_layer
@@ -54,8 +80,13 @@ def create_notification(recipient_id: str, notification_type: str, title: str, b
                 },
             },
         )
+        notification.delivery_status = 'delivered'
+        notification.delivered_at = timezone.now()
+        notification.save(update_fields=['delivery_status', 'delivered_at', 'updated_at'])
     except Exception:  # noqa: BLE001
-        pass
+        notification.delivery_status = 'failed'
+        notification.save(update_fields=['delivery_status', 'updated_at'])
+    return str(notification.id)
 
 
 def _deliver_notification(recipient_id: str, notification_type: str, title: str, body: str = '', metadata: dict = None):
@@ -294,7 +325,9 @@ def send_daily_digest():
 @shared_task
 def cleanup_old_notifications():
     from .models import Notification
-    cutoff = timezone.now() - timedelta(days=90)
+    now = timezone.now()
+    cutoff = now - timedelta(days=90)
+    Notification.objects.filter(expires_at__lte=now).delete()
     Notification.objects.filter(created_at__lt=cutoff, is_read=True).delete()
 
 

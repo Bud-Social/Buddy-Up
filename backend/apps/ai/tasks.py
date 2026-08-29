@@ -17,6 +17,7 @@ def log_ai_prediction(
     output_data: dict | None = None,
     error_message: str = '',
     model_version: str = '',
+    metadata: dict | None = None,
 ):
     """Persist an audit row for an AI service call (Sprint C7)."""
     from .models import AIPredictionJob
@@ -28,6 +29,12 @@ def log_ai_prediction(
             output_data=output_data or {},
             error_message=error_message,
             model_version=model_version,
+            confidence=(metadata or {}).get('confidence'),
+            correction=(metadata or {}).get('correction', {}),
+            fallback_used=(metadata or {}).get('fallback_used', False),
+            fallback_reason=(metadata or {}).get('fallback_reason', ''),
+            cost_usd=(metadata or {}).get('cost_usd'),
+            latency_ms=(metadata or {}).get('latency_ms'),
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning('Failed to log AI prediction audit: %s', exc)
@@ -125,7 +132,7 @@ def describe_workout_video(self, job_id: str, video_url: str, exercise: str = 'a
         result = ai_resp.json()
         _update_job(job_id, status='completed', output_data=result, model_version=result.get('model', ''))
         audit_ai_call('video_description', {'video_url': video_url, 'exercise': exercise},
-                      result, model_version=result.get('model', ''))
+                      result, model_version=result.get('model', ''), metadata=result)
     except Exception as exc:  # noqa: BLE001
         logger.warning('Video description failed for job %s: %s', job_id, exc)
         _retry_or_fail(self, job_id, exc, 'video_description',
@@ -147,7 +154,7 @@ def run_summarization(self, job_id: str, text: str):
         ai_resp.raise_for_status()
         result = ai_resp.json()
         _update_job(job_id, status='completed', output_data=result, model_version=result.get('model', ''))
-        audit_ai_call('summarization', {'text_chars': len(text)}, result, model_version=result.get('model', ''))
+        audit_ai_call('summarization', {'text_chars': len(text)}, result, model_version=result.get('model', ''), metadata=result)
     except Exception as exc:  # noqa: BLE001
         logger.warning('Summarization failed for job %s: %s', job_id, exc)
         _retry_or_fail(self, job_id, exc, 'summarization',
@@ -180,7 +187,8 @@ def synthesize_speech(self, job_id: str, text: str, speaker: str = ''):
             model_version=ai_resp.headers.get('x-model', ''),
         )
         audit_ai_call('text_to_speech', {'text_chars': len(text), 'speaker': speaker},
-                      {'result_url': url}, model_version=ai_resp.headers.get('x-model', ''))
+                      {'result_url': url}, model_version=ai_resp.headers.get('x-model', ''),
+                      metadata={'cost_usd': ai_resp.headers.get('x-cost-usd'), 'latency_ms': ai_resp.headers.get('x-latency-ms')})
     except Exception as exc:  # noqa: BLE001
         logger.warning('TTS failed for job %s: %s', job_id, exc)
         _retry_or_fail(self, job_id, exc, 'text_to_speech',

@@ -41,7 +41,9 @@ class BookingSerializer(serializers.ModelSerializer):
         fields = ['id', 'client_id', 'trainer_id', 'session_type', 'status',
                    'scheduled_at', 'duration_minutes', 'artifact_fee', 'notes',
                    'escrow_tx_id', 'client_data', 'trainer_data', 'completed_at',
-                   'cancelled_at', 'created_at', 'parent_series', 'recurrence_pattern']
+                   'cancelled_at', 'created_at', 'parent_series', 'recurrence_pattern',
+                   'completion_evidence', 'completion_confirmed_by_client', 'completed_by',
+                   'recurring_charge_status']
 
     def get_client_data(self, obj):
         return {
@@ -68,6 +70,7 @@ class CreateBookingSerializer(serializers.Serializer):
     duration_minutes = serializers.IntegerField(min_value=15, max_value=180)
     notes = serializers.CharField(max_length=300, required=False, allow_blank=True)
     recurrence_pattern = serializers.ChoiceField(choices=[('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly')], required=False, allow_null=True)
+    recurring_weeks = serializers.IntegerField(min_value=1, max_value=52, required=False, default=1)
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -89,6 +92,7 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 class BookingActionSerializer(serializers.Serializer):
     action = serializers.ChoiceField(choices=['start', 'complete', 'cancel'])
+    evidence = serializers.JSONField(required=False, default=dict)
 
 
 class AvailabilityCreateSerializer(serializers.Serializer):

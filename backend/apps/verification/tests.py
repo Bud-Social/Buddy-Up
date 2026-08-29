@@ -1,14 +1,16 @@
 """Tests for the multistep ID + selfie verification wizard."""
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.profiles.models import Profile
-from apps.verification.models import VerificationDocument
+from apps.verification.models import VerificationDocument, VerificationDocumentAccess
+from apps.verification.tasks import purge_expired_verification_documents
 from .services import run_face_match
 
 
@@ -134,8 +136,138 @@ class FaceMatchServiceTests(TestCase):
             result = run_face_match('https://example.com/id.jpg', 'https://example.com/selfie.jpg')
         self.assertEqual(result, ('manual_review', None))
 
+
+class VerificationRetentionTests(TestCase):
+    def setUp(self):
+        self.profile = _make_user('retention@test.com')
+        self.client = APIClient()
+        self.client.force_authenticate(self.profile.user)
+
+    def test_document_retrieve_is_audited(self):
+        doc = VerificationDocument.objects.create(
+            profile=self.profile,
+            document_type='id_card',
+            file_url='https://example.com/id.jpg',
+        )
+        response = self.client.get(
+            f'/api/v1/verification/documents/{doc.id}/?purpose=verify+identity',
+            HTTP_X_REQUEST_ID='audit-request-1',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        event = VerificationDocumentAccess.objects.get(document=doc)
+        self.assertEqual(event.actor, self.profile.user)
+        self.assertEqual(event.purpose, 'verify identity')
+        self.assertEqual(event.request_id, 'audit-request-1')
+
+    def test_signed_document_access_is_short_lived_and_audited(self):
+        doc = VerificationDocument.objects.create(
+            profile=self.profile, document_type='id_card', file_url='https://example.com/private/id.jpg',
+        )
+        grant = self.client.post(f'/api/v1/verification/documents/{doc.id}/access/')
+        self.assertEqual(grant.status_code, status.HTTP_200_OK)
+        access = self.client.get(f'/api/v1/verification/documents/{doc.id}/access/?token={grant.data["token"]}')
+        self.assertEqual(access.status_code, status.HTTP_200_OK)
+        self.assertEqual(access.data['file_url'], doc.file_url)
+        self.assertEqual(VerificationDocumentAccess.objects.filter(document=doc).count(), 1)
+
+    @override_settings(DEFAULT_FILE_STORAGE='django.core.files.storage.FileSystemStorage')
+    def test_expired_document_file_is_purged_but_metadata_remains(self):
+        doc = VerificationDocument.objects.create(
+            profile=self.profile,
+            document_type='selfie',
+            file_url='https://cdn.example.com/private/selfie.jpg',
+            purge_after=timezone.now() - timezone.timedelta(minutes=1),
+        )
+        count = purge_expired_verification_documents.run()
+        self.assertEqual(count, 1)
+        doc.refresh_from_db()
+        self.assertEqual(doc.file_url, '')
+        self.assertIsNotNone(doc.purged_at)
+
     def test_manual_backend_short_circuits(self):
         from unittest import mock
         with mock.patch.dict('os.environ', {'FACE_MATCH_BACKEND': 'manual'}):
             result = run_face_match('https://example.com/id.jpg', 'https://example.com/selfie.jpg')
         self.assertEqual(result, ('manual_review', None))
+
+
+class VerificationDocumentDeliveryTests(TestCase):
+    """KYC uploads are stored under server-generated names and served only
+    through the access-audited retrieve endpoint."""
+
+    def setUp(self):
+        self.profile = _make_user('delivery@test.com')
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.profile.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+        self.base = '/api/v1/verification/submissions'
+
+    def _create_draft(self):
+        res = self.client.post(f'{self.base}/', {'verification_type': 'id'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        return res.json()['id']
+
+    def test_upload_uses_server_generated_filename(self):
+        sid = self._create_draft()
+        upload = SimpleUploadedFile(
+            'my passport scan FINAL v2.JPG', b'\xff\xd8\xff\xe0FAKEJPEGDATA', content_type='image/jpeg',
+        )
+        res = self.client.post(
+            f'{self.base}/{sid}/upload_step/',
+            {'step': 'id_document', 'document_type': 'passport', 'file': upload},
+            format='multipart',
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        doc = VerificationDocument.objects.get(profile=self.profile)
+        self.assertFalse(doc.file_url.startswith(('http://', 'https://')))
+        stored_name = doc.file_url.rsplit('/', 1)[-1]
+        self.assertRegex(stored_name, r'^[0-9a-f]{32}\.jpg$')
+        self.assertNotIn('my passport', doc.file_url)
+
+        # The serializer must not expose a directly fetchable URL — point at
+        # the audited endpoint instead.
+        self.assertEqual(
+            res.json()['uploaded_document']['file_url'],
+            f'/api/v1/verification/documents/{doc.id}/',
+        )
+
+    def test_retrieve_streams_internal_file_and_records_access(self):
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+        saved = default_storage.save(
+            f'verification/stream-test/{__import__("uuid").uuid4().hex}.jpg',
+            ContentFile(b'SECRET-ID-BYTES'),
+        )
+        doc = VerificationDocument.objects.create(
+            profile=self.profile, document_type='id_card', file_url=saved,
+        )
+        response = self.client.get(
+            f'/api/v1/verification/documents/{doc.id}/?purpose=review',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(
+            b'SECRET-ID-BYTES' in b''.join(response.streaming_content),
+        )
+        self.assertTrue(
+            VerificationDocumentAccess.objects.filter(document=doc, actor=self.profile.user).exists(),
+        )
+
+    def test_retrieve_requires_authentication(self):
+        doc = VerificationDocument.objects.create(
+            profile=self.profile, document_type='id_card', file_url='verification/x.jpg',
+        )
+        anonymous = APIClient()
+        response = anonymous.get(f'/api/v1/verification/documents/{doc.id}/')
+        self.assertIn(response.status_code, (
+            status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN,
+        ))
+
+    def test_legacy_external_url_still_returned(self):
+        doc = VerificationDocument.objects.create(
+            profile=self.profile, document_type='id_card',
+            file_url='https://legacy-cdn.example.com/id.jpg',
+        )
+        response = self.client.get(f'/api/v1/verification/documents/{doc.id}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['file_url'], 'https://legacy-cdn.example.com/id.jpg')

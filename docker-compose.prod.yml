@@ -11,6 +11,11 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - buddyup_internal
 
@@ -25,6 +30,11 @@ services:
         --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a '${REDIS_PASSWORD}' ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - buddyup_internal
 
@@ -72,17 +82,24 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - FIREBASE_SERVICE_ACCOUNT_JSON=${FIREBASE_SERVICE_ACCOUNT_JSON}
       - SENTRY_DSN=${SENTRY_DSN}
+      - RELEASE_VERSION=${RELEASE_VERSION:-docker}
+      - RELEASE_COMMIT=${RELEASE_COMMIT:-unknown}
+      - METRICS_TOKEN=${METRICS_TOKEN}
     volumes:
       - backend_static:/app/staticfiles
+      - backend_media:/app/media
     networks:
       - buddyup_internal
     depends_on:
-      - db
-      - redis
-      - livekit
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      livekit:
+        condition: service_started
 
   livekit:
-    image: livekit/livekit-server:latest
+    image: livekit/livekit-server:v1.8
     restart: always
     command: --config /etc/livekit.yaml
     environment:
@@ -105,7 +122,7 @@ services:
       - redis
 
   livekit-egress:
-    image: livekit/egress:latest
+    image: livekit/egress:v1.6
     restart: always
     environment:
       - EGRESS_CONFIG_FILE=/etc/livekit-egress.yaml
@@ -193,8 +210,24 @@ services:
         --concurrency=8
         -Q default,high_priority,media,ai
         --max-tasks-per-child=1000
-    env_file: .env.prod
+    env_file:
+      - path: .env.prod
+        required: false
     environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - CLOUDINARY_URL=${CLOUDINARY_URL}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - FLUTTERWAVE_WEBHOOK_HASH=${FLUTTERWAVE_WEBHOOK_HASH}
+      - FLUTTERWAVE_SECRET_KEY=${FLUTTERWAVE_SECRET_KEY}
+      - FLUTTERWAVE_PUBLIC_KEY=${FLUTTERWAVE_PUBLIC_KEY}
+      - KES_PER_USD=${KES_PER_USD}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - RELEASE_VERSION=${RELEASE_VERSION:-docker}
+      - RELEASE_COMMIT=${RELEASE_COMMIT:-unknown}
+      - METRICS_TOKEN=${METRICS_TOKEN}
       - LIVEKIT_INTERNAL_URL=http://livekit:7880
       - LIVE_RECORDING_S3_ENDPOINT=http://minio:9000
       - LIVE_RECORDING_S3_BUCKET=buddyup-replays
@@ -204,8 +237,10 @@ services:
     networks:
       - buddyup_internal
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   celery-beat:
     build:
@@ -217,18 +252,45 @@ services:
       celery -A config.celery beat
         --loglevel=warning
         --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    env_file: .env.prod
+    env_file:
+      - path: .env.prod
+        required: false
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.production
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - CLOUDINARY_URL=${CLOUDINARY_URL}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - FLUTTERWAVE_WEBHOOK_HASH=${FLUTTERWAVE_WEBHOOK_HASH}
+      - FLUTTERWAVE_SECRET_KEY=${FLUTTERWAVE_SECRET_KEY}
+      - FLUTTERWAVE_PUBLIC_KEY=${FLUTTERWAVE_PUBLIC_KEY}
+      - KES_PER_USD=${KES_PER_USD}
+      - SENTRY_DSN=${SENTRY_DSN}
+      - RELEASE_VERSION=${RELEASE_VERSION:-docker}
+      - RELEASE_COMMIT=${RELEASE_COMMIT:-unknown}
+      - METRICS_TOKEN=${METRICS_TOKEN}
     networks:
       - buddyup_internal
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       target: production
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
+        - VITE_WS_BASE_URL=${VITE_WS_BASE_URL}
+        - VITE_LIVEKIT_URL=${VITE_LIVEKIT_URL}
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+        - VITE_GOOGLE_MAPS_KEY=${VITE_GOOGLE_MAPS_KEY}
+        - VITE_CLOUDINARY_CLOUD_NAME=${VITE_CLOUDINARY_CLOUD_NAME}
+        - VITE_FIREBASE_CONFIG=${VITE_FIREBASE_CONFIG}
     restart: always
     networks:
       - buddyup_internal
@@ -246,7 +308,6 @@ services:
       - ./nginx/ssl:/etc/nginx/ssl:ro
       - backend_static:/var/www/static:ro
       - backend_media:/media:ro
-      - frontend_build:/var/www/frontend:ro
     networks:
       - buddyup_internal
     depends_on:
@@ -257,7 +318,7 @@ volumes:
   postgres_data:
   redis_data:
   backend_static:
-  frontend_build:
+  backend_media:
   minio_data:
   ai_models:
 

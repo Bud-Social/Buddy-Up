@@ -46,6 +46,9 @@ class FlutterwaveClient:
     def verify_transaction(self, transaction_id: str) -> FlutterwaveResponse:
         return self._request('GET', f'transactions/{transaction_id}/verify')
 
+    def verify_transfer(self, transfer_id: str) -> FlutterwaveResponse:
+        return self._request('GET', f'transfers/{transfer_id}')
+
     def get_banks(self, country: str = 'KE') -> FlutterwaveResponse:
         return self._request('GET', f'banks/{country}')
 

@@ -199,6 +199,26 @@ class BookingTests(TestCase):
         response = self.client.get(f'/api/v1/sessions/bookings/{booking_id}/')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_recurring_booking_charges_each_child_and_records_evidence(self):
+        response = self.client.post(f'/api/v1/sessions/book/{self.trainer_profile.username}/', {
+            'session_type': '1on1_live',
+            'scheduled_at': (timezone.now() + timedelta(days=2)).isoformat(),
+            'duration_minutes': 60, 'recurrence_pattern': 'weekly', 'recurring_weeks': 3,
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(BookingSession.objects.filter(client=self.profile).count(), 3)
+        self.assertEqual(BookingSession.objects.filter(client=self.profile).exclude(escrow_tx_id='').count(), 3)
+        booking_id = response.data['data']['id']
+        _auth_client(self.client, email='trainer@test.com')
+        self.client.post(f'/api/v1/sessions/bookings/{booking_id}/', {
+            'action': 'start',
+        }, format='json')
+        response = self.client.post(f'/api/v1/sessions/bookings/{booking_id}/', {
+            'action': 'complete', 'evidence': {'attendance': 'confirmed'},
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(BookingSession.objects.get(id=booking_id).completion_evidence['attendance'], 'confirmed')
+
 
 class TrainerReviewsTest(TestCase):
     def setUp(self):

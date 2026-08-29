@@ -108,6 +108,7 @@ class ModerationAction(TimestampedModel):
         ('user_suspended', 'User Suspended'),
         ('user_banned', 'User Banned'),
         ('report_dismissed', 'Report Dismissed'),
+        ('action_reversed', 'Action Reversed on Appeal'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -133,3 +134,40 @@ class ModerationAction(TimestampedModel):
 
     def __str__(self):
         return f'{self.action} by {self.moderator}'
+
+
+class ModerationAppeal(TimestampedModel):
+    """User appeal against a moderation action, with independent review."""
+
+    STATUS_CHOICES = [
+        ('submitted', 'Submitted'),
+        ('under_review', 'Under Review'),
+        ('approved', 'Approved / Action Reversed'),
+        ('denied', 'Denied'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    action = models.ForeignKey(
+        ModerationAction, on_delete=models.CASCADE, related_name='appeals',
+    )
+    appellant = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='moderation_appeals',
+    )
+    reason = models.TextField(max_length=1500)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='submitted')
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='moderation_appeal_reviews',
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    resolution_note = models.TextField(blank=True, max_length=1500)
+
+    class Meta:
+        db_table = 'moderation_appeal'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['action', 'appellant'], name='uniq_action_appellant_appeal',
+            ),
+        ]

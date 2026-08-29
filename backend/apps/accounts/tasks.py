@@ -160,6 +160,24 @@ def send_login_alert_email(user_id: str, ip_address: str, device: str):
 
 
 @shared_task
+def send_security_notification_email(user_id: str, action: str, ip_address: str = ''):
+    from .models import User
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return
+    detail = f' from IP address {ip_address}' if ip_address else ''
+    send_mail(
+        subject=f'BuddyUp security alert: {action}',
+        message=(f'{action} was made to your BuddyUp account{detail}. '
+                 'If you did not make this change, sign in and secure your account immediately.'),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[user.email],
+        fail_silently=True,
+    )
+
+
+@shared_task
 def cleanup_expired_otps():
     from .models import OTPToken
     OTPToken.objects.filter(

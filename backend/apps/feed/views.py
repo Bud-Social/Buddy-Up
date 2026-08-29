@@ -4,8 +4,9 @@ import logging
 import uuid
 
 from django.conf import settings
+from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from django.db import models as db_models, transaction
+from django.db import IntegrityError, models as db_models, transaction
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -196,16 +197,45 @@ def _rank_for_you(request, user_profile, queryset, buddy_ids, followed_ids, gym_
     reposted_original_ids = {p.original_post_id for p in ordered if p.is_repost and p.original_post_id}
     deduped = [p for p in ordered if not (not p.is_repost and p.id in reposted_original_ids)]
 
+    # Persist rank + algorithm context per user for a short window so
+    # engagement feedback can be attributed to the impression that earned it.
+    feed_request_id = str(uuid.uuid4())
+    try:
+        cache.set(
+            f'feed_rank_ctx:{user_profile.user_id}',
+            {
+                'feed_request_id': feed_request_id,
+                'algorithm_version': 'linucb-v1',
+                'ranks': {str(p.id): i for i, p in enumerate(deduped, start=1)},
+            },
+            timeout=600,
+        )
+    except Exception:  # noqa: BLE001 — attribution is best-effort
+        pass
+
     paginator = CursorPagination()
     page_size = paginator.get_page_size(request)
     cursor = request.query_params.get('cursor')
-    page_posts = ai_ranking.paginate_ranked(deduped, cursor, page_size)
+    try:
+        page_window = ai_ranking.paginate_ranked(deduped, cursor, page_size + 1)
+    except ValueError as exc:
+        return Response({
+            'success': False, 'data': None, 'message': str(exc),
+            'errors': {'cursor': [str(exc)]}, 'pagination': None,
+        }, status=status.HTTP_400_BAD_REQUEST)
+    page_posts = page_window[:page_size]
+    has_next = len(page_window) > page_size
 
     serializer = FeedPostSerializer(page_posts, many=True, context={'request': request})
-    next_cursor = str(page_posts[-1].id) if page_posts else None
+    next_cursor = str(page_posts[-1].id) if page_posts and has_next else None
     return Response({
         'success': True,
         'data': serializer.data,
+        'ranking': {
+            'feed_request_id': feed_request_id,
+            'algorithm_version': 'linucb-v1',
+            'source': 'ai',
+        },
         'message': 'OK',
         'errors': None,
         'pagination': {
@@ -430,6 +460,26 @@ class CreatePostView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        client_request_id = (
+            request.headers.get('Idempotency-Key') or request.data.get('client_request_id') or ''
+        ).strip()
+        if len(client_request_id) > 128:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Idempotency key must be 128 characters or fewer.',
+                'errors': {'client_request_id': ['Too long.']}, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if client_request_id:
+            existing_post = Post.objects.filter(
+                author=request.user.profile, client_request_id=client_request_id,
+            ).first()
+            if existing_post:
+                output = PostSerializer(existing_post, context={'request': request})
+                return Response({
+                    'success': True, 'data': output.data,
+                    'message': 'Post already created.', 'errors': None, 'pagination': None,
+                }, status=status.HTTP_200_OK)
+
         # Handle file uploads — build media_urls from uploaded files
         if hasattr(request.FILES, 'getlist'):
             uploaded_files = request.FILES.getlist('media')
@@ -507,10 +557,24 @@ class CreatePostView(views.APIView):
                     except Exception as exc:  # noqa: BLE001
                         logger.warning('Meal photo auto-analysis failed: %s', exc)
 
-        post = Post.objects.create(
-            author=request.user.profile,
-            **validated,
-        )
+        try:
+            with transaction.atomic():
+                post = Post.objects.create(
+                    author=request.user.profile,
+                    client_request_id=client_request_id or None,
+                    **validated,
+                )
+        except IntegrityError:
+            if not client_request_id:
+                raise
+            post = Post.objects.get(
+                author=request.user.profile, client_request_id=client_request_id,
+            )
+            output = PostSerializer(post, context={'request': request})
+            return Response({
+                'success': True, 'data': output.data,
+                'message': 'Post already created.', 'errors': None, 'pagination': None,
+            }, status=status.HTTP_200_OK)
 
         # Handle poll creation
         poll_serializer = PollCreateSerializer(data=request.data)

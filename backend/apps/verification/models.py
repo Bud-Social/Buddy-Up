@@ -29,7 +29,7 @@ class VerificationDocument(TimestampedModel):
         related_name='verification_documents',
     )
     document_type = models.CharField(max_length=25, choices=DOCUMENT_TYPES)
-    file_url = models.URLField()
+    file_url = models.URLField(blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     rejection_reason = models.TextField(blank=True, max_length=500)
     reviewed_by = models.ForeignKey(
@@ -38,17 +38,43 @@ class VerificationDocument(TimestampedModel):
     )
     reviewed_at = models.DateTimeField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
+    purge_after = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Operations deadline for deleting the underlying sensitive file.',
+    )
+    purged_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = 'verification_document'
         indexes = [
             models.Index(fields=['profile', 'document_type']),
             models.Index(fields=['status']),
+            models.Index(fields=['purge_after', 'purged_at']),
         ]
         ordering = ['-created_at']
 
     def __str__(self):
         return f'{self.document_type} — {self.status}'
+
+
+class VerificationDocumentAccess(TimestampedModel):
+    """Audit every sensitive verification-document retrieval."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    document = models.ForeignKey(
+        VerificationDocument, on_delete=models.CASCADE, related_name='access_events',
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='verification_document_accesses',
+    )
+    purpose = models.CharField(max_length=120)
+    request_id = models.CharField(max_length=64, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'verification_document_access'
+        ordering = ['-created_at']
 
 
 class VerificationSubmission(TimestampedModel):

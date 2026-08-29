@@ -9,5 +9,6 @@ router.register(r'submissions', views.VerificationSubmissionViewSet)
 
 app_name = 'verification'
 urlpatterns = [
+    path('documents/<uuid:pk>/access/', views.VerificationDocumentAccessView.as_view(), name='document_access'),
     path('', include(router.urls)),
 ]

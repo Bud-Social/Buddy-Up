@@ -49,11 +49,13 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'common.middleware.RequestIdMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'common.middleware.ConsentEnforcementMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -167,6 +169,22 @@ CELERY_TASK_ROUTES = {
 }
 
 CELERY_BEAT_SCHEDULE = {
+    'wallet-pending-withdrawals': {
+        'task': 'apps.wallet.tasks.process_pending_withdrawals',
+        'schedule': 300.0,
+    },
+    'wallet-provider-reconciliation': {
+        'task': 'apps.wallet.tasks.reconcile_flutterwave_transactions',
+        'schedule': 86400.0,
+    },
+    'wallet-clearance-release': {
+        'task': 'apps.wallet.tasks.clear_locked_balance',
+        'schedule': 300.0,
+    },
+    'verification-document-retention': {
+        'task': 'apps.verification.tasks.purge_expired_verification_documents',
+        'schedule': 86400.0,
+    },
     'meal-plan-daily-reminders': {
         'task': 'apps.marketplace.tasks.send_meal_plan_daily_reminders',
         'schedule': 3600.0,  # Run every hour; task checks if current hour matches subscriber preference
@@ -255,6 +273,9 @@ REST_FRAMEWORK = {
         'password_reset': '3/h',
         'upload_attachment': '20/h',
         'link_preview': '30/h',
+        'checkout': '10/h',
+        'webauthn': '10/h',
+        'analytics': '120/min',
     },
 }
 
@@ -277,6 +298,12 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+
+# Release metadata is deliberately environment supplied so deploys can identify
+# the running artifact without coupling the application to a CI provider.
+RELEASE_VERSION = os.environ.get('RELEASE_VERSION', 'development')
+RELEASE_COMMIT = os.environ.get('RELEASE_COMMIT', os.environ.get('RAILWAY_GIT_COMMIT_SHA', 'unknown'))
+METRICS_TOKEN = os.environ.get('METRICS_TOKEN', '')
 
 # Email (SMTP)
 # Transactional email. SendGrid is wired automatically when SENDGRID_API_KEY
@@ -364,6 +391,7 @@ FLUTTERWAVE_SECRET_KEY = os.environ.get('FLUTTERWAVE_SECRET_KEY', '')
 FLUTTERWAVE_PUBLIC_KEY = os.environ.get('FLUTTERWAVE_PUBLIC_KEY', '')
 FLUTTERWAVE_WEBHOOK_HASH = os.environ.get('FLUTTERWAVE_WEBHOOK_HASH', '')
 FLUTTERWAVE_ENCRYPTION_KEY = os.environ.get('FLUTTERWAVE_ENCRYPTION_KEY', '')
+KES_PER_USD = float(os.environ.get('KES_PER_USD', '129.5'))
 
 # AI microservice
 AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://ai-service:8003')

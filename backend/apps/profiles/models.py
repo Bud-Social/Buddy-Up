@@ -113,6 +113,39 @@ class BlockRelationship(TimestampedModel):
         unique_together = ('blocker', 'blocked')
 
 
+class RecommendationFeedback(TimestampedModel):
+    FEEDBACK_CHOICES = [
+        ('not_interested', 'Not Interested'),
+        ('irrelevant', 'Irrelevant'),
+        ('already_connected', 'Already Connected'),
+        ('helpful', 'Helpful'),
+    ]
+
+    viewer = models.ForeignKey(
+        Profile, on_delete=models.CASCADE, related_name='recommendation_feedback_given'
+    )
+    target = models.ForeignKey(
+        Profile, on_delete=models.CASCADE, related_name='recommendation_feedback_received'
+    )
+    feedback = models.CharField(max_length=20, choices=FEEDBACK_CHOICES)
+    # Append-only history of {feedback, at} — the current value must never
+    # erase what the user said before (needed for ranking evaluation).
+    history = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        db_table = 'profiles_recommendation_feedback'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['viewer', 'target'], name='unique_profile_recommendation_feedback'
+            ),
+            models.CheckConstraint(
+                condition=~models.Q(viewer=models.F('target')),
+                name='recommendation_feedback_not_self',
+            ),
+        ]
+        indexes = [models.Index(fields=['viewer', 'feedback'], name='profiles_re_viewer__4ce10b_idx')]
+
+
 class AccountabilityPing(TimestampedModel):
     from_user = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='pings_sent')
     to_user = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='pings_received')
