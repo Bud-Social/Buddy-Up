@@ -334,7 +334,7 @@ class UploadAttachmentView(views.APIView):
 
     ALLOWED_EXTENSIONS = {
         '.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic',
-        '.mp4', '.mov', '.webm',
+        '.mp4', '.mov', '.webm', '.m4v', '.mpeg', '.mkv',
         '.mp3', '.ogg', '.m4a', '.wav',
         '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
     }

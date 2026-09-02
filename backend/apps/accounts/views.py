@@ -19,7 +19,7 @@ from django.contrib.auth import authenticate
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from rest_framework import status, views, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -148,42 +148,72 @@ class RegisterView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        user = User.objects.create_user(
-            email=data['email'],
-            password=data['password'],
-            phone=data.get('phone', ''),
-            dob_hash=hash_dob(data['dob']),
-            is_adult=data['age'] >= 18,
-            email_verified=False,
-            last_login_ip=_get_client_ip(request),
-            guardian_name=data.get('guardian_name', ''),
-            guardian_email=data.get('guardian_email', ''),
-            guardian_phone=data.get('guardian_phone', ''),
-            consent_log={
-                'tos_version': policy_version('terms'),
-                'privacy_version': policy_version('privacy'),
-                'guidelines_version': policy_version('guidelines'),
-                'cookie_version': policy_version('cookie_policy'),
-                'medical_disclaimer_version': policy_version('medical_disclaimer'),
-                'sponsorship_policy_version': policy_version('sponsorship_policy'),
-                'accepted_terms': data['accepted_terms'],
-                'accepted_privacy': data['accepted_privacy'],
-                'accepted_guidelines': data['accepted_guidelines'],
-                'is_16_plus': data['is_16_plus'],
-                'requires_parental_coowner': data.get('requires_parental_coowner', False),
-                'consented_at': timezone.now().isoformat(),
-                'ip': _get_client_ip(request),
-            },
-        )
+        # Username / display name are optional at registration — the onboarding
+        # pipeline collects the real ones. Derive collision-safe placeholders
+        # from the email (mirrors social sign-up provisioning).
+        username = data.get('username') or _generate_username(data['email'].split('@')[0])
+        display_name = data.get('display_name') or username
 
-        Profile.objects.create(
-            onboarding_completed=False,
-            user=user,
-            username=data['username'],
-            display_name=data['display_name'],
-            role=data['role'],
-            privacy_level='private',
-        )
+        try:
+            user = User.objects.create_user(
+                email=data['email'],
+                password=data['password'],
+                phone=data.get('phone', ''),
+                dob_hash=hash_dob(data['dob']),
+                is_adult=data['age'] >= 18,
+                email_verified=False,
+                last_login_ip=_get_client_ip(request),
+                guardian_name=data.get('guardian_name', ''),
+                guardian_email=data.get('guardian_email', ''),
+                guardian_phone=data.get('guardian_phone', ''),
+                consent_log={
+                    'tos_version': policy_version('terms'),
+                    'privacy_version': policy_version('privacy'),
+                    'guidelines_version': policy_version('guidelines'),
+                    'cookie_version': policy_version('cookie_policy'),
+                    'medical_disclaimer_version': policy_version('medical_disclaimer'),
+                    'sponsorship_policy_version': policy_version('sponsorship_policy'),
+                    'accepted_terms': data['accepted_terms'],
+                    'accepted_privacy': data['accepted_privacy'],
+                    'accepted_guidelines': data['accepted_guidelines'],
+                    'is_16_plus': data['is_16_plus'],
+                    'requires_parental_coowner': data.get('requires_parental_coowner', False),
+                    'consented_at': timezone.now().isoformat(),
+                    'ip': _get_client_ip(request),
+                },
+            )
+        except Exception as exc:
+            if 'unique' in str(exc).lower() or 'Duplicate entry' in str(exc) or isinstance(exc, IntegrityError):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'An account with this email already exists. Try logging in instead.',
+                    'errors': {'email': ['An account with this email already exists.']},
+                    'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            raise
+
+        try:
+            Profile.objects.create(
+                onboarding_completed=False,
+                user=user,
+                username=username,
+                display_name=display_name,
+                role=data['role'],
+                privacy_level='private',
+            )
+        except Exception:
+            # Username collision raced between validation and insert — derive
+            # a unique suffix rather than failing the whole registration.
+            user.profile.delete()
+            username = _generate_username(username)
+            Profile.objects.create(
+                onboarding_completed=False,
+                user=user,
+                username=username,
+                display_name=display_name,
+                role=data['role'],
+                privacy_level='private',
+            )
 
         otp = _generate_otp()
         OTPToken.objects.create(
@@ -298,7 +328,7 @@ class VerifyRegistrationOTPView(views.APIView):
                     'phone_verified': user.phone_verified,
                     'is_adult': user.is_adult,
                     'totp_enabled': user.totp_enabled,
-                    'created_at': user.created_at.isoformat(),
+                    'has_password': user.has_usable_password(),                    'created_at': user.created_at.isoformat(),
                     'is_staff': user.is_staff,
                 },
                 'profile': ProfileSerializer(profile).data,
@@ -324,6 +354,17 @@ class LoginView(views.APIView):
             try:
                 u = User.objects.get(email__iexact=data['email'])
                 _log_event(u, 'login_failed', request)
+                # Google/Apple accounts are provisioned with an unusable
+                # password — point the user at social sign-in instead of a
+                # bare "invalid credentials" 401.
+                if not u.has_usable_password():
+                    return Response({
+                        'success': False,
+                        'data': {'social_account': True},
+                        'message': 'This account was created with Google. Continue with Google to sign in — you can set a password during onboarding.',
+                        'errors': {'credentials': ['Social sign-in account.']},
+                        'pagination': None,
+                    }, status=status.HTTP_401_UNAUTHORIZED)
             except User.DoesNotExist:
                 pass
             return Response({
@@ -353,22 +394,44 @@ class LoginView(views.APIView):
             }, status=status.HTTP_403_FORBIDDEN)
 
         if not user.email_verified:
-            otp = _generate_otp()
-            OTPToken.objects.create(
+            # Unverified account: redirect the client to OTP verification.
+            # Reuse a still-valid OTP to avoid spamming the inbox — only
+            # generate and email a fresh code when the previous one has
+            # expired, been consumed, or exhausted its attempts.
+            pending = OTPToken.objects.filter(
                 user=user,
-                code=otp,
                 channel='email',
-                expires_at=timezone.now() + timedelta(minutes=10),
-            )
-            send_otp_email.delay(str(user.id), otp, 'registration')
+                is_used=False,
+                attempts__lt=3,
+                expires_at__gt=timezone.now(),
+            ).order_by('-created_at').first()
+            otp_resent = False
+            if pending is None:
+                otp = _generate_otp()
+                pending = OTPToken.objects.create(
+                    user=user,
+                    code=otp,
+                    channel='email',
+                    expires_at=timezone.now() + timedelta(minutes=10),
+                )
+                send_otp_email.delay(str(user.id), pending.code, 'registration')
+                otp_resent = True
             reg_token = _generate_temp_token(user, 'registration', expiry_minutes=10)
             return Response({
                 'success': False,
                 'data': {
+                    # Machine flag — clients must redirect to OTP verification
+                    # on this, not by matching the message text.
+                    'require_email_verification': True,
                     'registration_token': reg_token,
                     'email': user.email,
+                    'otp_resent': otp_resent,
                 },
-                'message': 'Please verify your email before logging in. Check your inbox for the OTP.',
+                'message': (
+                    'Your account has not been verified. We\'ve sent a fresh OTP to your email.'
+                    if otp_resent else
+                    'Your account has not been verified yet. Enter the OTP we emailed you — it\'s still valid, or tap Resend for a new one.'
+                ),
                 'errors': None,
                 'pagination': None,
             }, status=status.HTTP_403_FORBIDDEN)
@@ -494,7 +557,7 @@ class VerifyLoginOTPView(views.APIView):
                     'phone_verified': user.phone_verified,
                     'is_adult': user.is_adult,
                     'totp_enabled': user.totp_enabled,
-                    'created_at': user.created_at.isoformat(),
+                    'has_password': user.has_usable_password(),                    'created_at': user.created_at.isoformat(),
                     'is_staff': user.is_staff,
                 },
                 'profile': profile,
@@ -710,7 +773,7 @@ class TOTPChallengeView(views.APIView):
                     'phone_verified': user.phone_verified,
                     'is_adult': user.is_adult,
                     'totp_enabled': user.totp_enabled,
-                    'created_at': user.created_at.isoformat(),
+                    'has_password': user.has_usable_password(),                    'created_at': user.created_at.isoformat(),
                     'is_staff': user.is_staff,
                 },
                 'profile': profile,
@@ -815,6 +878,7 @@ def _finalize_social_login(user, method, request):
             'phone_verified': user.phone_verified,
             'is_adult': user.is_adult,
             'totp_enabled': user.totp_enabled,
+            'has_password': user.has_usable_password(),
             'created_at': user.created_at.isoformat(),
             'is_staff': user.is_staff,
         },
@@ -923,6 +987,17 @@ class AppleLoginView(views.APIView):
         last_name = serializer.validated_data.get('last_name', '')
         name = f"{first_name} {last_name}".strip()
 
+        # Fail closed: audience/issuer verification is mandatory. Without a
+        # configured client ID any Apple-signed token for ANY developer's app
+        # would otherwise log a user in.
+        apple_client_id = getattr(settings, 'APPLE_CLIENT_ID', '')
+        if not apple_client_id:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Apple sign-in is not configured.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
         try:
             # Fetch Apple's public keys — cached for an hour; the network
             # fetch itself is time-boxed so a slow IdP cannot hang the worker.
@@ -935,7 +1010,7 @@ class AppleLoginView(views.APIView):
             # Get the key ID from the token header
             header = jwt.get_unverified_header(identity_token)
             kid = header['kid']
-            
+
             # Find the matching public key
             key_data = next((k for k in apple_keys if k['kid'] == kid), None)
             if not key_data:
@@ -944,13 +1019,14 @@ class AppleLoginView(views.APIView):
             # Construct the public key
             public_key = RSAAlgorithm.from_jwk(key_data)
 
-            # Decode the token
+            # Decode the token — audience AND issuer are always verified.
             decoded = jwt.decode(
-                identity_token, 
-                public_key, 
-                algorithms=['RS256'], 
-                audience=settings.SOCIAL_AUTH_APPLE_CLIENT_ID if hasattr(settings, 'SOCIAL_AUTH_APPLE_CLIENT_ID') else None,
-                options={"verify_aud": hasattr(settings, 'SOCIAL_AUTH_APPLE_CLIENT_ID')}
+                identity_token,
+                public_key,
+                algorithms=['RS256'],
+                audience=apple_client_id,
+                issuer='https://appleid.apple.com',
+                options={"verify_aud": True, "verify_iss": True},
             )
             email = decoded.get('email', '').lower()
             
@@ -1393,6 +1469,50 @@ class ChangePasswordView(views.APIView):
         return Response({
             'success': True, 'data': None,
             'message': 'Password changed successfully.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class SetPasswordView(views.APIView):
+    """Set a password for social sign-ups that have none (Google/Apple).
+
+    Accounts that already have a password must supply the current one, so
+    this can never be abused as a password-change bypass.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            'success': True,
+            'data': {'has_password': request.user.has_usable_password()},
+            'message': 'OK',
+            'errors': None, 'pagination': None,
+        })
+
+    def post(self, request):
+        from .serializers import SetPasswordSerializer
+        serializer = SetPasswordSerializer(
+            data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        if request.user.has_usable_password():
+            if not request.user.check_password(data.get('current_password') or ''):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Current password is incorrect.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        request.user.set_password(data['new_password'])
+        request.user.save()
+
+        _log_event(request.user, 'password_changed', request)
+        _security_alert(request.user, 'Your password was set', request)
+
+        return Response({
+            'success': True, 'data': {'has_password': True},
+            'message': 'Password set successfully. You can now log in with your email and password.',
             'errors': None, 'pagination': None,
         })
 
@@ -1847,7 +1967,7 @@ class SocialAgeSetupView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         age = calculate_age(dob_date)
-        user.dob_hash = hash_dob(dob)
+        user.dob_hash = hash_dob(dob_date)
         user.is_adult = age >= 18
         user.save(update_fields=['dob_hash', 'is_adult'])
         _log_event(user, 'age_verified', request, metadata={'method': 'social_signup'})
@@ -1885,7 +2005,7 @@ class VerifyAgeView(views.APIView):
 
         age = calculate_age(dob_date)
         is_adult = age >= 18
-        hash_dob_val = hash_dob(dob)
+        hash_dob_val = hash_dob(dob_date)
 
         return Response({
             'success': True,
@@ -1928,12 +2048,22 @@ def health_check(request):
         checks['cache'] = {'ok': False, 'error': type(exc).__name__}
 
     try:
-        executor = MigrationExecutor(connections['default'])
-        pending = executor.migration_plan(executor.loader.graph.leaf_nodes())
-        checks['migrations'] = {
-            'ok': not pending,
-            'pending': [f'{m.app_label}.{m.name}' for m, _backward in pending[:20]],
-        }
+        # The Docker healthcheck hits this every 30s and the migration-plan
+        # walk is expensive (full MigrationExecutor graph). Cache the result
+        # briefly; a fresh check always runs after deploys/migrations because
+        # the cache key includes the schema_status of the moment is cheap
+        # enough at 60s granularity.
+        cached_migrations = cache.get('health:migrations')
+        if cached_migrations is not None:
+            checks['migrations'] = cached_migrations
+        else:
+            executor = MigrationExecutor(connections['default'])
+            pending = executor.migration_plan(executor.loader.graph.leaf_nodes())
+            checks['migrations'] = {
+                'ok': not pending,
+                'pending': [f'{m.app_label}.{m.name}' for m, _backward in pending[:20]],
+            }
+            cache.set('health:migrations', checks['migrations'], timeout=60)
     except Exception as exc:  # noqa: BLE001
         checks['migrations'] = {'ok': False, 'error': type(exc).__name__}
 
@@ -1954,7 +2084,12 @@ def health_check(request):
 def metrics(request):
     """Expose aggregate worker metrics to a configured scraper only."""
     expected = settings.METRICS_TOKEN
-    if expected and request.headers.get('X-Metrics-Token') != expected:
+    if not expected:
+        # Fail closed outside development: an unauthenticated metrics scrape
+        # must never be possible in production.
+        if not settings.DEBUG:
+            return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+    elif request.headers.get('X-Metrics-Token') != expected:
         return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
     from django.http import HttpResponse
     return HttpResponse(prometheus_metrics(), content_type='text/plain; version=0.0.4')

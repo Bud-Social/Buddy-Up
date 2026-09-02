@@ -6,6 +6,7 @@ from celery import shared_task
 from django.conf import settings
 from django.core.files.base import ContentFile
 from django.utils import timezone
+from apps.ai.client import ai_get, ai_post
 
 logger = logging.getLogger(__name__)
 
@@ -118,11 +119,11 @@ def describe_workout_video(self, job_id: str, video_url: str, exercise: str = 'a
     from .audit import audit_ai_call
 
     try:
-        resp = requests.get(video_url, timeout=60)
+        resp = ai_get(video_url, timeout=60)
         if resp.status_code != 200:
             raise requests.RequestException(f'Video fetch failed: {resp.status_code}')
         _update_job(job_id, status='processing')
-        ai_resp = requests.post(
+        ai_resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/workout/describe',
             files={'file': ('video.mp4', resp.content, 'video/mp4')},
             data={'exercise': exercise},
@@ -146,7 +147,7 @@ def run_summarization(self, job_id: str, text: str):
 
     try:
         _update_job(job_id, status='processing')
-        ai_resp = requests.post(
+        ai_resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/summarize',
             json={'text': text},
             timeout=60,
@@ -171,7 +172,7 @@ def synthesize_speech(self, job_id: str, text: str, speaker: str = ''):
         payload = {'text': text}
         if speaker:
             payload['speaker'] = speaker
-        ai_resp = requests.post(
+        ai_resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/tts/synthesize',
             json=payload,
             timeout=120,
@@ -193,6 +194,60 @@ def synthesize_speech(self, job_id: str, text: str, speaker: str = ''):
         logger.warning('TTS failed for job %s: %s', job_id, exc)
         _retry_or_fail(self, job_id, exc, 'text_to_speech',
                        {'text_chars': len(text), 'speaker': speaker})
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=10, queue='ai')
+def transcribe_post_media(self, post_media_id: str):
+    """Transcribe a PostMedia video into captions + WebVTT subtitles (Bud Press)."""
+    from .audit import audit_ai_call
+    from .models import AIPredictionJob
+    from .utils import segments_to_vtt
+    from apps.feed.models import PostMedia
+
+    try:
+        media = PostMedia.objects.select_related('post').get(pk=post_media_id)
+    except PostMedia.DoesNotExist:
+        logger.warning('PostMedia %s not found for transcription', post_media_id)
+        return
+
+    job = AIPredictionJob.objects.create(
+        task='transcription',
+        input_data={'post_media_id': post_media_id, 'media_url': media.url},
+    )
+    try:
+        _update_job(job.id, status='processing')
+        ai_resp = ai_post(
+            f'{settings.AI_SERVICE_URL}/api/v1/transcribe',
+            json={'media_url': media.url},
+            timeout=300,
+        )
+        ai_resp.raise_for_status()
+        result = ai_resp.json()
+        segments = result.get('segments') or []
+        media.captions = segments
+        media.captions_vtt = segments_to_vtt(segments)
+        media.save(update_fields=['captions', 'captions_vtt'])
+
+        # Moderate the transcript with the standard text moderation task.
+        transcript_text = ' '.join(str(seg.get('text') or '') for seg in segments).strip()
+        if transcript_text:
+            try:
+                from apps.moderation.tasks import moderate_text_content
+                moderate_text_content.delay('feed.postmedia', str(media.id), transcript_text)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning('Transcript moderation dispatch failed: %s', exc)
+
+        _update_job(
+            job.id,
+            status='completed',
+            output_data={'language': result.get('language', ''), 'segments': len(segments)},
+            model_version=result.get('model', ''),
+        )
+        audit_ai_call('transcription', {'post_media_id': post_media_id}, result,
+                      model_version=result.get('model', ''))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Transcription failed for PostMedia %s: %s', post_media_id, exc)
+        _retry_or_fail(self, job.id, exc, 'transcription', {'post_media_id': post_media_id})
 
 
 def _image_url(obj) -> str:
@@ -224,10 +279,10 @@ def embed_and_index_images(self, index_name: str = 'visual_search'):
         if not url:
             continue
         try:
-            img_resp = requests.get(url, timeout=20)
+            img_resp = ai_get(url, timeout=20)
             if img_resp.status_code != 200:
                 continue
-            ai_resp = requests.post(
+            ai_resp = ai_post(
                 f'{settings.AI_SERVICE_URL}/api/v1/embeddings/image',
                 files={'file': ('image.jpg', img_resp.content, 'image/jpeg')},
                 timeout=30,
@@ -242,7 +297,7 @@ def embed_and_index_images(self, index_name: str = 'visual_search'):
         return
 
     try:
-        ai_resp = requests.post(
+        ai_resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/embeddings/index/build',
             json={'index_name': index_name, 'vectors': vectors},
             timeout=30,

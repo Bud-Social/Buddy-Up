@@ -1,7 +1,34 @@
+import type { AxiosProgressEvent } from 'axios';
 import { apiClient } from './client';
 import type { ApiResponse, Post, Comment } from '@/types';
 
 export type FeedTab = 'for_you' | 'following' | 'videos' | 'videos_following' | 'meals' | 'progress' | 'communities';
+
+/** A sound available in the create studio's sound picker. */
+export interface Sound {
+  id: string;
+  name: string;
+  artist: string;
+  audio_url: string;
+  duration_ms: number;
+  source: string;
+  license: string;
+  usage_count: number;
+}
+
+export type SoundOrdering = 'trending' | 'recent';
+
+/** Cloudinary-style signed upload parameters from POST /uploads/sign/. */
+export interface SignUploadData {
+  cloud_name: string;
+  api_key: string;
+  timestamp: number;
+  signature: string;
+  folder: string;
+  resource_type: 'image' | 'video';
+  eager?: string;
+  upload_url: string;
+}
 
 export const feedApi = {
   getFeed: (tab: FeedTab = 'for_you', cursor?: string, opts?: { excludePostTypes?: string[] }) =>
@@ -13,9 +40,9 @@ export const feedApi = {
       },
     }).then((r) => r.data),
 
-  getVideoFeed: (variant: 'fyp' | 'following' = 'fyp') =>
+  getVideoFeed: (variant: 'fyp' | 'following' = 'fyp', cursor?: string) =>
     apiClient
-      .get<ApiResponse<Post[]>>('/feed/', { params: { tab: variant === 'following' ? 'videos_following' : 'videos' } })
+      .get<ApiResponse<Post[]>>('/feed/', { params: { tab: variant === 'following' ? 'videos_following' : 'videos', cursor } })
       .then((r) => r.data),
 
   getPost: (postId: string) =>
@@ -84,7 +111,13 @@ export const feedApi = {
     apiClient.delete(`/feed/drafts/${draftId}/`).then((r) => r.data),
 
   /** Upload composer media immediately so drafts can reference stable URLs. */
-  uploadPostMedia: (file: File) => {
+  uploadPostMedia: (
+    file: File,
+    opts?: {
+      onProgress?: (progress: { pct: number; loadedBytes: number; totalBytes: number }) => void;
+      signal?: AbortSignal;
+    },
+  ) => {
     const form = new FormData();
     form.append('file', file);
     return apiClient
@@ -94,10 +127,36 @@ export const feedApi = {
         {
           headers: { 'Content-Type': 'multipart/form-data' },
           timeout: 60_000,
+          onUploadProgress: (e: AxiosProgressEvent) => {
+            if (opts?.onProgress && e.total) {
+              opts.onProgress({
+                pct: Math.min(100, Math.round((e.loaded / e.total) * 100)),
+                loadedBytes: e.loaded,
+                totalBytes: e.total,
+              });
+            }
+          },
+          ...(opts?.signal ? { signal: opts.signal } : {}),
         },
       )
       .then((r) => r.data);
   },
+
+  /** Request signed Cloudinary upload params (503 ⇒ direct-upload fallback). */
+  signUpload: (resource_type: 'image' | 'video', filename: string) =>
+    apiClient
+      .post<ApiResponse<SignUploadData>>('/uploads/sign/', { resource_type, filename })
+      .then((r) => r.data),
+
+  listSounds: (params?: { q?: string; ordering?: SoundOrdering }) =>
+    apiClient.get<ApiResponse<Sound[]>>('/sounds/', { params }).then((r) => r.data),
+
+  createOriginalSound: (payload: { name: string; audio_url: string; duration_ms?: number; original_post?: boolean }) =>
+    apiClient.post<ApiResponse<Sound>>('/sounds/', payload).then((r) => r.data),
+
+  /** Count a usage when a sound is selected in the create studio. */
+  useSound: (soundId: string) =>
+    apiClient.post<ApiResponse<unknown>>(`/sounds/${soundId}/use/`).then((r) => r.data),
 
   analyzeWorkout: () =>
     apiClient.get<ApiResponse<any>>('/feed/workout/analyze/').then((r) => r.data),

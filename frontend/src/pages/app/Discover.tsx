@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {MessageCircle,Trophy,Utensils, Search, Users, Dumbbell, Radio, TrendingUp, X, Hash, Ticket, Tag } from 'lucide-react';
+import {MessageCircle,Trophy,Utensils, Search, Users, Dumbbell, Radio, TrendingUp, X, Hash, Ticket, Tag, Handshake, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
+import { useToast } from '@/components/ui/Toast';
+import { InterestChips } from '@/components/profile/InterestChips';
 import { profilesApi } from '@/api';
 import { gymsApi } from '@/api';
 import { livesApi } from '@/api';
@@ -17,10 +19,23 @@ type DiscoverTab = 'people' | 'gyms' | 'lives';
 
 export default function Discover() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DiscoverTab>('people');
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [trending, setTrending] = useState<DiscoverTrending | null>(null);
+  const [buddyRequested, setBuddyRequested] = useState<Set<string>>(new Set());
+
+  const handleBuddyUp = async (username: string) => {
+    try {
+      await profilesApi.sendBuddyRequest(username);
+      setBuddyRequested((prev) => new Set(prev).add(username));
+      toast('success', `Buddy request sent to @${username}`);
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      toast('error', data?.message || 'Could not send buddy request.');
+    }
+  };
 
   const [people, setPeople] = useState<Profile[]>([]);
   const [gyms, setGyms] = useState<Gym[]>([]);
@@ -346,29 +361,53 @@ export default function Discover() {
 
       {!isSearching && activeTab === 'people' && people.length > 0 && (
         <div className="space-y-3">
-          {people.map((p) => (
-            <Card key={p.user_id} className="p-4 flex items-center gap-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors" onClick={() => navigate(`/${p.username}`)}>
-              <Avatar src={p.avatar_url} alt={p.display_name} size="lg" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-heading font-semibold truncate">{p.display_name}</p>
-                  {p.verification_status === 'trainer' && <Badge variant="green" label="Trainer" />}
-                  {p.verification_status === 'practitioner' && <Badge variant="gold" label="Practitioner" />}
-                  {p.verification_status === 'id' && <Badge variant="silver" label="Verified" />}
+          {people.map((p) => {
+            const requested = buddyRequested.has(p.username);
+            const isBuddy = p.is_buddy || p.buddy_status === 'accepted';
+            return (
+              <Card key={p.user_id} className="p-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors" onClick={() => navigate(`/${p.username}`)}>
+                <div className="flex items-start gap-4">
+                  <Avatar src={p.avatar_url} alt={p.display_name} size="lg" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-heading font-semibold truncate">{p.display_name}</p>
+                      {p.verification_status === 'trainer' && <Badge variant="green" label="Trainer" />}
+                      {p.verification_status === 'practitioner' && <Badge variant="gold" label="Practitioner" />}
+                      {p.verification_status === 'id' && <Badge variant="silver" label="Verified" />}
+                    </div>
+                    <p className="text-sm text-buddy-text-secondary">@{p.username}</p>
+                    {p.bio && <p className="text-sm text-buddy-text-secondary line-clamp-2 mt-1">{p.bio}</p>}
+                    <div className="mt-2">
+                      <InterestChips preferences={p.preferences} showLocation city={p.location_city} />
+                    </div>
+                    <div className="flex gap-4 mt-2 text-xs text-buddy-text-secondary">
+                      <span>{p.buddy_count} buddies</span>
+                      <span>{p.follower_count} followers</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {isBuddy ? (
+                      <Button variant="outline" size="sm" disabled>
+                        <UserCheck size={14} className="mr-1" /> Buddies
+                      </Button>
+                    ) : (
+                      <Button
+                        variant={requested ? 'ghost' : 'outline'}
+                        size="sm"
+                        disabled={requested}
+                        onClick={() => handleBuddyUp(p.username)}
+                      >
+                        <Handshake size={14} className="mr-1" /> {requested ? 'Requested' : 'Buddy Up'}
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/${p.username}`)}>
+                      View
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-sm text-buddy-text-secondary">@{p.username}</p>
-                {p.bio && <p className="text-sm text-buddy-text-secondary truncate mt-1">{p.bio}</p>}
-                <div className="flex gap-4 mt-2 text-xs text-buddy-text-secondary">
-                  <span>{p.buddy_count} buddies</span>
-                  <span>{p.follower_count} followers</span>
-                  {p.location_city && <span>{p.location_city}</span>}
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/${p.username}`); }}>
-                View
-              </Button>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 

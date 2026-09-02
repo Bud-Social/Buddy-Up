@@ -16,6 +16,7 @@ from .models import ActivityRecord, WorkoutLog, MealLog, BodyMetric
 from apps.feed.models import Post
 from apps.lives.models import LiveAttendee
 from apps.wallet.models import ArtifactTransaction
+from apps.ai.client import ai_post
 
 logger = logging.getLogger(__name__)
 
@@ -362,12 +363,11 @@ def build_summary(profile, period='all'):
 
 def _call_ai_service(endpoint: str, files: dict, timeout: int = 30):
     """POST an image to the AI microservice and return the JSON payload or None."""
-    import requests
     from django.conf import settings
 
     url = f'{settings.AI_SERVICE_URL}{endpoint}'
     try:
-        resp = requests.post(url, files=files, timeout=timeout)
+        resp = ai_post(url, files=files, timeout=timeout)
         resp.raise_for_status()
         return resp.json()
     except Exception as exc:  # noqa: BLE001

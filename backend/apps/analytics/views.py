@@ -284,7 +284,12 @@ class IngestEventsView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         actor = request.user.profile if request.user.is_authenticated else None
-        request_anonymous_id = str(request.data.get('anonymous_id') or '').strip()
+        # Client queues stamp identity per event; accept the first event's
+        # identity as the batch default when top-level fields are absent.
+        first = events[0] if isinstance(events[0] if events else None, dict) else {}
+        request_anonymous_id = str(
+            request.data.get('anonymous_id') or first.get('anonymous_id') or '',
+        ).strip()
         if actor is None and not request_anonymous_id:
             return Response({
                 'success': False, 'data': None,
@@ -295,8 +300,8 @@ class IngestEventsView(views.APIView):
         # Client-level identity/session fields apply to every event in the batch.
         defaults = {
             'anonymous_id': request_anonymous_id,
-            'session_id': str(request.data.get('session_id') or ''),
-            'platform': str(request.data.get('platform') or ''),
+            'session_id': str(request.data.get('session_id') or first.get('session_id') or ''),
+            'platform': str(request.data.get('platform') or first.get('platform') or ''),
         }
         stamped = [
             {**defaults, **event} if isinstance(event, dict) else event

@@ -389,7 +389,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t border-buddy-surface pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-buddy-text-secondary">&copy; 2025 BuddyUp. All rights reserved.</p>
+            <p className="text-xs text-buddy-text-secondary">&copy; 2026 BuddyUp. All rights reserved.</p>
             <div className="flex gap-6 text-sm text-buddy-text-secondary">
               <span className="hover:text-buddy-text-primary cursor-pointer">Instagram</span>
               <span className="hover:text-buddy-text-primary cursor-pointer">TikTok</span>

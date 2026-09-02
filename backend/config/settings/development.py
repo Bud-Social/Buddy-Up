@@ -24,7 +24,28 @@ INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
-EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+# Email: use real SMTP when credentials exist (Gmail app password in .env),
+# otherwise fall back to the console backend — OTPs then print to the Django
+# and Celery worker logs so local flows are never blocked.
+if os.environ.get('EMAIL_BACKEND'):
+    EMAIL_BACKEND = os.environ['EMAIL_BACKEND']
+elif os.environ.get('EMAIL_HOST_PASSWORD'):
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Relaxed throttle scopes so local flows (register → resend → login) are not
+# blocked by production's tighter budgets.
+REST_FRAMEWORK = {
+    **REST_FRAMEWORK,
+    'DEFAULT_THROTTLE_RATES': {
+        **REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'],
+        'otp': '30/h',
+        'registration': '30/h',
+        'login': '60/h',
+        'password_reset': '20/h',
+    },
+}
 
 LOGGING = {
     'version': 1,

@@ -206,9 +206,16 @@ export default function Settings() {
     }
     setChangePwLoading(true);
     try {
-      await authApi.changePassword(changePwForm.current_password, changePwForm.new_password);
-      setChangePwSuccess('Password changed successfully.');
-      toast('success', 'Password changed');
+      // Social sign-ups have no password yet — the endpoint accepts a new
+      // password without the current one for those accounts.
+      const hasPassword = user?.has_password ?? true;
+      if (hasPassword) {
+        await authApi.changePassword(changePwForm.current_password, changePwForm.new_password);
+      } else {
+        await authApi.setPassword(changePwForm.new_password);
+      }
+      setChangePwSuccess(hasPassword ? 'Password changed successfully.' : 'Password set successfully. You can now log in with your email and password.');
+      toast('success', hasPassword ? 'Password changed' : 'Password set');
       setChangePwForm({ current_password: '', new_password: '', confirm: '' });
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
@@ -325,10 +332,17 @@ export default function Settings() {
           <div className="space-y-2">
             {changePwSuccess && <p className="text-xs text-buddy-green">{changePwSuccess}</p>}
             {changePwError && <p className="text-xs text-buddy-red">{changePwError}</p>}
-            <Input type="password" value={changePwForm.current_password} onChange={(e) => setChangePwForm(p => ({ ...p, current_password: e.target.value }))} placeholder="Current password" />
+            {!(user?.has_password === false) && (
+              <Input type="password" value={changePwForm.current_password} onChange={(e) => setChangePwForm(p => ({ ...p, current_password: e.target.value }))} placeholder="Current password" />
+            )}
+            {user?.has_password === false && (
+              <p className="text-xs text-buddy-text-secondary">You signed up with a social account — set a password to also log in with your email.</p>
+            )}
             <Input type="password" value={changePwForm.new_password} onChange={(e) => setChangePwForm(p => ({ ...p, new_password: e.target.value }))} placeholder="New password (min 8 chars)" />
             <Input type="password" value={changePwForm.confirm} onChange={(e) => setChangePwForm(p => ({ ...p, confirm: e.target.value }))} placeholder="Confirm new password" />
-            <Button variant="outline" className="w-full" size="sm" onClick={handleChangePassword} isLoading={changePwLoading}>Change Password</Button>
+            <Button variant="outline" className="w-full" size="sm" onClick={handleChangePassword} isLoading={changePwLoading}>
+              {user?.has_password === false ? 'Set Password' : 'Change Password'}
+            </Button>
           </div>
           <Card className="p-4">
             <button

@@ -13,11 +13,18 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def scan_random_drop_pool():
+    from .redis_client import get_raw_redis
+
+    client = get_raw_redis()
+    if client is None:
+        logger.warning('scan_random_drop_pool skipped: Redis unavailable')
+        return
+
     activity_types = ['weights', 'cardio', 'hiit', 'yoga', 'pilates', 'crossfit', 'martial_arts', 'swimming', 'running', 'cycling', 'other']
 
     for activity in activity_types:
         pool_key = f"random_drop:{activity}"
-        entries = cache.zrangebyscore(pool_key, '-inf', '+inf')
+        entries = client.zrangebyscore(pool_key, '-inf', '+inf')
 
         if not entries:
             continue
@@ -30,7 +37,7 @@ def scan_random_drop_pool():
                 entry = json.loads(entry_raw if isinstance(entry_raw, str) else entry_raw.decode('utf-8'))
                 ts = timezone.datetime.fromisoformat(entry['timestamp'])
                 if (now - ts).total_seconds() > 300:
-                    cache.zrem(pool_key, entry_raw)
+                    client.zrem(pool_key, entry_raw)
                 else:
                     pool_users.append(entry)
             except (json.JSONDecodeError, KeyError, ValueError):
@@ -82,7 +89,7 @@ def scan_random_drop_pool():
             for user in group:
                 user_key = f"random_drop_user:{user['user_id']}"
                 cache.delete(user_key)
-                cache.zrem(pool_key, json.dumps(user))
+                client.zrem(pool_key, json.dumps(user))
 
 
 @shared_task

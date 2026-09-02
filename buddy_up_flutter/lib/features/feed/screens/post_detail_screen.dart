@@ -6,6 +6,7 @@ import '../widgets/comment_tile.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/input.dart';
+import '../../../shared/widgets/toast.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
 
@@ -98,21 +99,34 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 color: BuddyColors.black,
                 border: Border(top: BorderSide(color: BuddyColors.border)),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: BuddyInput(
-                      controller: _commentController,
-                      hint: 'Write a comment...',
+              child: post.commentsDisabled
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.comment_bank_outlined,
+                            color: BuddyColors.textSecondary, size: 18),
+                        SizedBox(width: 8),
+                        Text(
+                          'Comments are turned off for this post',
+                          style: TextStyle(color: BuddyColors.textSecondary),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: BuddyInput(
+                            controller: _commentController,
+                            hint: 'Write a comment...',
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.send, color: BuddyColors.green),
+                          onPressed: () => _submitComment(post.id),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: BuddyColors.green),
-                    onPressed: () => _submitComment(post.id),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -152,6 +166,11 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   void _submitComment(String postId) async {
     final body = _commentController.text.trim();
     if (body.isEmpty) return;
+    final post = ref.read(postDetailProvider(postId)).value;
+    if (post?.commentsDisabled ?? false) {
+      showToast(context, 'Comments are turned off for this post');
+      return;
+    }
     final repo = ref.read(feedRepositoryProvider);
     try {
       await repo.addComment(postId, CommentCreateInput(body: body));

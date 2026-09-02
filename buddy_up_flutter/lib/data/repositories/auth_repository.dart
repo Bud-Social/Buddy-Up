@@ -43,6 +43,12 @@ abstract class AuthRepository {
   @POST('/auth/change-password/')
   Future<void> changePassword(@Body() ChangePasswordPayload payload);
 
+  @GET('/auth/set-password/')
+  Future<dynamic> passwordStatus();
+
+  @POST('/auth/set-password/')
+  Future<void> setPassword(@Body() Map<String, dynamic> payload);
+
   @POST('/auth/resend-otp/')
   Future<void> resendOtp(@Body() Map<String, dynamic> body);
 

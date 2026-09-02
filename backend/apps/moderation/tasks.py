@@ -4,6 +4,7 @@ import requests
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
+from apps.ai.client import ai_get, ai_post
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +22,12 @@ def moderate_image_url(
     from common.age_gating import AUDIENCE_MATURE
 
     try:
-        resp = requests.get(image_url, timeout=10)
+        resp = ai_get(image_url, timeout=10)
         if resp.status_code != 200:
             logger.warning('Could not fetch image %s for moderation', image_url)
             return
 
-        ai_resp = requests.post(
+        ai_resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/moderation/image',
             files={'file': ('image.jpg', resp.content, resp.headers.get('content-type', 'image/jpeg'))},
             timeout=30,
@@ -70,7 +71,7 @@ def moderate_text_content(self, content_type: str, content_id: str, text: str):
     from .models import ContentFlag
 
     try:
-        ai_resp = requests.post(
+        ai_resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/moderation/text',
             data={'text': text},
             timeout=15,
@@ -144,7 +145,7 @@ def moderate_policy_text(
         return
 
     try:
-        claims_resp = requests.post(
+        claims_resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/policy/health-claims',
             data={'text': text},
             timeout=15,
@@ -177,7 +178,7 @@ def moderate_policy_text(
     # Sponsorship disclosure check (author-agnostic — disclosure duties apply
     # to verified creators too).
     try:
-        sponsor_resp = requests.post(
+        sponsor_resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/policy/sponsorship',
             data={'text': text},
             timeout=15,

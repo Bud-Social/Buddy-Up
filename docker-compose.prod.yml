@@ -78,6 +78,8 @@ services:
       - LIVE_RECORDING_S3_SECRET_KEY=${MINIO_ROOT_PASSWORD}
       - LIVE_REPLAY_BASE_URL=${LIVE_REPLAY_BASE_URL:-https://buddyup.app/replays}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8003}
+      - AI_API_KEY=${AI_API_KEY:-}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - FIREBASE_SERVICE_ACCOUNT_JSON=${FIREBASE_SERVICE_ACCOUNT_JSON}
@@ -270,6 +272,8 @@ services:
       - RELEASE_VERSION=${RELEASE_VERSION:-docker}
       - RELEASE_COMMIT=${RELEASE_COMMIT:-unknown}
       - METRICS_TOKEN=${METRICS_TOKEN}
+      - AI_SERVICE_URL=${AI_SERVICE_URL:-http://ai-service:8003}
+      - AI_API_KEY=${AI_API_KEY:-}
     networks:
       - buddyup_internal
     depends_on:

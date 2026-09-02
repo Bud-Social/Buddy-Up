@@ -54,6 +54,7 @@ class Post(TimestampedModel, SoftDeleteModel):
         max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
     )
     moderation_status = models.CharField(max_length=15, choices=MODERATION_CHOICES, default='clean')
+    comments_disabled = models.BooleanField(default=False)
     pinned_comment = models.ForeignKey('Comment', null=True, blank=True, on_delete=models.SET_NULL, related_name='pinned_on')
     mentioned_profiles = models.ManyToManyField('profiles.Profile', blank=True, related_name='mention_posts')
     ai_analysis = models.JSONField(default=dict, blank=True)
@@ -210,3 +211,70 @@ class Draft(TimestampedModel):
         indexes = [
             models.Index(fields=['author', '-updated_at']),
         ]
+
+
+class Sound(TimestampedModel):
+    """A reusable audio track for Bud Press video posts."""
+    SOURCE_CHOICES = [
+        ('curated', 'Curated'),
+        ('original', 'Original'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=120)
+    artist = models.CharField(max_length=120, blank=True)
+    audio_url = models.URLField(blank=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='curated')
+    license = models.CharField(max_length=60, default='CC0')
+    original_post = models.ForeignKey(
+        Post, null=True, blank=True, on_delete=models.SET_NULL, related_name='derived_sounds',
+    )
+    usage_count = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'feed_sound'
+        indexes = [
+            models.Index(fields=['source']),
+            models.Index(fields=['usage_count']),
+        ]
+
+    def __str__(self):
+        return self.name
+
+
+class PostMedia(TimestampedModel):
+    """Structured media attached to a Post (Bud Press creation studio)."""
+    MEDIA_TYPE_CHOICES = [
+        ('image', 'Image'),
+        ('video', 'Video'),
+        ('audio', 'Audio'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='media')
+    order = models.PositiveIntegerField(default=0)
+    media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES, default='image')
+    url = models.URLField(max_length=1000)
+    poster_url = models.URLField(blank=True, max_length=1000)
+    width = models.PositiveIntegerField(null=True, blank=True)
+    height = models.PositiveIntegerField(null=True, blank=True)
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    trim_start_ms = models.PositiveIntegerField(null=True, blank=True)
+    trim_end_ms = models.PositiveIntegerField(null=True, blank=True)
+    sound = models.ForeignKey(Sound, null=True, blank=True, on_delete=models.SET_NULL, related_name='post_media')
+    sound_volume = models.PositiveSmallIntegerField(default=100)
+    captions = models.JSONField(default=list, blank=True)
+    captions_vtt = models.TextField(blank=True)
+    alt_text = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = 'feed_post_media'
+        ordering = ['order']
+        indexes = [
+            models.Index(fields=['post', 'order']),
+        ]
+
+    def __str__(self):
+        return f'{self.media_type}:{self.url[:60]}'

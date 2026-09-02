@@ -6,6 +6,55 @@ part of 'post.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+_CaptionSegment _$CaptionSegmentFromJson(Map<String, dynamic> json) =>
+    _CaptionSegment(
+      startMs: (json['startMs'] as num?)?.toInt() ?? 0,
+      endMs: (json['endMs'] as num?)?.toInt() ?? 0,
+      text: json['text'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$CaptionSegmentToJson(_CaptionSegment instance) =>
+    <String, dynamic>{
+      'startMs': instance.startMs,
+      'endMs': instance.endMs,
+      'text': instance.text,
+    };
+
+_PostMedia _$PostMediaFromJson(Map<String, dynamic> json) => _PostMedia(
+  url: json['url'] as String,
+  mediaType: json['mediaType'] as String? ?? 'image',
+  width: (json['width'] as num?)?.toInt(),
+  height: (json['height'] as num?)?.toInt(),
+  durationMs: (json['durationMs'] as num?)?.toInt(),
+  posterUrl: json['posterUrl'] as String?,
+  trimStartMs: (json['trimStartMs'] as num?)?.toInt(),
+  trimEndMs: (json['trimEndMs'] as num?)?.toInt(),
+  soundId: json['soundId'] as String?,
+  soundVolume: (json['soundVolume'] as num?)?.toDouble(),
+  altText: json['altText'] as String?,
+  captions:
+      (json['captions'] as List<dynamic>?)
+          ?.map((e) => CaptionSegment.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <CaptionSegment>[],
+);
+
+Map<String, dynamic> _$PostMediaToJson(_PostMedia instance) =>
+    <String, dynamic>{
+      'url': instance.url,
+      'mediaType': instance.mediaType,
+      'width': instance.width,
+      'height': instance.height,
+      'durationMs': instance.durationMs,
+      'posterUrl': instance.posterUrl,
+      'trimStartMs': instance.trimStartMs,
+      'trimEndMs': instance.trimEndMs,
+      'soundId': instance.soundId,
+      'soundVolume': instance.soundVolume,
+      'altText': instance.altText,
+      'captions': instance.captions,
+    };
+
 _AuthorData _$AuthorDataFromJson(Map<String, dynamic> json) => _AuthorData(
   userId: json['userId'] as String?,
   username: json['username'] as String,
@@ -95,6 +144,11 @@ _OriginalPostData _$OriginalPostDataFromJson(
   mediaUrls:
       (json['mediaUrls'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const <String>[],
+  media:
+      (json['media'] as List<dynamic>?)
+          ?.map((e) => PostMedia.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <PostMedia>[],
   postType: json['postType'] as String? ?? 'text',
   locationLabel: json['locationLabel'] as String?,
   workoutLogData: json['workoutLogData'] as Map<String, dynamic>?,
@@ -114,6 +168,7 @@ Map<String, dynamic> _$OriginalPostDataToJson(_OriginalPostData instance) =>
       'authorData': instance.authorData,
       'body': instance.body,
       'mediaUrls': instance.mediaUrls,
+      'media': instance.media,
       'postType': instance.postType,
       'locationLabel': instance.locationLabel,
       'workoutLogData': instance.workoutLogData,
@@ -134,6 +189,13 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   mediaUrls:
       (json['mediaUrls'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const <String>[],
+  media:
+      (json['media'] as List<dynamic>?)
+          ?.map((e) => PostMedia.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <PostMedia>[],
+  commentsDisabled:
+      _readCommentsDisabled(json, 'commentsDisabled') as bool? ?? false,
   tags:
       (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const <String>[],
@@ -186,6 +248,8 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'body': instance.body,
   'isAnonymous': instance.isAnonymous,
   'mediaUrls': instance.mediaUrls,
+  'media': instance.media,
+  'commentsDisabled': instance.commentsDisabled,
   'tags': instance.tags,
   'workoutLogData': instance.workoutLogData,
   'mealData': instance.mealData,

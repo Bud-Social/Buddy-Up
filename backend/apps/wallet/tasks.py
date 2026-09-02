@@ -55,7 +55,8 @@ def process_withdrawal(self, withdrawal_id: str):
     method = 'unknown'
     if tx.phone_number:
         method = 'M-Pesa'
-        logger.info('Processing withdrawal %s via M-Pesa to %s', withdrawal_id, tx.phone_number)
+        logger.info('Processing withdrawal %s via M-Pesa to %s', withdrawal_id,
+                      ('***' + tx.phone_number[-3:]) if tx.phone_number else '***')
     elif tx.bank_account:
         method = 'Bank Transfer'
         logger.info('Processing withdrawal %s via Bank Transfer to %s', withdrawal_id, tx.bank_account)

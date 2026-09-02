@@ -17,6 +17,7 @@ urlpatterns = [
     path('resend-registration-otp/', views.ResendRegistrationOTPView.as_view(), name='resend_registration_otp'),
     path('forgot-password/', views.PasswordResetRequestView.as_view(), name='forgot_password'),
     path('reset-password/', views.PasswordResetConfirmView.as_view(), name='reset_password'),
+    path('set-password/', views.SetPasswordView.as_view(), name='set_password'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
     path('totp/setup/', views.TOTPSetupView.as_view(), name='totp_setup'),
     path('totp/verify/', views.TOTPVerifyView.as_view(), name='totp_verify'),

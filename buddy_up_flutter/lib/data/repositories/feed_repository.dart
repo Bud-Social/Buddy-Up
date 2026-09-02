@@ -100,4 +100,13 @@ abstract class FeedRepository {
   Future<dynamic> analyzeWorkoutForm(
     @Part() Map<String, dynamic> data,
   );
+
+  @GET('/sounds/')
+  Future<dynamic> getSounds({
+    @Query('q') String? q,
+    @Query('ordering') String? ordering,
+  });
+
+  @POST('/sounds/{id}/use/')
+  Future<dynamic> useSound(@Path('id') String soundId);
 }

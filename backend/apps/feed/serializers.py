@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from collections import Counter
 from common.utils import absolute_media_url
-from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, Draft
+from .models import Post, FeedPost, GymPost, Comment, Reaction, Save, Poll, PollOption, Draft, PostMedia, Sound
 from apps.gyms.models import Gym
 from common.age_gating import CONTENT_RATING_CHOICES
 
@@ -110,6 +110,20 @@ class CommentSerializer(serializers.ModelSerializer):
         return normalize_reaction(reaction.reaction_type) if reaction else None
 
 
+class PostMediaSerializer(serializers.ModelSerializer):
+    """Structured media row (Bud Press). Read-only; managed via create/media[]."""
+
+    class Meta:
+        model = PostMedia
+        fields = [
+            'id', 'post', 'order', 'media_type', 'url', 'poster_url',
+            'width', 'height', 'duration_ms', 'trim_start_ms', 'trim_end_ms',
+            'sound', 'sound_volume', 'captions', 'captions_vtt', 'alt_text',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = fields
+
+
 class PostSerializer(serializers.ModelSerializer):
     author_data = serializers.SerializerMethodField()
     reaction_counts = serializers.SerializerMethodField()
@@ -122,6 +136,7 @@ class PostSerializer(serializers.ModelSerializer):
     gym_tag_name = serializers.SerializerMethodField()
     original_post_data = serializers.SerializerMethodField()
     reposters = serializers.SerializerMethodField()
+    media = PostMediaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Post
@@ -130,8 +145,8 @@ class PostSerializer(serializers.ModelSerializer):
         'visibility', 'is_repost', 'original_post_id', 'quote_body',
         'location_label', 'location_lat', 'location_lng', 'workout_log_data',
         'meal_data', 'progress_data',
-        'media_urls', 'tags', 'view_count', 'moderation_status',
-        'content_rating',
+        'media_urls', 'media', 'tags', 'view_count', 'moderation_status',
+        'content_rating', 'comments_disabled',
         'author_data', 'reaction_counts', 'user_reaction',
         'comment_count', 'repost_count', 'is_saved', 'is_reposted_by_me', 'is_pinned',
         'poll', 'original_post_data', 'reposters', 'created_at', 'updated_at',
@@ -274,6 +289,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
     gym_tag = serializers.PrimaryKeyRelatedField(
         queryset=Gym.objects.all(), required=False, allow_null=True
     )
+    comments_disabled = serializers.BooleanField(default=False, required=False)
 
     class Meta:
         model = Post
@@ -281,7 +297,7 @@ class PostCreateSerializer(serializers.ModelSerializer):
             'post_type', 'body', 'is_anonymous', 'gym_tag', 'visibility',
             'location_label', 'location_lat', 'location_lng', 'workout_log_data',
             'meal_data', 'progress_data',
-            'media_urls', 'tags', 'content_rating',
+            'media_urls', 'tags', 'content_rating', 'comments_disabled',
         ]
 
     def validate_body(self, value):
@@ -335,3 +351,24 @@ class FeedPostSerializer(PostSerializer):
 class GymPostSerializer(PostSerializer):
     class Meta(PostSerializer.Meta):
         model = GymPost
+
+
+class SoundSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sound
+        fields = [
+            'id', 'name', 'artist', 'audio_url', 'duration_ms', 'source',
+            'license', 'original_post', 'usage_count', 'is_active',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'usage_count', 'is_active', 'created_at', 'updated_at']
+
+
+class SoundCreateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=120)
+    artist = serializers.CharField(max_length=120, required=False, allow_blank=True, default='')
+    audio_url = serializers.URLField(required=False, allow_blank=True, default='')
+    duration_ms = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    original_post = serializers.PrimaryKeyRelatedField(
+        queryset=Post.objects.all(), required=False, allow_null=True,
+    )

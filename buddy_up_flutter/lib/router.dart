@@ -17,6 +17,7 @@ import 'features/profile/buddy_list_screen.dart';
 import 'features/profile/user_profile_screen.dart';
 import 'features/discover/discover_people_screen.dart';
 import 'features/feed/screens/feed_screen.dart';
+import 'features/feed/screens/bud_press_feed_screen.dart';
 import 'features/feed/screens/post_detail_screen.dart';
 import 'features/feed/screens/post_composer_screen.dart';
 import 'features/feed/screens/health_insights_screen.dart';
@@ -31,6 +32,7 @@ import 'features/live/screens/random_drop_screen.dart';
 import 'features/marketplace/screens/marketplace_screen.dart';
 import 'features/marketplace/screens/meal_plan_detail_screen.dart';
 import 'features/marketplace/screens/programme_detail_screen.dart';
+import 'features/marketplace/screens/create_product_screen.dart';
 import 'features/marketplace/screens/product_detail_screen.dart';
 import 'features/marketplace/screens/event_detail_screen.dart';
 import 'features/marketplace/screens/event_tickets_screen.dart';
@@ -251,6 +253,16 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           return ProgrammeDetailScreen(programmeId: programmeId);
         },
       ),
+      // Create route must precede the parameterized :productId route so
+      // go_router does not treat 'create' as an ID.
+      GoRoute(
+        path: '/marketplace/products/create',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) {
+          final editId = state.uri.queryParameters['edit'];
+          return CreateProductScreen(editProductId: (editId != null && editId.isNotEmpty) ? editId : null);
+        },
+      ),
       GoRoute(
         path: '/marketplace/products/:productId',
         parentNavigatorKey: _rootNavigatorKey,
@@ -469,7 +481,9 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           ),
           GoRoute(
             path: '/feed/bud-press',
-            builder: (_, _) => const FeedScreen(initialTab: 'videos'),
+            builder: (_, state) => BudPressFeedScreen(
+              initialPostId: state.uri.queryParameters['post'],
+            ),
           ),
           GoRoute(
             path: '/feed/meals',

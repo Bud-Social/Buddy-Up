@@ -863,7 +863,7 @@ class ExchangeRateView(views.APIView):
                 'rates': ARTIFACT_VALUES,
                 'base_currency': 'USD',
                 'local_currency': 'KES',
-                'conversion_rate': 129.5,
+                'conversion_rate': settings.KES_PER_USD,
                 'labels': ARTIFACT_LABELS,
             },
             'message': 'OK',

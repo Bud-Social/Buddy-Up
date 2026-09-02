@@ -1,15 +1,40 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+
 import '../../core/theme/app_theme.dart';
+import '../../data/models/post.dart';
+import 'caption_overlay.dart';
 
 class MediaGallery extends StatelessWidget {
   final List<String> urls;
   final List<String>? types;
 
-  const MediaGallery({super.key, required this.urls, this.types});
+  /// Typed media objects (video/image with poster, trim, captions). When
+  /// present, renders a PageView carousel with dots; otherwise the legacy
+  /// url-based layouts are used.
+  final List<PostMedia>? media;
+
+  /// Owning post id, used to deep link into Bud Press for full playback.
+  final String? postId;
+
+  const MediaGallery({
+    super.key,
+    required this.urls,
+    this.types,
+    this.media,
+    this.postId,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (media != null && media!.isNotEmpty) {
+      return _MediaCarousel(media: media!, postId: postId);
+    }
     if (urls.isEmpty) return const SizedBox.shrink();
     if (urls.length == 1) return _buildSingle(context, urls.first);
     if (urls.length == 2) return _buildPair(context);
@@ -155,6 +180,250 @@ class MediaGallery extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => _LightboxPage(urls: urls, initialIndex: index),
+    );
+  }
+}
+
+/// Carousel over typed media objects with dots, inline (muted) video
+/// playback and a Bud Press hand-off for full-screen sound-on playback.
+class _MediaCarousel extends StatefulWidget {
+  final List<PostMedia> media;
+  final String? postId;
+
+  const _MediaCarousel({required this.media, this.postId});
+
+  @override
+  State<_MediaCarousel> createState() => _MediaCarouselState();
+}
+
+class _MediaCarouselState extends State<_MediaCarousel> {
+  final PageController _pageController = PageController();
+  int _page = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _openInBudPress() {
+    if (widget.postId == null) return;
+    context.push('/feed/bud-press?post=${widget.postId}');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.media;
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 300,
+            width: double.infinity,
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: items.length,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, i) {
+                final item = items[i];
+                if (item.isVideo) {
+                  return _InlineVideoPage(
+                    media: item,
+                    onOpenFullscreen: _openInBudPress,
+                  );
+                }
+                return GestureDetector(
+                  child: CachedNetworkImage(
+                    imageUrl: item.url,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
+                    placeholder: (_, _) =>
+                        Container(color: BuddyColors.surfaceRaised),
+                    errorWidget: (_, _, _) => Container(
+                      color: BuddyColors.surfaceRaised,
+                      child: const Icon(
+                        Icons.broken_image,
+                        color: BuddyColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        if (items.length > 1) ...[
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(items.length, (i) {
+              final active = i == _page;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: active ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active ? BuddyColors.green : BuddyColors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Lazy inline video: shows poster + play overlay until tapped, then plays
+/// muted via media_kit. Tap toggles play/pause; the corner button hands off
+/// to Bud Press for full-screen playback.
+class _InlineVideoPage extends StatefulWidget {
+  final PostMedia media;
+  final VoidCallback onOpenFullscreen;
+
+  const _InlineVideoPage({
+    required this.media,
+    required this.onOpenFullscreen,
+  });
+
+  @override
+  State<_InlineVideoPage> createState() => _InlineVideoPageState();
+}
+
+class _InlineVideoPageState extends State<_InlineVideoPage> {
+  Player? _player;
+  VideoController? _controller;
+  StreamSubscription<Duration>? _positionSub;
+  bool _started = false;
+  bool _playing = false;
+  int _positionMs = 0;
+
+  @override
+  void dispose() {
+    _positionSub?.cancel();
+    _player?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _start() async {
+    if (_started) return;
+    if (widget.media.url.isEmpty) return;
+    final player = Player();
+    _player = player;
+    _controller = VideoController(player);
+    _positionSub = player.stream.position.listen((p) {
+      if (!mounted) return;
+      setState(() => _positionMs = p.inMilliseconds);
+      final startMs = widget.media.trimStartMs;
+      final endMs = widget.media.trimEndMs;
+      if (endMs != null && startMs != null && endMs > startMs &&
+          p.inMilliseconds >= endMs) {
+        player.seek(Duration(milliseconds: startMs));
+      }
+    });
+    player.stream.playing.listen((p) {
+      if (mounted) setState(() => _playing = p);
+    });
+    await player.setVolume(0); // muted inline autoplay parity
+    await player.open(Media(widget.media.url), play: true);
+    if (mounted) setState(() => _started = true);
+  }
+
+  void _toggle() {
+    final player = _player;
+    if (player == null) return;
+    if (player.state.playing) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  }
+
+  int get _trimStartMs => widget.media.trimStartMs ?? 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    final endMs = widget.media.trimEndMs;
+    final positionMs = _positionMs < _trimStartMs ? _trimStartMs : _positionMs;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (_started && controller != null)
+          GestureDetector(
+            onTap: _toggle,
+            child: Video(
+              controller: controller,
+              fit: BoxFit.cover,
+              controls: NoVideoControls,
+            ),
+          )
+        else
+          GestureDetector(
+            onTap: _start,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CachedNetworkImage(
+                  imageUrl: widget.media.posterUrl ?? widget.media.url,
+                  fit: BoxFit.cover,
+                  placeholder: (_, _) =>
+                      Container(color: BuddyColors.surfaceRaised),
+                  errorWidget: (_, _, _) => Container(
+                    color: BuddyColors.surfaceRaised,
+                    child: const Icon(
+                      Icons.videocam_off,
+                      color: BuddyColors.textSecondary,
+                    ),
+                  ),
+                ),
+                const Center(
+                  child: Icon(Icons.play_arrow, color: Colors.white70, size: 56),
+                ),
+              ],
+            ),
+          ),
+        if (_started && !_playing)
+          const Center(
+            child: Icon(Icons.pause_circle_outline, color: Colors.white70, size: 56),
+          ),
+        Positioned(
+          top: 8,
+          right: 8,
+          child: IconButton(
+            style: IconButton.styleFrom(backgroundColor: Colors.black38),
+            icon: const Icon(Icons.fullscreen, color: Colors.white, size: 22),
+            tooltip: 'Open in Bud Press',
+            onPressed: widget.onOpenFullscreen,
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 10,
+          child: CaptionOverlay(
+            captions: widget.media.captions,
+            positionMs: positionMs,
+          ),
+        ),
+        if (endMs != null && endMs > _trimStartMs)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: LinearProgressIndicator(
+              value: (positionMs / endMs).clamp(0.0, 1.0),
+              minHeight: 2,
+              backgroundColor: Colors.white24,
+              valueColor: const AlwaysStoppedAnimation(BuddyColors.green),
+            ),
+          ),
+      ],
     );
   }
 }

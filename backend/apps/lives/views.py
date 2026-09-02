@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
 from django.utils import timezone
 from django.core.cache import cache
+import json
 
 from rest_framework import views, permissions, status
 from rest_framework.response import Response
@@ -303,16 +304,20 @@ class RandomDropStartView(views.APIView):
             'timestamp': timezone.now().isoformat(),
             'timezone': str(timezone.get_current_timezone()),
         }
-        try:
-            import json
-            cache.zadd(pool_key, {json.dumps(entry): timezone.now().timestamp()})
-            cache.set(
-                f"random_drop_user:{request.user.profile.user_id}",
-                json.dumps(entry),
-                timeout=300,
-            )
-        except (AttributeError, TypeError):
-            pass
+        from .redis_client import get_raw_redis
+        client = get_raw_redis()
+        if client is None:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Live matching is temporarily unavailable. Please try again shortly.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        client.zadd(pool_key, {json.dumps(entry): timezone.now().timestamp()})
+        cache.set(
+            f"random_drop_user:{request.user.profile.user_id}",
+            json.dumps(entry),
+            timeout=300,
+        )
 
         return Response({
             'success': True,

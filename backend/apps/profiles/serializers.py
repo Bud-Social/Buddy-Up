@@ -14,6 +14,9 @@ class ProfileSerializer(serializers.ModelSerializer):
     is_following = serializers.SerializerMethodField()
     buddy_status = serializers.SerializerMethodField()
     is_blocked = serializers.SerializerMethodField()
+    # Interests/goals live on the user's preferences JSON — surfaced so other
+    # members can see them (profile pages, discover cards) for buddy matching.
+    preferences = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
@@ -22,7 +25,7 @@ class ProfileSerializer(serializers.ModelSerializer):
             'pronouns', 'location_city', 'location_country', 'role',
             'verification_status', 'privacy_level', 'streak_days',
             'artifact_balance', 'external_link', 'content_rating',
-            'workout_schedule',
+            'workout_schedule', 'preferences',
             'show_active_status', 'is_anonymous_posting',
             'onboarding_completed', 'terms_accepted_at', 'marketing_consent',
             'buddy_count', 'following_count', 'follower_count', 'gym_count', 'post_count',
@@ -107,6 +110,13 @@ class ProfileSerializer(serializers.ModelSerializer):
              Q(blocker=obj, blocked=viewer))
         ).exists()
 
+    def get_preferences(self, obj):
+        prefs = getattr(obj.user, 'preferences', None) or {}
+        # Only expose the interest-related keys, never anything sensitive.
+        allowed = ('primary_goal', 'activity_level', 'preferred_workouts',
+                   'dietary_preference', 'preferred_time', 'custom_interests')
+        return {k: prefs[k] for k in allowed if k in prefs}
+
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -176,6 +186,18 @@ class OnboardingSerializer(serializers.Serializer):
     )
     location_city = serializers.CharField(max_length=100, required=False, allow_blank=True)
     bio = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    # Free-text interests ("Other" categories). Persisted inside preferences.
+    custom_interests = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    # Optional password setup — lets Google/Apple sign-ups also log in with
+    # email + password. Only applied when the account has no password yet.
+    new_password = serializers.CharField(min_length=8, write_only=True, required=False, allow_blank=True)
+
+    def validate_new_password(self, value):
+        if not value:
+            return value
+        from django.contrib.auth.password_validation import validate_password
+        validate_password(value)
+        return value
 
     def to_internal_value(self, data):
         # Accept display labels ("Lose Weight") and alias values

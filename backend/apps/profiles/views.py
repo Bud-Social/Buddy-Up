@@ -16,6 +16,7 @@ from .serializers import (
 )
 from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, request_can_access_mature, can_view_content
+from apps.ai.client import ai_post
 
 
 class MyProfileView(generics.RetrieveUpdateAPIView):
@@ -128,6 +129,7 @@ class OnboardingView(views.APIView):
 
         terms_version = data.pop('terms_version', '')
         marketing_consent = data.pop('marketing_consent', False)
+        new_password = data.pop('new_password', '')
 
         profile = request.user.profile
         user = request.user
@@ -159,11 +161,34 @@ class OnboardingView(views.APIView):
             'terms_version', 'terms_accepted_at', 'marketing_consent', 'onboarding_completed',
         ])
 
+        # Record versioned legal consent on the user so ConsentEnforcementMiddleware
+        # sees the account as up-to-date. The backend policy versions are the
+        # source of truth (the client-sent string is stored for reference only).
+        from apps.accounts.policy_versions import CURRENT_POLICY_VERSIONS
+        consent_log = dict(user.consent_log or {})
+        for key, meta in CURRENT_POLICY_VERSIONS.items():
+            consent_log[f'{key}_version'] = meta['version']
+        consent_log.update({
+            'accepted_terms': True,
+            'accepted_privacy': True,
+            'accepted_guidelines': True,
+            'marketing_consent': bool(marketing_consent),
+            'consented_at': timezone.now().isoformat(),
+        })
+        user.consent_log = consent_log
+
+        # Optional password setup: Google/Apple accounts are provisioned with
+        # an unusable password; this lets them also sign in with email + password.
+        password_updated = bool(new_password) and not user.has_usable_password()
+        if password_updated:
+            user.set_password(new_password)
+
+        user.save(update_fields=['consent_log'] + (['password'] if password_updated else []))
+
         onboarding_plan = None
-        import requests as http_requests
         try:
             ai_url = f'{settings.AI_SERVICE_URL}/api/v1/onboarding/personalise'
-            resp = http_requests.post(ai_url, json=data, timeout=15)
+            resp = ai_post(ai_url, json=data, timeout=15)
             resp.raise_for_status()
             onboarding_plan = resp.json()
         except Exception:  # noqa: BLE001 — plan is best-effort; never block entry
@@ -754,12 +779,11 @@ class ProfileRecommendationsView(views.APIView):
         }
 
     def get(self, request):
-        import requests as http_requests
         profile = request.user.profile
         ai_url = f'{settings.AI_SERVICE_URL}/api/v1/embeddings/match'
         matches = []
         try:
-            resp = http_requests.post(
+            resp = ai_post(
                 ai_url,
                 json={'profile_id': str(profile.user_id), 'top_k': 20},
                 timeout=15,
@@ -1008,7 +1032,7 @@ class DiscoverTrendingView(views.APIView):
         # Trending communities by recent public post activity.
         from apps.messaging.models import Conversation
         trending_communities = Conversation.objects.filter(
-            is_community=True, is_public=True, is_deleted=False,
+            is_community=True, is_public=True,
         ).annotate(
             recent_posts=Count('community_posts', distinct=True),
         ).order_by('-recent_posts', '-last_message_at')[:8]
@@ -1126,3 +1150,71 @@ class PresenceStatusView(views.APIView):
             }
 
         return Response({'success': True, 'data': result, 'message': 'OK', 'errors': None, 'pagination': None})
+
+
+class CheckUsernameView(views.APIView):
+    """Live username availability for onboarding / edit-profile forms."""
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'username_check'
+
+    def get(self, request):
+        import re
+        username = str(request.query_params.get('username', '')).strip().lower()
+        if not username:
+            return Response({
+                'success': True, 'data': {'available': False, 'reason': 'required'},
+                'message': 'Username required.', 'errors': None, 'pagination': None,
+            })
+        if not re.fullmatch(r'[a-z0-9_]{3,30}', username):
+            return Response({
+                'success': True, 'data': {'available': False, 'reason': 'invalid'},
+                'message': '3–30 characters; letters, numbers and underscores only.',
+                'errors': None, 'pagination': None,
+            })
+        taken = Profile.objects.filter(username__iexact=username).exclude(
+            user_id=request.user.profile.user_id,
+        ).exists()
+        return Response({
+            'success': True,
+            'data': {'available': not taken, 'reason': 'taken' if taken else None},
+            'message': 'Available.' if not taken else 'Already taken.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class ChangeUsernameView(views.APIView):
+    """Deliberate username change with an anti-abuse throttle (3/day).
+
+    Kept separate from generic profile PATCH so rate limiting and auditing
+    can't be bypassed by pushing `username` through the regular update.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'username_change'
+
+    def post(self, request):
+        import re
+        username = str(request.data.get('username', '')).strip().lower()
+        if not re.fullmatch(r'[a-z0-9_]{3,30}', username):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Usernames are 3–30 characters: letters, numbers and underscores only.',
+                'errors': {'username': ['Invalid format.']}, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        profile = request.user.profile
+        if username == profile.username:
+            return Response({
+                'success': True, 'data': ProfileSerializer(profile, context={'request': request}).data,
+                'message': 'Username unchanged.', 'errors': None, 'pagination': None,
+            })
+        if Profile.objects.filter(username__iexact=username).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'That username is already taken.',
+                'errors': {'username': ['Already taken.']}, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        profile.username = username
+        profile.save(update_fields=['username'])
+        return Response({
+            'success': True, 'data': ProfileSerializer(profile, context={'request': request}).data,
+            'message': 'Username updated.', 'errors': None, 'pagination': None,
+        })

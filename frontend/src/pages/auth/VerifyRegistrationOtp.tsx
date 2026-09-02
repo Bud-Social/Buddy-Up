@@ -14,6 +14,11 @@ export default function VerifyRegistrationOtp() {
 
   const regToken = searchParams.get('token') || '';
   const email = searchParams.get('email') || '';
+  // When redirected from a login attempt, tell the user why they are here:
+  // their account was never verified. `fresh` means a new OTP was just sent
+  // because the previous one had expired.
+  const fromLogin = searchParams.get('reason') === 'unverified';
+  const freshOtp = searchParams.get('fresh') === '1';
 
   const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -66,6 +71,17 @@ export default function VerifyRegistrationOtp() {
         <p className="text-buddy-text-secondary text-center mb-6">
           Enter the 6-digit code sent to <strong className="text-buddy-text-primary">{email}</strong>
         </p>
+
+        {fromLogin && (
+          <div className="bg-buddy-orange/10 border border-buddy-orange/30 text-buddy-orange rounded-xl p-3 text-sm mb-4">
+            <p className="font-semibold">Your account isn't verified yet.</p>
+            <p className="mt-0.5 text-buddy-text-secondary">
+              {freshOtp
+                ? 'Your previous code had expired, so we sent a fresh OTP to your email.'
+                : 'Enter the OTP we already emailed you — it\'s still valid, or tap Resend for a new one.'}
+            </p>
+          </div>
+        )}
 
         {error && <div className="bg-buddy-red/10 border border-buddy-red/30 text-buddy-red rounded-xl p-3 text-sm mb-4">{error}</div>}
 

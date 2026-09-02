@@ -8,22 +8,28 @@ import {
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api/feed';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
+import { PostPhotoCarousel } from '@/components/features/feed/PostPhotoCarousel';
 import { useAuthStore } from '@/store/authStore';
 import { toEmoji } from '@/utils/emojiUtils';
+import { mediaPagesFromPost, postIsPhotoMode } from '@/lib/mediaPages';
 import type { Post } from '@/types/post';
 
 const VIDEO_EXT = /\.(mp4|mov|webm|m4v|mpeg|mkv)(\?|$)/i;
 
-function pickVideoUrl(post: Post): string | null {
+function pickVideoItem(post: Post): { url: string; poster?: string } | null {
+  // Prefer structured media (poster + dims), fall back to URL sniffing.
+  const first = post.media?.[0];
+  if (first && first.media_type === 'video') return { url: first.url, poster: first.poster_url ?? undefined };
   for (const url of post.media_urls || []) {
-    if (VIDEO_EXT.test(url)) return url;
+    if (VIDEO_EXT.test(url)) return { url };
   }
   return null;
 }
 
 interface VideoItem {
   post: Post;
-  url: string;
+  video: { url: string; poster?: string } | null;
+  photoMode: boolean;
 }
 
 export default function FullScreenVideoFeed() {
@@ -46,20 +52,34 @@ export default function FullScreenVideoFeed() {
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const isScrollingRef = useRef(false);
+  const cursorRef = useRef<string | undefined>(undefined);
+  const hasMoreRef = useRef(true);
+  const loadingLockRef = useRef(false);
 
   const loadVideos = useCallback(async () => {
+    if (!hasMoreRef.current || loadingLockRef.current) return;
+    loadingLockRef.current = true;
     setIsLoading(true);
     try {
-      const res = await feedApi.getVideoFeed();
+      const res = await feedApi.getVideoFeed('fyp', cursorRef.current);
+      cursorRef.current = res.pagination?.next
+        ? new URLSearchParams(res.pagination.next.split('?')[1]).get('cursor') || undefined
+        : undefined;
+      hasMoreRef.current = !!res.pagination?.next;
       const list = (res.data || [])
-        .map((post) => ({ post, url: pickVideoUrl(post) }))
-        .filter((v): v is VideoItem => Boolean(v.url));
+        .map((post) => ({
+          post,
+          video: pickVideoItem(post),
+          photoMode: postIsPhotoMode(mediaPagesFromPost(post)),
+        }))
+        .filter((v): v is VideoItem => Boolean(v.video) || v.photoMode);
       setItems((prev) => {
         const seen = new Set(prev.map((v) => v.post.id));
         const fresh = list.filter((v) => !seen.has(v.post.id));
         return [...prev, ...fresh];
       });
     } catch {} finally {
+      loadingLockRef.current = false;
       setIsLoading(false);
     }
   }, []);
@@ -110,16 +130,16 @@ export default function FullScreenVideoFeed() {
     if (idx !== activeIndex) setActiveIndex(idx);
   };
 
-  // Lazy-load more videos near the bottom
+  // Lazy-load more videos near the bottom (cursor-backed).
   useEffect(() => {
-    if (activeIndex >= items.length - 2 && items.length > 0) {
+    if (activeIndex >= items.length - 2 && items.length > 0 && hasMoreRef.current) {
       loadVideos();
     }
   }, [activeIndex, items.length, loadVideos]);
 
   const togglePlay = (idx: number) => {
     const v = videoRefs.current[idx];
-    if (!v) return;
+    if (!v) return; // photo-mode posts have no single video element
     if (v.paused) v.play().catch(() => {});
     else v.pause();
     setControlsVisible(true);
@@ -226,9 +246,9 @@ export default function FullScreenVideoFeed() {
           <Play size={40} className="text-buddy-text-secondary/40" />
           <p className="text-sm">No videos yet — post one to get started!</p>
           <button
-            onClick={() => navigate('/feed')}
+            onClick={() => navigate('/create')}
             className="mt-2 px-4 py-2 rounded-full bg-buddy-green text-buddy-black text-sm font-semibold"
-          >Back to Feed</button>
+          >Create a video</button>
         </div>
       )}
 
@@ -241,19 +261,24 @@ export default function FullScreenVideoFeed() {
             className="h-full w-full snap-start relative flex items-center justify-center bg-black overflow-hidden"
             onClick={() => togglePlay(idx)}
           >
-            <video
-              ref={(el) => { videoRefs.current[idx] = el; }}
-              src={item.url}
-              loop
-              playsInline
-              preload={active ? 'auto' : 'none'}
-              muted={isMuted}
-              className="w-full h-full object-contain"
-              onTimeUpdate={(e) => {
-                const v = e.currentTarget;
-                if (v.duration) setProgress((v.currentTime / v.duration) * 100);
-              }}
-            />
+            {item.photoMode ? (
+              <PostPhotoCarousel post={post} className="absolute inset-0" counterClassName="top-16 right-3" />
+            ) : (
+              <video
+                ref={(el) => { videoRefs.current[idx] = el; }}
+                src={item.video!.url}
+                poster={item.video!.poster}
+                loop
+                playsInline
+                preload={active ? 'auto' : 'none'}
+                muted={isMuted}
+                className="w-full h-full object-contain"
+                onTimeUpdate={(e) => {
+                  const v = e.currentTarget;
+                  if (v.duration) setProgress((v.currentTime / v.duration) * 100);
+                }}
+              />
+            )}
 
             {/* Animated gradient bars on the sides for the TikTok feel */}
             <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-black/60 to-transparent pointer-events-none" />
@@ -285,7 +310,7 @@ export default function FullScreenVideoFeed() {
                   <span className="text-[10px] bg-buddy-green text-buddy-black px-1.5 py-0.5 rounded-full font-medium pointer-events-auto">Trainer</span>
                 )}
               </div>
-              {post.body && (
+              {!item.photoMode && post.body && (
                 <p className="text-white/90 text-sm mt-2 line-clamp-2">{post.body}</p>
               )}
               {post.gym_tag_name && (
@@ -325,7 +350,7 @@ export default function FullScreenVideoFeed() {
             </div>
 
             {/* Center play/pause indicator */}
-            {controlsVisible && !active && (
+            {controlsVisible && !active && !item.photoMode && (
               <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                 <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center">
                   <Play size={28} className="text-white ml-1" />
@@ -334,7 +359,7 @@ export default function FullScreenVideoFeed() {
             )}
 
             {/* Video controls bar */}
-            {controlsVisible && (
+            {controlsVisible && !item.photoMode && (
               <div className="absolute bottom-0 left-0 right-0 z-20 px-3 pb-3">
                 <div className="flex items-center gap-3 bg-black/50 backdrop-blur rounded-full px-3 py-2">
                   <button onClick={(e) => { e.stopPropagation(); togglePlay(idx); }} className="text-white">

@@ -10,6 +10,8 @@ urlpatterns = [
     path('api/v1/auth/', include('apps.accounts.urls')),
     path('api/v1/profiles/', include('apps.profiles.urls')),
     path('api/v1/feed/', include('apps.feed.urls')),
+    path('api/v1/uploads/', include('apps.feed.urls_uploads')),
+    path('api/v1/sounds/', include('apps.feed.urls_sounds')),
     path('api/v1/gyms/', include('apps.gyms.urls')),
     path('api/v1/lives/', include('apps.lives.urls')),
     path('api/v1/sessions/', include('apps.sessions.urls')),

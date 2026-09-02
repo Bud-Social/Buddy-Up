@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Image, FileText, Music, MapPin, BarChart2,
   Smile, X, Send, Globe, Users, Lock, Dumbbell, AtSign, ChevronDown,
@@ -115,6 +116,7 @@ function clearDraft() {
 }
 
 export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, hideVisibility, onClose, initialMeal, initialMealPhotoDataUrl }: PostComposerProps) {
+  const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -644,6 +646,9 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
         feedApi.deleteDraft(serverDraftIdRef.current).catch(() => {});
         serverDraftIdRef.current = null;
       }
+      // Video ("Bud Press") posts go straight into the TikTok-style
+      // full-screen feed, like posting a clip on TikTok/Reels.
+      const postedVideo = mediaFiles.some((m) => m.type === 'video');
       setContent('');
       if (editorRef.current) editorRef.current.innerText = '';
       setMediaFiles([]);
@@ -658,6 +663,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
       setFoodName(''); setMealDesc(''); setCalories(''); setProteinG(''); setCarbsG(''); setFatG('');
       setMealPhotos([]); setProgressWeight(''); setBeforePhotos([]); setAfterPhotos([]);
       onClose?.();
+      if (postedVideo) navigate('/videos');
     } catch (err) {
       console.error('Post failed:', err);
     } finally {
@@ -1164,6 +1170,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
             type="file"
             multiple
             accept={acceptForKind[mediaKind]}
+            capture={mediaKind === 'video' ? 'environment' : undefined}
             className="hidden"
             onChange={e => { handleFiles(e.target.files, mediaKind); e.target.value = ''; }}
           />
@@ -1184,13 +1191,19 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
                 <div className="absolute bottom-full left-0 mb-2 z-20 bg-buddy-surface rounded-xl shadow-2xl border border-buddy-surface-raised overflow-hidden w-48">
                   {([
                     { key: 'image' as const, icon: Image, label: 'Photo', desc: 'Images from your device' },
-                    { key: 'video' as const, icon: Video, label: 'Video', desc: 'Clips up to 50 MB' },
+                    { key: 'video' as const, icon: Video, label: 'Video', desc: 'Trim, sound & captions studio' },
                     { key: 'file' as const, icon: FileIcon, label: 'File', desc: 'Docs, PDFs, archives' },
                     { key: 'document' as const, icon: FileText, label: 'Document', desc: 'Text & office files' },
                   ]).map(({ key, icon: KIcon, label, desc }) => (
                     <button
                       key={key}
                       onClick={() => {
+                        if (key === 'video') {
+                          // Video posts open the full creation studio.
+                          setShowAttachMenu(false);
+                          navigate('/create');
+                          return;
+                        }
                         setMediaKind(key);
                         setShowAttachMenu(false);
                         // Defer so the hidden input's accept attribute is committed first.

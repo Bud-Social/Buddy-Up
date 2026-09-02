@@ -8,7 +8,9 @@ request loads the promoted artifact.
 import logging
 
 import requests
+
 from django.conf import settings
+from apps.ai.client import ai_post
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ def push_model_metadata() -> tuple[int, dict | None]:
 
     url = f'{settings.AI_SERVICE_URL}/api/v1/models/sync'
     try:
-        resp = requests.post(url, json={'models': rows}, timeout=10)
+        resp = ai_post(url, json={'models': rows}, timeout=10)
         resp.raise_for_status()
         return len(rows), resp.json()
     except requests.RequestException as exc:

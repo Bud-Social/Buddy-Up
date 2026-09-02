@@ -22,6 +22,8 @@ it does not imply identical screens or platform-specific capabilities.
 | Notifications | `/notifications/`, `/notifications/preferences/` | `frontend/src/api/notifications.ts` | `lib/data/repositories/notification_repository.dart` | Fixture-checked prefix | Push delivery is platform-specific |
 | Moderation and verification | `/moderation/`, `/verification/` | `frontend/src/api/moderation.ts`, `verification.ts` | `lib/data/repositories/verification_repository.dart` | Partial: Flutter moderation coverage must be recorded before launch | |
 | Analytics and achievements | `/analytics/`, `/achievements/` | `frontend/src/api/analytics.ts`, `achievements.ts` | `lib/data/repositories/analytics_repository.dart` | Fixture-checked prefixes | |
+| Bud Press creation studio | `/uploads/sign/`, `/sounds/`, `/feed/create/` (structured `media` JSON) | `frontend/src/pages/app/CreateStudio.tsx`, `frontend/src/lib/uploader.ts`, `frontend/src/lib/createStudio.ts` | `lib/features/feed/screens/video_studio_screen.dart`, `lib/core/upload/cloudinary_uploader.dart` | Fixture-checked prefix | TikTok flow: local copy on pick → edit offline → finalize → upload with percentage → publish. Web uses IndexedDB drafts; Flutter persists media paths locally. Both clients have trim/sound/audience steps and photo-mode carousels; auto-captions generate server-side (faster-whisper) post-publish |
+| Behavioral event tracking | `/analytics/events/` | `frontend/src/lib/analytics.ts` | `lib/core/analytics/analytics_service.dart` | Fixture-checked prefix | Consent-gated batched events on both clients |
 | Admin and operations | `/admin/`, `/health/` | Staff/API only | Not shipped | Operator-only, out of client parity scope | Health is a flat readiness exception |
 
 ## Updating The Matrix

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { authApi } from '@/api';
+import { profilesApi } from '@/api';
 import { useAuthStore } from '@/store/authStore';
 
 const TERMS_VERSION = '2026-08-v1';
@@ -47,7 +48,7 @@ export default function Onboarding() {
   const needsAge = searchParams.get('step') === 'age' || user?.is_adult === false;
 
   const [step, setStep] = useState<number>(needsAge ? 0 : 1);
-  const totalSteps = 7; // age(0) + terms + profile + goals + level + workouts + diet/time
+  const totalSteps = 8; // age(0) + terms + profile + goals + level + workouts + diet/time + preview
 
   // Age step
   const [dob, setDob] = useState('');
@@ -64,7 +65,22 @@ export default function Onboarding() {
   const [username, setUsername] = useState(profile?.username ?? '');
   const [city, setCity] = useState(profile?.location_city ?? '');
   const [bio, setBio] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [profileError, setProfileError] = useState('');
+
+  // Live username availability (debounced) — message sits under the field.
+  const [usernameState, setUsernameState] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+  useEffect(() => {
+    if (!username) { setUsernameState('idle'); return; }
+    if (!/^[a-z0-9_]{3,30}$/.test(username)) { setUsernameState('invalid'); return; }
+    setUsernameState('checking');
+    const t = setTimeout(() => {
+      profilesApi.checkUsername(username)
+        .then((res) => setUsernameState(res.data?.available ? 'available' : 'taken'))
+        .catch(() => setUsernameState('idle'));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [username]);
 
   // Preferences
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
@@ -72,6 +88,7 @@ export default function Onboarding() {
   const [selectedWorkouts, setSelectedWorkouts] = useState<string[]>([]);
   const [diet, setDiet] = useState('none');
   const [preferredTime, setPreferredTime] = useState('flexible');
+  const [customInterest, setCustomInterest] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [plan, setPlan] = useState<OnboardingPlan | null>(null);
   const [error, setError] = useState('');
@@ -99,9 +116,12 @@ export default function Onboarding() {
 
   const usernameValid = /^[a-zA-Z0-9_]{3,30}$/.test(username);
   const displayNameValid = displayName.trim().length >= 2;
+  const usernameFree = usernameState === 'available';
+  const usernameChecking = usernameState === 'checking';
   const validateProfileStep = () => {
     if (!displayNameValid) { setProfileError('Display name needs at least 2 characters.'); return false; }
     if (!usernameValid) { setProfileError('Username must be 3–30 letters, numbers or underscores.'); return false; }
+    if (usernameState === 'taken') { setProfileError('That username is already taken — pick another one.'); return false; }
     setProfileError('');
     return true;
   };
@@ -123,6 +143,8 @@ export default function Onboarding() {
         username: username.trim().toLowerCase(),
         location_city: city.trim(),
         bio: bio.trim(),
+        ...(customInterest.trim() && { custom_interests: customInterest.trim() }),
+        ...(newPassword && { new_password: newPassword }),
       });
       const data = res.data as unknown as { profile?: typeof profile; onboarding_plan?: OnboardingPlan };
       if (data?.profile) setProfile(data.profile);
@@ -144,9 +166,9 @@ export default function Onboarding() {
 
   const Progress = ({ current }: { current: number }) => (
     <>
-      <p className="text-buddy-text-secondary text-center mb-2">Step {current} of {totalSteps}</p>
+      <p className="text-buddy-text-secondary text-center mb-2">Step {current} of {needsAge ? totalSteps : totalSteps - 1}</p>
       <div className="flex gap-1 mb-6">
-        {Array.from({ length: totalSteps }).map((_, i) => (
+        {Array.from({ length: needsAge ? totalSteps : totalSteps - 1 }).map((_, i) => (
           <div key={i} className={`flex-1 h-1 rounded-full ${i < current ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`} />
         ))}
       </div>
@@ -226,18 +248,40 @@ export default function Onboarding() {
               value={username}
               onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
               placeholder="fitness_fan"
-              helperText="3–30 characters — letters, numbers, underscores."
               required
             />
-            {!usernameValid && username.length > 0 && (
-              <p className="text-xs text-red-400 -mt-2">Letters, numbers and underscores only (3–30).</p>
+            <p className={`text-xs -mt-2 ${usernameState === 'available' ? 'text-buddy-green' : usernameState === 'taken' || usernameState === 'invalid' ? 'text-red-400' : 'text-buddy-text-secondary'}`}>
+              {usernameState === 'available' && '✓ Username available'}
+              {usernameState === 'taken' && '✗ That username is already taken'}
+              {usernameState === 'invalid' && '3–30 characters — letters, numbers, underscores.'}
+              {usernameState === 'checking' && 'Checking availability…'}
+              {usernameState === 'idle' && '3–30 characters — letters, numbers, underscores.'}
+            </p>
+            {!displayNameValid && displayName.length > 0 && (
+              <p className="text-xs text-red-400 -mt-2">At least 2 characters.</p>
             )}
             <Input label="City (optional)" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Nairobi" />
             <Input label="Short bio (optional)" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="5k beginner, gym 3×/week…" maxLength={200} />
+            {user?.has_password === false && (
+              <div>
+                <Input
+                  label="Create a password (optional)"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min 8 characters"
+                  helperText="Lets you also log in with your email and password instead of Google."
+                />
+                {newPassword.length > 0 && newPassword.length < 8 && (
+                  <p className="text-xs text-red-400 -mt-2">At least 8 characters.</p>
+                )}
+              </div>
+            )}
             {(profileError || error) && step === 2 && <p className="text-sm text-red-400">{profileError || error}</p>}
             <div className="flex gap-3 mt-4">
               <Button variant="ghost" onClick={() => setStep(needsAge ? 0 : 1)} className="flex-1">Back</Button>
-              <Button className="flex-1" size="lg" disabled={!displayNameValid || !usernameValid}
+              <Button className="flex-1" size="lg"
+                disabled={!displayNameValid || !usernameValid || usernameState === 'taken' || usernameChecking}
                 onClick={() => { if (validateProfileStep()) setStep(3); }}>Next</Button>
             </div>
           </div>
@@ -294,6 +338,18 @@ export default function Onboarding() {
                 >{workoutLabels[w]}</button>
               ))}
             </div>
+            {selectedWorkouts.includes('other') && (
+              <div>
+                <Input
+                  label="Tell us more about your other workouts"
+                  value={customInterest}
+                  onChange={(e) => setCustomInterest(e.target.value)}
+                  placeholder="e.g. climbing, dance, calisthenics…"
+                  maxLength={100}
+                />
+                <p className="text-xs text-buddy-text-secondary -mt-1">Separate multiple interests with commas — they appear on your profile for buddy matching.</p>
+              </div>
+            )}
             <div className="flex gap-3 mt-4">
               <Button variant="ghost" onClick={() => setStep(4)} className="flex-1">Back</Button>
               <Button className="flex-1" size="lg" disabled={selectedWorkouts.length === 0} onClick={() => setStep(6)}>Next</Button>
@@ -323,7 +379,58 @@ export default function Onboarding() {
             {error && <p className="text-sm text-red-400">{error}</p>}
             <div className="flex gap-3 mt-4">
               <Button variant="ghost" onClick={() => setStep(5)} className="flex-1">Back</Button>
-              <Button onClick={handleComplete} isLoading={isLoading} className="flex-1" size="lg">Complete Setup</Button>
+              <Button className="flex-1" size="lg" onClick={() => setStep(7)}>Next</Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── PREVIEW ── */}
+        {step === 7 && (
+          <div className="space-y-4">
+            <Progress current={needsAge ? 8 : 7} />
+            <p className="font-heading font-semibold text-lg">Preview your profile</p>
+            <p className="text-sm text-buddy-text-secondary">This is how other Buddies will see you. You can change any of it later in Settings.</p>
+
+            <div className="rounded-2xl border border-buddy-surface-raised bg-buddy-surface-raised/40 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-full bg-buddy-green/15 text-buddy-green flex items-center justify-center font-display font-extrabold text-xl shrink-0">
+                  {displayName.trim().charAt(0).toUpperCase() || 'B'}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="font-semibold text-sm truncate">{displayName.trim() || 'Your Name'}</p>
+                    <span className="text-[10px] bg-buddy-green/20 text-buddy-green px-1.5 py-0.5 rounded-full font-medium">Regular User</span>
+                  </div>
+                  <p className="text-xs text-buddy-text-secondary truncate">@{username || 'username'}</p>
+                </div>
+              </div>
+              {bio.trim() && <p className="text-sm text-buddy-text-primary mt-3">{bio.trim()}</p>}
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {city.trim() && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-buddy-surface text-buddy-text-secondary">📍 {city.trim()}</span>
+                )}
+                {activityLevel && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-buddy-surface text-buddy-text-secondary">{levelLabels[activityLevel]}</span>
+                )}
+                {selectedGoals.map((g) => (
+                  <span key={g} className="text-[11px] px-2 py-0.5 rounded-full bg-buddy-green/10 text-buddy-green">{goalLabels[g]}</span>
+                ))}
+                {selectedWorkouts.map((w) => (
+                  <span key={w} className="text-[11px] px-2 py-0.5 rounded-full bg-buddy-electric/10 text-buddy-electric">{workoutLabels[w]}</span>
+                ))}
+                {customInterest.trim() && customInterest.split(',').map((s) => s.trim()).filter(Boolean).map((s, i) => (
+                  <span key={`custom-${i}`} className="text-[11px] px-2 py-0.5 rounded-full bg-buddy-orange/10 text-buddy-orange">{s}</span>
+                ))}
+                {diet !== 'none' && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-buddy-orange/10 text-buddy-orange">{dietLabels[diet]}</span>
+                )}
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-buddy-surface text-buddy-text-secondary">🕐 {timeLabels[preferredTime]}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-4">
+              <Button variant="ghost" onClick={() => setStep(6)} className="flex-1">Back</Button>
+              <Button onClick={handleComplete} isLoading={isLoading} className="flex-1" size="lg">Confirm &amp; Finish</Button>
             </div>
           </div>
         )}

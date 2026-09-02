@@ -50,14 +50,16 @@ class RequestIdMiddleware:
 class ConsentEnforcementMiddleware:
     """Stop authenticated users with stale legal consent at the API boundary."""
 
-    EXEMPT_PATHS = ('/api/v1/auth/consent/', '/api/v1/auth/consent-status/', '/api/v1/auth/policies/')
+    # The entire auth namespace is exempt: register / login / social signup /
+    # onboarding are the very endpoints a user needs in order to accept the
+    # current policies, so blocking them would deadlock the account.
+    EXEMPT_PREFIXES = ('/api/v1/auth/', '/api/v1/health/')
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        if (request.method == 'OPTIONS' or request.path.startswith(self.EXEMPT_PATHS) or
-                request.path.startswith('/api/v1/health/')):
+        if request.method == 'OPTIONS' or request.path.startswith(self.EXEMPT_PREFIXES):
             return self.get_response(request)
         user = getattr(request, 'user', None)
         # DRF JWT authentication runs after Django middleware. Decode only the

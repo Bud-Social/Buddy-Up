@@ -1,6 +1,9 @@
 import hashlib
 
-from django.test import TestCase, override_settings
+from datetime import timedelta
+
+from django.test import SimpleTestCase, TestCase, override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -65,9 +68,24 @@ class AuthTests(TestCase):
         self.assertIn('commit', response.data)
 
     def test_metrics_endpoint_returns_prometheus_counters(self):
-        response = self.client.get('/api/v1/health/metrics/')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn('buddyup_http_requests_total', response.content.decode())
+        # pytest-django forces DEBUG=False; the endpoint is open only when
+        # DEBUG is on (fail-closed in production). Tested at view level —
+        # flipping DEBUG via the test client would also activate the
+        # debug-toolbar middleware, which has no URLs under the test runner.
+        from django.test import override_settings as _os
+        from rest_framework.test import APIRequestFactory
+
+        from .views import metrics as metrics_view
+
+        request = APIRequestFactory().get('/api/v1/health/metrics/')
+        with _os(DEBUG=True):
+            response = metrics_view(request)
+        assert response.status_code == 200
+        assert 'buddyup_http_requests_total' in response.content.decode()
+
+    def test_metrics_endpoint_fail_closed_without_debug_or_token(self):
+        # No token configured + DEBUG off → the endpoint must not exist.
+        self.assertEqual(self.client.get('/api/v1/health/metrics/').status_code, 404)
 
     @override_settings(METRICS_TOKEN='test-metrics-token')
     def test_metrics_endpoint_requires_configured_token(self):
@@ -188,14 +206,17 @@ class AuthTests(TestCase):
         Profile.objects.create(user=user, username='consentuser', display_name='Consent User')
         token = __import__('rest_framework_simplejwt.tokens', fromlist=['RefreshToken']).RefreshToken.for_user(user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token.access_token}')
-        blocked = self.client.get('/api/v1/auth/sessions/')
+        # Auth endpoints are exempt (they are how consent gets accepted);
+        # enforcement applies to app-data endpoints.
+        self.assertEqual(self.client.get('/api/v1/auth/sessions/').status_code, status.HTTP_200_OK)
+        blocked = self.client.get('/api/v1/profiles/me/')
         self.assertEqual(blocked.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(blocked.json()['data']['consent_required'])
         accepted = self.client.post('/api/v1/auth/consent/', {
             'accepted_terms': True, 'accepted_privacy': True, 'accepted_guidelines': True,
         }, format='json')
         self.assertEqual(accepted.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.client.get('/api/v1/auth/sessions/').status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.get('/api/v1/profiles/me/').status_code, status.HTTP_200_OK)
 
     def test_passkey_can_be_renamed_and_revoked_with_password(self):
         user = User.objects.create_user(email='key@example.com', password='TestPass123!')
@@ -380,9 +401,10 @@ class AppleJWKSCacheTests(TestCase):
         self.client = APIClient()
         self.apple_url = '/api/v1/auth/apple/'
 
+    @override_settings(APPLE_CLIENT_ID='com.buddyup.web')
     def test_second_login_attempt_uses_cached_jwks(self):
         from unittest import mock
-        fake_keys = {'keys': [{'kid': 'k1', 'kty': 'RSA', 'n': 'x', 'e': 'AQAB'}]}
+        fake_keys = {'keys': [{'kid': 'k1', 'kty': 'RSA', 'n': '0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86ZuT6Y7PFMuZ0dcWaTPCegyQvR35gZ05DkpjT8wNJdFJGOcic2vZnhnL6QDxZ4cWnzVRIXlT90ebRww9tV0dcWaTPCegyQvR35gZ05DkpjT8wNJdFJGO', 'e': 'AQAB'}]}
         with mock.patch('apps.accounts.views.requests.get') as get:
             get.return_value.json.return_value = fake_keys
             first = self.client.post(self.apple_url, {'identity_token': 'not-a-jwt'}, format='json')
@@ -393,6 +415,65 @@ class AppleJWKSCacheTests(TestCase):
             second = self.client.post(self.apple_url, {'identity_token': 'not-a-jwt'}, format='json')
             self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(get.call_count, first_count, 'JWKS must be served from cache')
+
+
+class AppleSignInFailClosedTests(TestCase):
+    """Audience/issuer verification is mandatory; unconfigured → 503."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.apple_url = '/api/v1/auth/apple/'
+
+    def test_unconfigured_client_id_returns_503(self):
+        from django.test import override_settings
+        with override_settings(APPLE_CLIENT_ID=''):
+            resp = self.client.post(self.apple_url, {'identity_token': 'x'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+
+    def test_wrong_audience_is_rejected(self):
+        import jwt as pyjwt
+        from unittest import mock
+        from django.test import override_settings
+        fake_keys = {'keys': [{'kid': 'k1', 'kty': 'RSA', 'n': '0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86ZuT6Y7PFMuZ0dcWaTPCegyQvR35gZ05DkpjT8wNJdFJGOcic2vZnhnL6QDxZ4cWnzVRIXlT90ebRww9tV0dcWaTPCegyQvR35gZ05DkpjT8wNJdFJGO', 'e': 'AQAB'}]}
+        with override_settings(APPLE_CLIENT_ID='com.buddyup.web'):
+            with mock.patch('apps.accounts.views.requests.get') as get, \
+                    mock.patch('apps.accounts.views.jwt.decode') as decode, \
+                    mock.patch('apps.accounts.views.jwt.get_unverified_header') as header:
+                get.return_value.json.return_value = fake_keys
+                header.return_value = {'kid': 'k1', 'alg': 'RS256'}
+                decode.side_effect = pyjwt.InvalidAudienceError('Invalid audience')
+                resp = self.client.post(self.apple_url, {'identity_token': 'tok'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_correct_audience_verifies_and_logs_in(self):
+        from unittest import mock
+        from django.test import override_settings
+        fake_keys = {'keys': [{'kid': 'k1', 'kty': 'RSA', 'n': '0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86ZuT6Y7PFMuZ0dcWaTPCegyQvR35gZ05DkpjT8wNJdFJGOcic2vZnhnL6QDxZ4cWnzVRIXlT90ebRww9tV0dcWaTPCegyQvR35gZ05DkpjT8wNJdFJGO', 'e': 'AQAB'}]}
+        with override_settings(APPLE_CLIENT_ID='com.buddyup.web'):
+            with mock.patch('apps.accounts.views.requests.get') as get, \
+                    mock.patch('apps.accounts.views.jwt.decode') as decode, \
+                    mock.patch('apps.accounts.views.jwt.get_unverified_header') as header, \
+                    mock.patch('apps.accounts.views._provision_social_user') as provision, \
+                    mock.patch('apps.accounts.views._finalize_social_login') as finalize:
+                get.return_value.json.return_value = fake_keys
+                header.return_value = {'kid': 'k1', 'alg': 'RS256'}
+                decode.return_value = {
+                    'email': 'appleuser@example.com', 'sub': 'apple-sub-1',
+                }
+                user = User.objects.create_user(email='appleuser@example.com', password='TestPass123!')
+                provision.return_value = (user, True)
+                finalize.return_value = ({'access': 'a', 'refresh': 'r'}, False)
+                resp = self.client.post(self.apple_url, {'identity_token': 'tok'}, format='json')
+        self.assertEqual(
+            resp.status_code, status.HTTP_200_OK,
+            f'unexpected response: {getattr(resp, "data", None)}',
+        )
+
+        # Issuer was enforced on the decode call.
+        _, kwargs = decode.call_args
+        self.assertEqual(kwargs.get('issuer'), 'https://appleid.apple.com')
+        self.assertEqual(kwargs.get('audience'), 'com.buddyup.web')
+        self.assertTrue(kwargs['options'].get('verify_iss'))
 
 
 class PasswordResetTwoFactorTests(TestCase):
@@ -433,3 +514,171 @@ class PasswordResetTwoFactorTests(TestCase):
             any('Two-factor authentication was disabled' in call for call in alert_calls),
             f'expected a 2FA-disabled security alert, got {alert_calls}',
         )
+
+
+class FriendlyErrorTests(TestCase):
+    """Validation failures surface human sentences, not developer JSON."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_duplicate_email_returns_friendly_message(self):
+        payload = {
+            'email': 'dup@example.com', 'password': 'TestPass123!',
+            'dob': '2000-01-01', 'accepted_terms': True, 'accepted_privacy': True,
+            'accepted_guidelines': True, 'is_16_plus': True,
+        }
+        first = self.client.post('/api/v1/auth/register/', payload, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        second = self.client.post('/api/v1/auth/register/', payload, format='json')
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+        # The message must be the human sentence — never a stringified dict.
+        self.assertEqual(second.data['message'], 'An account with this email already exists.')
+
+    def test_missing_field_returns_friendly_message(self):
+        resp = self.client.post('/api/v1/auth/register/', {'email': 'x@example.com'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertNotIn('{', resp.data['message'])
+        self.assertNotIn('ErrorDetail', resp.data['message'])
+
+
+class SetPasswordTests(TestCase):
+    """Social sign-ups can set a password; password accounts cannot bypass."""
+
+    def _auth(self, email):
+        user = User.objects.create_user(email=email, password='TestPass123!')
+        user.save()
+        from rest_framework_simplejwt.tokens import RefreshToken
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(user).access_token}')
+        return client, user
+
+    def test_social_user_sets_password_without_current(self):
+        client, user = self._auth('social@example.com')
+        user.set_unusable_password()
+        user.save()
+        status_check = client.get('/api/v1/auth/set-password/')
+        self.assertFalse(status_check.data['data']['has_password'])
+
+        resp = client.post('/api/v1/auth/set-password/', {'new_password': 'NewSecure123!'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        user.refresh_from_db()
+        self.assertTrue(user.has_usable_password())
+        self.assertTrue(user.check_password('NewSecure123!'))
+
+    def test_password_user_must_supply_current(self):
+        client, user = self._auth('existing@example.com')
+        resp = client.post('/api/v1/auth/set-password/', {'new_password': 'NewSecure123!'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        resp = client.post('/api/v1/auth/set-password/', {
+            'new_password': 'NewSecure123!', 'current_password': 'wrong',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+        resp = client.post('/api/v1/auth/set-password/', {
+            'new_password': 'NewSecure123!', 'current_password': 'TestPass123!',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+    def test_weak_password_rejected(self):
+        client, _ = self._auth('weak@example.com')
+        resp = client.post('/api/v1/auth/set-password/', {'new_password': 'password'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class ThrottleBudgetTests(SimpleTestCase):
+    """OTP resends stay usable: local dev overrides the tight prod budget."""
+
+    def test_dev_otp_rate_is_usable(self):
+        from django.conf import settings
+        self.assertGreaterEqual(
+            int(settings.REST_FRAMEWORK['DEFAULT_THROTTLE_RATES']['otp'].split('/')[0]), 10,
+        )
+
+
+class UnverifiedLoginRedirectTests(TestCase):
+    """Password login by an unverified user must hand back an OTP redirect.
+
+    A still-valid OTP is reused (no spam email); a fresh one is only sent
+    when the previous code has expired, been consumed, or exhausted attempts.
+    """
+
+    def setUp(self):
+        self.client = APIClient()
+        self.url = '/api/v1/auth/login/'
+        self.user = User.objects.create_user(
+            email='unverified@example.com', password='TestPass123!')
+        # create_user leaves email_verified False by default
+        self.user.email_verified = False
+        self.user.save()
+        # Registration always creates a profile — mirror that here.
+        Profile.objects.create(
+            user=self.user, username='unverified', display_name='Unverified',
+        )
+
+    def _login(self):
+        return self.client.post(self.url, {
+            'email': 'unverified@example.com', 'password': 'TestPass123!',
+        }, format='json')
+
+    def test_unverified_login_returns_verification_redirect(self):
+        resp = self._login()
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        data = resp.data['data']
+        self.assertTrue(data['require_email_verification'])
+        self.assertTrue(data['registration_token'])
+        self.assertTrue(data['otp_resent'], 'first login with no OTP should send one')
+        self.assertEqual(data['email'], 'unverified@example.com')
+        self.assertIn('not been verified', resp.data['message'])
+        self.assertTrue(OTPToken.objects.filter(
+            user=self.user, channel='email', is_used=False).exists())
+
+    def test_valid_pending_otp_is_reused_not_resent(self):
+        first = self._login()
+        self.assertTrue(first.data['data']['otp_resent'])
+        count_before = OTPToken.objects.filter(user=self.user).count()
+
+        second = self._login()
+        self.assertEqual(second.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(second.data['data']['otp_resent'])
+        self.assertIn('not been verified', second.data['message'])
+        # No extra OTP row — the still-valid code is reused.
+        self.assertEqual(
+            OTPToken.objects.filter(user=self.user).count(), count_before)
+
+    def test_expired_otp_gets_replaced_with_fresh_one(self):
+        from django.utils import timezone
+        expired = OTPToken.objects.create(
+            user=self.user, code='111111', channel='email',
+            expires_at=timezone.now() - timedelta(minutes=1),
+        )
+        resp = self._login()
+        self.assertTrue(resp.data['data']['otp_resent'])
+        fresh = OTPToken.objects.filter(
+            user=self.user, is_used=False, attempts__lt=3,
+        ).order_by('-created_at').first()
+        self.assertIsNotNone(fresh)
+        self.assertNotEqual(fresh.id, expired.id)
+        self.assertTrue(fresh.is_valid())
+
+    def test_exhausted_attempts_otp_gets_replaced(self):
+        OTPToken.objects.create(
+            user=self.user, code='222222', channel='email',
+            expires_at=timezone.now() + timedelta(minutes=10), attempts=3,
+        )
+        resp = self._login()
+        self.assertTrue(resp.data['data']['otp_resent'])
+        self.assertTrue(OTPToken.objects.filter(
+            user=self.user, is_used=False, attempts=0).exists())
+
+    def test_token_works_on_the_verification_endpoint(self):
+        resp = self._login()
+        token = resp.data['data']['registration_token']
+        otp = OTPToken.objects.filter(user=self.user, channel='email').latest('created_at').code
+        verify = self.client.post('/api/v1/auth/verify-registration-otp/', {
+            'registration_token': token, 'otp': otp,
+        }, format='json')
+        self.assertEqual(verify.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.email_verified)

@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { CropModal } from '@/components/ui/CropModal';
 import { useToast } from '@/components/ui/Toast';
+import { InterestChips } from '@/components/profile/InterestChips';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { profilesApi } from '@/api';
@@ -212,6 +213,23 @@ export default function Profile() {
             <span className="text-lg">🔥</span>
             <span className="font-mono font-bold text-buddy-orange ml-1">{profile.streak_days}</span>
             <span className="text-sm text-buddy-text-secondary ml-1">day streak</span>
+          </div>
+        )}
+
+        {!isEditing && (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-buddy-text-secondary uppercase tracking-wider">Interests</p>
+              <button onClick={() => navigate('/profile/edit')} className="text-xs text-buddy-green hover:underline">Edit</button>
+            </div>
+            {profile.preferences && (profile.preferences.primary_goal?.length || profile.preferences.preferred_workouts?.length || profile.preferences.custom_interests) ? (
+              <InterestChips preferences={profile.preferences} showLocation city={profile.location_city} />
+            ) : (
+              <div className="rounded-xl border border-dashed border-buddy-surface-raised px-4 py-3 text-center">
+                <p className="text-xs text-buddy-text-secondary mb-1.5">Add your goals and workout styles so matching Buddies can find you.</p>
+                <Button size="sm" variant="outline" onClick={() => navigate('/profile/edit')}>Add interests</Button>
+              </div>
+            )}
           </div>
         )}
 

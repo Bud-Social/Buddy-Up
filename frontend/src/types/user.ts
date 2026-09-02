@@ -11,6 +11,7 @@ export interface User {
   phone_verified: boolean;
   is_adult: boolean;
   totp_enabled?: boolean;
+  has_password?: boolean;
   is_staff: boolean;
   created_at: string;
 }
@@ -34,6 +35,14 @@ export interface Profile {
   role: UserRole;
   verification_status: VerificationStatus;
   privacy_level: PrivacyLevel;
+  preferences?: {
+    primary_goal?: string[];
+    activity_level?: string;
+    preferred_workouts?: string[];
+    dietary_preference?: string;
+    preferred_time?: string;
+    custom_interests?: string;
+  };
   onboarding_completed?: boolean;
   terms_accepted_at?: string | null;
   marketing_consent?: boolean;

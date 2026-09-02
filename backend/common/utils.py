@@ -32,6 +32,9 @@ MAGIC_BYTES: dict[str, bytes] = {
     '.mp4': b'\x00\x00\x00\x18ftyp',
     '.mov': b'\x00\x00\x00\x14ftypqt',
     '.webm': b'\x1a\x45\xdf\xa3',
+    '.m4v': b'\x00\x00\x00\x18ftypM4V',
+    '.mpeg': b'\x00\x00\x01\xba',
+    '.mkv': b'\x1a\x45\xdf\xa3',
     '.mp3': b'\xff\xfb',
     '.ogg': b'OggS',
     '.m4a': b'\x00\x00\x00\x18ftypM4A',
@@ -47,10 +50,19 @@ def validate_file_signature(file_bytes: bytes, extension: str) -> bool:
         return True
     if extension in ('.mp3',):
         return file_bytes[:2] == expected or file_bytes[:3] == b'\x49\x44\x33'
+    if extension in ('.mp4', '.m4v', '.m4a', '.mov'):
+        # ISO-BMFF: the first box is `ftyp`, but its size prefix varies
+        # (0x18, 0x20, ...) — match the box TYPE at offset 4, not the size.
+        if file_bytes[4:8] == b'ftyp':
+            return True
+        # Some MOV files start with a skip/'wide' or 'moov' box instead.
+        return extension == '.mov' and file_bytes[4:8] in (b'moov', b'wide', b'free', b'skip')
     if extension == '.wav':
         return file_bytes[:4] == b'RIFF' and file_bytes[8:12] == b'WAVE'
     if extension == '.webp':
         return file_bytes[:4] == b'RIFF' and file_bytes[8:12] == b'WEBP'
+    if extension in ('.webm', '.mkv'):
+        return file_bytes[:4] == b'\x1a\x45\xdf\xa3'
     return file_bytes[:len(expected)] == expected
 
 

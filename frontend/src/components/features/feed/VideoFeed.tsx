@@ -5,6 +5,10 @@
  * Only the active video plays; everything else pauses. Starts muted,
  * loops, autoplays — engagement actions (like/repost/save/comment) are
  * wired through feedApi so behaviour matches PostCard.
+ *
+ * Multi-media / photo posts render as swipeable photo-mode carousel
+ * pages; single-video posts use post.media[0] (+ poster) when available.
+ * Cursor-paginates via `pagination.next`.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -14,7 +18,9 @@ import {
 import { Avatar } from '@/components/ui/Avatar';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { PostPhotoCarousel } from '@/components/features/feed/PostPhotoCarousel';
 import { feedApi } from '@/api';
+import { mediaPagesFromPost, postIsPhotoMode, firstVideoPage } from '@/lib/mediaPages';
 import type { Post } from '@/types';
 
 interface VideoFeedProps {
@@ -24,6 +30,7 @@ interface VideoFeedProps {
 export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [fetchError, setFetchError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -32,16 +39,58 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastItemRef = useRef<HTMLDivElement | null>(null);
+  const cursorRef = useRef<string | undefined>(undefined);
+  const hasMoreRef = useRef(true);
+  const loadingMoreLockRef = useRef(false);
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+
+  const loadPosts = useCallback(async (reset: boolean) => {
+    if (!reset) {
+      if (!hasMoreRef.current || loadingMoreLockRef.current) return;
+      loadingMoreLockRef.current = true;
+      setIsLoadingMore(true);
+    }
+    try {
+      const res = await feedApi.getVideoFeed(variant, reset ? undefined : cursorRef.current);
+      const list = res.data || [];
+      cursorRef.current = res.pagination?.next
+        ? new URLSearchParams(res.pagination.next.split('?')[1]).get('cursor') || undefined
+        : undefined;
+      hasMoreRef.current = !!res.pagination?.next;
+      setPosts((prev) => {
+        if (reset) return list;
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...list.filter((p) => !seen.has(p.id))];
+      });
+      setFetchError('');
+    } catch {
+      if (!reset) hasMoreRef.current = false;
+      setFetchError('Could not load videos. Check your connection.');
+    } finally {
+      loadingMoreLockRef.current = false;
+      if (reset) setIsLoading(false);
+      else setIsLoadingMore(false);
+    }
+  }, [variant]);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
     setPosts([]);
     setActiveIndex(0);
+    cursorRef.current = undefined;
+    hasMoreRef.current = true;
     setFetchError('');
     feedApi.getVideoFeed(variant)
-      .then((res) => { if (!cancelled) setPosts(res.data || []); })
+      .then((res) => {
+        if (cancelled) return;
+        setPosts(res.data || []);
+        cursorRef.current = res.pagination?.next
+          ? new URLSearchParams(res.pagination.next.split('?')[1]).get('cursor') || undefined
+          : undefined;
+        hasMoreRef.current = !!res.pagination?.next;
+      })
       .catch(() => { if (!cancelled) setFetchError('Could not load videos. Check your connection.'); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
@@ -66,6 +115,21 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
     const idx = Math.round(el.scrollTop / Math.max(el.clientHeight, 1));
     if (idx !== activeIndex && idx >= 0 && idx < posts.length) setActiveIndex(idx);
   }, [activeIndex, posts.length]);
+
+  // Infinite pagination: load the next cursor page when the last item shows.
+  useEffect(() => {
+    const el = lastItemRef.current;
+    const root = containerRef.current;
+    if (!el || !root || !hasMoreRef.current) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) void loadPosts(false);
+      },
+      { root, threshold: 0.5 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [posts.length, loadPosts]);
 
   const toggleLike = async (postId: string) => {
     const next = new Set(likedIds);
@@ -103,7 +167,7 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
     );
   }
 
-  if (fetchError) {
+  if (fetchError && posts.length === 0) {
     return <ErrorBanner message={fetchError} onRetry={() => setReloadKey((k) => k + 1)} />;
   }
 
@@ -126,16 +190,29 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
         className="h-[calc(100dvh-14rem)] md:h-[calc(100dvh-12rem)] overflow-y-scroll snap-y snap-mandatory rounded-2xl"
       >
         {posts.map((post, i) => {
-          const videoUrl = post.media_urls?.find(u => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u)) ?? post.media_urls?.[0];
+          const pages = mediaPagesFromPost(post);
+          const photoMode = postIsPhotoMode(pages);
+          const videoPage = firstVideoPage(pages);
+          const videoUrl = videoPage?.url
+            ?? post.media_urls?.find((u) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u))
+            ?? post.media_urls?.[0];
+          const posterUrl = videoPage?.poster_url ?? undefined;
           const liked = likedIds.has(post.id);
           const saved = savedIds.has(post.id);
           const isActive = i === activeIndex;
           return (
-            <div key={post.id} className="relative h-full w-full snap-start snap-always bg-black">
-              {videoUrl ? (
+            <div
+              key={post.id}
+              ref={i === posts.length - 1 ? lastItemRef : undefined}
+              className="relative h-full w-full snap-start snap-always bg-black"
+            >
+              {photoMode ? (
+                <PostPhotoCarousel post={post} className="absolute inset-0" />
+              ) : videoUrl ? (
                 <video
-                  ref={el => { videoRefs.current[i] = el; }}
+                  ref={(el) => { videoRefs.current[i] = el; }}
                   src={videoUrl}
+                  poster={posterUrl}
                   loop
                   playsInline
                   muted={isMuted}
@@ -172,23 +249,31 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
                     @{post.author_data?.username ?? 'unknown'}
                   </span>
                 </div>
-                {post.body && (
+                {!photoMode && post.body && (
                   <p className="text-white/90 text-xs line-clamp-2 drop-shadow">{post.body}</p>
                 )}
               </div>
 
-              {/* Mute toggle */}
-              <button
-                onClick={() => setIsMuted(m => !m)}
-                className="absolute right-3 top-3 p-2 rounded-full bg-black/50 text-white z-10"
-                title={isMuted ? 'Unmute' : 'Mute'}
-              >
-                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-              </button>
+              {/* Mute toggle (single-video posts only — photo-mode videos unmute on tap) */}
+              {!photoMode && (
+                <button
+                  onClick={() => setIsMuted((m) => !m)}
+                  className="absolute right-3 top-3 p-2 rounded-full bg-black/50 text-white z-10"
+                  title={isMuted ? 'Unmute' : 'Mute'}
+                >
+                  {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+              )}
             </div>
           );
         })}
       </div>
+
+      {isLoadingMore && (
+        <div className="flex justify-center py-2">
+          <Loader2 size={18} className="animate-spin text-buddy-green" />
+        </div>
+      )}
 
       {commentPostId && (
         <CommentSheet

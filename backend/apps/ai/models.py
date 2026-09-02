@@ -27,6 +27,7 @@ class AIPredictionJob(TimestampedModel):
         ('summarization', 'Text Summarization'),
         ('text_to_speech', 'Text To Speech'),
         ('visual_search_embedding', 'Visual Search Embedding'),
+        ('transcription', 'Transcription'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)

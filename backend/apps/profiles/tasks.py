@@ -5,6 +5,7 @@ import requests
 from celery import shared_task
 from django.conf import settings
 from django.utils import timezone
+from apps.ai.client import ai_post
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ def generate_profile_embedding(self, profile_id: str):
     text = _build_profile_text(profile)
     ai_url = f'{settings.AI_SERVICE_URL}/api/v1/embeddings/text'
     try:
-        resp = requests.post(ai_url, params={'text': text}, timeout=15)
+        resp = ai_post(ai_url, params={'text': text}, timeout=15)
         resp.raise_for_status()
         data = resp.json()
         vector = data['vector']
@@ -84,7 +85,7 @@ def generate_profile_embedding(self, profile_id: str):
 
     store_url = f'{settings.AI_SERVICE_URL}/api/v1/embeddings/store'
     try:
-        resp = requests.post(store_url, params={'profile_id': profile_id}, json=vector, timeout=10)
+        resp = ai_post(store_url, params={'profile_id': profile_id}, json=vector, timeout=10)
         resp.raise_for_status()
     except requests.RequestException as e:
         logger.error('Failed to store embedding for profile %s: %s', profile_id, e)

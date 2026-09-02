@@ -1,6 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Dumbbell, GraduationCap, Stethoscope } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
@@ -8,40 +7,53 @@ import { getPasswordStrength } from '@/utils/passwordStrength';
 import { calculateAge } from '@/utils/ageCheck';
 import { authApi } from '@/api';
 import { useAuthStore } from '@/store/authStore';
-import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
+function GoogleSignUpButton({ onError }: { onError: (msg: string) => void }) {
+  const handleClick = () => {
+    if (!window.google?.accounts?.oauth2) {
+      onError('Google Sign-In is not available. Please try again later.');
+      return;
+    }
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID!,
+      scope: 'openid profile email',
+      callback: (response) => {
+        if (response.id_token) {
+          window.location.href = `/signup?google_token=${encodeURIComponent(response.id_token)}`;
+        } else if (response.access_token) {
+          window.location.href = `/signup?google_token=${encodeURIComponent(response.access_token)}`;
+        } else {
+          onError('Google sign-in failed: no ID token received.');
+        }
+      },
+      error_callback: () => onError('Google sign-in failed.'),
+    });
+    client.requestAccessToken();
+  };
+
+  return (
+    <button type="button" onClick={handleClick}
+      className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-buddy-surface-raised hover:bg-buddy-surface transition-colors text-sm font-medium text-buddy-text-primary"
+    >
+      <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Sign up with Google
+    </button>
+  );
+}
+
+/**
+ * Email/password sign-up. Profile details (username, display name, bio, goals)
+ * are collected by the shared /onboarding pipeline — the same one Google
+ * sign-ups use — so registration only gathers credentials and age.
+ */
 export default function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const logout = useAuthStore((s) => s.logout);
   const setTokens = useAuthStore((s) => s.setTokens);
-  const setUserStore = useAuthStore((s) => s.setUser);
-
-  // Social sign-up shares the login flow: the backend provisions or links
-  // the account, then the onboarding pipeline collects anything missing.
-  const handleGoogleSuccess = useCallback(async (credential: string) => {
-    setError('');
-    setIsLoading(true);
-    try {
-      const res = await authApi.googleLogin(credential);
-      const data = res.data as typeof res.data & { require_totp?: boolean; temp_token?: string; require_age_setup?: boolean; onboarding_required?: boolean };
-      if (data.require_totp && data.temp_token) {
-        navigate(`/login?totp=${encodeURIComponent(data.temp_token)}`);
-        return;
-      }
-      setTokens(res.data.access, res.data.refresh);
-      setUserStore(res.data.user, res.data.profile);
-      if (data.require_age_setup || data.onboarding_required) {
-        navigate(data.require_age_setup ? '/onboarding?step=age' : '/onboarding');
-      } else {
-        navigate('/feed');
-      }
-    } catch (err: unknown) {
-      setError('Google sign-up failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [navigate, setTokens, setUserStore]);
+  const setUser = useAuthStore((s) => s.setUser);
 
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
@@ -51,50 +63,79 @@ export default function Register() {
   const [dobDay, setDobDay] = useState('');
   const [dobMonth, setDobMonth] = useState('');
   const [dobYear, setDobYear] = useState('');
-  const [username, setUsername] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [role, setRole] = useState<string>('user');
   const [age, setAge] = useState<number | null>(null);
   const [guardianName, setGuardianName] = useState('');
   const [guardianEmail, setGuardianEmail] = useState('');
   const [guardianPhone, setGuardianPhone] = useState('');
+  const [guardianError, setGuardianError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [ageError, setAgeError] = useState('');
 
-  const requiresParentalCoowner = useMemo(() => age !== null && age >= 16 && age < 18, [age]);
+  // Drop any stale session (e.g. a half-onboarded social account) so the
+  // register request goes out anonymous and cannot hit consent gates —
+  // unless we're returning from Google OAuth with a credential to exchange.
+  useEffect(() => {
+    const googleToken = searchParams.get('google_token');
+    if (!googleToken) {
+      logout();
+      return;
+    }
+    // Complete Google sign-up: exchange the OAuth credential for a session.
+    logout();
+    authApi.googleLogin(googleToken)
+      .then((res) => {
+        const data = res.data as typeof res.data & { require_age_setup?: boolean; onboarding_required?: boolean };
+        setTokens(data.access, data.refresh);
+        setUser(data.user, data.profile);
+        if (data.require_age_setup) navigate('/onboarding?step=age');
+        else if (data.onboarding_required) navigate('/onboarding');
+        else navigate('/feed');
+      })
+      .catch((err: unknown) => {
+        const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+        setError(data?.message || 'Google sign-in failed. Please try again.');
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const pwStrength = useMemo(() => getPasswordStrength(password), [password]);
+  const requiresParentalCoowner = age !== null && age >= 16 && age < 18;
 
   const handleAgeCheck = (e: React.FormEvent) => {
     e.preventDefault();
     setAgeError('');
+    setGuardianError('');
     const d = parseInt(dobDay), m = parseInt(dobMonth), y = parseInt(dobYear);
     if (!d || !m || !y || d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > 2020) {
       setAgeError('Please enter a valid date of birth.');
       return;
     }
     const dob = new Date(y, m - 1, d);
-    const age = calculateAge(dob);
-    if (age < 16) {
+    const computed = calculateAge(dob);
+    if (computed < 16) {
       setAgeError('BuddyUp is for users aged 16 and over. You cannot create an account at this time.');
       return;
     }
-    setAge(age);
-    setStep(3);
+    if (computed < 18 && !guardianName && !guardianEmail && !guardianPhone) {
+      setAge(computed);
+      setGuardianError('Users aged 16–17 need a parent or guardian co-owner. Provide at least one contact detail below.');
+      return;
+    }
+    setAge(computed);
+    void handleSubmit(computed);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (computedAge: number) => {
     setError('');
     setIsLoading(true);
     try {
       const d = parseInt(dobDay), m = parseInt(dobMonth), y = parseInt(dobYear);
       const dob = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const res = await authApi.register({
-        email, password, dob, username, display_name: displayName || username, role,
+        email, password, dob,
         accepted_terms: acceptedTerms, accepted_privacy: true, accepted_guidelines: true, is_16_plus: true,
-        ...(requiresParentalCoowner && {
+        ...(computedAge < 18 && {
           guardian_name: guardianName,
           guardian_email: guardianEmail,
           guardian_phone: guardianPhone,
@@ -116,20 +157,30 @@ export default function Register() {
           Join <span className="text-buddy-green">BuddyUp</span>
         </h1>
         <p className="text-buddy-text-secondary text-center mb-6">
-          Step {step} of 3: {step === 1 ? 'Account Details' : step === 2 ? 'Age Verification' : 'Profile Setup'}
+          Step {step} of 2: {step === 1 ? 'Account Details' : 'Age Verification'}
         </p>
 
         <div className="flex gap-1 mb-6">
-          {[1, 2, 3].map((s) => (
+          {[1, 2].map((s) => (
             <div key={s} className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`} />
           ))}
         </div>
 
-        {error && <div className="bg-buddy-red/10 border border-buddy-red/30 text-buddy-red rounded-xl p-3 text-sm mb-4">{error}</div>}
+        {error && (
+          <div className="bg-buddy-red/10 border border-buddy-red/30 text-buddy-red rounded-xl p-3 text-sm mb-4">
+            {error}
+            {error.toLowerCase().includes('already exists') && (
+              <p className="mt-1.5 text-buddy-text-secondary">
+                Already have an account?{' '}
+                <Link to="/login" className="text-buddy-green font-semibold hover:underline">Log in instead</Link>
+              </p>
+            )}
+          </div>
+        )}
         {ageError && <div className="bg-buddy-red/10 border border-buddy-red/30 text-buddy-red rounded-xl p-3 text-sm mb-4">{ageError}</div>}
 
         <div className="space-y-3 mb-6">
-          {GOOGLE_CLIENT_ID && <GoogleAuthButton label="Sign up with Google" onSuccess={handleGoogleSuccess} onError={setError} />}
+          {GOOGLE_CLIENT_ID && <GoogleSignUpButton onError={setError} />}
           <div className="relative flex items-center gap-3">
             <div className="flex-1 border-t border-buddy-surface-raised" />
             <span className="text-xs text-buddy-text-secondary">or</span>
@@ -172,50 +223,21 @@ export default function Register() {
               <Input label="Year" type="number" value={dobYear} onChange={(e) => setDobYear(e.target.value)} placeholder="YYYY" required />
             </div>
             <p className="text-xs text-buddy-orange">BuddyUp is for users aged 16 and over. Underage accounts will be blocked.</p>
-            <div className="flex gap-3">
-              <Button variant="ghost" type="button" onClick={() => setStep(1)} className="flex-1">Back</Button>
-              <Button type="submit" className="flex-1" size="lg">Verify Age</Button>
-            </div>
-          </form>
-        )}
-
-        {step === 3 && (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input label="Username" value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} placeholder="fitness_fan" helperText="3–30 characters, letters, numbers, underscores" required minLength={3} maxLength={30} />
-            <Input label="Display Name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Your name or alias" required maxLength={50} />
             {requiresParentalCoowner && (
               <div className="space-y-3 rounded-xl border border-buddy-orange/30 bg-buddy-orange/5 p-4">
                 <div>
                   <p className="text-sm font-medium text-buddy-text-primary">Parental Co-Owner Required</p>
-                  <p className="text-xs text-buddy-text-secondary mt-0.5">You are 16–17, so BuddyUp requires a parent or guardian co-owner to supervise your account. Provide at least one contact detail below.</p>
+                  <p className="text-xs text-buddy-text-secondary mt-0.5">You are 16–17, so BuddyUp requires a parent or guardian co-owner to supervise your account. Provide at least one contact detail.</p>
                 </div>
                 <Input label="Guardian Name" value={guardianName} onChange={(e) => setGuardianName(e.target.value)} placeholder="Parent or guardian's name" maxLength={120} />
                 <Input label="Guardian Email" type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} placeholder="guardian@example.com" />
                 <Input label="Guardian Phone" value={guardianPhone} onChange={(e) => setGuardianPhone(e.target.value)} placeholder="+2547..." maxLength={20} />
-                {!guardianName && !guardianEmail && !guardianPhone && (
-                  <p className="text-xs text-buddy-orange">At least one guardian detail is required to continue.</p>
-                )}
+                {guardianError && <p className="text-xs text-buddy-orange">{guardianError}</p>}
               </div>
             )}
-            <div>
-              <label className="block text-sm font-medium text-buddy-text-secondary mb-1.5">I am a...</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: 'user', label: 'Regular User', icon: Dumbbell },
-                  { value: 'trainer', label: 'Trainer', icon: GraduationCap },
-                  { value: 'practitioner', label: 'Health Pro', icon: Stethoscope },
-                ].map(({ value, label, icon: Icon }) => (
-                  <button key={value} type="button" onClick={() => setRole(value)} className={`p-3 rounded-xl border-2 text-center text-sm transition-colors ${role === value ? 'border-buddy-green bg-buddy-green/10' : 'border-buddy-surface-raised hover:border-buddy-text-secondary/30'}`}>
-                    <div className="mb-1 flex justify-center"><Icon size={20} className={role === value ? 'text-buddy-green' : 'text-buddy-text-secondary'} /></div>
-                    <div className="font-medium text-xs">{label}</div>
-                  </button>
-                ))}
-              </div>
-              {role !== 'user' && <p className="mt-2 text-xs text-buddy-orange">Trainer & Practitioner accounts require verification. You'll start as a Regular User.</p>}
-            </div>
             <div className="flex gap-3">
-              <Button variant="ghost" type="button" onClick={() => setStep(2)} className="flex-1">Back</Button>
-              <Button type="submit" isLoading={isLoading} disabled={!username || !displayName || (requiresParentalCoowner && !guardianName && !guardianEmail && !guardianPhone)} className="flex-1" size="lg">Create Account</Button>
+              <Button variant="ghost" type="button" onClick={() => setStep(1)} className="flex-1">Back</Button>
+              <Button type="submit" isLoading={isLoading} className="flex-1" size="lg">Create Account</Button>
             </div>
           </form>
         )}

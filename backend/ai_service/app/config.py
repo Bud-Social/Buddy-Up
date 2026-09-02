@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # Max characters accepted for the on-device summarizer (T5 context limit).
     summarizer_max_chars: int = 4000
 
+    # Speech-to-text (faster-whisper) for Bud Press video captions.
+    whisper_model: str = 'base'
+    whisper_compute: str = 'int8'  # CPU default; float16 is used on CUDA.
+    transcribe_max_duration_sec: int = 240
+
     # Idle-TTL (seconds) before heavy HF models are unloaded to free RAM.
     model_idle_ttl: int = 900
 

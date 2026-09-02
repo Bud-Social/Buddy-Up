@@ -10,8 +10,11 @@ class RegisterSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=8)
     dob = serializers.DateField()
-    username = serializers.CharField(min_length=3, max_length=30)
-    display_name = serializers.CharField(min_length=1, max_length=50)
+    # Optional: the new onboarding pipeline collects the real username/display
+    # name. When omitted, the view derives collision-safe values from the
+    # email (same strategy as social sign-up).
+    username = serializers.CharField(min_length=3, max_length=30, required=False, allow_blank=True)
+    display_name = serializers.CharField(min_length=1, max_length=50, required=False, allow_blank=True)
     role = serializers.ChoiceField(choices=Profile.ROLE_CHOICES, default='user')
     accepted_terms = serializers.BooleanField()
     accepted_privacy = serializers.BooleanField()
@@ -100,6 +103,27 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 class ChangePasswordSerializer(serializers.Serializer):
     current_password = serializers.CharField(write_only=True)
     new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    """For social sign-ups that have no password yet.
+
+    When the account already has a usable password the current one is
+    required — this endpoint never becomes a password-change bypass.
+    """
+    current_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    new_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        if user.has_usable_password() and not attrs.get('current_password'):
+            raise serializers.ValidationError(
+                {'current_password': 'Your account already has a password — enter it to set a new one.'})
+        return attrs
 
     def validate_new_password(self, value):
         validate_password(value)

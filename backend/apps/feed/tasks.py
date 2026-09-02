@@ -5,11 +5,12 @@ import requests
 import redis
 from celery import shared_task
 from django.conf import settings
-from django.db.models import Count, OuterRef, Subquery
+from django.db.models import Count, IntegerField, OuterRef, Subquery
 from django.utils import timezone
 from datetime import timedelta
 
 from apps.ai.audit import audit_ai_call
+from apps.ai.client import ai_get, ai_post
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ def generate_feed_cache():
         moderation_status='clean',
         visibility='public',
     ).annotate(
-        reaction_score=Subquery(reaction_count, output_field=Count('pk')),
+        reaction_score=Subquery(reaction_count, output_field=IntegerField()),
     ).only('pk', 'created_at', 'is_repost')
 
     client = redis.Redis.from_url(settings.REDIS_URL)
@@ -85,7 +86,7 @@ def moderate_content(self, post_id: str):
     # Text moderation — persist positive results so the UI can surface them.
     if post.body and post.body.strip():
         try:
-            ai_resp = requests.post(
+            ai_resp = ai_post(
                 f'{settings.AI_SERVICE_URL}/api/v1/moderation/text',
                 data={'text': post.body},
                 timeout=20,
@@ -130,11 +131,11 @@ def moderate_content(self, post_id: str):
     image_results = []
     for url in post.media_urls or []:
         try:
-            resp = requests.get(url, timeout=10)
+            resp = ai_get(url, timeout=10)
             if resp.status_code != 200 or not resp.headers.get('content-type', '').startswith('image/'):
                 continue
 
-            ai_resp = requests.post(
+            ai_resp = ai_post(
                 f'{settings.AI_SERVICE_URL}/api/v1/moderation/image',
                 files={'file': ('image.jpg', resp.content, resp.headers['content-type'])},
                 timeout=30,

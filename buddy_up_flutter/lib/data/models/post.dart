@@ -10,6 +10,83 @@ Map<String, dynamic>? _readAiAnalysis(Map<dynamic, dynamic> json, String? key) {
   return null;
 }
 
+bool _readCommentsDisabled(Map<dynamic, dynamic> json, String key) {
+  final value = json['comments_disabled'] ?? json['commentsDisabled'];
+  return value == true || value == 'true' || value == 1 || value == '1';
+}
+
+/// Normalises backend keys so generated parsers can stay camelCase while the
+/// API contract uses snake_case (`media_type`, `poster_url`, `duration_ms`…).
+Map<String, dynamic> _normalizeMediaJson(Map<dynamic, dynamic> json) {
+  final map = Map<String, dynamic>.from(json);
+  const aliases = <String, String>{
+    'media_type': 'mediaType',
+    'poster_url': 'posterUrl',
+    'duration_ms': 'durationMs',
+    'trim_start_ms': 'trimStartMs',
+    'trim_end_ms': 'trimEndMs',
+    'sound_id': 'soundId',
+    'sound_volume': 'soundVolume',
+    'alt_text': 'altText',
+    'start_ms': 'startMs',
+    'end_ms': 'endMs',
+  };
+  for (final entry in aliases.entries) {
+    if (map.containsKey(entry.key) && !map.containsKey(entry.value)) {
+      map[entry.value] = map[entry.key];
+    }
+  }
+  return map;
+}
+
+@freezed
+abstract class CaptionSegment with _$CaptionSegment {
+  const factory CaptionSegment({
+    @Default(0) int startMs,
+    @Default(0) int endMs,
+    @Default('') String text,
+  }) = _CaptionSegment;
+
+  factory CaptionSegment.fromJson(Map<String, dynamic> json) =>
+      _$CaptionSegmentFromJson(_normalizeMediaJson(json));
+}
+
+@freezed
+abstract class PostMedia with _$PostMedia {
+  const factory PostMedia({
+    required String url,
+    @Default('image') String mediaType,
+    int? width,
+    int? height,
+    int? durationMs,
+    String? posterUrl,
+    int? trimStartMs,
+    int? trimEndMs,
+    String? soundId,
+    double? soundVolume,
+    String? altText,
+    @Default(<CaptionSegment>[]) List<CaptionSegment> captions,
+  }) = _PostMedia;
+
+  factory PostMedia.fromJson(Map<String, dynamic> json) =>
+      _$PostMediaFromJson(_withNormalizedCaptions(_normalizeMediaJson(json)));
+}
+
+Map<String, dynamic> _withNormalizedCaptions(Map<String, dynamic> map) {
+  final captions = map['captions'];
+  if (captions is List) {
+    map['captions'] = captions
+        .whereType<Map>()
+        .map((c) => _normalizeMediaJson(c))
+        .toList();
+  }
+  return map;
+}
+
+extension PostMediaX on PostMedia {
+  bool get isVideo => mediaType == 'video';
+}
+
 @freezed
 abstract class AuthorData with _$AuthorData {
   const factory AuthorData({
@@ -75,6 +152,7 @@ abstract class OriginalPostData with _$OriginalPostData {
     required AuthorData authorData,
     required String body,
     @Default(<String>[]) List<String> mediaUrls,
+    @Default(<PostMedia>[]) List<PostMedia> media,
     @Default('text') String postType,
     String? locationLabel,
     Map<String, dynamic>? workoutLogData,
@@ -99,6 +177,9 @@ abstract class Post with _$Post {
     @Default('') String body,
     @Default(false) bool isAnonymous,
     @Default(<String>[]) List<String> mediaUrls,
+    @Default(<PostMedia>[]) List<PostMedia> media,
+    @JsonKey(readValue: _readCommentsDisabled)
+    @Default(false) bool commentsDisabled,
     @Default(<String>[]) List<String> tags,
     Map<String, dynamic>? workoutLogData,
     Map<String, dynamic>? mealData,

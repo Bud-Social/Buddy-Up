@@ -1,8 +1,9 @@
 import os
-import requests
 from uuid import uuid4
 from django.conf import settings
 from django.core.cache import cache
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
 from django.utils import timezone
@@ -45,6 +46,7 @@ from .serializers import (
 from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator_artifacts, platform_cut
 from apps.wallet.models import ArtifactTransaction
 from apps.wallet.serializers import PLATFORM_CUTS, ARTIFACT_VALUES
+from apps.ai.client import ai_post
 
 
 def _resolve_creator_shop(profile, shop_id=None):
@@ -423,32 +425,18 @@ class ShopVerificationApplicationView(views.APIView):
 
         # Handle document uploads
         if 'id_document' in request.FILES:
-            try:
-                import cloudinary.uploader
-                result = cloudinary.uploader.upload(request.FILES['id_document'], folder='certs/id_docs', resource_type='raw')
-                app.id_document_url = result['secure_url']
-            except Exception:  # noqa: BLE001
-                from django.core.files.storage import default_storage
-                from django.core.files.base import ContentFile
-                f = request.FILES['id_document']
-                # Server-generated storage name — never persist the client's
-                # (potentially revealing or path-crafting) filename.
-                ext = os.path.splitext(f.name)[1].lower()[:10] or '.pdf'
-                p = default_storage.save(f'certs/id_docs/{uuid4().hex}{ext}', ContentFile(f.read()))
-                app.id_document_url = request.build_absolute_uri(f'{settings.MEDIA_URL}{p}')
+            f = request.FILES['id_document']
+            # Server-generated storage name — never persist the client's
+            # (potentially revealing or path-crafting) filename.
+            ext = os.path.splitext(f.name)[1].lower()[:10] or '.pdf'
+            p = default_storage.save(f'certs/id_docs/{uuid4().hex}{ext}', ContentFile(f.read()))
+            app.id_document_url = request.build_absolute_uri(f'{settings.MEDIA_URL}{p}')
 
         if 'professional_cert' in request.FILES:
-            try:
-                import cloudinary.uploader
-                result = cloudinary.uploader.upload(request.FILES['professional_cert'], folder='certs/prof_certs', resource_type='raw')
-                app.professional_cert_url = result['secure_url']
-            except Exception:  # noqa: BLE001
-                from django.core.files.storage import default_storage
-                from django.core.files.base import ContentFile
-                f = request.FILES['professional_cert']
-                ext = os.path.splitext(f.name)[1].lower()[:10] or '.pdf'
-                p = default_storage.save(f'certs/prof_certs/{uuid4().hex}{ext}', ContentFile(f.read()))
-                app.professional_cert_url = request.build_absolute_uri(f'{settings.MEDIA_URL}{p}')
+            f = request.FILES['professional_cert']
+            ext = os.path.splitext(f.name)[1].lower()[:10] or '.pdf'
+            p = default_storage.save(f'certs/prof_certs/{uuid4().hex}{ext}', ContentFile(f.read()))
+            app.professional_cert_url = request.build_absolute_uri(f'{settings.MEDIA_URL}{p}')
 
         # If submission requested, move from draft → submitted
         if request.data.get('submit') == 'true':
@@ -1569,7 +1557,7 @@ class FoodRecognizeView(views.APIView):
 
         ai_url = f'{settings.AI_SERVICE_URL}/api/v1/food/recognize'
         try:
-            resp = requests.post(
+            resp = ai_post(
                 ai_url, files={'file': (file.name, file.read(), file.content_type)},
                 timeout=30,
             )

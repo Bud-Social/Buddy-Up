@@ -9,6 +9,7 @@ import logging
 import threading
 
 from django.conf import settings
+from apps.ai.client import ai_post
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +65,7 @@ def rank_candidates(user_id: str, candidates: list[dict]) -> list[dict] | None:
         return candidates
 
     try:
-        import requests
-        resp = requests.post(
+        resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/feed/rank',
             json={'user_id': user_id, 'candidates': candidates, 'bandit': True},
             timeout=AI_RANK_TIMEOUT,
@@ -172,8 +172,7 @@ def send_feedback(user_id: str, post, reward: float, extra: dict | None = None):
 
     def _call():
         try:
-            import requests
-            requests.post(
+            ai_post(
                 f'{settings.AI_SERVICE_URL}/api/v1/feed/feedback',
                 json={
                     'user_id': user_id,

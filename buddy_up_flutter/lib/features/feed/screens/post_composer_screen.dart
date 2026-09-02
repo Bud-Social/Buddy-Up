@@ -9,13 +9,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/upload/cloudinary_uploader.dart';
 import '../../../core/utils/constants.dart';
 import '../../../data/models/post.dart';
 import '../../community/providers/community_provider.dart';
 import '../../marketplace/providers/marketplace_provider.dart';
 import '../providers/feed_provider.dart';
 import 'location_picker_screen.dart';
+import 'video_studio_screen.dart';
 
 const List<({String key, String label})> _mealTypes = [
   (key: 'breakfast', label: 'Breakfast'),
@@ -38,12 +41,44 @@ class ComposerMedia {
   final String type; // image | video | file | document
   final Uint8List? bytes;
 
+  // Video studio results (trim + sound), persisted into the media JSON.
+  final int trimStartMs;
+  final int trimEndMs;
+  final String? soundId;
+  final double? soundVolume;
+
   const ComposerMedia({
     this.path = '',
     required this.name,
     required this.type,
     this.bytes,
+    this.trimStartMs = 0,
+    this.trimEndMs = 0,
+    this.soundId,
+    this.soundVolume,
   });
+
+  ComposerMedia copyWith({
+    String? path,
+    String? name,
+    String? type,
+    Uint8List? bytes,
+    int? trimStartMs,
+    int? trimEndMs,
+    String? soundId,
+    double? soundVolume,
+  }) {
+    return ComposerMedia(
+      path: path ?? this.path,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      bytes: bytes ?? this.bytes,
+      trimStartMs: trimStartMs ?? this.trimStartMs,
+      trimEndMs: trimEndMs ?? this.trimEndMs,
+      soundId: soundId ?? this.soundId,
+      soundVolume: soundVolume ?? this.soundVolume,
+    );
+  }
 }
 
 class PostComposerScreen extends ConsumerStatefulWidget {
@@ -93,6 +128,13 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   String _mediaKind = 'image';
   final List<ComposerMedia> _media = [];
 
+  // Direct-upload state (Cloudinary) — per-item progress for the UI.
+  final Map<int, double> _uploadProgress = {};
+  String _uploadStatus = '';
+
+  // Studio audience result.
+  bool _commentsEnabled = true;
+
   // Meal
   String _mealType = 'breakfast';
   final List<ComposerMedia> _mealPhotos = [];
@@ -105,6 +147,9 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   final List<ComposerMedia> _afterPhotos = [];
 
   bool _isSubmitting = false;
+  // TikTok-style publish stages: Finalizing → Uploading (overall %) → Creating.
+  String _publishStage = '';
+  double _overallProgress = 0;
 
   String? _serverDraftId;
   Timer? _draftDebounce;
@@ -157,7 +202,31 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         return;
       }
       _serverDraftId = latest.id;
+      // Restore studio media whose local files still exist.
+      final restoredMedia = <ComposerMedia>[];
+      for (final entry in latest.mediaUrls) {
+        if (!entry.trim().startsWith('{')) continue;
+        try {
+          final decoded = jsonDecode(entry) as Map<String, dynamic>;
+          final list = decoded['buddyup_media'] as List? ?? [];
+          for (final raw in list) {
+            final map = raw as Map<String, dynamic>;
+            final path = (map['path'] ?? '') as String;
+            if (path.isEmpty || !File(path).existsSync()) continue;
+            restoredMedia.add(ComposerMedia(
+              path: path,
+              name: (map['name'] ?? '') as String,
+              type: (map['type'] ?? 'image') as String,
+              trimStartMs: (map['trim_start_ms'] ?? 0) as int,
+              trimEndMs: (map['trim_end_ms'] ?? 0) as int,
+              soundId: map['sound_id'] as String?,
+              soundVolume: (map['sound_volume'] as num?)?.toDouble(),
+            ));
+          }
+        } catch (_) {}
+      }
       setState(() {
+        if (restoredMedia.isNotEmpty) _media.addAll(restoredMedia);
         _postType = latest.postType;
         _bodyController.text = latest.body;
         _visibility = latest.visibility;
@@ -207,6 +276,25 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           pollAllowMultiple: _pollAllowMultiple,
           pollMinSelections: _pollMinSelections,
           pollMaxSelections: _pollMaxSelections,
+          // Persist studio media (paths + trim/sound metadata) as a JSON
+          // entry inside mediaUrls so the draft survives app restarts.
+          mediaUrls: _media.isEmpty
+              ? const <String>[]
+              : <String>[
+                  jsonEncode({
+                    'buddyup_media': _media
+                        .map((m) => {
+                              'path': m.path,
+                              'name': m.name,
+                              'type': m.type,
+                              'trim_start_ms': m.trimStartMs,
+                              'trim_end_ms': m.trimEndMs,
+                              'sound_id': m.soundId,
+                              'sound_volume': m.soundVolume,
+                            })
+                        .toList(),
+                  }),
+                ],
         ));
         final savedId = (res['data'] as Map<String, dynamic>?)?['id'] as String?;
         if (savedId != null) _serverDraftId = savedId;
@@ -265,7 +353,28 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       case 'video':
         final file = await _picker.pickVideo(source: ImageSource.gallery);
         if (file != null) {
-          setState(() => _media.add(ComposerMedia(path: file.path, name: file.name, type: 'video')));
+          final item = ComposerMedia(path: file.path, name: file.name, type: 'video');
+          if (!mounted) return;
+          // Route through the studio for trim → sound → audience steps.
+          final result = await Navigator.of(context).push<VideoStudioResult>(
+            MaterialPageRoute(
+              builder: (_) => VideoStudioScreen(
+                video: item,
+                initialVisibility: _visibility,
+              ),
+            ),
+          );
+          if (!mounted || result == null) return;
+          setState(() {
+            _media.add(item.copyWith(
+              trimStartMs: result.trimStartMs,
+              trimEndMs: result.trimEndMs,
+              soundId: result.soundId,
+              soundVolume: result.soundVolume,
+            ));
+            _visibility = result.visibility;
+            _commentsEnabled = result.commentsEnabled;
+          });
         }
         break;
       case 'file':
@@ -434,6 +543,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       'visibility': _visibility,
       'content_rating': 'general',
     };
+    int publishedMediaCount = 0;
+    String? publishedSoundId;
     if (_gymTag != null) data['gym_tag'] = _gymTag;
     if (_locationLabel.isNotEmpty) {
       data['location_label'] = _locationLabel;
@@ -474,7 +585,25 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       data['media'] = [..._beforePhotos, ..._afterPhotos].map(_fileToMultipart).toList();
     } else {
       // text / photo / video
-      data['media'] = _media.map(_fileToMultipart).toList();
+      final uploadable =
+          _media.isNotEmpty && !_media.any((m) => m.type == 'file' || m.type == 'document');
+      data['comments_disabled'] = '$_commentsEnabled';
+      var mediaJson = const <Map<String, dynamic>>[];
+      if (uploadable) {
+        mediaJson = await _uploadMediaViaCloudinary();
+        if (!mounted) return;
+      }
+      if (mediaJson.isNotEmpty) {
+        // Direct Cloudinary upload succeeded — submit the media JSON.
+        data['media'] = jsonEncode(mediaJson);
+        publishedMediaCount = mediaJson.length;
+        publishedSoundId = _media
+            .map((m) => m.soundId)
+            .firstWhere((s) => s != null, orElse: () => null);
+      } else {
+        // Legacy multipart fallback (sign unavailable / upload failed).
+        data['media'] = _media.map(_fileToMultipart).toList();
+      }
     }
 
     try {
@@ -493,6 +622,17 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       final raw = await repo.createPost(data);
       final post = Post.fromJson(raw['data'] as Map<String, dynamic>);
       ref.read(feedProvider.notifier).addPostToTop(post);
+      AnalyticsService.instance.track(
+        'create.published',
+        surface: 'composer_studio',
+        objectType: 'post',
+        objectId: post.id,
+        properties: {
+          'post_type': _postType,
+          'media_count': publishedMediaCount,
+          'sound_id': ?publishedSoundId,
+        },
+      );
       widget.onPostCreated?.call();
       if (_serverDraftId != null) {
         try { await repo.deleteDraft(_serverDraftId!); } catch (_) {}
@@ -509,6 +649,117 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   }
 
   num? _numOrNull(String s) => num.tryParse(s.trim());
+
+  /// TikTok-style publish pipeline:
+  /// 1. *Finalizing* — video compression runs once here, before any upload.
+  /// 2. *Uploading* — signed Cloudinary uploads with a byte-weighted overall
+  ///    percentage across all items.
+  /// Returns the media JSON entries, or an empty list when signing is
+  /// unavailable (503) or anything fails — callers fall back to multipart.
+  Future<List<Map<String, dynamic>>> _uploadMediaViaCloudinary() async {
+    final uploader = CloudinaryUploader(ref.read(apiClientProvider).dio);
+    final uploaded = <Map<String, dynamic>>[];
+    try {
+      // ── Stage 1: Finalizing (compression, before any upload) ─────────────
+      if (mounted) {
+        setState(() {
+          _publishStage = 'finalizing';
+          _uploadStatus = 'Finalizing your edits…';
+        });
+      }
+      final prepared = <({ComposerMedia m, File file, int? width, int? height})>[];
+      var totalBytes = 0;
+      for (final m in _media) {
+        final isVideo = m.type == 'video';
+        var file = File(m.path);
+        int? width;
+        int? height;
+        if (isVideo) {
+          final prep = await uploader.prepareVideo(file);
+          file = prep.file;
+          width = prep.width;
+          height = prep.height;
+        }
+        if (file.existsSync()) totalBytes += file.lengthSync();
+        prepared.add((m: m, file: file, width: width, height: height));
+      }
+
+      // ── Stage 2: Uploading (byte-weighted overall percentage) ────────────
+      if (mounted) {
+        setState(() {
+          _publishStage = 'uploading';
+          _overallProgress = 0;
+        });
+      }
+      var sentBefore = 0;
+      for (var i = 0; i < prepared.length; i++) {
+        final (:m, :file, width: finalWidth, height: finalHeight) = prepared[i];
+      var width = finalWidth;
+      var height = finalHeight;
+        if (mounted) {
+          setState(() => _uploadStatus = 'Uploading ${m.name}… (${i + 1}/${prepared.length})');
+        }
+        final sign = await uploader.sign(
+          resourceType: m.type == 'video' ? 'video' : 'image',
+          filename: m.name,
+        );
+        if (sign == null) return const [];
+
+        final res = await uploader.upload(
+          file: file,
+          sign: sign,
+          onProgress: (sent, total) {
+            if (!mounted || total <= 0) return;
+            setState(() => _uploadProgress[i] = sent / total);
+            if (totalBytes > 0) {
+              setState(() =>
+                  _overallProgress = (sentBefore + sent).clamp(0, totalBytes) / totalBytes);
+            }
+          },
+        );
+        sentBefore += file.existsSync() ? file.lengthSync() : 0;
+        if (m.type == 'video') {
+          width = res.width ?? width;
+          height = res.height ?? height;
+        }
+
+        uploaded.add(<String, dynamic>{
+          'url': res.url,
+          'media_type': m.type == 'video' ? 'video' : 'image',
+          'width': ?width,
+          'height': ?height,
+          if (res.durationMs != null) 'duration_ms': res.durationMs,
+          'poster_url': ?res.posterUrl,
+          if (m.type == 'video' && m.trimStartMs > 0) 'trim_start_ms': m.trimStartMs,
+          if (m.type == 'video' && m.trimEndMs > 0) 'trim_end_ms': m.trimEndMs,
+          'sound_id': ?m.soundId,
+          'sound_volume': ?m.soundVolume,
+        });
+        AnalyticsService.instance.track(
+          'upload.completed',
+          surface: 'composer_studio',
+          objectType: 'media',
+          objectId: m.name,
+          properties: {
+            'media_type': m.type == 'video' ? 'video' : 'image',
+            if (res.durationMs != null) 'duration_ms': res.durationMs,
+          },
+        );
+      }
+      return uploaded;
+    } catch (e) {
+      debugPrint('direct upload failed, falling back to multipart: $e');
+      return const [];
+    } finally {
+      if (mounted) {
+        setState(() {
+          _uploadStatus = '';
+          _publishStage = '';
+          _overallProgress = 0;
+        });
+      }
+    }
+  }
 
   void _snack(String message, {bool error = true}) {
     if (!mounted) return;
@@ -1034,18 +1285,79 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   }
 
   Widget _buildMediaGallery(List<ComposerMedia> items, void Function(int) onRemove) {
-    return SizedBox(
-      height: 120,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (_, i) => _buildSmallThumb(items[i], () => onRemove(i)),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 120,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (_, i) => _buildSmallThumb(
+              items[i],
+              () => onRemove(i),
+              progress: _uploadProgress[i],
+            ),
+          ),
+        ),
+        if (_uploadStatus.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          if (_publishStage == 'uploading') ...[
+            // Overall percentage across all items (byte-weighted).
+            Row(
+              children: [
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _overallProgress,
+                      minHeight: 5,
+                      backgroundColor: BuddyColors.surfaceRaised,
+                      color: BuddyColors.green,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '${(_overallProgress * 100).round()}%',
+                  style: const TextStyle(
+                    color: BuddyColors.green,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+          ],
+          Row(
+            children: [
+              const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _uploadStatus,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: BuddyColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _buildSmallThumb(ComposerMedia m, VoidCallback onRemove) {
+  Widget _buildSmallThumb(ComposerMedia m, VoidCallback onRemove, {double? progress}) {
     Widget preview;
     if (m.type == 'image') {
       preview = m.path.isNotEmpty
@@ -1070,6 +1382,25 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           borderRadius: BorderRadius.circular(10),
           child: SizedBox(width: 100, height: 100, child: preview),
         ),
+        if (progress != null)
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black38,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Text(
+                  '${(progress * 100).round()}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
         Positioned(
           top: -6,
           right: -6,

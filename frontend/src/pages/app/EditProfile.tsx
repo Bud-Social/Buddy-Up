@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, ArrowLeft, Save, Loader } from 'lucide-react';
+import { Camera, ArrowLeft, Save, Loader, AtSign, Sparkles } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -36,6 +36,71 @@ export default function EditProfile() {
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || '');
   const [coverUrl, setCoverUrl] = useState(profile?.cover_url || '');
   const [cropImage, setCropImage] = useState<string | null>(null);
+
+  // ── Username change (throttled server-side: 3/day) ──
+  const [username, setUsername] = useState(profile?.username || '');
+  const [usernameState, setUsernameState] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+  const [changingUsername, setChangingUsername] = useState(false);
+
+  useEffect(() => {
+    if (!username || username === (profile?.username || '')) { setUsernameState('idle'); return; }
+    if (!/^[a-z0-9_]{3,30}$/.test(username)) { setUsernameState('invalid'); return; }
+    setUsernameState('checking');
+    const t = setTimeout(() => {
+      profilesApi.checkUsername(username)
+        .then((res) => setUsernameState(res.data?.available ? 'available' : 'taken'))
+        .catch(() => setUsernameState('idle'));
+    }, 350);
+    return () => clearTimeout(t);
+  }, [username, profile?.username]);
+
+  const handleUsernameChange = async () => {
+    setChangingUsername(true);
+    try {
+      const res = await profilesApi.changeUsername(username);
+      setProfile(res.data);
+      toast('success', 'Username updated');
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      toast('error', data?.message || 'Could not change username. Daily limit is 3 changes.');
+    } finally {
+      setChangingUsername(false);
+    }
+  };
+
+  // ── Interests (buddy matching) ──
+  const GOALS = ['weight_loss', 'muscle_gain', 'endurance', 'flexibility', 'general_wellness', 'nutrition', 'sports_performance', 'rehabilitation', 'mental_health'];
+  const GOAL_LABELS: Record<string, string> = { weight_loss: 'Weight Loss', muscle_gain: 'Muscle Gain', endurance: 'Endurance', flexibility: 'Flexibility', general_wellness: 'General Wellness', nutrition: 'Nutrition', sports_performance: 'Sports Performance', rehabilitation: 'Rehabilitation', mental_health: 'Mental Health' };
+  const WORKOUTS = ['weights', 'cardio', 'hiit', 'yoga', 'pilates', 'crossfit', 'martial_arts', 'swimming', 'running', 'cycling', 'other'];
+  const WORKOUT_LABELS: Record<string, string> = { weights: 'Weights', cardio: 'Cardio', hiit: 'HIIT', yoga: 'Yoga', pilates: 'Pilates', crossfit: 'CrossFit', martial_arts: 'Martial Arts', swimming: 'Swimming', running: 'Running', cycling: 'Cycling', other: 'Other' };
+  const prefs = profile?.preferences || {};
+  const [goals, setGoals] = useState<string[]>(prefs.primary_goal || []);
+  const [workouts, setWorkouts] = useState<string[]>(prefs.preferred_workouts || []);
+  const [customInterest, setCustomInterest] = useState(prefs.custom_interests || '');
+  const [savingInterests, setSavingInterests] = useState(false);
+
+  const toggle = (item: string, list: string[], set: (v: string[]) => void) =>
+    set(list.includes(item) ? list.filter((i) => i !== item) : [...list, item]);
+
+  const handleSaveInterests = async () => {
+    setSavingInterests(true);
+    try {
+      await profilesApi.updateInterests({
+        primary_goal: goals,
+        preferred_workouts: workouts,
+        ...(customInterest.trim() && { custom_interests: customInterest.trim() }),
+        ...(prefs.activity_level ? { activity_level: prefs.activity_level } : {}),
+        ...(prefs.dietary_preference ? { dietary_preference: prefs.dietary_preference } : {}),
+        ...(prefs.preferred_time ? { preferred_time: prefs.preferred_time } : {}),
+      });
+      setProfile({ ...profile!, preferences: { ...prefs, primary_goal: goals, preferred_workouts: workouts, custom_interests: customInterest.trim() || undefined } });
+      toast('success', 'Interests updated');
+    } catch {
+      toast('error', 'Could not update interests');
+    } finally {
+      setSavingInterests(false);
+    }
+  };
 
   if (!profile) {
     navigate('/profile');
@@ -129,6 +194,62 @@ export default function EditProfile() {
             <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileSelected} />
           </div>
         </div>
+      </Card>
+
+      <Card className="p-4 mb-4 space-y-3">
+        <h2 className="font-heading font-semibold text-sm flex items-center gap-1.5"><AtSign size={14} /> Username</h2>
+        <div>
+          <Input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} maxLength={30} />
+          <p className={`text-xs mt-1 ${usernameState === 'available' ? 'text-buddy-green' : usernameState === 'taken' || usernameState === 'invalid' ? 'text-red-400' : 'text-buddy-text-secondary'}`}>
+            {username === (profile?.username || '') && 'Your current username'}
+            {username !== (profile?.username || '') && usernameState === 'available' && '✓ Username available'}
+            {usernameState === 'taken' && '✗ That username is already taken'}
+            {usernameState === 'invalid' && '3–30 characters — letters, numbers, underscores.'}
+            {usernameState === 'checking' && 'Checking availability…'}
+          </p>
+        </div>
+        <p className="text-xs text-buddy-text-secondary">Usernames can be changed up to 3 times per day to prevent impersonation and name-squatting.</p>
+        <Button size="sm" variant="outline"
+          disabled={username === (profile?.username || '') || usernameState !== 'available'}
+          isLoading={changingUsername}
+          onClick={handleUsernameChange}>
+          Update Username
+        </Button>
+      </Card>
+
+      <Card className="p-4 mb-4 space-y-4">
+        <h2 className="font-heading font-semibold text-sm flex items-center gap-1.5"><Sparkles size={14} /> Interests</h2>
+        <p className="text-xs text-buddy-text-secondary -mt-2">Helps Buddies with matching goals find you.</p>
+        <div>
+          <p className="text-xs text-buddy-text-secondary mb-2">Goals</p>
+          <div className="flex flex-wrap gap-2">
+            {GOALS.map((g) => (
+              <button key={g} type="button" onClick={() => toggle(g, goals, setGoals)}
+                className={`px-3 py-1.5 rounded-full text-xs transition-colors ${goals.includes(g) ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'}`}>
+                {GOAL_LABELS[g]}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs text-buddy-text-secondary mb-2">Workout types</p>
+          <div className="flex flex-wrap gap-2">
+            {WORKOUTS.map((w) => (
+              <button key={w} type="button" onClick={() => toggle(w, workouts, setWorkouts)}
+                className={`px-3 py-1.5 rounded-full text-xs transition-colors ${workouts.includes(w) ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'}`}>
+                {WORKOUT_LABELS[w]}
+              </button>
+            ))}
+          </div>
+        </div>
+        {workouts.includes('other') && (
+          <div>
+            <Input label="Other interests" value={customInterest} onChange={(e) => setCustomInterest(e.target.value)}
+              placeholder="e.g. climbing, dance, calisthenics…" maxLength={200} />
+            <p className="text-xs text-buddy-text-secondary mt-1">Separate multiple interests with commas.</p>
+          </div>
+        )}
+        <Button size="sm" variant="outline" onClick={handleSaveInterests} isLoading={savingInterests}>Save Interests</Button>
       </Card>
 
       <Card className="p-4 mb-4 space-y-4">

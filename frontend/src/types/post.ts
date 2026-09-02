@@ -31,6 +31,28 @@ export interface AuthorData {
   verification_status?: string;
 }
 
+/** Structured media item on a post (create studio uploads / Cloudinary). */
+export interface PostMedia {
+  url: string;
+  media_type: 'image' | 'video';
+  width?: number | null;
+  height?: number | null;
+  duration_ms?: number | null;
+  poster_url?: string | null;
+  trim_start_ms?: number | null;
+  trim_end_ms?: number | null;
+  sound_id?: string | null;
+  sound_volume?: number | null;
+  alt_text?: string | null;
+}
+
+/** Timed caption segment (seconds → ms) rendered as an overlay on video. */
+export interface PostCaption {
+  start_ms: number;
+  end_ms: number;
+  text: string;
+}
+
 export interface Post {
   id: string;
   author_data: AuthorData;
@@ -38,6 +60,12 @@ export interface Post {
   body: string;
   is_anonymous: boolean;
   media_urls: string[];
+  /** Structured media (create studio). Falls back to media_urls when absent. */
+  media?: PostMedia[] | null;
+  captions?: PostCaption[] | null;
+  captions_vtt?: string | null;
+  sound_id?: string | null;
+  comments_disabled?: boolean;
   tags: string[];
   workout_log_data: Record<string, unknown> | null;
   meal_data: Record<string, unknown> | null;
@@ -70,6 +98,8 @@ export interface Post {
     author_data: AuthorData;
     body: string;
     media_urls: string[];
+    media?: PostMedia[] | null;
+    captions?: PostCaption[] | null;
     created_at: string;
     post_type: string;
     location_label?: string;

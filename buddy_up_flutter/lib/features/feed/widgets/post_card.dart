@@ -4,6 +4,7 @@ import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/media_gallery.dart';
 import '../../../shared/widgets/reaction_bar.dart';
+import '../../../shared/widgets/toast.dart';
 import '../../../core/theme/app_theme.dart';
 import 'repost_indicator.dart';
 import 'poll_widget.dart';
@@ -60,9 +61,13 @@ class PostCard extends StatelessWidget {
             const SizedBox(height: 8),
             _buildBody(context),
           ],
-          if (post.mediaUrls.isNotEmpty) ...[
+          if (post.mediaUrls.isNotEmpty || post.media.isNotEmpty) ...[
             const SizedBox(height: 10),
-            MediaGallery(urls: post.mediaUrls),
+            MediaGallery(
+              urls: post.mediaUrls,
+              media: post.media.isEmpty ? null : post.media,
+              postId: post.id,
+            ),
           ],
           if (post.poll != null) ...[
             const SizedBox(height: 8),
@@ -197,7 +202,7 @@ class PostCard extends StatelessWidget {
         _ActionButton(
           icon: Icons.chat_bubble_outline,
           label: _formatCount(post.commentCount),
-          onTap: () => onComment?.call(post.id),
+          onTap: () => _handleCommentTap(context),
         ),
         _ActionButton(
           icon: Icons.repeat,
@@ -219,8 +224,15 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  Widget _buildWorkoutLog(BuildContext context) {
-    final data = post.workoutLogData!;
+  void _handleCommentTap(BuildContext context) {
+    if (post.commentsDisabled) {
+      showToast(context, 'Comments are turned off for this post');
+      return;
+    }
+    onComment?.call(post.id);
+  }
+
+  Widget _buildWorkoutLog(BuildContext context) {    final data = post.workoutLogData!;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(

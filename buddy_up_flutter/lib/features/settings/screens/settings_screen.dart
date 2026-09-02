@@ -36,6 +36,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final _confirmPwCtrl = TextEditingController();
   final _totpPasswordCtrl = TextEditingController();
   bool _isChangingPassword = false;
+  // Social sign-ups have no password yet — the current-password field hides
+  // and the endpoint accepts a new password without it.
+  bool? _hasPassword;
+  bool _passwordStatusLoaded = false;
   bool _isExporting = false;
   bool _isDeactivating = false;
   bool _isDeleting = false;
@@ -116,14 +120,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
     setState(() => _isChangingPassword = true);
     try {
+      final hasPassword = _hasPassword ?? true;
       final repo = ref.read(_settingsAuthRepoProvider);
-      await repo.changePassword(ChangePasswordPayload(
-        currentPassword: _currentPwCtrl.text,
-        newPassword: _newPwCtrl.text,
-      ));
+      if (hasPassword) {
+        await repo.changePassword(ChangePasswordPayload(
+          currentPassword: _currentPwCtrl.text,
+          newPassword: _newPwCtrl.text,
+        ));
+      } else {
+        await repo.setPassword(<String, dynamic>{'new_password': _newPwCtrl.text});
+      }
       if (mounted) {
+        setState(() {
+          _hasPassword = true;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password changed successfully')),
+          SnackBar(
+            content: Text(hasPassword ? 'Password changed successfully' : 'Password set successfully'),
+            backgroundColor: BuddyColors.green,
+          ),
         );
         _currentPwCtrl.clear();
         _newPwCtrl.clear();
@@ -414,6 +429,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final profile = ref.watch(authProvider).profile;
+    // Fetch password status once so social sign-ups get the Set Password flow.
+    if (!_passwordStatusLoaded) {
+      _passwordStatusLoaded = true;
+      (() async {
+        try {
+          final repo = ref.read(_settingsAuthRepoProvider);
+          final res = await repo.passwordStatus();
+          final data = (res is Map && res['data'] is Map) ? res['data'] as Map : {};
+          if (mounted) setState(() => _hasPassword = data['has_password'] == true);
+        } catch (_) {
+          if (mounted) setState(() => _hasPassword = true);
+        }
+      })();
+    }
     if (profile != null && _privacyLevel == 'public' && profile.privacyLevel == 'private') {
       _privacyLevel = profile.privacyLevel;
       _showActiveStatus = profile.showActiveStatus;
@@ -443,14 +472,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             const SizedBox(height: 32),
             const Text('Change Password', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            BuddyInput(label: 'Current Password', controller: _currentPwCtrl, obscureText: true),
-            const SizedBox(height: 12),
+            if (_hasPassword == false)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'You signed up with a social account — set a password to also log in with your email.',
+                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                ),
+              ),
+            if (_hasPassword != false)
+              BuddyInput(label: 'Current Password', controller: _currentPwCtrl, obscureText: true),
+            if (_hasPassword != false) const SizedBox(height: 12),
             BuddyInput(label: 'New Password', controller: _newPwCtrl, obscureText: true),
             const SizedBox(height: 12),
             BuddyInput(label: 'Confirm New Password', controller: _confirmPwCtrl, obscureText: true),
             const SizedBox(height: 12),
             BuddyButton(
-              label: 'Change Password',
+              label: (_hasPassword == false) ? 'Set Password' : 'Change Password',
               isLoading: _isChangingPassword,
               onPressed: _changePassword,
             ),

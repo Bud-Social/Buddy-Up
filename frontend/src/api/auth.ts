@@ -3,7 +3,7 @@ import type { ApiResponse, User, Profile } from '@/types';
 
 export interface RegisterPayload {
   email: string; phone?: string; password: string; dob: string;
-  username: string; display_name: string; role: string;
+  username?: string; display_name?: string; role?: string;
   accepted_terms: boolean; accepted_privacy: boolean; accepted_guidelines: boolean; is_16_plus: boolean;
   guardian_name?: string; guardian_email?: string; guardian_phone?: string;
 }
@@ -21,6 +21,7 @@ export interface OnboardingPayload {
   username?: string;
   location_city?: string;
   bio?: string;
+  new_password?: string;
 }
 
 export interface RegisterResponse {
@@ -111,6 +112,14 @@ export const authApi = {
 
   changePassword: (current_password: string, new_password: string) =>
     apiClient.post<ApiResponse<null>>('/auth/change-password/', { current_password, new_password }).then((r) => r.data),
+
+  passwordStatus: () =>
+    apiClient.get<ApiResponse<{ has_password: boolean }>>('/auth/set-password/').then((r) => r.data),
+  setPassword: (new_password: string, current_password?: string) =>
+    apiClient.post<ApiResponse<{ has_password: boolean }>>(
+      '/auth/set-password/',
+      current_password ? { new_password, current_password } : { new_password },
+    ).then((r) => r.data),
 
   deactivateAccount: () =>
     apiClient.post<ApiResponse<{ reactivatable_until: string }>>('/auth/deactivate/').then((r) => r.data),

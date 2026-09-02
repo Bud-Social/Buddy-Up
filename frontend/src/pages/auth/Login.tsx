@@ -39,9 +39,12 @@ export default function Login() {
       setMaskedEmail(res.data.masked_email);
       setStep('otp');
     } catch (err: unknown) {
-      const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string } } } })?.response?.data;
-      if (data?.message?.toLowerCase().includes('verify your email') && data?.data?.registration_token) {
-        navigate(`/verify-registration-otp?token=${encodeURIComponent(data.data.registration_token)}&email=${encodeURIComponent(data.data.email || email)}`);
+      const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string; require_email_verification?: boolean; otp_resent?: boolean } } } })?.response?.data;
+      if (data?.data?.require_email_verification && data?.data?.registration_token) {
+        // Send the user straight to OTP verification — the notice about the
+        // unverified account shows there, not here.
+        const fresh = data.data.otp_resent !== false;
+        navigate(`/verify-registration-otp?token=${encodeURIComponent(data.data.registration_token)}&email=${encodeURIComponent(data.data.email || email)}&reason=unverified${fresh ? '&fresh=1' : ''}`);
         return;
       }
       setError(data?.message || 'Invalid email or password.');
@@ -112,9 +115,10 @@ export default function Login() {
         navigate('/feed');
       }
     } catch (err: unknown) {
-      const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string } } } })?.response?.data;
-      if (data?.message?.toLowerCase().includes('verify your email') && data?.data?.registration_token) {
-        navigate(`/verify-registration-otp?token=${encodeURIComponent(data.data.registration_token)}&email=${encodeURIComponent(data.data.email || email)}`);
+      const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string; require_email_verification?: boolean; otp_resent?: boolean } } } })?.response?.data;
+      if (data?.data?.require_email_verification && data?.data?.registration_token) {
+        const fresh = data.data.otp_resent !== false;
+        navigate(`/verify-registration-otp?token=${encodeURIComponent(data.data.registration_token)}&email=${encodeURIComponent(data.data.email || email)}&reason=unverified${fresh ? '&fresh=1' : ''}`);
         return;
       }
       setError(data?.message || 'Google login failed. Please try again.');

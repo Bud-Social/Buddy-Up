@@ -32,6 +32,20 @@ export const profilesApi = {
   updateProfile: (data: Partial<Profile>) =>
     apiClient.patch<ApiResponse<Profile>>('/profiles/me/', data).then((r) => r.data),
 
+  checkUsername: (username: string) =>
+    apiClient.get<ApiResponse<{ available: boolean; reason: string | null }>>('/profiles/check-username/', { params: { username } }).then((r) => r.data),
+
+  changeUsername: (username: string) =>
+    apiClient.post<ApiResponse<Profile>>('/profiles/change-username/', { username }).then((r) => r.data),
+
+  updateInterests: (payload: {
+    primary_goal?: string[]; activity_level?: string; preferred_workouts?: string[];
+    dietary_preference?: string; preferred_time?: string; custom_interests?: string;
+  }) =>
+    apiClient.post<ApiResponse<Profile>>('/auth/onboarding/', {
+      terms_version: '2026-08-v1', ...payload,
+    }).then((r) => r.data),
+
   sendBuddyRequest: (username: string) =>
     apiClient.post<ApiResponse<{ status: string }>>(`/profiles/${username}/buddy/`).then((r) => r.data),
 

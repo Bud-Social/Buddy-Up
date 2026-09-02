@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { BuddyButton } from '@/components/features/profiles/BuddyButton';
 import { useToast } from '@/components/ui/Toast';
+import { InterestChips } from '@/components/profile/InterestChips';
 import { profilesApi, messagingApi } from '@/api';
 import { livesApi } from '@/api/lives';
 import ReplayPlayer from '@/components/live/ReplayPlayer';
@@ -178,7 +179,15 @@ export default function UserProfile() {
               📍 {profile.location_city}{profile.location_country && `, ${profile.location_country}`}
             </p>
           )}
-          <p className="text-xs text-buddy-text-secondary mt-1">Buddy since 2025</p>
+          <p className="text-xs text-buddy-text-secondary mt-1">Buddy since 2026</p>
+          {profile.preferences && (profile.preferences.primary_goal?.length || profile.preferences.preferred_workouts?.length || profile.preferences.custom_interests) && (
+            <div className="mt-3 px-4 w-full">
+              <p className="text-xs font-semibold text-buddy-text-secondary uppercase tracking-wider mb-1.5 text-left">Interests</p>
+              <div className="flex justify-center">
+                <InterestChips preferences={profile.preferences} />
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex gap-3 mb-4">

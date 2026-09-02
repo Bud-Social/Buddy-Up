@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+
     'django_filters',
     'drf_spectacular',
     'django_celery_beat',
@@ -59,6 +60,12 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# django-cors-headers: allow the custom headers the clients send. Without
+# 'idempotency-key' here, video/media uploads fail CORS preflight entirely.
+from corsheaders.defaults import default_headers  # noqa: E402
+
+CORS_ALLOW_HEADERS = [*default_headers, 'idempotency-key']
 
 ROOT_URLCONF = 'config.urls'
 
@@ -246,6 +253,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # DRF
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'common.authentication.SafeJWTAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
@@ -269,13 +277,18 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'registration': '10/h',
         'login': '30/h',
-        'otp': '3/h',
+        'otp': '10/h',
         'password_reset': '3/h',
         'upload_attachment': '20/h',
+        'uploads': '60/h',
         'link_preview': '30/h',
         'checkout': '10/h',
         'webauthn': '10/h',
         'analytics': '120/min',
+        'post_create': '30/h',
+        'sounds_write': '20/h',
+        'username_check': '30/min',
+        'username_change': '3/day',
     },
 }
 
@@ -395,6 +408,17 @@ KES_PER_USD = float(os.environ.get('KES_PER_USD', '129.5'))
 
 # AI microservice
 AI_SERVICE_URL = os.environ.get('AI_SERVICE_URL', 'http://ai-service:8003')
+# Enforced by the FastAPI dependency when set; Django callers attach it via
+# apps.ai.client.ai_service_headers().
+AI_API_KEY = os.environ.get('AI_API_KEY', '')
+
+# Apple Sign-In (fail-closed: without APPLE_CLIENT_ID the /auth/apple/
+# endpoint refuses any token — audience/issuer must always be verified).
+APPLE_CLIENT_ID = os.environ.get('APPLE_CLIENT_ID', '')
+APPLE_TEAM_ID = os.environ.get('APPLE_TEAM_ID', '')
+APPLE_KEY_ID = os.environ.get('APPLE_KEY_ID', '')
+APPLE_PRIVATE_KEY = os.environ.get('APPLE_PRIVATE_KEY', '')
+SOCIAL_AUTH_APPLE_CLIENT_ID = APPLE_CLIENT_ID  # legacy alias used by views
 
 # Minimum age
 BUDDYUP_MINIMUM_AGE = 16
@@ -405,7 +429,18 @@ BUDDYUP_MINIMUM_AGE = 16
 CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', '')
 CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY', '')
 CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET', '')
-CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '')  # Overrides individual vars if set
+CLOUDINARY_URL = os.environ.get('CLOUDINARY_URL', '')  # cloudinary://<key>:<secret>@<cloud>
+
+if CLOUDINARY_URL and not (CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY):
+    # Parse the single-variable credential form into the discrete vars so
+    # operators only need CLOUDINARY_URL set (dev compose and Railway both
+    # pass exactly this one variable).
+    from urllib.parse import urlparse
+    _parsed = urlparse(CLOUDINARY_URL)
+    if _parsed.scheme == 'cloudinary':
+        CLOUDINARY_API_KEY = CLOUDINARY_API_KEY or (_parsed.username or '')
+        CLOUDINARY_API_SECRET = CLOUDINARY_API_SECRET or (_parsed.password or '')
+        CLOUDINARY_CLOUD_NAME = CLOUDINARY_CLOUD_NAME or (_parsed.hostname or '')
 
 if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY:
     import cloudinary
@@ -427,6 +462,15 @@ if CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY:
     STORAGES['default'] = {'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage'}
 else:
     # Fall back to local Django media when no Cloudinary credentials are configured
+    # A dummy CLOUDINARY_STORAGE is still required: the cloudinary_storage app
+    # lazily reads these credentials on first storage access and would crash
+    # with a KeyError when the backend is unused-but-installed.
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
+        'API_KEY': CLOUDINARY_API_KEY,
+        'API_SECRET': CLOUDINARY_API_SECRET,
+        'SECURE': True,
+    }
     STORAGES['default'] = {'BACKEND': 'django.core.files.storage.FileSystemStorage'}
     # Local media must be addressed absolutely in deployed environments:
     # a relative '/media/…' URL resolves against whichever frontend origin

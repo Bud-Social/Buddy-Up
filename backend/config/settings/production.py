@@ -29,8 +29,6 @@ CORS_ALLOWED_ORIGINS = [
     'https://buddy-up-tan.vercel.app',
     'https://buddyup.app',
     'https://www.buddyup.app',
-    'http://localhost:3002',
-    'http://localhost:5173',
 ]
 # Env-supplied origins must never crash deploys (corsheaders.E013 turns a
 # single malformed entry into SystemCheckError → container unhealthy →

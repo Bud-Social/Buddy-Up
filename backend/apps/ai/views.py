@@ -1,3 +1,4 @@
+from apps.ai.client import ai_post
 from django.utils import timezone
 from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
@@ -104,17 +105,16 @@ class VisualSearchViewSet(viewsets.GenericViewSet):
             return Response({'detail': 'q is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         from django.conf import settings
-        import requests as http_requests
 
         try:
-            embed_resp = http_requests.post(
+            embed_resp = ai_post(
                 f'{settings.AI_SERVICE_URL}/api/v1/embeddings/clip-text',
                 params={'text': query},
                 timeout=30,
             )
             embed_resp.raise_for_status()
             vector = embed_resp.json()['vector']
-            search_resp = http_requests.post(
+            search_resp = ai_post(
                 f'{settings.AI_SERVICE_URL}/api/v1/embeddings/index/search',
                 json={'index_name': 'visual_search', 'query': vector, 'top_k': top_k},
                 timeout=30,

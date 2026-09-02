@@ -12,18 +12,22 @@ export default defineConfig({
       manifest: {
         name: 'BuddyUp',
         short_name: 'BuddyUp',
-        description: 'Health & fitness social platform',
+        description: 'Health & fitness social platform — train with buddies, join live workouts, eat better.',
         theme_color: '#0A0A0A',
         background_color: '#0A0A0A',
         display: 'standalone',
         start_url: '/',
         scope: '/',
         icons: [
-          { src: '/icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
-          { src: '/icons/icon-512.svg', sizes: '512x512', type: 'image/svg+xml' },
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
+        // Web-push handlers live here (loaded inside the generated SW).
+        // There must be exactly ONE service worker: the generated /sw.js.
+        importScripts: ['/service-worker-push.js'],
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         runtimeCaching: [
           {

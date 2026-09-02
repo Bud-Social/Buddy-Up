@@ -6,6 +6,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from apps.ai.audit import audit_ai_call
+from apps.ai.client import ai_post
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ def _send_push_to_device(platform: str, token: str, title: str, body: str, data:
                 'data': data,
                 'priority': 'high',
             }
-            resp = requests.post(
+            resp = ai_post(
                 'https://fcm.googleapis.com/fcm/send',
                 headers={'Authorization': f'key={fcm_key}', 'Content-Type': 'application/json'},
                 json=payload,
@@ -102,7 +103,7 @@ def personalise_meal_plan(self, purchase_id: str, profile_id: str):
     }
 
     try:
-        resp = requests.post(
+        resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/meal-plans/personalise',
             json=payload,
             timeout=30,

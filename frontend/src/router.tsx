@@ -54,6 +54,7 @@ const TotpChallenge = lazy(() => import('@/pages/auth/TotpChallenge'));
 
 const Feed = lazy(() => import('@/pages/app/Feed'));
 const FullScreenVideoFeed = lazy(() => import('@/pages/app/FullScreenVideoFeed'));
+const CreateStudio = lazy(() => import('@/pages/app/CreateStudio'));
 const Discover = lazy(() => import('@/pages/app/Discover'));
 const Lives = lazy(() => import('@/pages/app/Lives'));
 const Gyms = lazy(() => import('@/pages/app/Gyms'));
@@ -163,6 +164,7 @@ export const router = createBrowserRouter([
           { path: '/feed/meals', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/progress', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/communities', element: <SWrapper><Feed /></SWrapper> },
+          { path: '/create', element: <SWrapper><CreateStudio /></SWrapper> },
           { path: '/videos', element: <SWrapper><FullScreenVideoFeed /></SWrapper> },
           { path: '/discover', element: <SWrapper><Discover /></SWrapper> },
           { path: '/lives', element: <SWrapper><Lives /></SWrapper> },

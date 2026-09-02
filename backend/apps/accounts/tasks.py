@@ -59,6 +59,13 @@ def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
             fail_silently=False,
         )
         logger.info('OTP email sent user=%s purpose=%s', user.id, purpose)
+        # Developers running locally without a real mail backend must still
+        # be able to complete the flow — surface the code in the worker log.
+        if settings.DEBUG and 'console' in settings.EMAIL_BACKEND:
+            logger.warning(
+                'DEV OTP (console email backend) user=%s purpose=%s code=%s',
+                user.id, purpose, otp,
+            )
     except Exception as exc:  # noqa: BLE001 — retry transient SMTP/provider errors
         logger.exception('OTP email delivery failed user=%s purpose=%s', user.id, purpose)
         raise self.retry(exc=exc)
@@ -272,4 +279,26 @@ def export_user_data(user_id: str):
         ).values()),
     }
 
-    print(f'[DEV] Data export for {user.email}: {json.dumps(data, cls=DjangoJSONEncoder)[:500]}...')
+    try:
+        import json
+        from django.core.files.base import ContentFile
+        from django.core.files.storage import default_storage
+        from django.utils import timezone as tz
+
+        payload = json.dumps(data, cls=DjangoJSONEncoder, indent=2)
+        filename = f'exports/{profile.username}/{tz.now():%Y%m%d-%H%M%S}-data-export.json'
+        saved = default_storage.save(filename, ContentFile(payload.encode('utf-8')))
+        download_url = default_storage.url(saved)
+
+        from django.core.mail import send_mail
+        from django.conf import settings as dj_settings
+        send_mail(
+            'Your BuddyUp data export is ready',
+            f'Your data export is ready. Download it here (valid while your account is active):\n\n{download_url}\n\nIf the link does not work, request a new export from Settings.',
+            getattr(dj_settings, 'DEFAULT_FROM_EMAIL', None) or 'noreply@buddyup.app',
+            [user.email],
+            fail_silently=False,
+        )
+        logger.info('data_export_delivered user=%s file=%s', user.id, filename)
+    except Exception:  # noqa: BLE001
+        logger.exception('data_export_delivery_failed user=%s', user.id)

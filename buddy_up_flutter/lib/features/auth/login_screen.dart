@@ -76,7 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';
-        if (message.toLowerCase().contains('verify your email') && data['data'] is Map) {
+        if (data['data']?['require_email_verification'] == true && data['data'] is Map) {
           final inner = data['data'] as Map<String, dynamic>;
           final token = inner['registration_token'] as String?;
           final email = inner['email'] as String? ?? _emailController.text.trim();
@@ -86,6 +86,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 builder: (_) => VerifyRegistrationOtpScreen(
                   registrationToken: token,
                   email: email,
+                  unverifiedNotice: true,
                 ),
               ),
             );
@@ -158,14 +159,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';
-        if (message.toLowerCase().contains('verify your email') && data['data'] is Map) {
+        if (data['data']?['require_email_verification'] == true && data['data'] is Map) {
           final inner = data['data'] as Map<String, dynamic>;
           final token = inner['registration_token'] as String?;
           final email = inner['email'] as String? ?? '';
           if (token != null && mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => VerifyRegistrationOtpScreen(registrationToken: token, email: email),
+                builder: (_) => VerifyRegistrationOtpScreen(registrationToken: token, email: email, unverifiedNotice: true),
               ),
             );
             return;
@@ -201,14 +202,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';
-        if (message.toLowerCase().contains('verify your email') && data['data'] is Map) {
+        if (data['data']?['require_email_verification'] == true && data['data'] is Map) {
           final inner = data['data'] as Map<String, dynamic>;
           final token = inner['registration_token'] as String?;
           final email = inner['email'] as String? ?? '';
           if (token != null && mounted) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => VerifyRegistrationOtpScreen(registrationToken: token, email: email),
+                builder: (_) => VerifyRegistrationOtpScreen(registrationToken: token, email: email, unverifiedNotice: true),
               ),
             );
             return;

@@ -66,3 +66,11 @@ buddy_up_flutter/build/
 !buddy_up_flutter/lib/core/env/env.dart
 
 .gstack/
+
+# Generated / churn artifacts
+=5.0
+frontend/lint_output.txt
+frontend/tsconfig.tsbuildinfo
+frontend/tsconfig.node.tsbuildinfo
+backend/coverage.xml
+backend/.coverage

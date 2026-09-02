@@ -124,13 +124,13 @@ export default function Lives() {
 
       <div className="flex flex-wrap justify-center gap-2 mb-4">
         <NavLink to="/lives" end
-          className={({ isActive }) => `px-3 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-colors ${
+          className={({ isActive }) => `inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-colors ${
             isActive ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
           }`}
         >All</NavLink>
         {CATEGORIES.map((c) => (
           <NavLink key={c} to={`/lives/${c}`} end
-            className={({ isActive }) => `px-3 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-colors ${
+            className={({ isActive }) => `inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-colors ${
               isActive ? 'bg-buddy-green text-buddy-black' : 'bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
             }`}
           >{c.replace('_', ' ')}</NavLink>

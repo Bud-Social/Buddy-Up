@@ -7,6 +7,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
 from django.db import IntegrityError, models as db_models, transaction
+from django.db.models import F
 from django.utils import timezone
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -15,18 +16,21 @@ from rest_framework import views, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
-from common.pagination import CursorPagination
+from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
-from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft
+from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, Sound
+from .media_types import ALLOWED_EXTS, guess_media_type, url_extension
 from .serializers import (
     PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer,
     PollSerializer, DraftSerializer,
     CommentCreateSerializer, ReactionInputSerializer, RepostSerializer,
     SavePostSerializer, PollCreateSerializer, OptionVoteSerializer,
+    SoundSerializer, SoundCreateSerializer,
 )
 from apps.profiles.models import BuddyRelationship
 from apps.ai.audit import audit_ai_call
 from . import ai_ranking
+from apps.ai.client import ai_post
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +53,145 @@ def _looks_like_video(url: str) -> bool:
     if lower.rsplit('.', 1)[-1] in ('mp4', 'mov', 'webm', 'm4v', 'mpeg', 'mkv'):
         return True
     return 'video/' in lower or 'videos' in lower
+
+
+MAX_POST_MEDIA_ITEMS = 12
+
+
+def _extract_media_items(request):
+    """Extract structured `media` from the request (JSON string or list of dicts).
+
+    Returns (items, provided). `items` is a list when the client supplied a
+    parseable value, [] when the value could not be parsed, None when the
+    field was not supplied. Values that are not str/list (e.g. uploaded
+    files sharing the field name) are treated as not supplied.
+    """
+    if not hasattr(request.data, 'get') or 'media' not in request.data:
+        return None, False
+    raw = request.data.get('media')
+    if isinstance(raw, (list, tuple)):
+        return list(raw), True
+    if isinstance(raw, str) and raw.strip():
+        try:
+            parsed = json.loads(raw)
+        except (ValueError, TypeError):
+            return [], True
+        return (parsed if isinstance(parsed, list) else []), True
+    return None, False
+
+
+def _validate_media_items(items):
+    """Validate structured media[] items. Returns (clean_items, error_message)."""
+    from .media_types import is_allowed_media_host
+    if len(items) > MAX_POST_MEDIA_ITEMS:
+        return None, f'A post can have at most {MAX_POST_MEDIA_ITEMS} media items.'
+    clean = []
+    for i, item in enumerate(items):
+        if not isinstance(item, dict):
+            return None, f'media[{i}] must be an object.'
+        url = str(item.get('url') or '').strip()
+        if not url:
+            return None, f'media[{i}].url is required.'
+        if url_extension(url) not in ALLOWED_EXTS:
+            return None, f'media[{i}].url file extension is not allowed.'
+        if not is_allowed_media_host(url):
+            return None, f'media[{i}].url host is not allowed.'
+        media_type = item.get('media_type') or guess_media_type(url)
+        if media_type not in ('image', 'video', 'audio'):
+            return None, f'media[{i}].media_type must be one of image, video, audio.'
+
+        def _int(key):
+            value = item.get(key)
+            if value in (None, ''):
+                return None
+            try:
+                parsed_int = int(value)
+            except (TypeError, ValueError):
+                raise ValueError(f'media[{i}].{key} must be an integer.')
+            if parsed_int < 0:
+                raise ValueError(f'media[{i}].{key} must be >= 0.')
+            return parsed_int
+
+        try:
+            width = _int('width')
+            height = _int('height')
+            duration_ms = _int('duration_ms')
+            trim_start_ms = _int('trim_start_ms')
+            trim_end_ms = _int('trim_end_ms')
+        except ValueError as exc:
+            return None, str(exc)
+
+        sound = None
+        sound_id = str(item.get('sound_id') or '').strip()
+        if sound_id:
+            sound = Sound.objects.filter(id=sound_id).first()
+            if sound is None or not sound.is_active:
+                return None, f'media[{i}].sound_id does not reference an active sound.'
+        try:
+            sound_volume = int(item.get('sound_volume', 100))
+        except (TypeError, ValueError):
+            return None, f'media[{i}].sound_volume must be an integer between 0 and 100.'
+        if not 0 <= sound_volume <= 100:
+            return None, f'media[{i}].sound_volume must be between 0 and 100.'
+
+        clean.append({
+            'url': url,
+            'media_type': media_type,
+            'poster_url': str(item.get('poster_url') or ''),
+            'width': width,
+            'height': height,
+            'duration_ms': duration_ms,
+            'trim_start_ms': trim_start_ms,
+            'trim_end_ms': trim_end_ms,
+            'sound': sound,
+            'sound_volume': sound_volume,
+            'alt_text': str(item.get('alt_text') or '')[:255],
+        })
+    return clean, None
+
+
+def _create_post_media(post, items):
+    """Create PostMedia rows for `post` in order and bump sound usage counts.
+
+    `items` are validated dicts (or minimal {url, media_type} for the legacy
+    path). Returns the created rows.
+    """
+    rows = []
+    for order, item in enumerate(items):
+        rows.append(PostMedia.objects.create(
+            post=post,
+            order=order,
+            media_type=item.get('media_type') or 'image',
+            url=item['url'],
+            poster_url=item.get('poster_url') or '',
+            width=item.get('width'),
+            height=item.get('height'),
+            duration_ms=item.get('duration_ms'),
+            trim_start_ms=item.get('trim_start_ms'),
+            trim_end_ms=item.get('trim_end_ms'),
+            sound=item.get('sound'),
+            sound_volume=item.get('sound_volume') if item.get('sound_volume') is not None else 100,
+            alt_text=item.get('alt_text') or '',
+        ))
+    usage_counts = {}
+    for row in rows:
+        if row.sound_id:
+            usage_counts[row.sound_id] = usage_counts.get(row.sound_id, 0) + 1
+    for sound_id, count in usage_counts.items():
+        Sound.objects.filter(id=sound_id).update(usage_count=F('usage_count') + count)
+    return rows
+
+
+def _trigger_transcription(media_rows):
+    """Fire transcription for each video PostMedia (Bud Press captions)."""
+    for row in media_rows:
+        if row.media_type != 'video':
+            continue
+        try:
+            from apps.ai.tasks import transcribe_post_media
+            transcribe_post_media.delay(str(row.id))
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def _audience_q(user_profile):
@@ -289,19 +432,42 @@ class FeedView(views.APIView):
                 ),
             ).order_by('-rank', '-created_at')
             queryset = gate_mature_queryset(request, queryset)
-            # Video-ness is verified in Python over the page only — the pool
+            # Video-ness is verified in Python over the pool only — the pool
             # itself is already narrowed by post_type below.
             video_types = ['short_video', 'long_video']
             typed_pool = queryset.filter(post_type__in=video_types)
-            page_posts = list(typed_pool[:60])
-            videos = [p for p in page_posts if any(_looks_like_video(u) for u in (p.media_urls or []))]
-            serializer = FeedPostSerializer(videos, many=True, context={'request': request})
+            videos = [p for p in list(typed_pool[:200]) if any(_looks_like_video(u) for u in (p.media_urls or []))]
+
+            # Cursor pagination over the ranked video pool (same pattern as
+            # the for_you tab: opaque post-id cursor + _next_link builder).
+            paginator = CursorPagination()
+            page_size = paginator.get_page_size(request)
+            cursor = request.query_params.get('cursor')
+            if cursor:
+                start = next((i for i, p in enumerate(videos) if str(p.id) == cursor), None)
+                if start is None:
+                    return Response({
+                        'success': False, 'data': None,
+                        'message': 'Invalid or expired feed cursor.',
+                        'errors': {'cursor': ['Invalid or expired feed cursor.']},
+                        'pagination': None,
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                videos = videos[start + 1:]
+            page_posts = videos[:page_size]
+            has_next = len(videos) > page_size
+            next_cursor = str(page_posts[-1].id) if page_posts and has_next else None
+
+            serializer = FeedPostSerializer(page_posts, many=True, context={'request': request})
             return Response({
                 'success': True,
                 'data': serializer.data,
                 'message': 'OK',
                 'errors': None,
-                'pagination': {'count': len(videos), 'next': None, 'previous': None},
+                'pagination': {
+                    'count': len(page_posts),
+                    'next': _next_link(request, next_cursor) if next_cursor else None,
+                    'previous': None,
+                },
             })
 
         if tab == 'following':
@@ -458,6 +624,7 @@ class PostDetailView(views.APIView):
 
 class CreatePostView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'post_create'
 
     def post(self, request):
         client_request_id = (
@@ -497,7 +664,10 @@ class CreatePostView(views.APIView):
                     'errors': str(exc), 'pagination': None,
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Merge uploaded URLs with any pre-existing media_urls (e.g. from mobile)
+        # Merge uploaded URLs with any pre-existing media_urls (e.g. from mobile).
+        # Uploaded-file URLs are server-generated (safe); client-supplied
+        # media_urls go through the same host allowlist as structured media.
+        from .media_types import is_allowed_media_host
         existing_urls = request.data.getlist('media_urls') if hasattr(request.data, 'getlist') else (request.data.get('media_urls') or [])
         if isinstance(existing_urls, str):
             # Clients may send a JSON array in a single form field.
@@ -513,16 +683,40 @@ class CreatePostView(views.APIView):
                     existing_urls = parsed
             except (ValueError, TypeError):
                 pass
-        all_media_urls = [str(u) for u in existing_urls if u] + media_urls
+        client_urls = [str(u) for u in existing_urls if u]
+        for u in client_urls:
+            if not is_allowed_media_host(u):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'media_urls host is not allowed.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+        all_media_urls = client_urls + media_urls
+
+        # Bud Press structured media[] (JSON string or list of dicts).
+        media_items, media_provided = _extract_media_items(request)
+        clean_media = []
+        if media_provided:
+            clean_media, media_error = _validate_media_items(media_items)
+            if media_error:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': media_error,
+                    'errors': {'media': [media_error]}, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            # Dedupe: structured media[] wins over legacy media_urls.
+            post_media_urls = [item['url'] for item in clean_media]
+        else:
+            post_media_urls = all_media_urls
 
         # Build mutable data dict
         data = request.data.dict() if hasattr(request.data, 'dict') else dict(request.data)
-        data['media_urls'] = all_media_urls
+        data['media_urls'] = post_media_urls
 
         serializer = PostCreateSerializer(data=data)
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
-        validated['media_urls'] = all_media_urls
+        validated['media_urls'] = post_media_urls
 
         # Auto-analyze meal photos into nutrition details when not provided.
         if validated.get('post_type') == 'meal':
@@ -530,12 +724,12 @@ class CreatePostView(views.APIView):
             if not meal_data or not meal_data.get('calories'):
                 import requests as http_requests
 
-                image_url = next((u for u in all_media_urls if not _looks_like_video(u)), None)
+                image_url = next((u for u in post_media_urls if not _looks_like_video(u)), None)
                 if image_url:
                     try:
                         resp = http_requests.get(image_url, timeout=10)
                         if resp.status_code == 200:
-                            ai_resp = http_requests.post(
+                            ai_resp = ai_post(
                                 f'{settings.AI_SERVICE_URL}/api/v1/food/recognize',
                                 files={'file': ('meal.jpg', resp.content, resp.headers.get('content-type', 'image/jpeg'))},
                                 timeout=30,
@@ -564,6 +758,17 @@ class CreatePostView(views.APIView):
                     client_request_id=client_request_id or None,
                     **validated,
                 )
+                if clean_media:
+                    media_rows = _create_post_media(post, clean_media)
+                elif post.media_urls:
+                    # Legacy path (media_urls / multipart files) also gets
+                    # structured PostMedia rows so both representations exist.
+                    media_rows = _create_post_media(
+                        post,
+                        [{'url': url, 'media_type': guess_media_type(url)} for url in post.media_urls],
+                    )
+                else:
+                    media_rows = []
         except IntegrityError:
             if not client_request_id:
                 raise
@@ -575,6 +780,9 @@ class CreatePostView(views.APIView):
                 'success': True, 'data': output.data,
                 'message': 'Post already created.', 'errors': None, 'pagination': None,
             }, status=status.HTTP_200_OK)
+
+        # Kick off transcription for video media (Bud Press captions).
+        _trigger_transcription(media_rows)
 
         # Handle poll creation
         poll_serializer = PollCreateSerializer(data=request.data)
@@ -750,6 +958,12 @@ class CommentsView(views.APIView):
                 'success': False, 'data': None, 'message': 'Not found.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_404_NOT_FOUND)
+        if post.comments_disabled:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Comments are turned off for this post.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
         serializer = CommentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -1092,7 +1306,7 @@ class WorkoutAnalysisView(views.APIView):
 
         ai_url = f'{settings.AI_SERVICE_URL}/api/v1/workout/analyze'
         try:
-            resp = http_requests.post(ai_url, json={'history': history}, timeout=30)
+            resp = ai_post(ai_url, json={'history': history}, timeout=30)
             resp.raise_for_status()
             audit_ai_call('workout_analysis', input_data={'history': history}, output_data=resp.json())
             return Response({
@@ -1150,7 +1364,7 @@ class HealthInsightsView(views.APIView):
 
         ai_url = f'{settings.AI_SERVICE_URL}/api/v1/health-insights/analyze'
         try:
-            resp = http_requests.post(ai_url, json=payload, timeout=30)
+            resp = ai_post(ai_url, json=payload, timeout=30)
             resp.raise_for_status()
             audit_ai_call('health_insights', input_data=payload, output_data=resp.json())
             return Response({
@@ -1185,7 +1399,7 @@ class WorkoutFormAnalysisView(views.APIView):
 
         ai_url = f'{settings.AI_SERVICE_URL}/api/v1/form-analyzer/analyze'
         try:
-            resp = http_requests.post(
+            resp = ai_post(
                 ai_url,
                 files={'file': (file.name, file.read(), file.content_type)},
                 data={'exercise': exercise},
@@ -1205,3 +1419,71 @@ class WorkoutFormAnalysisView(views.APIView):
                 'message': 'Form analysis service unavailable.',
                 'errors': str(e), 'pagination': None,
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class SoundListCreateView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'sounds_write'
+
+    def get(self, request):
+        sounds = Sound.objects.filter(is_active=True)
+        q = request.query_params.get('q')
+        if q:
+            sounds = sounds.filter(db_models.Q(name__icontains=q) | db_models.Q(artist__icontains=q))
+        ordering = request.query_params.get('ordering', 'recent')
+        if ordering == 'trending':
+            sounds = sounds.order_by('-usage_count', '-created_at')
+        else:  # recent
+            sounds = sounds.order_by('-created_at')
+
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(sounds, request)
+        serializer = SoundSerializer(page, many=True, context={'request': request})
+        return Response({
+            'success': True,
+            'data': {'results': serializer.data},
+            'message': 'OK',
+            'errors': None,
+            'pagination': {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
+        })
+
+    def post(self, request):
+        serializer = SoundCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        audio_url = data.get('audio_url') or ''
+        sound = Sound.objects.create(
+            name=data['name'],
+            artist=data.get('artist') or '',
+            audio_url=audio_url,
+            duration_ms=data.get('duration_ms'),
+            source='original',
+            original_post=data.get('original_post'),
+            is_active=bool(audio_url),
+        )
+        output = SoundSerializer(sound, context={'request': request})
+        return Response({
+            'success': True, 'data': output.data,
+            'message': 'Sound created.', 'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class SoundUseView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'sounds_write'
+
+    def post(self, request, sound_id):
+        sound = get_object_or_404(Sound, id=sound_id)
+        Sound.objects.filter(id=sound.id).update(usage_count=F('usage_count') + 1)
+        sound.refresh_from_db(fields=['usage_count'])
+        return Response({
+            'success': True,
+            'data': {'id': str(sound.id), 'usage_count': sound.usage_count},
+            'message': 'Sound usage recorded.',
+            'errors': None,
+            'pagination': None,
+        })

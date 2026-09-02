@@ -17,7 +17,6 @@ django.setup()
 from django.test import Client
 from django.urls import resolve
 
-
 FIXTURE = ROOT / "contracts" / "api_contract.json"
 
 
@@ -37,7 +36,7 @@ def main():
     for route in contract["routes"]:
         try:
             match = resolve(route["path"])
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             raise AssertionError(f"route does not resolve: {route['path']}") from exc
         assert match.func, f"route has no callable view: {route['path']}"
 

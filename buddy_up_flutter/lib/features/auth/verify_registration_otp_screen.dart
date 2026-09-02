@@ -12,10 +12,15 @@ class VerifyRegistrationOtpScreen extends ConsumerStatefulWidget {
   final String registrationToken;
   final String email;
 
+  /// Set when the user was redirected here from a login attempt — the screen
+  /// then explains that the account was never verified.
+  final bool unverifiedNotice;
+
   const VerifyRegistrationOtpScreen({
     super.key,
     required this.registrationToken,
     required this.email,
+    this.unverifiedNotice = false,
   });
 
   @override
@@ -79,16 +84,32 @@ class _VerifyRegistrationOtpScreenState
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
-            children: [
-              const SizedBox(height: 32),
-              const Icon(Icons.mark_email_unread, size: 64, color: BuddyColors.green),
-              const SizedBox(height: 24),
-              Text(
-                'Enter the verification code',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: BuddyColors.textPrimary,
-                    ),
+          children: [
+            const SizedBox(height: 32),
+            const Icon(Icons.mark_email_unread, size: 64, color: BuddyColors.green),
+            const SizedBox(height: 24),
+            if (widget.unverifiedNotice) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: BuddyColors.surfaceRaised,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: BuddyColors.green.withValues(alpha: 0.3)),
+                ),
+                child: const Text(
+                  'Your account isn\'t verified yet — enter the OTP we emailed you, or tap Resend for a new one.',
+                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                ),
               ),
+              const SizedBox(height: 16),
+            ],
+            Text(
+              'Enter the verification code',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: BuddyColors.textPrimary,
+                  ),
+            ),
               const SizedBox(height: 8),
               Text(
                 'We sent a 6-digit code to ${widget.email}',

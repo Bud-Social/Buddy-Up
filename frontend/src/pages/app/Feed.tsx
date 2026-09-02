@@ -332,7 +332,7 @@ export default function Feed() {
           {/* Create + search row */}
           <div className="flex items-center gap-2 mb-3">
             <button
-              onClick={() => navigate('/feed', { state: { expandComposer: true } })}
+              onClick={() => navigate('/create')}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-buddy-green text-buddy-black text-sm font-bold hover:bg-buddy-green/90 transition-colors"
               title="Create a video post"
             >

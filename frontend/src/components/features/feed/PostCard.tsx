@@ -1,16 +1,18 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
   MoreHorizontal, Dumbbell, Utensils, TrendingUp, MapPin, BarChart2,
-  Maximize2, FileText, CheckSquare, CircleDot,
+  Maximize2, FileText, CheckSquare, CircleDot, ChevronLeft, ChevronRight,
+  Volume2, VolumeX,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api';
 import { formatPostDate } from '@/utils/formatDate';
 import { EmojiImg } from '@/utils/emojiUtils';
 import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
-import type { Post } from '@/types';
+import { mediaPagesFromPost, type MediaPage } from '@/lib/mediaPages';
+import type { Post, PostCaption, PostMedia } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
 import { RichText } from '@/components/ui/RichText';
 import { PostMap } from './PostMap';
@@ -228,58 +230,150 @@ function PollCard({ poll, postId }: { poll: NonNullable<Post['poll']>; postId: s
   );
 }
 
-function MediaGallery({ urls, blurred, postId }: { urls: string[]; blurred?: boolean; postId?: string }) {
+/** One video page inside the carousel: muted autoplay-in-view, tap-to-unmute. */
+function CarouselVideoPage({
+  page, muted, canAutoplay, blur, captions, postId, onToggleMute,
+}: {
+  page: MediaPage;
+  muted: boolean;
+  canAutoplay: boolean;
+  blur: boolean;
+  captions: PostCaption[];
+  postId?: string;
+  onToggleMute: () => void;
+}) {
+  const navigate = useNavigate();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [activeCaption, setActiveCaption] = useState('');
+  useInViewAutoplay(videoRef, canAutoplay);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.muted = muted;
+  }, [muted]);
+
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    if (captions.length === 0) return;
+    const t = e.currentTarget.currentTime * 1000;
+    const seg = captions.find((c) => t >= c.start_ms && t < c.end_ms);
+    setActiveCaption(seg ? seg.text : '');
+  };
+
+  return (
+    <div className="relative group/video">
+      <video
+        ref={videoRef}
+        src={page.url}
+        poster={page.poster_url ?? undefined}
+        muted={muted}
+        loop
+        playsInline
+        preload="metadata"
+        onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+        onTimeUpdate={handleTimeUpdate}
+        className={`w-full max-h-96 object-cover cursor-pointer ${blur ? 'blur-xl' : ''}`}
+      />
+      {/* Tap-to-unmute affordance */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+        className="absolute top-2 left-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-opacity"
+        aria-label={muted ? 'Unmute video' : 'Mute video'}
+      >
+        {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); navigate(postId ? `/videos?start=${postId}` : '/videos'); }}
+        className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover/video:opacity-100 transition-opacity"
+        title="Open full-screen video feed"
+      ><Maximize2 size={16} /></button>
+      {/* Timed caption overlay */}
+      {activeCaption && (
+        <p className="absolute bottom-10 left-1/2 -translate-x-1/2 max-w-[90%] px-3 py-1.5 rounded-full bg-black/50 text-white text-sm text-center whitespace-pre-wrap pointer-events-none">
+          {activeCaption}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function MediaGallery({
+  post, blurred, postId,
+}: {
+  post: { media?: PostMedia[] | null; media_urls?: string[] | null; captions?: PostCaption[] | null };
+  blurred?: boolean;
+  postId?: string;
+}) {
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const navigate = useNavigate();
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [muted, setMuted] = useState(true);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const pages = useMemo(() => mediaPagesFromPost(post), [post]);
+  const captions = useMemo(() => post.captions ?? [], [post.captions]);
+
+  const scrollToPage = useCallback((i: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const clamped = Math.max(0, Math.min(pages.length - 1, i));
+    el.scrollTo({ left: clamped * el.clientWidth, behavior: 'smooth' });
+    setIdx(clamped);
+  }, [pages.length]);
+
+  const onTrackScroll = () => {
+    const el = trackRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const next = Math.round(el.scrollLeft / el.clientWidth);
+    if (next !== idx && next >= 0 && next < pages.length) setIdx(next);
+  };
+
+  if (!pages.length) return null;
   const canAutoplay = !(blurred && !revealed);
-  useInViewAutoplay(videoRef, canAutoplay);
-  if (!urls.length) return null;
-  const currentUrl = urls[idx];
-  const isVideo = /\.(mp4|mov|webm|m4v|mpeg|mkv)/i.test(currentUrl);
-  const isAudio = /\.(mp3|wav|ogg|m4a|aac)/i.test(currentUrl);
-  const isDocument = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|md|csv)/i.test(currentUrl.split('?')[0]);
-  const fileName = currentUrl.split('?')[0].split('/').pop() || 'document';
+
   return (
-    <div className="mt-3 relative rounded-xl overflow-hidden bg-buddy-surface">
-      {isVideo ? (
-        <div className="relative group">
-          <video
-            ref={videoRef}
-            src={currentUrl}
-            controls
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            className={`w-full max-h-96 object-cover ${blurred && !revealed ? 'blur-xl' : ''}`}
-          />
-          <button
-            onClick={(e) => { e.stopPropagation(); navigate(postId ? `/videos?start=${postId}` : '/videos'); }}
-            className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-            title="Open full-screen video feed"
-          ><Maximize2 size={16} /></button>
-        </div>
-      ) : isAudio ? (
-        <div className="p-4 bg-buddy-surface-raised w-full">
-          <audio src={currentUrl} controls className="w-full" />
-        </div>
-      ) : isDocument ? (
-        <a href={currentUrl} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-3 p-4 bg-buddy-surface-raised hover:bg-buddy-surface transition-colors">
-          <div className="w-11 h-11 rounded-xl bg-buddy-green/15 text-buddy-green flex items-center justify-center shrink-0">
-            <FileText size={22} />
+    <div className="mt-3 relative rounded-xl overflow-hidden bg-buddy-surface group">
+      <div
+        ref={trackRef}
+        onScroll={onTrackScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-none"
+      >
+        {pages.map((page, i) => (
+          <div key={`${page.url}-${i}`} className="w-full shrink-0 snap-center snap-always">
+            {page.type === 'video' ? (
+              <CarouselVideoPage
+                page={page}
+                muted={muted}
+                canAutoplay={canAutoplay}
+                blur={!!blurred && !revealed}
+                captions={captions}
+                postId={postId}
+                onToggleMute={() => setMuted((m) => !m)}
+              />
+            ) : page.type === 'audio' ? (
+              <div className="p-4 bg-buddy-surface-raised w-full">
+                <audio src={page.url} controls className="w-full" />
+              </div>
+            ) : page.type === 'document' ? (
+              <a href={page.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-3 p-4 bg-buddy-surface-raised hover:bg-buddy-surface transition-colors">
+                <div className="w-11 h-11 rounded-xl bg-buddy-green/15 text-buddy-green flex items-center justify-center shrink-0">
+                  <FileText size={22} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{page.url.split('?')[0].split('/').pop() || 'document'}</p>
+                  <p className="text-xs text-buddy-text-secondary">Tap to open document</p>
+                </div>
+                <Maximize2 size={16} className="text-buddy-text-secondary shrink-0" />
+              </a>
+            ) : (
+              <img
+                src={page.url}
+                alt={page.alt_text ?? ''}
+                className={`w-full max-h-96 object-cover ${blurred && !revealed ? 'blur-xl' : ''}`}
+                loading="lazy"
+              />
+            )}
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{fileName}</p>
-            <p className="text-xs text-buddy-text-secondary">Tap to open document</p>
-          </div>
-          <Maximize2 size={16} className="text-buddy-text-secondary shrink-0" />
-        </a>
-      ) : (
-        <img src={currentUrl} alt="" className={`w-full max-h-96 object-cover ${blurred && !revealed ? 'blur-xl' : ''}`} loading="lazy" />
-      )}
+        ))}
+      </div>
+
       {blurred && !revealed && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/30">
           <button onClick={(e) => { e.stopPropagation(); setRevealed(true); }}
@@ -288,11 +382,29 @@ function MediaGallery({ urls, blurred, postId }: { urls: string[]; blurred?: boo
           </button>
         </div>
       )}
-      {urls.length > 1 && (
+
+      {/* Desktop arrows */}
+      {idx > 0 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); scrollToPage(idx - 1); }}
+          className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          aria-label="Previous media"
+        ><ChevronLeft size={16} /></button>
+      )}
+      {idx < pages.length - 1 && (
+        <button
+          onClick={(e) => { e.stopPropagation(); scrollToPage(idx + 1); }}
+          className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+          aria-label="Next media"
+        ><ChevronRight size={16} /></button>
+      )}
+
+      {/* Dots — active elongates */}
+      {pages.length > 1 && (
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-          {urls.map((_, i) => (
-            <button key={i} onClick={(e) => { e.stopPropagation(); setIdx(i); }}
-              className={`w-1.5 h-1.5 rounded-full transition-all ${i === idx ? 'bg-buddy-green w-3' : 'bg-white/50'}`} />
+          {pages.map((_, i) => (
+            <button key={i} onClick={(e) => { e.stopPropagation(); scrollToPage(i); }} aria-label={`Go to media ${i + 1}`}
+              className={`h-1.5 rounded-full transition-all ${i === idx ? 'bg-buddy-green w-4' : 'bg-white/50 w-1.5'}`} />
           ))}
         </div>
       )}
@@ -511,7 +623,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           {displayPost.post_type === 'poll' && (displayPost as any).poll && <PollCard poll={(displayPost as any).poll} postId={displayPost.id} />}
 
           {/* Media */}
-          <MediaGallery urls={displayPost.media_urls || []} blurred={post.moderation_status === 'flagged'} postId={displayPost.id} />
+          <MediaGallery post={displayPost} blurred={post.moderation_status === 'flagged'} postId={displayPost.id} />
 
           {/* Map */}
           {displayPost.location_lat != null && displayPost.location_lng != null && (
