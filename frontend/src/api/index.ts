@@ -13,3 +13,4 @@ export { activityApi } from './activity';
 export { verificationApi } from './verification';
 export { adminApi } from './admin';
 export { moderationApi } from './moderation';
+export { guardiansApi } from './guardians';

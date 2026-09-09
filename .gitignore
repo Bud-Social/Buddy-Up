@@ -46,6 +46,9 @@ backend/ai_service/models/*
 *.swo
 *~
 
+# LibreOffice lock files
+.~lock.*#
+
 # ── OS ──────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

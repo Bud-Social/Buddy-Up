@@ -31,6 +31,7 @@ from .serializers import (
     MessageReactionSerializer, CallLogSerializer,
     CommunityMemberSerializer, CommunityPostSerializer, CommunityPostCommentSerializer,
 )
+from apps.guardians.services import guardian_blocks_new_dms
 from apps.profiles.models import BuddyRelationship, Profile
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,13 @@ class StartConversationView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        if guardian_blocks_new_dms(request.user.profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Your parental co-owner has disabled new conversations.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
         input_serializer = StartConversationInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
         participant_usernames = input_serializer.validated_data['participants']

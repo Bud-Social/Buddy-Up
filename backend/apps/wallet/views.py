@@ -22,6 +22,7 @@ from .serializers import (
     GiftArtifactsSerializer, ARTIFACT_VALUES, ARTIFACT_LABELS,
     BUNDLES, PLATFORM_CUTS,
 )
+from apps.guardians.services import guardian_blocks_spends
 from apps.profiles.models import Profile
 from .flutterwave import FlutterwaveClient
 from .utils import (
@@ -545,6 +546,13 @@ class TipUserView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        if guardian_blocks_spends(request.user.profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Your parental co-owner has disabled spending.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
         serializer = TipSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -629,6 +637,13 @@ class GiftArtifactsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
+        if guardian_blocks_spends(request.user.profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Your parental co-owner has disabled spending.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
         serializer = GiftArtifactsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data

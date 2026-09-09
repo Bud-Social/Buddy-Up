@@ -249,7 +249,6 @@ export default function CreateStudio() {
     track('create.audience_set', { surface: 'create', properties: { visibility, comments_disabled: disabled } });
   };
 
-  const allUploaded = true; // uploads now happen at publish, not per-item
   const canProceed =
     step === 'pick' ? items.length > 0 : step === 'post' ? items.length > 0 : true;
 

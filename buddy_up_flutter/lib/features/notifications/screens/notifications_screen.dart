@@ -257,9 +257,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
           IconButton(
             icon: const Icon(Icons.tune),
             tooltip: 'Preferences',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const NotificationPreferencesScreen()),
-            ),
+            onPressed: () => context.push('/settings/notifications'),
           ),
         ],
         bottom: TabBar(
@@ -513,60 +511,5 @@ class _LiveCountdownState extends State<_LiveCountdown> {
       'Starts in $label',
       style: const TextStyle(color: BuddyColors.green, fontSize: 12, fontWeight: FontWeight.w600),
     );
-  }
-}
-
-class NotificationPreferencesScreen extends ConsumerWidget {
-  const NotificationPreferencesScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final prefsAsync = ref.watch(notificationPreferencesProvider);
-    return Scaffold(
-      appBar: AppBar(title: const Text('Notification Preferences')),
-      body: prefsAsync.when(
-        data: (prefs) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _switchTile('Likes', prefs.likes, (v) => _update(ref, {..._toMap(prefs), 'likes': v})),
-            _switchTile('Comments', prefs.comments, (v) => _update(ref, {..._toMap(prefs), 'comments': v})),
-            _switchTile('Follows', prefs.follows, (v) => _update(ref, {..._toMap(prefs), 'follows': v})),
-            _switchTile('Buddy Requests', prefs.buddyRequests, (v) => _update(ref, {..._toMap(prefs), 'buddy_requests': v})),
-            _switchTile('Messages', prefs.messages, (v) => _update(ref, {..._toMap(prefs), 'messages': v})),
-            _switchTile('Live Starts', prefs.liveStarts, (v) => _update(ref, {..._toMap(prefs), 'live_starts': v})),
-            _switchTile('Gym Updates', prefs.gymUpdates, (v) => _update(ref, {..._toMap(prefs), 'gym_updates': v})),
-            _switchTile('Tips & Gifts', prefs.tips, (v) => _update(ref, {..._toMap(prefs), 'tips': v})),
-            _switchTile('Marketing', prefs.marketing, (v) => _update(ref, {..._toMap(prefs), 'marketing': v})),
-          ]),
-        loading: () => const ShimmerList(itemHeight: 56),
-        error: (e, _) => Center(child: Text('$e')),
-      ),
-    );
-  }
-
-  Widget _switchTile(String label, bool value, void Function(bool) onChanged) {
-    return SwitchListTile(
-      title: Text(label),
-      value: value,
-      onChanged: onChanged,
-      activeThumbColor: BuddyColors.green,
-    );
-  }
-
-  Map<String, dynamic> _toMap(NotificationPreference p) => {
-    'likes': p.likes,
-    'comments': p.comments,
-    'follows': p.follows,
-    'buddy_requests': p.buddyRequests,
-    'messages': p.messages,
-    'live_starts': p.liveStarts,
-    'gym_updates': p.gymUpdates,
-    'tips': p.tips,
-    'marketing': p.marketing,
-  };
-
-  Future<void> _update(WidgetRef ref, Map<String, dynamic> data) async {
-    await ref.read(notificationRepositoryProvider).updatePreferences(data);
-    ref.invalidate(notificationPreferencesProvider);
   }
 }

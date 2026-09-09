@@ -19,6 +19,7 @@ from .serializers import (
     ProgrammeWeekSerializer, ProgrammeEnrollmentSerializer,
     BookingActionSerializer, AvailabilityCreateSerializer, ReviewCreateSerializer,
 )
+from apps.guardians.services import guardian_blocks_spends
 from apps.profiles.models import Profile
 from apps.wallet.utils import hold_artifacts, release_held_refund, release_held_to_party
 from apps.wallet.models import ArtifactTransaction
@@ -102,6 +103,13 @@ class BookingCreateView(views.APIView):
 
     @transaction.atomic
     def post(self, request, username):
+        if guardian_blocks_spends(request.user.profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Your parental co-owner has disabled spending.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
         trainer_profile = get_object_or_404(Profile, username=username, role__in=['trainer', 'practitioner'])
         serializer = CreateBookingSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

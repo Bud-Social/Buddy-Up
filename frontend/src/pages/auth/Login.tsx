@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavigateOptions, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
+import { Modal } from '@/components/ui/Modal';
 import { Shield } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/api';
@@ -12,10 +13,23 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undef
 
 type LoginStep = 'credentials' | 'otp' | 'totp';
 
+interface ReactivatePrompt {
+  hard_deletion_scheduled: string | null;
+}
+
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const setTokens = useAuthStore((s) => s.setTokens);
   const setUser = useAuthStore((s) => s.setUser);
+
+  /** Where to land after a full login — set by flows that bounce through
+   * /login (e.g. guardian invite acceptance). Only internal paths allowed. */
+  const nextUrl = (() => {
+    const next = searchParams.get('next');
+    return next && next.startsWith('/') && !next.startsWith('//') ? next : '/feed';
+  })();
+  const goNext = (opts?: NavigateOptions) => navigate(nextUrl, opts);
 
   const [step, setStep] = useState<LoginStep>('credentials');
   const [email, setEmail] = useState('');
@@ -28,6 +42,14 @@ export default function Login() {
   const [totpCode, setTotpCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [reactivatePrompt, setReactivatePrompt] = useState<ReactivatePrompt | null>(null);
+
+  /** Handle a successful login-init response: OTP step or verification redirect. */
+  const processLoginResponse = (res: Awaited<ReturnType<typeof authApi.login>>) => {
+    setLoginToken(res.data.login_token);
+    setMaskedEmail(res.data.masked_email);
+    setStep('otp');
+  };
 
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,11 +57,15 @@ export default function Login() {
     setIsLoading(true);
     try {
       const res = await authApi.login({ email, password, remember_me: rememberMe });
-      setLoginToken(res.data.login_token);
-      setMaskedEmail(res.data.masked_email);
-      setStep('otp');
+      processLoginResponse(res);
     } catch (err: unknown) {
-      const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string; require_email_verification?: boolean; otp_resent?: boolean } } } })?.response?.data;
+      const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string; require_email_verification?: boolean; otp_resent?: boolean; reactivatable?: boolean; hard_deletion_scheduled?: string | null } } } })?.response?.data;
+      if (data?.data?.reactivatable) {
+        // Deactivated (or deletion-scheduled) account with correct
+        // credentials — ask before reactivating.
+        setReactivatePrompt({ hard_deletion_scheduled: data.data.hard_deletion_scheduled ?? null });
+        return;
+      }
       if (data?.data?.require_email_verification && data?.data?.registration_token) {
         // Send the user straight to OTP verification — the notice about the
         // unverified account shows there, not here.
@@ -48,6 +74,29 @@ export default function Login() {
         return;
       }
       setError(data?.message || 'Invalid email or password.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReactivateConfirm = async () => {
+    setError('');
+    setIsLoading(true);
+    try {
+      // Re-post with the explicit opt-in — the backend returns the normal
+      // login response (OTP step or verification redirect).
+      const res = await authApi.login({ email, password, remember_me: rememberMe, reactivate: true });
+      setReactivatePrompt(null);
+      processLoginResponse(res);
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string; require_email_verification?: boolean; otp_resent?: boolean } } } })?.response?.data;
+      setReactivatePrompt(null);
+      if (data?.data?.require_email_verification && data?.data?.registration_token) {
+        const fresh = data.data.otp_resent !== false;
+        navigate(`/verify-registration-otp?token=${encodeURIComponent(data.data.registration_token)}&email=${encodeURIComponent(data.data.email || email)}&reason=unverified${fresh ? '&fresh=1' : ''}`);
+        return;
+      }
+      setError(data?.message || 'Could not reactivate your account.');
     } finally {
       setIsLoading(false);
     }
@@ -66,7 +115,7 @@ export default function Login() {
       } else {
         setTokens(data.access!, data.refresh!);
         setUser(data.user!, data.profile!);
-        navigate('/feed');
+        goNext();
       }
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
@@ -84,7 +133,7 @@ export default function Login() {
       const res = await authApi.totpChallenge(tempToken, totpCode);
       setTokens(res.data.access, res.data.refresh);
       setUser(res.data.user, res.data.profile);
-      navigate('/feed');
+      goNext();
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
       setError(data?.message || 'Invalid code. Please try again.');
@@ -112,7 +161,7 @@ export default function Login() {
       } else if ((res.data as { onboarding_required?: boolean }).onboarding_required) {
         navigate('/onboarding');
       } else {
-        navigate('/feed');
+        goNext();
       }
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string; data?: { registration_token?: string; email?: string; require_email_verification?: boolean; otp_resent?: boolean } } } })?.response?.data;
@@ -125,7 +174,7 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
-  }, [setTokens, setUser, navigate]);
+  }, [setTokens, setUser, navigate, goNext]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-buddy-black">
@@ -237,6 +286,30 @@ export default function Login() {
           </>
         )}
       </Card>
+
+      <Modal isOpen={reactivatePrompt !== null} onClose={() => setReactivatePrompt(null)} title="Reactivate account?" size="sm">
+        {reactivatePrompt?.hard_deletion_scheduled ? (
+          <p className="text-sm text-buddy-text-secondary mb-4">
+            Your account is scheduled for permanent deletion on{' '}
+            <strong className="text-buddy-text-primary">
+              {new Date(reactivatePrompt.hard_deletion_scheduled).toLocaleDateString()}
+            </strong>
+            . Logging in now cancels the deletion and reactivates your account.
+          </p>
+        ) : (
+          <p className="text-sm text-buddy-text-secondary mb-4">
+            Your account is deactivated. Logging in again will reactivate it and restore your profile.
+          </p>
+        )}
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" className="flex-1" onClick={() => setReactivatePrompt(null)} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button variant="outline" size="sm" className="flex-1" onClick={handleReactivateConfirm} isLoading={isLoading}>
+            Reactivate
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

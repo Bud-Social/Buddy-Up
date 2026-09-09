@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, AlertCircle, Plus, X } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import { Toggle } from '@/components/ui/Toggle';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
@@ -368,10 +369,9 @@ export default function CreateEvent() {
                 <p className="text-sm font-medium">Free Event</p>
                 <p className="text-xs text-buddy-text-secondary">No tickets required</p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={formData.is_free} onChange={(e) => setFormData({ ...formData, is_free: e.target.checked })} />
-                <div className="w-11 h-6 bg-buddy-surface-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buddy-green"></div>
-              </label>
+              <Toggle checked={formData.is_free}
+                onCheckedChange={(v) => setFormData({ ...formData, is_free: v })}
+                label="Free event" />
             </div>
 
             {!formData.is_free && (

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apps.ai',
     'apps.analytics',
     'apps.gamification',
+    'apps.guardians',
 ]
 
 MIDDLEWARE = [
@@ -175,7 +176,25 @@ CELERY_TASK_ROUTES = {
     'apps.notifications.tasks.*': {'queue': 'high_priority'},
 }
 
+# Beat entries: merged with config/celery.py's CELERY_BEAT_SCHEDULE by
+# config.celery (module entries win on key collisions).
+from celery.schedules import crontab  # noqa: E402
+
 CELERY_BEAT_SCHEDULE = {
+    # Daily 03:15 UTC sweep: hard-deletes accounts whose scheduled deletion
+    # date has passed (safety net for the per-user ETA countdown task).
+    'sweep-scheduled-deletions': {
+        'task': 'apps.accounts.tasks.sweep_scheduled_deletions',
+        'schedule': crontab(hour='3', minute='15'),
+    },
+    'cleanup-expired-otps': {
+        'task': 'apps.accounts.tasks.cleanup_expired_otps',
+        'schedule': crontab(hour='3', minute='45'),
+    },
+    'cleanup-expired-sessions': {
+        'task': 'apps.accounts.tasks.cleanup_expired_sessions',
+        'schedule': crontab(hour='4', minute='0'),
+    },
     'wallet-pending-withdrawals': {
         'task': 'apps.wallet.tasks.process_pending_withdrawals',
         'schedule': 300.0,
@@ -289,6 +308,7 @@ REST_FRAMEWORK = {
         'sounds_write': '20/h',
         'username_check': '30/min',
         'username_change': '3/day',
+        'guardian_invite': '10/h',
     },
 }
 

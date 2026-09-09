@@ -18,12 +18,17 @@ export interface NotificationPreferences {
   in_app_enabled: boolean;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
+  timezone?: string | null;
   buddy_request_push: boolean;
   buddy_accepted_push: boolean;
   new_follower_push: boolean;
   comment_push: boolean;
   live_starting_push: boolean;
   session_reminder_push: boolean;
+  programme_reminder_push: boolean;
+  meal_reminder_push: boolean;
+  shop_cert_push: boolean;
+  new_purchase_push: boolean;
   streak_milestone_push: boolean;
   accountability_ping_push: boolean;
 }

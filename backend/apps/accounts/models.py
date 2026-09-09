@@ -31,6 +31,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)
+    # When set (login-initiated deletion), the sweep hard-deletes the row at
+    # or after this instant. Cancelling the deletion clears it.
+    hard_delete_at = models.DateTimeField(null=True, blank=True)
     deletion_type = models.CharField(max_length=20, null=True, blank=True, choices=[('user', 'User'), ('moderation', 'Moderation')])
     created_at = models.DateTimeField(auto_now_add=True)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
@@ -107,6 +110,9 @@ class RecoveryCode(TimestampedModel):
 class DeviceSession(TimestampedModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='device_sessions')
     refresh_token_hash = models.CharField(max_length=64, unique=True)
+    # Stable client identifier (X-Device-Id header) used to recognise the
+    # current session in the device list. Truncated to 64 chars.
+    device_id = models.CharField(max_length=64, blank=True, db_index=True)
     device_name = models.CharField(max_length=200)
     ip_address = models.GenericIPAddressField()
     location = models.CharField(max_length=100, blank=True)

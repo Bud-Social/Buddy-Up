@@ -12,6 +12,7 @@ import { formatPostDate } from '@/utils/formatDate';
 import { EmojiImg } from '@/utils/emojiUtils';
 import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
 import { mediaPagesFromPost, type MediaPage } from '@/lib/mediaPages';
+import { isProfanityFilterEnabled, maskProfanity } from '@/lib/profanity';
 import type { Post, PostCaption, PostMedia } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
 import { RichText } from '@/components/ui/RichText';
@@ -609,10 +610,10 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           </button>
         </div>
 
-          {/* Body */}
+          {/* Body — masked client-side when the profanity filter is on */}
           {displayPost.body && (
             <p className="mt-2 text-sm text-buddy-text-primary whitespace-pre-wrap">
-              <RichText text={displayPost.body} />
+              <RichText text={isProfanityFilterEnabled() ? maskProfanity(displayPost.body) : displayPost.body} />
             </p>
           )}
 

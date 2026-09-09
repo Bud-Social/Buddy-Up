@@ -52,6 +52,14 @@ import 'features/wallet/screens/wallet_screen.dart';
 import 'features/notifications/screens/notifications_screen.dart';
 import 'features/verification/screens/verification_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
+import 'features/settings/screens/account_screen.dart';
+import 'features/settings/screens/security_screen.dart';
+import 'features/settings/screens/privacy_screen.dart';
+import 'features/settings/screens/data_screen.dart';
+import 'features/settings/screens/family_screen.dart';
+import 'features/settings/screens/appearance_screen.dart';
+import 'features/settings/screens/blocked_screen.dart';
+import 'features/settings/screens/notification_prefs_screen.dart';
 import 'features/settings/screens/adult_content_policy_screen.dart';
 import 'features/analytics/screens/analytics_screen.dart';
 import 'features/sessions/screens/trainer_list_screen.dart';
@@ -389,10 +397,51 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const NotificationsScreen(),
       ),
+      // Settings sub-screens (hub lives in the shell at /settings)
+      GoRoute(
+        path: '/settings/account',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AccountScreen(),
+      ),
+      GoRoute(
+        path: '/settings/security',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const SecurityScreen(),
+      ),
+      GoRoute(
+        path: '/settings/privacy',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const PrivacyScreen(),
+      ),
+      GoRoute(
+        path: '/settings/notifications',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const NotificationPrefsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/family',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const FamilyScreen(),
+      ),
+      GoRoute(
+        path: '/settings/appearance',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AppearanceScreen(),
+      ),
+      GoRoute(
+        path: '/settings/data',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const DataScreen(),
+      ),
+      GoRoute(
+        path: '/settings/blocked',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const BlockedScreen(),
+      ),
       GoRoute(
         path: '/notifications/preferences',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, _) => const NotificationPreferencesScreen(),
+        builder: (_, _) => const NotificationPrefsScreen(),
       ),
       // Verification
       GoRoute(

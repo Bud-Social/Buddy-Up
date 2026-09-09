@@ -16,6 +16,7 @@ urlpatterns = [
     path('api/v1/lives/', include('apps.lives.urls')),
     path('api/v1/sessions/', include('apps.sessions.urls')),
     path('api/v1/messaging/', include('apps.messaging.urls')),
+    path('api/v1/guardians/', include('apps.guardians.urls')),
     path('api/v1/marketplace/', include('apps.marketplace.urls')),
     path('api/v1/wallet/', include('apps.wallet.urls')),
     path('api/v1/notifications/', include('apps.notifications.urls')),

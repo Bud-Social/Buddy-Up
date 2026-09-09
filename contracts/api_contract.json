@@ -13,6 +13,7 @@
   "client_evidence": {
     "web": [
       "frontend/src/api/auth.ts",
+      "frontend/src/api/guardians.ts",
       "frontend/src/api/feed.ts",
       "frontend/src/api/lives.ts",
       "frontend/src/api/marketplace.ts",
@@ -126,6 +127,46 @@
       "methods": [
         "POST"
       ]
+    },
+    {
+      "path": "/api/v1/auth/sessions/",
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/auth/sessions/1/",
+      "method": "DELETE"
+    },
+    {
+      "path": "/api/v1/auth/export-data/status/",
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/guardians/invite/",
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/guardians/links/",
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/guardians/links/1/accept/",
+      "method": "POST"
+    },
+    {
+      "path": "/api/v1/guardians/links/1/permissions/",
+      "method": "PATCH"
+    },
+    {
+      "path": "/api/v1/guardians/links/1/",
+      "method": "DELETE"
+    },
+    {
+      "path": "/api/v1/guardians/dashboard/",
+      "method": "GET"
+    },
+    {
+      "path": "/api/v1/guardians/accept-invite/",
+      "method": "POST"
     }
   ]
 }

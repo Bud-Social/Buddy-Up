@@ -319,7 +319,7 @@ as String,
 /// @nodoc
 mixin _$NotificationPreference {
 
- bool get likes; bool get comments; bool get follows; bool get buddyRequests; bool get messages; bool get liveStarts; bool get gymUpdates; bool get tips; bool get marketing;
+@JsonKey(name: 'push_enabled') bool get pushEnabled;@JsonKey(name: 'email_enabled') bool get emailEnabled;@JsonKey(name: 'in_app_enabled') bool get inAppEnabled;@JsonKey(name: 'quiet_hours_start') String? get quietHoursStart;@JsonKey(name: 'quiet_hours_end') String? get quietHoursEnd;@JsonKey(name: 'timezone')@_FlexibleStringConverter() String? get timezone;@JsonKey(name: 'category_frequency')@_FlexibleStringConverter() String? get categoryFrequency;@JsonKey(name: 'buddy_request_push') bool get buddyRequestPush;@JsonKey(name: 'buddy_accepted_push') bool get buddyAcceptedPush;@JsonKey(name: 'new_follower_push') bool get newFollowerPush;@JsonKey(name: 'comment_push') bool get commentPush;@JsonKey(name: 'live_starting_push') bool get liveStartingPush;@JsonKey(name: 'session_reminder_push') bool get sessionReminderPush;@JsonKey(name: 'streak_milestone_push') bool get streakMilestonePush;@JsonKey(name: 'accountability_ping_push') bool get accountabilityPingPush;@JsonKey(name: 'programme_reminder_push') bool get programmeReminderPush;@JsonKey(name: 'meal_reminder_push') bool get mealReminderPush;@JsonKey(name: 'shop_cert_push') bool get shopCertPush;@JsonKey(name: 'new_purchase_push') bool get newPurchasePush;
 /// Create a copy of NotificationPreference
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -332,16 +332,16 @@ $NotificationPreferenceCopyWith<NotificationPreference> get copyWith => _$Notifi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is NotificationPreference&&(identical(other.likes, likes) || other.likes == likes)&&(identical(other.comments, comments) || other.comments == comments)&&(identical(other.follows, follows) || other.follows == follows)&&(identical(other.buddyRequests, buddyRequests) || other.buddyRequests == buddyRequests)&&(identical(other.messages, messages) || other.messages == messages)&&(identical(other.liveStarts, liveStarts) || other.liveStarts == liveStarts)&&(identical(other.gymUpdates, gymUpdates) || other.gymUpdates == gymUpdates)&&(identical(other.tips, tips) || other.tips == tips)&&(identical(other.marketing, marketing) || other.marketing == marketing));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is NotificationPreference&&(identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled)&&(identical(other.emailEnabled, emailEnabled) || other.emailEnabled == emailEnabled)&&(identical(other.inAppEnabled, inAppEnabled) || other.inAppEnabled == inAppEnabled)&&(identical(other.quietHoursStart, quietHoursStart) || other.quietHoursStart == quietHoursStart)&&(identical(other.quietHoursEnd, quietHoursEnd) || other.quietHoursEnd == quietHoursEnd)&&(identical(other.timezone, timezone) || other.timezone == timezone)&&(identical(other.categoryFrequency, categoryFrequency) || other.categoryFrequency == categoryFrequency)&&(identical(other.buddyRequestPush, buddyRequestPush) || other.buddyRequestPush == buddyRequestPush)&&(identical(other.buddyAcceptedPush, buddyAcceptedPush) || other.buddyAcceptedPush == buddyAcceptedPush)&&(identical(other.newFollowerPush, newFollowerPush) || other.newFollowerPush == newFollowerPush)&&(identical(other.commentPush, commentPush) || other.commentPush == commentPush)&&(identical(other.liveStartingPush, liveStartingPush) || other.liveStartingPush == liveStartingPush)&&(identical(other.sessionReminderPush, sessionReminderPush) || other.sessionReminderPush == sessionReminderPush)&&(identical(other.streakMilestonePush, streakMilestonePush) || other.streakMilestonePush == streakMilestonePush)&&(identical(other.accountabilityPingPush, accountabilityPingPush) || other.accountabilityPingPush == accountabilityPingPush)&&(identical(other.programmeReminderPush, programmeReminderPush) || other.programmeReminderPush == programmeReminderPush)&&(identical(other.mealReminderPush, mealReminderPush) || other.mealReminderPush == mealReminderPush)&&(identical(other.shopCertPush, shopCertPush) || other.shopCertPush == shopCertPush)&&(identical(other.newPurchasePush, newPurchasePush) || other.newPurchasePush == newPurchasePush));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,likes,comments,follows,buddyRequests,messages,liveStarts,gymUpdates,tips,marketing);
+int get hashCode => Object.hashAll([runtimeType,pushEnabled,emailEnabled,inAppEnabled,quietHoursStart,quietHoursEnd,timezone,categoryFrequency,buddyRequestPush,buddyAcceptedPush,newFollowerPush,commentPush,liveStartingPush,sessionReminderPush,streakMilestonePush,accountabilityPingPush,programmeReminderPush,mealReminderPush,shopCertPush,newPurchasePush]);
 
 @override
 String toString() {
-  return 'NotificationPreference(likes: $likes, comments: $comments, follows: $follows, buddyRequests: $buddyRequests, messages: $messages, liveStarts: $liveStarts, gymUpdates: $gymUpdates, tips: $tips, marketing: $marketing)';
+  return 'NotificationPreference(pushEnabled: $pushEnabled, emailEnabled: $emailEnabled, inAppEnabled: $inAppEnabled, quietHoursStart: $quietHoursStart, quietHoursEnd: $quietHoursEnd, timezone: $timezone, categoryFrequency: $categoryFrequency, buddyRequestPush: $buddyRequestPush, buddyAcceptedPush: $buddyAcceptedPush, newFollowerPush: $newFollowerPush, commentPush: $commentPush, liveStartingPush: $liveStartingPush, sessionReminderPush: $sessionReminderPush, streakMilestonePush: $streakMilestonePush, accountabilityPingPush: $accountabilityPingPush, programmeReminderPush: $programmeReminderPush, mealReminderPush: $mealReminderPush, shopCertPush: $shopCertPush, newPurchasePush: $newPurchasePush)';
 }
 
 
@@ -352,7 +352,7 @@ abstract mixin class $NotificationPreferenceCopyWith<$Res>  {
   factory $NotificationPreferenceCopyWith(NotificationPreference value, $Res Function(NotificationPreference) _then) = _$NotificationPreferenceCopyWithImpl;
 @useResult
 $Res call({
- bool likes, bool comments, bool follows, bool buddyRequests, bool messages, bool liveStarts, bool gymUpdates, bool tips, bool marketing
+@JsonKey(name: 'push_enabled') bool pushEnabled,@JsonKey(name: 'email_enabled') bool emailEnabled,@JsonKey(name: 'in_app_enabled') bool inAppEnabled,@JsonKey(name: 'quiet_hours_start') String? quietHoursStart,@JsonKey(name: 'quiet_hours_end') String? quietHoursEnd,@JsonKey(name: 'timezone')@_FlexibleStringConverter() String? timezone,@JsonKey(name: 'category_frequency')@_FlexibleStringConverter() String? categoryFrequency,@JsonKey(name: 'buddy_request_push') bool buddyRequestPush,@JsonKey(name: 'buddy_accepted_push') bool buddyAcceptedPush,@JsonKey(name: 'new_follower_push') bool newFollowerPush,@JsonKey(name: 'comment_push') bool commentPush,@JsonKey(name: 'live_starting_push') bool liveStartingPush,@JsonKey(name: 'session_reminder_push') bool sessionReminderPush,@JsonKey(name: 'streak_milestone_push') bool streakMilestonePush,@JsonKey(name: 'accountability_ping_push') bool accountabilityPingPush,@JsonKey(name: 'programme_reminder_push') bool programmeReminderPush,@JsonKey(name: 'meal_reminder_push') bool mealReminderPush,@JsonKey(name: 'shop_cert_push') bool shopCertPush,@JsonKey(name: 'new_purchase_push') bool newPurchasePush
 });
 
 
@@ -369,17 +369,27 @@ class _$NotificationPreferenceCopyWithImpl<$Res>
 
 /// Create a copy of NotificationPreference
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? likes = null,Object? comments = null,Object? follows = null,Object? buddyRequests = null,Object? messages = null,Object? liveStarts = null,Object? gymUpdates = null,Object? tips = null,Object? marketing = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? pushEnabled = null,Object? emailEnabled = null,Object? inAppEnabled = null,Object? quietHoursStart = freezed,Object? quietHoursEnd = freezed,Object? timezone = freezed,Object? categoryFrequency = freezed,Object? buddyRequestPush = null,Object? buddyAcceptedPush = null,Object? newFollowerPush = null,Object? commentPush = null,Object? liveStartingPush = null,Object? sessionReminderPush = null,Object? streakMilestonePush = null,Object? accountabilityPingPush = null,Object? programmeReminderPush = null,Object? mealReminderPush = null,Object? shopCertPush = null,Object? newPurchasePush = null,}) {
   return _then(_self.copyWith(
-likes: null == likes ? _self.likes : likes // ignore: cast_nullable_to_non_nullable
-as bool,comments: null == comments ? _self.comments : comments // ignore: cast_nullable_to_non_nullable
-as bool,follows: null == follows ? _self.follows : follows // ignore: cast_nullable_to_non_nullable
-as bool,buddyRequests: null == buddyRequests ? _self.buddyRequests : buddyRequests // ignore: cast_nullable_to_non_nullable
-as bool,messages: null == messages ? _self.messages : messages // ignore: cast_nullable_to_non_nullable
-as bool,liveStarts: null == liveStarts ? _self.liveStarts : liveStarts // ignore: cast_nullable_to_non_nullable
-as bool,gymUpdates: null == gymUpdates ? _self.gymUpdates : gymUpdates // ignore: cast_nullable_to_non_nullable
-as bool,tips: null == tips ? _self.tips : tips // ignore: cast_nullable_to_non_nullable
-as bool,marketing: null == marketing ? _self.marketing : marketing // ignore: cast_nullable_to_non_nullable
+pushEnabled: null == pushEnabled ? _self.pushEnabled : pushEnabled // ignore: cast_nullable_to_non_nullable
+as bool,emailEnabled: null == emailEnabled ? _self.emailEnabled : emailEnabled // ignore: cast_nullable_to_non_nullable
+as bool,inAppEnabled: null == inAppEnabled ? _self.inAppEnabled : inAppEnabled // ignore: cast_nullable_to_non_nullable
+as bool,quietHoursStart: freezed == quietHoursStart ? _self.quietHoursStart : quietHoursStart // ignore: cast_nullable_to_non_nullable
+as String?,quietHoursEnd: freezed == quietHoursEnd ? _self.quietHoursEnd : quietHoursEnd // ignore: cast_nullable_to_non_nullable
+as String?,timezone: freezed == timezone ? _self.timezone : timezone // ignore: cast_nullable_to_non_nullable
+as String?,categoryFrequency: freezed == categoryFrequency ? _self.categoryFrequency : categoryFrequency // ignore: cast_nullable_to_non_nullable
+as String?,buddyRequestPush: null == buddyRequestPush ? _self.buddyRequestPush : buddyRequestPush // ignore: cast_nullable_to_non_nullable
+as bool,buddyAcceptedPush: null == buddyAcceptedPush ? _self.buddyAcceptedPush : buddyAcceptedPush // ignore: cast_nullable_to_non_nullable
+as bool,newFollowerPush: null == newFollowerPush ? _self.newFollowerPush : newFollowerPush // ignore: cast_nullable_to_non_nullable
+as bool,commentPush: null == commentPush ? _self.commentPush : commentPush // ignore: cast_nullable_to_non_nullable
+as bool,liveStartingPush: null == liveStartingPush ? _self.liveStartingPush : liveStartingPush // ignore: cast_nullable_to_non_nullable
+as bool,sessionReminderPush: null == sessionReminderPush ? _self.sessionReminderPush : sessionReminderPush // ignore: cast_nullable_to_non_nullable
+as bool,streakMilestonePush: null == streakMilestonePush ? _self.streakMilestonePush : streakMilestonePush // ignore: cast_nullable_to_non_nullable
+as bool,accountabilityPingPush: null == accountabilityPingPush ? _self.accountabilityPingPush : accountabilityPingPush // ignore: cast_nullable_to_non_nullable
+as bool,programmeReminderPush: null == programmeReminderPush ? _self.programmeReminderPush : programmeReminderPush // ignore: cast_nullable_to_non_nullable
+as bool,mealReminderPush: null == mealReminderPush ? _self.mealReminderPush : mealReminderPush // ignore: cast_nullable_to_non_nullable
+as bool,shopCertPush: null == shopCertPush ? _self.shopCertPush : shopCertPush // ignore: cast_nullable_to_non_nullable
+as bool,newPurchasePush: null == newPurchasePush ? _self.newPurchasePush : newPurchasePush // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -465,10 +475,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( bool likes,  bool comments,  bool follows,  bool buddyRequests,  bool messages,  bool liveStarts,  bool gymUpdates,  bool tips,  bool marketing)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'push_enabled')  bool pushEnabled, @JsonKey(name: 'email_enabled')  bool emailEnabled, @JsonKey(name: 'in_app_enabled')  bool inAppEnabled, @JsonKey(name: 'quiet_hours_start')  String? quietHoursStart, @JsonKey(name: 'quiet_hours_end')  String? quietHoursEnd, @JsonKey(name: 'timezone')@_FlexibleStringConverter()  String? timezone, @JsonKey(name: 'category_frequency')@_FlexibleStringConverter()  String? categoryFrequency, @JsonKey(name: 'buddy_request_push')  bool buddyRequestPush, @JsonKey(name: 'buddy_accepted_push')  bool buddyAcceptedPush, @JsonKey(name: 'new_follower_push')  bool newFollowerPush, @JsonKey(name: 'comment_push')  bool commentPush, @JsonKey(name: 'live_starting_push')  bool liveStartingPush, @JsonKey(name: 'session_reminder_push')  bool sessionReminderPush, @JsonKey(name: 'streak_milestone_push')  bool streakMilestonePush, @JsonKey(name: 'accountability_ping_push')  bool accountabilityPingPush, @JsonKey(name: 'programme_reminder_push')  bool programmeReminderPush, @JsonKey(name: 'meal_reminder_push')  bool mealReminderPush, @JsonKey(name: 'shop_cert_push')  bool shopCertPush, @JsonKey(name: 'new_purchase_push')  bool newPurchasePush)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _NotificationPreference() when $default != null:
-return $default(_that.likes,_that.comments,_that.follows,_that.buddyRequests,_that.messages,_that.liveStarts,_that.gymUpdates,_that.tips,_that.marketing);case _:
+return $default(_that.pushEnabled,_that.emailEnabled,_that.inAppEnabled,_that.quietHoursStart,_that.quietHoursEnd,_that.timezone,_that.categoryFrequency,_that.buddyRequestPush,_that.buddyAcceptedPush,_that.newFollowerPush,_that.commentPush,_that.liveStartingPush,_that.sessionReminderPush,_that.streakMilestonePush,_that.accountabilityPingPush,_that.programmeReminderPush,_that.mealReminderPush,_that.shopCertPush,_that.newPurchasePush);case _:
   return orElse();
 
 }
@@ -486,10 +496,10 @@ return $default(_that.likes,_that.comments,_that.follows,_that.buddyRequests,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( bool likes,  bool comments,  bool follows,  bool buddyRequests,  bool messages,  bool liveStarts,  bool gymUpdates,  bool tips,  bool marketing)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'push_enabled')  bool pushEnabled, @JsonKey(name: 'email_enabled')  bool emailEnabled, @JsonKey(name: 'in_app_enabled')  bool inAppEnabled, @JsonKey(name: 'quiet_hours_start')  String? quietHoursStart, @JsonKey(name: 'quiet_hours_end')  String? quietHoursEnd, @JsonKey(name: 'timezone')@_FlexibleStringConverter()  String? timezone, @JsonKey(name: 'category_frequency')@_FlexibleStringConverter()  String? categoryFrequency, @JsonKey(name: 'buddy_request_push')  bool buddyRequestPush, @JsonKey(name: 'buddy_accepted_push')  bool buddyAcceptedPush, @JsonKey(name: 'new_follower_push')  bool newFollowerPush, @JsonKey(name: 'comment_push')  bool commentPush, @JsonKey(name: 'live_starting_push')  bool liveStartingPush, @JsonKey(name: 'session_reminder_push')  bool sessionReminderPush, @JsonKey(name: 'streak_milestone_push')  bool streakMilestonePush, @JsonKey(name: 'accountability_ping_push')  bool accountabilityPingPush, @JsonKey(name: 'programme_reminder_push')  bool programmeReminderPush, @JsonKey(name: 'meal_reminder_push')  bool mealReminderPush, @JsonKey(name: 'shop_cert_push')  bool shopCertPush, @JsonKey(name: 'new_purchase_push')  bool newPurchasePush)  $default,) {final _that = this;
 switch (_that) {
 case _NotificationPreference():
-return $default(_that.likes,_that.comments,_that.follows,_that.buddyRequests,_that.messages,_that.liveStarts,_that.gymUpdates,_that.tips,_that.marketing);case _:
+return $default(_that.pushEnabled,_that.emailEnabled,_that.inAppEnabled,_that.quietHoursStart,_that.quietHoursEnd,_that.timezone,_that.categoryFrequency,_that.buddyRequestPush,_that.buddyAcceptedPush,_that.newFollowerPush,_that.commentPush,_that.liveStartingPush,_that.sessionReminderPush,_that.streakMilestonePush,_that.accountabilityPingPush,_that.programmeReminderPush,_that.mealReminderPush,_that.shopCertPush,_that.newPurchasePush);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -506,10 +516,10 @@ return $default(_that.likes,_that.comments,_that.follows,_that.buddyRequests,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( bool likes,  bool comments,  bool follows,  bool buddyRequests,  bool messages,  bool liveStarts,  bool gymUpdates,  bool tips,  bool marketing)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'push_enabled')  bool pushEnabled, @JsonKey(name: 'email_enabled')  bool emailEnabled, @JsonKey(name: 'in_app_enabled')  bool inAppEnabled, @JsonKey(name: 'quiet_hours_start')  String? quietHoursStart, @JsonKey(name: 'quiet_hours_end')  String? quietHoursEnd, @JsonKey(name: 'timezone')@_FlexibleStringConverter()  String? timezone, @JsonKey(name: 'category_frequency')@_FlexibleStringConverter()  String? categoryFrequency, @JsonKey(name: 'buddy_request_push')  bool buddyRequestPush, @JsonKey(name: 'buddy_accepted_push')  bool buddyAcceptedPush, @JsonKey(name: 'new_follower_push')  bool newFollowerPush, @JsonKey(name: 'comment_push')  bool commentPush, @JsonKey(name: 'live_starting_push')  bool liveStartingPush, @JsonKey(name: 'session_reminder_push')  bool sessionReminderPush, @JsonKey(name: 'streak_milestone_push')  bool streakMilestonePush, @JsonKey(name: 'accountability_ping_push')  bool accountabilityPingPush, @JsonKey(name: 'programme_reminder_push')  bool programmeReminderPush, @JsonKey(name: 'meal_reminder_push')  bool mealReminderPush, @JsonKey(name: 'shop_cert_push')  bool shopCertPush, @JsonKey(name: 'new_purchase_push')  bool newPurchasePush)?  $default,) {final _that = this;
 switch (_that) {
 case _NotificationPreference() when $default != null:
-return $default(_that.likes,_that.comments,_that.follows,_that.buddyRequests,_that.messages,_that.liveStarts,_that.gymUpdates,_that.tips,_that.marketing);case _:
+return $default(_that.pushEnabled,_that.emailEnabled,_that.inAppEnabled,_that.quietHoursStart,_that.quietHoursEnd,_that.timezone,_that.categoryFrequency,_that.buddyRequestPush,_that.buddyAcceptedPush,_that.newFollowerPush,_that.commentPush,_that.liveStartingPush,_that.sessionReminderPush,_that.streakMilestonePush,_that.accountabilityPingPush,_that.programmeReminderPush,_that.mealReminderPush,_that.shopCertPush,_that.newPurchasePush);case _:
   return null;
 
 }
@@ -521,18 +531,28 @@ return $default(_that.likes,_that.comments,_that.follows,_that.buddyRequests,_th
 @JsonSerializable()
 
 class _NotificationPreference implements NotificationPreference {
-  const _NotificationPreference({this.likes = true, this.comments = true, this.follows = true, this.buddyRequests = true, this.messages = true, this.liveStarts = true, this.gymUpdates = true, this.tips = true, this.marketing = true});
+  const _NotificationPreference({@JsonKey(name: 'push_enabled') this.pushEnabled = true, @JsonKey(name: 'email_enabled') this.emailEnabled = true, @JsonKey(name: 'in_app_enabled') this.inAppEnabled = true, @JsonKey(name: 'quiet_hours_start') this.quietHoursStart, @JsonKey(name: 'quiet_hours_end') this.quietHoursEnd, @JsonKey(name: 'timezone')@_FlexibleStringConverter() this.timezone, @JsonKey(name: 'category_frequency')@_FlexibleStringConverter() this.categoryFrequency, @JsonKey(name: 'buddy_request_push') this.buddyRequestPush = true, @JsonKey(name: 'buddy_accepted_push') this.buddyAcceptedPush = true, @JsonKey(name: 'new_follower_push') this.newFollowerPush = true, @JsonKey(name: 'comment_push') this.commentPush = true, @JsonKey(name: 'live_starting_push') this.liveStartingPush = true, @JsonKey(name: 'session_reminder_push') this.sessionReminderPush = true, @JsonKey(name: 'streak_milestone_push') this.streakMilestonePush = true, @JsonKey(name: 'accountability_ping_push') this.accountabilityPingPush = true, @JsonKey(name: 'programme_reminder_push') this.programmeReminderPush = true, @JsonKey(name: 'meal_reminder_push') this.mealReminderPush = true, @JsonKey(name: 'shop_cert_push') this.shopCertPush = true, @JsonKey(name: 'new_purchase_push') this.newPurchasePush = true});
   factory _NotificationPreference.fromJson(Map<String, dynamic> json) => _$NotificationPreferenceFromJson(json);
 
-@override@JsonKey() final  bool likes;
-@override@JsonKey() final  bool comments;
-@override@JsonKey() final  bool follows;
-@override@JsonKey() final  bool buddyRequests;
-@override@JsonKey() final  bool messages;
-@override@JsonKey() final  bool liveStarts;
-@override@JsonKey() final  bool gymUpdates;
-@override@JsonKey() final  bool tips;
-@override@JsonKey() final  bool marketing;
+@override@JsonKey(name: 'push_enabled') final  bool pushEnabled;
+@override@JsonKey(name: 'email_enabled') final  bool emailEnabled;
+@override@JsonKey(name: 'in_app_enabled') final  bool inAppEnabled;
+@override@JsonKey(name: 'quiet_hours_start') final  String? quietHoursStart;
+@override@JsonKey(name: 'quiet_hours_end') final  String? quietHoursEnd;
+@override@JsonKey(name: 'timezone')@_FlexibleStringConverter() final  String? timezone;
+@override@JsonKey(name: 'category_frequency')@_FlexibleStringConverter() final  String? categoryFrequency;
+@override@JsonKey(name: 'buddy_request_push') final  bool buddyRequestPush;
+@override@JsonKey(name: 'buddy_accepted_push') final  bool buddyAcceptedPush;
+@override@JsonKey(name: 'new_follower_push') final  bool newFollowerPush;
+@override@JsonKey(name: 'comment_push') final  bool commentPush;
+@override@JsonKey(name: 'live_starting_push') final  bool liveStartingPush;
+@override@JsonKey(name: 'session_reminder_push') final  bool sessionReminderPush;
+@override@JsonKey(name: 'streak_milestone_push') final  bool streakMilestonePush;
+@override@JsonKey(name: 'accountability_ping_push') final  bool accountabilityPingPush;
+@override@JsonKey(name: 'programme_reminder_push') final  bool programmeReminderPush;
+@override@JsonKey(name: 'meal_reminder_push') final  bool mealReminderPush;
+@override@JsonKey(name: 'shop_cert_push') final  bool shopCertPush;
+@override@JsonKey(name: 'new_purchase_push') final  bool newPurchasePush;
 
 /// Create a copy of NotificationPreference
 /// with the given fields replaced by the non-null parameter values.
@@ -547,16 +567,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _NotificationPreference&&(identical(other.likes, likes) || other.likes == likes)&&(identical(other.comments, comments) || other.comments == comments)&&(identical(other.follows, follows) || other.follows == follows)&&(identical(other.buddyRequests, buddyRequests) || other.buddyRequests == buddyRequests)&&(identical(other.messages, messages) || other.messages == messages)&&(identical(other.liveStarts, liveStarts) || other.liveStarts == liveStarts)&&(identical(other.gymUpdates, gymUpdates) || other.gymUpdates == gymUpdates)&&(identical(other.tips, tips) || other.tips == tips)&&(identical(other.marketing, marketing) || other.marketing == marketing));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _NotificationPreference&&(identical(other.pushEnabled, pushEnabled) || other.pushEnabled == pushEnabled)&&(identical(other.emailEnabled, emailEnabled) || other.emailEnabled == emailEnabled)&&(identical(other.inAppEnabled, inAppEnabled) || other.inAppEnabled == inAppEnabled)&&(identical(other.quietHoursStart, quietHoursStart) || other.quietHoursStart == quietHoursStart)&&(identical(other.quietHoursEnd, quietHoursEnd) || other.quietHoursEnd == quietHoursEnd)&&(identical(other.timezone, timezone) || other.timezone == timezone)&&(identical(other.categoryFrequency, categoryFrequency) || other.categoryFrequency == categoryFrequency)&&(identical(other.buddyRequestPush, buddyRequestPush) || other.buddyRequestPush == buddyRequestPush)&&(identical(other.buddyAcceptedPush, buddyAcceptedPush) || other.buddyAcceptedPush == buddyAcceptedPush)&&(identical(other.newFollowerPush, newFollowerPush) || other.newFollowerPush == newFollowerPush)&&(identical(other.commentPush, commentPush) || other.commentPush == commentPush)&&(identical(other.liveStartingPush, liveStartingPush) || other.liveStartingPush == liveStartingPush)&&(identical(other.sessionReminderPush, sessionReminderPush) || other.sessionReminderPush == sessionReminderPush)&&(identical(other.streakMilestonePush, streakMilestonePush) || other.streakMilestonePush == streakMilestonePush)&&(identical(other.accountabilityPingPush, accountabilityPingPush) || other.accountabilityPingPush == accountabilityPingPush)&&(identical(other.programmeReminderPush, programmeReminderPush) || other.programmeReminderPush == programmeReminderPush)&&(identical(other.mealReminderPush, mealReminderPush) || other.mealReminderPush == mealReminderPush)&&(identical(other.shopCertPush, shopCertPush) || other.shopCertPush == shopCertPush)&&(identical(other.newPurchasePush, newPurchasePush) || other.newPurchasePush == newPurchasePush));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,likes,comments,follows,buddyRequests,messages,liveStarts,gymUpdates,tips,marketing);
+int get hashCode => Object.hashAll([runtimeType,pushEnabled,emailEnabled,inAppEnabled,quietHoursStart,quietHoursEnd,timezone,categoryFrequency,buddyRequestPush,buddyAcceptedPush,newFollowerPush,commentPush,liveStartingPush,sessionReminderPush,streakMilestonePush,accountabilityPingPush,programmeReminderPush,mealReminderPush,shopCertPush,newPurchasePush]);
 
 @override
 String toString() {
-  return 'NotificationPreference(likes: $likes, comments: $comments, follows: $follows, buddyRequests: $buddyRequests, messages: $messages, liveStarts: $liveStarts, gymUpdates: $gymUpdates, tips: $tips, marketing: $marketing)';
+  return 'NotificationPreference(pushEnabled: $pushEnabled, emailEnabled: $emailEnabled, inAppEnabled: $inAppEnabled, quietHoursStart: $quietHoursStart, quietHoursEnd: $quietHoursEnd, timezone: $timezone, categoryFrequency: $categoryFrequency, buddyRequestPush: $buddyRequestPush, buddyAcceptedPush: $buddyAcceptedPush, newFollowerPush: $newFollowerPush, commentPush: $commentPush, liveStartingPush: $liveStartingPush, sessionReminderPush: $sessionReminderPush, streakMilestonePush: $streakMilestonePush, accountabilityPingPush: $accountabilityPingPush, programmeReminderPush: $programmeReminderPush, mealReminderPush: $mealReminderPush, shopCertPush: $shopCertPush, newPurchasePush: $newPurchasePush)';
 }
 
 
@@ -567,7 +587,7 @@ abstract mixin class _$NotificationPreferenceCopyWith<$Res> implements $Notifica
   factory _$NotificationPreferenceCopyWith(_NotificationPreference value, $Res Function(_NotificationPreference) _then) = __$NotificationPreferenceCopyWithImpl;
 @override @useResult
 $Res call({
- bool likes, bool comments, bool follows, bool buddyRequests, bool messages, bool liveStarts, bool gymUpdates, bool tips, bool marketing
+@JsonKey(name: 'push_enabled') bool pushEnabled,@JsonKey(name: 'email_enabled') bool emailEnabled,@JsonKey(name: 'in_app_enabled') bool inAppEnabled,@JsonKey(name: 'quiet_hours_start') String? quietHoursStart,@JsonKey(name: 'quiet_hours_end') String? quietHoursEnd,@JsonKey(name: 'timezone')@_FlexibleStringConverter() String? timezone,@JsonKey(name: 'category_frequency')@_FlexibleStringConverter() String? categoryFrequency,@JsonKey(name: 'buddy_request_push') bool buddyRequestPush,@JsonKey(name: 'buddy_accepted_push') bool buddyAcceptedPush,@JsonKey(name: 'new_follower_push') bool newFollowerPush,@JsonKey(name: 'comment_push') bool commentPush,@JsonKey(name: 'live_starting_push') bool liveStartingPush,@JsonKey(name: 'session_reminder_push') bool sessionReminderPush,@JsonKey(name: 'streak_milestone_push') bool streakMilestonePush,@JsonKey(name: 'accountability_ping_push') bool accountabilityPingPush,@JsonKey(name: 'programme_reminder_push') bool programmeReminderPush,@JsonKey(name: 'meal_reminder_push') bool mealReminderPush,@JsonKey(name: 'shop_cert_push') bool shopCertPush,@JsonKey(name: 'new_purchase_push') bool newPurchasePush
 });
 
 
@@ -584,17 +604,27 @@ class __$NotificationPreferenceCopyWithImpl<$Res>
 
 /// Create a copy of NotificationPreference
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? likes = null,Object? comments = null,Object? follows = null,Object? buddyRequests = null,Object? messages = null,Object? liveStarts = null,Object? gymUpdates = null,Object? tips = null,Object? marketing = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? pushEnabled = null,Object? emailEnabled = null,Object? inAppEnabled = null,Object? quietHoursStart = freezed,Object? quietHoursEnd = freezed,Object? timezone = freezed,Object? categoryFrequency = freezed,Object? buddyRequestPush = null,Object? buddyAcceptedPush = null,Object? newFollowerPush = null,Object? commentPush = null,Object? liveStartingPush = null,Object? sessionReminderPush = null,Object? streakMilestonePush = null,Object? accountabilityPingPush = null,Object? programmeReminderPush = null,Object? mealReminderPush = null,Object? shopCertPush = null,Object? newPurchasePush = null,}) {
   return _then(_NotificationPreference(
-likes: null == likes ? _self.likes : likes // ignore: cast_nullable_to_non_nullable
-as bool,comments: null == comments ? _self.comments : comments // ignore: cast_nullable_to_non_nullable
-as bool,follows: null == follows ? _self.follows : follows // ignore: cast_nullable_to_non_nullable
-as bool,buddyRequests: null == buddyRequests ? _self.buddyRequests : buddyRequests // ignore: cast_nullable_to_non_nullable
-as bool,messages: null == messages ? _self.messages : messages // ignore: cast_nullable_to_non_nullable
-as bool,liveStarts: null == liveStarts ? _self.liveStarts : liveStarts // ignore: cast_nullable_to_non_nullable
-as bool,gymUpdates: null == gymUpdates ? _self.gymUpdates : gymUpdates // ignore: cast_nullable_to_non_nullable
-as bool,tips: null == tips ? _self.tips : tips // ignore: cast_nullable_to_non_nullable
-as bool,marketing: null == marketing ? _self.marketing : marketing // ignore: cast_nullable_to_non_nullable
+pushEnabled: null == pushEnabled ? _self.pushEnabled : pushEnabled // ignore: cast_nullable_to_non_nullable
+as bool,emailEnabled: null == emailEnabled ? _self.emailEnabled : emailEnabled // ignore: cast_nullable_to_non_nullable
+as bool,inAppEnabled: null == inAppEnabled ? _self.inAppEnabled : inAppEnabled // ignore: cast_nullable_to_non_nullable
+as bool,quietHoursStart: freezed == quietHoursStart ? _self.quietHoursStart : quietHoursStart // ignore: cast_nullable_to_non_nullable
+as String?,quietHoursEnd: freezed == quietHoursEnd ? _self.quietHoursEnd : quietHoursEnd // ignore: cast_nullable_to_non_nullable
+as String?,timezone: freezed == timezone ? _self.timezone : timezone // ignore: cast_nullable_to_non_nullable
+as String?,categoryFrequency: freezed == categoryFrequency ? _self.categoryFrequency : categoryFrequency // ignore: cast_nullable_to_non_nullable
+as String?,buddyRequestPush: null == buddyRequestPush ? _self.buddyRequestPush : buddyRequestPush // ignore: cast_nullable_to_non_nullable
+as bool,buddyAcceptedPush: null == buddyAcceptedPush ? _self.buddyAcceptedPush : buddyAcceptedPush // ignore: cast_nullable_to_non_nullable
+as bool,newFollowerPush: null == newFollowerPush ? _self.newFollowerPush : newFollowerPush // ignore: cast_nullable_to_non_nullable
+as bool,commentPush: null == commentPush ? _self.commentPush : commentPush // ignore: cast_nullable_to_non_nullable
+as bool,liveStartingPush: null == liveStartingPush ? _self.liveStartingPush : liveStartingPush // ignore: cast_nullable_to_non_nullable
+as bool,sessionReminderPush: null == sessionReminderPush ? _self.sessionReminderPush : sessionReminderPush // ignore: cast_nullable_to_non_nullable
+as bool,streakMilestonePush: null == streakMilestonePush ? _self.streakMilestonePush : streakMilestonePush // ignore: cast_nullable_to_non_nullable
+as bool,accountabilityPingPush: null == accountabilityPingPush ? _self.accountabilityPingPush : accountabilityPingPush // ignore: cast_nullable_to_non_nullable
+as bool,programmeReminderPush: null == programmeReminderPush ? _self.programmeReminderPush : programmeReminderPush // ignore: cast_nullable_to_non_nullable
+as bool,mealReminderPush: null == mealReminderPush ? _self.mealReminderPush : mealReminderPush // ignore: cast_nullable_to_non_nullable
+as bool,shopCertPush: null == shopCertPush ? _self.shopCertPush : shopCertPush // ignore: cast_nullable_to_non_nullable
+as bool,newPurchasePush: null == newPurchasePush ? _self.newPurchasePush : newPurchasePush // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

@@ -19,6 +19,9 @@ _RegisterPayload _$RegisterPayloadFromJson(Map<String, dynamic> json) =>
       acceptedPrivacy: json['accepted_privacy'] as bool,
       acceptedGuidelines: json['accepted_guidelines'] as bool,
       is16Plus: json['is_16_plus'] as bool,
+      guardianName: json['guardian_name'] as String?,
+      guardianEmail: json['guardian_email'] as String?,
+      guardianPhone: json['guardian_phone'] as String?,
     );
 
 Map<String, dynamic> _$RegisterPayloadToJson(_RegisterPayload instance) =>
@@ -34,6 +37,9 @@ Map<String, dynamic> _$RegisterPayloadToJson(_RegisterPayload instance) =>
       'accepted_privacy': instance.acceptedPrivacy,
       'accepted_guidelines': instance.acceptedGuidelines,
       'is_16_plus': instance.is16Plus,
+      'guardian_name': instance.guardianName,
+      'guardian_email': instance.guardianEmail,
+      'guardian_phone': instance.guardianPhone,
     };
 
 _LoginPayload _$LoginPayloadFromJson(Map<String, dynamic> json) =>
@@ -41,6 +47,7 @@ _LoginPayload _$LoginPayloadFromJson(Map<String, dynamic> json) =>
       email: json['email'] as String,
       password: json['password'] as String,
       rememberMe: json['remember_me'] as bool? ?? false,
+      reactivate: json['reactivate'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$LoginPayloadToJson(_LoginPayload instance) =>
@@ -48,6 +55,7 @@ Map<String, dynamic> _$LoginPayloadToJson(_LoginPayload instance) =>
       'email': instance.email,
       'password': instance.password,
       'remember_me': instance.rememberMe,
+      'reactivate': instance.reactivate,
     };
 
 _LoginInitResponse _$LoginInitResponseFromJson(Map<String, dynamic> json) =>

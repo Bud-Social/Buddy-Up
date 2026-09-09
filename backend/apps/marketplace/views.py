@@ -15,6 +15,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.throttling import ScopedRateThrottle
 
 from common.pagination import PageNumberPagination
+from apps.guardians.services import guardian_blocks_spends
 from apps.profiles.models import BuddyRelationship
 from common.age_gating import gate_mature_queryset, can_view_content
 from .models import (
@@ -1815,6 +1816,13 @@ class CheckoutCartView(views.APIView):
 
     @transaction.atomic
     def post(self, request):
+        if guardian_blocks_spends(request.user.profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Your parental co-owner has disabled spending.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
         # Idempotency guard: replaying the same checkout key is a no-op.
         idempotency_key = str(request.data.get('idempotency_key') or '')[:128]
         if idempotency_key:

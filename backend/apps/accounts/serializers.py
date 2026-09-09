@@ -70,6 +70,9 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
     remember_me = serializers.BooleanField(default=False)
+    # Opt-in reactivation: logging into a deactivated / scheduled-for-deletion
+    # account only restores it when the client explicitly asks for it.
+    reactivate = serializers.BooleanField(required=False)
 
 
 class OTPSerializer(serializers.Serializer):

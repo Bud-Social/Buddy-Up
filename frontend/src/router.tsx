@@ -11,6 +11,9 @@ const PUBLIC_ROUTES = [
   '/terms', '/privacy', '/community-guidelines', '/cookie-policy',
   '/medical-disclaimer', '/sponsorship-policy', '/adult-content-policy', '/help',
   '/totp-setup', '/totp-challenge',
+  // Guardian invite landing: unauthenticated visitors are redirected by the
+  // page itself so the invite token survives via ?next=.
+  '/settings/family/accept',
 ];
 
 function AuthGuard() {
@@ -92,7 +95,9 @@ const Profile = lazy(() => import('@/pages/app/Profile'));
 const EditProfile = lazy(() => import('@/pages/app/EditProfile'));
 const UserProfile = lazy(() => import('@/pages/app/UserProfile'));
 const FollowListScreen = lazy(() => import('@/pages/app/FollowListScreen'));
-const Settings = lazy(() => import('@/pages/app/Settings'));
+const Settings = lazy(() => import('@/pages/settings/Settings'));
+const SettingsSection = lazy(() => import('@/pages/settings/SettingsSection'));
+const FamilyAccept = lazy(() => import('@/pages/settings/FamilyAccept'));
 const BuddiesPage = lazy(() => import('@/pages/app/BuddiesPage'));
 const CreateGymPage = lazy(() => import('@/pages/app/CreateGymPage'));
 const LiveRoom = lazy(() => import('@/pages/app/LiveRoom'));
@@ -205,6 +210,8 @@ export const router = createBrowserRouter([
           { path: '/profile/edit', element: <SWrapper><EditProfile /></SWrapper> },
           { path: '/buddies', element: <SWrapper><BuddiesPage /></SWrapper> },
           { path: '/settings', element: <SWrapper><Settings /></SWrapper> },
+          { path: '/settings/:section', element: <SWrapper><SettingsSection /></SWrapper> },
+          { path: '/settings/family/accept', element: <SWrapper><FamilyAccept /></SWrapper> },
           { path: '/health-insights', element: <SWrapper><HealthInsights /></SWrapper> },
           { path: '/workout-form', element: <SWrapper><WorkoutForm /></SWrapper> },
           { path: '/verification', element: <SWrapper><Verification /></SWrapper> },

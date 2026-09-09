@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 import '../models/auth_models.dart';
+import '../models/device_session.dart';
 
 part 'auth_repository.g.dart';
 
@@ -73,9 +74,31 @@ abstract class AuthRepository {
   @POST('/auth/deactivate/')
   Future<void> deactivateAccount();
 
-  @DELETE('/auth/delete/')
-  Future<void> deleteAccount();
+  /// Backend contract: POST (not DELETE) with
+  /// {confirm: 'delete my account', current_password} or {totp_code}.
+  @POST('/auth/delete/')
+  Future<void> deleteAccount(@Body() Map<String, dynamic> payload);
 
   @POST('/auth/export-data/')
   Future<void> exportData();
+
+  /// {ready: bool, created_at: String?, filename: String?}
+  @GET('/auth/export-data/status/')
+  Future<dynamic> exportDataStatus();
+
+  @GET('/auth/consent-status/')
+  Future<dynamic> consentStatus();
+
+  // ── Device sessions ────────────────────────────────────────────────────────
+  // The client sends X-Device-Id (see ApiClient) so the backend can
+  // attribute each login to a device.
+
+  @GET('/auth/sessions/')
+  Future<List<DeviceSession>> listSessions();
+
+  @DELETE('/auth/sessions/{id}/')
+  Future<void> revokeSession(@Path('id') int sessionId);
+
+  @POST('/auth/logout-all/')
+  Future<void> logoutAllDevices();
 }

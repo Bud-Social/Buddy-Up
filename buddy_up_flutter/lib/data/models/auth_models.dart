@@ -19,6 +19,9 @@ abstract class RegisterPayload with _$RegisterPayload {
     @JsonKey(name: 'accepted_privacy') required bool acceptedPrivacy,
     @JsonKey(name: 'accepted_guidelines') required bool acceptedGuidelines,
     @JsonKey(name: 'is_16_plus') required bool is16Plus,
+    @JsonKey(name: 'guardian_name') String? guardianName,
+    @JsonKey(name: 'guardian_email') String? guardianEmail,
+    @JsonKey(name: 'guardian_phone') String? guardianPhone,
   }) = _RegisterPayload;
 
   factory RegisterPayload.fromJson(Map<String, dynamic> json) =>
@@ -31,6 +34,7 @@ abstract class LoginPayload with _$LoginPayload {
     required String email,
     required String password,
     @JsonKey(name: 'remember_me') @Default(false) bool rememberMe,
+    @Default(false) bool reactivate,
   }) = _LoginPayload;
 
   factory LoginPayload.fromJson(Map<String, dynamic> json) =>

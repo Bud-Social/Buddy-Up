@@ -5,6 +5,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/age_gating.dart';
 import '../../data/models/auth_models.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../shared/widgets/button.dart';
@@ -29,11 +30,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _confirmPasswordController = TextEditingController();
   final _usernameController = TextEditingController();
   final _displayNameController = TextEditingController();
+  final _guardianNameController = TextEditingController();
+  final _guardianEmailController = TextEditingController();
+  final _guardianPhoneController = TextEditingController();
   bool _isLoading = false;
   bool _acceptedTerms = false;
   bool _acceptedPrivacy = false;
   bool _acceptedGuidelines = false;
-  bool _is16Plus = false;
+  DateTime? _dob;
   String _role = 'user';
   late AuthRepository _authRepo;
 
@@ -51,7 +55,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     _confirmPasswordController.dispose();
     _usernameController.dispose();
     _displayNameController.dispose();
+    _guardianNameController.dispose();
+    _guardianEmailController.dispose();
+    _guardianPhoneController.dispose();
     super.dispose();
+  }
+
+  int? get _age => _dob == null ? null : AgeGating.calculateAge(_dob!);
+  bool get _isMinor => _age != null && _age! >= 16 && _age! < 18;
+
+  String _formatDob(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  Future<void> _pickDob() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(now.year - 18),
+      firstDate: DateTime(now.year - 100),
+      lastDate: now,
+    );
+    if (picked != null) setState(() => _dob = picked);
   }
 
   Future<void> _handleRegister() async {
@@ -59,6 +83,30 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!_acceptedTerms || !_acceptedPrivacy) {
       showToast(context, 'You must accept the terms and privacy policy.', type: ToastType.error);
       return;
+    }
+    final dob = _dob;
+    if (dob == null) {
+      showToast(context, 'Please enter your date of birth.', type: ToastType.error);
+      return;
+    }
+    final age = AgeGating.calculateAge(dob);
+    if (age < 16) {
+      showToast(context, 'You must be at least 16 years old to join Buddy-Up.', type: ToastType.error);
+      return;
+    }
+    // 16-17 year olds need guardian details (at least one field), mirroring web.
+    if (age < 18) {
+      final hasGuardian = _guardianNameController.text.trim().isNotEmpty ||
+          _guardianEmailController.text.trim().isNotEmpty ||
+          _guardianPhoneController.text.trim().isNotEmpty;
+      if (!hasGuardian) {
+        showToast(
+          context,
+          'Guardian name, email or phone is required for members under 18.',
+          type: ToastType.error,
+        );
+        return;
+      }
     }
 
     setState(() => _isLoading = true);
@@ -68,14 +116,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           email: _emailController.text.trim(),
           phone: _phoneController.text.isNotEmpty ? _phoneController.text.trim() : null,
           password: _passwordController.text,
-          dob: '2000-01-01',
+          dob: _formatDob(dob),
           username: _usernameController.text.trim(),
           displayName: _displayNameController.text.trim(),
           role: _role,
           acceptedTerms: _acceptedTerms,
           acceptedPrivacy: _acceptedPrivacy,
           acceptedGuidelines: _acceptedGuidelines,
-          is16Plus: _is16Plus,
+          is16Plus: age >= 16,
+          guardianName: age < 18 && _guardianNameController.text.trim().isNotEmpty
+              ? _guardianNameController.text.trim()
+              : null,
+          guardianEmail: age < 18 && _guardianEmailController.text.trim().isNotEmpty
+              ? _guardianEmailController.text.trim()
+              : null,
+          guardianPhone: age < 18 && _guardianPhoneController.text.trim().isNotEmpty
+              ? _guardianPhoneController.text.trim()
+              : null,
         ),
       );
       if (mounted) {
@@ -255,6 +312,86 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+                // Real DOB input — the backend age-gates registrations.
+                InkWell(
+                  onTap: _pickDob,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InputDecorator(
+                    decoration: InputDecoration(
+                      labelText: 'Date of Birth',
+                      labelStyle: const TextStyle(color: BuddyColors.textSecondary),
+                      prefixIcon: const Icon(Icons.cake_outlined,
+                          size: 18, color: BuddyColors.textSecondary),
+                      filled: true,
+                      fillColor: BuddyColors.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    child: Text(
+                      _dob == null ? 'Select your date of birth' : _formatDob(_dob!),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: _dob == null ? BuddyColors.textSecondary : BuddyColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_age != null && _age! < 16)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'You must be at least 16 years old to join Buddy-Up.',
+                      style: TextStyle(color: BuddyColors.red, fontSize: 12),
+                    ),
+                  ),
+                if (_isMinor) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: BuddyColors.surface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Guardian Details',
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Because you are under 18, we need a parent or guardian. '
+                          'Provide at least one contact.',
+                          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                        ),
+                        const SizedBox(height: 12),
+                        BuddyInput(
+                          controller: _guardianNameController,
+                          label: 'Guardian Name',
+                          hint: 'Parent or guardian name',
+                        ),
+                        const SizedBox(height: 8),
+                        BuddyInput(
+                          controller: _guardianEmailController,
+                          label: 'Guardian Email',
+                          hint: 'guardian@email.com',
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 8),
+                        BuddyInput(
+                          controller: _guardianPhoneController,
+                          label: 'Guardian Phone',
+                          hint: '+1234567890',
+                          keyboardType: TextInputType.phone,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
                 const Text(
                   'I am a...',
                   style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
@@ -308,14 +445,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                       style: TextStyle(fontSize: 14, decoration: TextDecoration.underline, color: BuddyColors.green),
                     ),
                   ),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                CheckboxListTile(
-                  value: _is16Plus,
-                  onChanged: (v) => setState(() => _is16Plus = v ?? false),
-                  title: const Text('I am 16 or older', style: TextStyle(fontSize: 14)),
                   controlAffinity: ListTileControlAffinity.leading,
                   dense: true,
                   contentPadding: EdgeInsets.zero,

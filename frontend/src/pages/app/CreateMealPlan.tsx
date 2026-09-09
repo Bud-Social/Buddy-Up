@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Info, Clock, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Toggle } from '@/components/ui/Toggle';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
@@ -263,10 +264,9 @@ export default function CreateMealPlan() {
                   <p className="font-semibold text-sm">Enable Daily Reminders</p>
                   <p className="text-xs text-buddy-text-secondary">Send daily motivation and meal previews</p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only peer" checked={form.reminder_settings.enabled} onChange={(e) => setForm({ ...form, reminder_settings: { ...form.reminder_settings, enabled: e.target.checked } })} />
-                  <div className="w-11 h-6 bg-buddy-surface-raised peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-buddy-orange"></div>
-                </label>
+                <Toggle checked={form.reminder_settings.enabled}
+                  onCheckedChange={(v) => setForm({ ...form, reminder_settings: { ...form.reminder_settings, enabled: v } })}
+                  label="Enable daily reminders" />
               </div>
 
               {form.reminder_settings.enabled && (

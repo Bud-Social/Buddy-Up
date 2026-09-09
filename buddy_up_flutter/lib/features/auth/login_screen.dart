@@ -49,7 +49,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  Future<void> _handleLogin({bool reactivate = false}) async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _isLoading = true);
     try {
@@ -57,6 +57,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         LoginPayload(
           email: _emailController.text.trim(),
           password: _passwordController.text,
+          reactivate: reactivate,
         ),
       );
       if (response.requireOtp) {
@@ -76,8 +77,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
         final message = data['message'] as String? ?? '';
-        if (data['data']?['require_email_verification'] == true && data['data'] is Map) {
-          final inner = data['data'] as Map<String, dynamic>;
+        final inner = data['data'];
+        if (inner is Map && inner['require_email_verification'] == true) {
           final token = inner['registration_token'] as String?;
           final email = inner['email'] as String? ?? _emailController.text.trim();
           if (token != null && mounted) {
@@ -93,12 +94,44 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             return;
           }
         }
+        // Deactivated accounts can reactivate by logging in again.
+        if (inner is Map && inner['reactivatable'] == true && !reactivate) {
+          await _showReactivateDialog(inner['hard_deletion_scheduled']);
+          return;
+        }
         if (mounted) showToast(context, message.isNotEmpty ? message : 'Login failed.', type: ToastType.error);
       } else {
         if (mounted) showToast(context, 'Login failed. Please try again.', type: ToastType.error);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _showReactivateDialog(dynamic hardDeletionScheduled) async {
+    if (!mounted) return;
+    final scheduledText = (hardDeletionScheduled == null ||
+            hardDeletionScheduled == false ||
+            (hardDeletionScheduled is String && hardDeletionScheduled.isEmpty))
+        ? ''
+        : ' Your account is scheduled for permanent deletion on $hardDeletionScheduled.';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: BuddyColors.surface,
+        title: const Text('Reactivate account?'),
+        content: Text(
+          'This account has been deactivated. Signing in again will reactivate it '
+          'and restore your data.$scheduledText',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          BuddyButton(label: 'Reactivate', onPressed: () => Navigator.pop(ctx, true)),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _handleLogin(reactivate: true);
     }
   }
 

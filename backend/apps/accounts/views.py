@@ -73,6 +73,12 @@ def _get_user_agent(request):
     return request.META.get('HTTP_USER_AGENT', '')
 
 
+def _get_device_id(request):
+    """Stable client identifier from the X-Device-Id header (max 64 chars)."""
+    raw = request.headers.get('X-Device-Id', '') or ''
+    return raw.strip()[:64]
+
+
 def _generate_otp():
     return str(secrets.randbelow(10 ** 6)).zfill(6)
 
@@ -97,6 +103,7 @@ def _create_device_session(user, refresh_token, request):
         device_name=_get_user_agent(request)[:200],
         ip_address=_get_client_ip(request),
         location='',
+        device_id=_get_device_id(request),
     )
 
 
@@ -137,6 +144,26 @@ def _verify_temp_token(token_str, expected_purpose):
         return User.objects.get(id=token['user_id'])
     except Exception:  # noqa: BLE001
         return None
+
+
+def _authenticate_allow_inactive(request, email, password):
+    """Password authentication that also matches deactivated accounts.
+
+    ModelBackend rejects inactive users before the view ever sees them, but
+    the reactivation flow needs the credentials verified for a deactivated
+    account (without logging them in). Returns the user even when inactive —
+    the caller decides whether to reactivate or challenge.
+    """
+    user = authenticate(request, email=email, password=password)
+    if user is not None:
+        return user
+    try:
+        candidate = User.objects.get(email__iexact=email)
+    except User.DoesNotExist:
+        return None
+    if candidate.has_usable_password() and candidate.check_password(password):
+        return candidate
+    return None
 
 
 class RegisterView(views.APIView):
@@ -348,7 +375,7 @@ class LoginView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        user = authenticate(request, email=data['email'], password=data['password'])
+        user = _authenticate_allow_inactive(request, data['email'], data['password'])
 
         if user is None:
             try:
@@ -375,23 +402,36 @@ class LoginView(views.APIView):
                 'pagination': None,
             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        if not user.is_active:
-            return Response({
-                'success': False,
-                'data': None,
-                'message': 'This account has been deactivated.',
-                'errors': None,
-                'pagination': None,
-            }, status=status.HTTP_403_FORBIDDEN)
+        # Reactivation gate: deactivation and login-initiated deletion both
+        # mark the account. Credentials are correct here — a 403 would lose
+        # them, so the client gets a reactivation prompt instead. Login only
+        # proceeds when the client explicitly opts in.
+        if not user.is_active or user.deleted_at:
+            if data.get('reactivate') is not True:
+                scheduled = user.hard_delete_at
+                if scheduled:
+                    message = (
+                        'Your account is scheduled for deletion on '
+                        f'{scheduled.date().isoformat()}. Logging in will cancel the deletion.'
+                    )
+                else:
+                    message = 'Your account is deactivated. Logging in again will reactivate it.'
+                return Response({
+                    'success': False,
+                    'data': {
+                        'reactivatable': True,
+                        'hard_deletion_scheduled': scheduled.isoformat() if scheduled else None,
+                    },
+                    'message': message,
+                    'errors': None,
+                    'pagination': None,
+                }, status=status.HTTP_403_FORBIDDEN)
 
-        if user.deleted_at:
-            return Response({
-                'success': False,
-                'data': None,
-                'message': 'This account has been deleted.',
-                'errors': None,
-                'pagination': None,
-            }, status=status.HTTP_403_FORBIDDEN)
+            user.is_active = True
+            user.deleted_at = None
+            user.hard_delete_at = None
+            user.save(update_fields=['is_active', 'deleted_at', 'hard_delete_at'])
+            _log_event(user, 'account_reactivated', request)
 
         if not user.email_verified:
             # Unverified account: redirect the client to OTP verification.
@@ -2180,7 +2220,16 @@ class DeactivateAccountView(views.APIView):
         user.is_active = False
         user.deleted_at = timezone.now()
         user.deletion_type = 'user'
-        user.save(update_fields=['is_active', 'deleted_at', 'deletion_type'])
+        # Deactivation is reversible — never carry a pending hard deletion.
+        user.hard_delete_at = None
+        user.save(update_fields=['is_active', 'deleted_at', 'deletion_type', 'hard_delete_at'])
+
+        # Reactivation must not silently resurrect live sessions: kill every
+        # device session and blacklist every outstanding refresh token.
+        DeviceSession.objects.filter(user=user, is_active=True).update(is_active=False)
+        from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+        for token in OutstandingToken.objects.filter(user=user):
+            BlacklistedToken.objects.get_or_create(token=token)
 
         _log_event(user, 'account_deactivated', request)
 
@@ -2207,12 +2256,31 @@ class DeleteAccountView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Hard step-up: deleting the account requires the password. TOTP
+        # users may present a valid authenticator code instead (passwordless
+        # 2FA accounts still have a proof of presence).
+        current_password = request.data.get('current_password') or ''
+        totp_code = (request.data.get('totp_code') or '').strip()
+        password_ok = bool(current_password) and user.has_usable_password() \
+            and user.check_password(current_password)
+        totp_ok = bool(totp_code) and user.totp_enabled \
+            and pyotp.TOTP(user.totp_secret).verify(totp_code)
+        if not (password_ok or totp_ok):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Password confirmation required.',
+                'errors': {'current_password': ['Password confirmation required.']},
+                'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         _log_event(user, 'account_deleted', request)
 
+        now = timezone.now()
         user.is_active = False
-        user.deleted_at = timezone.now()
+        user.deleted_at = now
         user.deletion_type = 'user'
-        user.save(update_fields=['is_active', 'deleted_at', 'deletion_type'])
+        user.hard_delete_at = now + timedelta(days=30)
+        user.save(update_fields=['is_active', 'deleted_at', 'deletion_type', 'hard_delete_at'])
 
         DeviceSession.objects.filter(user=user).update(is_active=False)
 
@@ -2225,7 +2293,7 @@ class DeleteAccountView(views.APIView):
         return Response({
             'success': True,
             'data': {
-                'hard_deletion_scheduled': (timezone.now() + timedelta(days=30)).isoformat(),
+                'hard_deletion_scheduled': user.hard_delete_at.isoformat(),
             },
             'message': 'Account deletion initiated. Your data will be permanently deleted in 30 days. Log in within 30 days to cancel.',
             'errors': None,
@@ -2249,6 +2317,50 @@ class ExportUserDataView(views.APIView):
         })
 
 
+class ExportDataStatusView(views.APIView):
+    """Whether the newest data export for this account is ready.
+
+    Scans the account's export folder and reports the newest artifact so
+    clients can poll without downloading anything.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from django.core.files.storage import default_storage
+
+        profile = getattr(request.user, 'profile', None)
+        folder = f'exports/{profile.username}' if profile else None
+        ready, created_at, filename = False, None, None
+        if folder:
+            try:
+                _dirs, files = default_storage.listdir(folder)
+            except (FileNotFoundError, OSError, NotADirectoryError):
+                files = []
+            except Exception:  # noqa: BLE001 — storage backends vary; stay defensive
+                logger.warning('Export status scan failed for user=%s', request.user.id, exc_info=True)
+                files = []
+            # Filenames embed a sortable timestamp (YYYYmmdd-HHMMSS).
+            files = sorted(f for f in files if f.endswith('.json'))
+            if files:
+                newest = files[-1]
+                filename = f'{folder}/{newest}'
+                ready = True
+                try:
+                    stamp = default_storage.get_created_time(filename)
+                    created_at = stamp.isoformat() if stamp else None
+                except (NotImplementedError, OSError, AttributeError):
+                    created_at = None
+
+        return Response({
+            'success': True,
+            'data': {'ready': ready, 'created_at': created_at, 'filename': filename},
+            'message': 'Export ready.' if ready else 'No export available yet.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
 class DeviceSessionsListView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -2257,8 +2369,21 @@ class DeviceSessionsListView(views.APIView):
             user=request.user, is_active=True
         ).order_by('-last_active')
 
+        header_device_id = _get_device_id(request)
+        # When the client sends X-Device-Id the matching session is current;
+        # otherwise fall back to the most recently active one. Users may have
+        # zero sessions (e.g. token-only test clients) — guard the fallback.
+        fallback_current_id = None
+        if not header_device_id:
+            most_recent = sessions.first()
+            fallback_current_id = most_recent.id if most_recent else None
+
         data = []
         for s in sessions:
+            if header_device_id:
+                is_current = bool(s.device_id) and s.device_id == header_device_id
+            else:
+                is_current = s.id == fallback_current_id
             data.append({
                 'id': str(s.id),
                 'device_name': s.device_name,
@@ -2266,14 +2391,45 @@ class DeviceSessionsListView(views.APIView):
                 'location': s.location,
                 'last_active': s.last_active.isoformat(),
                 'created_at': s.created_at.isoformat(),
-                'is_current': s.refresh_token_hash == hashlib.sha256(
-                    (request.auth or '').encode() if hasattr(request, 'auth') and request.auth else b''
-                ).hexdigest()[:64] if hasattr(request, 'auth') else False,
+                'is_current': is_current,
             })
 
         return Response({
             'success': True, 'data': data,
             'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+
+class RevokeSessionView(views.APIView):
+    """Revoke a single device session (owner-only)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, session_id):
+        session = get_object_or_404(DeviceSession, id=session_id, user=request.user)
+        session.is_active = False
+        session.save(update_fields=['is_active', 'last_active'])
+
+        # Best-effort blacklist: the session stores a SHA-256 of its refresh
+        # token string, so map it back to the outstanding token and blacklist
+        # it. A miss (token already rotated away) is not fatal — the inactive
+        # session row already blocks refresh.
+        try:
+            from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
+            for token in OutstandingToken.objects.filter(user=request.user):
+                if hashlib.sha256(token.token.encode()).hexdigest() == session.refresh_token_hash:
+                    BlacklistedToken.objects.get_or_create(token=token)
+                    break
+        except Exception:  # noqa: BLE001 — blacklist is advisory here
+            logger.warning('Session token blacklist failed for session=%s', session.id, exc_info=True)
+
+        _log_event(request.user, 'session_revoked', request,
+                   metadata={'session_id': str(session.id)})
+
+        return Response({
+            'success': True, 'data': {'revoked': True},
+            'message': 'Session revoked.',
+            'errors': None, 'pagination': None,
         })
 
 

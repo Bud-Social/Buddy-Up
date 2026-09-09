@@ -116,7 +116,6 @@ export default function Onboarding() {
 
   const usernameValid = /^[a-zA-Z0-9_]{3,30}$/.test(username);
   const displayNameValid = displayName.trim().length >= 2;
-  const usernameFree = usernameState === 'available';
   const usernameChecking = usernameState === 'checking';
   const validateProfileStep = () => {
     if (!displayNameValid) { setProfileError('Display name needs at least 2 characters.'); return false; }

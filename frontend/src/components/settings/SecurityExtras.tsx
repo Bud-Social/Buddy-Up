@@ -28,7 +28,7 @@ function base64UrlToBuffer(value: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-export function PasskeyCard() {
+export function PasskeyCard({ onRegistered }: { onRegistered?: () => void }) {
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
 
@@ -102,6 +102,7 @@ export function PasskeyCard() {
         },
       );
       toast('success', 'Passkey registered — you can now sign in with biometrics.');
+      onRegistered?.();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message
         || (err as Error)?.message

@@ -93,6 +93,15 @@ ThemeData buildBuddyTheme() {
       color: BuddyColors.surfaceRaised,
       thickness: 1,
     ),
+    switchTheme: SwitchThemeData(
+      thumbColor: const WidgetStatePropertyAll<Color>(Colors.white),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? BuddyColors.green
+            : BuddyColors.surfaceRaised,
+      ),
+      overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
+    ),
     chipTheme: ChipThemeData(
       backgroundColor: BuddyColors.surface,
       selectedColor: BuddyColors.green.withValues(alpha: 0.2),
@@ -195,6 +204,15 @@ ThemeData buildBuddyLightTheme() {
     dividerTheme: const DividerThemeData(
       color: BuddyLightColors.border,
       thickness: 1,
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: const WidgetStatePropertyAll<Color>(Colors.white),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? BuddyColors.green
+            : BuddyLightColors.surfaceRaised,
+      ),
+      overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
     ),
     chipTheme: ChipThemeData(
       backgroundColor: BuddyLightColors.surface,

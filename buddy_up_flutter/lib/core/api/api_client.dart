@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../device/device_id.dart';
 import '../env/env.dart';
 
 class ApiClient {
@@ -26,6 +27,8 @@ class ApiClient {
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
+        // Device sessions: the backend stores this to attribute logins.
+        options.headers['X-Device-Id'] = await DeviceId.get();
         handler.next(options);
       },
       onError: (error, handler) async {

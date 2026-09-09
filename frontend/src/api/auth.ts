@@ -8,7 +8,7 @@ export interface RegisterPayload {
   guardian_name?: string; guardian_email?: string; guardian_phone?: string;
 }
 
-export interface LoginPayload { email: string; password: string; remember_me?: boolean; }
+export interface LoginPayload { email: string; password: string; remember_me?: boolean; reactivate?: boolean; }
 
 export interface TokenResponse { access: string; refresh: string; user: User; profile: Profile; }
 
@@ -64,6 +64,29 @@ export interface ConsentStatus {
   requires_parental_coowner: boolean;
   guardian_verified: boolean;
   policies: Record<string, { current_version: string; accepted_version: string; up_to_date: boolean; updated_at: string }>;
+}
+
+/** Step-up proof for passkey revoke/re-verify. Field names mirror the backend
+ * PasskeyRevokeSerializer exactly: `password` | `code` | `recovery_code`. */
+export interface PasskeyProof {
+  password?: string;
+  code?: string;
+  recovery_code?: string;
+}
+
+export interface PasskeyInfo {
+  id: number;
+  device_name: string;
+  created_at: string;
+  last_verified_at: string | null;
+  expires_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface ExportStatus {
+  ready: boolean;
+  created_at: string | null;
+  filename: string | null;
 }
 
 export const authApi = {
@@ -124,14 +147,33 @@ export const authApi = {
   deactivateAccount: () =>
     apiClient.post<ApiResponse<{ reactivatable_until: string }>>('/auth/deactivate/').then((r) => r.data),
 
-  deleteAccount: (confirm: string) =>
-    apiClient.post<ApiResponse<{ hard_deletion_scheduled: string }>>('/auth/delete/', { confirm }).then((r) => r.data),
+  deleteAccount: (confirm: string, current_password: string) =>
+    apiClient.post<ApiResponse<{ hard_deletion_scheduled: string }>>('/auth/delete/', { confirm, current_password }).then((r) => r.data),
 
   exportData: () =>
     apiClient.post<ApiResponse<null>>('/auth/export-data/').then((r) => r.data),
 
+  exportStatus: () =>
+    apiClient.get<ApiResponse<ExportStatus>>('/auth/export-data/status/').then((r) => r.data),
+
   getSessions: () =>
     apiClient.get<ApiResponse<Array<{ id: string; device_name: string; ip_address: string; location: string; last_active: string; created_at: string; is_current: boolean }>>>('/auth/sessions/').then((r) => r.data),
+
+  revokeSession: (id: string | number) =>
+    apiClient.delete<ApiResponse<{ revoked: boolean }>>(`/auth/sessions/${id}/`).then((r) => r.data),
+
+  // ── Passkeys (WebAuthn) management ──────────────────────────────────────
+  listPasskeys: () =>
+    apiClient.get<ApiResponse<PasskeyInfo[]>>('/auth/passkeys/').then((r) => r.data),
+
+  renamePasskey: (id: number, device_name: string) =>
+    apiClient.patch<ApiResponse<{ id: number; device_name: string }>>(`/auth/passkeys/${id}/rename/`, { device_name }).then((r) => r.data),
+
+  revokePasskey: (id: number, proof: PasskeyProof) =>
+    apiClient.post<ApiResponse<null>>(`/auth/passkeys/${id}/revoke/`, proof).then((r) => r.data),
+
+  reverifyPasskey: (id: number, proof: PasskeyProof) =>
+    apiClient.post<ApiResponse<{ id: number; expires_at: string }>>(`/auth/passkeys/${id}/reverify/`, proof).then((r) => r.data),
 
   logoutAllSessions: () =>
     apiClient.post<ApiResponse<null>>('/auth/logout-all/').then((r) => r.data),

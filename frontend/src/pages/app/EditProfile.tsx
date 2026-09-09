@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { CropModal } from '@/components/ui/CropModal';
+import { Toggle } from '@/components/ui/Toggle';
 import { useToast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store/authStore';
 import { profilesApi } from '@/api';
@@ -306,20 +307,18 @@ export default function EditProfile() {
             <p className="text-sm">Show Active Status</p>
             <p className="text-xs text-buddy-text-secondary">Display when you're online</p>
           </div>
-          <button onClick={() => setForm(p => ({ ...p, show_active_status: !p.show_active_status }))}
-            className={`w-10 h-6 rounded-full relative transition-colors ${form.show_active_status ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`}>
-            <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${form.show_active_status ? 'right-0.5' : 'left-0.5'}`} />
-          </button>
+          <Toggle checked={form.show_active_status}
+            onCheckedChange={(v) => setForm(p => ({ ...p, show_active_status: v }))}
+            label="Show active status" />
         </div>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm">Anonymous Posting</p>
             <p className="text-xs text-buddy-text-secondary">Post without showing your identity</p>
           </div>
-          <button onClick={() => setForm(p => ({ ...p, is_anonymous_posting: !p.is_anonymous_posting }))}
-            className={`w-10 h-6 rounded-full relative transition-colors ${form.is_anonymous_posting ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`}>
-            <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${form.is_anonymous_posting ? 'right-0.5' : 'left-0.5'}`} />
-          </button>
+          <Toggle checked={form.is_anonymous_posting}
+            onCheckedChange={(v) => setForm(p => ({ ...p, is_anonymous_posting: v }))}
+            label="Anonymous posting" />
         </div>
       </Card>
 

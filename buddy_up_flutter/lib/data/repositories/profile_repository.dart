@@ -59,6 +59,9 @@ abstract class ProfileRepository {
   @POST('/profiles/{username}/block/')
   Future<void> blockUser(@Path('username') String username);
 
+  @DELETE('/profiles/{username}/block/')
+  Future<void> unblockUser(@Path('username') String username);
+
   @POST('/profiles/{username}/ping/')
   Future<void> pingUser(
     @Path('username') String username,
