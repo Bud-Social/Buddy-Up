@@ -18,6 +18,8 @@ _OnboardingPayload _$OnboardingPayloadFromJson(Map<String, dynamic> json) =>
       dietaryPreference: json['dietaryPreference'] as String,
       preferredTime: json['preferredTime'] as String,
       discoverySource: json['discoverySource'] as String?,
+      termsVersion: json['terms_version'] as String,
+      marketingConsent: json['marketing_consent'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$OnboardingPayloadToJson(_OnboardingPayload instance) =>
@@ -28,6 +30,8 @@ Map<String, dynamic> _$OnboardingPayloadToJson(_OnboardingPayload instance) =>
       'dietaryPreference': instance.dietaryPreference,
       'preferredTime': instance.preferredTime,
       'discoverySource': instance.discoverySource,
+      'terms_version': instance.termsVersion,
+      'marketing_consent': instance.marketingConsent,
     };
 
 _OnboardingData _$OnboardingDataFromJson(Map<String, dynamic> json) =>

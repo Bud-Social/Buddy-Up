@@ -29,6 +29,10 @@ INSTALLED_APPS = [
     'cloudinary_storage',
     'cloudinary',
 
+    # Shared helpers — hosts the schema_status / validate_deploy
+    # management commands; has no concrete models so no migrations.
+    'common',
+
     # BuddyUp apps
     'apps.accounts',
     'apps.profiles',

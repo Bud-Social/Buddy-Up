@@ -121,7 +121,6 @@ describe('uploadToCloudinary', () => {
       addEventListener() {}
       removeEventListener() {}
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).XMLHttpRequest = FakeXhr;
     try {
       const res = await uploadToCloudinary(new File(['x'], 'v.mp4', { type: 'video/mp4' }));
@@ -155,7 +154,6 @@ describe('uploadToCloudinary', () => {
       addEventListener() {}
       removeEventListener() {}
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).XMLHttpRequest = FakeXhr;
     try {
       await expect(
@@ -192,7 +190,6 @@ describe('uploadToCloudinary', () => {
       addEventListener() {}
       removeEventListener() {}
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).XMLHttpRequest = FakeXhr;
     try {
       const res = await uploadToCloudinary(new File(['x'], 'f.png', { type: 'image/png' }));

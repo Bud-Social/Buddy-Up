@@ -52,8 +52,14 @@ class ConsentEnforcementMiddleware:
 
     # The entire auth namespace is exempt: register / login / social signup /
     # onboarding are the very endpoints a user needs in order to accept the
-    # current policies, so blocking them would deadlock the account.
-    EXEMPT_PREFIXES = ('/api/v1/auth/', '/api/v1/health/')
+    # current policies, so blocking them would deadlock the account. The
+    # profiles onboarding endpoint is exempt for the same reason — a user with
+    # onboarding_completed=False could never complete onboarding otherwise.
+    EXEMPT_PREFIXES = (
+        '/api/v1/auth/',
+        '/api/v1/health/',
+        '/api/v1/profiles/onboarding/',
+    )
 
     def __init__(self, get_response):
         self.get_response = get_response

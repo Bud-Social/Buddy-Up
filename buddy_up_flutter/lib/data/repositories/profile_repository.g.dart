@@ -169,12 +169,12 @@ class _ProfileRepository implements ProfileRepository {
   }
 
   @override
-  Future<OnboardingPlan> saveOnboarding(OnboardingPayload payload) async {
+  Future<Map<String, dynamic>> saveOnboarding(OnboardingPayload payload) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
     final _data = payload;
-    final _options = _setStreamType<OnboardingPlan>(
+    final _options = _setStreamType<Map<String, dynamic>>(
       Options(method: 'POST', headers: _headers, extra: _extra)
           .compose(
             _dio.options,
@@ -185,9 +185,12 @@ class _ProfileRepository implements ProfileRepository {
           .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
     );
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
-    late OnboardingPlan _value;
+    late Map<String, dynamic> _value;
     try {
-      _value = OnboardingPlan.fromJson(_result.data!);
+      _value = _result.data!.map(
+        (k, dynamic v) =>
+            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
+      );
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;

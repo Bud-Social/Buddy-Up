@@ -12,6 +12,10 @@ abstract class OnboardingPayload with _$OnboardingPayload {
     required String dietaryPreference,
     required String preferredTime,
     String? discoverySource,
+    // Consent — required by the backend; recorded on the profile with a
+    // version + timestamp (mirrors the web onboarding payload).
+    @JsonKey(name: 'terms_version') required String termsVersion,
+    @JsonKey(name: 'marketing_consent') @Default(false) bool marketingConsent,
   }) = _OnboardingPayload;
 
   factory OnboardingPayload.fromJson(Map<String, dynamic> json) =>

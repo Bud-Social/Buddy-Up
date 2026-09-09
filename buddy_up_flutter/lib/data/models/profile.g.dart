@@ -21,6 +21,7 @@ _Profile _$ProfileFromJson(Map<String, dynamic> json) => _Profile(
   role: json['role'] as String? ?? 'user',
   verificationStatus: json['verificationStatus'] as String? ?? 'none',
   privacyLevel: json['privacyLevel'] as String? ?? 'public',
+  onboardingCompleted: json['onboarding_completed'] as bool? ?? true,
   streakDays: (json['streakDays'] as num?)?.toInt() ?? 0,
   artifactBalance:
       (json['artifactBalance'] as Map<String, dynamic>?)?.map(
@@ -55,6 +56,7 @@ Map<String, dynamic> _$ProfileToJson(_Profile instance) => <String, dynamic>{
   'role': instance.role,
   'verificationStatus': instance.verificationStatus,
   'privacyLevel': instance.privacyLevel,
+  'onboarding_completed': instance.onboardingCompleted,
   'streakDays': instance.streakDays,
   'artifactBalance': instance.artifactBalance,
   'buddyCount': instance.buddyCount,

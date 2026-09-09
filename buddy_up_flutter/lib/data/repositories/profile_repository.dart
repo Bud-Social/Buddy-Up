@@ -33,7 +33,7 @@ abstract class ProfileRepository {
   Future<OnboardingData> getOnboarding();
 
   @POST('/profiles/onboarding/')
-  Future<OnboardingPlan> saveOnboarding(@Body() OnboardingPayload payload);
+  Future<Map<String, dynamic>> saveOnboarding(@Body() OnboardingPayload payload);
 
   @GET('/profiles/{username}/')
   Future<Profile> getProfile(@Path('username') String username);

@@ -112,6 +112,19 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         return '/login';
       }
 
+      // Required-once onboarding: incomplete accounts (new Google/Apple
+      // sign-ups, or fresh registrations) are routed through the onboarding
+      // pipeline — consent first, then preferences — before anything else.
+      // Mirrors the web router guard. profile can be null right after a cold
+      // start before it loads; skip the gate until it arrives.
+      final profile = authState.profile;
+      if (isAuthenticated &&
+          profile != null &&
+          !profile.onboardingCompleted &&
+          location != '/onboarding') {
+        return '/onboarding';
+      }
+
       if (isAuthenticated &&
           publicRoutes.contains(location) &&
           location != '/onboarding') {

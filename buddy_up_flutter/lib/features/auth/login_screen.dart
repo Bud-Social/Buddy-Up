@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../core/api/api_client.dart';
 import '../../core/auth/auth_provider.dart';
@@ -70,7 +71,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       } else {
         await ref.read(authProvider.notifier).setTokens(response.loginToken, '');
         if (mounted) {
-          Navigator.of(context).pushReplacementNamed('/feed');
+          // GoRouter decides the landing spot: /onboarding for accounts that
+          // have not completed the pipeline, /feed otherwise.
+          context.go('/feed');
         }
       }
     } catch (e) {
@@ -149,7 +152,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           _isLoading = false;
         });
       } else {
-        if (mounted) Navigator.of(context).pushReplacementNamed('/feed');
+        if (mounted) context.go('/feed');
       }
     } catch (e) {
       if (mounted) showToast(context, 'Invalid OTP. Try again.', type: ToastType.error);
@@ -167,7 +170,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       });
       await ref.read(authProvider.notifier).setTokens(response.access, response.refresh);
       await ref.read(authProvider.notifier).setUserAndProfile(response.user, response.profile);
-      if (mounted) Navigator.of(context).pushReplacementNamed('/feed');
+      if (mounted) context.go('/feed');
     } catch (e) {
       if (mounted) showToast(context, 'Invalid TOTP code.', type: ToastType.error);
     } finally {
@@ -185,6 +188,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       final res = await _authRepo.googleLogin({'credential': credential});
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
+      // New Google emails are auto-registered by the backend; GoRouter sends
+      // onboarding-incomplete accounts to /onboarding (consent first).
+      if (mounted) context.go('/feed');
     } catch (e) {
       if (GoogleAuth.isCancelled(e)) {
         return; // User cancelled mid-flow.
@@ -231,6 +237,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         'last_name': credential.familyName,
       });
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
+      // GoRouter sends onboarding-incomplete accounts to /onboarding.
+      if (mounted) context.go('/feed');
     } catch (e) {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;

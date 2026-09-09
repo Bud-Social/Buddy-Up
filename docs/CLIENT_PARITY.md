@@ -10,7 +10,7 @@ it does not imply identical screens or platform-specific capabilities.
 
 | Domain | Representative backend routes | Web evidence | Flutter evidence | Contract status | Notes |
 |---|---|---|---|---|
-| Authentication and onboarding | `/auth/login/`, `/auth/token/refresh/`, `/profiles/onboarding/` | `frontend/src/api/auth.ts` | `lib/data/repositories/auth_repository.dart` | Fixture-checked routes | JWT refresh and age gating are client-owned flows |
+| Authentication and onboarding | `/auth/login/`, `/auth/token/refresh/`, `/profiles/onboarding/` | `frontend/src/api/auth.ts` | `lib/data/repositories/auth_repository.dart` | Fixture-checked routes | JWT refresh and age gating are client-owned flows. Social logins with an unregistered email auto-register and route into onboarding (consent step first) on both clients; router guards + 403 `consent_required` handling send incomplete accounts back to onboarding |
 | Profiles and Buds | `/profiles/me/`, `/profiles/<username>/` | `frontend/src/api/profiles.ts` | `lib/data/repositories/profile_repository.dart` | Fixture-checked prefix | |
 | Feed and reactions | `/feed/`, `/feed/create/` | `frontend/src/api/feed.ts` | `lib/data/repositories/feed_repository.dart` | Fixture-checked prefix | |
 | Gyms and communities | `/gyms/`, `/messaging/communities/` | `frontend/src/api/gyms.ts`, `messaging.ts` | `lib/data/repositories/gym_repository.dart`, `lib/features/community/providers/community_provider.dart` | Partial: separate backend domains | |

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$OnboardingPayload {
 
- List<String> get primaryGoal; String get activityLevel; List<String> get preferredWorkouts; String get dietaryPreference; String get preferredTime; String? get discoverySource;
+ List<String> get primaryGoal; String get activityLevel; List<String> get preferredWorkouts; String get dietaryPreference; String get preferredTime; String? get discoverySource;@JsonKey(name: 'terms_version') String get termsVersion;@JsonKey(name: 'marketing_consent') bool get marketingConsent;
 /// Create a copy of OnboardingPayload
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $OnboardingPayloadCopyWith<OnboardingPayload> get copyWith => _$OnboardingPayloa
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is OnboardingPayload&&const DeepCollectionEquality().equals(other.primaryGoal, primaryGoal)&&(identical(other.activityLevel, activityLevel) || other.activityLevel == activityLevel)&&const DeepCollectionEquality().equals(other.preferredWorkouts, preferredWorkouts)&&(identical(other.dietaryPreference, dietaryPreference) || other.dietaryPreference == dietaryPreference)&&(identical(other.preferredTime, preferredTime) || other.preferredTime == preferredTime)&&(identical(other.discoverySource, discoverySource) || other.discoverySource == discoverySource));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OnboardingPayload&&const DeepCollectionEquality().equals(other.primaryGoal, primaryGoal)&&(identical(other.activityLevel, activityLevel) || other.activityLevel == activityLevel)&&const DeepCollectionEquality().equals(other.preferredWorkouts, preferredWorkouts)&&(identical(other.dietaryPreference, dietaryPreference) || other.dietaryPreference == dietaryPreference)&&(identical(other.preferredTime, preferredTime) || other.preferredTime == preferredTime)&&(identical(other.discoverySource, discoverySource) || other.discoverySource == discoverySource)&&(identical(other.termsVersion, termsVersion) || other.termsVersion == termsVersion)&&(identical(other.marketingConsent, marketingConsent) || other.marketingConsent == marketingConsent));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(primaryGoal),activityLevel,const DeepCollectionEquality().hash(preferredWorkouts),dietaryPreference,preferredTime,discoverySource);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(primaryGoal),activityLevel,const DeepCollectionEquality().hash(preferredWorkouts),dietaryPreference,preferredTime,discoverySource,termsVersion,marketingConsent);
 
 @override
 String toString() {
-  return 'OnboardingPayload(primaryGoal: $primaryGoal, activityLevel: $activityLevel, preferredWorkouts: $preferredWorkouts, dietaryPreference: $dietaryPreference, preferredTime: $preferredTime, discoverySource: $discoverySource)';
+  return 'OnboardingPayload(primaryGoal: $primaryGoal, activityLevel: $activityLevel, preferredWorkouts: $preferredWorkouts, dietaryPreference: $dietaryPreference, preferredTime: $preferredTime, discoverySource: $discoverySource, termsVersion: $termsVersion, marketingConsent: $marketingConsent)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $OnboardingPayloadCopyWith<$Res>  {
   factory $OnboardingPayloadCopyWith(OnboardingPayload value, $Res Function(OnboardingPayload) _then) = _$OnboardingPayloadCopyWithImpl;
 @useResult
 $Res call({
- List<String> primaryGoal, String activityLevel, List<String> preferredWorkouts, String dietaryPreference, String preferredTime, String? discoverySource
+ List<String> primaryGoal, String activityLevel, List<String> preferredWorkouts, String dietaryPreference, String preferredTime, String? discoverySource,@JsonKey(name: 'terms_version') String termsVersion,@JsonKey(name: 'marketing_consent') bool marketingConsent
 });
 
 
@@ -65,7 +65,7 @@ class _$OnboardingPayloadCopyWithImpl<$Res>
 
 /// Create a copy of OnboardingPayload
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? primaryGoal = null,Object? activityLevel = null,Object? preferredWorkouts = null,Object? dietaryPreference = null,Object? preferredTime = null,Object? discoverySource = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? primaryGoal = null,Object? activityLevel = null,Object? preferredWorkouts = null,Object? dietaryPreference = null,Object? preferredTime = null,Object? discoverySource = freezed,Object? termsVersion = null,Object? marketingConsent = null,}) {
   return _then(_self.copyWith(
 primaryGoal: null == primaryGoal ? _self.primaryGoal : primaryGoal // ignore: cast_nullable_to_non_nullable
 as List<String>,activityLevel: null == activityLevel ? _self.activityLevel : activityLevel // ignore: cast_nullable_to_non_nullable
@@ -73,7 +73,9 @@ as String,preferredWorkouts: null == preferredWorkouts ? _self.preferredWorkouts
 as List<String>,dietaryPreference: null == dietaryPreference ? _self.dietaryPreference : dietaryPreference // ignore: cast_nullable_to_non_nullable
 as String,preferredTime: null == preferredTime ? _self.preferredTime : preferredTime // ignore: cast_nullable_to_non_nullable
 as String,discoverySource: freezed == discoverySource ? _self.discoverySource : discoverySource // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,termsVersion: null == termsVersion ? _self.termsVersion : termsVersion // ignore: cast_nullable_to_non_nullable
+as String,marketingConsent: null == marketingConsent ? _self.marketingConsent : marketingConsent // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -158,10 +160,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<String> primaryGoal,  String activityLevel,  List<String> preferredWorkouts,  String dietaryPreference,  String preferredTime,  String? discoverySource)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<String> primaryGoal,  String activityLevel,  List<String> preferredWorkouts,  String dietaryPreference,  String preferredTime,  String? discoverySource, @JsonKey(name: 'terms_version')  String termsVersion, @JsonKey(name: 'marketing_consent')  bool marketingConsent)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OnboardingPayload() when $default != null:
-return $default(_that.primaryGoal,_that.activityLevel,_that.preferredWorkouts,_that.dietaryPreference,_that.preferredTime,_that.discoverySource);case _:
+return $default(_that.primaryGoal,_that.activityLevel,_that.preferredWorkouts,_that.dietaryPreference,_that.preferredTime,_that.discoverySource,_that.termsVersion,_that.marketingConsent);case _:
   return orElse();
 
 }
@@ -179,10 +181,10 @@ return $default(_that.primaryGoal,_that.activityLevel,_that.preferredWorkouts,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<String> primaryGoal,  String activityLevel,  List<String> preferredWorkouts,  String dietaryPreference,  String preferredTime,  String? discoverySource)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<String> primaryGoal,  String activityLevel,  List<String> preferredWorkouts,  String dietaryPreference,  String preferredTime,  String? discoverySource, @JsonKey(name: 'terms_version')  String termsVersion, @JsonKey(name: 'marketing_consent')  bool marketingConsent)  $default,) {final _that = this;
 switch (_that) {
 case _OnboardingPayload():
-return $default(_that.primaryGoal,_that.activityLevel,_that.preferredWorkouts,_that.dietaryPreference,_that.preferredTime,_that.discoverySource);case _:
+return $default(_that.primaryGoal,_that.activityLevel,_that.preferredWorkouts,_that.dietaryPreference,_that.preferredTime,_that.discoverySource,_that.termsVersion,_that.marketingConsent);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +201,10 @@ return $default(_that.primaryGoal,_that.activityLevel,_that.preferredWorkouts,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<String> primaryGoal,  String activityLevel,  List<String> preferredWorkouts,  String dietaryPreference,  String preferredTime,  String? discoverySource)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<String> primaryGoal,  String activityLevel,  List<String> preferredWorkouts,  String dietaryPreference,  String preferredTime,  String? discoverySource, @JsonKey(name: 'terms_version')  String termsVersion, @JsonKey(name: 'marketing_consent')  bool marketingConsent)?  $default,) {final _that = this;
 switch (_that) {
 case _OnboardingPayload() when $default != null:
-return $default(_that.primaryGoal,_that.activityLevel,_that.preferredWorkouts,_that.dietaryPreference,_that.preferredTime,_that.discoverySource);case _:
+return $default(_that.primaryGoal,_that.activityLevel,_that.preferredWorkouts,_that.dietaryPreference,_that.preferredTime,_that.discoverySource,_that.termsVersion,_that.marketingConsent);case _:
   return null;
 
 }
@@ -214,7 +216,7 @@ return $default(_that.primaryGoal,_that.activityLevel,_that.preferredWorkouts,_t
 @JsonSerializable()
 
 class _OnboardingPayload implements OnboardingPayload {
-  const _OnboardingPayload({required final  List<String> primaryGoal, required this.activityLevel, required final  List<String> preferredWorkouts, required this.dietaryPreference, required this.preferredTime, this.discoverySource}): _primaryGoal = primaryGoal,_preferredWorkouts = preferredWorkouts;
+  const _OnboardingPayload({required final  List<String> primaryGoal, required this.activityLevel, required final  List<String> preferredWorkouts, required this.dietaryPreference, required this.preferredTime, this.discoverySource, @JsonKey(name: 'terms_version') required this.termsVersion, @JsonKey(name: 'marketing_consent') this.marketingConsent = false}): _primaryGoal = primaryGoal,_preferredWorkouts = preferredWorkouts;
   factory _OnboardingPayload.fromJson(Map<String, dynamic> json) => _$OnboardingPayloadFromJson(json);
 
  final  List<String> _primaryGoal;
@@ -235,6 +237,8 @@ class _OnboardingPayload implements OnboardingPayload {
 @override final  String dietaryPreference;
 @override final  String preferredTime;
 @override final  String? discoverySource;
+@override@JsonKey(name: 'terms_version') final  String termsVersion;
+@override@JsonKey(name: 'marketing_consent') final  bool marketingConsent;
 
 /// Create a copy of OnboardingPayload
 /// with the given fields replaced by the non-null parameter values.
@@ -249,16 +253,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OnboardingPayload&&const DeepCollectionEquality().equals(other._primaryGoal, _primaryGoal)&&(identical(other.activityLevel, activityLevel) || other.activityLevel == activityLevel)&&const DeepCollectionEquality().equals(other._preferredWorkouts, _preferredWorkouts)&&(identical(other.dietaryPreference, dietaryPreference) || other.dietaryPreference == dietaryPreference)&&(identical(other.preferredTime, preferredTime) || other.preferredTime == preferredTime)&&(identical(other.discoverySource, discoverySource) || other.discoverySource == discoverySource));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OnboardingPayload&&const DeepCollectionEquality().equals(other._primaryGoal, _primaryGoal)&&(identical(other.activityLevel, activityLevel) || other.activityLevel == activityLevel)&&const DeepCollectionEquality().equals(other._preferredWorkouts, _preferredWorkouts)&&(identical(other.dietaryPreference, dietaryPreference) || other.dietaryPreference == dietaryPreference)&&(identical(other.preferredTime, preferredTime) || other.preferredTime == preferredTime)&&(identical(other.discoverySource, discoverySource) || other.discoverySource == discoverySource)&&(identical(other.termsVersion, termsVersion) || other.termsVersion == termsVersion)&&(identical(other.marketingConsent, marketingConsent) || other.marketingConsent == marketingConsent));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_primaryGoal),activityLevel,const DeepCollectionEquality().hash(_preferredWorkouts),dietaryPreference,preferredTime,discoverySource);
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_primaryGoal),activityLevel,const DeepCollectionEquality().hash(_preferredWorkouts),dietaryPreference,preferredTime,discoverySource,termsVersion,marketingConsent);
 
 @override
 String toString() {
-  return 'OnboardingPayload(primaryGoal: $primaryGoal, activityLevel: $activityLevel, preferredWorkouts: $preferredWorkouts, dietaryPreference: $dietaryPreference, preferredTime: $preferredTime, discoverySource: $discoverySource)';
+  return 'OnboardingPayload(primaryGoal: $primaryGoal, activityLevel: $activityLevel, preferredWorkouts: $preferredWorkouts, dietaryPreference: $dietaryPreference, preferredTime: $preferredTime, discoverySource: $discoverySource, termsVersion: $termsVersion, marketingConsent: $marketingConsent)';
 }
 
 
@@ -269,7 +273,7 @@ abstract mixin class _$OnboardingPayloadCopyWith<$Res> implements $OnboardingPay
   factory _$OnboardingPayloadCopyWith(_OnboardingPayload value, $Res Function(_OnboardingPayload) _then) = __$OnboardingPayloadCopyWithImpl;
 @override @useResult
 $Res call({
- List<String> primaryGoal, String activityLevel, List<String> preferredWorkouts, String dietaryPreference, String preferredTime, String? discoverySource
+ List<String> primaryGoal, String activityLevel, List<String> preferredWorkouts, String dietaryPreference, String preferredTime, String? discoverySource,@JsonKey(name: 'terms_version') String termsVersion,@JsonKey(name: 'marketing_consent') bool marketingConsent
 });
 
 
@@ -286,7 +290,7 @@ class __$OnboardingPayloadCopyWithImpl<$Res>
 
 /// Create a copy of OnboardingPayload
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? primaryGoal = null,Object? activityLevel = null,Object? preferredWorkouts = null,Object? dietaryPreference = null,Object? preferredTime = null,Object? discoverySource = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? primaryGoal = null,Object? activityLevel = null,Object? preferredWorkouts = null,Object? dietaryPreference = null,Object? preferredTime = null,Object? discoverySource = freezed,Object? termsVersion = null,Object? marketingConsent = null,}) {
   return _then(_OnboardingPayload(
 primaryGoal: null == primaryGoal ? _self._primaryGoal : primaryGoal // ignore: cast_nullable_to_non_nullable
 as List<String>,activityLevel: null == activityLevel ? _self.activityLevel : activityLevel // ignore: cast_nullable_to_non_nullable
@@ -294,7 +298,9 @@ as String,preferredWorkouts: null == preferredWorkouts ? _self._preferredWorkout
 as List<String>,dietaryPreference: null == dietaryPreference ? _self.dietaryPreference : dietaryPreference // ignore: cast_nullable_to_non_nullable
 as String,preferredTime: null == preferredTime ? _self.preferredTime : preferredTime // ignore: cast_nullable_to_non_nullable
 as String,discoverySource: freezed == discoverySource ? _self.discoverySource : discoverySource // ignore: cast_nullable_to_non_nullable
-as String?,
+as String?,termsVersion: null == termsVersion ? _self.termsVersion : termsVersion // ignore: cast_nullable_to_non_nullable
+as String,marketingConsent: null == marketingConsent ? _self.marketingConsent : marketingConsent // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

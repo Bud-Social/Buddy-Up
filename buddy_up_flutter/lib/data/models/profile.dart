@@ -20,6 +20,7 @@ abstract class Profile with _$Profile {
     @Default('user') String role,
     @Default('none') String verificationStatus,
     @Default('public') String privacyLevel,
+    @JsonKey(name: 'onboarding_completed') @Default(true) bool onboardingCompleted,
     @Default(0) int streakDays,
     @Default({}) Map<String, int> artifactBalance,
     @Default(0) int buddyCount,

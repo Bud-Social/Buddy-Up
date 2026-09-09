@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
@@ -168,6 +169,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       final res = await _authRepo.googleLogin({'credential': credential});
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
+      // New Google emails are auto-registered by the backend; GoRouter sends
+      // onboarding-incomplete accounts to /onboarding (consent first).
+      if (mounted) context.go('/feed');
     } catch (e) {
       if (GoogleAuth.isCancelled(e)) {
         return; // User cancelled mid-flow.
@@ -211,6 +215,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         'last_name': credential.familyName,
       });
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
+      // GoRouter sends onboarding-incomplete accounts to /onboarding.
+      if (mounted) context.go('/feed');
     } catch (e) {
       if (e is DioException && e.response?.data is Map) {
         final data = e.response!.data as Map<String, dynamic>;
