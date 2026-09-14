@@ -1,1 +1,8 @@
 #include "Generated.xcconfig"
+
+// Disable code signing for CI / no-codesign release builds.
+// Xcode's Automatic signing style can override the --no-codesign flag that
+// Flutter passes to xcodebuild; setting CODE_SIGNING_ALLOWED here ensures
+// the build succeeds without a provisioning profile or development team.
+CODE_SIGNING_ALLOWED = NO
+CODE_SIGNING_REQUIRED = NO
