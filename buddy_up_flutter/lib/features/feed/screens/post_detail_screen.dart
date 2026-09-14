@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/post_card.dart';
+import '../widgets/share_sheet.dart';
 import '../widgets/comment_tile.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -56,6 +57,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                       post: post,
                       onReact: (id, reaction) => _handleReact(post, reaction),
                       onSave: (id) => _handleSave(post),
+                      onShare: (_) => ShareSheet.show(context, post),
                       onDelete: (id) => _handleDelete(post.id),
                     ),
                     const Divider(height: 1),

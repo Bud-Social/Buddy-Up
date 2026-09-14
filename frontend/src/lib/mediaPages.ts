@@ -17,6 +17,9 @@ export interface MediaPage {
   trim_end_ms?: number | null;
   sound_id?: string | null;
   sound_volume?: number | null;
+  sound_audio_url?: string | null;
+  captions?: import('@/types').PostCaption[] | null;
+  edit_meta?: import('@/types').PostEditMeta | null;
 }
 
 const VIDEO_EXT = /\.(mp4|mov|webm|m4v|mpeg|mkv)(\?|$)/i;
@@ -41,6 +44,9 @@ function pageFromMedia(m: PostMedia): MediaPage {
     trim_end_ms: m.trim_end_ms ?? null,
     sound_id: m.sound_id ?? null,
     sound_volume: m.sound_volume ?? null,
+    sound_audio_url: (m as { sound_audio_url?: string | null }).sound_audio_url ?? null,
+    captions: m.captions ?? null,
+    edit_meta: m.edit_meta ?? null,
   };
 }
 

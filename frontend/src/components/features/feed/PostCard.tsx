@@ -4,15 +4,29 @@ import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
   MoreHorizontal, Dumbbell, Utensils, TrendingUp, MapPin, BarChart2,
   Maximize2, FileText, CheckSquare, CircleDot, ChevronLeft, ChevronRight,
-  Volume2, VolumeX,
+  Volume2, VolumeX, Share2, Eye,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api';
 import { formatPostDate } from '@/utils/formatDate';
-import { EmojiImg } from '@/utils/emojiUtils';
+import { EmojiImg, toEmoji } from '@/utils/emojiUtils';
 import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
+import { RailAction, RAIL_ICON_SIZE, nextReactionState, totalReactions } from './RailAction';
+import { AuthorChip } from './AuthorChip';
+import { PostShareSheet } from './PostShareSheet';
+import { useRecordPostView } from './useRecordPostView';
 import { mediaPagesFromPost, type MediaPage } from '@/lib/mediaPages';
+import { filterCssAt, adjustCss } from '@/lib/createStudio';
+import { CreativeLayer } from '@/components/create/CreativeLayer';
+import { FeedTrackAudio } from '@/components/features/feed/FeedTrackAudio';
 import { isProfanityFilterEnabled, maskProfanity } from '@/lib/profanity';
+
+function combinedFilterCss(page: MediaPage): string {
+  const edits = page.edit_meta;
+  if (!edits) return '';
+  const parts = [filterCssAt(edits.filter, edits.filter_strength ?? 100), adjustCss(edits.adjust)];
+  return parts.filter(Boolean).join(' ');
+}
 import type { Post, PostCaption, PostMedia } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
 import { RichText } from '@/components/ui/RichText';
@@ -233,7 +247,7 @@ function PollCard({ poll, postId }: { poll: NonNullable<Post['poll']>; postId: s
 
 /** One video page inside the carousel: muted autoplay-in-view, tap-to-unmute. */
 function CarouselVideoPage({
-  page, muted, canAutoplay, blur, captions, postId, onToggleMute,
+  page, muted, canAutoplay, blur, captions, postId, onToggleMute, onAdvance, onViewRecorded,
 }: {
   page: MediaPage;
   muted: boolean;
@@ -242,36 +256,83 @@ function CarouselVideoPage({
   captions: PostCaption[];
   postId?: string;
   onToggleMute: () => void;
+  /** Sequential multi-clip posts: next video page when this one ends. */
+  onAdvance?: () => void;
+  onViewRecorded?: (viewCount: number) => void;
 }) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activeCaption, setActiveCaption] = useState('');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
   useInViewAutoplay(videoRef, canAutoplay);
+  const viewRef = useRecordPostView(postId, { active: isPlaying, progress, onRecorded: onViewRecorded });
+
+  // Creative-studio edits: filter preset + strength + manual adjustments
+  // (CSS), playback speed, timed text overlays, stickers. Also honor the
+  // editor's trim in-point on first play.
+  const edits = page.edit_meta ?? null;
+  const [overlayTimeMs, setOverlayTimeMs] = useState(0);
+  const speed = edits?.speed && edits.speed !== 1 ? edits.speed : 1;
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.muted = muted;
-  }, [muted]);
+    // Editor's original-audio volume applies at playback (browser caps at 1).
+    if (videoRef.current && !muted) {
+      videoRef.current.volume = Math.min(1, ((page.edit_meta?.volume ?? 100) as number) / 100);
+    }
+  }, [muted, page.edit_meta?.volume]);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.playbackRate = speed;
+  }, [speed]);
 
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const v = e.currentTarget;
+    setOverlayTimeMs(v.currentTime * 1000);
+    if (v.duration > 0) setProgress(v.currentTime / v.duration);
     if (captions.length === 0) return;
-    const t = e.currentTarget.currentTime * 1000;
+    const t = v.currentTime * 1000;
     const seg = captions.find((c) => t >= c.start_ms && t < c.end_ms);
     setActiveCaption(seg ? seg.text : '');
   };
 
   return (
-    <div className="relative group/video">
+    <div className="relative group/video" ref={viewRef}>
       <video
         ref={videoRef}
         src={page.url}
         poster={page.poster_url ?? undefined}
         muted={muted}
-        loop
+        loop={!onAdvance}
         playsInline
         preload="metadata"
         onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+        onEnded={() => onAdvance?.()}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
         onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={(e) => {
+          const startSec = (page.trim_start_ms ?? 0) / 1000;
+          if (startSec > 0 && e.currentTarget.currentTime < startSec) {
+            e.currentTarget.currentTime = startSec;
+          }
+        }}
+        style={{ filter: combinedFilterCss(page) }}
         className={`w-full max-h-96 object-cover cursor-pointer ${blur ? 'blur-xl' : ''}`}
+      />
+      {/* Studio edits: text overlays, stickers, captions — shared renderer */}
+      <CreativeLayer meta={edits} timeMs={overlayTimeMs} activeCaption={activeCaption ? { text: activeCaption } : null} />
+      {/* Studio audio mix: added tracks + attached sound, synced to playback */}
+      <FeedTrackAudio
+        getVideo={() => videoRef.current}
+        editMeta={edits}
+        soundUrl={page.sound_audio_url}
+        soundVolume={page.sound_volume}
+        soundPlacement={edits?.sound_placement}
+        trimStartMs={page.trim_start_ms}
+        muted={muted}
+        active={isPlaying}
       />
       {/* Tap-to-unmute affordance */}
       <button
@@ -286,22 +347,17 @@ function CarouselVideoPage({
         className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover/video:opacity-100 transition-opacity"
         title="Open full-screen video feed"
       ><Maximize2 size={16} /></button>
-      {/* Timed caption overlay */}
-      {activeCaption && (
-        <p className="absolute bottom-10 left-1/2 -translate-x-1/2 max-w-[90%] px-3 py-1.5 rounded-full bg-black/50 text-white text-sm text-center whitespace-pre-wrap pointer-events-none">
-          {activeCaption}
-        </p>
-      )}
     </div>
   );
 }
 
 function MediaGallery({
-  post, blurred, postId,
+  post, blurred, postId, onViewRecorded,
 }: {
   post: { media?: PostMedia[] | null; media_urls?: string[] | null; captions?: PostCaption[] | null };
   blurred?: boolean;
   postId?: string;
+  onViewRecorded?: (viewCount: number) => void;
 }) {
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -343,9 +399,15 @@ function MediaGallery({
                 muted={muted}
                 canAutoplay={canAutoplay}
                 blur={!!blurred && !revealed}
-                captions={captions}
+                captions={page.captions ?? captions}
                 postId={postId}
                 onToggleMute={() => setMuted((m) => !m)}
+                onViewRecorded={onViewRecorded}
+                onAdvance={
+                  pages.length > 1 && i < pages.length - 1 && pages[i + 1].type === 'video'
+                    ? () => scrollToPage(i + 1)
+                    : undefined
+                }
               />
             ) : page.type === 'audio' ? (
               <div className="p-4 bg-buddy-surface-raised w-full">
@@ -413,22 +475,6 @@ function MediaGallery({
   );
 }
 
-// ─── Side action button ───────────────────────────────────────────────────────
-function ActionBtn({ icon: Icon, count, active, color, onClick }: {
-  icon: React.ElementType; count?: number; active?: boolean;
-  color?: string; onClick?: (e: React.MouseEvent) => void;
-}) {
-  return (
-    <button onClick={onClick}
-      className={`flex flex-col items-center gap-0.5 group transition-all ${active ? color || 'text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-green'}`}>
-      <div className="p-2 rounded-full group-hover:bg-buddy-green/10 transition-colors">
-        <Icon size={20} />
-      </div>
-      {count !== undefined && <span className="text-[11px] font-medium leading-none">{count}</span>}
-    </button>
-  );
-}
-
 // ─── Main PostCard ────────────────────────────────────────────────────────────
 interface PostCardProps {
   post: Post;
@@ -439,53 +485,105 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
   const navigate = useNavigate();
   const [post] = useState(initialPost);
   const [isSaved, setIsSaved] = useState(post.is_saved ?? false);
+  const [saveCount, setSaveCount] = useState<number | undefined>(post.save_count);
   const [reactionCounts, setReactionCounts] = useState(post.reaction_counts || {});
-  const [userReaction, setUserReaction] = useState(post.user_reaction);
+  const [userReaction, setUserReaction] = useState<string | null>(
+    post.user_reaction ? toEmoji(post.user_reaction) : null,
+  );
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [repostCount, setRepostCount] = useState(post.repost_count || 0);
   const [isRepostedByMe, setIsRepostedByMe] = useState(post.is_reposted_by_me ?? false);
+  const [shareCount, setShareCount] = useState(post.share_count ?? 0);
+  const [viewCount, setViewCount] = useState(post.view_count ?? 0);
+  const [showShareSheet, setShowShareSheet] = useState(false);
   const [heartPop, setHeartPop] = useState<{ show: boolean; x: number; y: number } | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = useRef(false);
 
   const reactionsArr = Object.entries(reactionCounts)
     .filter(([, count]) => count > 0)
     .sort((a, b) => b[1] - a[1]);
   const topReactions = reactionsArr.slice(0, 3);
+  const likeCount = totalReactions(reactionCounts);
+
+  /** One-tap toggles 💪 (optimistic w/ rollback). Long-press opens the picker. */
+  const togglePump = async () => {
+    const prevCounts = reactionCounts;
+    const prevReaction = userReaction;
+    const next = nextReactionState(reactionCounts, userReaction, '💪');
+    setReactionCounts(next.counts);
+    setUserReaction(next.userReaction);
+    try {
+      if (next.removed) await feedApi.unreact(post.id);
+      else await feedApi.react(post.id, '💪');
+    } catch {
+      setReactionCounts(prevCounts);
+      setUserReaction(prevReaction);
+    }
+  };
 
   const handleReact = async (emojiStr: string) => {
+    const emoji = toEmoji(emojiStr);
     setShowReactionPicker(false);
-    try {
-      if (userReaction === emojiStr) {
+    if (emoji === userReaction) {
+      const prevCounts = reactionCounts;
+      setUserReaction(null);
+      setReactionCounts(prev => {
+        const next = { ...prev };
+        if (next[emoji] > 1) next[emoji]--;
+        else delete next[emoji];
+        return next;
+      });
+      try {
         await feedApi.unreact(post.id);
-        setUserReaction(null);
-        setReactionCounts(prev => {
-          const next = { ...prev };
-          if (next[emojiStr] > 1) next[emojiStr]--;
-          else delete next[emojiStr];
-          return next;
-        });
-      } else {
-        await feedApi.react(post.id, emojiStr);
-        setReactionCounts(prev => {
-          const next = { ...prev };
-          if (userReaction && next[userReaction]) {
-            if (next[userReaction] > 1) next[userReaction]--;
-            else delete next[userReaction];
-          }
-          next[emojiStr] = (next[emojiStr] || 0) + 1;
-          return next;
-        });
-        setUserReaction(emojiStr);
+      } catch {
+        setUserReaction(emoji);
+        setReactionCounts(prevCounts);
       }
-    } catch {}
+      return;
+    }
+    const prevCounts = reactionCounts;
+    const prevReaction = userReaction;
+    const next = nextReactionState(reactionCounts, userReaction, emoji);
+    setReactionCounts(next.counts);
+    setUserReaction(next.userReaction);
+    try {
+      await feedApi.react(post.id, emoji);
+    } catch {
+      setReactionCounts(prevCounts);
+      setUserReaction(prevReaction);
+    }
   };
+
+  const startLongPress = () => {
+    longPressFired.current = false;
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      setShowReactionPicker(true);
+    }, 450);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  };
+  useEffect(() => cancelLongPress, []);
 
   const handleSave = async () => {
-    setIsSaved(s => !s);
-    try { await feedApi.save(post.id); } catch {}
+    const prev = isSaved;
+    const prevCount = saveCount;
+    setIsSaved(!prev);
+    if (saveCount !== undefined) setSaveCount(Math.max(0, saveCount + (prev ? -1 : 1)));
+    try {
+      if (prev) await feedApi.unsave(post.id);
+      else await feedApi.save(post.id);
+    } catch {
+      setIsSaved(prev);
+      if (prevCount !== undefined) setSaveCount(prevCount);
+    }
   };
 
-  const handleRepost = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleRepost = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     // Optimistic update
     const wasReposted = isRepostedByMe;
     setIsRepostedByMe(!wasReposted);
@@ -504,15 +602,14 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
   };
 
   const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (userReaction !== '💪') {
-      handleReact('💪');
-      const rect = e.currentTarget.getBoundingClientRect();
-      setHeartPop(null);
-      requestAnimationFrame(() => {
-        setHeartPop({ show: true, x: e.clientX - rect.left, y: e.clientY - rect.top });
-      });
-      setTimeout(() => setHeartPop(null), 700);
-    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    setHeartPop(null);
+    requestAnimationFrame(() => {
+      setHeartPop({ show: true, x: e.clientX - rect.left, y: e.clientY - rect.top });
+    });
+    setTimeout(() => setHeartPop(null), 700);
+    // Double-tap always likes with 💪 (no-op if already the active reaction).
+    if (userReaction !== '💪') void handleReact('💪');
   };
 
   const displayPost = (post.is_repost && post.original_post_data) ? post.original_post_data : post;
@@ -520,6 +617,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
 
   return (
     <article
+      id={`post-${post.id}`}
       className={`flex gap-1 bg-buddy-surface rounded-2xl border ${post.is_repost ? 'border-buddy-green/30 shadow-[0_0_15px_rgba(0,255,157,0.05)]' : 'border-buddy-surface-raised hover:border-buddy-green/20'} transition-colors select-none flex-col`}
     >
       {/* Repost Header Ribbon */}
@@ -566,49 +664,29 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           )}
 
           {/* Header */}
-          <div className="flex items-start gap-2.5">
-            <button onClick={() => navigate(`/${displayAuthor?.username}`)} className="flex-shrink-0 mt-0.5">
-              <Avatar src={displayAuthor?.avatar_url} alt={displayAuthor?.display_name || 'User'} size="md" verificationStatus={displayAuthor?.verification_status} />
-            </button>
+          <div className="flex items-start gap-2">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <button onClick={() => navigate(`/${displayAuthor?.username}`)}
-                  className="font-semibold text-sm hover:text-buddy-green transition-colors truncate leading-tight">
-                  {displayAuthor?.display_name}
-                </button>
-                {displayAuthor?.verification_status === 'trainer' && (
-                  <span className="text-[10px] bg-buddy-green/20 text-buddy-green px-1.5 py-0.5 rounded-full font-medium leading-tight shrink-0">Trainer</span>
+              <AuthorChip author={displayAuthor} />
+              <div className="flex items-center gap-1.5 mt-1 ml-[52px] flex-wrap">
+                <span className="text-xs text-buddy-text-secondary leading-tight">
+                  {formatPostDate(displayPost.created_at)}
+                </span>
+                {(displayPost as any).gym_tag_name && (
+                  <span className="inline-flex items-center gap-1 text-[10px] bg-buddy-green/10 text-buddy-green px-2 py-0.5 rounded-full">
+                    <Dumbbell size={9} /> {(displayPost as any).gym_tag_name}
+                  </span>
                 )}
-                {displayAuthor?.verification_status === 'practitioner' && (
-                  <span className="text-[10px] bg-buddy-gold/20 text-buddy-gold px-1.5 py-0.5 rounded-full font-medium leading-tight shrink-0">Practitioner</span>
-                )}
-                {displayAuthor?.verification_status === 'shop' && (
-                  <span className="text-[10px] bg-buddy-electric/20 text-buddy-electric px-1.5 py-0.5 rounded-full font-medium leading-tight shrink-0">Shop</span>
-                )}
-                {displayAuthor?.verification_status === 'gym' && (
-                  <span className="text-[10px] bg-buddy-green/20 text-buddy-green px-1.5 py-0.5 rounded-full font-medium leading-tight shrink-0">Gym</span>
+                {displayPost.location_label && (
+                  <span className="inline-flex items-center gap-0.5 text-[10px] text-buddy-text-secondary">
+                    <MapPin size={9} /> {displayPost.location_label}
+                  </span>
                 )}
               </div>
-              <p className="text-xs text-buddy-text-secondary leading-tight">
-                @{displayAuthor?.username} · {formatPostDate(displayPost.created_at)}
-              </p>
-            {/* Gym badge */}
-            {(displayPost as any).gym_tag_name && (
-              <span className="inline-flex items-center gap-1 text-[10px] bg-buddy-green/10 text-buddy-green px-2 py-0.5 rounded-full mt-1">
-                <Dumbbell size={9} /> {(displayPost as any).gym_tag_name}
-              </span>
-            )}
-            {/* Location */}
-            {displayPost.location_label && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] text-buddy-text-secondary mt-1 ml-1">
-                <MapPin size={9} /> {displayPost.location_label}
-              </span>
-            )}
+            </div>
+            <button className="p-1 rounded-lg hover:bg-buddy-surface text-buddy-text-secondary flex-shrink-0" aria-label="More options">
+              <MoreHorizontal size={16} />
+            </button>
           </div>
-          <button className="p-1 rounded-lg hover:bg-buddy-surface text-buddy-text-secondary flex-shrink-0">
-            <MoreHorizontal size={16} />
-          </button>
-        </div>
 
           {/* Body — masked client-side when the profanity filter is on */}
           {displayPost.body && (
@@ -624,7 +702,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           {displayPost.post_type === 'poll' && (displayPost as any).poll && <PollCard poll={(displayPost as any).poll} postId={displayPost.id} />}
 
           {/* Media */}
-          <MediaGallery post={displayPost} blurred={post.moderation_status === 'flagged'} postId={displayPost.id} />
+          <MediaGallery post={displayPost} blurred={post.moderation_status === 'flagged'} postId={post.id} onViewRecorded={setViewCount} />
 
           {/* Map */}
           {displayPost.location_lat != null && displayPost.location_lng != null && (
@@ -643,29 +721,44 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
         </div>
 
         {/* Side action bar — right column */}
-        <div onClick={e => e.stopPropagation()} className="flex flex-col items-center justify-center gap-1 py-4 pr-2 border-l border-buddy-surface min-w-[52px]">
-          {/* React */}
-          <div className="relative">
-            <button
-              onClick={() => setShowReactionPicker(p => !p)}
-              className={`flex flex-col items-center gap-0.5 group transition-all ${userReaction ? 'text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-green'}`}
-            >
-              <div className="p-2 rounded-full group-hover:bg-buddy-green/10 transition-colors">
-                <Heart size={20} />
-              </div>
-              {reactionsArr.length > 0 && (
-                <div className="flex flex-col items-center mt-1">
-                  <div className="flex -space-x-1">
-                    {topReactions.map(([emojiChar]) => (
-                      <EmojiImg key={emojiChar} emoji={emojiChar} size={18} className="z-10 rounded-full" />
-                    ))}
-                  </div>
-                  <span className="text-[10px] mt-0.5">
-                    {reactionsArr.reduce((sum, [, count]) => sum + count, 0)}
-                  </span>
-                </div>
+        <div onClick={e => e.stopPropagation()} className="flex flex-col items-center justify-center gap-0.5 py-4 pr-2 border-l border-buddy-surface min-w-[52px]">
+          {/* Like — one-tap toggles 💪, long-press opens other reactions */}
+          <div
+            className="relative flex flex-col items-center"
+            onPointerDown={startLongPress}
+            onPointerUp={cancelLongPress}
+            onPointerLeave={cancelLongPress}
+          >
+            <RailAction
+              label={userReaction ? `Liked with ${userReaction}` : 'Like with flexed biceps'}
+              title="Tap to 💪 · long-press for more reactions"
+              count={likeCount}
+              active={!!userReaction}
+              testId="rail-like"
+              onClick={() => {
+                // A completed long-press already opened the picker; skip the tap.
+                if (longPressFired.current) { longPressFired.current = false; return; }
+                void togglePump();
+              }}
+              onContextMenu={(e) => { e.preventDefault(); setShowReactionPicker(true); }}
+              icon={userReaction ? (
+                <EmojiImg emoji={userReaction} size={RAIL_ICON_SIZE} />
+              ) : (
+                <Heart size={RAIL_ICON_SIZE} />
               )}
-            </button>
+            />
+            {reactionsArr.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setShowReactionPicker(p => !p); }}
+                className="flex -space-x-1 -mt-1"
+                aria-label="See all reactions"
+              >
+                {topReactions.map(([emojiChar]) => (
+                  <EmojiImg key={emojiChar} emoji={emojiChar} size={16} className="z-10 rounded-full ring-1 ring-buddy-surface" />
+                ))}
+              </button>
+            )}
 
             {/* Reaction picker popup */}
             {showReactionPicker && (
@@ -675,7 +768,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
                   <EmojiPicker
                     theme={Theme.DARK}
                     emojiStyle={EmojiStyle.APPLE}
-                    onEmojiClick={(emojiData) => handleReact(emojiData.emoji)}
+                    onEmojiClick={(emojiData) => void handleReact(emojiData.emoji)}
                     lazyLoadEmojis
                     searchDisabled
                     skinTonesDisabled
@@ -688,22 +781,68 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           </div>
 
           {/* Comment */}
-          <ActionBtn icon={MessageCircle} count={displayPost.comment_count || 0} onClick={() => onComment?.(displayPost.id)} />
+          <RailAction
+            label="Comments"
+            icon={<MessageCircle size={RAIL_ICON_SIZE} />}
+            count={displayPost.comment_count || 0}
+            testId="rail-comment"
+            onClick={() => onComment?.(displayPost.id)}
+          />
 
           {/* Repost */}
           <div title={isRepostedByMe ? 'Tap to undo repost' : 'Repost'}>
-            <ActionBtn icon={Repeat2} count={repostCount} active={isRepostedByMe} onClick={handleRepost} color="text-buddy-electric" />
+            <RailAction
+              label={isRepostedByMe ? 'Undo repost' : 'Repost'}
+              icon={<Repeat2 size={RAIL_ICON_SIZE} />}
+              count={repostCount}
+              active={isRepostedByMe}
+              activeClassName="text-buddy-electric"
+              testId="rail-repost"
+              onClick={handleRepost}
+            />
           </div>
 
           {/* Save */}
-          <button onClick={handleSave}
-            className={`flex flex-col items-center gap-0.5 transition-all ${isSaved ? 'text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-green'}`}>
-            <div className="p-2 rounded-full hover:bg-buddy-green/10 transition-colors">
-              {isSaved ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
-            </div>
-          </button>
+          <RailAction
+            label={isSaved ? 'Unsave' : 'Save'}
+            icon={isSaved ? <BookmarkCheck size={RAIL_ICON_SIZE} /> : <Bookmark size={RAIL_ICON_SIZE} />}
+            count={saveCount}
+            active={isSaved}
+            testId="rail-save"
+            onClick={() => void handleSave()}
+          />
+
+          {/* Share */}
+          <RailAction
+            label="Share"
+            icon={<Share2 size={RAIL_ICON_SIZE} />}
+            count={shareCount}
+            testId="rail-share"
+            onClick={() => setShowShareSheet(true)}
+          />
+
+          {/* Views */}
+          <RailAction
+            label={`${viewCount} views`}
+            icon={<Eye size={RAIL_ICON_SIZE} />}
+            count={viewCount}
+            testId="rail-views"
+          />
         </div>
       </div>
+
+      {showShareSheet && (
+        <PostShareSheet
+          post={post}
+          isOpen={showShareSheet}
+          onClose={() => setShowShareSheet(false)}
+          isSaved={isSaved}
+          onToggleSave={() => void handleSave()}
+          isReposted={isRepostedByMe}
+          onRepost={() => void handleRepost()}
+          onShared={setShareCount}
+        />
+      )}
     </article>
   );
 }

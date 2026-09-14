@@ -1,25 +1,43 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback, forwardRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
-  X, ChevronUp, Loader2,
+  X, ChevronUp, Loader2, Share2, Eye,
 } from 'lucide-react';
-import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api/feed';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { PostPhotoCarousel } from '@/components/features/feed/PostPhotoCarousel';
-import { useAuthStore } from '@/store/authStore';
-import { toEmoji } from '@/utils/emojiUtils';
+import { RailAction, RAIL_ICON_SIZE, nextReactionState, totalReactions } from '@/components/features/feed/RailAction';
+import { AuthorChip } from '@/components/features/feed/AuthorChip';
+import { PostShareSheet } from '@/components/features/feed/PostShareSheet';
+import { useRecordPostView } from '@/components/features/feed/useRecordPostView';
+import {
+  isSwipeLeftToProfile, shouldIgnoreSwipeOrigin,
+} from '@/components/features/feed/feedGestures';
+import { EmojiImg, toEmoji } from '@/utils/emojiUtils';
 import { mediaPagesFromPost, postIsPhotoMode } from '@/lib/mediaPages';
+import { filterCssAt, adjustCss } from '@/lib/createStudio';
+import { CreativeLayer } from '@/components/create/CreativeLayer';
+import { FeedTrackAudio } from '@/components/features/feed/FeedTrackAudio';
+import type { PostEditMeta, PostCaption } from '@/types';
 import type { Post } from '@/types/post';
 
 const VIDEO_EXT = /\.(mp4|mov|webm|m4v|mpeg|mkv)(\?|$)/i;
 
-function pickVideoItem(post: Post): { url: string; poster?: string } | null {
-  // Prefer structured media (poster + dims), fall back to URL sniffing.
+function pickVideoItem(post: Post): {
+  url: string; poster?: string; editMeta?: PostEditMeta | null; captions?: PostCaption[] | null;
+  soundUrl?: string | null; soundVolume?: number | null;
+} | null {
+  // Prefer structured media (poster + dims + studio edits), fall back to URL sniffing.
   const first = post.media?.[0];
-  if (first && first.media_type === 'video') return { url: first.url, poster: first.poster_url ?? undefined };
+  if (first && first.media_type === 'video') {
+    return {
+      url: first.url, poster: first.poster_url ?? undefined, editMeta: first.edit_meta ?? null,
+      captions: first.captions ?? null, soundUrl: first.sound_audio_url ?? null,
+      soundVolume: first.sound_volume ?? null,
+    };
+  }
   for (const url of post.media_urls || []) {
     if (VIDEO_EXT.test(url)) return { url };
   }
@@ -28,15 +46,101 @@ function pickVideoItem(post: Post): { url: string; poster?: string } | null {
 
 interface VideoItem {
   post: Post;
-  video: { url: string; poster?: string } | null;
+  video: {
+    url: string; poster?: string; editMeta?: PostEditMeta | null; captions?: PostCaption[] | null;
+    soundUrl?: string | null; soundVolume?: number | null;
+  } | null;
   photoMode: boolean;
+}
+
+const OVERLAY_COLORS_SKIP: Record<string, string> = {};
+void OVERLAY_COLORS_SKIP;
+
+function overlaySizePx(size: number): number {
+  return [14, 20, 30][size] ?? 20;
+}
+void overlaySizePx;
+
+/** Full-screen video player that applies create-studio edits
+ *  (filter preset + strength, adjustments, playback speed, trim in-point,
+ *  timed text overlays, stickers). */
+const FeedVideoWithEdits = forwardRef<HTMLVideoElement, {
+  video: {
+    url: string; poster?: string; editMeta?: PostEditMeta | null; captions?: PostCaption[] | null;
+    soundUrl?: string | null; soundVolume?: number | null;
+  };
+  muted: boolean;
+  active: boolean;
+  onTime?: (ms: number, durationSec: number) => void;
+}>(({ video, muted, active, onTime }, ref) => {
+  const [overlayTimeMs, setOverlayTimeMs] = useState(0);
+  const edits = video.editMeta;
+  const speed = edits?.speed && edits.speed !== 1 ? edits.speed : 1;
+  const internalRef = useRef<HTMLVideoElement | null>(null);
+  const mergedRef = (el: HTMLVideoElement | null) => {
+    internalRef.current = el;
+    if (typeof ref === 'function') ref(el);
+    else if (ref) (ref as { current: HTMLVideoElement | null }).current = el;
+  };
+  const filterCss = useMemo(() => {
+    const parts = [filterCssAt(edits?.filter, edits?.filter_strength ?? 100), adjustCss(edits?.adjust)];
+    return parts.filter(Boolean).join(' ');
+  }, [edits]);
+  const activeCaption = useMemo(() => {
+    const seg = (video.captions ?? []).find((c) => overlayTimeMs >= c.start_ms && overlayTimeMs < c.end_ms);
+    return seg ? { text: seg.text } : null;
+  }, [video.captions, overlayTimeMs]);
+
+  useEffect(() => {
+    const el = internalRef.current;
+    if (el) el.playbackRate = speed;
+    if (el && !muted) el.volume = Math.min(1, (edits?.volume ?? 100) / 100);
+  }, [speed, muted, edits?.volume]);
+
+  return (
+    <div className="relative w-full h-full">
+      <video
+        ref={mergedRef}
+        src={video.url}
+        poster={video.poster}
+        loop
+        playsInline
+        muted={muted}
+        preload="auto"
+        style={{ filter: filterCss || undefined }}
+        className="w-full h-full object-contain"
+        onTimeUpdate={(e) => {
+          const v = e.currentTarget;
+          if (v.duration) onTime?.(v.currentTime * 1000, v.duration);
+          setOverlayTimeMs(v.currentTime * 1000);
+        }}
+      />
+      <CreativeLayer meta={edits} timeMs={overlayTimeMs} activeCaption={activeCaption} />
+      <FeedTrackAudio
+        getVideo={() => internalRef.current}
+        editMeta={edits}
+        soundUrl={video.soundUrl}
+        soundVolume={video.soundVolume}
+        soundPlacement={edits?.sound_placement}
+        muted={muted}
+        active={active}
+      />
+    </div>
+  );
+});
+
+/** Invisible in-section sentinel that records a qualified view via useRecordPostView. */
+function ViewRecorder({ postId, active, progress, onRecorded }: {
+  postId: string; active: boolean; progress: number; onRecorded: (n: number) => void;
+}) {
+  const ref = useRecordPostView(postId, { active, progress, onRecorded });
+  return <div ref={ref} className="absolute inset-0 pointer-events-none" aria-hidden />;
 }
 
 export default function FullScreenVideoFeed() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const startPostId = searchParams.get('start');
-  const profile = useAuthStore((s) => s.profile);
 
   const [items, setItems] = useState<VideoItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,8 +148,12 @@ export default function FullScreenVideoFeed() {
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  const [shareIdx, setShareIdx] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(() => {
+    try { return !sessionStorage.getItem('buddyup-swipe-hint-seen'); } catch { return true; }
+  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const startScrolledRef = useRef(false);
@@ -55,6 +163,7 @@ export default function FullScreenVideoFeed() {
   const cursorRef = useRef<string | undefined>(undefined);
   const hasMoreRef = useRef(true);
   const loadingLockRef = useRef(false);
+  const touchOriginRef = useRef<{ x: number; y: number } | null>(null);
 
   const loadVideos = useCallback(async () => {
     if (!hasMoreRef.current || loadingLockRef.current) return;
@@ -146,24 +255,26 @@ export default function FullScreenVideoFeed() {
     scheduleHide();
   };
 
+  /** One-tap toggles 💪 (optimistic w/ rollback + count switching). */
   const handleLike = async (idx: number) => {
     const item = items[idx];
     if (!item) return;
-    const { post } = item;
-    const current = post.user_reaction ? toEmoji(post.user_reaction) : null;
-    const emoji = '💪';
-    if (current === emoji) {
-      try {
-        await feedApi.unreact(post.id);
-        post.user_reaction = null;
-      } catch {}
-    } else {
-      try {
-        await feedApi.react(post.id, emoji);
-        post.user_reaction = emoji;
-      } catch {}
+    const prevReaction = item.post.user_reaction ? toEmoji(item.post.user_reaction) : null;
+    const prevCounts = item.post.reaction_counts || {};
+    const next = nextReactionState(prevCounts, prevReaction, '💪');
+    setItems((prev) => prev.map((it, i) => (i === idx ? {
+      ...it,
+      post: { ...it.post, user_reaction: next.userReaction, reaction_counts: next.counts },
+    } : it)));
+    try {
+      if (next.removed) await feedApi.unreact(item.post.id);
+      else await feedApi.react(item.post.id, '💪');
+    } catch {
+      setItems((prev) => prev.map((it, i) => (i === idx ? {
+        ...it,
+        post: { ...it.post, user_reaction: prevReaction, reaction_counts: prevCounts },
+      } : it)));
     }
-    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, post: { ...post } } : it)));
   };
 
   const handleSave = async (idx: number) => {
@@ -210,6 +321,9 @@ export default function FullScreenVideoFeed() {
     }
   };
 
+  const patchItem = (idx: number, patch: Partial<Post>) =>
+    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, post: { ...it.post, ...patch } } : it)));
+
   const toggleFullscreen = () => {
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => {});
@@ -224,13 +338,48 @@ export default function FullScreenVideoFeed() {
     return () => document.removeEventListener('fullscreenchange', onFs);
   }, []);
 
-  const totalReactions = (post: Post) =>
-    Object.values(post.reaction_counts || {}).reduce((a, b) => a + b, 0);
+  // Dismiss the swipe hint after a few seconds.
+  useEffect(() => {
+    if (!showSwipeHint) return;
+    const t = setTimeout(() => setShowSwipeHint(false), 6000);
+    return () => clearTimeout(t);
+  }, [showSwipeHint]);
+
+  const dismissSwipeHint = () => {
+    setShowSwipeHint(false);
+    try { sessionStorage.setItem('buddyup-swipe-hint-seen', '1'); } catch {}
+  };
+
+  // Deliberate horizontal swipe (dx < -80, dominant over dy) navigates to the
+  // active post author's profile. Gestures from carousels/sliders/buttons/
+  // sheets are ignored; back falls back to /videos?start=<postId> via state.
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchOriginRef.current = { x: t.clientX, y: t.clientY };
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const origin = touchOriginRef.current;
+    touchOriginRef.current = null;
+    if (!origin || commentPostId !== null || shareIdx !== null) return;
+    if (shouldIgnoreSwipeOrigin(e.target)) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - origin.x;
+    const dy = t.clientY - origin.y;
+    if (!isSwipeLeftToProfile(dx, dy)) return;
+    const post = items[activeIndex]?.post;
+    const username = post?.author_data?.username;
+    if (!username) return;
+    dismissSwipeHint();
+    navigate(`/${username}`, { state: { returnTo: `/videos?start=${post.id}` } });
+  };
 
   return (
     <div
       ref={containerRef}
       onScroll={handleScroll}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       className="h-full w-full overflow-y-scroll snap-y snap-mandatory bg-black"
       style={{ scrollSnapType: 'y mandatory' }}
     >
@@ -264,18 +413,13 @@ export default function FullScreenVideoFeed() {
             {item.photoMode ? (
               <PostPhotoCarousel post={post} className="absolute inset-0" counterClassName="top-16 right-3" />
             ) : (
-              <video
+              <FeedVideoWithEdits
                 ref={(el) => { videoRefs.current[idx] = el; }}
-                src={item.video!.url}
-                poster={item.video!.poster}
-                loop
-                playsInline
-                preload={active ? 'auto' : 'none'}
+                video={item.video!}
                 muted={isMuted}
-                className="w-full h-full object-contain"
-                onTimeUpdate={(e) => {
-                  const v = e.currentTarget;
-                  if (v.duration) setProgress((v.currentTime / v.duration) * 100);
+                active={active}
+                onTime={(ms, durSec) => {
+                  if (active && durSec > 0) setProgress((ms / 1000 / durSec) * 100);
                 }}
               />
             )}
@@ -286,7 +430,7 @@ export default function FullScreenVideoFeed() {
 
             {/* Top bar */}
             {controlsVisible && (
-              <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-4 pb-12 bg-gradient-to-b from-black/70 to-transparent">
+              <div data-no-swipe className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-4 pb-12 bg-gradient-to-b from-black/70 to-transparent">
                 <h1 className="text-white font-bold text-base flex items-center gap-2">
                   <Play size={16} className="text-buddy-green fill-current" /> Videos
                 </h1>
@@ -298,17 +442,18 @@ export default function FullScreenVideoFeed() {
               </div>
             )}
 
+            {/* Qualified-view recorder (in-view + active playback/progress). */}
+            <ViewRecorder
+              postId={post.id}
+              active={active}
+              progress={item.photoMode ? 0 : progress / 100}
+              onRecorded={(n) => patchItem(idx, { view_count: n })}
+            />
+
             {/* Bottom overlay — author + caption */}
             <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-6 pt-16 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
-              <div className="flex items-center gap-2">
-                <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name} size="sm" className="ring-2 ring-white/30" />
-                <button
-                  onClick={(e) => { e.stopPropagation(); navigate(`/${post.author_data?.username}`); }}
-                  className="text-white font-semibold text-sm pointer-events-auto"
-                >@{post.author_data?.username}</button>
-                {post.author_data?.verification_status === 'trainer' && (
-                  <span className="text-[10px] bg-buddy-green text-buddy-black px-1.5 py-0.5 rounded-full font-medium pointer-events-auto">Trainer</span>
-                )}
+              <div className="pointer-events-auto max-w-[70%]">
+                <AuthorChip author={post.author_data} tone="onDark" />
               </div>
               {!item.photoMode && post.body && (
                 <p className="text-white/90 text-sm mt-2 line-clamp-2">{post.body}</p>
@@ -321,32 +466,62 @@ export default function FullScreenVideoFeed() {
             </div>
 
             {/* Right interaction rail */}
-            <div className="absolute right-2 bottom-24 z-20 flex flex-col items-center gap-5 pointer-events-none">
-              <div className="flex flex-col items-center gap-5 pointer-events-auto">
-                <div className="flex flex-col items-center gap-1">
-                  <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name} size="md" className="ring-2 ring-white/40 mb-1" onClick={(e) => { e.stopPropagation(); navigate(`/${post.author_data?.username}`); }} />
-                  <span className="w-6 h-6 rounded-full bg-buddy-green text-buddy-black flex items-center justify-center -mt-3 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleLike(idx); }}>+</span>
-                </div>
-
-                <button onClick={(e) => { e.stopPropagation(); handleLike(idx); }} className="flex flex-col items-center gap-0.5 text-white">
-                  <Heart size={26} className={post.user_reaction ? 'text-buddy-green fill-current' : 'drop-shadow'} />
-                  <span className="text-[11px] font-medium">{totalReactions(post) || ''}</span>
-                </button>
-
-                <button onClick={(e) => { e.stopPropagation(); setCommentPostId(post.id); }} className="flex flex-col items-center gap-0.5 text-white">
-                  <MessageCircle size={26} className="drop-shadow" />
-                  <span className="text-[11px] font-medium">{post.comment_count || ''}</span>
-                </button>
-
-                <button onClick={(e) => { e.stopPropagation(); handleRepost(idx); }} className="flex flex-col items-center gap-0.5 text-white" title={post.is_reposted_by_me ? 'Tap to undo repost' : 'Repost'}>
-                  <Repeat2 size={26} className={`drop-shadow ${post.is_reposted_by_me ? 'text-buddy-electric' : ''}`} />
-                  <span className="text-[11px] font-medium">{post.repost_count || ''}</span>
-                </button>
-
-                <button onClick={(e) => { e.stopPropagation(); handleSave(idx); }} className="flex flex-col items-center gap-0.5 text-white">
-                  {post.is_saved ? <BookmarkCheck size={26} className="text-buddy-green drop-shadow" /> : <Bookmark size={26} className="drop-shadow" />}
-                </button>
-              </div>
+            <div data-no-swipe className="absolute right-2 bottom-24 z-20 flex flex-col items-center gap-1">
+              <RailAction
+                tone="onDark"
+                label={post.user_reaction ? `Liked with ${toEmoji(post.user_reaction)}` : 'Like with flexed biceps'}
+                icon={post.user_reaction
+                  ? <EmojiImg emoji={toEmoji(post.user_reaction)} size={RAIL_ICON_SIZE + 4} />
+                  : <Heart size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
+                count={totalReactions(post.reaction_counts)}
+                active={!!post.user_reaction}
+                testId={`fs-like-${post.id}`}
+                onClick={(e) => { e.stopPropagation(); void handleLike(idx); }}
+              />
+              <RailAction
+                tone="onDark"
+                label="Comments"
+                icon={<MessageCircle size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
+                count={post.comment_count ?? 0}
+                testId={`fs-comment-${post.id}`}
+                onClick={(e) => { e.stopPropagation(); setCommentPostId(post.id); }}
+              />
+              <RailAction
+                tone="onDark"
+                label={post.is_reposted_by_me ? 'Undo repost' : 'Repost'}
+                icon={<Repeat2 size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
+                count={post.repost_count ?? 0}
+                active={!!post.is_reposted_by_me}
+                activeClassName="text-buddy-electric"
+                testId={`fs-repost-${post.id}`}
+                onClick={(e) => { e.stopPropagation(); void handleRepost(idx); }}
+              />
+              <RailAction
+                tone="onDark"
+                label={post.is_saved ? 'Unsave' : 'Save'}
+                icon={post.is_saved
+                  ? <BookmarkCheck size={RAIL_ICON_SIZE + 4} className="drop-shadow" />
+                  : <Bookmark size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
+                count={post.save_count}
+                active={!!post.is_saved}
+                testId={`fs-save-${post.id}`}
+                onClick={(e) => { e.stopPropagation(); void handleSave(idx); }}
+              />
+              <RailAction
+                tone="onDark"
+                label="Share"
+                icon={<Share2 size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
+                count={post.share_count ?? 0}
+                testId={`fs-share-${post.id}`}
+                onClick={(e) => { e.stopPropagation(); setShareIdx(idx); }}
+              />
+              <RailAction
+                tone="onDark"
+                label={`${post.view_count ?? 0} views`}
+                icon={<Eye size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
+                count={post.view_count ?? 0}
+                testId={`fs-views-${post.id}`}
+              />
             </div>
 
             {/* Center play/pause indicator */}
@@ -360,7 +535,7 @@ export default function FullScreenVideoFeed() {
 
             {/* Video controls bar */}
             {controlsVisible && !item.photoMode && (
-              <div className="absolute bottom-0 left-0 right-0 z-20 px-3 pb-3">
+              <div data-no-swipe className="absolute bottom-0 left-0 right-0 z-20 px-3 pb-3">
                 <div className="flex items-center gap-3 bg-black/50 backdrop-blur rounded-full px-3 py-2">
                   <button onClick={(e) => { e.stopPropagation(); togglePlay(idx); }} className="text-white">
                     {videoRefs.current[idx]?.paused ? <Play size={18} /> : <Pause size={18} />}
@@ -388,8 +563,14 @@ export default function FullScreenVideoFeed() {
               </div>
             )}
 
-            {/* Profile chip (bottom-left, above caption when logged in) */}
-            <span className="absolute bottom-28 left-3 text-[11px] text-white/50">{profile?.display_name ? 'Swipe up to explore' : ''}</span>
+            {/* Swipe-left hint */}
+            {showSwipeHint && active && (
+              <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
+                <span className="text-[11px] text-white/80 bg-black/50 rounded-full px-3 py-1.5 backdrop-blur">
+                  ← Swipe left to view profile
+                </span>
+              </div>
+            )}
           </section>
         );
       })}
@@ -405,6 +586,19 @@ export default function FullScreenVideoFeed() {
           postId={commentPostId}
           isOpen={!!commentPostId}
           onClose={() => setCommentPostId(null)}
+        />
+      )}
+
+      {shareIdx !== null && items[shareIdx] && (
+        <PostShareSheet
+          post={items[shareIdx].post}
+          isOpen={shareIdx !== null}
+          onClose={() => setShareIdx(null)}
+          isSaved={!!items[shareIdx].post.is_saved}
+          onToggleSave={() => void handleSave(shareIdx)}
+          isReposted={!!items[shareIdx].post.is_reposted_by_me}
+          onRepost={() => void handleRepost(shareIdx)}
+          onShared={(n) => patchItem(shareIdx, { share_count: n })}
         />
       )}
     </div>

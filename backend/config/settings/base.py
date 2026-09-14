@@ -68,9 +68,11 @@ MIDDLEWARE = [
 
 # django-cors-headers: allow the custom headers the clients send. Without
 # 'idempotency-key' here, video/media uploads fail CORS preflight entirely.
+# Without 'x-device-id' here, every client request (auth included) fails
+# preflight because both web and Flutter clients send it on all calls.
 from corsheaders.defaults import default_headers  # noqa: E402
 
-CORS_ALLOW_HEADERS = [*default_headers, 'idempotency-key']
+CORS_ALLOW_HEADERS = [*default_headers, 'idempotency-key', 'x-device-id']
 
 ROOT_URLCONF = 'config.urls'
 

@@ -31,6 +31,75 @@ export interface AuthorData {
   verification_status?: string;
 }
 
+/** Creative-studio edits (IG/TikTok style) stored per media item. */
+export interface PostEditMeta {
+  filter?: string | null;
+  filter_strength?: number;
+  speed?: number;
+  volume?: number;
+  enhance?: boolean;
+  voice_effect?: string;
+  adjust?: {
+    brightness?: number;
+    contrast?: number;
+    saturation?: number;
+    vignette?: number;
+  };
+  aspect?: string;
+  focus_y?: number;
+  text_overlays?: Array<{
+    id?: string;
+    text: string;
+    start_ms: number;
+    end_ms: number;
+    y: number;
+    x?: number;
+    rotation?: number;
+    size: number;
+    color: string;
+    font?: string;
+    effect?: 'none' | 'outline' | 'glow' | 'neon' | 'bubble' | 'highlight' | 'shadow';
+    bg?: 'none' | 'pill' | 'block';
+    bg_color?: string;
+    animation?: 'none' | 'fade' | 'pop' | 'slide' | 'karaoke';
+  }>;
+  stickers?: Array<{
+    id?: string;
+    kind: 'emoji' | 'countdown' | 'mention';
+    content: string;
+    x: number;
+    y: number;
+    start_ms: number;
+    end_ms: number;
+    scale: number;
+  }>;
+  audio_tracks?: Array<{
+    kind: 'sound' | 'voiceover' | 'url';
+    url?: string;
+    label?: string;
+    volume: number;
+    start_ms: number;
+    duration_ms?: number;
+    effect?: string;
+    fade_in_ms?: number;
+    fade_out_ms?: number;
+    ducking?: boolean;
+  }>;
+  sound_placement?: {
+    start_ms?: number;
+    fade_in_ms?: number;
+    fade_out_ms?: number;
+  };
+  captions_style?: {
+    preset?: string;
+    font?: string;
+    size?: number;
+    color?: string;
+    bg?: 'none' | 'pill' | 'block';
+    placement?: 'top' | 'center' | 'bottom';
+  };
+}
+
 /** Structured media item on a post (create studio uploads / Cloudinary). */
 export interface PostMedia {
   url: string;
@@ -43,6 +112,10 @@ export interface PostMedia {
   trim_end_ms?: number | null;
   sound_id?: string | null;
   sound_volume?: number | null;
+  sound_audio_url?: string | null;
+  captions?: PostCaption[] | null;
+  captions_vtt?: string | null;
+  edit_meta?: PostEditMeta | null;
   alt_text?: string | null;
 }
 
@@ -74,6 +147,10 @@ export interface Post {
   location_lat?: number | null;
   location_lng?: number | null;
   view_count: number;
+  /** Number of times the post was shared (server may omit until implemented). */
+  share_count?: number;
+  /** Number of saves (server may omit until implemented). */
+  save_count?: number;
   reaction_counts: Record<string, number>;
   user_reaction: string | null;
   comment_count: number;
@@ -127,4 +204,18 @@ export interface Comment {
   reaction_counts: Record<string, number>;
   user_reaction: string | null;
   created_at: string;
+}
+
+/** Per-post aggregates for the creator-insights endpoint. All counts are
+ *  defensive: the backend may omit keys while it is being built in parallel. */
+export interface CreatorInsightItem {
+  post_id: string;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  reposts?: number;
+  saves?: number;
+  shares?: number;
+  created_at?: string;
+  visibility?: string;
 }

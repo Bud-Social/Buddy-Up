@@ -112,16 +112,20 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class PostMediaSerializer(serializers.ModelSerializer):
     """Structured media row (Bud Press). Read-only; managed via create/media[]."""
+    sound_audio_url = serializers.SerializerMethodField()
 
     class Meta:
         model = PostMedia
         fields = [
             'id', 'post', 'order', 'media_type', 'url', 'poster_url',
             'width', 'height', 'duration_ms', 'trim_start_ms', 'trim_end_ms',
-            'sound', 'sound_volume', 'captions', 'captions_vtt', 'alt_text',
+            'sound', 'sound_volume', 'sound_audio_url', 'captions', 'captions_vtt', 'edit_meta', 'alt_text',
             'created_at', 'updated_at',
         ]
         read_only_fields = fields
+
+    def get_sound_audio_url(self, obj):
+        return obj.sound.audio_url if obj.sound_id and obj.sound else None
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -130,6 +134,7 @@ class PostSerializer(serializers.ModelSerializer):
     user_reaction = serializers.SerializerMethodField()
     comment_count = serializers.SerializerMethodField()
     repost_count = serializers.SerializerMethodField()
+    save_count = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
     is_reposted_by_me = serializers.SerializerMethodField()
     poll = serializers.SerializerMethodField()
@@ -145,14 +150,14 @@ class PostSerializer(serializers.ModelSerializer):
         'visibility', 'is_repost', 'original_post_id', 'quote_body',
         'location_label', 'location_lat', 'location_lng', 'workout_log_data',
         'meal_data', 'progress_data',
-        'media_urls', 'media', 'tags', 'view_count', 'moderation_status',
+        'media_urls', 'media', 'tags', 'view_count', 'share_count', 'moderation_status',
         'content_rating', 'comments_disabled',
         'author_data', 'reaction_counts', 'user_reaction',
-        'comment_count', 'repost_count', 'is_saved', 'is_reposted_by_me', 'is_pinned',
+        'comment_count', 'repost_count', 'save_count', 'is_saved', 'is_reposted_by_me', 'is_pinned',
         'poll', 'original_post_data', 'reposters', 'created_at', 'updated_at',
         'ai_analysis',
         ]
-        read_only_fields = ['id', 'view_count', 'moderation_status', 'ai_analysis', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'view_count', 'share_count', 'moderation_status', 'ai_analysis', 'created_at', 'updated_at']
 
     def get_author_data(self, obj):
         if obj.is_anonymous:
@@ -185,6 +190,9 @@ class PostSerializer(serializers.ModelSerializer):
 
     def get_repost_count(self, obj):
         return obj.reposts.count()
+
+    def get_save_count(self, obj):
+        return obj.saves.count()
 
     def get_is_saved(self, obj):
         request = self.context.get('request')

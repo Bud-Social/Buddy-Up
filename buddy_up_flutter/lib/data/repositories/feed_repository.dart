@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 import '../models/post.dart';
@@ -55,6 +57,15 @@ abstract class FeedRepository {
     @Body() RepostPayload payload,
   );
 
+  @POST('/feed/{id}/share/')
+  Future<dynamic> sharePost(@Path('id') String postId);
+
+  @POST('/feed/{id}/view/')
+  Future<dynamic> recordView(@Path('id') String postId);
+
+  @GET('/feed/creator/insights/')
+  Future<dynamic> getCreatorInsights();
+
   @POST('/feed/{id}/save/')
   Future<dynamic> save(
     @Path('id') String postId,
@@ -109,4 +120,8 @@ abstract class FeedRepository {
 
   @POST('/sounds/{id}/use/')
   Future<dynamic> useSound(@Path('id') String soundId);
+
+  @POST('/feed/studio/transcribe/')
+  @MultiPart()
+  Future<dynamic> transcribeStudioMedia(@Part(name: 'media') File file);
 }

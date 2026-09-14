@@ -210,6 +210,12 @@ def transcribe_post_media(self, post_media_id: str):
         logger.warning('PostMedia %s not found for transcription', post_media_id)
         return
 
+    # Studio/manual captions are already timed to the uploaded media. Never
+    # overwrite them with a later automatic pass.
+    if media.captions:
+        logger.info('PostMedia %s already has captions; skipping transcription', post_media_id)
+        return
+
     job = AIPredictionJob.objects.create(
         task='transcription',
         input_data={'post_media_id': post_media_id, 'media_url': media.url},

@@ -31,6 +31,8 @@ _PostMedia _$PostMediaFromJson(Map<String, dynamic> json) => _PostMedia(
   trimEndMs: (json['trimEndMs'] as num?)?.toInt(),
   soundId: json['soundId'] as String?,
   soundVolume: (json['soundVolume'] as num?)?.toDouble(),
+  soundAudioUrl: json['soundAudioUrl'] as String?,
+  editMeta: json['editMeta'] as Map<String, dynamic>?,
   altText: json['altText'] as String?,
   captions:
       (json['captions'] as List<dynamic>?)
@@ -51,33 +53,35 @@ Map<String, dynamic> _$PostMediaToJson(_PostMedia instance) =>
       'trimEndMs': instance.trimEndMs,
       'soundId': instance.soundId,
       'soundVolume': instance.soundVolume,
+      'soundAudioUrl': instance.soundAudioUrl,
+      'editMeta': instance.editMeta,
       'altText': instance.altText,
       'captions': instance.captions,
     };
 
 _AuthorData _$AuthorDataFromJson(Map<String, dynamic> json) => _AuthorData(
-  userId: json['userId'] as String?,
+  userId: json['user_id'] as String?,
   username: json['username'] as String,
-  displayName: json['displayName'] as String,
-  avatarUrl: json['avatarUrl'] as String,
-  verificationStatus: json['verificationStatus'] as String? ?? 'none',
+  displayName: json['display_name'] as String,
+  avatarUrl: json['avatar_url'] as String,
+  verificationStatus: json['verification_status'] as String? ?? 'none',
 );
 
 Map<String, dynamic> _$AuthorDataToJson(_AuthorData instance) =>
     <String, dynamic>{
-      'userId': instance.userId,
+      'user_id': instance.userId,
       'username': instance.username,
-      'displayName': instance.displayName,
-      'avatarUrl': instance.avatarUrl,
-      'verificationStatus': instance.verificationStatus,
+      'display_name': instance.displayName,
+      'avatar_url': instance.avatarUrl,
+      'verification_status': instance.verificationStatus,
     };
 
 _PollOption _$PollOptionFromJson(Map<String, dynamic> json) => _PollOption(
   id: json['id'] as String,
   text: json['text'] as String,
   order: (json['order'] as num?)?.toInt() ?? 0,
-  voteCount: (json['voteCount'] as num?)?.toInt() ?? 0,
-  userVoted: json['userVoted'] as bool? ?? false,
+  voteCount: (json['vote_count'] as num?)?.toInt() ?? 0,
+  userVoted: json['user_voted'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$PollOptionToJson(_PollOption instance) =>
@@ -85,24 +89,24 @@ Map<String, dynamic> _$PollOptionToJson(_PollOption instance) =>
       'id': instance.id,
       'text': instance.text,
       'order': instance.order,
-      'voteCount': instance.voteCount,
-      'userVoted': instance.userVoted,
+      'vote_count': instance.voteCount,
+      'user_voted': instance.userVoted,
     };
 
 _Poll _$PollFromJson(Map<String, dynamic> json) => _Poll(
   id: json['id'] as String,
   question: json['question'] as String,
-  closesAt: json['closesAt'] as String?,
-  allowMultiple: json['allowMultiple'] as bool? ?? false,
+  closesAt: json['closes_at'] as String?,
+  allowMultiple: json['allow_multiple'] as bool? ?? false,
   minSelections: (json['min_selections'] as num?)?.toInt() ?? 1,
   maxSelections: (json['max_selections'] as num?)?.toInt() ?? 1,
-  totalVotes: (json['totalVotes'] as num?)?.toInt() ?? 0,
-  isClosed: json['isClosed'] as bool? ?? false,
+  totalVotes: (json['total_votes'] as num?)?.toInt() ?? 0,
+  isClosed: json['is_closed'] as bool? ?? false,
   options: (json['options'] as List<dynamic>)
       .map((e) => PollOption.fromJson(e as Map<String, dynamic>))
       .toList(),
   userVotedOptionIds:
-      (json['userVotedOptionIds'] as List<dynamic>?)
+      (json['user_voted_option_ids'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
@@ -111,83 +115,88 @@ _Poll _$PollFromJson(Map<String, dynamic> json) => _Poll(
 Map<String, dynamic> _$PollToJson(_Poll instance) => <String, dynamic>{
   'id': instance.id,
   'question': instance.question,
-  'closesAt': instance.closesAt,
-  'allowMultiple': instance.allowMultiple,
+  'closes_at': instance.closesAt,
+  'allow_multiple': instance.allowMultiple,
   'min_selections': instance.minSelections,
   'max_selections': instance.maxSelections,
-  'totalVotes': instance.totalVotes,
-  'isClosed': instance.isClosed,
+  'total_votes': instance.totalVotes,
+  'is_closed': instance.isClosed,
   'options': instance.options,
-  'userVotedOptionIds': instance.userVotedOptionIds,
+  'user_voted_option_ids': instance.userVotedOptionIds,
 };
 
 _ReposterData _$ReposterDataFromJson(Map<String, dynamic> json) =>
     _ReposterData(
-      userId: json['userId'] as String?,
-      displayName: json['displayName'] as String? ?? '',
-      avatarUrl: json['avatarUrl'] as String? ?? '',
+      userId: json['user_id'] as String?,
+      displayName: json['display_name'] as String? ?? '',
+      avatarUrl: json['avatar_url'] as String? ?? '',
     );
 
 Map<String, dynamic> _$ReposterDataToJson(_ReposterData instance) =>
     <String, dynamic>{
-      'userId': instance.userId,
-      'displayName': instance.displayName,
-      'avatarUrl': instance.avatarUrl,
+      'user_id': instance.userId,
+      'display_name': instance.displayName,
+      'avatar_url': instance.avatarUrl,
     };
 
-_OriginalPostData _$OriginalPostDataFromJson(
-  Map<String, dynamic> json,
-) => _OriginalPostData(
-  id: json['id'] as String,
-  authorData: AuthorData.fromJson(json['authorData'] as Map<String, dynamic>),
-  body: json['body'] as String,
-  mediaUrls:
-      (json['mediaUrls'] as List<dynamic>?)?.map((e) => e as String).toList() ??
-      const <String>[],
-  media:
-      (json['media'] as List<dynamic>?)
-          ?.map((e) => PostMedia.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      const <PostMedia>[],
-  postType: json['postType'] as String? ?? 'text',
-  locationLabel: json['locationLabel'] as String?,
-  workoutLogData: json['workoutLogData'] as Map<String, dynamic>?,
-  mealData: json['mealData'] as Map<String, dynamic>?,
-  progressData: json['progressData'] as Map<String, dynamic>?,
-  poll: json['poll'] == null
-      ? null
-      : Poll.fromJson(json['poll'] as Map<String, dynamic>),
-  commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
-  gymTagName: json['gymTagName'] as String?,
-  createdAt: json['createdAt'] as String,
-);
+_OriginalPostData _$OriginalPostDataFromJson(Map<String, dynamic> json) =>
+    _OriginalPostData(
+      id: json['id'] as String,
+      authorData: AuthorData.fromJson(
+        json['author_data'] as Map<String, dynamic>,
+      ),
+      body: json['body'] as String,
+      mediaUrls:
+          (json['media_urls'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      media:
+          (json['media'] as List<dynamic>?)
+              ?.map((e) => PostMedia.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <PostMedia>[],
+      postType: json['post_type'] as String? ?? 'text',
+      locationLabel: json['location_label'] as String?,
+      workoutLogData: json['workout_log_data'] as Map<String, dynamic>?,
+      mealData: json['meal_data'] as Map<String, dynamic>?,
+      progressData: json['progress_data'] as Map<String, dynamic>?,
+      poll: json['poll'] == null
+          ? null
+          : Poll.fromJson(json['poll'] as Map<String, dynamic>),
+      commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
+      gymTagName: json['gym_tag_name'] as String?,
+      createdAt: json['created_at'] as String,
+    );
 
 Map<String, dynamic> _$OriginalPostDataToJson(_OriginalPostData instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'authorData': instance.authorData,
+      'author_data': instance.authorData,
       'body': instance.body,
-      'mediaUrls': instance.mediaUrls,
+      'media_urls': instance.mediaUrls,
       'media': instance.media,
-      'postType': instance.postType,
-      'locationLabel': instance.locationLabel,
-      'workoutLogData': instance.workoutLogData,
-      'mealData': instance.mealData,
-      'progressData': instance.progressData,
+      'post_type': instance.postType,
+      'location_label': instance.locationLabel,
+      'workout_log_data': instance.workoutLogData,
+      'meal_data': instance.mealData,
+      'progress_data': instance.progressData,
       'poll': instance.poll,
-      'commentCount': instance.commentCount,
-      'gymTagName': instance.gymTagName,
-      'createdAt': instance.createdAt,
+      'comment_count': instance.commentCount,
+      'gym_tag_name': instance.gymTagName,
+      'created_at': instance.createdAt,
     };
 
 _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   id: json['id'] as String,
-  authorData: AuthorData.fromJson(json['authorData'] as Map<String, dynamic>),
-  postType: json['postType'] as String? ?? 'text',
+  authorData: AuthorData.fromJson(json['author_data'] as Map<String, dynamic>),
+  postType: json['post_type'] as String? ?? 'text',
   body: json['body'] as String? ?? '',
-  isAnonymous: json['isAnonymous'] as bool? ?? false,
+  isAnonymous: json['is_anonymous'] as bool? ?? false,
   mediaUrls:
-      (json['mediaUrls'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      (json['media_urls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
       const <String>[],
   media:
       (json['media'] as List<dynamic>?)
@@ -199,116 +208,120 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   tags:
       (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const <String>[],
-  workoutLogData: json['workoutLogData'] as Map<String, dynamic>?,
-  mealData: json['mealData'] as Map<String, dynamic>?,
-  progressData: json['progressData'] as Map<String, dynamic>?,
-  locationLabel: json['locationLabel'] as String? ?? '',
-  viewCount: (json['viewCount'] as num?)?.toInt() ?? 0,
+  workoutLogData: json['workout_log_data'] as Map<String, dynamic>?,
+  mealData: json['meal_data'] as Map<String, dynamic>?,
+  progressData: json['progress_data'] as Map<String, dynamic>?,
+  locationLabel: json['location_label'] as String? ?? '',
+  viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
   reactionCounts:
-      (json['reactionCounts'] as Map<String, dynamic>?)?.map(
+      (json['reaction_counts'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, (e as num).toInt()),
       ) ??
       const <String, int>{},
-  userReaction: json['userReaction'] as String?,
-  commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
-  repostCount: (json['repostCount'] as num?)?.toInt() ?? 0,
-  isRepost: json['isRepost'] as bool? ?? false,
-  isRepostedByMe: json['isRepostedByMe'] as bool? ?? false,
-  originalPostId: json['originalPostId'] as String?,
-  quoteBody: json['quoteBody'] as String? ?? '',
+  userReaction: json['user_reaction'] as String?,
+  commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
+  repostCount: (json['repost_count'] as num?)?.toInt() ?? 0,
+  saveCount: (json['save_count'] as num?)?.toInt() ?? 0,
+  shareCount: (json['share_count'] as num?)?.toInt() ?? 0,
+  isRepost: json['is_repost'] as bool? ?? false,
+  isRepostedByMe: json['is_reposted_by_me'] as bool? ?? false,
+  originalPostId: json['original_post_id'] as String?,
+  quoteBody: json['quote_body'] as String? ?? '',
   reposters:
       (json['reposters'] as List<dynamic>?)
           ?.map((e) => ReposterData.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const <ReposterData>[],
-  isSaved: json['isSaved'] as bool? ?? false,
-  isPinned: json['isPinned'] as bool? ?? false,
+  isSaved: json['is_saved'] as bool? ?? false,
+  isPinned: json['is_pinned'] as bool? ?? false,
   visibility: json['visibility'] as String? ?? 'public',
   contentRating: json['content_rating'] as String? ?? 'general',
-  moderationStatus: json['moderationStatus'] as String? ?? 'clean',
+  moderationStatus: json['moderation_status'] as String? ?? 'clean',
   aiAnalysis: _readAiAnalysis(json, 'aiAnalysis') as Map<String, dynamic>?,
-  gymTagId: json['gymTagId'] as String?,
-  gymTagName: json['gymTagName'] as String?,
+  gymTagId: json['gym_tag_id'] as String?,
+  gymTagName: json['gym_tag_name'] as String?,
   poll: json['poll'] == null
       ? null
       : Poll.fromJson(json['poll'] as Map<String, dynamic>),
-  originalPostData: json['originalPostData'] == null
+  originalPostData: json['original_post_data'] == null
       ? null
       : OriginalPostData.fromJson(
-          json['originalPostData'] as Map<String, dynamic>,
+          json['original_post_data'] as Map<String, dynamic>,
         ),
-  createdAt: json['createdAt'] as String,
-  updatedAt: json['updatedAt'] as String?,
+  createdAt: json['created_at'] as String,
+  updatedAt: json['updated_at'] as String?,
 );
 
 Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'id': instance.id,
-  'authorData': instance.authorData,
-  'postType': instance.postType,
+  'author_data': instance.authorData,
+  'post_type': instance.postType,
   'body': instance.body,
-  'isAnonymous': instance.isAnonymous,
-  'mediaUrls': instance.mediaUrls,
+  'is_anonymous': instance.isAnonymous,
+  'media_urls': instance.mediaUrls,
   'media': instance.media,
   'commentsDisabled': instance.commentsDisabled,
   'tags': instance.tags,
-  'workoutLogData': instance.workoutLogData,
-  'mealData': instance.mealData,
-  'progressData': instance.progressData,
-  'locationLabel': instance.locationLabel,
-  'viewCount': instance.viewCount,
-  'reactionCounts': instance.reactionCounts,
-  'userReaction': instance.userReaction,
-  'commentCount': instance.commentCount,
-  'repostCount': instance.repostCount,
-  'isRepost': instance.isRepost,
-  'isRepostedByMe': instance.isRepostedByMe,
-  'originalPostId': instance.originalPostId,
-  'quoteBody': instance.quoteBody,
+  'workout_log_data': instance.workoutLogData,
+  'meal_data': instance.mealData,
+  'progress_data': instance.progressData,
+  'location_label': instance.locationLabel,
+  'view_count': instance.viewCount,
+  'reaction_counts': instance.reactionCounts,
+  'user_reaction': instance.userReaction,
+  'comment_count': instance.commentCount,
+  'repost_count': instance.repostCount,
+  'save_count': instance.saveCount,
+  'share_count': instance.shareCount,
+  'is_repost': instance.isRepost,
+  'is_reposted_by_me': instance.isRepostedByMe,
+  'original_post_id': instance.originalPostId,
+  'quote_body': instance.quoteBody,
   'reposters': instance.reposters,
-  'isSaved': instance.isSaved,
-  'isPinned': instance.isPinned,
+  'is_saved': instance.isSaved,
+  'is_pinned': instance.isPinned,
   'visibility': instance.visibility,
   'content_rating': instance.contentRating,
-  'moderationStatus': instance.moderationStatus,
+  'moderation_status': instance.moderationStatus,
   'aiAnalysis': instance.aiAnalysis,
-  'gymTagId': instance.gymTagId,
-  'gymTagName': instance.gymTagName,
+  'gym_tag_id': instance.gymTagId,
+  'gym_tag_name': instance.gymTagName,
   'poll': instance.poll,
-  'originalPostData': instance.originalPostData,
-  'createdAt': instance.createdAt,
-  'updatedAt': instance.updatedAt,
+  'original_post_data': instance.originalPostData,
+  'created_at': instance.createdAt,
+  'updated_at': instance.updatedAt,
 };
 
 _Comment _$CommentFromJson(Map<String, dynamic> json) => _Comment(
   id: json['id'] as String,
-  postId: json['postId'] as String,
-  authorData: AuthorData.fromJson(json['authorData'] as Map<String, dynamic>),
+  postId: json['post_id'] as String,
+  authorData: AuthorData.fromJson(json['author_data'] as Map<String, dynamic>),
   body: json['body'] as String,
-  parentId: json['parentId'] as String?,
-  isAnonymous: json['isAnonymous'] as bool? ?? false,
-  replyCount: (json['replyCount'] as num?)?.toInt() ?? 0,
+  parentId: json['parent_id'] as String?,
+  isAnonymous: json['is_anonymous'] as bool? ?? false,
+  replyCount: (json['reply_count'] as num?)?.toInt() ?? 0,
   reactionCounts:
-      (json['reactionCounts'] as Map<String, dynamic>?)?.map(
+      (json['reaction_counts'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, (e as num).toInt()),
       ) ??
       const <String, int>{},
-  userReaction: json['userReaction'] as String?,
-  createdAt: json['createdAt'] as String,
-  updatedAt: json['updatedAt'] as String?,
+  userReaction: json['user_reaction'] as String?,
+  createdAt: json['created_at'] as String,
+  updatedAt: json['updated_at'] as String?,
 );
 
 Map<String, dynamic> _$CommentToJson(_Comment instance) => <String, dynamic>{
   'id': instance.id,
-  'postId': instance.postId,
-  'authorData': instance.authorData,
+  'post_id': instance.postId,
+  'author_data': instance.authorData,
   'body': instance.body,
-  'parentId': instance.parentId,
-  'isAnonymous': instance.isAnonymous,
-  'replyCount': instance.replyCount,
-  'reactionCounts': instance.reactionCounts,
-  'userReaction': instance.userReaction,
-  'createdAt': instance.createdAt,
-  'updatedAt': instance.updatedAt,
+  'parent_id': instance.parentId,
+  'is_anonymous': instance.isAnonymous,
+  'reply_count': instance.replyCount,
+  'reaction_counts': instance.reactionCounts,
+  'user_reaction': instance.userReaction,
+  'created_at': instance.createdAt,
+  'updated_at': instance.updatedAt,
 };
 
 _FeedFilter _$FeedFilterFromJson(Map<String, dynamic> json) => _FeedFilter(
@@ -321,31 +334,31 @@ Map<String, dynamic> _$FeedFilterToJson(_FeedFilter instance) =>
 
 _CreatePostPayload _$CreatePostPayloadFromJson(Map<String, dynamic> json) =>
     _CreatePostPayload(
-      postType: json['postType'] as String,
+      postType: json['post_type'] as String,
       body: json['body'] as String?,
       visibility: json['visibility'] as String? ?? 'public',
       contentRating: json['content_rating'] as String? ?? 'general',
-      gymTag: json['gymTag'] as String?,
-      locationLabel: json['locationLabel'] as String?,
+      gymTag: json['gym_tag'] as String?,
+      locationLabel: json['location_label'] as String?,
       mediaUrls:
-          (json['mediaUrls'] as List<dynamic>?)
+          (json['media_urls'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const <String>[],
       tags:
           (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
           const <String>[],
-      isAnonymous: json['isAnonymous'] as bool? ?? false,
-      pollQuestion: json['pollQuestion'] as String?,
+      isAnonymous: json['is_anonymous'] as bool? ?? false,
+      pollQuestion: json['poll_question'] as String?,
       pollOptions:
-          (json['pollOptions'] as List<dynamic>?)
+          (json['poll_options'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const <String>[],
-      pollClosesAt: json['pollClosesAt'] as String?,
-      pollAllowMultiple: json['pollAllowMultiple'] as bool? ?? false,
+      pollClosesAt: json['poll_closes_at'] as String?,
+      pollAllowMultiple: json['poll_allow_multiple'] as bool? ?? false,
       mentionedUsers:
-          (json['mentionedUsers'] as List<dynamic>?)
+          (json['mentioned_users'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const <String>[],
@@ -353,47 +366,47 @@ _CreatePostPayload _$CreatePostPayloadFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$CreatePostPayloadToJson(_CreatePostPayload instance) =>
     <String, dynamic>{
-      'postType': instance.postType,
+      'post_type': instance.postType,
       'body': instance.body,
       'visibility': instance.visibility,
       'content_rating': instance.contentRating,
-      'gymTag': instance.gymTag,
-      'locationLabel': instance.locationLabel,
-      'mediaUrls': instance.mediaUrls,
+      'gym_tag': instance.gymTag,
+      'location_label': instance.locationLabel,
+      'media_urls': instance.mediaUrls,
       'tags': instance.tags,
-      'isAnonymous': instance.isAnonymous,
-      'pollQuestion': instance.pollQuestion,
-      'pollOptions': instance.pollOptions,
-      'pollClosesAt': instance.pollClosesAt,
-      'pollAllowMultiple': instance.pollAllowMultiple,
-      'mentionedUsers': instance.mentionedUsers,
+      'is_anonymous': instance.isAnonymous,
+      'poll_question': instance.pollQuestion,
+      'poll_options': instance.pollOptions,
+      'poll_closes_at': instance.pollClosesAt,
+      'poll_allow_multiple': instance.pollAllowMultiple,
+      'mentioned_users': instance.mentionedUsers,
     };
 
 _ReactionInput _$ReactionInputFromJson(Map<String, dynamic> json) =>
-    _ReactionInput(reactionType: json['reactionType'] as String);
+    _ReactionInput(reactionType: json['reaction_type'] as String);
 
 Map<String, dynamic> _$ReactionInputToJson(_ReactionInput instance) =>
-    <String, dynamic>{'reactionType': instance.reactionType};
+    <String, dynamic>{'reaction_type': instance.reactionType};
 
 _CommentCreateInput _$CommentCreateInputFromJson(Map<String, dynamic> json) =>
     _CommentCreateInput(
       body: json['body'] as String,
-      parentId: json['parentId'] as String?,
-      isAnonymous: json['isAnonymous'] as bool? ?? false,
+      parentId: json['parent_id'] as String?,
+      isAnonymous: json['is_anonymous'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$CommentCreateInputToJson(_CommentCreateInput instance) =>
     <String, dynamic>{
       'body': instance.body,
-      'parentId': instance.parentId,
-      'isAnonymous': instance.isAnonymous,
+      'parent_id': instance.parentId,
+      'is_anonymous': instance.isAnonymous,
     };
 
 _RepostPayload _$RepostPayloadFromJson(Map<String, dynamic> json) =>
-    _RepostPayload(quoteBody: json['quoteBody'] as String? ?? '');
+    _RepostPayload(quoteBody: json['quote_body'] as String? ?? '');
 
 Map<String, dynamic> _$RepostPayloadToJson(_RepostPayload instance) =>
-    <String, dynamic>{'quoteBody': instance.quoteBody};
+    <String, dynamic>{'quote_body': instance.quoteBody};
 
 _SavePayload _$SavePayloadFromJson(Map<String, dynamic> json) =>
     _SavePayload(collection: json['collection'] as String?);

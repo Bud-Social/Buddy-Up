@@ -9,6 +9,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/post.dart';
 import 'caption_overlay.dart';
+import 'creative_overlays.dart';
 
 class MediaGallery extends StatelessWidget {
   final List<String> urls;
@@ -409,7 +410,15 @@ class _InlineVideoPageState extends State<_InlineVideoPage> {
           child: CaptionOverlay(
             captions: widget.media.captions,
             positionMs: positionMs,
+            style: widget.media.editMeta?['captions_style'] is Map
+                ? Map<String, dynamic>.from(
+                    widget.media.editMeta!['captions_style'] as Map)
+                : null,
           ),
+        ),
+        CreativeOverlays(
+          meta: widget.media.editMeta,
+          positionMs: positionMs,
         ),
         if (endMs != null && endMs > _trimStartMs)
           Positioned(

@@ -150,8 +150,84 @@ class FeedNotifier extends Notifier<FeedState> {
     return uri?.queryParameters['cursor'];
   }
 
-  Future<void> toggleRepost(String postId) async {
+  /// Optimistic 💪 toggle with rollback (Bud Press rail + cards).
+  Future<void> reactTo(String postId, String emoji) async {
     final idx = state.posts.indexWhere((p) => p.id == postId);
+    if (idx == -1) return;
+    final post = state.posts[idx];
+    final counts = Map<String, int>.from(post.reactionCounts);
+    if (post.userReaction == emoji) {
+      counts[emoji] = (counts[emoji] ?? 1) - 1;
+      if (counts[emoji]! <= 0) counts.remove(emoji);
+      updatePostInList(post.copyWith(userReaction: null, reactionCounts: counts));
+      try {
+        await _repository.unreact(postId);
+      } catch (_) {
+        updatePostInList(post);
+      }
+      return;
+    }
+    final prev = post.userReaction;
+    if (prev != null) {
+      counts[prev] = (counts[prev] ?? 1) - 1;
+      if (counts[prev]! <= 0) counts.remove(prev);
+    }
+    counts[emoji] = (counts[emoji] ?? 0) + 1;
+    updatePostInList(post.copyWith(userReaction: emoji, reactionCounts: counts));
+    try {
+      await _repository.react(postId, ReactionInput(reactionType: emoji));
+    } catch (_) {
+      updatePostInList(post);
+    }
+  }
+
+  /// Optimistic save toggle with rollback.
+  Future<void> toggleSaveById(String postId) async {
+    final idx = state.posts.indexWhere((p) => p.id == postId);
+    if (idx == -1) return;
+    final post = state.posts[idx];
+    updatePostInList(post.copyWith(
+      isSaved: !post.isSaved,
+      saveCount: (post.saveCount + (post.isSaved ? -1 : 1)).clamp(0, 999999),
+    ));
+    try {
+      if (post.isSaved) {
+        await _repository.unsave(postId);
+      } else {
+        await _repository.save(postId, const SavePayload());
+      }
+    } catch (_) {
+      updatePostInList(post);
+    }
+  }
+
+  /// Record a share; count updates only on success.
+  Future<void> recordShareById(String postId) async {
+    final idx = state.posts.indexWhere((p) => p.id == postId);
+    if (idx == -1) return;
+    try {
+      final raw = await _repository.sharePost(postId);
+      final count = (raw['data'] as Map<String, dynamic>?)?['share_count'] as int?;
+      if (count != null) {
+        updatePostInList(state.posts[idx].copyWith(shareCount: count));
+      }
+    } catch (_) {}
+  }
+
+  /// Record a qualified view; count updates only on success.
+  Future<void> recordViewById(String postId) async {
+    final idx = state.posts.indexWhere((p) => p.id == postId);
+    if (idx == -1) return;
+    try {
+      final raw = await _repository.recordView(postId);
+      final count = (raw['data'] as Map<String, dynamic>?)?['view_count'] as int?;
+      if (count != null) {
+        updatePostInList(state.posts[idx].copyWith(viewCount: count));
+      }
+    } catch (_) {}
+  }
+
+  Future<void> toggleRepost(String postId) async {    final idx = state.posts.indexWhere((p) => p.id == postId);
     if (idx == -1) return;
     
     final post = state.posts[idx];

@@ -213,11 +213,13 @@ class PostCard extends StatelessWidget {
         _ActionButton(
           icon: post.isSaved ? Icons.bookmark : Icons.bookmark_border,
           color: post.isSaved ? BuddyColors.green : BuddyColors.textSecondary,
+          label: _formatCount(post.saveCount),
           onTap: () => onSave?.call(post.id),
         ),
         const Spacer(),
         _ActionButton(
           icon: Icons.share_outlined,
+          label: _formatCount(post.shareCount),
           onTap: () => onShare?.call(post.id),
         ),
       ],

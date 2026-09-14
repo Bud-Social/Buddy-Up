@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Profile {
 
- String get userId; String get username; String get displayName; String get bio; String get avatarUrl; String get coverUrl; String get pronouns; String get locationCity; String get locationCountry; String? get externalLink;@JsonKey(name: 'content_rating') String get contentRating; String get role; String get verificationStatus; String get privacyLevel;@JsonKey(name: 'onboarding_completed') bool get onboardingCompleted; int get streakDays; Map<String, int> get artifactBalance; int get buddyCount; int get followingCount; int get followerCount; int get gymCount; int get postCount; bool get isBuddy; String? get buddyStatus; bool get isFollowing; bool get showActiveStatus; String? get createdAt; String? get updatedAt;
+@JsonKey(name: 'user_id') String get userId; String get username;@JsonKey(name: 'display_name') String get displayName; String get bio;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'cover_url') String get coverUrl; String get pronouns;@JsonKey(name: 'location_city') String get locationCity;@JsonKey(name: 'location_country') String get locationCountry;@JsonKey(name: 'external_link') String? get externalLink;@JsonKey(name: 'content_rating') String get contentRating; String get role;@JsonKey(name: 'verification_status') String get verificationStatus;@JsonKey(name: 'privacy_level') String get privacyLevel;@JsonKey(name: 'onboarding_completed') bool get onboardingCompleted;@JsonKey(name: 'streak_days') int get streakDays;@JsonKey(name: 'artifact_balance') Map<String, int> get artifactBalance;@JsonKey(name: 'buddy_count') int get buddyCount;@JsonKey(name: 'following_count') int get followingCount;@JsonKey(name: 'follower_count') int get followerCount;@JsonKey(name: 'gym_count') int get gymCount;@JsonKey(name: 'post_count') int get postCount;@JsonKey(name: 'is_buddy') bool get isBuddy;@JsonKey(name: 'buddy_status') String? get buddyStatus;@JsonKey(name: 'is_following') bool get isFollowing;@JsonKey(name: 'show_active_status') bool get showActiveStatus;@JsonKey(name: 'created_at') String? get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
 /// Create a copy of Profile
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $ProfileCopyWith<$Res>  {
   factory $ProfileCopyWith(Profile value, $Res Function(Profile) _then) = _$ProfileCopyWithImpl;
 @useResult
 $Res call({
- String userId, String username, String displayName, String bio, String avatarUrl, String coverUrl, String pronouns, String locationCity, String locationCountry, String? externalLink,@JsonKey(name: 'content_rating') String contentRating, String role, String verificationStatus, String privacyLevel,@JsonKey(name: 'onboarding_completed') bool onboardingCompleted, int streakDays, Map<String, int> artifactBalance, int buddyCount, int followingCount, int followerCount, int gymCount, int postCount, bool isBuddy, String? buddyStatus, bool isFollowing, bool showActiveStatus, String? createdAt, String? updatedAt
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName, String bio,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'cover_url') String coverUrl, String pronouns,@JsonKey(name: 'location_city') String locationCity,@JsonKey(name: 'location_country') String locationCountry,@JsonKey(name: 'external_link') String? externalLink,@JsonKey(name: 'content_rating') String contentRating, String role,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'privacy_level') String privacyLevel,@JsonKey(name: 'onboarding_completed') bool onboardingCompleted,@JsonKey(name: 'streak_days') int streakDays,@JsonKey(name: 'artifact_balance') Map<String, int> artifactBalance,@JsonKey(name: 'buddy_count') int buddyCount,@JsonKey(name: 'following_count') int followingCount,@JsonKey(name: 'follower_count') int followerCount,@JsonKey(name: 'gym_count') int gymCount,@JsonKey(name: 'post_count') int postCount,@JsonKey(name: 'is_buddy') bool isBuddy,@JsonKey(name: 'buddy_status') String? buddyStatus,@JsonKey(name: 'is_following') bool isFollowing,@JsonKey(name: 'show_active_status') bool showActiveStatus,@JsonKey(name: 'created_at') String? createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
@@ -180,7 +180,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String bio,  String avatarUrl,  String coverUrl,  String pronouns,  String locationCity,  String locationCountry,  String? externalLink, @JsonKey(name: 'content_rating')  String contentRating,  String role,  String verificationStatus,  String privacyLevel, @JsonKey(name: 'onboarding_completed')  bool onboardingCompleted,  int streakDays,  Map<String, int> artifactBalance,  int buddyCount,  int followingCount,  int followerCount,  int gymCount,  int postCount,  bool isBuddy,  String? buddyStatus,  bool isFollowing,  bool showActiveStatus,  String? createdAt,  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName,  String bio, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'cover_url')  String coverUrl,  String pronouns, @JsonKey(name: 'location_city')  String locationCity, @JsonKey(name: 'location_country')  String locationCountry, @JsonKey(name: 'external_link')  String? externalLink, @JsonKey(name: 'content_rating')  String contentRating,  String role, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'privacy_level')  String privacyLevel, @JsonKey(name: 'onboarding_completed')  bool onboardingCompleted, @JsonKey(name: 'streak_days')  int streakDays, @JsonKey(name: 'artifact_balance')  Map<String, int> artifactBalance, @JsonKey(name: 'buddy_count')  int buddyCount, @JsonKey(name: 'following_count')  int followingCount, @JsonKey(name: 'follower_count')  int followerCount, @JsonKey(name: 'gym_count')  int gymCount, @JsonKey(name: 'post_count')  int postCount, @JsonKey(name: 'is_buddy')  bool isBuddy, @JsonKey(name: 'buddy_status')  String? buddyStatus, @JsonKey(name: 'is_following')  bool isFollowing, @JsonKey(name: 'show_active_status')  bool showActiveStatus, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Profile() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.avatarUrl,_that.coverUrl,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.contentRating,_that.role,_that.verificationStatus,_that.privacyLevel,_that.onboardingCompleted,_that.streakDays,_that.artifactBalance,_that.buddyCount,_that.followingCount,_that.followerCount,_that.gymCount,_that.postCount,_that.isBuddy,_that.buddyStatus,_that.isFollowing,_that.showActiveStatus,_that.createdAt,_that.updatedAt);case _:
@@ -201,7 +201,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.av
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String bio,  String avatarUrl,  String coverUrl,  String pronouns,  String locationCity,  String locationCountry,  String? externalLink, @JsonKey(name: 'content_rating')  String contentRating,  String role,  String verificationStatus,  String privacyLevel, @JsonKey(name: 'onboarding_completed')  bool onboardingCompleted,  int streakDays,  Map<String, int> artifactBalance,  int buddyCount,  int followingCount,  int followerCount,  int gymCount,  int postCount,  bool isBuddy,  String? buddyStatus,  bool isFollowing,  bool showActiveStatus,  String? createdAt,  String? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName,  String bio, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'cover_url')  String coverUrl,  String pronouns, @JsonKey(name: 'location_city')  String locationCity, @JsonKey(name: 'location_country')  String locationCountry, @JsonKey(name: 'external_link')  String? externalLink, @JsonKey(name: 'content_rating')  String contentRating,  String role, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'privacy_level')  String privacyLevel, @JsonKey(name: 'onboarding_completed')  bool onboardingCompleted, @JsonKey(name: 'streak_days')  int streakDays, @JsonKey(name: 'artifact_balance')  Map<String, int> artifactBalance, @JsonKey(name: 'buddy_count')  int buddyCount, @JsonKey(name: 'following_count')  int followingCount, @JsonKey(name: 'follower_count')  int followerCount, @JsonKey(name: 'gym_count')  int gymCount, @JsonKey(name: 'post_count')  int postCount, @JsonKey(name: 'is_buddy')  bool isBuddy, @JsonKey(name: 'buddy_status')  String? buddyStatus, @JsonKey(name: 'is_following')  bool isFollowing, @JsonKey(name: 'show_active_status')  bool showActiveStatus, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Profile():
 return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.avatarUrl,_that.coverUrl,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.contentRating,_that.role,_that.verificationStatus,_that.privacyLevel,_that.onboardingCompleted,_that.streakDays,_that.artifactBalance,_that.buddyCount,_that.followingCount,_that.followerCount,_that.gymCount,_that.postCount,_that.isBuddy,_that.buddyStatus,_that.isFollowing,_that.showActiveStatus,_that.createdAt,_that.updatedAt);case _:
@@ -221,7 +221,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.av
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String username,  String displayName,  String bio,  String avatarUrl,  String coverUrl,  String pronouns,  String locationCity,  String locationCountry,  String? externalLink, @JsonKey(name: 'content_rating')  String contentRating,  String role,  String verificationStatus,  String privacyLevel, @JsonKey(name: 'onboarding_completed')  bool onboardingCompleted,  int streakDays,  Map<String, int> artifactBalance,  int buddyCount,  int followingCount,  int followerCount,  int gymCount,  int postCount,  bool isBuddy,  String? buddyStatus,  bool isFollowing,  bool showActiveStatus,  String? createdAt,  String? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName,  String bio, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'cover_url')  String coverUrl,  String pronouns, @JsonKey(name: 'location_city')  String locationCity, @JsonKey(name: 'location_country')  String locationCountry, @JsonKey(name: 'external_link')  String? externalLink, @JsonKey(name: 'content_rating')  String contentRating,  String role, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'privacy_level')  String privacyLevel, @JsonKey(name: 'onboarding_completed')  bool onboardingCompleted, @JsonKey(name: 'streak_days')  int streakDays, @JsonKey(name: 'artifact_balance')  Map<String, int> artifactBalance, @JsonKey(name: 'buddy_count')  int buddyCount, @JsonKey(name: 'following_count')  int followingCount, @JsonKey(name: 'follower_count')  int followerCount, @JsonKey(name: 'gym_count')  int gymCount, @JsonKey(name: 'post_count')  int postCount, @JsonKey(name: 'is_buddy')  bool isBuddy, @JsonKey(name: 'buddy_status')  String? buddyStatus, @JsonKey(name: 'is_following')  bool isFollowing, @JsonKey(name: 'show_active_status')  bool showActiveStatus, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Profile() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.avatarUrl,_that.coverUrl,_that.pronouns,_that.locationCity,_that.locationCountry,_that.externalLink,_that.contentRating,_that.role,_that.verificationStatus,_that.privacyLevel,_that.onboardingCompleted,_that.streakDays,_that.artifactBalance,_that.buddyCount,_that.followingCount,_that.followerCount,_that.gymCount,_that.postCount,_that.isBuddy,_that.buddyStatus,_that.isFollowing,_that.showActiveStatus,_that.createdAt,_that.updatedAt);case _:
@@ -236,43 +236,43 @@ return $default(_that.userId,_that.username,_that.displayName,_that.bio,_that.av
 @JsonSerializable()
 
 class _Profile implements Profile {
-  const _Profile({required this.userId, required this.username, required this.displayName, this.bio = '', this.avatarUrl = '', this.coverUrl = '', this.pronouns = '', this.locationCity = '', this.locationCountry = '', this.externalLink, @JsonKey(name: 'content_rating') this.contentRating = 'general', this.role = 'user', this.verificationStatus = 'none', this.privacyLevel = 'public', @JsonKey(name: 'onboarding_completed') this.onboardingCompleted = true, this.streakDays = 0, final  Map<String, int> artifactBalance = const {}, this.buddyCount = 0, this.followingCount = 0, this.followerCount = 0, this.gymCount = 0, this.postCount = 0, this.isBuddy = false, this.buddyStatus, this.isFollowing = false, this.showActiveStatus = true, this.createdAt, this.updatedAt}): _artifactBalance = artifactBalance;
+  const _Profile({@JsonKey(name: 'user_id') required this.userId, required this.username, @JsonKey(name: 'display_name') required this.displayName, this.bio = '', @JsonKey(name: 'avatar_url') this.avatarUrl = '', @JsonKey(name: 'cover_url') this.coverUrl = '', this.pronouns = '', @JsonKey(name: 'location_city') this.locationCity = '', @JsonKey(name: 'location_country') this.locationCountry = '', @JsonKey(name: 'external_link') this.externalLink, @JsonKey(name: 'content_rating') this.contentRating = 'general', this.role = 'user', @JsonKey(name: 'verification_status') this.verificationStatus = 'none', @JsonKey(name: 'privacy_level') this.privacyLevel = 'public', @JsonKey(name: 'onboarding_completed') this.onboardingCompleted = true, @JsonKey(name: 'streak_days') this.streakDays = 0, @JsonKey(name: 'artifact_balance') final  Map<String, int> artifactBalance = const {}, @JsonKey(name: 'buddy_count') this.buddyCount = 0, @JsonKey(name: 'following_count') this.followingCount = 0, @JsonKey(name: 'follower_count') this.followerCount = 0, @JsonKey(name: 'gym_count') this.gymCount = 0, @JsonKey(name: 'post_count') this.postCount = 0, @JsonKey(name: 'is_buddy') this.isBuddy = false, @JsonKey(name: 'buddy_status') this.buddyStatus, @JsonKey(name: 'is_following') this.isFollowing = false, @JsonKey(name: 'show_active_status') this.showActiveStatus = true, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _artifactBalance = artifactBalance;
   factory _Profile.fromJson(Map<String, dynamic> json) => _$ProfileFromJson(json);
 
-@override final  String userId;
+@override@JsonKey(name: 'user_id') final  String userId;
 @override final  String username;
-@override final  String displayName;
+@override@JsonKey(name: 'display_name') final  String displayName;
 @override@JsonKey() final  String bio;
-@override@JsonKey() final  String avatarUrl;
-@override@JsonKey() final  String coverUrl;
+@override@JsonKey(name: 'avatar_url') final  String avatarUrl;
+@override@JsonKey(name: 'cover_url') final  String coverUrl;
 @override@JsonKey() final  String pronouns;
-@override@JsonKey() final  String locationCity;
-@override@JsonKey() final  String locationCountry;
-@override final  String? externalLink;
+@override@JsonKey(name: 'location_city') final  String locationCity;
+@override@JsonKey(name: 'location_country') final  String locationCountry;
+@override@JsonKey(name: 'external_link') final  String? externalLink;
 @override@JsonKey(name: 'content_rating') final  String contentRating;
 @override@JsonKey() final  String role;
-@override@JsonKey() final  String verificationStatus;
-@override@JsonKey() final  String privacyLevel;
+@override@JsonKey(name: 'verification_status') final  String verificationStatus;
+@override@JsonKey(name: 'privacy_level') final  String privacyLevel;
 @override@JsonKey(name: 'onboarding_completed') final  bool onboardingCompleted;
-@override@JsonKey() final  int streakDays;
+@override@JsonKey(name: 'streak_days') final  int streakDays;
  final  Map<String, int> _artifactBalance;
-@override@JsonKey() Map<String, int> get artifactBalance {
+@override@JsonKey(name: 'artifact_balance') Map<String, int> get artifactBalance {
   if (_artifactBalance is EqualUnmodifiableMapView) return _artifactBalance;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableMapView(_artifactBalance);
 }
 
-@override@JsonKey() final  int buddyCount;
-@override@JsonKey() final  int followingCount;
-@override@JsonKey() final  int followerCount;
-@override@JsonKey() final  int gymCount;
-@override@JsonKey() final  int postCount;
-@override@JsonKey() final  bool isBuddy;
-@override final  String? buddyStatus;
-@override@JsonKey() final  bool isFollowing;
-@override@JsonKey() final  bool showActiveStatus;
-@override final  String? createdAt;
-@override final  String? updatedAt;
+@override@JsonKey(name: 'buddy_count') final  int buddyCount;
+@override@JsonKey(name: 'following_count') final  int followingCount;
+@override@JsonKey(name: 'follower_count') final  int followerCount;
+@override@JsonKey(name: 'gym_count') final  int gymCount;
+@override@JsonKey(name: 'post_count') final  int postCount;
+@override@JsonKey(name: 'is_buddy') final  bool isBuddy;
+@override@JsonKey(name: 'buddy_status') final  String? buddyStatus;
+@override@JsonKey(name: 'is_following') final  bool isFollowing;
+@override@JsonKey(name: 'show_active_status') final  bool showActiveStatus;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+@override@JsonKey(name: 'updated_at') final  String? updatedAt;
 
 /// Create a copy of Profile
 /// with the given fields replaced by the non-null parameter values.
@@ -307,7 +307,7 @@ abstract mixin class _$ProfileCopyWith<$Res> implements $ProfileCopyWith<$Res> {
   factory _$ProfileCopyWith(_Profile value, $Res Function(_Profile) _then) = __$ProfileCopyWithImpl;
 @override @useResult
 $Res call({
- String userId, String username, String displayName, String bio, String avatarUrl, String coverUrl, String pronouns, String locationCity, String locationCountry, String? externalLink,@JsonKey(name: 'content_rating') String contentRating, String role, String verificationStatus, String privacyLevel,@JsonKey(name: 'onboarding_completed') bool onboardingCompleted, int streakDays, Map<String, int> artifactBalance, int buddyCount, int followingCount, int followerCount, int gymCount, int postCount, bool isBuddy, String? buddyStatus, bool isFollowing, bool showActiveStatus, String? createdAt, String? updatedAt
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName, String bio,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'cover_url') String coverUrl, String pronouns,@JsonKey(name: 'location_city') String locationCity,@JsonKey(name: 'location_country') String locationCountry,@JsonKey(name: 'external_link') String? externalLink,@JsonKey(name: 'content_rating') String contentRating, String role,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'privacy_level') String privacyLevel,@JsonKey(name: 'onboarding_completed') bool onboardingCompleted,@JsonKey(name: 'streak_days') int streakDays,@JsonKey(name: 'artifact_balance') Map<String, int> artifactBalance,@JsonKey(name: 'buddy_count') int buddyCount,@JsonKey(name: 'following_count') int followingCount,@JsonKey(name: 'follower_count') int followerCount,@JsonKey(name: 'gym_count') int gymCount,@JsonKey(name: 'post_count') int postCount,@JsonKey(name: 'is_buddy') bool isBuddy,@JsonKey(name: 'buddy_status') String? buddyStatus,@JsonKey(name: 'is_following') bool isFollowing,@JsonKey(name: 'show_active_status') bool showActiveStatus,@JsonKey(name: 'created_at') String? createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 

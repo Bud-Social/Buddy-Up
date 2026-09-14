@@ -27,6 +27,8 @@ Map<String, dynamic> _normalizeMediaJson(Map<dynamic, dynamic> json) {
     'trim_end_ms': 'trimEndMs',
     'sound_id': 'soundId',
     'sound_volume': 'soundVolume',
+    'sound_audio_url': 'soundAudioUrl',
+    'edit_meta': 'editMeta',
     'alt_text': 'altText',
     'start_ms': 'startMs',
     'end_ms': 'endMs',
@@ -64,6 +66,8 @@ abstract class PostMedia with _$PostMedia {
     int? trimEndMs,
     String? soundId,
     double? soundVolume,
+    String? soundAudioUrl,
+    Map<String, dynamic>? editMeta,
     String? altText,
     @Default(<CaptionSegment>[]) List<CaptionSegment> captions,
   }) = _PostMedia;
@@ -90,11 +94,11 @@ extension PostMediaX on PostMedia {
 @freezed
 abstract class AuthorData with _$AuthorData {
   const factory AuthorData({
-    String? userId,
+    @JsonKey(name: 'user_id') String? userId,
     required String username,
-    required String displayName,
-    required String avatarUrl,
-    @Default('none') String verificationStatus,
+    @JsonKey(name: 'display_name') required String displayName,
+    @JsonKey(name: 'avatar_url') required String avatarUrl,
+    @JsonKey(name: 'verification_status') @Default('none') String verificationStatus,
   }) = _AuthorData;
 
   factory AuthorData.fromJson(Map<String, dynamic> json) =>
@@ -107,8 +111,8 @@ abstract class PollOption with _$PollOption {
     required String id,
     required String text,
     @Default(0) int order,
-    @Default(0) int voteCount,
-    @Default(false) bool userVoted,
+    @JsonKey(name: 'vote_count') @Default(0) int voteCount,
+    @JsonKey(name: 'user_voted') @Default(false) bool userVoted,
   }) = _PollOption;
 
   factory PollOption.fromJson(Map<String, dynamic> json) =>
@@ -120,14 +124,14 @@ abstract class Poll with _$Poll {
   const factory Poll({
     required String id,
     required String question,
-    String? closesAt,
-    @Default(false) bool allowMultiple,
+    @JsonKey(name: 'closes_at') String? closesAt,
+    @JsonKey(name: 'allow_multiple') @Default(false) bool allowMultiple,
     @JsonKey(name: 'min_selections') @Default(1) int minSelections,
     @JsonKey(name: 'max_selections') @Default(1) int maxSelections,
-    @Default(0) int totalVotes,
-    @Default(false) bool isClosed,
+    @JsonKey(name: 'total_votes') @Default(0) int totalVotes,
+    @JsonKey(name: 'is_closed') @Default(false) bool isClosed,
     required List<PollOption> options,
-    @Default(<String>[]) List<String> userVotedOptionIds,
+    @JsonKey(name: 'user_voted_option_ids') @Default(<String>[]) List<String> userVotedOptionIds,
   }) = _Poll;
 
   factory Poll.fromJson(Map<String, dynamic> json) => _$PollFromJson(json);
@@ -136,9 +140,9 @@ abstract class Poll with _$Poll {
 @freezed
 abstract class ReposterData with _$ReposterData {
   const factory ReposterData({
-    String? userId,
-    @Default('') String displayName,
-    @Default('') String avatarUrl,
+    @JsonKey(name: 'user_id') String? userId,
+    @JsonKey(name: 'display_name') @Default('') String displayName,
+    @JsonKey(name: 'avatar_url') @Default('') String avatarUrl,
   }) = _ReposterData;
 
   factory ReposterData.fromJson(Map<String, dynamic> json) =>
@@ -149,19 +153,19 @@ abstract class ReposterData with _$ReposterData {
 abstract class OriginalPostData with _$OriginalPostData {
   const factory OriginalPostData({
     required String id,
-    required AuthorData authorData,
+    @JsonKey(name: 'author_data') required AuthorData authorData,
     required String body,
-    @Default(<String>[]) List<String> mediaUrls,
+    @JsonKey(name: 'media_urls') @Default(<String>[]) List<String> mediaUrls,
     @Default(<PostMedia>[]) List<PostMedia> media,
-    @Default('text') String postType,
-    String? locationLabel,
-    Map<String, dynamic>? workoutLogData,
-    Map<String, dynamic>? mealData,
-    Map<String, dynamic>? progressData,
+    @JsonKey(name: 'post_type') @Default('text') String postType,
+    @JsonKey(name: 'location_label') String? locationLabel,
+    @JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,
+    @JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,
+    @JsonKey(name: 'progress_data') Map<String, dynamic>? progressData,
     Poll? poll,
-    @Default(0) int commentCount,
-    String? gymTagName,
-    required String createdAt,
+    @JsonKey(name: 'comment_count') @Default(0) int commentCount,
+    @JsonKey(name: 'gym_tag_name') String? gymTagName,
+    @JsonKey(name: 'created_at') required String createdAt,
   }) = _OriginalPostData;
 
   factory OriginalPostData.fromJson(Map<String, dynamic> json) =>
@@ -172,41 +176,43 @@ abstract class OriginalPostData with _$OriginalPostData {
 abstract class Post with _$Post {
   const factory Post({
     required String id,
-    required AuthorData authorData,
-    @Default('text') String postType,
+    @JsonKey(name: 'author_data') required AuthorData authorData,
+    @JsonKey(name: 'post_type') @Default('text') String postType,
     @Default('') String body,
-    @Default(false) bool isAnonymous,
-    @Default(<String>[]) List<String> mediaUrls,
+    @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
+    @JsonKey(name: 'media_urls') @Default(<String>[]) List<String> mediaUrls,
     @Default(<PostMedia>[]) List<PostMedia> media,
     @JsonKey(readValue: _readCommentsDisabled)
     @Default(false) bool commentsDisabled,
     @Default(<String>[]) List<String> tags,
-    Map<String, dynamic>? workoutLogData,
-    Map<String, dynamic>? mealData,
-    Map<String, dynamic>? progressData,
-    @Default('') String locationLabel,
-    @Default(0) int viewCount,
-    @Default(<String, int>{}) Map<String, int> reactionCounts,
-    String? userReaction,
-    @Default(0) int commentCount,
-    @Default(0) int repostCount,
-    @Default(false) bool isRepost,
-    @Default(false) bool isRepostedByMe,
-    String? originalPostId,
-    @Default('') String quoteBody,
+    @JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,
+    @JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,
+    @JsonKey(name: 'progress_data') Map<String, dynamic>? progressData,
+    @JsonKey(name: 'location_label') @Default('') String locationLabel,
+    @JsonKey(name: 'view_count') @Default(0) int viewCount,
+    @JsonKey(name: 'reaction_counts') @Default(<String, int>{}) Map<String, int> reactionCounts,
+    @JsonKey(name: 'user_reaction') String? userReaction,
+    @JsonKey(name: 'comment_count') @Default(0) int commentCount,
+    @JsonKey(name: 'repost_count') @Default(0) int repostCount,
+    @JsonKey(name: 'save_count') @Default(0) int saveCount,
+    @JsonKey(name: 'share_count') @Default(0) int shareCount,
+    @JsonKey(name: 'is_repost') @Default(false) bool isRepost,
+    @JsonKey(name: 'is_reposted_by_me') @Default(false) bool isRepostedByMe,
+    @JsonKey(name: 'original_post_id') String? originalPostId,
+    @JsonKey(name: 'quote_body') @Default('') String quoteBody,
     @Default(<ReposterData>[]) List<ReposterData> reposters,
-    @Default(false) bool isSaved,
-    @Default(false) bool isPinned,
+    @JsonKey(name: 'is_saved') @Default(false) bool isSaved,
+    @JsonKey(name: 'is_pinned') @Default(false) bool isPinned,
     @Default('public') String visibility,
     @JsonKey(name: 'content_rating') @Default('general') String contentRating,
-    @Default('clean') String moderationStatus,
+    @JsonKey(name: 'moderation_status') @Default('clean') String moderationStatus,
     @JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis,
-    String? gymTagId,
-    String? gymTagName,
+    @JsonKey(name: 'gym_tag_id') String? gymTagId,
+    @JsonKey(name: 'gym_tag_name') String? gymTagName,
     Poll? poll,
-    OriginalPostData? originalPostData,
-    required String createdAt,
-    String? updatedAt,
+    @JsonKey(name: 'original_post_data') OriginalPostData? originalPostData,
+    @JsonKey(name: 'created_at') required String createdAt,
+    @JsonKey(name: 'updated_at') String? updatedAt,
   }) = _Post;
 
   factory Post.fromJson(Map<String, dynamic> json) => _$PostFromJson(json);
@@ -216,16 +222,16 @@ abstract class Post with _$Post {
 abstract class Comment with _$Comment {
   const factory Comment({
     required String id,
-    required String postId,
-    required AuthorData authorData,
+    @JsonKey(name: 'post_id') required String postId,
+    @JsonKey(name: 'author_data') required AuthorData authorData,
     required String body,
-    String? parentId,
-    @Default(false) bool isAnonymous,
-    @Default(0) int replyCount,
-    @Default(<String, int>{}) Map<String, int> reactionCounts,
-    String? userReaction,
-    required String createdAt,
-    String? updatedAt,
+    @JsonKey(name: 'parent_id') String? parentId,
+    @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
+    @JsonKey(name: 'reply_count') @Default(0) int replyCount,
+    @JsonKey(name: 'reaction_counts') @Default(<String, int>{}) Map<String, int> reactionCounts,
+    @JsonKey(name: 'user_reaction') String? userReaction,
+    @JsonKey(name: 'created_at') required String createdAt,
+    @JsonKey(name: 'updated_at') String? updatedAt,
   }) = _Comment;
 
   factory Comment.fromJson(Map<String, dynamic> json) =>
@@ -246,20 +252,20 @@ abstract class FeedFilter with _$FeedFilter {
 @freezed
 abstract class CreatePostPayload with _$CreatePostPayload {
   const factory CreatePostPayload({
-    required String postType,
+    @JsonKey(name: 'post_type') required String postType,
     String? body,
     @Default('public') String visibility,
     @JsonKey(name: 'content_rating') @Default('general') String contentRating,
-    String? gymTag,
-    String? locationLabel,
-    @Default(<String>[]) List<String> mediaUrls,
+    @JsonKey(name: 'gym_tag') String? gymTag,
+    @JsonKey(name: 'location_label') String? locationLabel,
+    @JsonKey(name: 'media_urls') @Default(<String>[]) List<String> mediaUrls,
     @Default(<String>[]) List<String> tags,
-    @Default(false) bool isAnonymous,
-    String? pollQuestion,
-    @Default(<String>[]) List<String> pollOptions,
-    String? pollClosesAt,
-    @Default(false) bool pollAllowMultiple,
-    @Default(<String>[]) List<String> mentionedUsers,
+    @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
+    @JsonKey(name: 'poll_question') String? pollQuestion,
+    @JsonKey(name: 'poll_options') @Default(<String>[]) List<String> pollOptions,
+    @JsonKey(name: 'poll_closes_at') String? pollClosesAt,
+    @JsonKey(name: 'poll_allow_multiple') @Default(false) bool pollAllowMultiple,
+    @JsonKey(name: 'mentioned_users') @Default(<String>[]) List<String> mentionedUsers,
   }) = _CreatePostPayload;
 
   factory CreatePostPayload.fromJson(Map<String, dynamic> json) =>
@@ -269,7 +275,7 @@ abstract class CreatePostPayload with _$CreatePostPayload {
 @freezed
 abstract class ReactionInput with _$ReactionInput {
   const factory ReactionInput({
-    required String reactionType,
+    @JsonKey(name: 'reaction_type') required String reactionType,
   }) = _ReactionInput;
 
   factory ReactionInput.fromJson(Map<String, dynamic> json) =>
@@ -280,8 +286,8 @@ abstract class ReactionInput with _$ReactionInput {
 abstract class CommentCreateInput with _$CommentCreateInput {
   const factory CommentCreateInput({
     required String body,
-    String? parentId,
-    @Default(false) bool isAnonymous,
+    @JsonKey(name: 'parent_id') String? parentId,
+    @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
   }) = _CommentCreateInput;
 
   factory CommentCreateInput.fromJson(Map<String, dynamic> json) =>
@@ -291,7 +297,7 @@ abstract class CommentCreateInput with _$CommentCreateInput {
 @freezed
 abstract class RepostPayload with _$RepostPayload {
   const factory RepostPayload({
-    @Default('') String quoteBody,
+    @JsonKey(name: 'quote_body') @Default('') String quoteBody,
   }) = _RepostPayload;
 
   factory RepostPayload.fromJson(Map<String, dynamic> json) =>

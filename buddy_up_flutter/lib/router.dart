@@ -62,6 +62,7 @@ import 'features/settings/screens/blocked_screen.dart';
 import 'features/settings/screens/notification_prefs_screen.dart';
 import 'features/settings/screens/adult_content_policy_screen.dart';
 import 'features/analytics/screens/analytics_screen.dart';
+import 'features/feed/screens/creator_insights_screen.dart';
 import 'features/sessions/screens/trainer_list_screen.dart';
 import 'features/sessions/screens/trainer_profile_screen.dart';
 import 'features/sessions/screens/booking_screen.dart';
@@ -403,6 +404,11 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         path: '/analytics',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const AnalyticsScreen(),
+      ),
+      GoRoute(
+        path: '/insights',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const CreatorInsightsScreen(),
       ),
       // Notifications
       GoRoute(

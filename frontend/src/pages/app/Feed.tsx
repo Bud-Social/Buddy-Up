@@ -153,7 +153,8 @@ export default function Feed() {
     fetchPosts(activeTab === 'videos' ? 'for_you' : activeTab, true);
   }, [activeTab, fetchPosts]);
 
-  // Deep-link from notifications: /feed?post=:id opens that post's comments.
+  // Deep-link: /feed?post=:id (shared links) prepends the post and scrolls
+  // it into view; notification links already clear the param first.
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const postId = searchParams.get('post');
@@ -165,7 +166,15 @@ export default function Feed() {
         if (!post) return;
         knownIdsRef.current.add(post.id);
         setPosts((prev) => (prev.some((p) => p.id === post.id) ? prev : [post, ...prev]));
-        setCommentPostId(post.id);
+        if (searchParams.get('comments') === '1') {
+          setCommentPostId(post.id);
+          return;
+        }
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            document.getElementById(`post-${post.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          });
+        });
       })
       .catch(() => {});
   }, [searchParams, setSearchParams]);

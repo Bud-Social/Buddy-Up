@@ -284,7 +284,7 @@ as String,
 /// @nodoc
 mixin _$PostMedia {
 
- String get url; String get mediaType; int? get width; int? get height; int? get durationMs; String? get posterUrl; int? get trimStartMs; int? get trimEndMs; String? get soundId; double? get soundVolume; String? get altText; List<CaptionSegment> get captions;
+ String get url; String get mediaType; int? get width; int? get height; int? get durationMs; String? get posterUrl; int? get trimStartMs; int? get trimEndMs; String? get soundId; double? get soundVolume; String? get soundAudioUrl; Map<String, dynamic>? get editMeta; String? get altText; List<CaptionSegment> get captions;
 /// Create a copy of PostMedia
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -297,16 +297,16 @@ $PostMediaCopyWith<PostMedia> get copyWith => _$PostMediaCopyWithImpl<PostMedia>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PostMedia&&(identical(other.url, url) || other.url == url)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.trimStartMs, trimStartMs) || other.trimStartMs == trimStartMs)&&(identical(other.trimEndMs, trimEndMs) || other.trimEndMs == trimEndMs)&&(identical(other.soundId, soundId) || other.soundId == soundId)&&(identical(other.soundVolume, soundVolume) || other.soundVolume == soundVolume)&&(identical(other.altText, altText) || other.altText == altText)&&const DeepCollectionEquality().equals(other.captions, captions));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PostMedia&&(identical(other.url, url) || other.url == url)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.trimStartMs, trimStartMs) || other.trimStartMs == trimStartMs)&&(identical(other.trimEndMs, trimEndMs) || other.trimEndMs == trimEndMs)&&(identical(other.soundId, soundId) || other.soundId == soundId)&&(identical(other.soundVolume, soundVolume) || other.soundVolume == soundVolume)&&(identical(other.soundAudioUrl, soundAudioUrl) || other.soundAudioUrl == soundAudioUrl)&&const DeepCollectionEquality().equals(other.editMeta, editMeta)&&(identical(other.altText, altText) || other.altText == altText)&&const DeepCollectionEquality().equals(other.captions, captions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,url,mediaType,width,height,durationMs,posterUrl,trimStartMs,trimEndMs,soundId,soundVolume,altText,const DeepCollectionEquality().hash(captions));
+int get hashCode => Object.hash(runtimeType,url,mediaType,width,height,durationMs,posterUrl,trimStartMs,trimEndMs,soundId,soundVolume,soundAudioUrl,const DeepCollectionEquality().hash(editMeta),altText,const DeepCollectionEquality().hash(captions));
 
 @override
 String toString() {
-  return 'PostMedia(url: $url, mediaType: $mediaType, width: $width, height: $height, durationMs: $durationMs, posterUrl: $posterUrl, trimStartMs: $trimStartMs, trimEndMs: $trimEndMs, soundId: $soundId, soundVolume: $soundVolume, altText: $altText, captions: $captions)';
+  return 'PostMedia(url: $url, mediaType: $mediaType, width: $width, height: $height, durationMs: $durationMs, posterUrl: $posterUrl, trimStartMs: $trimStartMs, trimEndMs: $trimEndMs, soundId: $soundId, soundVolume: $soundVolume, soundAudioUrl: $soundAudioUrl, editMeta: $editMeta, altText: $altText, captions: $captions)';
 }
 
 
@@ -317,7 +317,7 @@ abstract mixin class $PostMediaCopyWith<$Res>  {
   factory $PostMediaCopyWith(PostMedia value, $Res Function(PostMedia) _then) = _$PostMediaCopyWithImpl;
 @useResult
 $Res call({
- String url, String mediaType, int? width, int? height, int? durationMs, String? posterUrl, int? trimStartMs, int? trimEndMs, String? soundId, double? soundVolume, String? altText, List<CaptionSegment> captions
+ String url, String mediaType, int? width, int? height, int? durationMs, String? posterUrl, int? trimStartMs, int? trimEndMs, String? soundId, double? soundVolume, String? soundAudioUrl, Map<String, dynamic>? editMeta, String? altText, List<CaptionSegment> captions
 });
 
 
@@ -334,7 +334,7 @@ class _$PostMediaCopyWithImpl<$Res>
 
 /// Create a copy of PostMedia
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? url = null,Object? mediaType = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? posterUrl = freezed,Object? trimStartMs = freezed,Object? trimEndMs = freezed,Object? soundId = freezed,Object? soundVolume = freezed,Object? altText = freezed,Object? captions = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? url = null,Object? mediaType = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? posterUrl = freezed,Object? trimStartMs = freezed,Object? trimEndMs = freezed,Object? soundId = freezed,Object? soundVolume = freezed,Object? soundAudioUrl = freezed,Object? editMeta = freezed,Object? altText = freezed,Object? captions = null,}) {
   return _then(_self.copyWith(
 url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
@@ -346,7 +346,9 @@ as String?,trimStartMs: freezed == trimStartMs ? _self.trimStartMs : trimStartMs
 as int?,trimEndMs: freezed == trimEndMs ? _self.trimEndMs : trimEndMs // ignore: cast_nullable_to_non_nullable
 as int?,soundId: freezed == soundId ? _self.soundId : soundId // ignore: cast_nullable_to_non_nullable
 as String?,soundVolume: freezed == soundVolume ? _self.soundVolume : soundVolume // ignore: cast_nullable_to_non_nullable
-as double?,altText: freezed == altText ? _self.altText : altText // ignore: cast_nullable_to_non_nullable
+as double?,soundAudioUrl: freezed == soundAudioUrl ? _self.soundAudioUrl : soundAudioUrl // ignore: cast_nullable_to_non_nullable
+as String?,editMeta: freezed == editMeta ? _self.editMeta : editMeta // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,altText: freezed == altText ? _self.altText : altText // ignore: cast_nullable_to_non_nullable
 as String?,captions: null == captions ? _self.captions : captions // ignore: cast_nullable_to_non_nullable
 as List<CaptionSegment>,
   ));
@@ -433,10 +435,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? altText,  List<CaptionSegment> captions)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? soundAudioUrl,  Map<String, dynamic>? editMeta,  String? altText,  List<CaptionSegment> captions)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PostMedia() when $default != null:
-return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.altText,_that.captions);case _:
+return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.soundAudioUrl,_that.editMeta,_that.altText,_that.captions);case _:
   return orElse();
 
 }
@@ -454,10 +456,10 @@ return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.duratio
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? altText,  List<CaptionSegment> captions)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? soundAudioUrl,  Map<String, dynamic>? editMeta,  String? altText,  List<CaptionSegment> captions)  $default,) {final _that = this;
 switch (_that) {
 case _PostMedia():
-return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.altText,_that.captions);case _:
+return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.soundAudioUrl,_that.editMeta,_that.altText,_that.captions);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -474,10 +476,10 @@ return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.duratio
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? altText,  List<CaptionSegment> captions)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? soundAudioUrl,  Map<String, dynamic>? editMeta,  String? altText,  List<CaptionSegment> captions)?  $default,) {final _that = this;
 switch (_that) {
 case _PostMedia() when $default != null:
-return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.altText,_that.captions);case _:
+return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.soundAudioUrl,_that.editMeta,_that.altText,_that.captions);case _:
   return null;
 
 }
@@ -489,7 +491,7 @@ return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.duratio
 @JsonSerializable()
 
 class _PostMedia implements PostMedia {
-  const _PostMedia({required this.url, this.mediaType = 'image', this.width, this.height, this.durationMs, this.posterUrl, this.trimStartMs, this.trimEndMs, this.soundId, this.soundVolume, this.altText, final  List<CaptionSegment> captions = const <CaptionSegment>[]}): _captions = captions;
+  const _PostMedia({required this.url, this.mediaType = 'image', this.width, this.height, this.durationMs, this.posterUrl, this.trimStartMs, this.trimEndMs, this.soundId, this.soundVolume, this.soundAudioUrl, final  Map<String, dynamic>? editMeta, this.altText, final  List<CaptionSegment> captions = const <CaptionSegment>[]}): _editMeta = editMeta,_captions = captions;
   factory _PostMedia.fromJson(Map<String, dynamic> json) => _$PostMediaFromJson(json);
 
 @override final  String url;
@@ -502,6 +504,16 @@ class _PostMedia implements PostMedia {
 @override final  int? trimEndMs;
 @override final  String? soundId;
 @override final  double? soundVolume;
+@override final  String? soundAudioUrl;
+ final  Map<String, dynamic>? _editMeta;
+@override Map<String, dynamic>? get editMeta {
+  final value = _editMeta;
+  if (value == null) return null;
+  if (_editMeta is EqualUnmodifiableMapView) return _editMeta;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
 @override final  String? altText;
  final  List<CaptionSegment> _captions;
 @override@JsonKey() List<CaptionSegment> get captions {
@@ -524,16 +536,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PostMedia&&(identical(other.url, url) || other.url == url)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.trimStartMs, trimStartMs) || other.trimStartMs == trimStartMs)&&(identical(other.trimEndMs, trimEndMs) || other.trimEndMs == trimEndMs)&&(identical(other.soundId, soundId) || other.soundId == soundId)&&(identical(other.soundVolume, soundVolume) || other.soundVolume == soundVolume)&&(identical(other.altText, altText) || other.altText == altText)&&const DeepCollectionEquality().equals(other._captions, _captions));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PostMedia&&(identical(other.url, url) || other.url == url)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.trimStartMs, trimStartMs) || other.trimStartMs == trimStartMs)&&(identical(other.trimEndMs, trimEndMs) || other.trimEndMs == trimEndMs)&&(identical(other.soundId, soundId) || other.soundId == soundId)&&(identical(other.soundVolume, soundVolume) || other.soundVolume == soundVolume)&&(identical(other.soundAudioUrl, soundAudioUrl) || other.soundAudioUrl == soundAudioUrl)&&const DeepCollectionEquality().equals(other._editMeta, _editMeta)&&(identical(other.altText, altText) || other.altText == altText)&&const DeepCollectionEquality().equals(other._captions, _captions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,url,mediaType,width,height,durationMs,posterUrl,trimStartMs,trimEndMs,soundId,soundVolume,altText,const DeepCollectionEquality().hash(_captions));
+int get hashCode => Object.hash(runtimeType,url,mediaType,width,height,durationMs,posterUrl,trimStartMs,trimEndMs,soundId,soundVolume,soundAudioUrl,const DeepCollectionEquality().hash(_editMeta),altText,const DeepCollectionEquality().hash(_captions));
 
 @override
 String toString() {
-  return 'PostMedia(url: $url, mediaType: $mediaType, width: $width, height: $height, durationMs: $durationMs, posterUrl: $posterUrl, trimStartMs: $trimStartMs, trimEndMs: $trimEndMs, soundId: $soundId, soundVolume: $soundVolume, altText: $altText, captions: $captions)';
+  return 'PostMedia(url: $url, mediaType: $mediaType, width: $width, height: $height, durationMs: $durationMs, posterUrl: $posterUrl, trimStartMs: $trimStartMs, trimEndMs: $trimEndMs, soundId: $soundId, soundVolume: $soundVolume, soundAudioUrl: $soundAudioUrl, editMeta: $editMeta, altText: $altText, captions: $captions)';
 }
 
 
@@ -544,7 +556,7 @@ abstract mixin class _$PostMediaCopyWith<$Res> implements $PostMediaCopyWith<$Re
   factory _$PostMediaCopyWith(_PostMedia value, $Res Function(_PostMedia) _then) = __$PostMediaCopyWithImpl;
 @override @useResult
 $Res call({
- String url, String mediaType, int? width, int? height, int? durationMs, String? posterUrl, int? trimStartMs, int? trimEndMs, String? soundId, double? soundVolume, String? altText, List<CaptionSegment> captions
+ String url, String mediaType, int? width, int? height, int? durationMs, String? posterUrl, int? trimStartMs, int? trimEndMs, String? soundId, double? soundVolume, String? soundAudioUrl, Map<String, dynamic>? editMeta, String? altText, List<CaptionSegment> captions
 });
 
 
@@ -561,7 +573,7 @@ class __$PostMediaCopyWithImpl<$Res>
 
 /// Create a copy of PostMedia
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? url = null,Object? mediaType = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? posterUrl = freezed,Object? trimStartMs = freezed,Object? trimEndMs = freezed,Object? soundId = freezed,Object? soundVolume = freezed,Object? altText = freezed,Object? captions = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? url = null,Object? mediaType = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? posterUrl = freezed,Object? trimStartMs = freezed,Object? trimEndMs = freezed,Object? soundId = freezed,Object? soundVolume = freezed,Object? soundAudioUrl = freezed,Object? editMeta = freezed,Object? altText = freezed,Object? captions = null,}) {
   return _then(_PostMedia(
 url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
@@ -573,7 +585,9 @@ as String?,trimStartMs: freezed == trimStartMs ? _self.trimStartMs : trimStartMs
 as int?,trimEndMs: freezed == trimEndMs ? _self.trimEndMs : trimEndMs // ignore: cast_nullable_to_non_nullable
 as int?,soundId: freezed == soundId ? _self.soundId : soundId // ignore: cast_nullable_to_non_nullable
 as String?,soundVolume: freezed == soundVolume ? _self.soundVolume : soundVolume // ignore: cast_nullable_to_non_nullable
-as double?,altText: freezed == altText ? _self.altText : altText // ignore: cast_nullable_to_non_nullable
+as double?,soundAudioUrl: freezed == soundAudioUrl ? _self.soundAudioUrl : soundAudioUrl // ignore: cast_nullable_to_non_nullable
+as String?,editMeta: freezed == editMeta ? _self._editMeta : editMeta // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,altText: freezed == altText ? _self.altText : altText // ignore: cast_nullable_to_non_nullable
 as String?,captions: null == captions ? _self._captions : captions // ignore: cast_nullable_to_non_nullable
 as List<CaptionSegment>,
   ));
@@ -586,7 +600,7 @@ as List<CaptionSegment>,
 /// @nodoc
 mixin _$AuthorData {
 
- String? get userId; String get username; String get displayName; String get avatarUrl; String get verificationStatus;
+@JsonKey(name: 'user_id') String? get userId; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'verification_status') String get verificationStatus;
 /// Create a copy of AuthorData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -619,7 +633,7 @@ abstract mixin class $AuthorDataCopyWith<$Res>  {
   factory $AuthorDataCopyWith(AuthorData value, $Res Function(AuthorData) _then) = _$AuthorDataCopyWithImpl;
 @useResult
 $Res call({
- String? userId, String username, String displayName, String avatarUrl, String verificationStatus
+@JsonKey(name: 'user_id') String? userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus
 });
 
 
@@ -728,7 +742,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AuthorData() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus);case _:
@@ -749,7 +763,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus)  $default,) {final _that = this;
 switch (_that) {
 case _AuthorData():
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus);case _:
@@ -769,7 +783,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String? userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus)?  $default,) {final _that = this;
 switch (_that) {
 case _AuthorData() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus);case _:
@@ -784,14 +798,14 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 @JsonSerializable()
 
 class _AuthorData implements AuthorData {
-  const _AuthorData({this.userId, required this.username, required this.displayName, required this.avatarUrl, this.verificationStatus = 'none'});
+  const _AuthorData({@JsonKey(name: 'user_id') this.userId, required this.username, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'avatar_url') required this.avatarUrl, @JsonKey(name: 'verification_status') this.verificationStatus = 'none'});
   factory _AuthorData.fromJson(Map<String, dynamic> json) => _$AuthorDataFromJson(json);
 
-@override final  String? userId;
+@override@JsonKey(name: 'user_id') final  String? userId;
 @override final  String username;
-@override final  String displayName;
-@override final  String avatarUrl;
-@override@JsonKey() final  String verificationStatus;
+@override@JsonKey(name: 'display_name') final  String displayName;
+@override@JsonKey(name: 'avatar_url') final  String avatarUrl;
+@override@JsonKey(name: 'verification_status') final  String verificationStatus;
 
 /// Create a copy of AuthorData
 /// with the given fields replaced by the non-null parameter values.
@@ -826,7 +840,7 @@ abstract mixin class _$AuthorDataCopyWith<$Res> implements $AuthorDataCopyWith<$
   factory _$AuthorDataCopyWith(_AuthorData value, $Res Function(_AuthorData) _then) = __$AuthorDataCopyWithImpl;
 @override @useResult
 $Res call({
- String? userId, String username, String displayName, String avatarUrl, String verificationStatus
+@JsonKey(name: 'user_id') String? userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus
 });
 
 
@@ -861,7 +875,7 @@ as String,
 /// @nodoc
 mixin _$PollOption {
 
- String get id; String get text; int get order; int get voteCount; bool get userVoted;
+ String get id; String get text; int get order;@JsonKey(name: 'vote_count') int get voteCount;@JsonKey(name: 'user_voted') bool get userVoted;
 /// Create a copy of PollOption
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -894,7 +908,7 @@ abstract mixin class $PollOptionCopyWith<$Res>  {
   factory $PollOptionCopyWith(PollOption value, $Res Function(PollOption) _then) = _$PollOptionCopyWithImpl;
 @useResult
 $Res call({
- String id, String text, int order, int voteCount, bool userVoted
+ String id, String text, int order,@JsonKey(name: 'vote_count') int voteCount,@JsonKey(name: 'user_voted') bool userVoted
 });
 
 
@@ -1003,7 +1017,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String text,  int order,  int voteCount,  bool userVoted)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String text,  int order, @JsonKey(name: 'vote_count')  int voteCount, @JsonKey(name: 'user_voted')  bool userVoted)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PollOption() when $default != null:
 return $default(_that.id,_that.text,_that.order,_that.voteCount,_that.userVoted);case _:
@@ -1024,7 +1038,7 @@ return $default(_that.id,_that.text,_that.order,_that.voteCount,_that.userVoted)
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String text,  int order,  int voteCount,  bool userVoted)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String text,  int order, @JsonKey(name: 'vote_count')  int voteCount, @JsonKey(name: 'user_voted')  bool userVoted)  $default,) {final _that = this;
 switch (_that) {
 case _PollOption():
 return $default(_that.id,_that.text,_that.order,_that.voteCount,_that.userVoted);case _:
@@ -1044,7 +1058,7 @@ return $default(_that.id,_that.text,_that.order,_that.voteCount,_that.userVoted)
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String text,  int order,  int voteCount,  bool userVoted)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String text,  int order, @JsonKey(name: 'vote_count')  int voteCount, @JsonKey(name: 'user_voted')  bool userVoted)?  $default,) {final _that = this;
 switch (_that) {
 case _PollOption() when $default != null:
 return $default(_that.id,_that.text,_that.order,_that.voteCount,_that.userVoted);case _:
@@ -1059,14 +1073,14 @@ return $default(_that.id,_that.text,_that.order,_that.voteCount,_that.userVoted)
 @JsonSerializable()
 
 class _PollOption implements PollOption {
-  const _PollOption({required this.id, required this.text, this.order = 0, this.voteCount = 0, this.userVoted = false});
+  const _PollOption({required this.id, required this.text, this.order = 0, @JsonKey(name: 'vote_count') this.voteCount = 0, @JsonKey(name: 'user_voted') this.userVoted = false});
   factory _PollOption.fromJson(Map<String, dynamic> json) => _$PollOptionFromJson(json);
 
 @override final  String id;
 @override final  String text;
 @override@JsonKey() final  int order;
-@override@JsonKey() final  int voteCount;
-@override@JsonKey() final  bool userVoted;
+@override@JsonKey(name: 'vote_count') final  int voteCount;
+@override@JsonKey(name: 'user_voted') final  bool userVoted;
 
 /// Create a copy of PollOption
 /// with the given fields replaced by the non-null parameter values.
@@ -1101,7 +1115,7 @@ abstract mixin class _$PollOptionCopyWith<$Res> implements $PollOptionCopyWith<$
   factory _$PollOptionCopyWith(_PollOption value, $Res Function(_PollOption) _then) = __$PollOptionCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String text, int order, int voteCount, bool userVoted
+ String id, String text, int order,@JsonKey(name: 'vote_count') int voteCount,@JsonKey(name: 'user_voted') bool userVoted
 });
 
 
@@ -1136,7 +1150,7 @@ as bool,
 /// @nodoc
 mixin _$Poll {
 
- String get id; String get question; String? get closesAt; bool get allowMultiple;@JsonKey(name: 'min_selections') int get minSelections;@JsonKey(name: 'max_selections') int get maxSelections; int get totalVotes; bool get isClosed; List<PollOption> get options; List<String> get userVotedOptionIds;
+ String get id; String get question;@JsonKey(name: 'closes_at') String? get closesAt;@JsonKey(name: 'allow_multiple') bool get allowMultiple;@JsonKey(name: 'min_selections') int get minSelections;@JsonKey(name: 'max_selections') int get maxSelections;@JsonKey(name: 'total_votes') int get totalVotes;@JsonKey(name: 'is_closed') bool get isClosed; List<PollOption> get options;@JsonKey(name: 'user_voted_option_ids') List<String> get userVotedOptionIds;
 /// Create a copy of Poll
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1169,7 +1183,7 @@ abstract mixin class $PollCopyWith<$Res>  {
   factory $PollCopyWith(Poll value, $Res Function(Poll) _then) = _$PollCopyWithImpl;
 @useResult
 $Res call({
- String id, String question, String? closesAt, bool allowMultiple,@JsonKey(name: 'min_selections') int minSelections,@JsonKey(name: 'max_selections') int maxSelections, int totalVotes, bool isClosed, List<PollOption> options, List<String> userVotedOptionIds
+ String id, String question,@JsonKey(name: 'closes_at') String? closesAt,@JsonKey(name: 'allow_multiple') bool allowMultiple,@JsonKey(name: 'min_selections') int minSelections,@JsonKey(name: 'max_selections') int maxSelections,@JsonKey(name: 'total_votes') int totalVotes,@JsonKey(name: 'is_closed') bool isClosed, List<PollOption> options,@JsonKey(name: 'user_voted_option_ids') List<String> userVotedOptionIds
 });
 
 
@@ -1283,7 +1297,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String question,  String? closesAt,  bool allowMultiple, @JsonKey(name: 'min_selections')  int minSelections, @JsonKey(name: 'max_selections')  int maxSelections,  int totalVotes,  bool isClosed,  List<PollOption> options,  List<String> userVotedOptionIds)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String question, @JsonKey(name: 'closes_at')  String? closesAt, @JsonKey(name: 'allow_multiple')  bool allowMultiple, @JsonKey(name: 'min_selections')  int minSelections, @JsonKey(name: 'max_selections')  int maxSelections, @JsonKey(name: 'total_votes')  int totalVotes, @JsonKey(name: 'is_closed')  bool isClosed,  List<PollOption> options, @JsonKey(name: 'user_voted_option_ids')  List<String> userVotedOptionIds)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Poll() when $default != null:
 return $default(_that.id,_that.question,_that.closesAt,_that.allowMultiple,_that.minSelections,_that.maxSelections,_that.totalVotes,_that.isClosed,_that.options,_that.userVotedOptionIds);case _:
@@ -1304,7 +1318,7 @@ return $default(_that.id,_that.question,_that.closesAt,_that.allowMultiple,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String question,  String? closesAt,  bool allowMultiple, @JsonKey(name: 'min_selections')  int minSelections, @JsonKey(name: 'max_selections')  int maxSelections,  int totalVotes,  bool isClosed,  List<PollOption> options,  List<String> userVotedOptionIds)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String question, @JsonKey(name: 'closes_at')  String? closesAt, @JsonKey(name: 'allow_multiple')  bool allowMultiple, @JsonKey(name: 'min_selections')  int minSelections, @JsonKey(name: 'max_selections')  int maxSelections, @JsonKey(name: 'total_votes')  int totalVotes, @JsonKey(name: 'is_closed')  bool isClosed,  List<PollOption> options, @JsonKey(name: 'user_voted_option_ids')  List<String> userVotedOptionIds)  $default,) {final _that = this;
 switch (_that) {
 case _Poll():
 return $default(_that.id,_that.question,_that.closesAt,_that.allowMultiple,_that.minSelections,_that.maxSelections,_that.totalVotes,_that.isClosed,_that.options,_that.userVotedOptionIds);case _:
@@ -1324,7 +1338,7 @@ return $default(_that.id,_that.question,_that.closesAt,_that.allowMultiple,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String question,  String? closesAt,  bool allowMultiple, @JsonKey(name: 'min_selections')  int minSelections, @JsonKey(name: 'max_selections')  int maxSelections,  int totalVotes,  bool isClosed,  List<PollOption> options,  List<String> userVotedOptionIds)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String question, @JsonKey(name: 'closes_at')  String? closesAt, @JsonKey(name: 'allow_multiple')  bool allowMultiple, @JsonKey(name: 'min_selections')  int minSelections, @JsonKey(name: 'max_selections')  int maxSelections, @JsonKey(name: 'total_votes')  int totalVotes, @JsonKey(name: 'is_closed')  bool isClosed,  List<PollOption> options, @JsonKey(name: 'user_voted_option_ids')  List<String> userVotedOptionIds)?  $default,) {final _that = this;
 switch (_that) {
 case _Poll() when $default != null:
 return $default(_that.id,_that.question,_that.closesAt,_that.allowMultiple,_that.minSelections,_that.maxSelections,_that.totalVotes,_that.isClosed,_that.options,_that.userVotedOptionIds);case _:
@@ -1339,17 +1353,17 @@ return $default(_that.id,_that.question,_that.closesAt,_that.allowMultiple,_that
 @JsonSerializable()
 
 class _Poll implements Poll {
-  const _Poll({required this.id, required this.question, this.closesAt, this.allowMultiple = false, @JsonKey(name: 'min_selections') this.minSelections = 1, @JsonKey(name: 'max_selections') this.maxSelections = 1, this.totalVotes = 0, this.isClosed = false, required final  List<PollOption> options, final  List<String> userVotedOptionIds = const <String>[]}): _options = options,_userVotedOptionIds = userVotedOptionIds;
+  const _Poll({required this.id, required this.question, @JsonKey(name: 'closes_at') this.closesAt, @JsonKey(name: 'allow_multiple') this.allowMultiple = false, @JsonKey(name: 'min_selections') this.minSelections = 1, @JsonKey(name: 'max_selections') this.maxSelections = 1, @JsonKey(name: 'total_votes') this.totalVotes = 0, @JsonKey(name: 'is_closed') this.isClosed = false, required final  List<PollOption> options, @JsonKey(name: 'user_voted_option_ids') final  List<String> userVotedOptionIds = const <String>[]}): _options = options,_userVotedOptionIds = userVotedOptionIds;
   factory _Poll.fromJson(Map<String, dynamic> json) => _$PollFromJson(json);
 
 @override final  String id;
 @override final  String question;
-@override final  String? closesAt;
-@override@JsonKey() final  bool allowMultiple;
+@override@JsonKey(name: 'closes_at') final  String? closesAt;
+@override@JsonKey(name: 'allow_multiple') final  bool allowMultiple;
 @override@JsonKey(name: 'min_selections') final  int minSelections;
 @override@JsonKey(name: 'max_selections') final  int maxSelections;
-@override@JsonKey() final  int totalVotes;
-@override@JsonKey() final  bool isClosed;
+@override@JsonKey(name: 'total_votes') final  int totalVotes;
+@override@JsonKey(name: 'is_closed') final  bool isClosed;
  final  List<PollOption> _options;
 @override List<PollOption> get options {
   if (_options is EqualUnmodifiableListView) return _options;
@@ -1358,7 +1372,7 @@ class _Poll implements Poll {
 }
 
  final  List<String> _userVotedOptionIds;
-@override@JsonKey() List<String> get userVotedOptionIds {
+@override@JsonKey(name: 'user_voted_option_ids') List<String> get userVotedOptionIds {
   if (_userVotedOptionIds is EqualUnmodifiableListView) return _userVotedOptionIds;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_userVotedOptionIds);
@@ -1398,7 +1412,7 @@ abstract mixin class _$PollCopyWith<$Res> implements $PollCopyWith<$Res> {
   factory _$PollCopyWith(_Poll value, $Res Function(_Poll) _then) = __$PollCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String question, String? closesAt, bool allowMultiple,@JsonKey(name: 'min_selections') int minSelections,@JsonKey(name: 'max_selections') int maxSelections, int totalVotes, bool isClosed, List<PollOption> options, List<String> userVotedOptionIds
+ String id, String question,@JsonKey(name: 'closes_at') String? closesAt,@JsonKey(name: 'allow_multiple') bool allowMultiple,@JsonKey(name: 'min_selections') int minSelections,@JsonKey(name: 'max_selections') int maxSelections,@JsonKey(name: 'total_votes') int totalVotes,@JsonKey(name: 'is_closed') bool isClosed, List<PollOption> options,@JsonKey(name: 'user_voted_option_ids') List<String> userVotedOptionIds
 });
 
 
@@ -1438,7 +1452,7 @@ as List<String>,
 /// @nodoc
 mixin _$ReposterData {
 
- String? get userId; String get displayName; String get avatarUrl;
+@JsonKey(name: 'user_id') String? get userId;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1471,7 +1485,7 @@ abstract mixin class $ReposterDataCopyWith<$Res>  {
   factory $ReposterDataCopyWith(ReposterData value, $Res Function(ReposterData) _then) = _$ReposterDataCopyWithImpl;
 @useResult
 $Res call({
- String? userId, String displayName, String avatarUrl
+@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
 });
 
 
@@ -1578,7 +1592,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? userId,  String displayName,  String avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReposterData() when $default != null:
 return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
@@ -1599,7 +1613,7 @@ return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? userId,  String displayName,  String avatarUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)  $default,) {final _that = this;
 switch (_that) {
 case _ReposterData():
 return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
@@ -1619,7 +1633,7 @@ return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? userId,  String displayName,  String avatarUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _ReposterData() when $default != null:
 return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
@@ -1634,12 +1648,12 @@ return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
 @JsonSerializable()
 
 class _ReposterData implements ReposterData {
-  const _ReposterData({this.userId, this.displayName = '', this.avatarUrl = ''});
+  const _ReposterData({@JsonKey(name: 'user_id') this.userId, @JsonKey(name: 'display_name') this.displayName = '', @JsonKey(name: 'avatar_url') this.avatarUrl = ''});
   factory _ReposterData.fromJson(Map<String, dynamic> json) => _$ReposterDataFromJson(json);
 
-@override final  String? userId;
-@override@JsonKey() final  String displayName;
-@override@JsonKey() final  String avatarUrl;
+@override@JsonKey(name: 'user_id') final  String? userId;
+@override@JsonKey(name: 'display_name') final  String displayName;
+@override@JsonKey(name: 'avatar_url') final  String avatarUrl;
 
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
@@ -1674,7 +1688,7 @@ abstract mixin class _$ReposterDataCopyWith<$Res> implements $ReposterDataCopyWi
   factory _$ReposterDataCopyWith(_ReposterData value, $Res Function(_ReposterData) _then) = __$ReposterDataCopyWithImpl;
 @override @useResult
 $Res call({
- String? userId, String displayName, String avatarUrl
+@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
 });
 
 
@@ -1707,7 +1721,7 @@ as String,
 /// @nodoc
 mixin _$OriginalPostData {
 
- String get id; AuthorData get authorData; String get body; List<String> get mediaUrls; List<PostMedia> get media; String get postType; String? get locationLabel; Map<String, dynamic>? get workoutLogData; Map<String, dynamic>? get mealData; Map<String, dynamic>? get progressData; Poll? get poll; int get commentCount; String? get gymTagName; String get createdAt;
+ String get id;@JsonKey(name: 'author_data') AuthorData get authorData; String get body;@JsonKey(name: 'media_urls') List<String> get mediaUrls; List<PostMedia> get media;@JsonKey(name: 'post_type') String get postType;@JsonKey(name: 'location_label') String? get locationLabel;@JsonKey(name: 'workout_log_data') Map<String, dynamic>? get workoutLogData;@JsonKey(name: 'meal_data') Map<String, dynamic>? get mealData;@JsonKey(name: 'progress_data') Map<String, dynamic>? get progressData; Poll? get poll;@JsonKey(name: 'comment_count') int get commentCount;@JsonKey(name: 'gym_tag_name') String? get gymTagName;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of OriginalPostData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1740,7 +1754,7 @@ abstract mixin class $OriginalPostDataCopyWith<$Res>  {
   factory $OriginalPostDataCopyWith(OriginalPostData value, $Res Function(OriginalPostData) _then) = _$OriginalPostDataCopyWithImpl;
 @useResult
 $Res call({
- String id, AuthorData authorData, String body, List<String> mediaUrls, List<PostMedia> media, String postType, String? locationLabel, Map<String, dynamic>? workoutLogData, Map<String, dynamic>? mealData, Map<String, dynamic>? progressData, Poll? poll, int commentCount, String? gymTagName, String createdAt
+ String id,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(name: 'post_type') String postType,@JsonKey(name: 'location_label') String? locationLabel,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,@JsonKey(name: 'progress_data') Map<String, dynamic>? progressData, Poll? poll,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'gym_tag_name') String? gymTagName,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -1879,7 +1893,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  AuthorData authorData,  String body,  List<String> mediaUrls,  List<PostMedia> media,  String postType,  String? locationLabel,  Map<String, dynamic>? workoutLogData,  Map<String, dynamic>? mealData,  Map<String, dynamic>? progressData,  Poll? poll,  int commentCount,  String? gymTagName,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(name: 'post_type')  String postType, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData,  Poll? poll, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'gym_tag_name')  String? gymTagName, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OriginalPostData() when $default != null:
 return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media,_that.postType,_that.locationLabel,_that.workoutLogData,_that.mealData,_that.progressData,_that.poll,_that.commentCount,_that.gymTagName,_that.createdAt);case _:
@@ -1900,7 +1914,7 @@ return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  AuthorData authorData,  String body,  List<String> mediaUrls,  List<PostMedia> media,  String postType,  String? locationLabel,  Map<String, dynamic>? workoutLogData,  Map<String, dynamic>? mealData,  Map<String, dynamic>? progressData,  Poll? poll,  int commentCount,  String? gymTagName,  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(name: 'post_type')  String postType, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData,  Poll? poll, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'gym_tag_name')  String? gymTagName, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _OriginalPostData():
 return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media,_that.postType,_that.locationLabel,_that.workoutLogData,_that.mealData,_that.progressData,_that.poll,_that.commentCount,_that.gymTagName,_that.createdAt);case _:
@@ -1920,7 +1934,7 @@ return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  AuthorData authorData,  String body,  List<String> mediaUrls,  List<PostMedia> media,  String postType,  String? locationLabel,  Map<String, dynamic>? workoutLogData,  Map<String, dynamic>? mealData,  Map<String, dynamic>? progressData,  Poll? poll,  int commentCount,  String? gymTagName,  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(name: 'post_type')  String postType, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData,  Poll? poll, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'gym_tag_name')  String? gymTagName, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _OriginalPostData() when $default != null:
 return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media,_that.postType,_that.locationLabel,_that.workoutLogData,_that.mealData,_that.progressData,_that.poll,_that.commentCount,_that.gymTagName,_that.createdAt);case _:
@@ -1935,14 +1949,14 @@ return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media
 @JsonSerializable()
 
 class _OriginalPostData implements OriginalPostData {
-  const _OriginalPostData({required this.id, required this.authorData, required this.body, final  List<String> mediaUrls = const <String>[], final  List<PostMedia> media = const <PostMedia>[], this.postType = 'text', this.locationLabel, final  Map<String, dynamic>? workoutLogData, final  Map<String, dynamic>? mealData, final  Map<String, dynamic>? progressData, this.poll, this.commentCount = 0, this.gymTagName, required this.createdAt}): _mediaUrls = mediaUrls,_media = media,_workoutLogData = workoutLogData,_mealData = mealData,_progressData = progressData;
+  const _OriginalPostData({required this.id, @JsonKey(name: 'author_data') required this.authorData, required this.body, @JsonKey(name: 'media_urls') final  List<String> mediaUrls = const <String>[], final  List<PostMedia> media = const <PostMedia>[], @JsonKey(name: 'post_type') this.postType = 'text', @JsonKey(name: 'location_label') this.locationLabel, @JsonKey(name: 'workout_log_data') final  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data') final  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data') final  Map<String, dynamic>? progressData, this.poll, @JsonKey(name: 'comment_count') this.commentCount = 0, @JsonKey(name: 'gym_tag_name') this.gymTagName, @JsonKey(name: 'created_at') required this.createdAt}): _mediaUrls = mediaUrls,_media = media,_workoutLogData = workoutLogData,_mealData = mealData,_progressData = progressData;
   factory _OriginalPostData.fromJson(Map<String, dynamic> json) => _$OriginalPostDataFromJson(json);
 
 @override final  String id;
-@override final  AuthorData authorData;
+@override@JsonKey(name: 'author_data') final  AuthorData authorData;
 @override final  String body;
  final  List<String> _mediaUrls;
-@override@JsonKey() List<String> get mediaUrls {
+@override@JsonKey(name: 'media_urls') List<String> get mediaUrls {
   if (_mediaUrls is EqualUnmodifiableListView) return _mediaUrls;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_mediaUrls);
@@ -1955,10 +1969,10 @@ class _OriginalPostData implements OriginalPostData {
   return EqualUnmodifiableListView(_media);
 }
 
-@override@JsonKey() final  String postType;
-@override final  String? locationLabel;
+@override@JsonKey(name: 'post_type') final  String postType;
+@override@JsonKey(name: 'location_label') final  String? locationLabel;
  final  Map<String, dynamic>? _workoutLogData;
-@override Map<String, dynamic>? get workoutLogData {
+@override@JsonKey(name: 'workout_log_data') Map<String, dynamic>? get workoutLogData {
   final value = _workoutLogData;
   if (value == null) return null;
   if (_workoutLogData is EqualUnmodifiableMapView) return _workoutLogData;
@@ -1967,7 +1981,7 @@ class _OriginalPostData implements OriginalPostData {
 }
 
  final  Map<String, dynamic>? _mealData;
-@override Map<String, dynamic>? get mealData {
+@override@JsonKey(name: 'meal_data') Map<String, dynamic>? get mealData {
   final value = _mealData;
   if (value == null) return null;
   if (_mealData is EqualUnmodifiableMapView) return _mealData;
@@ -1976,7 +1990,7 @@ class _OriginalPostData implements OriginalPostData {
 }
 
  final  Map<String, dynamic>? _progressData;
-@override Map<String, dynamic>? get progressData {
+@override@JsonKey(name: 'progress_data') Map<String, dynamic>? get progressData {
   final value = _progressData;
   if (value == null) return null;
   if (_progressData is EqualUnmodifiableMapView) return _progressData;
@@ -1985,9 +1999,9 @@ class _OriginalPostData implements OriginalPostData {
 }
 
 @override final  Poll? poll;
-@override@JsonKey() final  int commentCount;
-@override final  String? gymTagName;
-@override final  String createdAt;
+@override@JsonKey(name: 'comment_count') final  int commentCount;
+@override@JsonKey(name: 'gym_tag_name') final  String? gymTagName;
+@override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of OriginalPostData
 /// with the given fields replaced by the non-null parameter values.
@@ -2022,7 +2036,7 @@ abstract mixin class _$OriginalPostDataCopyWith<$Res> implements $OriginalPostDa
   factory _$OriginalPostDataCopyWith(_OriginalPostData value, $Res Function(_OriginalPostData) _then) = __$OriginalPostDataCopyWithImpl;
 @override @useResult
 $Res call({
- String id, AuthorData authorData, String body, List<String> mediaUrls, List<PostMedia> media, String postType, String? locationLabel, Map<String, dynamic>? workoutLogData, Map<String, dynamic>? mealData, Map<String, dynamic>? progressData, Poll? poll, int commentCount, String? gymTagName, String createdAt
+ String id,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(name: 'post_type') String postType,@JsonKey(name: 'location_label') String? locationLabel,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,@JsonKey(name: 'progress_data') Map<String, dynamic>? progressData, Poll? poll,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'gym_tag_name') String? gymTagName,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -2087,7 +2101,7 @@ $PollCopyWith<$Res>? get poll {
 /// @nodoc
 mixin _$Post {
 
- String get id; AuthorData get authorData; String get postType; String get body; bool get isAnonymous; List<String> get mediaUrls; List<PostMedia> get media;@JsonKey(readValue: _readCommentsDisabled) bool get commentsDisabled; List<String> get tags; Map<String, dynamic>? get workoutLogData; Map<String, dynamic>? get mealData; Map<String, dynamic>? get progressData; String get locationLabel; int get viewCount; Map<String, int> get reactionCounts; String? get userReaction; int get commentCount; int get repostCount; bool get isRepost; bool get isRepostedByMe; String? get originalPostId; String get quoteBody; List<ReposterData> get reposters; bool get isSaved; bool get isPinned; String get visibility;@JsonKey(name: 'content_rating') String get contentRating; String get moderationStatus;@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? get aiAnalysis; String? get gymTagId; String? get gymTagName; Poll? get poll; OriginalPostData? get originalPostData; String get createdAt; String? get updatedAt;
+ String get id;@JsonKey(name: 'author_data') AuthorData get authorData;@JsonKey(name: 'post_type') String get postType; String get body;@JsonKey(name: 'is_anonymous') bool get isAnonymous;@JsonKey(name: 'media_urls') List<String> get mediaUrls; List<PostMedia> get media;@JsonKey(readValue: _readCommentsDisabled) bool get commentsDisabled; List<String> get tags;@JsonKey(name: 'workout_log_data') Map<String, dynamic>? get workoutLogData;@JsonKey(name: 'meal_data') Map<String, dynamic>? get mealData;@JsonKey(name: 'progress_data') Map<String, dynamic>? get progressData;@JsonKey(name: 'location_label') String get locationLabel;@JsonKey(name: 'view_count') int get viewCount;@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts;@JsonKey(name: 'user_reaction') String? get userReaction;@JsonKey(name: 'comment_count') int get commentCount;@JsonKey(name: 'repost_count') int get repostCount;@JsonKey(name: 'save_count') int get saveCount;@JsonKey(name: 'share_count') int get shareCount;@JsonKey(name: 'is_repost') bool get isRepost;@JsonKey(name: 'is_reposted_by_me') bool get isRepostedByMe;@JsonKey(name: 'original_post_id') String? get originalPostId;@JsonKey(name: 'quote_body') String get quoteBody; List<ReposterData> get reposters;@JsonKey(name: 'is_saved') bool get isSaved;@JsonKey(name: 'is_pinned') bool get isPinned; String get visibility;@JsonKey(name: 'content_rating') String get contentRating;@JsonKey(name: 'moderation_status') String get moderationStatus;@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? get aiAnalysis;@JsonKey(name: 'gym_tag_id') String? get gymTagId;@JsonKey(name: 'gym_tag_name') String? get gymTagName; Poll? get poll;@JsonKey(name: 'original_post_data') OriginalPostData? get originalPostData;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2100,16 +2114,16 @@ $PostCopyWith<Post> get copyWith => _$PostCopyWithImpl<Post>(this as Post, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Post&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.body, body) || other.body == body)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&const DeepCollectionEquality().equals(other.mediaUrls, mediaUrls)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.commentsDisabled, commentsDisabled) || other.commentsDisabled == commentsDisabled)&&const DeepCollectionEquality().equals(other.tags, tags)&&const DeepCollectionEquality().equals(other.workoutLogData, workoutLogData)&&const DeepCollectionEquality().equals(other.mealData, mealData)&&const DeepCollectionEquality().equals(other.progressData, progressData)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&const DeepCollectionEquality().equals(other.reactionCounts, reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isRepostedByMe, isRepostedByMe) || other.isRepostedByMe == isRepostedByMe)&&(identical(other.originalPostId, originalPostId) || other.originalPostId == originalPostId)&&(identical(other.quoteBody, quoteBody) || other.quoteBody == quoteBody)&&const DeepCollectionEquality().equals(other.reposters, reposters)&&(identical(other.isSaved, isSaved) || other.isSaved == isSaved)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.moderationStatus, moderationStatus) || other.moderationStatus == moderationStatus)&&const DeepCollectionEquality().equals(other.aiAnalysis, aiAnalysis)&&(identical(other.gymTagId, gymTagId) || other.gymTagId == gymTagId)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.originalPostData, originalPostData) || other.originalPostData == originalPostData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Post&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.body, body) || other.body == body)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&const DeepCollectionEquality().equals(other.mediaUrls, mediaUrls)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.commentsDisabled, commentsDisabled) || other.commentsDisabled == commentsDisabled)&&const DeepCollectionEquality().equals(other.tags, tags)&&const DeepCollectionEquality().equals(other.workoutLogData, workoutLogData)&&const DeepCollectionEquality().equals(other.mealData, mealData)&&const DeepCollectionEquality().equals(other.progressData, progressData)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&const DeepCollectionEquality().equals(other.reactionCounts, reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isRepostedByMe, isRepostedByMe) || other.isRepostedByMe == isRepostedByMe)&&(identical(other.originalPostId, originalPostId) || other.originalPostId == originalPostId)&&(identical(other.quoteBody, quoteBody) || other.quoteBody == quoteBody)&&const DeepCollectionEquality().equals(other.reposters, reposters)&&(identical(other.isSaved, isSaved) || other.isSaved == isSaved)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.moderationStatus, moderationStatus) || other.moderationStatus == moderationStatus)&&const DeepCollectionEquality().equals(other.aiAnalysis, aiAnalysis)&&(identical(other.gymTagId, gymTagId) || other.gymTagId == gymTagId)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.originalPostData, originalPostData) || other.originalPostData == originalPostData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,authorData,postType,body,isAnonymous,const DeepCollectionEquality().hash(mediaUrls),const DeepCollectionEquality().hash(media),commentsDisabled,const DeepCollectionEquality().hash(tags),const DeepCollectionEquality().hash(workoutLogData),const DeepCollectionEquality().hash(mealData),const DeepCollectionEquality().hash(progressData),locationLabel,viewCount,const DeepCollectionEquality().hash(reactionCounts),userReaction,commentCount,repostCount,isRepost,isRepostedByMe,originalPostId,quoteBody,const DeepCollectionEquality().hash(reposters),isSaved,isPinned,visibility,contentRating,moderationStatus,const DeepCollectionEquality().hash(aiAnalysis),gymTagId,gymTagName,poll,originalPostData,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,authorData,postType,body,isAnonymous,const DeepCollectionEquality().hash(mediaUrls),const DeepCollectionEquality().hash(media),commentsDisabled,const DeepCollectionEquality().hash(tags),const DeepCollectionEquality().hash(workoutLogData),const DeepCollectionEquality().hash(mealData),const DeepCollectionEquality().hash(progressData),locationLabel,viewCount,const DeepCollectionEquality().hash(reactionCounts),userReaction,commentCount,repostCount,saveCount,shareCount,isRepost,isRepostedByMe,originalPostId,quoteBody,const DeepCollectionEquality().hash(reposters),isSaved,isPinned,visibility,contentRating,moderationStatus,const DeepCollectionEquality().hash(aiAnalysis),gymTagId,gymTagName,poll,originalPostData,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'Post(id: $id, authorData: $authorData, postType: $postType, body: $body, isAnonymous: $isAnonymous, mediaUrls: $mediaUrls, media: $media, commentsDisabled: $commentsDisabled, tags: $tags, workoutLogData: $workoutLogData, mealData: $mealData, progressData: $progressData, locationLabel: $locationLabel, viewCount: $viewCount, reactionCounts: $reactionCounts, userReaction: $userReaction, commentCount: $commentCount, repostCount: $repostCount, isRepost: $isRepost, isRepostedByMe: $isRepostedByMe, originalPostId: $originalPostId, quoteBody: $quoteBody, reposters: $reposters, isSaved: $isSaved, isPinned: $isPinned, visibility: $visibility, contentRating: $contentRating, moderationStatus: $moderationStatus, aiAnalysis: $aiAnalysis, gymTagId: $gymTagId, gymTagName: $gymTagName, poll: $poll, originalPostData: $originalPostData, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Post(id: $id, authorData: $authorData, postType: $postType, body: $body, isAnonymous: $isAnonymous, mediaUrls: $mediaUrls, media: $media, commentsDisabled: $commentsDisabled, tags: $tags, workoutLogData: $workoutLogData, mealData: $mealData, progressData: $progressData, locationLabel: $locationLabel, viewCount: $viewCount, reactionCounts: $reactionCounts, userReaction: $userReaction, commentCount: $commentCount, repostCount: $repostCount, saveCount: $saveCount, shareCount: $shareCount, isRepost: $isRepost, isRepostedByMe: $isRepostedByMe, originalPostId: $originalPostId, quoteBody: $quoteBody, reposters: $reposters, isSaved: $isSaved, isPinned: $isPinned, visibility: $visibility, contentRating: $contentRating, moderationStatus: $moderationStatus, aiAnalysis: $aiAnalysis, gymTagId: $gymTagId, gymTagName: $gymTagName, poll: $poll, originalPostData: $originalPostData, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -2120,7 +2134,7 @@ abstract mixin class $PostCopyWith<$Res>  {
   factory $PostCopyWith(Post value, $Res Function(Post) _then) = _$PostCopyWithImpl;
 @useResult
 $Res call({
- String id, AuthorData authorData, String postType, String body, bool isAnonymous, List<String> mediaUrls, List<PostMedia> media,@JsonKey(readValue: _readCommentsDisabled) bool commentsDisabled, List<String> tags, Map<String, dynamic>? workoutLogData, Map<String, dynamic>? mealData, Map<String, dynamic>? progressData, String locationLabel, int viewCount, Map<String, int> reactionCounts, String? userReaction, int commentCount, int repostCount, bool isRepost, bool isRepostedByMe, String? originalPostId, String quoteBody, List<ReposterData> reposters, bool isSaved, bool isPinned, String visibility,@JsonKey(name: 'content_rating') String contentRating, String moderationStatus,@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis, String? gymTagId, String? gymTagName, Poll? poll, OriginalPostData? originalPostData, String createdAt, String? updatedAt
+ String id,@JsonKey(name: 'author_data') AuthorData authorData,@JsonKey(name: 'post_type') String postType, String body,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(readValue: _readCommentsDisabled) bool commentsDisabled, List<String> tags,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,@JsonKey(name: 'progress_data') Map<String, dynamic>? progressData,@JsonKey(name: 'location_label') String locationLabel,@JsonKey(name: 'view_count') int viewCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'repost_count') int repostCount,@JsonKey(name: 'save_count') int saveCount,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'is_repost') bool isRepost,@JsonKey(name: 'is_reposted_by_me') bool isRepostedByMe,@JsonKey(name: 'original_post_id') String? originalPostId,@JsonKey(name: 'quote_body') String quoteBody, List<ReposterData> reposters,@JsonKey(name: 'is_saved') bool isSaved,@JsonKey(name: 'is_pinned') bool isPinned, String visibility,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'moderation_status') String moderationStatus,@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis,@JsonKey(name: 'gym_tag_id') String? gymTagId,@JsonKey(name: 'gym_tag_name') String? gymTagName, Poll? poll,@JsonKey(name: 'original_post_data') OriginalPostData? originalPostData,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
@@ -2137,7 +2151,7 @@ class _$PostCopyWithImpl<$Res>
 
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? authorData = null,Object? postType = null,Object? body = null,Object? isAnonymous = null,Object? mediaUrls = null,Object? media = null,Object? commentsDisabled = null,Object? tags = null,Object? workoutLogData = freezed,Object? mealData = freezed,Object? progressData = freezed,Object? locationLabel = null,Object? viewCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? commentCount = null,Object? repostCount = null,Object? isRepost = null,Object? isRepostedByMe = null,Object? originalPostId = freezed,Object? quoteBody = null,Object? reposters = null,Object? isSaved = null,Object? isPinned = null,Object? visibility = null,Object? contentRating = null,Object? moderationStatus = null,Object? aiAnalysis = freezed,Object? gymTagId = freezed,Object? gymTagName = freezed,Object? poll = freezed,Object? originalPostData = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? authorData = null,Object? postType = null,Object? body = null,Object? isAnonymous = null,Object? mediaUrls = null,Object? media = null,Object? commentsDisabled = null,Object? tags = null,Object? workoutLogData = freezed,Object? mealData = freezed,Object? progressData = freezed,Object? locationLabel = null,Object? viewCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? commentCount = null,Object? repostCount = null,Object? saveCount = null,Object? shareCount = null,Object? isRepost = null,Object? isRepostedByMe = null,Object? originalPostId = freezed,Object? quoteBody = null,Object? reposters = null,Object? isSaved = null,Object? isPinned = null,Object? visibility = null,Object? contentRating = null,Object? moderationStatus = null,Object? aiAnalysis = freezed,Object? gymTagId = freezed,Object? gymTagName = freezed,Object? poll = freezed,Object? originalPostData = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
@@ -2157,6 +2171,8 @@ as int,reactionCounts: null == reactionCounts ? _self.reactionCounts : reactionC
 as Map<String, int>,userReaction: freezed == userReaction ? _self.userReaction : userReaction // ignore: cast_nullable_to_non_nullable
 as String?,commentCount: null == commentCount ? _self.commentCount : commentCount // ignore: cast_nullable_to_non_nullable
 as int,repostCount: null == repostCount ? _self.repostCount : repostCount // ignore: cast_nullable_to_non_nullable
+as int,saveCount: null == saveCount ? _self.saveCount : saveCount // ignore: cast_nullable_to_non_nullable
+as int,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
 as int,isRepost: null == isRepost ? _self.isRepost : isRepost // ignore: cast_nullable_to_non_nullable
 as bool,isRepostedByMe: null == isRepostedByMe ? _self.isRepostedByMe : isRepostedByMe // ignore: cast_nullable_to_non_nullable
 as bool,originalPostId: freezed == originalPostId ? _self.originalPostId : originalPostId // ignore: cast_nullable_to_non_nullable
@@ -2292,10 +2308,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  AuthorData authorData,  String postType,  String body,  bool isAnonymous,  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags,  Map<String, dynamic>? workoutLogData,  Map<String, dynamic>? mealData,  Map<String, dynamic>? progressData,  String locationLabel,  int viewCount,  Map<String, int> reactionCounts,  String? userReaction,  int commentCount,  int repostCount,  bool isRepost,  bool isRepostedByMe,  String? originalPostId,  String quoteBody,  List<ReposterData> reposters,  bool isSaved,  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating,  String moderationStatus, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis,  String? gymTagId,  String? gymTagName,  Poll? poll,  OriginalPostData? originalPostData,  String createdAt,  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData, @JsonKey(name: 'post_type')  String postType,  String body, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData, @JsonKey(name: 'location_label')  String locationLabel, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'is_repost')  bool isRepost, @JsonKey(name: 'is_reposted_by_me')  bool isRepostedByMe, @JsonKey(name: 'original_post_id')  String? originalPostId, @JsonKey(name: 'quote_body')  String quoteBody,  List<ReposterData> reposters, @JsonKey(name: 'is_saved')  bool isSaved, @JsonKey(name: 'is_pinned')  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'moderation_status')  String moderationStatus, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id')  String? gymTagId, @JsonKey(name: 'gym_tag_name')  String? gymTagName,  Poll? poll, @JsonKey(name: 'original_post_data')  OriginalPostData? originalPostData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Post() when $default != null:
-return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.mealData,_that.progressData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.mealData,_that.progressData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.saveCount,_that.shareCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -2313,10 +2329,10 @@ return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnon
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  AuthorData authorData,  String postType,  String body,  bool isAnonymous,  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags,  Map<String, dynamic>? workoutLogData,  Map<String, dynamic>? mealData,  Map<String, dynamic>? progressData,  String locationLabel,  int viewCount,  Map<String, int> reactionCounts,  String? userReaction,  int commentCount,  int repostCount,  bool isRepost,  bool isRepostedByMe,  String? originalPostId,  String quoteBody,  List<ReposterData> reposters,  bool isSaved,  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating,  String moderationStatus, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis,  String? gymTagId,  String? gymTagName,  Poll? poll,  OriginalPostData? originalPostData,  String createdAt,  String? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData, @JsonKey(name: 'post_type')  String postType,  String body, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData, @JsonKey(name: 'location_label')  String locationLabel, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'is_repost')  bool isRepost, @JsonKey(name: 'is_reposted_by_me')  bool isRepostedByMe, @JsonKey(name: 'original_post_id')  String? originalPostId, @JsonKey(name: 'quote_body')  String quoteBody,  List<ReposterData> reposters, @JsonKey(name: 'is_saved')  bool isSaved, @JsonKey(name: 'is_pinned')  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'moderation_status')  String moderationStatus, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id')  String? gymTagId, @JsonKey(name: 'gym_tag_name')  String? gymTagName,  Poll? poll, @JsonKey(name: 'original_post_data')  OriginalPostData? originalPostData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Post():
-return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.mealData,_that.progressData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.mealData,_that.progressData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.saveCount,_that.shareCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2333,10 +2349,10 @@ return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnon
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  AuthorData authorData,  String postType,  String body,  bool isAnonymous,  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags,  Map<String, dynamic>? workoutLogData,  Map<String, dynamic>? mealData,  Map<String, dynamic>? progressData,  String locationLabel,  int viewCount,  Map<String, int> reactionCounts,  String? userReaction,  int commentCount,  int repostCount,  bool isRepost,  bool isRepostedByMe,  String? originalPostId,  String quoteBody,  List<ReposterData> reposters,  bool isSaved,  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating,  String moderationStatus, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis,  String? gymTagId,  String? gymTagName,  Poll? poll,  OriginalPostData? originalPostData,  String createdAt,  String? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData, @JsonKey(name: 'post_type')  String postType,  String body, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData, @JsonKey(name: 'location_label')  String locationLabel, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'is_repost')  bool isRepost, @JsonKey(name: 'is_reposted_by_me')  bool isRepostedByMe, @JsonKey(name: 'original_post_id')  String? originalPostId, @JsonKey(name: 'quote_body')  String quoteBody,  List<ReposterData> reposters, @JsonKey(name: 'is_saved')  bool isSaved, @JsonKey(name: 'is_pinned')  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'moderation_status')  String moderationStatus, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id')  String? gymTagId, @JsonKey(name: 'gym_tag_name')  String? gymTagName,  Poll? poll, @JsonKey(name: 'original_post_data')  OriginalPostData? originalPostData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Post() when $default != null:
-return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.mealData,_that.progressData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.mealData,_that.progressData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.saveCount,_that.shareCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -2348,16 +2364,16 @@ return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnon
 @JsonSerializable()
 
 class _Post implements Post {
-  const _Post({required this.id, required this.authorData, this.postType = 'text', this.body = '', this.isAnonymous = false, final  List<String> mediaUrls = const <String>[], final  List<PostMedia> media = const <PostMedia>[], @JsonKey(readValue: _readCommentsDisabled) this.commentsDisabled = false, final  List<String> tags = const <String>[], final  Map<String, dynamic>? workoutLogData, final  Map<String, dynamic>? mealData, final  Map<String, dynamic>? progressData, this.locationLabel = '', this.viewCount = 0, final  Map<String, int> reactionCounts = const <String, int>{}, this.userReaction, this.commentCount = 0, this.repostCount = 0, this.isRepost = false, this.isRepostedByMe = false, this.originalPostId, this.quoteBody = '', final  List<ReposterData> reposters = const <ReposterData>[], this.isSaved = false, this.isPinned = false, this.visibility = 'public', @JsonKey(name: 'content_rating') this.contentRating = 'general', this.moderationStatus = 'clean', @JsonKey(readValue: _readAiAnalysis) final  Map<String, dynamic>? aiAnalysis, this.gymTagId, this.gymTagName, this.poll, this.originalPostData, required this.createdAt, this.updatedAt}): _mediaUrls = mediaUrls,_media = media,_tags = tags,_workoutLogData = workoutLogData,_mealData = mealData,_progressData = progressData,_reactionCounts = reactionCounts,_reposters = reposters,_aiAnalysis = aiAnalysis;
+  const _Post({required this.id, @JsonKey(name: 'author_data') required this.authorData, @JsonKey(name: 'post_type') this.postType = 'text', this.body = '', @JsonKey(name: 'is_anonymous') this.isAnonymous = false, @JsonKey(name: 'media_urls') final  List<String> mediaUrls = const <String>[], final  List<PostMedia> media = const <PostMedia>[], @JsonKey(readValue: _readCommentsDisabled) this.commentsDisabled = false, final  List<String> tags = const <String>[], @JsonKey(name: 'workout_log_data') final  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data') final  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data') final  Map<String, dynamic>? progressData, @JsonKey(name: 'location_label') this.locationLabel = '', @JsonKey(name: 'view_count') this.viewCount = 0, @JsonKey(name: 'reaction_counts') final  Map<String, int> reactionCounts = const <String, int>{}, @JsonKey(name: 'user_reaction') this.userReaction, @JsonKey(name: 'comment_count') this.commentCount = 0, @JsonKey(name: 'repost_count') this.repostCount = 0, @JsonKey(name: 'save_count') this.saveCount = 0, @JsonKey(name: 'share_count') this.shareCount = 0, @JsonKey(name: 'is_repost') this.isRepost = false, @JsonKey(name: 'is_reposted_by_me') this.isRepostedByMe = false, @JsonKey(name: 'original_post_id') this.originalPostId, @JsonKey(name: 'quote_body') this.quoteBody = '', final  List<ReposterData> reposters = const <ReposterData>[], @JsonKey(name: 'is_saved') this.isSaved = false, @JsonKey(name: 'is_pinned') this.isPinned = false, this.visibility = 'public', @JsonKey(name: 'content_rating') this.contentRating = 'general', @JsonKey(name: 'moderation_status') this.moderationStatus = 'clean', @JsonKey(readValue: _readAiAnalysis) final  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id') this.gymTagId, @JsonKey(name: 'gym_tag_name') this.gymTagName, this.poll, @JsonKey(name: 'original_post_data') this.originalPostData, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _mediaUrls = mediaUrls,_media = media,_tags = tags,_workoutLogData = workoutLogData,_mealData = mealData,_progressData = progressData,_reactionCounts = reactionCounts,_reposters = reposters,_aiAnalysis = aiAnalysis;
   factory _Post.fromJson(Map<String, dynamic> json) => _$PostFromJson(json);
 
 @override final  String id;
-@override final  AuthorData authorData;
-@override@JsonKey() final  String postType;
+@override@JsonKey(name: 'author_data') final  AuthorData authorData;
+@override@JsonKey(name: 'post_type') final  String postType;
 @override@JsonKey() final  String body;
-@override@JsonKey() final  bool isAnonymous;
+@override@JsonKey(name: 'is_anonymous') final  bool isAnonymous;
  final  List<String> _mediaUrls;
-@override@JsonKey() List<String> get mediaUrls {
+@override@JsonKey(name: 'media_urls') List<String> get mediaUrls {
   if (_mediaUrls is EqualUnmodifiableListView) return _mediaUrls;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_mediaUrls);
@@ -2379,7 +2395,7 @@ class _Post implements Post {
 }
 
  final  Map<String, dynamic>? _workoutLogData;
-@override Map<String, dynamic>? get workoutLogData {
+@override@JsonKey(name: 'workout_log_data') Map<String, dynamic>? get workoutLogData {
   final value = _workoutLogData;
   if (value == null) return null;
   if (_workoutLogData is EqualUnmodifiableMapView) return _workoutLogData;
@@ -2388,7 +2404,7 @@ class _Post implements Post {
 }
 
  final  Map<String, dynamic>? _mealData;
-@override Map<String, dynamic>? get mealData {
+@override@JsonKey(name: 'meal_data') Map<String, dynamic>? get mealData {
   final value = _mealData;
   if (value == null) return null;
   if (_mealData is EqualUnmodifiableMapView) return _mealData;
@@ -2397,7 +2413,7 @@ class _Post implements Post {
 }
 
  final  Map<String, dynamic>? _progressData;
-@override Map<String, dynamic>? get progressData {
+@override@JsonKey(name: 'progress_data') Map<String, dynamic>? get progressData {
   final value = _progressData;
   if (value == null) return null;
   if (_progressData is EqualUnmodifiableMapView) return _progressData;
@@ -2405,22 +2421,24 @@ class _Post implements Post {
   return EqualUnmodifiableMapView(value);
 }
 
-@override@JsonKey() final  String locationLabel;
-@override@JsonKey() final  int viewCount;
+@override@JsonKey(name: 'location_label') final  String locationLabel;
+@override@JsonKey(name: 'view_count') final  int viewCount;
  final  Map<String, int> _reactionCounts;
-@override@JsonKey() Map<String, int> get reactionCounts {
+@override@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts {
   if (_reactionCounts is EqualUnmodifiableMapView) return _reactionCounts;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableMapView(_reactionCounts);
 }
 
-@override final  String? userReaction;
-@override@JsonKey() final  int commentCount;
-@override@JsonKey() final  int repostCount;
-@override@JsonKey() final  bool isRepost;
-@override@JsonKey() final  bool isRepostedByMe;
-@override final  String? originalPostId;
-@override@JsonKey() final  String quoteBody;
+@override@JsonKey(name: 'user_reaction') final  String? userReaction;
+@override@JsonKey(name: 'comment_count') final  int commentCount;
+@override@JsonKey(name: 'repost_count') final  int repostCount;
+@override@JsonKey(name: 'save_count') final  int saveCount;
+@override@JsonKey(name: 'share_count') final  int shareCount;
+@override@JsonKey(name: 'is_repost') final  bool isRepost;
+@override@JsonKey(name: 'is_reposted_by_me') final  bool isRepostedByMe;
+@override@JsonKey(name: 'original_post_id') final  String? originalPostId;
+@override@JsonKey(name: 'quote_body') final  String quoteBody;
  final  List<ReposterData> _reposters;
 @override@JsonKey() List<ReposterData> get reposters {
   if (_reposters is EqualUnmodifiableListView) return _reposters;
@@ -2428,11 +2446,11 @@ class _Post implements Post {
   return EqualUnmodifiableListView(_reposters);
 }
 
-@override@JsonKey() final  bool isSaved;
-@override@JsonKey() final  bool isPinned;
+@override@JsonKey(name: 'is_saved') final  bool isSaved;
+@override@JsonKey(name: 'is_pinned') final  bool isPinned;
 @override@JsonKey() final  String visibility;
 @override@JsonKey(name: 'content_rating') final  String contentRating;
-@override@JsonKey() final  String moderationStatus;
+@override@JsonKey(name: 'moderation_status') final  String moderationStatus;
  final  Map<String, dynamic>? _aiAnalysis;
 @override@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? get aiAnalysis {
   final value = _aiAnalysis;
@@ -2442,12 +2460,12 @@ class _Post implements Post {
   return EqualUnmodifiableMapView(value);
 }
 
-@override final  String? gymTagId;
-@override final  String? gymTagName;
+@override@JsonKey(name: 'gym_tag_id') final  String? gymTagId;
+@override@JsonKey(name: 'gym_tag_name') final  String? gymTagName;
 @override final  Poll? poll;
-@override final  OriginalPostData? originalPostData;
-@override final  String createdAt;
-@override final  String? updatedAt;
+@override@JsonKey(name: 'original_post_data') final  OriginalPostData? originalPostData;
+@override@JsonKey(name: 'created_at') final  String createdAt;
+@override@JsonKey(name: 'updated_at') final  String? updatedAt;
 
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
@@ -2462,16 +2480,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Post&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.body, body) || other.body == body)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&const DeepCollectionEquality().equals(other._mediaUrls, _mediaUrls)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.commentsDisabled, commentsDisabled) || other.commentsDisabled == commentsDisabled)&&const DeepCollectionEquality().equals(other._tags, _tags)&&const DeepCollectionEquality().equals(other._workoutLogData, _workoutLogData)&&const DeepCollectionEquality().equals(other._mealData, _mealData)&&const DeepCollectionEquality().equals(other._progressData, _progressData)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&const DeepCollectionEquality().equals(other._reactionCounts, _reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isRepostedByMe, isRepostedByMe) || other.isRepostedByMe == isRepostedByMe)&&(identical(other.originalPostId, originalPostId) || other.originalPostId == originalPostId)&&(identical(other.quoteBody, quoteBody) || other.quoteBody == quoteBody)&&const DeepCollectionEquality().equals(other._reposters, _reposters)&&(identical(other.isSaved, isSaved) || other.isSaved == isSaved)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.moderationStatus, moderationStatus) || other.moderationStatus == moderationStatus)&&const DeepCollectionEquality().equals(other._aiAnalysis, _aiAnalysis)&&(identical(other.gymTagId, gymTagId) || other.gymTagId == gymTagId)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.originalPostData, originalPostData) || other.originalPostData == originalPostData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Post&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.body, body) || other.body == body)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&const DeepCollectionEquality().equals(other._mediaUrls, _mediaUrls)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.commentsDisabled, commentsDisabled) || other.commentsDisabled == commentsDisabled)&&const DeepCollectionEquality().equals(other._tags, _tags)&&const DeepCollectionEquality().equals(other._workoutLogData, _workoutLogData)&&const DeepCollectionEquality().equals(other._mealData, _mealData)&&const DeepCollectionEquality().equals(other._progressData, _progressData)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&const DeepCollectionEquality().equals(other._reactionCounts, _reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isRepostedByMe, isRepostedByMe) || other.isRepostedByMe == isRepostedByMe)&&(identical(other.originalPostId, originalPostId) || other.originalPostId == originalPostId)&&(identical(other.quoteBody, quoteBody) || other.quoteBody == quoteBody)&&const DeepCollectionEquality().equals(other._reposters, _reposters)&&(identical(other.isSaved, isSaved) || other.isSaved == isSaved)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.moderationStatus, moderationStatus) || other.moderationStatus == moderationStatus)&&const DeepCollectionEquality().equals(other._aiAnalysis, _aiAnalysis)&&(identical(other.gymTagId, gymTagId) || other.gymTagId == gymTagId)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.originalPostData, originalPostData) || other.originalPostData == originalPostData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,authorData,postType,body,isAnonymous,const DeepCollectionEquality().hash(_mediaUrls),const DeepCollectionEquality().hash(_media),commentsDisabled,const DeepCollectionEquality().hash(_tags),const DeepCollectionEquality().hash(_workoutLogData),const DeepCollectionEquality().hash(_mealData),const DeepCollectionEquality().hash(_progressData),locationLabel,viewCount,const DeepCollectionEquality().hash(_reactionCounts),userReaction,commentCount,repostCount,isRepost,isRepostedByMe,originalPostId,quoteBody,const DeepCollectionEquality().hash(_reposters),isSaved,isPinned,visibility,contentRating,moderationStatus,const DeepCollectionEquality().hash(_aiAnalysis),gymTagId,gymTagName,poll,originalPostData,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,authorData,postType,body,isAnonymous,const DeepCollectionEquality().hash(_mediaUrls),const DeepCollectionEquality().hash(_media),commentsDisabled,const DeepCollectionEquality().hash(_tags),const DeepCollectionEquality().hash(_workoutLogData),const DeepCollectionEquality().hash(_mealData),const DeepCollectionEquality().hash(_progressData),locationLabel,viewCount,const DeepCollectionEquality().hash(_reactionCounts),userReaction,commentCount,repostCount,saveCount,shareCount,isRepost,isRepostedByMe,originalPostId,quoteBody,const DeepCollectionEquality().hash(_reposters),isSaved,isPinned,visibility,contentRating,moderationStatus,const DeepCollectionEquality().hash(_aiAnalysis),gymTagId,gymTagName,poll,originalPostData,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'Post(id: $id, authorData: $authorData, postType: $postType, body: $body, isAnonymous: $isAnonymous, mediaUrls: $mediaUrls, media: $media, commentsDisabled: $commentsDisabled, tags: $tags, workoutLogData: $workoutLogData, mealData: $mealData, progressData: $progressData, locationLabel: $locationLabel, viewCount: $viewCount, reactionCounts: $reactionCounts, userReaction: $userReaction, commentCount: $commentCount, repostCount: $repostCount, isRepost: $isRepost, isRepostedByMe: $isRepostedByMe, originalPostId: $originalPostId, quoteBody: $quoteBody, reposters: $reposters, isSaved: $isSaved, isPinned: $isPinned, visibility: $visibility, contentRating: $contentRating, moderationStatus: $moderationStatus, aiAnalysis: $aiAnalysis, gymTagId: $gymTagId, gymTagName: $gymTagName, poll: $poll, originalPostData: $originalPostData, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Post(id: $id, authorData: $authorData, postType: $postType, body: $body, isAnonymous: $isAnonymous, mediaUrls: $mediaUrls, media: $media, commentsDisabled: $commentsDisabled, tags: $tags, workoutLogData: $workoutLogData, mealData: $mealData, progressData: $progressData, locationLabel: $locationLabel, viewCount: $viewCount, reactionCounts: $reactionCounts, userReaction: $userReaction, commentCount: $commentCount, repostCount: $repostCount, saveCount: $saveCount, shareCount: $shareCount, isRepost: $isRepost, isRepostedByMe: $isRepostedByMe, originalPostId: $originalPostId, quoteBody: $quoteBody, reposters: $reposters, isSaved: $isSaved, isPinned: $isPinned, visibility: $visibility, contentRating: $contentRating, moderationStatus: $moderationStatus, aiAnalysis: $aiAnalysis, gymTagId: $gymTagId, gymTagName: $gymTagName, poll: $poll, originalPostData: $originalPostData, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -2482,7 +2500,7 @@ abstract mixin class _$PostCopyWith<$Res> implements $PostCopyWith<$Res> {
   factory _$PostCopyWith(_Post value, $Res Function(_Post) _then) = __$PostCopyWithImpl;
 @override @useResult
 $Res call({
- String id, AuthorData authorData, String postType, String body, bool isAnonymous, List<String> mediaUrls, List<PostMedia> media,@JsonKey(readValue: _readCommentsDisabled) bool commentsDisabled, List<String> tags, Map<String, dynamic>? workoutLogData, Map<String, dynamic>? mealData, Map<String, dynamic>? progressData, String locationLabel, int viewCount, Map<String, int> reactionCounts, String? userReaction, int commentCount, int repostCount, bool isRepost, bool isRepostedByMe, String? originalPostId, String quoteBody, List<ReposterData> reposters, bool isSaved, bool isPinned, String visibility,@JsonKey(name: 'content_rating') String contentRating, String moderationStatus,@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis, String? gymTagId, String? gymTagName, Poll? poll, OriginalPostData? originalPostData, String createdAt, String? updatedAt
+ String id,@JsonKey(name: 'author_data') AuthorData authorData,@JsonKey(name: 'post_type') String postType, String body,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(readValue: _readCommentsDisabled) bool commentsDisabled, List<String> tags,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,@JsonKey(name: 'progress_data') Map<String, dynamic>? progressData,@JsonKey(name: 'location_label') String locationLabel,@JsonKey(name: 'view_count') int viewCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'repost_count') int repostCount,@JsonKey(name: 'save_count') int saveCount,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'is_repost') bool isRepost,@JsonKey(name: 'is_reposted_by_me') bool isRepostedByMe,@JsonKey(name: 'original_post_id') String? originalPostId,@JsonKey(name: 'quote_body') String quoteBody, List<ReposterData> reposters,@JsonKey(name: 'is_saved') bool isSaved,@JsonKey(name: 'is_pinned') bool isPinned, String visibility,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'moderation_status') String moderationStatus,@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis,@JsonKey(name: 'gym_tag_id') String? gymTagId,@JsonKey(name: 'gym_tag_name') String? gymTagName, Poll? poll,@JsonKey(name: 'original_post_data') OriginalPostData? originalPostData,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
@@ -2499,7 +2517,7 @@ class __$PostCopyWithImpl<$Res>
 
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? authorData = null,Object? postType = null,Object? body = null,Object? isAnonymous = null,Object? mediaUrls = null,Object? media = null,Object? commentsDisabled = null,Object? tags = null,Object? workoutLogData = freezed,Object? mealData = freezed,Object? progressData = freezed,Object? locationLabel = null,Object? viewCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? commentCount = null,Object? repostCount = null,Object? isRepost = null,Object? isRepostedByMe = null,Object? originalPostId = freezed,Object? quoteBody = null,Object? reposters = null,Object? isSaved = null,Object? isPinned = null,Object? visibility = null,Object? contentRating = null,Object? moderationStatus = null,Object? aiAnalysis = freezed,Object? gymTagId = freezed,Object? gymTagName = freezed,Object? poll = freezed,Object? originalPostData = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? authorData = null,Object? postType = null,Object? body = null,Object? isAnonymous = null,Object? mediaUrls = null,Object? media = null,Object? commentsDisabled = null,Object? tags = null,Object? workoutLogData = freezed,Object? mealData = freezed,Object? progressData = freezed,Object? locationLabel = null,Object? viewCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? commentCount = null,Object? repostCount = null,Object? saveCount = null,Object? shareCount = null,Object? isRepost = null,Object? isRepostedByMe = null,Object? originalPostId = freezed,Object? quoteBody = null,Object? reposters = null,Object? isSaved = null,Object? isPinned = null,Object? visibility = null,Object? contentRating = null,Object? moderationStatus = null,Object? aiAnalysis = freezed,Object? gymTagId = freezed,Object? gymTagName = freezed,Object? poll = freezed,Object? originalPostData = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_Post(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
@@ -2519,6 +2537,8 @@ as int,reactionCounts: null == reactionCounts ? _self._reactionCounts : reaction
 as Map<String, int>,userReaction: freezed == userReaction ? _self.userReaction : userReaction // ignore: cast_nullable_to_non_nullable
 as String?,commentCount: null == commentCount ? _self.commentCount : commentCount // ignore: cast_nullable_to_non_nullable
 as int,repostCount: null == repostCount ? _self.repostCount : repostCount // ignore: cast_nullable_to_non_nullable
+as int,saveCount: null == saveCount ? _self.saveCount : saveCount // ignore: cast_nullable_to_non_nullable
+as int,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
 as int,isRepost: null == isRepost ? _self.isRepost : isRepost // ignore: cast_nullable_to_non_nullable
 as bool,isRepostedByMe: null == isRepostedByMe ? _self.isRepostedByMe : isRepostedByMe // ignore: cast_nullable_to_non_nullable
 as bool,originalPostId: freezed == originalPostId ? _self.originalPostId : originalPostId // ignore: cast_nullable_to_non_nullable
@@ -2580,7 +2600,7 @@ $OriginalPostDataCopyWith<$Res>? get originalPostData {
 /// @nodoc
 mixin _$Comment {
 
- String get id; String get postId; AuthorData get authorData; String get body; String? get parentId; bool get isAnonymous; int get replyCount; Map<String, int> get reactionCounts; String? get userReaction; String get createdAt; String? get updatedAt;
+ String get id;@JsonKey(name: 'post_id') String get postId;@JsonKey(name: 'author_data') AuthorData get authorData; String get body;@JsonKey(name: 'parent_id') String? get parentId;@JsonKey(name: 'is_anonymous') bool get isAnonymous;@JsonKey(name: 'reply_count') int get replyCount;@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts;@JsonKey(name: 'user_reaction') String? get userReaction;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
 /// Create a copy of Comment
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2613,7 +2633,7 @@ abstract mixin class $CommentCopyWith<$Res>  {
   factory $CommentCopyWith(Comment value, $Res Function(Comment) _then) = _$CommentCopyWithImpl;
 @useResult
 $Res call({
- String id, String postId, AuthorData authorData, String body, String? parentId, bool isAnonymous, int replyCount, Map<String, int> reactionCounts, String? userReaction, String createdAt, String? updatedAt
+ String id,@JsonKey(name: 'post_id') String postId,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'reply_count') int replyCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
@@ -2737,7 +2757,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String postId,  AuthorData authorData,  String body,  String? parentId,  bool isAnonymous,  int replyCount,  Map<String, int> reactionCounts,  String? userReaction,  String createdAt,  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'post_id')  String postId, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Comment() when $default != null:
 return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId,_that.isAnonymous,_that.replyCount,_that.reactionCounts,_that.userReaction,_that.createdAt,_that.updatedAt);case _:
@@ -2758,7 +2778,7 @@ return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String postId,  AuthorData authorData,  String body,  String? parentId,  bool isAnonymous,  int replyCount,  Map<String, int> reactionCounts,  String? userReaction,  String createdAt,  String? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'post_id')  String postId, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Comment():
 return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId,_that.isAnonymous,_that.replyCount,_that.reactionCounts,_that.userReaction,_that.createdAt,_that.updatedAt);case _:
@@ -2778,7 +2798,7 @@ return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String postId,  AuthorData authorData,  String body,  String? parentId,  bool isAnonymous,  int replyCount,  Map<String, int> reactionCounts,  String? userReaction,  String createdAt,  String? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'post_id')  String postId, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Comment() when $default != null:
 return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId,_that.isAnonymous,_that.replyCount,_that.reactionCounts,_that.userReaction,_that.createdAt,_that.updatedAt);case _:
@@ -2793,26 +2813,26 @@ return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId
 @JsonSerializable()
 
 class _Comment implements Comment {
-  const _Comment({required this.id, required this.postId, required this.authorData, required this.body, this.parentId, this.isAnonymous = false, this.replyCount = 0, final  Map<String, int> reactionCounts = const <String, int>{}, this.userReaction, required this.createdAt, this.updatedAt}): _reactionCounts = reactionCounts;
+  const _Comment({required this.id, @JsonKey(name: 'post_id') required this.postId, @JsonKey(name: 'author_data') required this.authorData, required this.body, @JsonKey(name: 'parent_id') this.parentId, @JsonKey(name: 'is_anonymous') this.isAnonymous = false, @JsonKey(name: 'reply_count') this.replyCount = 0, @JsonKey(name: 'reaction_counts') final  Map<String, int> reactionCounts = const <String, int>{}, @JsonKey(name: 'user_reaction') this.userReaction, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _reactionCounts = reactionCounts;
   factory _Comment.fromJson(Map<String, dynamic> json) => _$CommentFromJson(json);
 
 @override final  String id;
-@override final  String postId;
-@override final  AuthorData authorData;
+@override@JsonKey(name: 'post_id') final  String postId;
+@override@JsonKey(name: 'author_data') final  AuthorData authorData;
 @override final  String body;
-@override final  String? parentId;
-@override@JsonKey() final  bool isAnonymous;
-@override@JsonKey() final  int replyCount;
+@override@JsonKey(name: 'parent_id') final  String? parentId;
+@override@JsonKey(name: 'is_anonymous') final  bool isAnonymous;
+@override@JsonKey(name: 'reply_count') final  int replyCount;
  final  Map<String, int> _reactionCounts;
-@override@JsonKey() Map<String, int> get reactionCounts {
+@override@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts {
   if (_reactionCounts is EqualUnmodifiableMapView) return _reactionCounts;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableMapView(_reactionCounts);
 }
 
-@override final  String? userReaction;
-@override final  String createdAt;
-@override final  String? updatedAt;
+@override@JsonKey(name: 'user_reaction') final  String? userReaction;
+@override@JsonKey(name: 'created_at') final  String createdAt;
+@override@JsonKey(name: 'updated_at') final  String? updatedAt;
 
 /// Create a copy of Comment
 /// with the given fields replaced by the non-null parameter values.
@@ -2847,7 +2867,7 @@ abstract mixin class _$CommentCopyWith<$Res> implements $CommentCopyWith<$Res> {
   factory _$CommentCopyWith(_Comment value, $Res Function(_Comment) _then) = __$CommentCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String postId, AuthorData authorData, String body, String? parentId, bool isAnonymous, int replyCount, Map<String, int> reactionCounts, String? userReaction, String createdAt, String? updatedAt
+ String id,@JsonKey(name: 'post_id') String postId,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'reply_count') int replyCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
@@ -3163,7 +3183,7 @@ as String?,
 /// @nodoc
 mixin _$CreatePostPayload {
 
- String get postType; String? get body; String get visibility;@JsonKey(name: 'content_rating') String get contentRating; String? get gymTag; String? get locationLabel; List<String> get mediaUrls; List<String> get tags; bool get isAnonymous; String? get pollQuestion; List<String> get pollOptions; String? get pollClosesAt; bool get pollAllowMultiple; List<String> get mentionedUsers;
+@JsonKey(name: 'post_type') String get postType; String? get body; String get visibility;@JsonKey(name: 'content_rating') String get contentRating;@JsonKey(name: 'gym_tag') String? get gymTag;@JsonKey(name: 'location_label') String? get locationLabel;@JsonKey(name: 'media_urls') List<String> get mediaUrls; List<String> get tags;@JsonKey(name: 'is_anonymous') bool get isAnonymous;@JsonKey(name: 'poll_question') String? get pollQuestion;@JsonKey(name: 'poll_options') List<String> get pollOptions;@JsonKey(name: 'poll_closes_at') String? get pollClosesAt;@JsonKey(name: 'poll_allow_multiple') bool get pollAllowMultiple;@JsonKey(name: 'mentioned_users') List<String> get mentionedUsers;
 /// Create a copy of CreatePostPayload
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3196,7 +3216,7 @@ abstract mixin class $CreatePostPayloadCopyWith<$Res>  {
   factory $CreatePostPayloadCopyWith(CreatePostPayload value, $Res Function(CreatePostPayload) _then) = _$CreatePostPayloadCopyWithImpl;
 @useResult
 $Res call({
- String postType, String? body, String visibility,@JsonKey(name: 'content_rating') String contentRating, String? gymTag, String? locationLabel, List<String> mediaUrls, List<String> tags, bool isAnonymous, String? pollQuestion, List<String> pollOptions, String? pollClosesAt, bool pollAllowMultiple, List<String> mentionedUsers
+@JsonKey(name: 'post_type') String postType, String? body, String visibility,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'gym_tag') String? gymTag,@JsonKey(name: 'location_label') String? locationLabel,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<String> tags,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'poll_question') String? pollQuestion,@JsonKey(name: 'poll_options') List<String> pollOptions,@JsonKey(name: 'poll_closes_at') String? pollClosesAt,@JsonKey(name: 'poll_allow_multiple') bool pollAllowMultiple,@JsonKey(name: 'mentioned_users') List<String> mentionedUsers
 });
 
 
@@ -3314,7 +3334,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String postType,  String? body,  String visibility, @JsonKey(name: 'content_rating')  String contentRating,  String? gymTag,  String? locationLabel,  List<String> mediaUrls,  List<String> tags,  bool isAnonymous,  String? pollQuestion,  List<String> pollOptions,  String? pollClosesAt,  bool pollAllowMultiple,  List<String> mentionedUsers)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'post_type')  String postType,  String? body,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'gym_tag')  String? gymTag, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<String> tags, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'poll_question')  String? pollQuestion, @JsonKey(name: 'poll_options')  List<String> pollOptions, @JsonKey(name: 'poll_closes_at')  String? pollClosesAt, @JsonKey(name: 'poll_allow_multiple')  bool pollAllowMultiple, @JsonKey(name: 'mentioned_users')  List<String> mentionedUsers)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CreatePostPayload() when $default != null:
 return $default(_that.postType,_that.body,_that.visibility,_that.contentRating,_that.gymTag,_that.locationLabel,_that.mediaUrls,_that.tags,_that.isAnonymous,_that.pollQuestion,_that.pollOptions,_that.pollClosesAt,_that.pollAllowMultiple,_that.mentionedUsers);case _:
@@ -3335,7 +3355,7 @@ return $default(_that.postType,_that.body,_that.visibility,_that.contentRating,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String postType,  String? body,  String visibility, @JsonKey(name: 'content_rating')  String contentRating,  String? gymTag,  String? locationLabel,  List<String> mediaUrls,  List<String> tags,  bool isAnonymous,  String? pollQuestion,  List<String> pollOptions,  String? pollClosesAt,  bool pollAllowMultiple,  List<String> mentionedUsers)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'post_type')  String postType,  String? body,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'gym_tag')  String? gymTag, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<String> tags, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'poll_question')  String? pollQuestion, @JsonKey(name: 'poll_options')  List<String> pollOptions, @JsonKey(name: 'poll_closes_at')  String? pollClosesAt, @JsonKey(name: 'poll_allow_multiple')  bool pollAllowMultiple, @JsonKey(name: 'mentioned_users')  List<String> mentionedUsers)  $default,) {final _that = this;
 switch (_that) {
 case _CreatePostPayload():
 return $default(_that.postType,_that.body,_that.visibility,_that.contentRating,_that.gymTag,_that.locationLabel,_that.mediaUrls,_that.tags,_that.isAnonymous,_that.pollQuestion,_that.pollOptions,_that.pollClosesAt,_that.pollAllowMultiple,_that.mentionedUsers);case _:
@@ -3355,7 +3375,7 @@ return $default(_that.postType,_that.body,_that.visibility,_that.contentRating,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String postType,  String? body,  String visibility, @JsonKey(name: 'content_rating')  String contentRating,  String? gymTag,  String? locationLabel,  List<String> mediaUrls,  List<String> tags,  bool isAnonymous,  String? pollQuestion,  List<String> pollOptions,  String? pollClosesAt,  bool pollAllowMultiple,  List<String> mentionedUsers)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'post_type')  String postType,  String? body,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'gym_tag')  String? gymTag, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<String> tags, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'poll_question')  String? pollQuestion, @JsonKey(name: 'poll_options')  List<String> pollOptions, @JsonKey(name: 'poll_closes_at')  String? pollClosesAt, @JsonKey(name: 'poll_allow_multiple')  bool pollAllowMultiple, @JsonKey(name: 'mentioned_users')  List<String> mentionedUsers)?  $default,) {final _that = this;
 switch (_that) {
 case _CreatePostPayload() when $default != null:
 return $default(_that.postType,_that.body,_that.visibility,_that.contentRating,_that.gymTag,_that.locationLabel,_that.mediaUrls,_that.tags,_that.isAnonymous,_that.pollQuestion,_that.pollOptions,_that.pollClosesAt,_that.pollAllowMultiple,_that.mentionedUsers);case _:
@@ -3370,17 +3390,17 @@ return $default(_that.postType,_that.body,_that.visibility,_that.contentRating,_
 @JsonSerializable()
 
 class _CreatePostPayload implements CreatePostPayload {
-  const _CreatePostPayload({required this.postType, this.body, this.visibility = 'public', @JsonKey(name: 'content_rating') this.contentRating = 'general', this.gymTag, this.locationLabel, final  List<String> mediaUrls = const <String>[], final  List<String> tags = const <String>[], this.isAnonymous = false, this.pollQuestion, final  List<String> pollOptions = const <String>[], this.pollClosesAt, this.pollAllowMultiple = false, final  List<String> mentionedUsers = const <String>[]}): _mediaUrls = mediaUrls,_tags = tags,_pollOptions = pollOptions,_mentionedUsers = mentionedUsers;
+  const _CreatePostPayload({@JsonKey(name: 'post_type') required this.postType, this.body, this.visibility = 'public', @JsonKey(name: 'content_rating') this.contentRating = 'general', @JsonKey(name: 'gym_tag') this.gymTag, @JsonKey(name: 'location_label') this.locationLabel, @JsonKey(name: 'media_urls') final  List<String> mediaUrls = const <String>[], final  List<String> tags = const <String>[], @JsonKey(name: 'is_anonymous') this.isAnonymous = false, @JsonKey(name: 'poll_question') this.pollQuestion, @JsonKey(name: 'poll_options') final  List<String> pollOptions = const <String>[], @JsonKey(name: 'poll_closes_at') this.pollClosesAt, @JsonKey(name: 'poll_allow_multiple') this.pollAllowMultiple = false, @JsonKey(name: 'mentioned_users') final  List<String> mentionedUsers = const <String>[]}): _mediaUrls = mediaUrls,_tags = tags,_pollOptions = pollOptions,_mentionedUsers = mentionedUsers;
   factory _CreatePostPayload.fromJson(Map<String, dynamic> json) => _$CreatePostPayloadFromJson(json);
 
-@override final  String postType;
+@override@JsonKey(name: 'post_type') final  String postType;
 @override final  String? body;
 @override@JsonKey() final  String visibility;
 @override@JsonKey(name: 'content_rating') final  String contentRating;
-@override final  String? gymTag;
-@override final  String? locationLabel;
+@override@JsonKey(name: 'gym_tag') final  String? gymTag;
+@override@JsonKey(name: 'location_label') final  String? locationLabel;
  final  List<String> _mediaUrls;
-@override@JsonKey() List<String> get mediaUrls {
+@override@JsonKey(name: 'media_urls') List<String> get mediaUrls {
   if (_mediaUrls is EqualUnmodifiableListView) return _mediaUrls;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_mediaUrls);
@@ -3393,19 +3413,19 @@ class _CreatePostPayload implements CreatePostPayload {
   return EqualUnmodifiableListView(_tags);
 }
 
-@override@JsonKey() final  bool isAnonymous;
-@override final  String? pollQuestion;
+@override@JsonKey(name: 'is_anonymous') final  bool isAnonymous;
+@override@JsonKey(name: 'poll_question') final  String? pollQuestion;
  final  List<String> _pollOptions;
-@override@JsonKey() List<String> get pollOptions {
+@override@JsonKey(name: 'poll_options') List<String> get pollOptions {
   if (_pollOptions is EqualUnmodifiableListView) return _pollOptions;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_pollOptions);
 }
 
-@override final  String? pollClosesAt;
-@override@JsonKey() final  bool pollAllowMultiple;
+@override@JsonKey(name: 'poll_closes_at') final  String? pollClosesAt;
+@override@JsonKey(name: 'poll_allow_multiple') final  bool pollAllowMultiple;
  final  List<String> _mentionedUsers;
-@override@JsonKey() List<String> get mentionedUsers {
+@override@JsonKey(name: 'mentioned_users') List<String> get mentionedUsers {
   if (_mentionedUsers is EqualUnmodifiableListView) return _mentionedUsers;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_mentionedUsers);
@@ -3445,7 +3465,7 @@ abstract mixin class _$CreatePostPayloadCopyWith<$Res> implements $CreatePostPay
   factory _$CreatePostPayloadCopyWith(_CreatePostPayload value, $Res Function(_CreatePostPayload) _then) = __$CreatePostPayloadCopyWithImpl;
 @override @useResult
 $Res call({
- String postType, String? body, String visibility,@JsonKey(name: 'content_rating') String contentRating, String? gymTag, String? locationLabel, List<String> mediaUrls, List<String> tags, bool isAnonymous, String? pollQuestion, List<String> pollOptions, String? pollClosesAt, bool pollAllowMultiple, List<String> mentionedUsers
+@JsonKey(name: 'post_type') String postType, String? body, String visibility,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'gym_tag') String? gymTag,@JsonKey(name: 'location_label') String? locationLabel,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<String> tags,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'poll_question') String? pollQuestion,@JsonKey(name: 'poll_options') List<String> pollOptions,@JsonKey(name: 'poll_closes_at') String? pollClosesAt,@JsonKey(name: 'poll_allow_multiple') bool pollAllowMultiple,@JsonKey(name: 'mentioned_users') List<String> mentionedUsers
 });
 
 
@@ -3489,7 +3509,7 @@ as List<String>,
 /// @nodoc
 mixin _$ReactionInput {
 
- String get reactionType;
+@JsonKey(name: 'reaction_type') String get reactionType;
 /// Create a copy of ReactionInput
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3522,7 +3542,7 @@ abstract mixin class $ReactionInputCopyWith<$Res>  {
   factory $ReactionInputCopyWith(ReactionInput value, $Res Function(ReactionInput) _then) = _$ReactionInputCopyWithImpl;
 @useResult
 $Res call({
- String reactionType
+@JsonKey(name: 'reaction_type') String reactionType
 });
 
 
@@ -3627,7 +3647,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String reactionType)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'reaction_type')  String reactionType)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReactionInput() when $default != null:
 return $default(_that.reactionType);case _:
@@ -3648,7 +3668,7 @@ return $default(_that.reactionType);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String reactionType)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'reaction_type')  String reactionType)  $default,) {final _that = this;
 switch (_that) {
 case _ReactionInput():
 return $default(_that.reactionType);case _:
@@ -3668,7 +3688,7 @@ return $default(_that.reactionType);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String reactionType)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'reaction_type')  String reactionType)?  $default,) {final _that = this;
 switch (_that) {
 case _ReactionInput() when $default != null:
 return $default(_that.reactionType);case _:
@@ -3683,10 +3703,10 @@ return $default(_that.reactionType);case _:
 @JsonSerializable()
 
 class _ReactionInput implements ReactionInput {
-  const _ReactionInput({required this.reactionType});
+  const _ReactionInput({@JsonKey(name: 'reaction_type') required this.reactionType});
   factory _ReactionInput.fromJson(Map<String, dynamic> json) => _$ReactionInputFromJson(json);
 
-@override final  String reactionType;
+@override@JsonKey(name: 'reaction_type') final  String reactionType;
 
 /// Create a copy of ReactionInput
 /// with the given fields replaced by the non-null parameter values.
@@ -3721,7 +3741,7 @@ abstract mixin class _$ReactionInputCopyWith<$Res> implements $ReactionInputCopy
   factory _$ReactionInputCopyWith(_ReactionInput value, $Res Function(_ReactionInput) _then) = __$ReactionInputCopyWithImpl;
 @override @useResult
 $Res call({
- String reactionType
+@JsonKey(name: 'reaction_type') String reactionType
 });
 
 
@@ -3752,7 +3772,7 @@ as String,
 /// @nodoc
 mixin _$CommentCreateInput {
 
- String get body; String? get parentId; bool get isAnonymous;
+ String get body;@JsonKey(name: 'parent_id') String? get parentId;@JsonKey(name: 'is_anonymous') bool get isAnonymous;
 /// Create a copy of CommentCreateInput
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3785,7 +3805,7 @@ abstract mixin class $CommentCreateInputCopyWith<$Res>  {
   factory $CommentCreateInputCopyWith(CommentCreateInput value, $Res Function(CommentCreateInput) _then) = _$CommentCreateInputCopyWithImpl;
 @useResult
 $Res call({
- String body, String? parentId, bool isAnonymous
+ String body,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous
 });
 
 
@@ -3892,7 +3912,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String body,  String? parentId,  bool isAnonymous)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CommentCreateInput() when $default != null:
 return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
@@ -3913,7 +3933,7 @@ return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String body,  String? parentId,  bool isAnonymous)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous)  $default,) {final _that = this;
 switch (_that) {
 case _CommentCreateInput():
 return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
@@ -3933,7 +3953,7 @@ return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String body,  String? parentId,  bool isAnonymous)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous)?  $default,) {final _that = this;
 switch (_that) {
 case _CommentCreateInput() when $default != null:
 return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
@@ -3948,12 +3968,12 @@ return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
 @JsonSerializable()
 
 class _CommentCreateInput implements CommentCreateInput {
-  const _CommentCreateInput({required this.body, this.parentId, this.isAnonymous = false});
+  const _CommentCreateInput({required this.body, @JsonKey(name: 'parent_id') this.parentId, @JsonKey(name: 'is_anonymous') this.isAnonymous = false});
   factory _CommentCreateInput.fromJson(Map<String, dynamic> json) => _$CommentCreateInputFromJson(json);
 
 @override final  String body;
-@override final  String? parentId;
-@override@JsonKey() final  bool isAnonymous;
+@override@JsonKey(name: 'parent_id') final  String? parentId;
+@override@JsonKey(name: 'is_anonymous') final  bool isAnonymous;
 
 /// Create a copy of CommentCreateInput
 /// with the given fields replaced by the non-null parameter values.
@@ -3988,7 +4008,7 @@ abstract mixin class _$CommentCreateInputCopyWith<$Res> implements $CommentCreat
   factory _$CommentCreateInputCopyWith(_CommentCreateInput value, $Res Function(_CommentCreateInput) _then) = __$CommentCreateInputCopyWithImpl;
 @override @useResult
 $Res call({
- String body, String? parentId, bool isAnonymous
+ String body,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous
 });
 
 
@@ -4021,7 +4041,7 @@ as bool,
 /// @nodoc
 mixin _$RepostPayload {
 
- String get quoteBody;
+@JsonKey(name: 'quote_body') String get quoteBody;
 /// Create a copy of RepostPayload
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4054,7 +4074,7 @@ abstract mixin class $RepostPayloadCopyWith<$Res>  {
   factory $RepostPayloadCopyWith(RepostPayload value, $Res Function(RepostPayload) _then) = _$RepostPayloadCopyWithImpl;
 @useResult
 $Res call({
- String quoteBody
+@JsonKey(name: 'quote_body') String quoteBody
 });
 
 
@@ -4159,7 +4179,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String quoteBody)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'quote_body')  String quoteBody)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RepostPayload() when $default != null:
 return $default(_that.quoteBody);case _:
@@ -4180,7 +4200,7 @@ return $default(_that.quoteBody);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String quoteBody)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'quote_body')  String quoteBody)  $default,) {final _that = this;
 switch (_that) {
 case _RepostPayload():
 return $default(_that.quoteBody);case _:
@@ -4200,7 +4220,7 @@ return $default(_that.quoteBody);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String quoteBody)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'quote_body')  String quoteBody)?  $default,) {final _that = this;
 switch (_that) {
 case _RepostPayload() when $default != null:
 return $default(_that.quoteBody);case _:
@@ -4215,10 +4235,10 @@ return $default(_that.quoteBody);case _:
 @JsonSerializable()
 
 class _RepostPayload implements RepostPayload {
-  const _RepostPayload({this.quoteBody = ''});
+  const _RepostPayload({@JsonKey(name: 'quote_body') this.quoteBody = ''});
   factory _RepostPayload.fromJson(Map<String, dynamic> json) => _$RepostPayloadFromJson(json);
 
-@override@JsonKey() final  String quoteBody;
+@override@JsonKey(name: 'quote_body') final  String quoteBody;
 
 /// Create a copy of RepostPayload
 /// with the given fields replaced by the non-null parameter values.
@@ -4253,7 +4273,7 @@ abstract mixin class _$RepostPayloadCopyWith<$Res> implements $RepostPayloadCopy
   factory _$RepostPayloadCopyWith(_RepostPayload value, $Res Function(_RepostPayload) _then) = __$RepostPayloadCopyWithImpl;
 @override @useResult
 $Res call({
- String quoteBody
+@JsonKey(name: 'quote_body') String quoteBody
 });
 
 

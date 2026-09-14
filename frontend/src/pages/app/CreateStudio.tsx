@@ -4,55 +4,59 @@
  * Steps: Pick → Edit (trim) → Sound → Cover → Captions → Audience + Publish.
  * TikTok upload model: picking creates a LOCAL copy only (auto-saved to
  * IndexedDB so a refresh never loses the edit); upload starts ONLY when the
- * user hits Publish, after a short finalizing pass, with a percentage-based
- * progress stage. Publish sends a structured `media` JSON payload.
+ * user hits Publish — as a BACKGROUND job (see lib/uploadManager) with
+ * percentage progress. Navigating away never aborts a running upload while
+ * the SPA is alive; the draft is cleared only after post-create success.
+ * Captions are owned per clip (captionsByItem) and ship with each video.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Camera, ChevronLeft, ChevronRight, Clapperboard, Image as ImageIcon,
-  Loader2, Music, Plus, Scissors, Trash2, Type, Users, X,
+  ArrowLeft, ArrowRight, Camera, Captions, ChevronLeft, ChevronRight, Clapperboard, Copy, Image as ImageIcon,
+  Loader2, Music, Pause, Play, Plus, RotateCcw, Redo2, Scissors, Trash2, Type, Undo2, Users, X,
 } from 'lucide-react';
 import { feedApi, type Sound } from '@/api/feed';
+import { getOrExportTrimmedVideo } from '@/lib/uploader';
 import {
-  compressImage, uploadToCloudinary, UploadError, extractServerError,
-  type UploadedMedia, type UploadProgress,
-} from '@/lib/uploader';
-import { buildMediaPayload, MAX_MEDIA_ITEMS } from '@/lib/createStudio';
+  MAX_MEDIA_ITEMS, defaultEditMeta, splitTrim, partitionTimedElements,
+  normalizeTrimExport, shouldExportTrimmedVideo,
+  cleanCaptionSegments, cloneCaptionSegments, newCaptionId, partitionCaptionsForSplit,
+  UndoStack,
+  type AudioTrack, type CaptionsByItem, type CaptionsStyle, type EditMeta, type TrimRangeValue,
+} from '@/lib/createStudio';
 import {
-  saveStudioDraft, loadStudioDraft, clearStudioDraft,
+  saveStudioDraft, loadStudioDraft,
+  extractCaptionsByItem, isQuotaError,
   type DraftMediaItem,
 } from '@/lib/createDrafts';
+import { uploadManager, type EnqueueSpec, type JobSnapshot, type PersistedSession } from '@/lib/uploadManager';
 import { track } from '@/lib/analytics';
-import { TrimEditor, type TrimRangeValue } from '@/components/create/TrimEditor';
+import { EditStage } from '@/components/create/EditStage';
 import { SoundPicker, type SelectedSound } from '@/components/create/SoundPicker';
 import { CoverPicker } from '@/components/create/CoverPicker';
-import { CaptionsPanel, type CaptionSegment } from '@/components/create/CaptionsPanel';
+import { CaptionsPanel, type AutoCaptionJob, type CaptionSegment } from '@/components/create/CaptionsPanel';
 import { AudienceSheet } from '@/components/create/AudienceSheet';
 import type { Visibility } from '@/types';
 
 type StepKey = 'pick' | 'edit' | 'sound' | 'cover' | 'captions' | 'post';
-type PublishStage = 'finalizing' | 'uploading' | 'creating';
 
 interface StudioItem {
   id: string;
   file: File;
   kind: 'image' | 'video';
   previewUrl: string;
-  status: 'ready' | 'uploading' | 'done' | 'error';
-  progress: number;
-  media?: UploadedMedia;
   durationMs: number | null;
   trim: TrimRangeValue | null;
+  editMeta: EditMeta;
   altText: string;
   coverOffsetSec: number | null;
 }
 
-interface UploadState {
-  itemName: string;
-  pct: number;
-  loadedBytes: number;
-  totalBytes: number;
+interface StudioSnap {
+  items: StudioItem[];
+  captionsByItem: CaptionsByItem;
+  captionStylesByItem: Record<string, CaptionsStyle>;
+  sound: SelectedSound | null;
 }
 
 function formatBytes(bytes: number): string {
@@ -61,12 +65,23 @@ function formatBytes(bytes: number): string {
   return `${bytes} B`;
 }
 
+function cloneEditMeta(meta: EditMeta): EditMeta {
+  return {
+    ...meta,
+    adjust: { ...meta.adjust },
+    textOverlays: meta.textOverlays.map((o) => ({ ...o })),
+    stickers: (meta.stickers || []).map((s) => ({ ...s })),
+    audioTracks: meta.audioTracks.map((t) => ({ ...t })),
+    captions_style: meta.captions_style ? { ...meta.captions_style } : meta.captions_style,
+  };
+}
+
 const STEP_META: Record<StepKey, { title: string; blurb: string }> = {
   pick: { title: 'Pick media', blurb: 'Choose up to 12 photos and videos' },
   edit: { title: 'Trim clips', blurb: 'Set the best in and out points' },
   sound: { title: 'Add sound', blurb: 'Pick a sound or keep original audio' },
   cover: { title: 'Choose cover', blurb: 'Pick the frame people see first' },
-  captions: { title: 'Captions', blurb: 'Auto or manual timed captions' },
+  captions: { title: 'Captions', blurb: 'Review & style per clip' },
   post: { title: 'Post', blurb: 'Caption, audience & publish' },
 };
 
@@ -74,33 +89,47 @@ export default function CreateStudio() {
   const navigate = useNavigate();
 
   const [items, setItems] = useState<StudioItem[]>([]);
+  const [captionsByItem, setCaptionsByItem] = useState<CaptionsByItem>({});
+  const [captionStylesByItem, setCaptionStylesByItem] = useState<Record<string, CaptionsStyle>>({});
+  const [autoStateByItem, setAutoStateByItem] = useState<Record<string, AutoCaptionJob>>({});
   const [stepIdx, setStepIdx] = useState(0);
   const [showSoundPicker, setShowSoundPicker] = useState(false);
   const [sound, setSound] = useState<SelectedSound | null>(null);
   const [autoCaptions, setAutoCaptions] = useState(true);
-  const [segments, setSegments] = useState<CaptionSegment[]>([]);
   const [visibility, setVisibility] = useState<Visibility>('public');
   const [commentsDisabled, setCommentsDisabled] = useState(false);
   const [body, setBody] = useState('');
-  const [publishStage, setPublishStage] = useState<PublishStage | null>(null);
-  const [uploadState, setUploadState] = useState<UploadState | null>(null);
   const [publishError, setPublishError] = useState('');
   const [draftRestored, setDraftRestored] = useState(false);
+  const [storageFull, setStorageFull] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [jobSnap, setJobSnap] = useState<JobSnapshot | null>(null);
+  const [sessions, setSessions] = useState<PersistedSession[]>([]);
+  const [, setHistTick] = useState(0);
 
-  const abortMapRef = useRef<Map<string, AbortController>>(new Map());
-  const idempotencyRef = useRef<string | null>(null);
+  const autoCtrlRef = useRef<Map<string, AbortController>>(new Map());
   const itemsRef = useRef<StudioItem[]>([]);
+  const captionsRef = useRef<CaptionsByItem>({});
+  const stylesRef = useRef<Record<string, CaptionsStyle>>({});
+  const soundRef = useRef<SelectedSound | null>(null);
+  const historyRef = useRef(new UndoStack<StudioSnap>(50));
+  const lastHistPushRef = useRef(0);
+  const urlsRef = useRef<Set<string>>(new Set());
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraVideoInputRef = useRef<HTMLInputElement>(null);
   const cameraPhotoInputRef = useRef<HTMLInputElement>(null);
 
-  // Active video per Edit/Cover step.
+  // Active video per Edit/Cover/Captions step.
   const videoItems = useMemo(() => items.filter((it) => it.kind === 'video'), [items]);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const activeVideo = videoItems.find((it) => it.id === activeVideoId) ?? videoItems[0] ?? null;
+  const activeIdx = activeVideo ? videoItems.findIndex((it) => it.id === activeVideo.id) : -1;
 
   const hasVideo = videoItems.length > 0;
   useEffect(() => { itemsRef.current = items; }, [items]);
+  useEffect(() => { captionsRef.current = captionsByItem; }, [captionsByItem]);
+  useEffect(() => { stylesRef.current = captionStylesByItem; }, [captionStylesByItem]);
+  useEffect(() => { soundRef.current = sound; }, [sound]);
   const steps: StepKey[] = useMemo(() => {
     const s: StepKey[] = ['pick'];
     if (hasVideo) s.push('edit', 'sound', 'cover');
@@ -115,7 +144,43 @@ export default function CreateStudio() {
     setStepIdx((i) => Math.min(i, steps.length - 1));
   }, [steps.length]);
 
-  // ── Local draft (IndexedDB): load once, autosave on change, clear on publish ──
+  // ── Bounded undo/redo (trim/text/stickers/captions/audio/filter/speed) ──
+  const snapshotNow = (): StudioSnap => ({
+    items: itemsRef.current,
+    captionsByItem: captionsRef.current,
+    captionStylesByItem: stylesRef.current,
+    sound: soundRef.current,
+  });
+  const pushHistory = (mode: 'discrete' | 'coalesce' = 'discrete') => {
+    const now = Date.now();
+    if (mode === 'coalesce' && now - lastHistPushRef.current < 1500) return;
+    lastHistPushRef.current = now;
+    historyRef.current.push(snapshotNow());
+    setHistTick((t) => t + 1);
+  };
+  const restoreSnap = (s: StudioSnap) => {
+    setItems(s.items);
+    setCaptionsByItem(s.captionsByItem);
+    setCaptionStylesByItem(s.captionStylesByItem);
+    setSound(s.sound);
+  };
+  const undo = () => {
+    const prev = historyRef.current.undo(snapshotNow());
+    if (prev) {
+      restoreSnap(prev);
+      setHistTick((t) => t + 1);
+    }
+  };
+  const redo = () => {
+    const next = historyRef.current.redo(snapshotNow());
+    if (next) {
+      restoreSnap(next);
+      setHistTick((t) => t + 1);
+    }
+  };
+
+  // ── Local draft (IndexedDB): load once, autosave on change ────────────────
+  // Cleared only by the upload manager after post-create success.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -123,28 +188,45 @@ export default function CreateStudio() {
       if (cancelled || !draft || draft.items.length === 0) return;
       const restored: StudioItem[] = draft.items.map((d: DraftMediaItem) => {
         const file = new File([d.blob], d.name, { type: d.type });
+        const previewUrl = URL.createObjectURL(file);
+        urlsRef.current.add(previewUrl);
         return {
           id: d.id,
           file,
           kind: d.kind,
-          previewUrl: URL.createObjectURL(file),
-          status: 'ready' as const,
-          progress: 0,
+          previewUrl,
           durationMs: d.duration_ms ?? null,
           trim: d.trim_start_ms != null && d.trim_end_ms != null
             ? { start_ms: d.trim_start_ms, end_ms: d.trim_end_ms }
             : null,
           altText: d.alt_text ?? '',
           coverOffsetSec: d.cover_offset_sec ?? null,
+          editMeta: { ...defaultEditMeta(), ...(d.edit_meta ?? {}) },
         };
       });
+      const perClip = extractCaptionsByItem(draft);
+      const seeded: CaptionsByItem = {};
+      for (const [id, list] of Object.entries(perClip)) {
+        seeded[id] = list.map((s) => ({ id: newCaptionId(), start_ms: s.start_ms, end_ms: s.end_ms, text: s.text }));
+      }
+      const seededStyles: Record<string, CaptionsStyle> = {};
+      for (const d of draft.items) {
+        if (d.edit_meta?.captions_style) seededStyles[d.id] = { ...d.edit_meta.captions_style };
+      }
       setItems(restored);
+      setCaptionsByItem(seeded);
+      setCaptionStylesByItem(seededStyles);
       setBody(draft.text);
       setVisibility((draft.visibility as Visibility) || 'public');
       setCommentsDisabled(draft.commentsDisabled);
       if (draft.items.some((d) => d.sound)) {
         const ds = draft.items.find((d) => d.sound)!.sound!;
-        setSound({ id: ds.id, name: ds.name, artist: ds.artist, volume: ds.volume });
+        setSound({
+          id: ds.id, name: ds.name, artist: ds.artist, volume: ds.volume,
+          ...(ds.start_offset_ms != null ? { startOffsetMs: ds.start_offset_ms } : {}),
+          ...(ds.fade_in_ms != null ? { fadeInMs: ds.fade_in_ms } : {}),
+          ...(ds.fade_out_ms != null ? { fadeOutMs: ds.fade_out_ms } : {}),
+        });
       }
       setDraftRestored(true);
     })();
@@ -152,8 +234,8 @@ export default function CreateStudio() {
   }, []);
 
   // Debounced autosave — media Blobs are structured-cloneable into IDB.
+  // Quota failures keep the memory copy and surface a banner (never discard).
   useEffect(() => {
-    if (publishStage) return;
     const timer = setTimeout(() => {
       if (items.length === 0 && !body) return;
       const draftItems: DraftMediaItem[] = items.map((it) => ({
@@ -166,9 +248,25 @@ export default function CreateStudio() {
         duration_ms: it.durationMs ?? undefined,
         trim_start_ms: it.trim?.start_ms,
         trim_end_ms: it.trim?.end_ms,
-        sound: sound && it.kind === 'video' ? sound : undefined,
+        sound: sound && it.kind === 'video'
+          ? {
+            id: sound.id, name: sound.name, artist: sound.artist, volume: sound.volume,
+            ...(sound.startOffsetMs != null ? { start_offset_ms: sound.startOffsetMs } : {}),
+            ...(sound.fadeInMs != null ? { fade_in_ms: sound.fadeInMs } : {}),
+            ...(sound.fadeOutMs != null ? { fadeOutMs: sound.fadeOutMs } : {}),
+          }
+          : undefined,
         alt_text: it.altText || undefined,
         cover_offset_sec: it.coverOffsetSec,
+        edit_meta: it.kind === 'video'
+          ? {
+            ...it.editMeta,
+            ...(captionStylesByItem[it.id] ? { captions_style: captionStylesByItem[it.id] } : {}),
+          }
+          : undefined,
+        captions: it.kind === 'video' && captionsByItem[it.id]?.length
+          ? cleanCaptionSegments(captionsByItem[it.id])
+          : undefined,
       }));
       void saveStudioDraft({
         savedAt: Date.now(),
@@ -177,18 +275,67 @@ export default function CreateStudio() {
         visibility,
         commentsDisabled,
         items: draftItems,
+      }).then((res) => {
+        setStorageFull(!res.ok && res.quota);
+      }).catch((err) => {
+        setStorageFull(isQuotaError(err));
       });
     }, 800);
     return () => clearTimeout(timer);
-  }, [items, body, visibility, commentsDisabled, sound, publishStage]);
+  }, [items, captionsByItem, captionStylesByItem, body, visibility, commentsDisabled, sound]);
 
-  // Revoke object previews on unmount.
+  // Revoke object previews on unmount (shared URLs are revoked once via set).
   useEffect(() => () => {
-    itemsRef.current.forEach((it) => URL.revokeObjectURL(it.previewUrl));
+    const urls = urlsRef.current;
+    urls.forEach((u) => {
+      try {
+        URL.revokeObjectURL(u);
+      } catch {
+        // Already revoked.
+      }
+    });
+    autoCtrlRef.current.forEach((c) => {
+      try {
+        c.abort();
+      } catch {
+        // ignore
+      }
+    });
   }, []);
 
+  // Re-attach to a running job after remount (same SPA session) and follow it.
+  useEffect(() => {
+    if (!jobId) {
+      const active = uploadManager.getAllSnapshots().find((s) =>
+        ['queued', 'finalizing', 'uploading', 'creating', 'paused', 'failed'].includes(s.status),
+      );
+      if (active) setJobId(active.jobId);
+    }
+    setSessions(uploadManager.getPersistedSessions().filter((s) => s.status !== 'done' && s.status !== 'canceled'));
+  }, [jobId]);
+
+  useEffect(() => {
+    if (!jobId) return;
+    setJobSnap(uploadManager.getSnapshot(jobId));
+    const unsub = uploadManager.subscribe((ev) => {
+      if (ev.snapshot.jobId !== jobId) return;
+      setJobSnap(ev.snapshot);
+      setSessions(uploadManager.getPersistedSessions().filter((s) => s.status !== 'done' && s.status !== 'canceled'));
+      if (ev.type === 'done') {
+        track('create.published', {
+          surface: 'create',
+          properties: { media_count: ev.snapshot.items.length },
+        });
+        navigate('/feed/bud-press');
+      } else if (ev.type === 'failed') {
+        track('upload.failed', { surface: 'create', object_type: 'media' });
+      }
+    });
+    return unsub;
+  }, [jobId, navigate]);
+
   // ── Pick: local copy only — no network. ────────────────────────────────────
-  const handleFiles = useCallback((fileList: FileList | null) => {
+  const handleFiles = (fileList: FileList | null) => {
     if (!fileList) return;
     const remaining = MAX_MEDIA_ITEMS - itemsRef.current.length;
     const picked = Array.from(fileList)
@@ -197,37 +344,260 @@ export default function CreateStudio() {
     if (picked.length === 0) return;
     track('create.started', { surface: 'create', properties: { count: picked.length } });
     setDraftRestored(false);
-    const newItems: StudioItem[] = picked.map((file) => ({
-      id: crypto.randomUUID(),
-      file,
-      kind: file.type.startsWith('video/') ? 'video' : 'image',
-      previewUrl: URL.createObjectURL(file),
-      status: 'ready',
-      progress: 0,
-      durationMs: null,
-      trim: null,
-      altText: '',
-      coverOffsetSec: null,
-    }));
+    const newItems: StudioItem[] = picked.map((file) => {
+      const previewUrl = URL.createObjectURL(file);
+      urlsRef.current.add(previewUrl);
+      return {
+        id: crypto.randomUUID(),
+        file,
+        kind: file.type.startsWith('video/') ? 'video' : 'image',
+        previewUrl,
+        durationMs: null,
+        trim: null,
+        editMeta: defaultEditMeta(),
+        altText: '',
+        coverOffsetSec: null,
+      };
+    });
+    pushHistory();
     setItems((prev) => [...prev, ...newItems]);
-  }, []);
-
-  const removeItem = (id: string) => {
-    const item = itemsRef.current.find((it) => it.id === id);
-    if (item) URL.revokeObjectURL(item.previewUrl);
-    setItems((prev) => prev.filter((it) => it.id !== id));
   };
 
-  const handleTrimChange = (itemId: string) => (trim: TrimRangeValue, meta: { clamped: boolean }) => {
-    setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, trim } : it)));
-    track('create.trim_set', {
-      surface: 'create',
-      properties: { item_id: itemId, start_ms: trim.start_ms, end_ms: trim.end_ms, clamped: meta.clamped },
+  const removeItem = (id: string) => {
+    pushHistory();
+    setItems((prev) => prev.filter((it) => it.id !== id));
+    setCaptionsByItem((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setCaptionStylesByItem((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setAutoStateByItem((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    // Preview URLs are revoked once on unmount (undo may restore the item).
+  };
+
+  /** Clip-strip reorder: captions/styles ride along (keyed by item id). */
+  const moveItem = (id: string, dir: -1 | 1) => {
+    const idx = items.findIndex((it) => it.id === id);
+    const j = idx + dir;
+    if (idx < 0 || j < 0 || j >= items.length) return;
+    pushHistory();
+    setItems((prev) => {
+      const next = [...prev];
+      const at = next.findIndex((it) => it.id === id);
+      if (at < 0 || at + dir < 0 || at + dir >= next.length) return prev;
+      const [moved] = next.splice(at, 1);
+      next.splice(at + dir, 0, moved);
+      return next;
     });
   };
 
+  /** Clip-strip duplicate: same bytes, copied trim/edits/captions, fresh id. */
+  const duplicateItem = (id: string) => {
+    const item = items.find((it) => it.id === id);
+    if (!item || items.length >= MAX_MEDIA_ITEMS) return;
+    pushHistory();
+    const nid = crypto.randomUUID();
+    const copy: StudioItem = { ...item, id: nid, trim: item.trim ? { ...item.trim } : null, editMeta: cloneEditMeta(item.editMeta) };
+    setItems((prev) => {
+      const at = prev.findIndex((it) => it.id === id);
+      if (at < 0) return prev;
+      const next = [...prev];
+      next.splice(at + 1, 0, copy);
+      return next;
+    });
+    const caps = captionsByItem[id];
+    if (caps?.length) {
+      const cloned = cloneCaptionSegments(caps);
+      setCaptionsByItem((prev) => ({ ...prev, [nid]: cloned }));
+    }
+    const st = captionStylesByItem[id] ?? item.editMeta.captions_style;
+    if (st) setCaptionStylesByItem((prev) => ({ ...prev, [nid]: { ...st } }));
+    track('create.clip_duplicated', { surface: 'create', properties: { kind: item.kind } });
+  };
+
+  const handleTrimChange = (itemId: string) => (trim: TrimRangeValue, _meta?: { clamped: boolean }) => {
+    pushHistory('coalesce');
+    setItems((prev) => prev.map((it) => (it.id === itemId ? { ...it, trim } : it)));
+    track('create.trim_set', {
+      properties: { item_id: itemId, start_ms: trim.start_ms, end_ms: trim.end_ms },
+    });
+  };
+
+  const handleMetaChange = (itemId: string) => (patch: Partial<EditMeta>) => {
+    pushHistory('coalesce');
+    setItems((prev) => prev.map((it) =>
+      it.id === itemId ? { ...it, editMeta: { ...it.editMeta, ...patch } } : it,
+    ));
+  };
+
+  /** TikTok-style split-at-playhead: clone the clip into two ordered halves. */
+  const handleSplitItem = (itemId: string) => (atMs: number) => {
+    const item = items.find((it) => it.id === itemId);
+    if (!item || item.kind !== 'video' || !item.trim) return;
+    if (items.length >= MAX_MEDIA_ITEMS) return;
+    pushHistory();
+    const [leftRange, rightRange] = splitTrim(item.trim, atMs);
+    const partition = <T extends { start_ms: number; end_ms: number }>(els: T[]) =>
+      partitionTimedElements(els, [leftRange, rightRange]);
+    const [leftOverlays, rightOverlays] = partition(item.editMeta.textOverlays);
+    const [leftStickers, rightStickers] = partition(item.editMeta.stickers || []);
+    const [leftTracks, rightTracks] = partition(
+      item.editMeta.audioTracks.map((t) => ({ ...t, end_ms: (t.start_ms || 0) + (t.duration_ms || 0) })),
+    );
+    const trackRange = (tracks: Array<AudioTrack & { end_ms: number }>): AudioTrack[] =>
+      tracks.map(({ end_ms, ...rest }) => ({ ...rest, duration_ms: Math.max(0, end_ms - rest.start_ms) }));
+    const [leftCaps, rightCaps] = partitionCaptionsForSplit(captionsByItem[itemId] ?? [], leftRange, rightRange);
+    const style = captionStylesByItem[itemId] ?? item.editMeta.captions_style;
+    const leftId = crypto.randomUUID();
+    const rightId = crypto.randomUUID();
+    const makeHalf = (
+      id: string,
+      range: typeof leftRange,
+      overlays: typeof leftOverlays,
+      stickers: typeof leftStickers,
+      tracks: AudioTrack[],
+    ): StudioItem => ({
+      ...item,
+      id,
+      trim: range,
+      editMeta: { ...item.editMeta, textOverlays: overlays, stickers, audioTracks: tracks },
+    });
+    setItems((prev) => {
+      const next: StudioItem[] = [];
+      let replaced = false;
+      for (const it of prev) {
+        if (it.id !== itemId) { next.push(it); continue; }
+        replaced = true;
+        next.push(makeHalf(leftId, leftRange, leftOverlays, leftStickers, trackRange(leftTracks)));
+        next.push(makeHalf(rightId, rightRange, rightOverlays, rightStickers, trackRange(rightTracks)));
+      }
+      return replaced ? next : prev;
+    });
+    setCaptionsByItem((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      if (leftCaps.length) next[leftId] = leftCaps;
+      if (rightCaps.length) next[rightId] = rightCaps;
+      return next;
+    });
+    if (style) {
+      setCaptionStylesByItem((prev) => {
+        const next = { ...prev };
+        delete next[itemId];
+        next[leftId] = { ...style };
+        next[rightId] = { ...style };
+        return next;
+      });
+    } else {
+      setCaptionStylesByItem((prev) => {
+        if (!(itemId in prev)) return prev;
+        const next = { ...prev };
+        delete next[itemId];
+        return next;
+      });
+    }
+    setActiveVideoId(leftId);
+    track('create.clip_split', { surface: 'create', properties: { item_id: itemId } });
+  };
+
+  // ── Per-clip auto-captions (trimmed snippet + offset re-anchor) ────────────
+  const generateAutoCaptions = async (itemId: string) => {
+    const item = itemsRef.current.find((it) => it.id === itemId);
+    if (!item || item.kind !== 'video') return;
+    autoCtrlRef.current.get(itemId)?.abort();
+    const ctrl = new AbortController();
+    autoCtrlRef.current.set(itemId, ctrl);
+    setAutoStateByItem((prev) => ({ ...prev, [itemId]: { status: 'working' } }));
+    try {
+      const plan = normalizeTrimExport(item.trim?.start_ms, item.trim?.end_ms, item.durationMs);
+      let mediaForTranscription = item.file;
+      let offsetMs = 0;
+      if (plan && shouldExportTrimmedVideo(plan)) {
+        const trimmed = await getOrExportTrimmedVideo(item.file, plan.start_ms, plan.end_ms, {
+          durationMs: item.durationMs,
+          signal: ctrl.signal,
+        });
+        if (ctrl.signal.aborted) return;
+        if (trimmed.trimmed) {
+          mediaForTranscription = trimmed.file;
+          offsetMs = plan.start_ms;
+        }
+      }
+      const res = await feedApi.transcribeStudioMedia(mediaForTranscription, { signal: ctrl.signal });
+      if (ctrl.signal.aborted) return;
+      const rawSegments = res.data?.segments ?? [];
+      const segments: CaptionSegment[] = rawSegments.map((s) => ({
+        id: newCaptionId(),
+        start_ms: s.start_ms + offsetMs,
+        end_ms: s.end_ms + offsetMs,
+        text: s.text,
+      }));
+      pushHistory();
+      setCaptionsByItem((prev) => ({ ...prev, [itemId]: segments }));
+      setAutoStateByItem((prev) => ({ ...prev, [itemId]: { status: 'done' } }));
+      track('create.studio_captions_generated', { surface: 'create', properties: { segments: segments.length } });
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setAutoStateByItem((prev) => ({ ...prev, [itemId]: { status: 'idle' } }));
+        return;
+      }
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setAutoStateByItem((prev) => ({
+        ...prev,
+        [itemId]: {
+          status: 'error',
+          error: status === 0 || err instanceof TypeError
+            ? 'Could not reach the transcription service — try again.'
+            : (message || 'Transcription failed. Try again or add captions manually.'),
+        },
+      }));
+    } finally {
+      if (autoCtrlRef.current.get(itemId) === ctrl) autoCtrlRef.current.delete(itemId);
+    }
+  };
+
+  const cancelAutoCaptions = (itemId: string) => {
+    autoCtrlRef.current.get(itemId)?.abort();
+    autoCtrlRef.current.delete(itemId);
+    setAutoStateByItem((prev) => ({ ...prev, [itemId]: { status: 'idle' } }));
+  };
+
+  const handleCaptionSegments = (itemId: string) => (next: CaptionSegment[]) => {
+    pushHistory('coalesce');
+    setCaptionsByItem((prev) => ({ ...prev, [itemId]: next }));
+  };
+
+  const handleCaptionStyle = (itemId: string) => (cs: CaptionsStyle) => {
+    pushHistory('coalesce');
+    setCaptionStylesByItem((prev) => ({ ...prev, [itemId]: cs }));
+  };
+
+  const activeStyle: CaptionsStyle | null = activeVideo
+    ? (captionStylesByItem[activeVideo.id] ?? activeVideo.editMeta.captions_style ?? null)
+    : null;
+  const activeSegments: CaptionSegment[] = activeVideo ? (captionsByItem[activeVideo.id] ?? []) : [];
+
   const handleSoundSelect = (selected: Sound | null, volume: number) => {
-    setSound(selected ? { id: selected.id, name: selected.name, artist: selected.artist, volume } : null);
+    pushHistory();
+    setSound((prev) => selected
+      ? {
+        id: selected.id, name: selected.name, artist: selected.artist, volume,
+        ...(prev?.id === selected.id ? { startOffsetMs: prev.startOffsetMs, fadeInMs: prev.fadeInMs, fadeOutMs: prev.fadeOutMs } : {}),
+      }
+      : null);
     setShowSoundPicker(false);
     if (selected) {
       track('create.sound_added', {
@@ -260,126 +630,87 @@ export default function CreateStudio() {
     }
   };
 
+  const jobActive = !!jobSnap && ['queued', 'finalizing', 'uploading', 'creating'].includes(jobSnap.status);
+
   const exitStudio = () => {
-    if (publishStage) return; // never abandon a running publish silently
+    // A running background job owns its own lifecycle — leaving is safe.
+    if (jobActive || jobSnap?.status === 'paused') {
+      navigate('/feed/bud-press');
+      return;
+    }
     if ((items.length > 0 || body) && !window.confirm('Leave? Your draft is saved automatically.')) return;
     navigate('/feed/bud-press');
   };
 
-  // ── Publish: Finalize → Upload (percentage) → Create ───────────────────────
-  const publish = async () => {
-    if (items.length === 0 || publishStage) return;
+  // ── Publish: enqueue a background job (finalize → upload → create) ────────
+  const publish = () => {
+    if (items.length === 0 || jobActive) return;
     setPublishError('');
-    const controller = new AbortController();
-    abortMapRef.current.set('__publish__', controller);
-    const uploaded: { item: StudioItem; media: UploadedMedia }[] = [];
-
-    try {
-      // 1) Finalize: images are downscaled here (the "export your edit" pass);
-      //    videos ship as-is — trim/sound render parametrically at delivery.
-      setPublishStage('finalizing');
-      const finalized: StudioItem[] = [];
-      for (const it of items) {
-        const file = it.kind === 'image' ? await compressImage(it.file) : it.file;
-        finalized.push({ ...it, file });
-      }
-
-      // 2) Upload with byte-accurate percentage.
-      setPublishStage('uploading');
-      for (let i = 0; i < finalized.length; i++) {
-        const it = finalized[i];
-        setUploadState({ itemName: it.file.name, pct: 0, loadedBytes: 0, totalBytes: it.file.size });
-        setItems((prev) => prev.map((p) => (p.id === it.id ? { ...p, status: 'uploading', progress: 0 } : p)));
-        const media = await uploadToCloudinary(it.file, {
-          signal: controller.signal,
-          onProgress: (p: UploadProgress) => {
-            setUploadState({ itemName: it.file.name, ...p });
-            setItems((prev) => prev.map((pp) => (pp.id === it.id ? { ...pp, progress: p.pct } : pp)));
-          },
-        });
-        uploaded.push({ item: it, media });
-        setItems((prev) =>
-          prev.map((pp) =>
-            pp.id === it.id
-              ? { ...pp, status: 'done', progress: 100, media, durationMs: media.duration_ms ?? pp.durationMs }
-              : pp,
-          ),
-        );
-        track('upload.completed', {
-          surface: 'create',
-          object_type: 'media',
-          properties: { media_type: it.kind, bytes: media.bytes, duration_ms: media.duration_ms },
-        });
-      }
-
-      // 3) Create the post — it appears immediately; captions arrive async.
-      setPublishStage('creating');
-      const mediaJson = buildMediaPayload(
-        uploaded.map(({ item: it, media }) => ({
-          kind: it.kind,
-          media,
-          trim_start_ms: it.kind === 'video' ? (it.trim?.start_ms ?? 0) : null,
-          trim_end_ms: it.kind === 'video' ? (it.trim?.end_ms ?? it.durationMs ?? 0) : null,
-          sound: it.kind === 'video' && sound ? { id: sound.id, volume: sound.volume } : null,
-          alt_text: it.altText || null,
-          coverOffsetSec: it.kind === 'video' ? it.coverOffsetSec : null,
-        })),
-      );
-      const formData = new FormData();
-      formData.append('body', body.trim());
-      formData.append('visibility', visibility);
-      formData.append('post_type', uploaded.some(({ item: i }) => i.kind === 'video') ? 'short_video' : 'photo');
-      formData.append('media', JSON.stringify(mediaJson));
-      if (commentsDisabled) formData.append('comments_disabled', 'true');
-      formData.append('auto_captions', String(autoCaptions));
-      const cleanSegments = segments.filter((s) => s.text.trim() && s.end_ms > s.start_ms);
-      if (cleanSegments.length > 0) {
-        formData.append(
-          'captions',
-          JSON.stringify(cleanSegments.map(({ start_ms, end_ms, text }) => ({ start_ms, end_ms, text: text.trim() }))),
-        );
-      }
-      // Keep one key across retries so a re-submit never double-posts.
-      const key = idempotencyRef.current ?? crypto.randomUUID();
-      idempotencyRef.current = key;
-      await feedApi.createPost(formData, key);
-      idempotencyRef.current = null;
-      track('create.published', {
-        surface: 'create',
-        properties: {
-          media_count: uploaded.length,
-          image_count: uploaded.filter(({ item: i }) => i.kind === 'image').length,
-          video_count: uploaded.filter(({ item: i }) => i.kind === 'video').length,
-          has_sound: !!sound,
-          auto_captions: autoCaptions,
-        },
-      });
-      await clearStudioDraft();
-      navigate('/feed/bud-press');
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') {
-        setPublishError('Upload canceled. Your draft is saved on this device.');
-      } else {
-        const serverMessage =
-          err instanceof UploadError && err.message && err.message !== 'Upload failed'
-            ? err.message
-            : '';
-        setPublishError(
-          serverMessage ||
-            extractServerError(err, '') ||
-            'Could not publish. Check your connection and try again.',
-        );
-        track('upload.failed', { surface: 'create', object_type: 'media' });
-      }
-      setPublishStage(null);
-      setUploadState(null);
-    } finally {
-      abortMapRef.current.delete('__publish__');
-    }
+    const spec: EnqueueSpec = {
+      body,
+      visibility,
+      postType: items.some((i) => i.kind === 'video') ? 'short_video' : 'photo',
+      commentsDisabled,
+      autoCaptions,
+      items: items.map((it) => ({
+        id: it.id,
+        kind: it.kind,
+        name: it.file.name,
+        file: it.file,
+        durationMs: it.durationMs,
+        trimStartMs: it.trim?.start_ms ?? null,
+        trimEndMs: it.trim?.end_ms ?? it.durationMs ?? null,
+        editMeta: it.editMeta,
+        captions: cleanCaptionSegments(captionsByItem[it.id] ?? []),
+        captionsStyle: captionStylesByItem[it.id] ?? it.editMeta.captions_style ?? null,
+        sound: it.kind === 'video' && sound
+          ? {
+            id: sound.id,
+            volume: sound.volume,
+            ...(sound.startOffsetMs ? { start_ms: sound.startOffsetMs } : {}),
+            ...(sound.fadeInMs ? { fade_in_ms: sound.fadeInMs } : {}),
+            ...(sound.fadeOutMs ? { fade_out_ms: sound.fadeOutMs } : {}),
+          }
+          : null,
+        altText: it.altText || null,
+        coverOffsetSec: it.coverOffsetSec,
+      })),
+    };
+    // Keep one draft copy until the manager clears it on post-create success.
+    track('create.publish_enqueued', {
+      surface: 'create',
+      properties: {
+        media_count: spec.items.length,
+        video_count: spec.items.filter((i) => i.kind === 'video').length,
+        captioned_clips: spec.items.filter((i) => (i.captions?.length ?? 0) > 0).length,
+      },
+    });
+    setJobId(uploadManager.enqueue(spec));
   };
 
-  const cancelPublish = () => {
-    abortMapRef.current.get('__publish__')?.abort();
+  const dismissJob = () => {
+    if (jobId) uploadManager.dismissJob(jobId);
+    setJobId(null);
+    setJobSnap(null);
+  };
+
+  const tryResumeSession = (s: PersistedSession) => {
+    const files = new Map<string, File>();
+    for (const it of s.items) {
+      const local = itemsRef.current.find((x) => x.id === it.id);
+      if (!local) {
+        setPublishError('Could not resume: the saved draft no longer has those clips.');
+        return;
+      }
+      files.set(it.id, local.file);
+    }
+    const id = uploadManager.resumeSession(s.jobId, files);
+    if (id) {
+      setPublishError('');
+      setJobId(id);
+    } else {
+      setPublishError('Could not resume that upload — it may have already finished.');
+    }
   };
 
   // ── Render helpers ─────────────────────────────────────────────────────────
@@ -440,6 +771,11 @@ export default function CreateStudio() {
                 >
                   <Trash2 size={11} />
                 </button>
+                {it.kind === 'video' && (captionsByItem[it.id]?.length ?? 0) > 0 && (
+                  <span className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 px-1 rounded bg-buddy-green/90 text-buddy-black text-[9px] font-bold">
+                    <Captions size={9} /> {captionsByItem[it.id].length}
+                  </span>
+                )}
                 {it.kind === 'video' && it.durationMs != null && (
                   <span className="absolute bottom-1.5 left-1.5 px-1 rounded bg-black/60 text-white text-[9px] font-semibold">
                     {Math.round(it.durationMs / 1000)}s
@@ -458,31 +794,92 @@ export default function CreateStudio() {
     </div>
   );
 
-  const videoStrip = () => (
-    <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
-      {videoItems.map((it) => (
-        <button
-          key={it.id}
-          onClick={() => setActiveVideoId(it.id)}
-          className={`relative w-14 h-20 rounded-lg overflow-hidden shrink-0 ring-2 transition-all ${
-            activeVideo?.id === it.id ? 'ring-buddy-green' : 'ring-transparent opacity-60'
-          }`}
-        >
-          <video src={it.previewUrl} muted playsInline preload="metadata" className="w-full h-full object-cover" />
-        </button>
-      ))}
+  /** Clip strip with per-clip caption badges + reorder/duplicate/delete. */
+  const videoStrip = (withActions = false) => (
+    <div className="space-y-1.5">
+      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+        {videoItems.map((it, i) => {
+          const count = captionsByItem[it.id]?.length ?? 0;
+          return (
+            <button
+              key={it.id}
+              onClick={() => setActiveVideoId(it.id)}
+              className={`relative w-14 h-20 rounded-lg overflow-hidden shrink-0 ring-2 transition-all ${
+                activeVideo?.id === it.id ? 'ring-buddy-green' : 'ring-transparent opacity-60'
+              }`}
+              aria-label={`Clip ${i + 1}${count ? `, ${count} captions` : ''}`}
+            >
+              <video src={it.previewUrl} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+              <span className="absolute bottom-0.5 left-0.5 px-1 rounded bg-black/60 text-white text-[9px] font-bold">
+                {i + 1}
+              </span>
+              {count > 0 && (
+                <span className="absolute top-0.5 right-0.5 flex items-center gap-0.5 px-1 rounded bg-buddy-green/90 text-buddy-black text-[9px] font-bold">
+                  <Captions size={9} />{count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {withActions && activeVideo && (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-buddy-text-secondary mr-1">Clip {activeIdx + 1}/{videoItems.length}</span>
+          <button
+            onClick={() => moveItem(activeVideo.id, -1)}
+            disabled={activeIdx <= 0}
+            className="p-1.5 rounded-lg bg-buddy-surface-raised text-buddy-text-secondary hover:text-buddy-text-primary disabled:opacity-30"
+            aria-label="Move clip earlier"
+          >
+            <ArrowLeft size={13} />
+          </button>
+          <button
+            onClick={() => moveItem(activeVideo.id, 1)}
+            disabled={activeIdx >= videoItems.length - 1}
+            className="p-1.5 rounded-lg bg-buddy-surface-raised text-buddy-text-secondary hover:text-buddy-text-primary disabled:opacity-30"
+            aria-label="Move clip later"
+          >
+            <ArrowRight size={13} />
+          </button>
+          <button
+            onClick={() => duplicateItem(activeVideo.id)}
+            disabled={items.length >= MAX_MEDIA_ITEMS}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-buddy-surface-raised text-[11px] font-semibold text-buddy-text-secondary hover:text-buddy-text-primary disabled:opacity-30"
+          >
+            <Copy size={12} /> Duplicate
+          </button>
+          <button
+            onClick={() => removeItem(activeVideo.id)}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-buddy-surface-raised text-[11px] font-semibold text-buddy-text-secondary hover:text-buddy-red"
+          >
+            <Trash2 size={12} /> Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 
   const renderEdit = () =>
     activeVideo ? (
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
-        {videoItems.length > 1 && videoStrip()}
-        <TrimEditor
-          videoUrl={activeVideo.previewUrl}
-          durationMs={activeVideo.durationMs ?? activeVideo.media?.duration_ms ?? null}
+        {videoItems.length > 1 && videoStrip(true)}
+        <EditStage
+          previewUrl={activeVideo.previewUrl}
+          durationMs={activeVideo.durationMs}
           trim={activeVideo.trim ?? { start_ms: 0, end_ms: activeVideo.durationMs ?? 0 }}
-          onChange={handleTrimChange(activeVideo.id)}
+          editMeta={activeVideo.editMeta}
+          previewCaptions={activeSegments}
+          sourceFile={activeVideo.file}
+          captionSegments={activeSegments}
+          onCaptionSegments={handleCaptionSegments(activeVideo.id)}
+          autoCaption={autoStateByItem[activeVideo.id] ?? { status: 'idle' }}
+          onAutoCaptions={() => void generateAutoCaptions(activeVideo.id)}
+          onCancelAutoCaptions={() => cancelAutoCaptions(activeVideo.id)}
+          captionStyle={activeStyle}
+          onCaptionStyleChange={handleCaptionStyle(activeVideo.id)}
+          onTrimChange={handleTrimChange(activeVideo.id)}
+          onSplit={handleSplitItem(activeVideo.id)}
+          onMetaChange={handleMetaChange(activeVideo.id)}
           onDuration={(ms) =>
             setItems((prev) => prev.map((it) => (it.id === activeVideo.id ? { ...it, durationMs: ms } : it)))
           }
@@ -520,9 +917,46 @@ export default function CreateStudio() {
         Your clips keep their original audio — a chosen sound plays on top at the volume you set.
       </p>
       {sound && (
-        <button onClick={() => handleSoundSelect(null, 0)} className="text-xs text-buddy-text-secondary hover:text-buddy-red">
-          Remove sound — back to original audio only
-        </button>
+        <div className="rounded-2xl bg-buddy-surface-raised p-3 space-y-2.5">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-buddy-text-secondary w-20 shrink-0">Starts at</span>
+            <input
+              type="number" min={0} step={0.5}
+              value={sound.startOffsetMs != null ? sound.startOffsetMs / 1000 : 0}
+              onChange={(e) => {
+                const v = Math.max(0, Number(e.target.value) * 1000);
+                pushHistory('coalesce');
+                setSound((s) => (s ? { ...s, startOffsetMs: Math.round(v) } : s));
+              }}
+              className="w-20 bg-buddy-surface rounded-lg px-2 py-1.5 font-mono outline-none focus:ring-1 focus:ring-buddy-green/40"
+              aria-label="Sound start offset (seconds)"
+            />
+            <span className="text-buddy-text-secondary">s into the sound</span>
+          </div>
+          {([
+            ['fadeInMs', 'Fade in'],
+            ['fadeOutMs', 'Fade out'],
+          ] as const).map(([key, label]) => (
+            <div key={key} className="flex items-center gap-2 text-xs">
+              <span className="text-buddy-text-secondary w-20 shrink-0">{label}</span>
+              <input
+                type="range" min={0} max={3000} step={100}
+                value={sound[key] ?? 0}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  pushHistory('coalesce');
+                  setSound((s) => (s ? { ...s, [key]: v } : s));
+                }}
+                className="flex-1 accent-buddy-green"
+                aria-label={`Sound ${label.toLowerCase()} (milliseconds)`}
+              />
+              <span className="font-mono w-10 text-right text-buddy-text-secondary">{((sound[key] ?? 0) / 1000).toFixed(1)}s</span>
+            </div>
+          ))}
+          <button onClick={() => handleSoundSelect(null, 0)} className="text-xs text-buddy-text-secondary hover:text-buddy-red">
+            Remove sound — back to original audio only
+          </button>
+        </div>
       )}
     </div>
   );
@@ -533,7 +967,7 @@ export default function CreateStudio() {
         {videoItems.length > 1 && videoStrip()}
         <CoverPicker
           videoUrl={activeVideo.previewUrl}
-          durationMs={activeVideo.durationMs ?? activeVideo.media?.duration_ms ?? null}
+          durationMs={activeVideo.durationMs}
           offsetSec={activeVideo.coverOffsetSec}
           onChange={(offsetSec) =>
             setItems((prev) => prev.map((it) => (it.id === activeVideo.id ? { ...it, coverOffsetSec: offsetSec } : it)))
@@ -543,17 +977,30 @@ export default function CreateStudio() {
     ) : null;
 
   const renderCaptions = () => (
-    <div className="flex-1 overflow-y-auto px-4 pb-4">
-      <CaptionsPanel
-        hasVideo={hasVideo}
-        autoCaptions={autoCaptions}
-        onToggleAuto={(on) => {
-          setAutoCaptions(on);
-          track('create.captions_toggled', { surface: 'create', properties: { auto: on } });
-        }}
-        segments={segments}
-        onChangeSegments={setSegments}
-      />
+    <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
+      {hasVideo && activeVideo && videoItems.length > 1 && videoStrip()}
+      {hasVideo && activeVideo ? (
+        <CaptionsPanel
+          hasVideo
+          autoCaptions={autoCaptions}
+          onToggleAuto={(on) => {
+            setAutoCaptions(on);
+            track('create.captions_toggled', { surface: 'create', properties: { auto: on } });
+          }}
+          segments={activeSegments}
+          onChangeSegments={handleCaptionSegments(activeVideo.id)}
+          style={activeStyle}
+          onStyleChange={handleCaptionStyle(activeVideo.id)}
+          clipLabel={videoItems.length > 1 ? `Clip ${activeIdx + 1} of ${videoItems.length}` : undefined}
+          autoJob={autoStateByItem[activeVideo.id] ?? { status: 'idle' }}
+          onGenerateAuto={() => void generateAutoCaptions(activeVideo.id)}
+          onCancelAuto={() => cancelAutoCaptions(activeVideo.id)}
+        />
+      ) : (
+        <div className="rounded-2xl bg-buddy-surface-raised p-4 text-sm text-buddy-text-secondary">
+          Add a video to use timed captions — they ship with each clip for review before posting.
+        </div>
+      )}
     </div>
   );
 
@@ -606,6 +1053,104 @@ export default function CreateStudio() {
     </div>
   );
 
+  const renderJobCard = () => {
+    if (!jobSnap) return null;
+    const s = jobSnap;
+    const isActive = ['queued', 'finalizing', 'uploading', 'creating'].includes(s.status);
+    const activeItem = s.items.find((it) => it.status === 'uploading' || it.status === 'finalizing')
+      ?? s.items.find((it) => it.status !== 'done');
+    return (
+      <div className="rounded-xl bg-buddy-surface-raised px-3 py-2.5 space-y-1.5">
+        {s.status === 'done' ? (
+          <p className="text-xs font-semibold text-buddy-green">Published ✓ — taking you to the feed…</p>
+        ) : s.status === 'failed' ? (
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-buddy-red">Upload paused with an error — nothing was lost.</p>
+            {s.error && <p className="text-[11px] text-buddy-text-secondary">{s.error}</p>}
+            <div className="flex gap-2">
+              <button
+                onClick={() => jobId && uploadManager.retryJob(jobId)}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-buddy-green text-buddy-black text-xs font-bold"
+              >
+                <RotateCcw size={13} /> Retry upload
+              </button>
+              <button
+                onClick={dismissJob}
+                className="px-3 py-2 rounded-xl bg-buddy-surface text-xs font-semibold text-buddy-text-secondary"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        ) : s.status === 'canceled' ? (
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-buddy-text-secondary flex-1">Upload canceled — your draft is saved on this device.</p>
+            <button
+              onClick={dismissJob}
+              className="px-3 py-1.5 rounded-xl bg-buddy-surface text-xs font-semibold text-buddy-text-secondary"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-buddy-text-primary truncate max-w-[55%]">
+                {s.status === 'creating'
+                  ? 'Creating your post…'
+                  : s.status === 'finalizing'
+                    ? 'Trimming clips…'
+                    : activeItem
+                      ? `Uploading ${activeItem.name}`
+                      : 'Starting upload…'}
+              </span>
+              <span className="font-bold text-buddy-green tabular-nums">{s.overallPct}%</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-buddy-surface overflow-hidden">
+              <div className="h-full bg-buddy-green transition-all" style={{ width: `${s.overallPct}%` }} />
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-buddy-text-secondary">
+              <span>
+                {s.items.filter((it) => it.status === 'done').length}/{s.items.length} clips ·{' '}
+                {formatBytes(s.loadedBytes)} / {formatBytes(s.totalBytes)}
+              </span>
+              <span className="flex gap-2">
+                {s.status === 'paused' ? (
+                  <button
+                    onClick={() => jobId && uploadManager.resumeJob(jobId)}
+                    className="flex items-center gap-1 font-semibold text-buddy-green"
+                  >
+                    <Play size={11} /> Resume
+                  </button>
+                ) : (
+                  isActive && (
+                    <button
+                      onClick={() => jobId && uploadManager.pauseJob(jobId)}
+                      className="flex items-center gap-1 font-semibold hover:text-buddy-text-primary"
+                    >
+                      <Pause size={11} /> Pause
+                    </button>
+                  )
+                )}
+                <button
+                  onClick={() => jobId && uploadManager.cancelJob(jobId)}
+                  className="font-semibold hover:text-buddy-red"
+                >
+                  Cancel
+                </button>
+              </span>
+            </div>
+            {isActive && (
+              <p className="text-[10px] text-buddy-text-secondary">
+                Safe to leave — the upload continues in the background while this tab stays open.
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
   const stepIcons: Record<StepKey, React.ReactNode> = {
     pick: <Plus size={13} />,
     edit: <Scissors size={13} />,
@@ -615,8 +1160,10 @@ export default function CreateStudio() {
     post: <Users size={13} />,
   };
 
+  const resumableSessions = sessions.filter((sn) => sn.jobId !== jobId);
+
   return (
-    <div className="fixed inset-0 z-50 bg-buddy-black flex flex-col">
+    <div className="fixed inset-0 z-50 bg-buddy-black flex flex-col sm:mx-auto sm:w-full sm:max-w-[520px] sm:border-x sm:border-buddy-surface">
       {/* Hidden pickers — camera capture rides the input's capture attribute */}
       <input
         ref={galleryInputRef}
@@ -652,6 +1199,24 @@ export default function CreateStudio() {
           <h1 className="font-heading font-bold text-base leading-tight truncate">{STEP_META[step].title}</h1>
           <p className="text-[11px] text-buddy-text-secondary truncate">{STEP_META[step].blurb}</p>
         </div>
+        <button
+          onClick={undo}
+          disabled={!historyRef.current.canUndo}
+          className="p-2 rounded-full text-buddy-text-secondary hover:text-buddy-text-primary disabled:opacity-30"
+          aria-label="Undo edit"
+          title="Undo"
+        >
+          <Undo2 size={18} />
+        </button>
+        <button
+          onClick={redo}
+          disabled={!historyRef.current.canRedo}
+          className="p-2 rounded-full text-buddy-text-secondary hover:text-buddy-text-primary disabled:opacity-30"
+          aria-label="Redo edit"
+          title="Redo"
+        >
+          <Redo2 size={18} />
+        </button>
         <button onClick={exitStudio} className="p-2 rounded-full text-buddy-text-secondary hover:text-buddy-text-primary" aria-label="Close studio">
           <X size={20} />
         </button>
@@ -682,47 +1247,36 @@ export default function CreateStudio() {
 
       {/* Footer */}
       <div className="border-t border-buddy-surface px-4 py-3 shrink-0 space-y-2">
+        {storageFull && (
+          <p className="text-xs text-buddy-gold bg-buddy-gold/10 rounded-xl px-3 py-2">
+            Device storage is full — your work is kept in memory for this session. Free up space to keep autosave.
+          </p>
+        )}
         {publishError && (
           <p className="text-sm text-buddy-red bg-buddy-red/10 rounded-xl px-3 py-2">{publishError}</p>
         )}
-        {publishStage && publishStage !== 'creating' && (
+        {renderJobCard()}
+        {resumableSessions.length > 0 && !jobSnap && (
           <div className="rounded-xl bg-buddy-surface-raised px-3 py-2.5 space-y-1.5">
-            {publishStage === 'uploading' && uploadState ? (
-              <>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-buddy-text-primary truncate max-w-[55%]">
-                    Uploading {uploadState.itemName}
-                  </span>
-                  <span className="font-bold text-buddy-green tabular-nums">{uploadState.pct}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-buddy-surface overflow-hidden">
-                  <div
-                    className="h-full bg-buddy-green transition-all"
-                    style={{ width: `${uploadState.pct}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-buddy-text-secondary">
-                  <span>
-                    {formatBytes(uploadState.loadedBytes)} / {formatBytes(uploadState.totalBytes)}
-                  </span>
-                  <button
-                    onClick={cancelPublish}
-                    className="font-semibold text-buddy-text-secondary hover:text-buddy-red"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center gap-2 text-xs text-buddy-text-secondary">
-                <Loader2 size={13} className="animate-spin text-buddy-green" />
-                {publishStage === 'finalizing' ? 'Finalizing your edit…' : 'Publishing…'}
+            <p className="text-xs font-semibold">Interrupted uploads</p>
+            {resumableSessions.slice(0, 3).map((sn) => (
+              <div key={sn.jobId} className="flex items-center gap-2 text-[11px] text-buddy-text-secondary">
+                <span className="flex-1 truncate">
+                  {sn.items.length} clips · {sn.status}
+                  {sn.error ? ` — ${sn.error}` : ''}
+                </span>
+                <button
+                  onClick={() => tryResumeSession(sn)}
+                  className="px-2.5 py-1 rounded-lg bg-buddy-green/15 text-buddy-green font-semibold"
+                >
+                  Resume
+                </button>
               </div>
-            )}
+            ))}
           </div>
         )}
         <div className="flex items-center gap-3">
-          {stepIdx > 0 && !publishStage && (
+          {stepIdx > 0 && !jobActive && (
             <button
               onClick={() => setStepIdx((i) => i - 1)}
               className="px-4 py-2.5 rounded-xl bg-buddy-surface-raised text-sm font-semibold hover:bg-buddy-surface transition-colors"
@@ -731,12 +1285,12 @@ export default function CreateStudio() {
             </button>
           )}
           <button
-            onClick={() => (isLastStep ? void publish() : setStepIdx((i) => i + 1))}
-            disabled={!canProceed || !!publishStage}
+            onClick={() => (isLastStep ? publish() : setStepIdx((i) => i + 1))}
+            disabled={!canProceed || jobActive}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-buddy-green text-buddy-black text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-buddy-green/90 transition-colors"
           >
-            {publishStage && <Loader2 size={15} className="animate-spin" />}
-            {isLastStep ? (publishStage ? 'Publishing…' : 'Publish') : 'Next'}
+            {jobActive && <Loader2 size={15} className="animate-spin" />}
+            {isLastStep ? (jobActive ? 'Uploading in background…' : 'Publish') : 'Next'}
           </button>
         </div>
       </div>

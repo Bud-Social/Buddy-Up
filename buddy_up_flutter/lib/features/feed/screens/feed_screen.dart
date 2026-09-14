@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/feed_tab_bar.dart';
 import '../widgets/post_card.dart';
+import '../widgets/share_sheet.dart';
 import 'post_composer_screen.dart';
 import '../../community/providers/community_provider.dart';
 import '../../../data/models/messaging.dart';
@@ -345,6 +346,12 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                   onReact: (id, reaction) => _handleReact(id, reaction),
                   onSave: (id) => _handleSave(id),
                   onRepost: (id) => _handleRepost(id),
+                  onShare: (id) {
+                    final matches = ref.read(feedProvider).posts
+                        .where((p) => p.id == id)
+                        .toList();
+                    if (matches.isNotEmpty) ShareSheet.show(context, matches.first);
+                  },
                   onProfileTap: (username) => _navigateToProfile(username),
                   onPollVote: (id, optionIds) => _handlePollVote(id, optionIds),
                 );

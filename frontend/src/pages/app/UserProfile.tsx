@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Radio, Play, Clock, Users, Loader, Zap, MessageCircle } from 'lucide-react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Radio, Play, Clock, Users, Loader, Zap, MessageCircle, ArrowLeft } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -14,12 +14,14 @@ import ReplayPlayer from '@/components/live/ReplayPlayer';
 import type { Profile, Post } from '@/types';
 import type { BuddyLive } from '@/types/live';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { CommentSheet } from '@/components/features/feed/CommentSheet';
 
 type ProfileTab = 'posts' | 'lives';
 
 export default function UserProfile() {
   const { username } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,6 +37,14 @@ export default function UserProfile() {
 
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [commentPostId, setCommentPostId] = useState<string | null>(null);
+
+  /** Back returns to the swipe origin (e.g. /videos?start=<id>) when present. */
+  const handleBack = () => {
+    const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
+    if (returnTo) navigate(returnTo);
+    else navigate(-1);
+  };
 
   const fetchProfile = useCallback(async () => {
     if (!username) return;
@@ -155,59 +165,76 @@ export default function UserProfile() {
 
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
+      <button
+        onClick={handleBack}
+        className="flex items-center gap-1.5 text-sm text-buddy-text-secondary hover:text-buddy-text-primary mb-3 transition-colors"
+        aria-label="Go back"
+      >
+        <ArrowLeft size={16} /> Back
+      </button>
+      {/* Public header mirrors Profile's presentation; owner-only controls stay out. */}
       <Card className="p-6 mb-6">
-        <div className="text-center mb-4">
-          <Avatar
-            src={profile.avatar_url}
-            alt={profile.display_name}
-            size="xl"
-            showRepRing
-            streakProgress={profile.streak_days > 0 ? Math.min(profile.streak_days / 365 * 100, 100) : 0}
-            className="mx-auto"
-          />
-          <h2 className="font-heading text-xl font-semibold mt-3">{profile.display_name}</h2>
-          <p className="text-buddy-text-secondary text-sm">@{profile.username}</p>
-          {badgeConfig && <Badge variant={badgeConfig.variant} label={badgeConfig.label} icon={badgeConfig.icon} className="mt-1.5" />}
-          {profile.role !== 'user' && (
-            <p className="text-xs text-buddy-electric mt-1">
-              {profile.role === 'trainer' ? 'Personal Trainer' : 'Health Practitioner'}
-            </p>
-          )}
-          {profile.bio && <p className="text-sm mt-2 px-4">{profile.bio}</p>}
-          {profile.location_city && (
+        <div className="flex items-start gap-4 mb-4">
+          <div className="relative inline-block flex-shrink-0">
+            <Avatar
+              src={profile.avatar_url}
+              alt={profile.display_name}
+              size="xl"
+              showRepRing
+              streakProgress={profile.streak_days > 0 ? Math.min(profile.streak_days / 365 * 100, 100) : 0}
+              verificationStatus={profile.verification_status}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-heading text-xl font-semibold truncate">{profile.display_name}</h2>
+            <p className="text-buddy-text-secondary text-sm">@{profile.username}</p>
+            {badgeConfig && <Badge variant={badgeConfig.variant} label={badgeConfig.label} icon={badgeConfig.icon} className="mt-1" />}
+            <p className="text-sm text-buddy-text-primary mt-1">{profile.bio || 'No bio yet'}</p>
             <p className="text-xs text-buddy-text-secondary mt-1">
-              📍 {profile.location_city}{profile.location_country && `, ${profile.location_country}`}
+              {profile.location_city && `${profile.location_city}${profile.location_country ? `, ${profile.location_country}` : ''} · `}
+              {profile.role === 'trainer' ? 'Personal Trainer' : profile.role === 'practitioner' ? 'Health Practitioner' : 'Regular User'}
             </p>
-          )}
-          <p className="text-xs text-buddy-text-secondary mt-1">Buddy since 2026</p>
-          {profile.preferences && (profile.preferences.primary_goal?.length || profile.preferences.preferred_workouts?.length || profile.preferences.custom_interests) && (
-            <div className="mt-3 px-4 w-full">
-              <p className="text-xs font-semibold text-buddy-text-secondary uppercase tracking-wider mb-1.5 text-left">Interests</p>
-              <div className="flex justify-center">
-                <InterestChips preferences={profile.preferences} />
-              </div>
-            </div>
-          )}
+            <p className="text-xs text-buddy-text-secondary mt-1">Buddy since 2026</p>
+          </div>
         </div>
 
-        <div className="flex gap-3 mb-4">
-          {[
-            { value: profile.buddy_count, label: 'Buddies' },
-            { value: profile.following_count, label: 'Following' },
-            { value: profile.follower_count, label: 'Followers' },
-          ].map(({ value, label }) => (
-            <div key={label} className="flex-1 text-center bg-buddy-surface-raised rounded-xl py-2">
-              <p className="font-mono font-bold text-lg">{value}</p>
-              <p className="text-xs text-buddy-text-secondary">{label}</p>
-            </div>
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {([
+            { value: profile.buddy_count, label: 'Buddies', to: null as string | null },
+            { value: profile.following_count, label: 'Following', to: `/${profile.username}/following` },
+            { value: profile.follower_count, label: 'Followers', to: `/${profile.username}/followers` },
+          ]).map(({ value, label, to }) => (
+            to ? (
+              <button
+                key={label}
+                onClick={() => navigate(to)}
+                className="text-center bg-buddy-surface-raised hover:bg-buddy-surface rounded-xl py-2 transition-colors"
+                title={`View ${label.toLowerCase()}`}
+              >
+                <p className="font-mono font-bold text-lg">{value}</p>
+                <p className="text-xs text-buddy-text-secondary">{label}</p>
+              </button>
+            ) : (
+              <div key={label} className="text-center bg-buddy-surface-raised rounded-xl py-2">
+                <p className="font-mono font-bold text-lg">{value}</p>
+                <p className="text-xs text-buddy-text-secondary">{label}</p>
+              </div>
+            )
           ))}
         </div>
 
         {profile.streak_days > 0 && (
-          <div className="bg-buddy-orange/10 border border-buddy-orange/20 rounded-xl px-4 py-2.5 mb-4 text-center">
+          <div className="bg-buddy-orange/10 border border-buddy-orange/20 rounded-xl px-4 py-3 mb-4 text-center">
             <span className="text-lg">🔥</span>
             <span className="font-mono font-bold text-buddy-orange ml-1">{profile.streak_days}</span>
             <span className="text-sm text-buddy-text-secondary ml-1">day streak</span>
+          </div>
+        )}
+
+        {(profile.preferences?.primary_goal?.length || profile.preferences?.preferred_workouts?.length || profile.preferences?.custom_interests) && (
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-buddy-text-secondary uppercase tracking-wider mb-2">Interests</p>
+            <InterestChips preferences={profile.preferences} />
           </div>
         )}
 
@@ -314,10 +341,18 @@ export default function UserProfile() {
         ) : (
           <div className="space-y-3">
             {posts.map((post) => (
-              <PostCard key={post.id} post={post} />
+              <PostCard key={post.id} post={post} onComment={setCommentPostId} />
             ))}
           </div>
         )
+      )}
+
+      {commentPostId && (
+        <CommentSheet
+          postId={commentPostId}
+          isOpen={!!commentPostId}
+          onClose={() => setCommentPostId(null)}
+        />
       )}
 
       {replayLive && (

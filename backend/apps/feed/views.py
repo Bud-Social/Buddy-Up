@@ -56,6 +56,7 @@ def _looks_like_video(url: str) -> bool:
 
 
 MAX_POST_MEDIA_ITEMS = 12
+MAX_TRIM_MS = 180_000  # TikTok-style 3-minute cap, mirrors the client cap.
 
 
 def _extract_media_items(request):
@@ -134,6 +135,271 @@ def _validate_media_items(items):
         if not 0 <= sound_volume <= 100:
             return None, f'media[{i}].sound_volume must be between 0 and 100.'
 
+        # Parametric sound placement (start offset + fades for the attached
+        # sound). Stored inside edit_meta so no model change is needed.
+        sound_placement = {}
+        if sound_id and item.get('sound_start_ms') not in (None, ''):
+            try:
+                sound_placement['start_ms'] = max(0, int(item.get('sound_start_ms') or 0))
+            except (TypeError, ValueError):
+                return None, f'media[{i}].sound_start_ms must be an integer.'
+        for _skey in ('sound_fade_in_ms', 'sound_fade_out_ms'):
+            if sound_id and item.get(_skey) not in (None, ''):
+                try:
+                    sound_placement[_skey.replace('sound_', '')] = max(0, min(10_000, int(item.get(_skey) or 0)))
+                except (TypeError, ValueError):
+                    return None, f'media[{i}].{_skey} must be an integer.'
+
+        # Studio/in-studio captions travel per video row so they survive the
+        # post-publish async transcription pass below.
+        captions_raw = item.get('captions') or []
+        if not isinstance(captions_raw, list):
+            return None, f'media[{i}].captions must be a list.'
+        captions = []
+        for seg in captions_raw[:500]:
+            if not isinstance(seg, dict):
+                continue
+            text = str(seg.get('text') or '').strip()[:500]
+            if not text:
+                continue
+            try:
+                seg_start = max(0, int(seg.get('start_ms') or 0))
+                seg_end = max(0, int(seg.get('end_ms') or 0))
+            except (TypeError, ValueError):
+                continue
+            if seg_end <= seg_start:
+                continue
+            captions.append({'start_ms': seg_start, 'end_ms': seg_end, 'text': text})
+
+        # Creative-studio edit metadata (IG/TikTok-style): filter preset,
+        # playback speed, original-audio volume, voice enhance, text overlays,
+        # manual adjustments, aspect crop, stickers and additional audio tracks.
+        edit_meta_raw = item.get('edit_meta') or {}
+        if not isinstance(edit_meta_raw, dict):
+            edit_meta_raw = {}
+        edit_meta = {}
+        _filter_name = str(edit_meta_raw.get('filter') or '').strip()[:32]
+        if _filter_name:
+            edit_meta['filter'] = _filter_name
+            try:
+                _fos = int(edit_meta_raw.get('filter_strength', 100))
+                if 0 <= _fos <= 100 and _fos != 100:
+                    edit_meta['filter_strength'] = _fos
+            except (TypeError, ValueError):
+                pass
+        try:
+            _speed = float(edit_meta_raw.get('speed') or 1.0)
+        except (TypeError, ValueError):
+            _speed = 1.0
+        if 0.3 <= _speed <= 3.0 and _speed != 1.0:
+            edit_meta['speed'] = round(_speed, 2)
+        try:
+            _volume = int(edit_meta_raw.get('volume', 100))
+        except (TypeError, ValueError):
+            _volume = None
+        if _volume is not None and 0 <= _volume <= 200:
+            edit_meta['volume'] = _volume
+        if bool(edit_meta_raw.get('enhance')):
+            edit_meta['enhance'] = True
+
+        _VOICE_EFFECTS = ('chipmunk', 'deep', 'robot', 'echo')
+        _voice_effect = str(edit_meta_raw.get('voice_effect') or '').strip()
+        if _voice_effect in _VOICE_EFFECTS:
+            edit_meta['voice_effect'] = _voice_effect
+
+        _adjust_raw = edit_meta_raw.get('adjust')
+        if isinstance(_adjust_raw, dict):
+            adjust = {}
+            for _key in ('brightness', 'contrast', 'saturation'):
+                if _key in _adjust_raw:
+                    try:
+                        adjust[_key] = max(0, min(100, int(_adjust_raw.get(_key) or 50)))
+                    except (TypeError, ValueError):
+                        pass
+            if 'vignette' in _adjust_raw:
+                try:
+                    adjust['vignette'] = max(0, min(100, int(_adjust_raw.get('vignette') or 0)))
+                except (TypeError, ValueError):
+                    pass
+            if adjust:
+                edit_meta['adjust'] = adjust
+
+        _ASPECT_MODES = ('9:16', '1:1', '4:5', '16:9')
+        _aspect = str(edit_meta_raw.get('aspect') or '').strip()
+        if _aspect in _ASPECT_MODES:
+            edit_meta['aspect'] = _aspect
+            try:
+                edit_meta['focus_y'] = max(0, min(100, int(edit_meta_raw.get('focus_y', 50))))
+            except (TypeError, ValueError):
+                edit_meta['focus_y'] = 50
+
+        overlays_raw = edit_meta_raw.get('text_overlays')
+        if isinstance(overlays_raw, list):
+            overlays = []
+            for ov in overlays_raw[:50]:
+                if not isinstance(ov, dict):
+                    continue
+                text = str(ov.get('text') or '').strip()[:200]
+                if not text:
+                    continue
+                try:
+                    ov_start = max(0, int(ov.get('start_ms') or 0))
+                    ov_end = max(0, int(ov.get('end_ms') or 0))
+                    ov_y = max(0, min(100, int(ov.get('y') or 80)))
+                    ov_size = max(0.0, min(2.0, float(ov.get('size') or 0)))
+                except (TypeError, ValueError):
+                    continue
+                if ov_end <= ov_start:
+                    continue
+                overlay_out = {
+                    'text': text,
+                    'start_ms': ov_start,
+                    'end_ms': ov_end,
+                    'y': ov_y,
+                    'size': round(ov_size, 2),
+                    'color': str(ov.get('color') or 'white')[:16],
+                }
+                if ov.get('x') is not None:
+                    try:
+                        overlay_out['x'] = max(0, min(100, int(ov.get('x') or 50)))
+                    except (TypeError, ValueError):
+                        pass
+                if ov.get('rotation') is not None:
+                    try:
+                        overlay_out['rotation'] = max(-15, min(15, int(ov.get('rotation') or 0)))
+                    except (TypeError, ValueError):
+                        pass
+                _font = str(ov.get('font') or '').strip()[:24]
+                if _font:
+                    overlay_out['font'] = _font
+                _fx = str(ov.get('effect') or '').strip()
+                if _fx in ('outline', 'glow', 'neon', 'bubble', 'highlight', 'shadow'):
+                    overlay_out['effect'] = _fx
+                _bg = str(ov.get('bg') or '').strip()
+                if _bg in ('pill', 'block'):
+                    overlay_out['bg'] = _bg
+                if ov.get('bg_color'):
+                    overlay_out['bg_color'] = str(ov.get('bg_color'))[:32]
+                _anim = str(ov.get('animation') or '').strip()
+                if _anim in ('fade', 'pop', 'slide', 'karaoke'):
+                    overlay_out['animation'] = _anim
+                overlays.append(overlay_out)
+            if overlays:
+                edit_meta['text_overlays'] = overlays
+
+        stickers_raw = edit_meta_raw.get('stickers')
+        if isinstance(stickers_raw, list):
+            stickers = []
+            for st in stickers_raw[:12]:
+                if not isinstance(st, dict):
+                    continue
+                content = str(st.get('content') or '').strip()
+                kind = str(st.get('kind') or 'emoji').strip()
+                if kind not in ('emoji', 'countdown', 'mention'):
+                    continue
+                # countdown stickers render a live timer — content optional
+                if not content and kind != 'countdown':
+                    continue
+                try:
+                    st_start = max(0, int(st.get('start_ms') or 0))
+                    st_end = max(0, int(st.get('end_ms') or 0))
+                except (TypeError, ValueError):
+                    continue
+                if st_end <= st_start:
+                    continue
+                try:
+                    st_x = max(0, min(100, int(st.get('x') or 50)))
+                    st_y = max(0, min(100, int(st.get('y') or 50)))
+                    st_scale = max(0.5, min(2.0, float(st.get('scale') or 1)))
+                except (TypeError, ValueError):
+                    st_x, st_y, st_scale = 50, 50, 1
+                stickers.append({
+                    'kind': kind,
+                    'content': content[:8] if kind == 'emoji' else content[:60],
+                    'x': st_x, 'y': st_y,
+                    'start_ms': st_start, 'end_ms': st_end,
+                    'scale': round(st_scale, 2),
+                })
+            if stickers:
+                edit_meta['stickers'] = stickers
+
+        tracks_raw = edit_meta_raw.get('audio_tracks')
+        if isinstance(tracks_raw, list):
+            tracks = []
+            for tr in tracks_raw[:3]:
+                if not isinstance(tr, dict):
+                    continue
+                tr_kind = str(tr.get('kind') or '').strip()
+                if tr_kind not in ('sound', 'voiceover', 'url'):
+                    continue
+                try:
+                    tr_volume = max(0, min(200, int(tr.get('volume') or 100)))
+                    tr_start = max(0, int(tr.get('start_ms') or 0))
+                    tr_duration = int(tr.get('duration_ms', 0) or 0)
+                except (TypeError, ValueError):
+                    continue
+                if tr_duration < 0 or tr_duration > MAX_TRIM_MS:
+                    tr_duration = MAX_TRIM_MS
+                track_out = {'kind': tr_kind, 'volume': tr_volume, 'start_ms': tr_start}
+                if tr_duration > 0:
+                    track_out['duration_ms'] = tr_duration
+                _src_url = ''
+                if tr_kind == 'sound':
+                    _sound = Sound.objects.filter(
+                        id=str(tr.get('sound_id') or '').strip()
+                    ).filter(is_active=True).only('audio_url').first()
+                    if _sound is None or not _sound.audio_url:
+                        continue
+                    _src_url = _sound.audio_url
+                else:
+                    _src_url = str(tr.get('url') or '').strip()
+                    if not _src_url or not is_allowed_media_host(_src_url):
+                        continue
+                if _src_url:
+                    track_out['url'] = _src_url
+                _track_effect = str(tr.get('effect') or '').strip()
+                if _track_effect in _VOICE_EFFECTS:
+                    track_out['effect'] = _track_effect
+                for _fade_key in ('fade_in_ms', 'fade_out_ms'):
+                    if tr.get(_fade_key) not in (None, ''):
+                        try:
+                            track_out[_fade_key] = max(0, min(10_000, int(tr.get(_fade_key) or 0)))
+                        except (TypeError, ValueError):
+                            pass
+                if bool(tr.get('ducking')):
+                    track_out['ducking'] = True
+                _track_label = str(tr.get('label') or '').strip()[:60]
+                if _track_label:
+                    track_out['label'] = _track_label
+                tracks.append(track_out)
+            if tracks:
+                edit_meta['audio_tracks'] = tracks
+
+        _caps_style_raw = edit_meta_raw.get('captions_style')
+        if isinstance(_caps_style_raw, dict):
+            caps_style = {}
+            _preset = str(_caps_style_raw.get('preset') or 'classic').strip()[:24]
+            if _preset:
+                caps_style['preset'] = _preset
+            if _caps_style_raw.get('font'):
+                caps_style['font'] = str(_caps_style_raw['font']).strip()[:24]
+            if _caps_style_raw.get('color'):
+                caps_style['color'] = str(_caps_style_raw['color']).strip()[:16]
+            if _caps_style_raw.get('bg') in ('pill', 'block'):
+                caps_style['bg'] = _caps_style_raw['bg']
+            if _caps_style_raw.get('size') not in (None, ''):
+                try:
+                    caps_style['size'] = max(0.8, min(1.6, round(float(_caps_style_raw.get('size')), 2)))
+                except (TypeError, ValueError):
+                    pass
+            if _caps_style_raw.get('placement') in ('top', 'center', 'bottom'):
+                caps_style['placement'] = _caps_style_raw['placement']
+            if caps_style:
+                edit_meta['captions_style'] = caps_style
+
+        if sound_placement:
+            edit_meta['sound_placement'] = sound_placement
+
         clean.append({
             'url': url,
             'media_type': media_type,
@@ -145,6 +411,8 @@ def _validate_media_items(items):
             'trim_end_ms': trim_end_ms,
             'sound': sound,
             'sound_volume': sound_volume,
+            'captions': captions,
+            'edit_meta': edit_meta,
             'alt_text': str(item.get('alt_text') or '')[:255],
         })
     return clean, None
@@ -156,8 +424,11 @@ def _create_post_media(post, items):
     `items` are validated dicts (or minimal {url, media_type} for the legacy
     path). Returns the created rows.
     """
+    from apps.ai.utils import segments_to_vtt
+
     rows = []
     for order, item in enumerate(items):
+        row_captions = item.get('captions') or []
         rows.append(PostMedia.objects.create(
             post=post,
             order=order,
@@ -171,6 +442,9 @@ def _create_post_media(post, items):
             trim_end_ms=item.get('trim_end_ms'),
             sound=item.get('sound'),
             sound_volume=item.get('sound_volume') if item.get('sound_volume') is not None else 100,
+            captions=row_captions,
+            captions_vtt=segments_to_vtt(row_captions),
+            edit_meta=item.get('edit_meta') or {},
             alt_text=item.get('alt_text') or '',
         ))
     usage_counts = {}
@@ -192,6 +466,14 @@ def _trigger_transcription(media_rows):
             transcribe_post_media.delay(str(row.id))
         except Exception:  # noqa: BLE001
             pass
+
+
+def _auto_captions_requested(request) -> bool:
+    """Studio captions toggle. Defaults to true for older clients."""
+    raw = request.data.get('auto_captions')
+    if raw in (None, ''):
+        return True
+    return str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
 
 
 def _audience_q(user_profile):
@@ -269,6 +551,38 @@ def _can_view_post(post, user_profile) -> bool:
             profile_id=post.author_id, subscription_active=True, gym_id__in=my_gym_ids,
         ).exists()
     return False
+
+
+# Bud Press engagement counters.
+# Views are throttled to one counted view per viewer per post per 24h so
+# refresh loops and re-opens don't inflate creator insights. Shares are
+# counted on every POST — each share is a deliberate outbound action.
+POST_VIEW_THROTTLE_SECONDS = 24 * 60 * 60
+
+
+def _post_view_cache_key(post_id, user_id) -> str:
+    return f'feed:post_view:{post_id}:{user_id}'
+
+
+def _record_post_view(post, viewer_profile):
+    """Count a view for `post`, throttled per viewer (24h window).
+
+    Shared by PostDetailView (implicit view on read) and PostViewRecordView
+    (explicit view ping) so both surfaces stay consistent. Returns
+    (view_count, counted).
+    """
+    if viewer_profile is None:
+        return post.view_count, False
+    key = _post_view_cache_key(post.id, viewer_profile.user_id)
+    try:
+        first_in_window = cache.add(key, 1, timeout=POST_VIEW_THROTTLE_SECONDS)
+    except Exception:  # noqa: BLE001 — cache outage must not break reads
+        first_in_window = True
+    if not first_in_window:
+        return post.view_count, False
+    Post.objects.filter(id=post.id).update(view_count=F('view_count') + 1)
+    post.refresh_from_db(fields=['view_count'])
+    return post.view_count, True
 
 
 def _handle_media_uploads(request_files):
@@ -589,9 +903,7 @@ class PostDetailView(views.APIView):
             }, status=status.HTTP_404_NOT_FOUND)
 
         if request.user.is_authenticated:
-            post.view_count = db_models.F('view_count') + 1
-            post.save(update_fields=['view_count'])
-            post.refresh_from_db()
+            _record_post_view(post, request.user.profile)
 
         serializer = PostSerializer(post, context={'request': request})
         return Response({
@@ -781,8 +1093,14 @@ class CreatePostView(views.APIView):
                 'message': 'Post already created.', 'errors': None, 'pagination': None,
             }, status=status.HTTP_200_OK)
 
-        # Kick off transcription for video media (Bud Press captions).
-        _trigger_transcription(media_rows)
+        # Kick off transcription for videos without studio/manual captions.
+        # Studio captions are already timed to the uploaded snippet; the async
+        # pass must not overwrite them.
+        if _auto_captions_requested(request):
+            _trigger_transcription([
+                row for row in media_rows
+                if row.media_type == 'video' and not (row.captions or [])
+            ])
 
         # Handle poll creation
         poll_serializer = PollCreateSerializer(data=request.data)
@@ -1226,6 +1544,120 @@ class PostPinView(views.APIView):
         return Response({'success': True, 'data': {'is_pinned': post.is_pinned}, 'message': 'Pin toggled.', 'errors': None, 'pagination': None})
 
 
+def _engagement_post_or_error_response(request, post_id):
+    """Shared lookup + permission gate for share/view engagement endpoints.
+
+    Returns (post, None) on success or (None, Response) with the 410/404
+    envelope matching PostDetailView.
+    """
+    post = get_object_or_404(Post, id=post_id)
+    if post.moderation_status == 'removed':
+        return None, Response({
+            'success': False, 'data': None,
+            'message': 'This post has been removed.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_410_GONE)
+    viewer_profile = request.user.profile
+    if not _can_view_post(post, viewer_profile):
+        return None, Response({
+            'success': False, 'data': None,
+            'message': 'Not found.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_404_NOT_FOUND)
+    if post.author_id != viewer_profile.user_id and not can_view_content(request, post):
+        return None, Response({
+            'success': False, 'data': None,
+            'message': 'Not found.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_404_NOT_FOUND)
+    return post, None
+
+
+class PostShareView(views.APIView):
+    """POST /api/v1/feed/<post_id>/share/ — count an outbound share.
+
+    Every POST increments share_count: each share is a deliberate user
+    action (unlike passive views), so repeats are counted, not deduped.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, post_id):
+        post, error = _engagement_post_or_error_response(request, post_id)
+        if error is not None:
+            return error
+        Post.objects.filter(id=post.id).update(share_count=F('share_count') + 1)
+        post.refresh_from_db(fields=['share_count'])
+        return Response({
+            'success': True,
+            'data': {'share_count': post.share_count},
+            'message': 'Post shared.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class PostViewRecordView(views.APIView):
+    """POST /api/v1/feed/<post_id>/view/ — explicit view ping (Bud Press).
+
+    Uses the same throttled helper as PostDetailView: one counted view per
+    viewer per post per 24h. Repeat pings inside the window return the
+    current count with success=True and a 'View already counted.' message.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, post_id):
+        post, error = _engagement_post_or_error_response(request, post_id)
+        if error is not None:
+            return error
+        view_count, counted = _record_post_view(post, request.user.profile)
+        return Response({
+            'success': True,
+            'data': {'view_count': view_count},
+            'message': 'View recorded.' if counted else 'View already counted.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class CreatorInsightsView(views.APIView):
+    """GET /api/v1/feed/creator/insights/ — per-post aggregates for the author."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        profile = request.user.profile
+        posts = (
+            Post.objects.filter(author=profile, is_deleted=False)
+            .annotate(
+                likes_agg=db_models.Count('reactions', distinct=True),
+                comments_agg=db_models.Count('comments', distinct=True),
+                reposts_agg=db_models.Count('reposts', distinct=True),
+                saves_agg=db_models.Count('saves', distinct=True),
+            )
+            .order_by('-created_at')
+        )
+        items = [
+            {
+                'post_id': str(p.id),
+                'views': p.view_count,
+                'likes': p.likes_agg,
+                'comments': p.comments_agg,
+                'reposts': p.reposts_agg,
+                'saves': p.saves_agg,
+                'shares': p.share_count,
+                'created_at': p.created_at.isoformat(),
+                'visibility': p.visibility,
+            }
+            for p in posts
+        ]
+        return Response({
+            'success': True,
+            'data': {'items': items},
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+
 class DraftListCreateView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1417,6 +1849,71 @@ class WorkoutFormAnalysisView(views.APIView):
             return Response({
                 'success': False, 'data': None,
                 'message': 'Form analysis service unavailable.',
+                'errors': str(e), 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+_STUDIO_TRANSCRIBE_MAX_BYTES = 150 * 1024 * 1024
+
+
+class StudioTranscribeView(views.APIView):
+    """POST /api/v1/feed/studio/transcribe/ — in-studio auto-captions.
+
+    The create studio uploads the picked video while the user is still
+    editing. Django validates the upload and streams it to the AI service
+    over the internal network (no public URL needed), returning whisper
+    segments so captions can be generated mid-session instead of only
+    after publish.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'uploads'
+
+    def post(self, request):
+        import requests as http_requests
+        file = request.FILES.get('media')
+        if not file:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No media provided.',
+                'errors': 'media field is required.', 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if file.size > _STUDIO_TRANSCRIBE_MAX_BYTES:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Media is too large for in-studio transcription.',
+                'errors': 'media must be 150 MB or smaller.', 'pagination': None,
+            }, status=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+
+        ai_url = f'{settings.AI_SERVICE_URL}/api/v1/transcribe-file'
+        try:
+            resp = ai_post(
+                ai_url,
+                files={'file': (file.name, file.read(), file.content_type or 'application/octet-stream')},
+                timeout=240,
+            )
+            if resp.status_code >= 400:
+                detail = ''
+                try:
+                    detail = resp.json().get('detail', '')
+                except (ValueError, AttributeError):
+                    pass
+                return Response({
+                    'success': False, 'data': None,
+                    'message': detail or 'Transcription unavailable.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_502_BAD_GATEWAY if resp.status_code >= 500 else status.HTTP_422_UNPROCESSABLE_ENTITY)
+            audit_ai_call('studio_transcribe', input_data={'filename': file.name}, output_data={'segments': len(resp.json().get('segments', []))})
+            return Response({
+                'success': True, 'data': resp.json(),
+                'message': 'Transcription complete.',
+                'errors': None, 'pagination': None,
+            })
+        except http_requests.RequestException as e:
+            audit_ai_call('studio_transcribe', input_data={'filename': file.name}, error_message=str(e))
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Transcription service unavailable.',
                 'errors': str(e), 'pagination': None,
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 

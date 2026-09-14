@@ -11,10 +11,13 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/caption_overlay.dart';
+import '../../../shared/widgets/creative_overlays.dart';
+import '../../../shared/widgets/track_audio_mixer.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/toast.dart';
 import '../providers/feed_provider.dart';
+import '../widgets/share_sheet.dart';
 
 /// Full-screen vertical video feed (Bud Press) over the `videos` tab posts.
 ///
@@ -224,19 +227,29 @@ class _PostMeta extends StatelessWidget {
   }
 }
 
-/// Right-rail action buttons (like / save / comment).
+/// Right-rail action buttons (like / repost / save / comment / share / views).
 class _ActionRail extends StatelessWidget {
   final Post post;
   final VoidCallback onLike;
+  final VoidCallback onRepost;
   final VoidCallback onSave;
   final VoidCallback onComment;
+  final VoidCallback onShare;
 
   const _ActionRail({
     required this.post,
     required this.onLike,
+    required this.onRepost,
     required this.onSave,
     required this.onComment,
+    required this.onShare,
   });
+
+  static String _count(int n) {
+    if (n < 1000) return '$n';
+    if (n < 1000000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return '${(n / 1000000).toStringAsFixed(1)}m';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -247,21 +260,43 @@ class _ActionRail extends StatelessWidget {
         _RailButton(
           icon: post.userReaction != null ? Icons.favorite : Icons.favorite_border,
           color: post.userReaction != null ? BuddyColors.red : Colors.white,
-          label: '$likes',
+          label: _count(likes),
           onTap: onLike,
-        ),
-        const SizedBox(height: 18),
-        _RailButton(
-          icon: post.isSaved ? Icons.bookmark : Icons.bookmark_border,
-          color: post.isSaved ? BuddyColors.gold : Colors.white,
-          onTap: onSave,
         ),
         const SizedBox(height: 18),
         _RailButton(
           icon: Icons.chat_bubble_outline,
           color: Colors.white,
-          label: '${post.commentCount}',
+          label: _count(post.commentCount),
           onTap: onComment,
+        ),
+        const SizedBox(height: 18),
+        _RailButton(
+          icon: Icons.repeat,
+          color: post.isRepostedByMe ? BuddyColors.green : Colors.white,
+          label: _count(post.repostCount),
+          onTap: onRepost,
+        ),
+        const SizedBox(height: 18),
+        _RailButton(
+          icon: post.isSaved ? Icons.bookmark : Icons.bookmark_border,
+          color: post.isSaved ? BuddyColors.gold : Colors.white,
+          label: _count(post.saveCount),
+          onTap: onSave,
+        ),
+        const SizedBox(height: 18),
+        _RailButton(
+          icon: Icons.share_outlined,
+          color: Colors.white,
+          label: _count(post.shareCount),
+          onTap: onShare,
+        ),
+        const SizedBox(height: 18),
+        _RailButton(
+          icon: Icons.visibility_outlined,
+          color: Colors.white,
+          label: _count(post.viewCount),
+          onTap: () {},
         ),
       ],
     );
@@ -372,6 +407,11 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
   Duration _duration = Duration.zero;
   bool _playing = false;
   bool _opened = false;
+  bool _viewRecorded = false;
+  int _activePlayMs = 0;
+  int _lastTickMs = 0;
+  Offset? _dragStart;
+  final TrackAudioMixer _mixer = TrackAudioMixer();
 
   Post get _post => widget.post;
   PostMedia get _media => _post.media.isNotEmpty
@@ -399,7 +439,48 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
       if (mounted) setState(() => _playing = p);
     });
     player.setVolume(widget.muted ? 0 : _soundVolume);
+    _syncMixerTracks();
     if (widget.active) _startPlayback();
+  }
+
+  /// Parametric studio mix for this clip: added tracks + attached sound.
+  void _syncMixerTracks() {
+    final meta = _media.editMeta;
+    final tracks = <TrackCue>[];
+    final rawTracks = meta?['audio_tracks'];
+    if (rawTracks is List) {
+      var i = 0;
+      for (final raw in rawTracks) {
+        if (raw is! Map) continue;
+        final url = raw['url'] as String?;
+        if (url == null || url.isEmpty) continue;
+        tracks.add(TrackCue(
+          id: 'track-$i',
+          url: url,
+          volume: ((raw['volume'] as num?)?.toDouble() ?? 100),
+          startMs: (raw['start_ms'] as num?)?.toInt() ?? 0,
+          durationMs: (raw['duration_ms'] as num?)?.toInt(),
+          fadeInMs: (raw['fade_in_ms'] as num?)?.toInt() ?? 0,
+          fadeOutMs: (raw['fade_out_ms'] as num?)?.toInt() ?? 0,
+          ducking: raw['ducking'] == true,
+        ));
+        i++;
+      }
+    }
+    final soundUrl = _media.soundAudioUrl;
+    if (soundUrl != null && soundUrl.isNotEmpty) {
+      final placement = meta?['sound_placement'];
+      final asMap = placement is Map ? placement : <String, dynamic>{};
+      tracks.add(TrackCue(
+        id: 'attached-sound',
+        url: soundUrl,
+        volume: _soundVolume,
+        offsetMs: (asMap['start_ms'] as num?)?.toInt() ?? 0,
+        fadeInMs: (asMap['fade_in_ms'] as num?)?.toInt() ?? 0,
+        fadeOutMs: (asMap['fade_out_ms'] as num?)?.toInt() ?? 0,
+      ));
+    }
+    _mixer.setTracks(tracks);
   }
 
   double get _soundVolume {
@@ -423,7 +504,21 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
 
   void _onPosition(Duration position) {
     if (!mounted) return;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    if (widget.active && _playing && _lastTickMs > 0) {
+      _activePlayMs += nowMs - _lastTickMs;
+      if (!_viewRecorded && _activePlayMs >= 2000) {
+        _viewRecorded = true;
+        ref.read(feedProvider.notifier).recordViewById(_post.id);
+      }
+    }
+    _lastTickMs = nowMs;
     setState(() => _position = position);
+    // Keep the parametric mix glued to the video clock.
+    unawaited(_mixer.sync(
+      position.inMilliseconds,
+      widget.active && _playing && !widget.muted,
+    ));
     // Trim loop: jump back to the in-point when the out-point is crossed.
     final endMs = _trimEndMs;
     if (endMs != null && endMs > _trimStartMs) {
@@ -449,6 +544,12 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
 
   void _handleSave() => _savePost(ref, _post);
 
+  void _handleRepost() {
+    ref.read(feedProvider.notifier).toggleRepost(_post.id);
+  }
+
+  void _handleShare() => ShareSheet.show(context, _post);
+
   void _handleComment() => _openComments(context, _post);
 
   @override
@@ -464,12 +565,15 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
     }
     if (widget.muted != oldWidget.muted) {
       _player?.setVolume(widget.muted ? 0 : _soundVolume);
+      if (widget.muted) unawaited(_mixer.silence());
     }
+    if (widget.post.id != oldWidget.post.id) _syncMixerTracks();
   }
 
   @override
   void deactivate() {
     _player?.pause();
+    unawaited(_mixer.silence());
     super.deactivate();
   }
 
@@ -477,6 +581,7 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
   void dispose() {
     _positionSub?.cancel();
     _player?.dispose();
+    unawaited(_mixer.dispose());
     super.dispose();
   }
 
@@ -495,6 +600,18 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
         if (controller != null)
           GestureDetector(
             onTap: _togglePlayPause,
+            onHorizontalDragStart: (d) => _dragStart = d.globalPosition,
+            onHorizontalDragEnd: (d) {
+              final start = _dragStart;
+              _dragStart = null;
+              if (start == null) return;
+              final dx = d.globalPosition.dx - start.dx;
+              final dy = (d.globalPosition.dy - start.dy).abs();
+              // Deliberate left swipe opens the creator's profile.
+              if (dx < -80 && dx.abs() > dy * 1.5) {
+                context.push('/${_post.authorData.username}');
+              }
+            },
             child: Video(
               controller: controller,
               fit: BoxFit.cover,
@@ -523,8 +640,10 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
           child: _ActionRail(
             post: _post,
             onLike: _handleReact,
+            onRepost: _handleRepost,
             onSave: _handleSave,
             onComment: _handleComment,
+            onShare: _handleShare,
           ),
         ),
         // Unmute button.
@@ -542,14 +661,29 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
           ),
         ),
         // Captions + meta.
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 96,
-          child: CaptionOverlay(
-            captions: _media.captions,
-            positionMs: _position.inMilliseconds,
-          ),
+        Builder(builder: (context) {
+          final rawStyle = _media.editMeta?['captions_style'];
+          final style = rawStyle is Map<String, dynamic>
+              ? rawStyle
+              : rawStyle is Map
+                  ? Map<String, dynamic>.from(rawStyle)
+                  : null;
+          final placement = captionPlacement(style);
+          return Positioned(
+            left: 0,
+            right: 0,
+            bottom: placement == 'top' ? null : 96,
+            top: placement == 'top' ? 96 : null,
+            child: CaptionOverlay(
+              captions: _media.captions,
+              positionMs: _position.inMilliseconds,
+              style: style,
+            ),
+          );
+        }),
+        CreativeOverlays(
+          meta: _media.editMeta,
+          positionMs: _position.inMilliseconds,
         ),
         Positioned(
           left: 0,
@@ -671,8 +805,10 @@ class _BudPressPhotoPageState extends ConsumerState<_BudPressPhotoPage> {
           child: _ActionRail(
             post: post,
             onLike: () => _reactToPost(ref, post),
+            onRepost: () => ref.read(feedProvider.notifier).toggleRepost(post.id),
             onSave: () => _savePost(ref, post),
             onComment: () => _openComments(context, post),
+            onShare: () => ShareSheet.show(context, post),
           ),
         ),
         Positioned(

@@ -49,6 +49,7 @@ class Post(TimestampedModel, SoftDeleteModel):
     media_urls = models.JSONField(default=list)
     tags = models.JSONField(default=list)
     view_count = models.IntegerField(default=0)
+    share_count = models.IntegerField(default=0)
     is_pinned = models.BooleanField(default=False)
     content_rating = models.CharField(
         max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
@@ -268,6 +269,8 @@ class PostMedia(TimestampedModel):
     captions = models.JSONField(default=list, blank=True)
     captions_vtt = models.TextField(blank=True)
     alt_text = models.CharField(max_length=255, blank=True)
+    # Creative-studio edits: {filter, speed, volume, enhance, text_overlays[]}
+    edit_meta = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'feed_post_media'

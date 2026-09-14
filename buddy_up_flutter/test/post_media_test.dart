@@ -5,13 +5,13 @@ void main() {
   Post basePost(Map<String, dynamic> extra) {
     return Post.fromJson({
       'id': 'p1',
-      'authorData': {
+      'author_data': {
         'username': 'u',
-        'displayName': 'U',
-        'avatarUrl': '',
-        'verificationStatus': 'none',
+        'display_name': 'U',
+        'avatar_url': '',
+        'verification_status': 'none',
       },
-      'createdAt': '2026-01-01T00:00:00Z',
+      'created_at': '2026-01-01T00:00:00Z',
       ...extra,
     });
   }
@@ -68,5 +68,45 @@ void main() {
   test('Post without media defaults to empty list', () {
     final post = basePost({});
     expect(post.media, isEmpty);
+  });
+
+  test('Post parses engagement counters and studio media fields', () {
+    final post = basePost({
+      'view_count': 120,
+      'comment_count': 4,
+      'repost_count': 2,
+      'save_count': 3,
+      'share_count': 7,
+      'user_reaction': 'fire',
+      'reaction_counts': {'fire': 3},
+      'media': [
+        {
+          'url': 'https://cdn.example.com/v.mp4',
+          'media_type': 'video',
+          'sound_id': 's1',
+          'sound_volume': 80,
+          'sound_audio_url': 'https://cdn.example.com/s.mp3',
+          'edit_meta': {
+            'speed': 1.5,
+            'audio_tracks': [
+              {'kind': 'voiceover', 'url': 'https://cdn.example.com/v.mp3', 'volume': 100, 'start_ms': 0},
+            ],
+            'captions_style': {'preset': 'pop'},
+          },
+        },
+      ],
+    });
+    expect(post.authorData.displayName, 'U');
+    expect(post.viewCount, 120);
+    expect(post.commentCount, 4);
+    expect(post.repostCount, 2);
+    expect(post.saveCount, 3);
+    expect(post.shareCount, 7);
+    expect(post.userReaction, 'fire');
+    expect(post.reactionCounts, {'fire': 3});
+    final m = post.media.single;
+    expect(m.soundAudioUrl, 'https://cdn.example.com/s.mp3');
+    expect(m.editMeta?['speed'], 1.5);
+    expect((m.editMeta?['audio_tracks'] as List), hasLength(1));
   });
 }

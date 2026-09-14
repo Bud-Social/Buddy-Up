@@ -12,6 +12,11 @@ export interface SelectedSound {
   name: string;
   artist: string;
   volume: number; // 0–100
+  /** Offset into the sound where playback starts (ms, parametric). */
+  startOffsetMs?: number;
+  /** Fade in/out lengths in ms (0 = none, parametric). */
+  fadeInMs?: number;
+  fadeOutMs?: number;
 }
 
 interface SoundPickerProps {
@@ -46,7 +51,14 @@ export function SoundPicker({ open, selected, videoHasAudio, onSelect, onVolumeC
       feedApi
         .listSounds({ q: query.trim() || undefined, ordering: query.trim() ? undefined : ordering })
         .then((res) => {
-          if (!cancelled) setResults(res.data || []);
+          // Backend envelope nests the paginated page: {data: {results: [...]}}
+          const raw = res.data as unknown;
+          const sounds = Array.isArray(raw)
+            ? raw
+            : Array.isArray((raw as { results?: Sound[] } | undefined)?.results)
+              ? ((raw as { results: Sound[] }).results)
+              : [];
+          if (!cancelled) setResults(sounds);
         })
         .catch(() => {
           if (!cancelled) {

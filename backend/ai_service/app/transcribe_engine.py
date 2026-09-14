@@ -97,23 +97,29 @@ def transcribe(media_url: str) -> dict:
     model = _load_model()  # ImportError propagates → router returns 503
     tmp_path = _download_to_temp(media_url)
     try:
-        segments_iter, info = model.transcribe(tmp_path, vad_filter=True)
-        max_seconds = settings.transcribe_max_duration_sec or 240
-        if info.duration and info.duration > max_seconds:
-            raise ValueError(f'Media exceeds the {max_seconds}s transcription limit.')
-        segments = [
-            {
-                'start_ms': int(seg.start * 1000),
-                'end_ms': int(seg.end * 1000),
-                'text': seg.text.strip(),
-            }
-            for seg in segments_iter
-        ]
-        return {
-            'segments': segments,
-            'language': info.language or '',
-            'duration_ms': int((info.duration or 0) * 1000),
-        }
+        return transcribe_path(tmp_path)
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
+
+
+def transcribe_path(path: str) -> dict:
+    """Transcribe a local media file; returns {segments, language, duration_ms}."""
+    model = _load_model()  # ImportError propagates → router returns 503
+    segments_iter, info = model.transcribe(path, vad_filter=True)
+    max_seconds = settings.transcribe_max_duration_sec or 240
+    if info.duration and info.duration > max_seconds:
+        raise ValueError(f'Media exceeds the {max_seconds}s transcription limit.')
+    segments = [
+        {
+            'start_ms': int(seg.start * 1000),
+            'end_ms': int(seg.end * 1000),
+            'text': seg.text.strip(),
+        }
+        for seg in segments_iter
+    ]
+    return {
+        'segments': segments,
+        'language': info.language or '',
+        'duration_ms': int((info.duration or 0) * 1000),
+    }

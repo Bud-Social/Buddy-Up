@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { feedApi } from '@/api/feed';
-import { uploadToCloudinary, compressImage, mapCloudinaryResponse, UploadError } from './uploader';
+import { uploadToCloudinary, compressImage, mapCloudinaryResponse, UploadError, trimVideoFile } from './uploader';
 
 vi.mock('@/api/feed', () => ({
   feedApi: {
@@ -215,6 +215,16 @@ describe('compressImage', () => {
   it('falls back to the original file when canvas is unavailable', async () => {
     const big = new File([new Uint8Array(310 * 1024)], 'big.jpg', { type: 'image/jpeg' });
     expect(await compressImage(big)).toBe(big);
+  });
+});
+
+describe('trimVideoFile', () => {
+  it('falls back to the original file when MediaRecorder is unavailable', async () => {
+    const file = new File(['x'], 'clip.mp4', { type: 'video/mp4' });
+    const res = await trimVideoFile(file, 1_000, 2_000, { durationMs: 5_000 });
+    expect(res.file).toBe(file);
+    expect(res.trimmed).toBe(false);
+    expect(res.duration_ms).toBe(5_000);
   });
 });
 

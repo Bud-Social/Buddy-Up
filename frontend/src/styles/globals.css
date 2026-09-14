@@ -174,3 +174,20 @@ html.reduce-motion *, html.reduce-motion *::before, html.reduce-motion *::after 
   scroll-behavior: auto !important;
 }
 .EmojiPickerReact * { flex-shrink: 0; }
+/* Bud Press creative-layer animations (text overlay presets). */
+@keyframes creative-anim-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes creative-anim-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+  60% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes creative-anim-slide {
+  from { opacity: 0; margin-left: -14px; }
+  to { opacity: 1; margin-left: 0; }
+}
+.creative-anim-fade { animation: creative-anim-fade 0.25s ease-out both; }
+.creative-anim-pop { animation: creative-anim-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+.creative-anim-slide { animation: creative-anim-slide 0.3s ease-out both; }

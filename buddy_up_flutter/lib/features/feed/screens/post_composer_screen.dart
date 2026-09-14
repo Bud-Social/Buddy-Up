@@ -41,11 +41,12 @@ class ComposerMedia {
   final String type; // image | video | file | document
   final Uint8List? bytes;
 
-  // Video studio results (trim + sound), persisted into the media JSON.
+  // Video studio results (trim + sound + captions), persisted into the media JSON.
   final int trimStartMs;
   final int trimEndMs;
   final String? soundId;
   final double? soundVolume;
+  final List<Map<String, dynamic>> captions;
 
   const ComposerMedia({
     this.path = '',
@@ -56,6 +57,7 @@ class ComposerMedia {
     this.trimEndMs = 0,
     this.soundId,
     this.soundVolume,
+    this.captions = const [],
   });
 
   ComposerMedia copyWith({
@@ -67,6 +69,7 @@ class ComposerMedia {
     int? trimEndMs,
     String? soundId,
     double? soundVolume,
+    List<Map<String, dynamic>>? captions,
   }) {
     return ComposerMedia(
       path: path ?? this.path,
@@ -77,6 +80,7 @@ class ComposerMedia {
       trimEndMs: trimEndMs ?? this.trimEndMs,
       soundId: soundId ?? this.soundId,
       soundVolume: soundVolume ?? this.soundVolume,
+      captions: captions ?? this.captions,
     );
   }
 }
@@ -221,6 +225,15 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               trimEndMs: (map['trim_end_ms'] ?? 0) as int,
               soundId: map['sound_id'] as String?,
               soundVolume: (map['sound_volume'] as num?)?.toDouble(),
+              captions: [
+                for (final c in (map['captions'] as List? ?? []))
+                  if (c is Map)
+                    {
+                      'start_ms': (c['start_ms'] as num?)?.toInt() ?? 0,
+                      'end_ms': (c['end_ms'] as num?)?.toInt() ?? 0,
+                      'text': (c['text'] as String?) ?? '',
+                    },
+              ],
             ));
           }
         } catch (_) {}
@@ -291,6 +304,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                               'trim_end_ms': m.trimEndMs,
                               'sound_id': m.soundId,
                               'sound_volume': m.soundVolume,
+                              'captions': m.captions,
                             })
                         .toList(),
                   }),
@@ -371,6 +385,10 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               trimEndMs: result.trimEndMs,
               soundId: result.soundId,
               soundVolume: result.soundVolume,
+              captions: [
+                for (final s in result.captions)
+                  {'start_ms': s.startMs, 'end_ms': s.endMs, 'text': s.text},
+              ],
             ));
             _visibility = result.visibility;
             _commentsEnabled = result.commentsEnabled;
@@ -734,6 +752,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           if (m.type == 'video' && m.trimEndMs > 0) 'trim_end_ms': m.trimEndMs,
           'sound_id': ?m.soundId,
           'sound_volume': ?m.soundVolume,
+          if (m.type == 'video' && m.captions.isNotEmpty) 'captions': m.captions,
         });
         AnalyticsService.instance.track(
           'upload.completed',

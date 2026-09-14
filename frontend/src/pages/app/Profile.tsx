@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radio, Play, Clock, Users, Camera, Settings, Moon, Sun, Monitor, Contrast, Loader, MessageCircle, Shield } from 'lucide-react';
+import { Radio, Play, Clock, Users, Camera, Settings, Moon, Sun, Monitor, Contrast, Loader, MessageCircle, Shield, BarChart3 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,6 +19,7 @@ import type { BuddyLive } from '@/types/live';
 import type { Post } from '@/types';
 import type { Gym } from '@/types';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { CreatorInsights } from '@/components/features/feed/CreatorInsights';
 import { AchievementsTab } from '@/components/profile/AchievementsTab';
 
 type ProfileTab = 'posts' | 'lives' | 'gyms' | 'achievements';
@@ -33,6 +34,7 @@ export default function Profile() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
+  const [showInsights, setShowInsights] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState(profile?.bio || '');
   const [editDisplayName, setEditDisplayName] = useState(profile?.display_name || '');
@@ -252,8 +254,27 @@ export default function Profile() {
             {theme === 'high-contrast' && <><Contrast size={14} /> High Contrast</>}
             {theme === 'ambient' && <><Monitor size={14} /> Ambient</>}
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex-1 gap-1.5"
+            onClick={() => setShowInsights((s) => !s)}
+            aria-expanded={showInsights}
+          >
+            <BarChart3 size={14} /> Creator insights
+          </Button>
         </div>
       </Card>
+
+      {showInsights && (
+        <Card className="p-4 mb-6" data-testid="insights-panel">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart3 size={16} className="text-buddy-green" />
+            <h3 className="font-heading font-semibold text-sm">Creator insights</h3>
+          </div>
+          <CreatorInsights />
+        </Card>
+      )}
 
       <div className="flex border-b border-buddy-surface mb-4">
         {(['posts', 'lives', 'gyms', 'achievements'] as ProfileTab[]).map((tab) => (

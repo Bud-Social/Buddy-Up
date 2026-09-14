@@ -12,19 +12,227 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Heart, MessageCircle, Repeat2, Bookmark,
-  Volume2, VolumeX, Loader2,
+  Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
+  Volume2, VolumeX, Loader2, Share2, Eye,
 } from 'lucide-react';
-import { Avatar } from '@/components/ui/Avatar';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { PostPhotoCarousel } from '@/components/features/feed/PostPhotoCarousel';
+import { RailAction } from '@/components/features/feed/RailAction';
+import { AuthorChip } from '@/components/features/feed/AuthorChip';
+import { PostShareSheet } from '@/components/features/feed/PostShareSheet';
+import { FeedTrackAudio } from '@/components/features/feed/FeedTrackAudio';
+import { useRecordPostView } from '@/components/features/feed/useRecordPostView';
+import { toEmoji } from '@/utils/emojiUtils';
 import { feedApi } from '@/api';
 import { mediaPagesFromPost, postIsPhotoMode, firstVideoPage } from '@/lib/mediaPages';
 import type { Post } from '@/types';
 
 interface VideoFeedProps {
   variant?: 'fyp' | 'following';
+}
+
+const totalReactions = (counts?: Record<string, number> | null) =>
+  Object.values(counts || {}).reduce((a, b) => a + b, 0);
+
+/** One fullscreen slide: shared rail, share sheet, view + track-audio wiring. */
+function VideoFeedSlide({
+  post, active, muted, last, onPatch, onComment, registerVideo, lastItemRef,
+}: {
+  post: Post;
+  active: boolean;
+  muted: boolean;
+  last: boolean;
+  onPatch: (id: string, patch: Partial<Post>) => void;
+  onComment: (id: string) => void;
+  registerVideo: (id: string, el: HTMLVideoElement | null) => void;
+  lastItemRef: (el: HTMLDivElement | null) => void;
+}) {
+  const [shareOpen, setShareOpen] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const viewRef = useRecordPostView(post.id, {
+    active: active && isPlaying,
+    progress,
+    onRecorded: (n) => onPatch(post.id, { view_count: n }),
+  });
+
+  const pages = mediaPagesFromPost(post);
+  const photoMode = postIsPhotoMode(pages);
+  const videoPage = firstVideoPage(pages);
+  const videoUrl = videoPage?.url
+    ?? post.media_urls?.find((u) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u))
+    ?? post.media_urls?.[0];
+  const posterUrl = videoPage?.poster_url ?? undefined;
+
+  const handleLike = async () => {
+    const current = post.user_reaction ? toEmoji(post.user_reaction) : null;
+    const emoji = '💪';
+    if (current === emoji) {
+      onPatch(post.id, { user_reaction: null });
+      try {
+        await feedApi.unreact(post.id);
+      } catch {
+        onPatch(post.id, { user_reaction: post.user_reaction });
+      }
+    } else {
+      const prev = post.user_reaction;
+      const counts = { ...(post.reaction_counts || {}) };
+      if (prev) counts[prev] = Math.max(0, (counts[prev] || 1) - 1);
+      counts[emoji] = (counts[emoji] || 0) + 1;
+      onPatch(post.id, { user_reaction: emoji, reaction_counts: counts });
+      try {
+        await feedApi.react(post.id, emoji);
+      } catch {
+        onPatch(post.id, { user_reaction: prev });
+      }
+    }
+  };
+
+  const handleRepost = async () => {
+    const was = !!post.is_reposted_by_me;
+    onPatch(post.id, {
+      is_reposted_by_me: !was,
+      repost_count: Math.max(0, (post.repost_count || 0) + (was ? -1 : 1)),
+    });
+    try {
+      const res = await feedApi.repost(post.id);
+      if (res.data) onPatch(post.id, { is_reposted_by_me: res.data.action === 'reposted', repost_count: res.data.repost_count });
+    } catch {
+      onPatch(post.id, { is_reposted_by_me: was });
+    }
+  };
+
+  const handleSave = async () => {
+    const next = !post.is_saved;
+    onPatch(post.id, { is_saved: next });
+    try {
+      if (next) await feedApi.save(post.id);
+      else await feedApi.unsave(post.id);
+    } catch {
+      onPatch(post.id, { is_saved: !next });
+    }
+  };
+
+  return (
+    <div
+      key={post.id}
+      ref={last ? lastItemRef : undefined}
+      className="relative h-full w-full snap-start snap-always bg-black"
+    >
+      {photoMode ? (
+        <PostPhotoCarousel post={post} className="absolute inset-0" />
+      ) : videoUrl ? (
+        <>
+          <video
+            ref={(el) => registerVideo(post.id, el)}
+            src={videoUrl}
+            poster={posterUrl}
+            loop
+            playsInline
+            muted={muted}
+            preload={active ? 'auto' : 'none'}
+            className="absolute inset-0 w-full h-full object-contain"
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+            onTimeUpdate={(e) => {
+              const v = e.currentTarget;
+              if (v.duration > 0) setProgress(v.currentTime / v.duration);
+            }}
+          />
+          <FeedTrackAudio
+            getVideo={() => document.querySelector(`video[src="${CSS.escape(videoUrl)}"]`) as HTMLVideoElement | null}
+            editMeta={videoPage?.edit_meta}
+            soundUrl={videoPage?.sound_audio_url}
+            soundVolume={videoPage?.sound_volume}
+            soundPlacement={videoPage?.edit_meta?.sound_placement}
+            trimStartMs={videoPage?.trim_start_ms}
+            muted={muted}
+            active={active && isPlaying}
+          />
+        </>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-buddy-text-secondary text-sm">
+          Unsupported media
+        </div>
+      )}
+
+      {/* Qualified-view recorder */}
+      <span ref={viewRef} className="absolute inset-0 pointer-events-none" aria-hidden />
+
+      {/* Right rail actions */}
+      <div className="absolute right-3 bottom-20 flex flex-col items-center gap-1 z-10">
+        <RailAction
+          tone="onDark"
+          label={post.user_reaction ? 'Liked' : 'Like with flexed biceps'}
+          icon={<Heart size={30} className={post.user_reaction ? 'text-buddy-green fill-current drop-shadow' : 'drop-shadow'} />}
+          count={totalReactions(post.reaction_counts)}
+          active={!!post.user_reaction}
+          onClick={() => void handleLike()}
+        />
+        <RailAction
+          tone="onDark"
+          label="Comments"
+          icon={<MessageCircle size={30} className="drop-shadow" />}
+          count={post.comment_count ?? 0}
+          onClick={() => onComment(post.id)}
+        />
+        <RailAction
+          tone="onDark"
+          label={post.is_reposted_by_me ? 'Undo repost' : 'Repost'}
+          icon={<Repeat2 size={30} className="drop-shadow" />}
+          count={post.repost_count ?? 0}
+          active={!!post.is_reposted_by_me}
+          activeClassName="text-buddy-electric"
+          onClick={() => void handleRepost()}
+        />
+        <RailAction
+          tone="onDark"
+          label={post.is_saved ? 'Saved' : 'Save'}
+          icon={post.is_saved
+            ? <BookmarkCheck size={30} className="text-buddy-green drop-shadow" />
+            : <Bookmark size={30} className="drop-shadow" />}
+          count={post.save_count ?? 0}
+          active={!!post.is_saved}
+          onClick={() => void handleSave()}
+        />
+        <RailAction
+          tone="onDark"
+          label="Share"
+          icon={<Share2 size={30} className="drop-shadow" />}
+          count={post.share_count ?? 0}
+          onClick={() => setShareOpen(true)}
+        />
+        <RailAction
+          tone="onDark"
+          label="Views"
+          icon={<Eye size={30} className="drop-shadow" />}
+          count={post.view_count ?? 0}
+        />
+      </div>
+
+      {/* Bottom-left author info */}
+      <div className="absolute left-3 bottom-20 right-16 z-10 pointer-events-none">
+        <div className="pointer-events-auto max-w-full">
+          <AuthorChip author={post.author_data} tone="onDark" />
+        </div>
+        {!photoMode && post.body && (
+          <p className="text-white/90 text-xs line-clamp-2 drop-shadow">{post.body}</p>
+        )}
+      </div>
+
+      <PostShareSheet
+        post={post}
+        isOpen={shareOpen}
+        onClose={() => setShareOpen(false)}
+        isSaved={!!post.is_saved}
+        onToggleSave={() => void handleSave()}
+        isReposted={!!post.is_reposted_by_me}
+        onRepost={() => void handleRepost()}
+        onShared={(n: number) => onPatch(post.id, { share_count: n })}
+      />
+    </div>
+  );
 }
 
 export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
@@ -35,15 +243,22 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
   const [reloadKey, setReloadKey] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastItemRef = useRef<HTMLDivElement | null>(null);
   const cursorRef = useRef<string | undefined>(undefined);
   const hasMoreRef = useRef(true);
   const loadingMoreLockRef = useRef(false);
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const videoEls = useRef(new Map<string, HTMLVideoElement | null>());
+
+  const patchPost = useCallback((id: string, patch: Partial<Post>) => {
+    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  }, []);
+
+  const registerVideo = useCallback((id: string, el: HTMLVideoElement | null) => {
+    if (el) videoEls.current.set(id, el);
+    else videoEls.current.delete(id);
+  }, []);
 
   const loadPosts = useCallback(async (reset: boolean) => {
     if (!reset) {
@@ -96,11 +311,12 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
     return () => { cancelled = true; };
   }, [variant, reloadKey]);
 
-  // Play only the active index.
+  // Play only the active post's video.
   useEffect(() => {
-    videoRefs.current.forEach((el, i) => {
+    const activeId = posts[activeIndex]?.id;
+    videoEls.current.forEach((el, id) => {
       if (!el) return;
-      if (i === activeIndex) {
+      if (id === activeId) {
         el.currentTime = el.currentTime || 0;
         el.play().catch(() => {});
       } else {
@@ -131,34 +347,6 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
     return () => obs.disconnect();
   }, [posts.length, loadPosts]);
 
-  const toggleLike = async (postId: string) => {
-    const next = new Set(likedIds);
-    try {
-      if (next.has(postId)) {
-        next.delete(postId);
-        await feedApi.unreact(postId);
-      } else {
-        next.add(postId);
-        await feedApi.react(postId, 'like');
-      }
-      setLikedIds(new Set(next));
-    } catch {}
-  };
-
-  const toggleSave = async (postId: string) => {
-    const next = new Set(savedIds);
-    try {
-      if (next.has(postId)) {
-        next.delete(postId);
-        await feedApi.unsave(postId);
-      } else {
-        next.add(postId);
-        await feedApi.save(postId);
-      }
-      setSavedIds(new Set(next));
-    } catch {}
-  };
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -187,86 +375,29 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
       <div
         ref={containerRef}
         onScroll={onScroll}
-        className="h-[calc(100dvh-14rem)] md:h-[calc(100dvh-12rem)] overflow-y-scroll snap-y snap-mandatory rounded-2xl"
+        className="relative h-[calc(100dvh-14rem)] md:h-[calc(100dvh-12rem)] overflow-y-scroll snap-y snap-mandatory rounded-2xl"
       >
-        {posts.map((post, i) => {
-          const pages = mediaPagesFromPost(post);
-          const photoMode = postIsPhotoMode(pages);
-          const videoPage = firstVideoPage(pages);
-          const videoUrl = videoPage?.url
-            ?? post.media_urls?.find((u) => /\.(mp4|webm|mov|m4v)(\?|$)/i.test(u))
-            ?? post.media_urls?.[0];
-          const posterUrl = videoPage?.poster_url ?? undefined;
-          const liked = likedIds.has(post.id);
-          const saved = savedIds.has(post.id);
-          const isActive = i === activeIndex;
-          return (
-            <div
-              key={post.id}
-              ref={i === posts.length - 1 ? lastItemRef : undefined}
-              className="relative h-full w-full snap-start snap-always bg-black"
-            >
-              {photoMode ? (
-                <PostPhotoCarousel post={post} className="absolute inset-0" />
-              ) : videoUrl ? (
-                <video
-                  ref={(el) => { videoRefs.current[i] = el; }}
-                  src={videoUrl}
-                  poster={posterUrl}
-                  loop
-                  playsInline
-                  muted={isMuted}
-                  preload={isActive ? 'auto' : 'none'}
-                  className="absolute inset-0 w-full h-full object-contain"
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-buddy-text-secondary text-sm">
-                  Unsupported media
-                </div>
-              )}
-
-              {/* Right rail actions */}
-              <div className="absolute right-3 bottom-20 flex flex-col items-center gap-4 z-10">
-                <button onClick={() => toggleLike(post.id)} className="flex flex-col items-center gap-0.5">
-                  <Heart size={26} className={liked ? 'text-buddy-red fill-buddy-red' : 'text-white'} />
-                </button>
-                <button onClick={() => setCommentPostId(post.id)} className="flex flex-col items-center gap-0.5 text-white">
-                  <MessageCircle size={26} />
-                </button>
-                <button onClick={() => feedApi.repost(post.id).catch(() => {})} className="text-white">
-                  <Repeat2 size={28} />
-                </button>
-                <button onClick={() => toggleSave(post.id)}>
-                  <Bookmark size={25} className={saved ? 'text-buddy-gold fill-buddy-gold' : 'text-white'} />
-                </button>
-              </div>
-
-              {/* Bottom-left author info */}
-              <div className="absolute left-3 bottom-20 right-16 z-10 pointer-events-none">
-                <div className="flex items-center gap-2 mb-1">
-                  <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name ?? ''} size="xs" />
-                  <span className="text-white text-sm font-bold drop-shadow">
-                    @{post.author_data?.username ?? 'unknown'}
-                  </span>
-                </div>
-                {!photoMode && post.body && (
-                  <p className="text-white/90 text-xs line-clamp-2 drop-shadow">{post.body}</p>
-                )}
-              </div>
-
-              {/* Mute toggle (single-video posts only — photo-mode videos unmute on tap) */}
-              {!photoMode && (
-                <button
-                  onClick={() => setIsMuted((m) => !m)}
-                  className="absolute right-3 top-3 p-2 rounded-full bg-black/50 text-white z-10"
-                  title={isMuted ? 'Unmute' : 'Mute'}
-                >
-                  {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                </button>
-              )}
-            </div>
-          );
-        })}
+        <button
+          onClick={() => setIsMuted((m) => !m)}
+          className="absolute right-3 top-3 p-2 rounded-full bg-black/50 text-white z-20"
+          title={isMuted ? 'Unmute' : 'Mute'}
+          aria-label={isMuted ? 'Unmute videos' : 'Mute videos'}
+        >
+          {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+        </button>
+        {posts.map((post, i) => (
+          <VideoFeedSlide
+            key={post.id}
+            post={post}
+            active={i === activeIndex}
+            muted={isMuted}
+            last={i === posts.length - 1}
+            onPatch={patchPost}
+            onComment={setCommentPostId}
+            registerVideo={registerVideo}
+            lastItemRef={(el) => { lastItemRef.current = el; }}
+          />
+        ))}
       </div>
 
       {isLoadingMore && (

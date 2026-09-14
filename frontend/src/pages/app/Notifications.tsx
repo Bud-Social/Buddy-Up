@@ -190,7 +190,7 @@ export default function Notifications() {
 
     if (type === 'repost' || type === 'post_repost' || type === 'mention' || type === 'post_reaction' || type === 'comment') {
       const postId = meta.post_id;
-      if (postId) navigate(`/feed?post=${postId}`);
+      if (postId) navigate(`/feed?post=${postId}&comments=1`);
       return;
     }
   };

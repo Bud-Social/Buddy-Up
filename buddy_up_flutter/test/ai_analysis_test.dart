@@ -7,11 +7,11 @@ void main() {
   test('Post.fromJson parses ai_analysis from snake_case key', () {
     final post = Post.fromJson({
       'id': 'p1',
-      'authorData': {
+      'author_data': {
         'username': 'u',
-        'displayName': 'U',
-        'avatarUrl': '',
-        'verificationStatus': 'none',
+        'display_name': 'U',
+        'avatar_url': '',
+        'verification_status': 'none',
       },
       'ai_analysis': {
         'text': {'toxicity_score': 0.01, 'label': 'not_toxic', 'method': 'model'},
@@ -19,7 +19,7 @@ void main() {
           {'url': 'x.jpg', 'is_nsfw': false, 'confidence': 0.0, 'labels': ['clean'], 'method': 'model'}
         ],
       },
-      'createdAt': '2026-01-01T00:00:00Z',
+      'created_at': '2026-01-01T00:00:00Z',
     });
     expect(post.aiAnalysis, isNotNull);
     expect(post.aiAnalysis!['text'], isNotNull);
@@ -28,16 +28,16 @@ void main() {
   test('Post.fromJson parses ai_analysis from camelCase key', () {
     final post = Post.fromJson({
       'id': 'p1',
-      'authorData': {
+      'author_data': {
         'username': 'u',
-        'displayName': 'U',
-        'avatarUrl': '',
-        'verificationStatus': 'none',
+        'display_name': 'U',
+        'avatar_url': '',
+        'verification_status': 'none',
       },
       'aiAnalysis': {
         'text': {'toxicity_score': 0.01, 'label': 'not_toxic', 'method': 'model'},
       },
-      'createdAt': '2026-01-01T00:00:00Z',
+      'created_at': '2026-01-01T00:00:00Z',
     });
     expect(post.aiAnalysis, isNotNull);
   });

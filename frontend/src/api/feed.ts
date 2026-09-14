@@ -1,6 +1,6 @@
 import type { AxiosProgressEvent } from 'axios';
 import { apiClient } from './client';
-import type { ApiResponse, Post, Comment } from '@/types';
+import type { ApiResponse, Post, Comment, CreatorInsightItem } from '@/types';
 
 export type FeedTab = 'for_you' | 'following' | 'videos' | 'videos_following' | 'meals' | 'progress' | 'communities';
 
@@ -98,6 +98,18 @@ export const feedApi = {
   unsave: (postId: string) =>
     apiClient.delete(`/feed/${postId}/save/`).then((r) => r.data),
 
+  /** Record an outbound share. Returns the authoritative share count. */
+  sharePost: (postId: string) =>
+    apiClient.post<ApiResponse<{ share_count: number }>>(`/feed/${postId}/share/`).then((r) => r.data),
+
+  /** Record a qualified view (server throttles duplicates). Silent-friendly. */
+  recordView: (postId: string) =>
+    apiClient.post<ApiResponse<{ view_count: number }>>(`/feed/${postId}/view/`).then((r) => r.data),
+
+  /** Owner-only per-post aggregates. May 404 while the backend lands. */
+  getCreatorInsights: () =>
+    apiClient.get<ApiResponse<CreatorInsightItem[]>>('/feed/creator/insights/').then((r) => r.data),
+
   getSaved: (collection?: string) =>
     apiClient.get<ApiResponse<Post[]>>('/feed/saved/', { params: collection ? { collection } : {} }).then((r) => r.data),
 
@@ -147,6 +159,25 @@ export const feedApi = {
     apiClient
       .post<ApiResponse<SignUploadData>>('/uploads/sign/', { resource_type, filename })
       .then((r) => r.data),
+
+  /** In-studio auto-captions: upload the still-editing video for whisper. */
+  transcribeStudioMedia: (file: File, opts?: { signal?: AbortSignal }) => {
+    const form = new FormData();
+    form.append('media', file);
+    return apiClient
+      .post<ApiResponse<{ segments: Array<{ start_ms: number; end_ms: number; text: string }>; language: string; duration_ms: number }>>(
+        '/feed/studio/transcribe/',
+        form,
+        {
+          // apiClient defaults to application/json; without this override,
+          // axios serializes FormData to JSON and Django receives no file.
+          headers: { 'Content-Type': 'multipart/form-data' },
+          signal: opts?.signal,
+          timeout: 240_000,
+        },
+      )
+      .then((r) => r.data);
+  },
 
   listSounds: (params?: { q?: string; ordering?: SoundOrdering }) =>
     apiClient.get<ApiResponse<Sound[]>>('/sounds/', { params }).then((r) => r.data),

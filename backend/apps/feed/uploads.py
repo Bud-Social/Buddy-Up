@@ -10,8 +10,11 @@ from rest_framework.throttling import ScopedRateThrottle
 
 from .media_types import IMAGE_EXTS, VIDEO_EXTS
 
+# Video re-encode keeps the audio track explicitly: without `ac_aac`,
+# sources with non-MP4-compatible audio codecs (some AAC profiles, Opus in
+# .mov containers) can replay silently after Cloudinary's vc_h264 pass.
 EAGER_TRANSFORMS = {
-    'video': 'vc_h264:q_auto:so_auto,w_1080,c_limit',
+    'video': 'vc_h264:q_auto:so_auto,w_1080,c_limit,ac_aac',
     'image': 'f_auto,q_auto:good,w_1440,c_limit',
 }
 

@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { IncomingCallOverlay } from '@/components/chat/IncomingCallOverlay';
+import { UploadPill } from './UploadPill';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useSidebarStore } from '@/store/sidebarStore';
 
@@ -72,6 +73,7 @@ export function AppShell() {
       )}
 
       <IncomingCallOverlay />
+      <UploadPill />
     </div>
   );
 }

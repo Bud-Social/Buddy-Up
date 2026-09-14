@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,9 @@ import 'package:media_kit_video/media_kit_video.dart';
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/constants.dart';
+import '../../../data/models/post.dart';
 import '../../../shared/widgets/toast.dart';
+import '../providers/feed_provider.dart';
 import '../providers/sounds_provider.dart';
 import 'post_composer_screen.dart';
 
@@ -18,6 +21,7 @@ class VideoStudioResult {
   final int trimEndMs;
   final String? soundId;
   final double? soundVolume; // 0..1, null when original audio
+  final List<CaptionSegment> captions;
   final String visibility;
   final bool commentsEnabled;
 
@@ -26,6 +30,7 @@ class VideoStudioResult {
     required this.trimEndMs,
     this.soundId,
     this.soundVolume,
+    this.captions = const [],
     required this.visibility,
     required this.commentsEnabled,
   });
@@ -62,6 +67,10 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
   double _soundVolume = 100;
   late String _visibility;
   bool _commentsEnabled = true;
+
+  List<CaptionSegment> _captions = const [];
+  bool _transcribing = false;
+  String? _transcribeError;
 
   static const int _maxTrimMs = 180 * 1000;
 
@@ -139,10 +148,7 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
       surface: 'composer_studio',
       objectType: 'video',
       objectId: widget.video.name,
-      properties: {
-        'trim_start_ms': _trimStartMs,
-        'trim_end_ms': _trimEndMs,
-      },
+      properties: {'trim_start_ms': _trimStartMs, 'trim_end_ms': _trimEndMs},
     );
     showToast(context, 'Trim saved', type: ToastType.success);
   }
@@ -176,14 +182,15 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
   }
 
   Future<void> _openAudienceSheet() async {
-    final result = await showModalBottomSheet<({String visibility, bool commentsEnabled})>(
-      context: context,
-      backgroundColor: BuddyColors.surface,
-      builder: (_) => _AudienceSheet(
-        initialVisibility: _visibility,
-        initialCommentsEnabled: _commentsEnabled,
-      ),
-    );
+    final result =
+        await showModalBottomSheet<({String visibility, bool commentsEnabled})>(
+          context: context,
+          backgroundColor: BuddyColors.surface,
+          builder: (_) => _AudienceSheet(
+            initialVisibility: _visibility,
+            initialCommentsEnabled: _commentsEnabled,
+          ),
+        );
     if (result == null) return;
     if (!mounted) return;
     setState(() {
@@ -205,14 +212,83 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
   }
 
   void _done() {
-    Navigator.of(context).pop(VideoStudioResult(
-      trimStartMs: _trimStartMs,
-      trimEndMs: _trimEndMs,
-      soundId: _selectedSound?.id,
-      soundVolume: _selectedSound == null ? null : _soundVolume / 100,
-      visibility: _visibility,
-      commentsEnabled: _commentsEnabled,
-    ));
+    Navigator.of(context).pop(
+      VideoStudioResult(
+        trimStartMs: _trimStartMs,
+        trimEndMs: _trimEndMs,
+        soundId: _selectedSound?.id,
+        soundVolume: _selectedSound == null ? null : _soundVolume / 100,
+        captions: _captions
+            .where((s) => s.text.trim().isNotEmpty && s.endMs > s.startMs)
+            .toList(),
+        visibility: _visibility,
+        commentsEnabled: _commentsEnabled,
+      ),
+    );
+  }
+
+  /// In-studio auto-captions: transcribe the picked clip and let the user
+  /// edit the lines before returning to the composer.
+  Future<void> _generateCaptions() async {
+    if (_transcribing) return;
+    setState(() {
+      _transcribing = true;
+      _transcribeError = null;
+    });
+    try {
+      final file = File(widget.video.path);
+      if (!await file.exists()) {
+        throw Exception('Clip file is no longer available.');
+      }
+      final raw = await ref
+          .read(feedRepositoryProvider)
+          .transcribeStudioMedia(file);
+      final data = (raw['data'] as Map<String, dynamic>?) ?? {};
+      final segments = data['segments'];
+      final parsed = <CaptionSegment>[];
+      if (segments is List) {
+        for (final s in segments) {
+          if (s is! Map) continue;
+          final text = (s['text'] as String? ?? '').trim();
+          if (text.isEmpty) continue;
+          parsed.add(
+            CaptionSegment(
+              startMs: (s['start_ms'] as num?)?.toInt() ?? 0,
+              endMs: (s['end_ms'] as num?)?.toInt() ?? 0,
+              text: text,
+            ),
+          );
+        }
+      }
+      if (!mounted) return;
+      setState(() => _captions = parsed);
+      AnalyticsService.instance.track(
+        'create.studio_captions_generated',
+        surface: 'composer_studio',
+        objectType: 'video',
+        objectId: widget.video.name,
+        properties: {'segments': parsed.length},
+      );
+      showToast(
+        context,
+        parsed.isEmpty
+            ? 'No speech detected'
+            : '${parsed.length} caption lines ready',
+        type: ToastType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(
+        () => _transcribeError =
+            'Transcription failed — try again or add captions manually.',
+      );
+    } finally {
+      if (mounted) setState(() => _transcribing = false);
+    }
+  }
+
+  void _removeCaption(int index) {
+    setState(() => _captions = List.of(_captions)..removeAt(index));
   }
 
   String _fmt(int ms) {
@@ -225,105 +301,240 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
     final controller = _controller;
     return Scaffold(
       appBar: AppBar(title: const Text('Video Studio')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: AspectRatio(
-              aspectRatio: 9 / 16,
-              child: controller == null
-                  ? Container(color: BuddyColors.surfaceRaised)
-                  : Video(controller: controller, controls: NoVideoControls),
-            ),
-          ),
-          if (_durationMs > 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Duration ${_fmt(_durationMs)}'
-                '${_trimEndMs > _trimStartMs ? ' · trim ${_fmt(_trimStartMs)}–${_fmt(_trimEndMs)}' : ''}',
-                style: const TextStyle(
-                  color: BuddyColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              ActionChip(
-                avatar: const Icon(Icons.content_cut, size: 18, color: BuddyColors.textSecondary),
-                label: Text(
-                  _trimEndMs > _trimStartMs
-                      ? 'Trim ${_fmt(_trimStartMs)}–${_fmt(_trimEndMs)}'
-                      : 'Trim',
-                  style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12),
-                ),
-                onPressed: _openTrimSheet,
-              ),
-              ActionChip(
-                avatar: const Icon(Icons.music_note, size: 18, color: BuddyColors.textSecondary),
-                label: Text(
-                  _selectedSound?.name ?? 'Original only',
-                  style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12),
-                ),
-                onPressed: _openSoundSheet,
-              ),
-              ActionChip(
-                avatar: const Icon(Icons.visibility_outlined, size: 18, color: BuddyColors.textSecondary),
-                label: Text(
-                  'Audience: $_visibility${_commentsEnabled ? '' : ' · comments off'}',
-                  style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12),
-                ),
-                onPressed: _openAudienceSheet,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _toggleLoopPreview,
-                  icon: Icon(_loopPreview ? Icons.pause : Icons.loop),
-                  label: Text(_loopPreview ? 'Stop preview' : 'Loop preview'),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: AspectRatio(
+                  aspectRatio: 9 / 16,
+                  child: controller == null
+                      ? Container(color: BuddyColors.surfaceRaised)
+                      : Video(
+                          controller: controller,
+                          controls: NoVideoControls,
+                        ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: BuddyColors.surfaceRaised.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.image_outlined, color: BuddyColors.textSecondary, size: 20),
-                SizedBox(width: 8),
-                Expanded(
+              if (_durationMs > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
                   child: Text(
-                    'Cover: auto-generated from your video when it uploads',
-                    style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                    'Duration ${_fmt(_durationMs)}'
+                    '${_trimEndMs > _trimStartMs ? ' · trim ${_fmt(_trimStartMs)}–${_fmt(_trimEndMs)}' : ''}',
+                    style: const TextStyle(
+                      color: BuddyColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
-              ],
-            ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ActionChip(
+                    avatar: const Icon(
+                      Icons.content_cut,
+                      size: 18,
+                      color: BuddyColors.textSecondary,
+                    ),
+                    label: Text(
+                      _trimEndMs > _trimStartMs
+                          ? 'Trim ${_fmt(_trimStartMs)}–${_fmt(_trimEndMs)}'
+                          : 'Trim',
+                      style: const TextStyle(
+                        color: BuddyColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onPressed: _openTrimSheet,
+                  ),
+                  ActionChip(
+                    avatar: const Icon(
+                      Icons.music_note,
+                      size: 18,
+                      color: BuddyColors.textSecondary,
+                    ),
+                    label: Text(
+                      _selectedSound?.name ?? 'Original only',
+                      style: const TextStyle(
+                        color: BuddyColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onPressed: _openSoundSheet,
+                  ),
+                  ActionChip(
+                    avatar: const Icon(
+                      Icons.visibility_outlined,
+                      size: 18,
+                      color: BuddyColors.textSecondary,
+                    ),
+                    label: Text(
+                      'Audience: $_visibility${_commentsEnabled ? '' : ' · comments off'}',
+                      style: const TextStyle(
+                        color: BuddyColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onPressed: _openAudienceSheet,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _toggleLoopPreview,
+                      icon: Icon(_loopPreview ? Icons.pause : Icons.loop),
+                      label: Text(
+                        _loopPreview ? 'Stop preview' : 'Loop preview',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: BuddyColors.surfaceRaised.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.closed_caption_outlined,
+                          color: BuddyColors.textSecondary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Auto-captions',
+                            style: TextStyle(
+                              color: BuddyColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _transcribing ? null : _generateCaptions,
+                          child: _transcribing
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  _captions.isEmpty ? 'Generate' : 'Regenerate',
+                                ),
+                        ),
+                      ],
+                    ),
+                    if (_transcribeError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          _transcribeError!,
+                          style: const TextStyle(
+                            color: BuddyColors.red,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    if (_captions.isEmpty && _transcribeError == null)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Transcribe speech in this clip, then edit the lines. They publish with the video.',
+                          style: TextStyle(
+                            color: BuddyColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    for (var i = 0; i < _captions.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                _captions[i].text,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: BuddyColors.textPrimary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.close,
+                                color: BuddyColors.textSecondary,
+                                size: 16,
+                              ),
+                              tooltip: 'Remove line',
+                              onPressed: () => _removeCaption(i),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: BuddyColors.surfaceRaised.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(
+                      Icons.image_outlined,
+                      color: BuddyColors.textSecondary,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Cover: auto-generated from your video when it uploads',
+                        style: TextStyle(
+                          color: BuddyColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: BuddyColors.green,
+                  foregroundColor: BuddyColors.black,
+                ),
+                onPressed: _done,
+                child: const Text('Done'),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: BuddyColors.green,
-              foregroundColor: BuddyColors.black,
-            ),
-            onPressed: _done,
-            child: const Text('Done'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -354,9 +565,7 @@ class _TrimSheetState extends State<_TrimSheet> {
   void initState() {
     super.initState();
     _startMs = widget.initialStartMs.toDouble();
-    _endMs = (widget.initialEndMs > 0
-            ? widget.initialEndMs
-            : widget.durationMs)
+    _endMs = (widget.initialEndMs > 0 ? widget.initialEndMs : widget.durationMs)
         .toDouble();
   }
 
@@ -406,7 +615,10 @@ class _TrimSheetState extends State<_TrimSheet> {
               const SizedBox(height: 4),
               const Text(
                 'Max 3:00 per clip',
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                style: TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 12,
+                ),
               ),
               const SizedBox(height: 12),
               RangeSlider(
@@ -422,7 +634,10 @@ class _TrimSheetState extends State<_TrimSheet> {
                 children: [
                   Text(
                     'In ${_fmt(_startMs)}',
-                    style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
+                    style: const TextStyle(
+                      color: BuddyColors.textPrimary,
+                      fontSize: 13,
+                    ),
                   ),
                   Text(
                     '${_fmt(_endMs - _startMs)} selected',
@@ -433,7 +648,10 @@ class _TrimSheetState extends State<_TrimSheet> {
                   ),
                   Text(
                     'Out ${_fmt(_endMs)}',
-                    style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
+                    style: const TextStyle(
+                      color: BuddyColors.textPrimary,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
@@ -453,10 +671,9 @@ class _TrimSheetState extends State<_TrimSheet> {
                         backgroundColor: BuddyColors.green,
                         foregroundColor: BuddyColors.black,
                       ),
-                      onPressed: () => Navigator.of(context).pop((
-                        start: _startMs.round(),
-                        end: _endMs.round(),
-                      )),
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pop((start: _startMs.round(), end: _endMs.round())),
                       child: const Text('Save trim'),
                     ),
                   ),
@@ -504,7 +721,9 @@ class _SoundSheetState extends ConsumerState<_SoundSheet> {
   void _onSearchChanged() {
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 350), () {
-      ref.read(soundsProvider.notifier).load(query: _searchController.text.trim());
+      ref
+          .read(soundsProvider.notifier)
+          .load(query: _searchController.text.trim());
     });
   }
 
@@ -544,17 +763,26 @@ class _SoundSheetState extends ConsumerState<_SoundSheet> {
                 style: const TextStyle(color: BuddyColors.textPrimary),
                 decoration: const InputDecoration(
                   hintText: 'Search sounds…',
-                  prefixIcon: Icon(Icons.search, color: BuddyColors.textSecondary),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: BuddyColors.textSecondary,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                leading: const Icon(Icons.volume_off_outlined, color: BuddyColors.textSecondary),
+                leading: const Icon(
+                  Icons.volume_off_outlined,
+                  color: BuddyColors.textSecondary,
+                ),
                 title: const Text(
                   'Original only',
-                  style: TextStyle(color: BuddyColors.textPrimary, fontSize: 14),
+                  style: TextStyle(
+                    color: BuddyColors.textPrimary,
+                    fontSize: 14,
+                  ),
                 ),
                 trailing: _selectedId == null
                     ? const Icon(Icons.check, color: BuddyColors.green)
@@ -571,75 +799,80 @@ class _SoundSheetState extends ConsumerState<_SoundSheet> {
               Expanded(
                 child: state.isLoading
                     ? const Center(
-                        child: CircularProgressIndicator(color: BuddyColors.green),
+                        child: CircularProgressIndicator(
+                          color: BuddyColors.green,
+                        ),
                       )
                     : state.items.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No sounds found',
-                              style: TextStyle(color: BuddyColors.textSecondary),
+                    ? const Center(
+                        child: Text(
+                          'No sounds found',
+                          style: TextStyle(color: BuddyColors.textSecondary),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: state.items.length,
+                        separatorBuilder: (_, _) => const Divider(height: 1),
+                        itemBuilder: (_, i) {
+                          final sound = state.items[i];
+                          final isPreviewing = _previewingId == sound.id;
+                          return ListTile(
+                            dense: true,
+                            leading: Icon(
+                              isPreviewing
+                                  ? Icons.pause_circle_outline
+                                  : Icons.play_circle_outline,
+                              color: BuddyColors.green,
                             ),
-                          )
-                        : ListView.separated(
-                            itemCount: state.items.length,
-                            separatorBuilder: (_, _) =>
-                                const Divider(height: 1),
-                            itemBuilder: (_, i) {
-                              final sound = state.items[i];
-                              final isPreviewing = _previewingId == sound.id;
-                              return ListTile(
-                                dense: true,
-                                leading: Icon(
-                                  isPreviewing
-                                      ? Icons.pause_circle_outline
-                                      : Icons.play_circle_outline,
-                                  color: BuddyColors.green,
-                                ),
-                                title: Text(
-                                  sound.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: BuddyColors.textPrimary,
-                                    fontSize: 14,
+                            title: Text(
+                              sound.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: BuddyColors.textPrimary,
+                                fontSize: 14,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '${sound.artist} · ${sound.usageCount} uses',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: BuddyColors.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                            onTap: () => _preview(sound),
+                            trailing: _selectedId == sound.id
+                                ? const Icon(
+                                    Icons.check_circle,
+                                    color: BuddyColors.green,
+                                  )
+                                : IconButton(
+                                    icon: const Icon(
+                                      Icons.add_circle_outline,
+                                      color: BuddyColors.green,
+                                    ),
+                                    tooltip: 'Use sound',
+                                    onPressed: () {
+                                      setState(() => _selectedId = sound.id);
+                                      Navigator.of(
+                                        context,
+                                      ).pop((sound: sound, volume: _volume));
+                                    },
                                   ),
-                                ),
-                                subtitle: Text(
-                                  '${sound.artist} · ${sound.usageCount} uses',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: BuddyColors.textSecondary,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                onTap: () => _preview(sound),
-                                trailing: _selectedId == sound.id
-                                    ? const Icon(
-                                        Icons.check_circle,
-                                        color: BuddyColors.green,
-                                      )
-                                    : IconButton(
-                                        icon: const Icon(
-                                          Icons.add_circle_outline,
-                                          color: BuddyColors.green,
-                                        ),
-                                        tooltip: 'Use sound',
-                                        onPressed: () {
-                                          setState(() => _selectedId = sound.id);
-                                          Navigator.of(context).pop(
-                                            (sound: sound, volume: _volume),
-                                          );
-                                        },
-                                      ),
-                              );
-                            },
-                          ),
+                          );
+                        },
+                      ),
               ),
               const Divider(height: 1),
               Row(
                 children: [
-                  const Icon(Icons.volume_up, color: BuddyColors.textSecondary, size: 20),
+                  const Icon(
+                    Icons.volume_up,
+                    color: BuddyColors.textSecondary,
+                    size: 20,
+                  ),
                   Expanded(
                     child: Slider(
                       value: _volume,
@@ -656,7 +889,10 @@ class _SoundSheetState extends ConsumerState<_SoundSheet> {
                   ),
                   Text(
                     '${_volume.round()}',
-                    style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                    style: const TextStyle(
+                      color: BuddyColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -686,12 +922,12 @@ class _AudienceSheetState extends State<_AudienceSheet> {
   late bool _commentsEnabled = widget.initialCommentsEnabled;
 
   String _label(String key) => switch (key) {
-        'public' => 'Public — anyone on Buddy-Up',
-        'buddies' => 'Buddies — your buddies only',
-        'gym_members' => 'Gym members — your gyms',
-        'private' => 'Private — only you',
-        _ => key,
-      };
+    'public' => 'Public — anyone on Buddy-Up',
+    'buddies' => 'Buddies — your buddies only',
+    'gym_members' => 'Gym members — your gyms',
+    'private' => 'Private — only you',
+    _ => key,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -716,16 +952,18 @@ class _AudienceSheetState extends State<_AudienceSheet> {
               onChanged: (v) => setState(() => _visibility = v ?? _visibility),
               child: Column(
                 children: visibilityOptions
-                    .map((opt) => RadioListTile<String>(
-                          value: opt,
-                          title: Text(
-                            _label(opt),
-                            style: const TextStyle(
-                              color: BuddyColors.textPrimary,
-                              fontSize: 14,
-                            ),
+                    .map(
+                      (opt) => RadioListTile<String>(
+                        value: opt,
+                        title: Text(
+                          _label(opt),
+                          style: const TextStyle(
+                            color: BuddyColors.textPrimary,
+                            fontSize: 14,
                           ),
-                        ))
+                        ),
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -739,7 +977,10 @@ class _AudienceSheetState extends State<_AudienceSheet> {
               ),
               subtitle: Text(
                 _commentsEnabled ? 'Anyone can comment' : 'Comments are off',
-                style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                style: const TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 12,
+                ),
               ),
               value: _commentsEnabled,
               onChanged: (v) => setState(() => _commentsEnabled = v),

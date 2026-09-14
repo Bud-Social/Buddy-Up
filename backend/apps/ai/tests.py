@@ -96,6 +96,19 @@ class TranscribePostMediaTaskTests(TestCase):
         transcribe_post_media.apply(args=['00000000-0000-0000-0000-000000000000'])
         self.assertEqual(AIPredictionJob.objects.filter(task='transcription').count(), 0)
 
+    def test_manual_captions_are_preserved(self):
+        media = _make_video_media()
+        manual = [{'start_ms': 0, 'end_ms': 1000, 'text': 'Studio caption.'}]
+        media.captions = manual
+        media.captions_vtt = segments_to_vtt(manual)
+        media.save(update_fields=['captions', 'captions_vtt'])
+        with patch('apps.ai.tasks.requests.post') as mock_post:
+            transcribe_post_media.apply(args=[str(media.id)])
+        mock_post.assert_not_called()
+        media.refresh_from_db()
+        self.assertEqual(media.captions, manual)
+        self.assertEqual(AIPredictionJob.objects.filter(task='transcription').count(), 0)
+
 
 class TranscribeSsrfGuardTests(SimpleTestCase):
     """The transcription URL-fetcher rejects non-public / oversized targets."""
