@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { profilesApi } from '@/api';
 import { useAuthStore } from '@/store/authStore';
@@ -36,6 +37,8 @@ interface AuthorChipProps {
   tone?: 'default' | 'onDark';
   compact?: boolean;
   onFollowChange?: (following: boolean) => void;
+  /** View count rendered between the name block and the follow button. */
+  viewCount?: number | null;
 }
 
 /**
@@ -49,6 +52,7 @@ export function AuthorChip({
   tone = 'default',
   compact = false,
   onFollowChange,
+  viewCount,
 }: AuthorChipProps) {
   const navigate = useNavigate();
   const ownUsername = useAuthStore((s) => s.profile?.username);
@@ -109,6 +113,15 @@ export function AuthorChip({
           <p className={`text-xs leading-tight truncate ${subCls}`}>@{author?.username}</p>
         )}
       </div>
+      {viewCount != null && (
+        <span
+          className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-medium tabular-nums ${dark ? 'text-white/70' : 'text-buddy-text-secondary'}`}
+          title={`${viewCount} views`}
+          aria-label={`${viewCount} views`}
+        >
+          <Eye size={13} /> {viewCount >= 1000 ? `${(viewCount / 1000).toFixed(1)}k` : viewCount}
+        </span>
+      )}
       {showFollow && !isOwn && author?.username && (
         <button
           type="button"

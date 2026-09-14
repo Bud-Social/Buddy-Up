@@ -15,7 +15,7 @@ import { useRecordPostView } from '@/components/features/feed/useRecordPostView'
 import {
   isSwipeLeftToProfile, shouldIgnoreSwipeOrigin,
 } from '@/components/features/feed/feedGestures';
-import { EmojiImg, toEmoji } from '@/utils/emojiUtils';
+import { toEmoji } from '@/utils/emojiUtils';
 import { mediaPagesFromPost, postIsPhotoMode } from '@/lib/mediaPages';
 import { filterCssAt, adjustCss } from '@/lib/createStudio';
 import { CreativeLayer } from '@/components/create/CreativeLayer';
@@ -149,6 +149,7 @@ export default function FullScreenVideoFeed() {
   const [isMuted, setIsMuted] = useState(true);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const [shareIdx, setShareIdx] = useState<number | null>(null);
+  const [shareAnchor, setShareAnchor] = useState<{ top: number; left: number; bottom: number } | null>(null);
   const [progress, setProgress] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showSwipeHint, setShowSwipeHint] = useState(() => {
@@ -255,25 +256,45 @@ export default function FullScreenVideoFeed() {
     scheduleHide();
   };
 
+  /** Engagement targets the ORIGINAL post on repost rows so counts never zero out. */
+  const engagementIdOf = (post: Post) =>
+    post.is_repost && post.original_post_data ? post.original_post_data.id : post.id;
+
+  /** Engagement source for display: original's counts on repost rows. */
+  const engagementSourceOf = (post: Post): Post =>
+    post.is_repost && post.original_post_data
+      ? { ...post, ...post.original_post_data, id: post.id } as Post
+      : post;
+
+  /** Patch row-level engagement AND nested original data on repost rows. */
+  const patchEngagement = (
+    idx: number,
+    patch: Partial<Pick<Post, 'user_reaction' | 'reaction_counts' | 'repost_count' | 'is_reposted_by_me' | 'is_saved' | 'save_count'>>,
+  ) =>
+    setItems((prev) => prev.map((it, i) => {
+      if (i !== idx) return it;
+      const post = { ...it.post, ...patch };
+      if (post.is_repost && post.original_post_data) {
+        post.original_post_data = { ...post.original_post_data, ...patch };
+      }
+      return { ...it, post };
+    }));
+
   /** One-tap toggles 💪 (optimistic w/ rollback + count switching). */
   const handleLike = async (idx: number) => {
     const item = items[idx];
     if (!item) return;
-    const prevReaction = item.post.user_reaction ? toEmoji(item.post.user_reaction) : null;
-    const prevCounts = item.post.reaction_counts || {};
+    const targetId = engagementIdOf(item.post);
+    const src = engagementSourceOf(item.post);
+    const prevReaction = src.user_reaction ? toEmoji(src.user_reaction) : null;
+    const prevCounts = src.reaction_counts || {};
     const next = nextReactionState(prevCounts, prevReaction, '💪');
-    setItems((prev) => prev.map((it, i) => (i === idx ? {
-      ...it,
-      post: { ...it.post, user_reaction: next.userReaction, reaction_counts: next.counts },
-    } : it)));
+    patchEngagement(idx, { user_reaction: next.userReaction, reaction_counts: next.counts });
     try {
-      if (next.removed) await feedApi.unreact(item.post.id);
-      else await feedApi.react(item.post.id, '💪');
+      if (next.removed) await feedApi.unreact(targetId);
+      else await feedApi.react(targetId, '💪');
     } catch {
-      setItems((prev) => prev.map((it, i) => (i === idx ? {
-        ...it,
-        post: { ...it.post, user_reaction: prevReaction, reaction_counts: prevCounts },
-      } : it)));
+      patchEngagement(idx, { user_reaction: prevReaction, reaction_counts: prevCounts });
     }
   };
 
@@ -281,43 +302,46 @@ export default function FullScreenVideoFeed() {
     const item = items[idx];
     if (!item) return;
     const post = item.post;
+    const targetId = engagementIdOf(post);
     const next = !post.is_saved;
-    setItems((prev) => prev.map((it, i) => (i === idx ? { ...it, post: { ...it.post, is_saved: next } } : it)));
+    const nextCount = Math.max(0, ((post.is_repost && post.original_post_data
+      ? post.original_post_data.save_count
+      : post.save_count) || 0) + (next ? 1 : -1));
+    patchEngagement(idx, { is_saved: next, save_count: nextCount });
     try {
-      if (next) await feedApi.save(post.id);
-      else await feedApi.unsave(post.id);
-    } catch {}
+      if (next) await feedApi.save(targetId);
+      else await feedApi.unsave(targetId);
+    } catch {
+      patchEngagement(idx, { is_saved: post.is_saved });
+    }
   };
 
   const handleRepost = async (idx: number) => {
     const item = items[idx];
     if (!item) return;
     const wasReposted = item.post.is_reposted_by_me ?? false;
+    const baseCount = (item.post.is_repost && item.post.original_post_data
+      ? item.post.original_post_data.repost_count
+      : item.post.repost_count) || 0;
     // Optimistic update
-    setItems((prev) => prev.map((it, i) =>
-      i === idx ? { ...it, post: { ...it.post,
-        is_reposted_by_me: !wasReposted,
-        repost_count: wasReposted ? Math.max(0, (it.post.repost_count || 0) - 1) : (it.post.repost_count || 0) + 1,
-      }} : it
-    ));
+    patchEngagement(idx, {
+      is_reposted_by_me: !wasReposted,
+      repost_count: wasReposted ? Math.max(0, baseCount - 1) : baseCount + 1,
+    });
     try {
       const res = await feedApi.repost(item.post.id);
       if (res.data) {
-        setItems((prev) => prev.map((it, i) =>
-          i === idx ? { ...it, post: { ...it.post,
-            is_reposted_by_me: res.data!.action === 'reposted',
-            repost_count: res.data!.repost_count,
-          }} : it
-        ));
+        patchEngagement(idx, {
+          is_reposted_by_me: res.data!.action === 'reposted',
+          repost_count: res.data!.repost_count,
+        });
       }
     } catch {
       // Rollback
-      setItems((prev) => prev.map((it, i) =>
-        i === idx ? { ...it, post: { ...it.post,
-          is_reposted_by_me: wasReposted,
-          repost_count: wasReposted ? (it.post.repost_count || 0) + 1 : Math.max(0, (it.post.repost_count || 0) - 1),
-        }} : it
-      ));
+      patchEngagement(idx, {
+        is_reposted_by_me: wasReposted,
+        repost_count: wasReposted ? baseCount + 1 : Math.max(0, baseCount - 1),
+      });
     }
   };
 
@@ -404,6 +428,8 @@ export default function FullScreenVideoFeed() {
       {items.map((item, idx) => {
         const { post } = item;
         const active = idx === activeIndex;
+        // Engagement display follows the ORIGINAL on repost rows.
+        const src = engagementSourceOf(post);
         return (
           <section
             key={post.id}
@@ -452,8 +478,13 @@ export default function FullScreenVideoFeed() {
 
             {/* Bottom overlay — author + caption */}
             <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-6 pt-16 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+              {post.is_repost && (
+                <p className="animate-in slide-in-from-top-2 fade-in duration-300 text-[11px] font-semibold text-buddy-green mb-1.5 flex items-center gap-1">
+                  <Repeat2 size={11} /> {(post as any).reposters?.[0]?.display_name || post.author_data?.display_name} reposted
+                </p>
+              )}
               <div className="pointer-events-auto max-w-[70%]">
-                <AuthorChip author={post.author_data} tone="onDark" />
+                <AuthorChip author={post.author_data} tone="onDark" viewCount={post.view_count ?? 0} />
               </div>
               {!item.photoMode && post.body && (
                 <p className="text-white/90 text-sm mt-2 line-clamp-2">{post.body}</p>
@@ -469,12 +500,10 @@ export default function FullScreenVideoFeed() {
             <div data-no-swipe className="absolute right-2 bottom-24 z-20 flex flex-col items-center gap-1">
               <RailAction
                 tone="onDark"
-                label={post.user_reaction ? `Liked with ${toEmoji(post.user_reaction)}` : 'Like with flexed biceps'}
-                icon={post.user_reaction
-                  ? <EmojiImg emoji={toEmoji(post.user_reaction)} size={RAIL_ICON_SIZE + 4} />
-                  : <Heart size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
-                count={totalReactions(post.reaction_counts)}
-                active={!!post.user_reaction}
+                label={src.user_reaction ? `Liked with ${toEmoji(src.user_reaction)}` : 'Like with flexed biceps'}
+                icon={<Heart size={RAIL_ICON_SIZE + 4} className={`drop-shadow ${src.user_reaction ? 'fill-current' : ''}`} />}
+                count={totalReactions(src.reaction_counts)}
+                active={!!src.user_reaction}
                 testId={`fs-like-${post.id}`}
                 onClick={(e) => { e.stopPropagation(); void handleLike(idx); }}
               />
@@ -482,15 +511,15 @@ export default function FullScreenVideoFeed() {
                 tone="onDark"
                 label="Comments"
                 icon={<MessageCircle size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
-                count={post.comment_count ?? 0}
+                count={src.comment_count ?? 0}
                 testId={`fs-comment-${post.id}`}
-                onClick={(e) => { e.stopPropagation(); setCommentPostId(post.id); }}
+                onClick={(e) => { e.stopPropagation(); setCommentPostId(engagementIdOf(post)); }}
               />
               <RailAction
                 tone="onDark"
                 label={post.is_reposted_by_me ? 'Undo repost' : 'Repost'}
                 icon={<Repeat2 size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
-                count={post.repost_count ?? 0}
+                count={src.repost_count ?? 0}
                 active={!!post.is_reposted_by_me}
                 activeClassName="text-buddy-electric"
                 testId={`fs-repost-${post.id}`}
@@ -502,7 +531,7 @@ export default function FullScreenVideoFeed() {
                 icon={post.is_saved
                   ? <BookmarkCheck size={RAIL_ICON_SIZE + 4} className="drop-shadow" />
                   : <Bookmark size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
-                count={post.save_count}
+                count={src.save_count}
                 active={!!post.is_saved}
                 testId={`fs-save-${post.id}`}
                 onClick={(e) => { e.stopPropagation(); void handleSave(idx); }}
@@ -513,7 +542,12 @@ export default function FullScreenVideoFeed() {
                 icon={<Share2 size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
                 count={post.share_count ?? 0}
                 testId={`fs-share-${post.id}`}
-                onClick={(e) => { e.stopPropagation(); setShareIdx(idx); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  setShareAnchor({ top: r.top, left: r.left, bottom: r.bottom });
+                  setShareIdx(idx);
+                }}
               />
               <RailAction
                 tone="onDark"
@@ -593,12 +627,13 @@ export default function FullScreenVideoFeed() {
         <PostShareSheet
           post={items[shareIdx].post}
           isOpen={shareIdx !== null}
-          onClose={() => setShareIdx(null)}
+          onClose={() => { setShareIdx(null); setShareAnchor(null); }}
           isSaved={!!items[shareIdx].post.is_saved}
           onToggleSave={() => void handleSave(shareIdx)}
           isReposted={!!items[shareIdx].post.is_reposted_by_me}
           onRepost={() => void handleRepost(shareIdx)}
           onShared={(n) => patchItem(shareIdx, { share_count: n })}
+          anchorRect={shareAnchor}
         />
       )}
     </div>

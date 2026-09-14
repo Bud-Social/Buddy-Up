@@ -18,7 +18,7 @@ from rest_framework.response import Response
 
 from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
-from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, Sound
+from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, PostShare, Sound
 from .media_types import ALLOWED_EXTS, guess_media_type, url_extension
 from .serializers import (
     PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer,
@@ -605,6 +605,38 @@ def _handle_media_uploads(request_files):
     return urls
 
 
+def _dedupe_reposts_for_viewer(posts, viewer_profile):
+    """TikTok-style repost/original collapse, viewer-aware.
+
+    For each original with repost rows in the page: viewers who follow (or
+    are) the reposter keep the repost row(s) and lose the plain original;
+    everyone else keeps the original (with its repost count) and never sees
+    a stranger's repost row.
+    """
+    try:
+        followed_ids = set(viewer_profile.following.values_list('followee_id', flat=True))
+    except Exception:  # noqa: BLE001 — fall back to showing originals
+        followed_ids = set()
+    followed_ids.add(viewer_profile.user_id)
+    by_original: dict = {}
+    for p in posts:
+        if p.is_repost and p.original_post_id:
+            by_original.setdefault(p.original_post_id, []).append(p)
+    keep_repost_ids = set()
+    drop_original_ids = set()
+    for orig_id, reposts in by_original.items():
+        kept = [r for r in reposts if r.author_id in followed_ids]
+        if kept:
+            keep_repost_ids.update(r.id for r in kept)
+            drop_original_ids.add(orig_id)
+    return [
+        p for p in posts
+        if p.id in keep_repost_ids
+        or (not p.is_repost and p.id not in drop_original_ids)
+        or (p.is_repost and not p.original_post_id)
+    ]
+
+
 def _next_link(request, cursor):
     """Build a pagination URL for the ranked feed, preserving other query params."""
     from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
@@ -652,7 +684,7 @@ def _rank_for_you(request, user_profile, queryset, buddy_ids, followed_ids, gym_
     )
 
     reposted_original_ids = {p.original_post_id for p in ordered if p.is_repost and p.original_post_id}
-    deduped = [p for p in ordered if not (not p.is_repost and p.id in reposted_original_ids)]
+    deduped = _dedupe_reposts_for_viewer(ordered, user_profile)
 
     # Persist rank + algorithm context per user for a short window so
     # engagement feedback can be attributed to the impression that earned it.
@@ -854,8 +886,7 @@ class FeedView(views.APIView):
         page = paginator.paginate_queryset(queryset, request)
         page_posts = list(page)
 
-        reposted_original_ids = {p.original_post_id for p in page_posts if p.is_repost and p.original_post_id}
-        deduped_posts = [p for p in page_posts if not (not p.is_repost and p.id in reposted_original_ids)]
+        deduped_posts = _dedupe_reposts_for_viewer(page_posts, user_profile)
 
         serializer = FeedPostSerializer(deduped_posts, many=True, context={'request': request})
 
@@ -1578,6 +1609,9 @@ class PostShareView(views.APIView):
 
     Every POST increments share_count: each share is a deliberate user
     action (unlike passive views), so repeats are counted, not deduped.
+    Accepts an optional `channel` (native/copy/whatsapp/x/facebook/
+    telegram/other) and returns the sharer's stable referral `code` so the
+    client can build a tracked link (`…?ref=<code>`).
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1585,14 +1619,89 @@ class PostShareView(views.APIView):
         post, error = _engagement_post_or_error_response(request, post_id)
         if error is not None:
             return error
+        channel = str(request.data.get('channel') or 'other').strip().lower()[:20]
+        valid_channels = {c for c, _ in PostShare.CHANNEL_CHOICES}
+        if channel not in valid_channels:
+            channel = 'other'
+        record, _ = PostShare.objects.get_or_create(
+            post=post,
+            sharer=request.user.profile,
+            defaults={'channel': channel},
+        )
+        if record.channel != channel:
+            record.channel = channel
+            record.save(update_fields=['channel'])
         Post.objects.filter(id=post.id).update(share_count=F('share_count') + 1)
         post.refresh_from_db(fields=['share_count'])
         return Response({
             'success': True,
-            'data': {'share_count': post.share_count},
+            'data': {'share_count': post.share_count, 'code': record.code},
             'message': 'Post shared.',
             'errors': None,
             'pagination': None,
+        })
+
+
+class PostSharesListView(views.APIView):
+    """GET /api/v1/feed/<post_id>/shares/ — who shared this post.
+
+    Recent sharers first, with accounts the viewer follows floated to the
+    top so recipients see familiar faces ("Shared by people you follow").
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, post_id):
+        post, error = _engagement_post_or_error_response(request, post_id)
+        if error is not None:
+            return error
+        from common.utils import absolute_media_url
+        followed_ids = set(
+            request.user.profile.following.values_list('followee_id', flat=True)
+        ) if hasattr(request.user.profile, 'following') else set()
+        records = list(
+            PostShare.objects.filter(post=post)
+            .select_related('sharer')
+            .order_by('-created_at')[:20]
+        )
+        records.sort(key=lambda r: (r.sharer_id not in followed_ids, -r.created_at.timestamp()))
+        return Response({
+            'success': True,
+            'data': [{
+                'username': r.sharer.username,
+                'display_name': r.sharer.display_name,
+                'avatar_url': absolute_media_url(request, r.sharer.avatar_url),
+                'channel': r.channel,
+                'shared_at': r.created_at.isoformat(),
+                'followed_by_viewer': r.sharer_id in followed_ids,
+            } for r in records],
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class ShareOpenView(views.APIView):
+    """POST /api/v1/s/<code>/open/ — attribute a tracked-link open.
+
+    Public (recipients may be logged out). Returns the target post so the
+    client can route, and increments the link's click counter.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, code):
+        record = PostShare.objects.filter(code=str(code).strip()[:16]).select_related('post').first()
+        if record is None:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Unknown share link.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+        PostShare.objects.filter(id=record.id).update(clicks=F('clicks') + 1)
+        return Response({
+            'success': True,
+            'data': {'post_id': str(record.post_id), 'post_type': record.post.post_type},
+            'message': 'OK',
+            'errors': None, 'pagination': None,
         })
 
 

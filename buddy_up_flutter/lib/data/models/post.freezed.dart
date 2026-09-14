@@ -1721,7 +1721,7 @@ as String,
 /// @nodoc
 mixin _$OriginalPostData {
 
- String get id;@JsonKey(name: 'author_data') AuthorData get authorData; String get body;@JsonKey(name: 'media_urls') List<String> get mediaUrls; List<PostMedia> get media;@JsonKey(name: 'post_type') String get postType;@JsonKey(name: 'location_label') String? get locationLabel;@JsonKey(name: 'workout_log_data') Map<String, dynamic>? get workoutLogData;@JsonKey(name: 'meal_data') Map<String, dynamic>? get mealData;@JsonKey(name: 'progress_data') Map<String, dynamic>? get progressData; Poll? get poll;@JsonKey(name: 'comment_count') int get commentCount;@JsonKey(name: 'gym_tag_name') String? get gymTagName;@JsonKey(name: 'created_at') String get createdAt;
+ String get id;@JsonKey(name: 'author_data') AuthorData get authorData; String get body;@JsonKey(name: 'media_urls') List<String> get mediaUrls; List<PostMedia> get media;@JsonKey(name: 'post_type') String get postType;@JsonKey(name: 'location_label') String? get locationLabel;@JsonKey(name: 'workout_log_data') Map<String, dynamic>? get workoutLogData;@JsonKey(name: 'meal_data') Map<String, dynamic>? get mealData;@JsonKey(name: 'progress_data') Map<String, dynamic>? get progressData; Poll? get poll;@JsonKey(name: 'comment_count') int get commentCount;@JsonKey(name: 'repost_count') int get repostCount;@JsonKey(name: 'view_count') int get viewCount;@JsonKey(name: 'share_count') int get shareCount;@JsonKey(name: 'save_count') int get saveCount;@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts;@JsonKey(name: 'user_reaction') String? get userReaction;@JsonKey(name: 'gym_tag_name') String? get gymTagName;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of OriginalPostData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1734,16 +1734,16 @@ $OriginalPostDataCopyWith<OriginalPostData> get copyWith => _$OriginalPostDataCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is OriginalPostData&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other.mediaUrls, mediaUrls)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&const DeepCollectionEquality().equals(other.workoutLogData, workoutLogData)&&const DeepCollectionEquality().equals(other.mealData, mealData)&&const DeepCollectionEquality().equals(other.progressData, progressData)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OriginalPostData&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other.mediaUrls, mediaUrls)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&const DeepCollectionEquality().equals(other.workoutLogData, workoutLogData)&&const DeepCollectionEquality().equals(other.mealData, mealData)&&const DeepCollectionEquality().equals(other.progressData, progressData)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&const DeepCollectionEquality().equals(other.reactionCounts, reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,authorData,body,const DeepCollectionEquality().hash(mediaUrls),const DeepCollectionEquality().hash(media),postType,locationLabel,const DeepCollectionEquality().hash(workoutLogData),const DeepCollectionEquality().hash(mealData),const DeepCollectionEquality().hash(progressData),poll,commentCount,gymTagName,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,authorData,body,const DeepCollectionEquality().hash(mediaUrls),const DeepCollectionEquality().hash(media),postType,locationLabel,const DeepCollectionEquality().hash(workoutLogData),const DeepCollectionEquality().hash(mealData),const DeepCollectionEquality().hash(progressData),poll,commentCount,repostCount,viewCount,shareCount,saveCount,const DeepCollectionEquality().hash(reactionCounts),userReaction,gymTagName,createdAt]);
 
 @override
 String toString() {
-  return 'OriginalPostData(id: $id, authorData: $authorData, body: $body, mediaUrls: $mediaUrls, media: $media, postType: $postType, locationLabel: $locationLabel, workoutLogData: $workoutLogData, mealData: $mealData, progressData: $progressData, poll: $poll, commentCount: $commentCount, gymTagName: $gymTagName, createdAt: $createdAt)';
+  return 'OriginalPostData(id: $id, authorData: $authorData, body: $body, mediaUrls: $mediaUrls, media: $media, postType: $postType, locationLabel: $locationLabel, workoutLogData: $workoutLogData, mealData: $mealData, progressData: $progressData, poll: $poll, commentCount: $commentCount, repostCount: $repostCount, viewCount: $viewCount, shareCount: $shareCount, saveCount: $saveCount, reactionCounts: $reactionCounts, userReaction: $userReaction, gymTagName: $gymTagName, createdAt: $createdAt)';
 }
 
 
@@ -1754,7 +1754,7 @@ abstract mixin class $OriginalPostDataCopyWith<$Res>  {
   factory $OriginalPostDataCopyWith(OriginalPostData value, $Res Function(OriginalPostData) _then) = _$OriginalPostDataCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(name: 'post_type') String postType,@JsonKey(name: 'location_label') String? locationLabel,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,@JsonKey(name: 'progress_data') Map<String, dynamic>? progressData, Poll? poll,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'gym_tag_name') String? gymTagName,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(name: 'post_type') String postType,@JsonKey(name: 'location_label') String? locationLabel,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,@JsonKey(name: 'progress_data') Map<String, dynamic>? progressData, Poll? poll,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'repost_count') int repostCount,@JsonKey(name: 'view_count') int viewCount,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'save_count') int saveCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'gym_tag_name') String? gymTagName,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -1771,7 +1771,7 @@ class _$OriginalPostDataCopyWithImpl<$Res>
 
 /// Create a copy of OriginalPostData
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? authorData = null,Object? body = null,Object? mediaUrls = null,Object? media = null,Object? postType = null,Object? locationLabel = freezed,Object? workoutLogData = freezed,Object? mealData = freezed,Object? progressData = freezed,Object? poll = freezed,Object? commentCount = null,Object? gymTagName = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? authorData = null,Object? body = null,Object? mediaUrls = null,Object? media = null,Object? postType = null,Object? locationLabel = freezed,Object? workoutLogData = freezed,Object? mealData = freezed,Object? progressData = freezed,Object? poll = freezed,Object? commentCount = null,Object? repostCount = null,Object? viewCount = null,Object? shareCount = null,Object? saveCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? gymTagName = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
@@ -1785,7 +1785,13 @@ as Map<String, dynamic>?,mealData: freezed == mealData ? _self.mealData : mealDa
 as Map<String, dynamic>?,progressData: freezed == progressData ? _self.progressData : progressData // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,poll: freezed == poll ? _self.poll : poll // ignore: cast_nullable_to_non_nullable
 as Poll?,commentCount: null == commentCount ? _self.commentCount : commentCount // ignore: cast_nullable_to_non_nullable
-as int,gymTagName: freezed == gymTagName ? _self.gymTagName : gymTagName // ignore: cast_nullable_to_non_nullable
+as int,repostCount: null == repostCount ? _self.repostCount : repostCount // ignore: cast_nullable_to_non_nullable
+as int,viewCount: null == viewCount ? _self.viewCount : viewCount // ignore: cast_nullable_to_non_nullable
+as int,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
+as int,saveCount: null == saveCount ? _self.saveCount : saveCount // ignore: cast_nullable_to_non_nullable
+as int,reactionCounts: null == reactionCounts ? _self.reactionCounts : reactionCounts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,userReaction: freezed == userReaction ? _self.userReaction : userReaction // ignore: cast_nullable_to_non_nullable
+as String?,gymTagName: freezed == gymTagName ? _self.gymTagName : gymTagName // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -1893,10 +1899,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(name: 'post_type')  String postType, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData,  Poll? poll, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'gym_tag_name')  String? gymTagName, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(name: 'post_type')  String postType, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData,  Poll? poll, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'gym_tag_name')  String? gymTagName, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OriginalPostData() when $default != null:
-return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media,_that.postType,_that.locationLabel,_that.workoutLogData,_that.mealData,_that.progressData,_that.poll,_that.commentCount,_that.gymTagName,_that.createdAt);case _:
+return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media,_that.postType,_that.locationLabel,_that.workoutLogData,_that.mealData,_that.progressData,_that.poll,_that.commentCount,_that.repostCount,_that.viewCount,_that.shareCount,_that.saveCount,_that.reactionCounts,_that.userReaction,_that.gymTagName,_that.createdAt);case _:
   return orElse();
 
 }
@@ -1914,10 +1920,10 @@ return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(name: 'post_type')  String postType, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData,  Poll? poll, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'gym_tag_name')  String? gymTagName, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(name: 'post_type')  String postType, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData,  Poll? poll, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'gym_tag_name')  String? gymTagName, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _OriginalPostData():
-return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media,_that.postType,_that.locationLabel,_that.workoutLogData,_that.mealData,_that.progressData,_that.poll,_that.commentCount,_that.gymTagName,_that.createdAt);case _:
+return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media,_that.postType,_that.locationLabel,_that.workoutLogData,_that.mealData,_that.progressData,_that.poll,_that.commentCount,_that.repostCount,_that.viewCount,_that.shareCount,_that.saveCount,_that.reactionCounts,_that.userReaction,_that.gymTagName,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1934,10 +1940,10 @@ return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(name: 'post_type')  String postType, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData,  Poll? poll, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'gym_tag_name')  String? gymTagName, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(name: 'post_type')  String postType, @JsonKey(name: 'location_label')  String? locationLabel, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data')  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data')  Map<String, dynamic>? progressData,  Poll? poll, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'gym_tag_name')  String? gymTagName, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _OriginalPostData() when $default != null:
-return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media,_that.postType,_that.locationLabel,_that.workoutLogData,_that.mealData,_that.progressData,_that.poll,_that.commentCount,_that.gymTagName,_that.createdAt);case _:
+return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media,_that.postType,_that.locationLabel,_that.workoutLogData,_that.mealData,_that.progressData,_that.poll,_that.commentCount,_that.repostCount,_that.viewCount,_that.shareCount,_that.saveCount,_that.reactionCounts,_that.userReaction,_that.gymTagName,_that.createdAt);case _:
   return null;
 
 }
@@ -1949,7 +1955,7 @@ return $default(_that.id,_that.authorData,_that.body,_that.mediaUrls,_that.media
 @JsonSerializable()
 
 class _OriginalPostData implements OriginalPostData {
-  const _OriginalPostData({required this.id, @JsonKey(name: 'author_data') required this.authorData, required this.body, @JsonKey(name: 'media_urls') final  List<String> mediaUrls = const <String>[], final  List<PostMedia> media = const <PostMedia>[], @JsonKey(name: 'post_type') this.postType = 'text', @JsonKey(name: 'location_label') this.locationLabel, @JsonKey(name: 'workout_log_data') final  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data') final  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data') final  Map<String, dynamic>? progressData, this.poll, @JsonKey(name: 'comment_count') this.commentCount = 0, @JsonKey(name: 'gym_tag_name') this.gymTagName, @JsonKey(name: 'created_at') required this.createdAt}): _mediaUrls = mediaUrls,_media = media,_workoutLogData = workoutLogData,_mealData = mealData,_progressData = progressData;
+  const _OriginalPostData({required this.id, @JsonKey(name: 'author_data') required this.authorData, required this.body, @JsonKey(name: 'media_urls') final  List<String> mediaUrls = const <String>[], final  List<PostMedia> media = const <PostMedia>[], @JsonKey(name: 'post_type') this.postType = 'text', @JsonKey(name: 'location_label') this.locationLabel, @JsonKey(name: 'workout_log_data') final  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'meal_data') final  Map<String, dynamic>? mealData, @JsonKey(name: 'progress_data') final  Map<String, dynamic>? progressData, this.poll, @JsonKey(name: 'comment_count') this.commentCount = 0, @JsonKey(name: 'repost_count') this.repostCount = 0, @JsonKey(name: 'view_count') this.viewCount = 0, @JsonKey(name: 'share_count') this.shareCount = 0, @JsonKey(name: 'save_count') this.saveCount = 0, @JsonKey(name: 'reaction_counts') final  Map<String, int> reactionCounts = const <String, int>{}, @JsonKey(name: 'user_reaction') this.userReaction, @JsonKey(name: 'gym_tag_name') this.gymTagName, @JsonKey(name: 'created_at') required this.createdAt}): _mediaUrls = mediaUrls,_media = media,_workoutLogData = workoutLogData,_mealData = mealData,_progressData = progressData,_reactionCounts = reactionCounts;
   factory _OriginalPostData.fromJson(Map<String, dynamic> json) => _$OriginalPostDataFromJson(json);
 
 @override final  String id;
@@ -2000,6 +2006,18 @@ class _OriginalPostData implements OriginalPostData {
 
 @override final  Poll? poll;
 @override@JsonKey(name: 'comment_count') final  int commentCount;
+@override@JsonKey(name: 'repost_count') final  int repostCount;
+@override@JsonKey(name: 'view_count') final  int viewCount;
+@override@JsonKey(name: 'share_count') final  int shareCount;
+@override@JsonKey(name: 'save_count') final  int saveCount;
+ final  Map<String, int> _reactionCounts;
+@override@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts {
+  if (_reactionCounts is EqualUnmodifiableMapView) return _reactionCounts;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_reactionCounts);
+}
+
+@override@JsonKey(name: 'user_reaction') final  String? userReaction;
 @override@JsonKey(name: 'gym_tag_name') final  String? gymTagName;
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
@@ -2016,16 +2034,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OriginalPostData&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other._mediaUrls, _mediaUrls)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&const DeepCollectionEquality().equals(other._workoutLogData, _workoutLogData)&&const DeepCollectionEquality().equals(other._mealData, _mealData)&&const DeepCollectionEquality().equals(other._progressData, _progressData)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OriginalPostData&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other._mediaUrls, _mediaUrls)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&const DeepCollectionEquality().equals(other._workoutLogData, _workoutLogData)&&const DeepCollectionEquality().equals(other._mealData, _mealData)&&const DeepCollectionEquality().equals(other._progressData, _progressData)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&const DeepCollectionEquality().equals(other._reactionCounts, _reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,authorData,body,const DeepCollectionEquality().hash(_mediaUrls),const DeepCollectionEquality().hash(_media),postType,locationLabel,const DeepCollectionEquality().hash(_workoutLogData),const DeepCollectionEquality().hash(_mealData),const DeepCollectionEquality().hash(_progressData),poll,commentCount,gymTagName,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,authorData,body,const DeepCollectionEquality().hash(_mediaUrls),const DeepCollectionEquality().hash(_media),postType,locationLabel,const DeepCollectionEquality().hash(_workoutLogData),const DeepCollectionEquality().hash(_mealData),const DeepCollectionEquality().hash(_progressData),poll,commentCount,repostCount,viewCount,shareCount,saveCount,const DeepCollectionEquality().hash(_reactionCounts),userReaction,gymTagName,createdAt]);
 
 @override
 String toString() {
-  return 'OriginalPostData(id: $id, authorData: $authorData, body: $body, mediaUrls: $mediaUrls, media: $media, postType: $postType, locationLabel: $locationLabel, workoutLogData: $workoutLogData, mealData: $mealData, progressData: $progressData, poll: $poll, commentCount: $commentCount, gymTagName: $gymTagName, createdAt: $createdAt)';
+  return 'OriginalPostData(id: $id, authorData: $authorData, body: $body, mediaUrls: $mediaUrls, media: $media, postType: $postType, locationLabel: $locationLabel, workoutLogData: $workoutLogData, mealData: $mealData, progressData: $progressData, poll: $poll, commentCount: $commentCount, repostCount: $repostCount, viewCount: $viewCount, shareCount: $shareCount, saveCount: $saveCount, reactionCounts: $reactionCounts, userReaction: $userReaction, gymTagName: $gymTagName, createdAt: $createdAt)';
 }
 
 
@@ -2036,7 +2054,7 @@ abstract mixin class _$OriginalPostDataCopyWith<$Res> implements $OriginalPostDa
   factory _$OriginalPostDataCopyWith(_OriginalPostData value, $Res Function(_OriginalPostData) _then) = __$OriginalPostDataCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(name: 'post_type') String postType,@JsonKey(name: 'location_label') String? locationLabel,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,@JsonKey(name: 'progress_data') Map<String, dynamic>? progressData, Poll? poll,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'gym_tag_name') String? gymTagName,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(name: 'post_type') String postType,@JsonKey(name: 'location_label') String? locationLabel,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'meal_data') Map<String, dynamic>? mealData,@JsonKey(name: 'progress_data') Map<String, dynamic>? progressData, Poll? poll,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'repost_count') int repostCount,@JsonKey(name: 'view_count') int viewCount,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'save_count') int saveCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'gym_tag_name') String? gymTagName,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -2053,7 +2071,7 @@ class __$OriginalPostDataCopyWithImpl<$Res>
 
 /// Create a copy of OriginalPostData
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? authorData = null,Object? body = null,Object? mediaUrls = null,Object? media = null,Object? postType = null,Object? locationLabel = freezed,Object? workoutLogData = freezed,Object? mealData = freezed,Object? progressData = freezed,Object? poll = freezed,Object? commentCount = null,Object? gymTagName = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? authorData = null,Object? body = null,Object? mediaUrls = null,Object? media = null,Object? postType = null,Object? locationLabel = freezed,Object? workoutLogData = freezed,Object? mealData = freezed,Object? progressData = freezed,Object? poll = freezed,Object? commentCount = null,Object? repostCount = null,Object? viewCount = null,Object? shareCount = null,Object? saveCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? gymTagName = freezed,Object? createdAt = null,}) {
   return _then(_OriginalPostData(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
@@ -2067,7 +2085,13 @@ as Map<String, dynamic>?,mealData: freezed == mealData ? _self._mealData : mealD
 as Map<String, dynamic>?,progressData: freezed == progressData ? _self._progressData : progressData // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,poll: freezed == poll ? _self.poll : poll // ignore: cast_nullable_to_non_nullable
 as Poll?,commentCount: null == commentCount ? _self.commentCount : commentCount // ignore: cast_nullable_to_non_nullable
-as int,gymTagName: freezed == gymTagName ? _self.gymTagName : gymTagName // ignore: cast_nullable_to_non_nullable
+as int,repostCount: null == repostCount ? _self.repostCount : repostCount // ignore: cast_nullable_to_non_nullable
+as int,viewCount: null == viewCount ? _self.viewCount : viewCount // ignore: cast_nullable_to_non_nullable
+as int,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
+as int,saveCount: null == saveCount ? _self.saveCount : saveCount // ignore: cast_nullable_to_non_nullable
+as int,reactionCounts: null == reactionCounts ? _self._reactionCounts : reactionCounts // ignore: cast_nullable_to_non_nullable
+as Map<String, int>,userReaction: freezed == userReaction ? _self.userReaction : userReaction // ignore: cast_nullable_to_non_nullable
+as String?,gymTagName: freezed == gymTagName ? _self.gymTagName : gymTagName // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));

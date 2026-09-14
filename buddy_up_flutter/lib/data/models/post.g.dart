@@ -165,6 +165,16 @@ _OriginalPostData _$OriginalPostDataFromJson(Map<String, dynamic> json) =>
           ? null
           : Poll.fromJson(json['poll'] as Map<String, dynamic>),
       commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
+      repostCount: (json['repost_count'] as num?)?.toInt() ?? 0,
+      viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
+      shareCount: (json['share_count'] as num?)?.toInt() ?? 0,
+      saveCount: (json['save_count'] as num?)?.toInt() ?? 0,
+      reactionCounts:
+          (json['reaction_counts'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const <String, int>{},
+      userReaction: json['user_reaction'] as String?,
       gymTagName: json['gym_tag_name'] as String?,
       createdAt: json['created_at'] as String,
     );
@@ -183,6 +193,12 @@ Map<String, dynamic> _$OriginalPostDataToJson(_OriginalPostData instance) =>
       'progress_data': instance.progressData,
       'poll': instance.poll,
       'comment_count': instance.commentCount,
+      'repost_count': instance.repostCount,
+      'view_count': instance.viewCount,
+      'share_count': instance.shareCount,
+      'save_count': instance.saveCount,
+      'reaction_counts': instance.reactionCounts,
+      'user_reaction': instance.userReaction,
       'gym_tag_name': instance.gymTagName,
       'created_at': instance.createdAt,
     };

@@ -9,7 +9,7 @@ import {
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi } from '@/api';
 import { formatPostDate } from '@/utils/formatDate';
-import { EmojiImg, toEmoji } from '@/utils/emojiUtils';
+import { toEmoji } from '@/utils/emojiUtils';
 import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
 import { RailAction, RAIL_ICON_SIZE, nextReactionState, totalReactions } from './RailAction';
 import { AuthorChip } from './AuthorChip';
@@ -484,26 +484,35 @@ interface PostCardProps {
 export function PostCard({ post: initialPost, onComment }: PostCardProps) {
   const navigate = useNavigate();
   const [post] = useState(initialPost);
+  // Engagement always reflects the ORIGINAL post: repost rows borrow the
+  // original's counts and actions target the original id.
+  const engagementSource = (post.is_repost && post.original_post_data) ? post.original_post_data : post;
+  const engagementId = post.is_repost && post.original_post_data ? post.original_post_data.id : post.id;
   const [isSaved, setIsSaved] = useState(post.is_saved ?? false);
-  const [saveCount, setSaveCount] = useState<number | undefined>(post.save_count);
-  const [reactionCounts, setReactionCounts] = useState(post.reaction_counts || {});
-  const [userReaction, setUserReaction] = useState<string | null>(
-    post.user_reaction ? toEmoji(post.user_reaction) : null,
+  const [saveCount, setSaveCount] = useState<number | undefined>(
+    (engagementSource as { save_count?: number }).save_count ?? post.save_count,
   );
+  const [reactionCounts, setReactionCounts] = useState(
+    (engagementSource as { reaction_counts?: Record<string, number> }).reaction_counts || {},
+  );
+  const [userReaction, setUserReaction] = useState<string | null>(() => {
+    const r = (engagementSource as { user_reaction?: string | null }).user_reaction;
+    return r ? toEmoji(r) : null;
+  });
   const [showReactionPicker, setShowReactionPicker] = useState(false);
-  const [repostCount, setRepostCount] = useState(post.repost_count || 0);
+  const [repostCount, setRepostCount] = useState(
+    (engagementSource as { repost_count?: number }).repost_count || 0,
+  );
   const [isRepostedByMe, setIsRepostedByMe] = useState(post.is_reposted_by_me ?? false);
   const [shareCount, setShareCount] = useState(post.share_count ?? 0);
   const [viewCount, setViewCount] = useState(post.view_count ?? 0);
+  const [justRepostedFlash, setJustRepostedFlash] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [shareAnchor, setShareAnchor] = useState<{ top: number; left: number; bottom: number } | null>(null);
   const [heartPop, setHeartPop] = useState<{ show: boolean; x: number; y: number } | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
 
-  const reactionsArr = Object.entries(reactionCounts)
-    .filter(([, count]) => count > 0)
-    .sort((a, b) => b[1] - a[1]);
-  const topReactions = reactionsArr.slice(0, 3);
   const likeCount = totalReactions(reactionCounts);
 
   /** One-tap toggles 💪 (optimistic w/ rollback). Long-press opens the picker. */
@@ -514,8 +523,8 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
     setReactionCounts(next.counts);
     setUserReaction(next.userReaction);
     try {
-      if (next.removed) await feedApi.unreact(post.id);
-      else await feedApi.react(post.id, '💪');
+      if (next.removed) await feedApi.unreact(engagementId);
+      else await feedApi.react(engagementId, '💪');
     } catch {
       setReactionCounts(prevCounts);
       setUserReaction(prevReaction);
@@ -535,7 +544,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
         return next;
       });
       try {
-        await feedApi.unreact(post.id);
+        await feedApi.unreact(engagementId);
       } catch {
         setUserReaction(emoji);
         setReactionCounts(prevCounts);
@@ -548,7 +557,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
     setReactionCounts(next.counts);
     setUserReaction(next.userReaction);
     try {
-      await feedApi.react(post.id, emoji);
+      await feedApi.react(engagementId, emoji);
     } catch {
       setReactionCounts(prevCounts);
       setUserReaction(prevReaction);
@@ -574,8 +583,8 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
     setIsSaved(!prev);
     if (saveCount !== undefined) setSaveCount(Math.max(0, saveCount + (prev ? -1 : 1)));
     try {
-      if (prev) await feedApi.unsave(post.id);
-      else await feedApi.save(post.id);
+      if (prev) await feedApi.unsave(engagementId);
+      else await feedApi.save(engagementId);
     } catch {
       setIsSaved(prev);
       if (prevCount !== undefined) setSaveCount(prevCount);
@@ -588,6 +597,11 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
     const wasReposted = isRepostedByMe;
     setIsRepostedByMe(!wasReposted);
     setRepostCount(c => wasReposted ? Math.max(0, c - 1) : c + 1);
+    // Fresh repost on an original row: flash the card into repost design.
+    if (!wasReposted && !post.is_repost) {
+      setJustRepostedFlash(true);
+      setTimeout(() => setJustRepostedFlash(false), 2200);
+    }
     try {
       const res = await feedApi.repost(post.id);
       if (res.data) {
@@ -597,6 +611,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
     } catch {
       // Rollback on error
       setIsRepostedByMe(wasReposted);
+      setJustRepostedFlash(false);
       setRepostCount(c => wasReposted ? c + 1 : Math.max(0, c - 1));
     }
   };
@@ -620,9 +635,12 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
       id={`post-${post.id}`}
       className={`flex gap-1 bg-buddy-surface rounded-2xl border ${post.is_repost ? 'border-buddy-green/30 shadow-[0_0_15px_rgba(0,255,157,0.05)]' : 'border-buddy-surface-raised hover:border-buddy-green/20'} transition-colors select-none flex-col`}
     >
-      {/* Repost Header Ribbon */}
-      {post.is_repost && (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-buddy-green/10 border-l-4 border-buddy-green shadow-[0_2px_10px_rgba(0,255,157,0.1)] text-xs">
+      {/* Repost header: TikTok-style "X reposted" attribution above the creator. */}
+      {(post.is_repost || (justRepostedFlash && isRepostedByMe)) && (
+        <div
+          key={post.is_repost ? 'repost-row' : 'just-reposted'}
+          className="animate-in slide-in-from-top-2 fade-in duration-300 flex items-center gap-2 px-4 py-2 bg-buddy-green/10 border-l-4 border-buddy-green text-xs"
+        >
           {(post as any).reposters && (post as any).reposters.length > 0 ? (
             <div className="flex items-center -space-x-2 flex-shrink-0">
               {(post as any).reposters.slice(0, 3).map((reposter: any, idx: number) => (
@@ -640,10 +658,17 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
             </button>
           )}
           <div className="flex-1 min-w-0 flex items-center gap-1.5">
-            <span className="font-semibold text-buddy-green cursor-pointer truncate" onClick={(e) => { e.stopPropagation(); navigate(`/${post.author_data?.username}`); }}>
-              {post.author_data?.display_name}
-            </span>
-            <span className="text-buddy-text-secondary flex-shrink-0">reposted</span>
+            <Repeat2 size={13} className="text-buddy-green shrink-0" />
+            {justRepostedFlash && !post.is_repost ? (
+              <span className="font-semibold text-buddy-green truncate">You reposted this</span>
+            ) : (
+              <span className="font-semibold text-buddy-green cursor-pointer truncate" onClick={(e) => { e.stopPropagation(); navigate(`/${post.author_data?.username}`); }}>
+                {post.author_data?.display_name}
+              </span>
+            )}
+            {!justRepostedFlash && (
+              <span className="text-buddy-text-secondary flex-shrink-0">reposted</span>
+            )}
             {post.quote_body && (
               <span className="text-buddy-text-primary truncate border-l border-buddy-green/40 pl-1.5 italic flex-1">
                 "{post.quote_body}"
@@ -741,24 +766,8 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
                 void togglePump();
               }}
               onContextMenu={(e) => { e.preventDefault(); setShowReactionPicker(true); }}
-              icon={userReaction ? (
-                <EmojiImg emoji={userReaction} size={RAIL_ICON_SIZE} />
-              ) : (
-                <Heart size={RAIL_ICON_SIZE} />
-              )}
+              icon={<Heart size={RAIL_ICON_SIZE} className={userReaction ? 'fill-current' : undefined} />}
             />
-            {reactionsArr.length > 0 && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setShowReactionPicker(p => !p); }}
-                className="flex -space-x-1 -mt-1"
-                aria-label="See all reactions"
-              >
-                {topReactions.map(([emojiChar]) => (
-                  <EmojiImg key={emojiChar} emoji={emojiChar} size={16} className="z-10 rounded-full ring-1 ring-buddy-surface" />
-                ))}
-              </button>
-            )}
 
             {/* Reaction picker popup */}
             {showReactionPicker && (
@@ -818,7 +827,11 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
             icon={<Share2 size={RAIL_ICON_SIZE} />}
             count={shareCount}
             testId="rail-share"
-            onClick={() => setShowShareSheet(true)}
+            onClick={(e) => {
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setShareAnchor({ top: r.top, left: r.left, bottom: r.bottom });
+              setShowShareSheet(true);
+            }}
           />
 
           {/* Views */}
@@ -835,12 +848,13 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
         <PostShareSheet
           post={post}
           isOpen={showShareSheet}
-          onClose={() => setShowShareSheet(false)}
+          onClose={() => { setShowShareSheet(false); setShareAnchor(null); }}
           isSaved={isSaved}
           onToggleSave={() => void handleSave()}
           isReposted={isRepostedByMe}
           onRepost={() => void handleRepost()}
           onShared={setShareCount}
+          anchorRect={shareAnchor}
         />
       )}
     </article>

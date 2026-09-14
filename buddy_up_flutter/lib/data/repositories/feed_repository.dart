@@ -58,7 +58,13 @@ abstract class FeedRepository {
   );
 
   @POST('/feed/{id}/share/')
-  Future<dynamic> sharePost(@Path('id') String postId);
+  Future<dynamic> sharePost(
+    @Path('id') String postId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @GET('/feed/{id}/shares/')
+  Future<dynamic> getPostShares(@Path('id') String postId);
 
   @POST('/feed/{id}/view/')
   Future<dynamic> recordView(@Path('id') String postId);

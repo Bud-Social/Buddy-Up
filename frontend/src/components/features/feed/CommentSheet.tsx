@@ -23,6 +23,17 @@ export function CommentSheet({ postId, isOpen, onClose }: CommentSheetProps) {
     feedApi.getComments(postId).then((res) => setComments(res.data || [])).catch(() => {});
   }, [isOpen, postId]);
 
+  // Lock background scroll while the sheet is open so the feed behind it
+  // cannot move on desktop or mobile.
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
   const handleSubmit = async () => {
     if (!body.trim()) return;
     setIsLoading(true);

@@ -358,6 +358,60 @@ class CreateStructuredMediaTests(TestCase):
         self.assertIn('Studio caption.', row.captions_vtt)
         mock_delay.assert_not_called()
 
+@override_settings(CELERY_TASK_ALWAYS_EAGER=False)
+class RepostVisibilityTests(TestCase):
+    """TikTok-style repost collapse: followers of the reposter see the
+    repost row; everyone else sees the original with its repost count."""
+
+    def setUp(self):
+        self.author = _make_user('repost_author')
+        self.reposter = _make_user('reposter')
+        self.follower = _make_user('follower')
+        self.stranger = _make_user('stranger')
+        self.post = Post.objects.create(
+            author=self.author.profile, post_type='text', body='Original',
+        )
+        _client_for(self.reposter).post(f'/api/v1/feed/{self.post.id}/repost/')
+        from apps.profiles.models import FollowRelationship
+        FollowRelationship.objects.create(
+            follower=self.follower.profile, followee=self.reposter.profile,
+        )
+
+    def _feed(self, user):
+        res = _client_for(user).get('/api/v1/feed/?tab=for_you')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        return res.data['data']
+
+    def test_follower_sees_repost_row(self):
+        data = self._feed(self.follower)
+        rows = [p for p in data if (p.get('original_post_data') or {}).get('id') == str(self.post.id)]
+        self.assertTrue(rows)
+        self.assertTrue(all(p['is_repost'] for p in rows))
+
+    def test_stranger_sees_original_with_repost_count(self):
+        data = self._feed(self.stranger)
+        by_id = {p['id']: p for p in data}
+        self.assertIn(str(self.post.id), by_id)
+        self.assertFalse(by_id[str(self.post.id)]['is_repost'])
+        self.assertEqual(by_id[str(self.post.id)]['repost_count'], 1)
+
+    def test_repost_row_carries_original_counts_and_followed_first(self):
+        from apps.profiles.models import FollowRelationship
+        other = _make_user('other_reposter')
+        _client_for(other).post(f'/api/v1/feed/{self.post.id}/repost/')
+        FollowRelationship.objects.create(
+            follower=self.follower.profile, followee=other.profile,
+        )
+        data = self._feed(self.follower)
+        rows = [p for p in data if (p.get('original_post_data') or {}).get('id') == str(self.post.id)]
+        self.assertTrue(rows)
+        row = rows[0]
+        self.assertEqual(row['original_post_data']['repost_count'], 2)
+        self.assertEqual(row['original_post_data']['comment_count'], 0)
+        reposters = row['reposters']
+        self.assertTrue(all(r.get('followed_by_viewer') for r in reposters[:2]))
+
+
 class CommentsDisabledTests(TestCase):
     def setUp(self):
         self.user = _make_user('poster')
@@ -591,7 +645,8 @@ class ShareEndpointTests(TestCase):
         res = _client_for(self.viewer).post(self.url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertTrue(res.data['success'])
-        self.assertEqual(res.data['data'], {'share_count': 1})
+        self.assertEqual(res.data['data']['share_count'], 1)
+        self.assertTrue(res.data['data']['code'])
         self.assertIsNone(res.data['errors'])
         self.assertIsNone(res.data['pagination'])
         self.post.refresh_from_db()
@@ -605,9 +660,44 @@ class ShareEndpointTests(TestCase):
         """Each POST is a deliberate outbound share, so repeats increment."""
         _client_for(self.viewer).post(self.url)
         res = _client_for(self.viewer).post(self.url)
-        self.assertEqual(res.data['data'], {'share_count': 2})
+        self.assertEqual(res.data['data']['share_count'], 2)
         self.post.refresh_from_db()
         self.assertEqual(self.post.share_count, 2)
+
+    def test_share_returns_stable_code_and_records_channel(self):
+        from apps.feed.models import PostShare
+        first = _client_for(self.viewer).post(self.url, {'channel': 'whatsapp'})
+        second = _client_for(self.viewer).post(self.url, {'channel': 'x'})
+        self.assertEqual(first.data['data']['code'], second.data['data']['code'])
+        record = PostShare.objects.get(post=self.post, sharer=self.viewer.profile)
+        self.assertEqual(record.channel, 'x')
+        self.assertEqual(
+            PostShare.objects.filter(post=self.post).count(), 1,
+        )
+
+    def test_shares_list_orders_followed_first(self):
+        from apps.profiles.models import FollowRelationship
+        _client_for(self.stranger).post(self.url)
+        _client_for(self.viewer).post(self.url)
+        FollowRelationship.objects.create(
+            follower=self.author.profile, followee=self.viewer.profile,
+        )
+        res = _client_for(self.author).get(f'/api/v1/feed/{self.post.id}/shares/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        usernames = [r['username'] for r in res.data['data']]
+        self.assertEqual(usernames[0], 'share_viewer')
+        self.assertTrue(res.data['data'][0]['followed_by_viewer'])
+        self.assertFalse(res.data['data'][1]['followed_by_viewer'])
+
+    def test_share_open_increments_clicks_and_resolves_post(self):
+        res = _client_for(self.viewer).post(self.url)
+        code = res.data['data']['code']
+        opened = APIClient().post(f'/api/v1/s/{code}/open/')
+        self.assertEqual(opened.status_code, status.HTTP_200_OK)
+        self.assertEqual(opened.data['data']['post_id'], str(self.post.id))
+        from apps.feed.models import PostShare
+        record = PostShare.objects.get(code=code)
+        self.assertEqual(record.clicks, 1)
 
     def test_forbidden_post_returns_404_and_does_not_increment(self):
         buddies_post = Post.objects.create(

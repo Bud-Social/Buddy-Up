@@ -206,12 +206,30 @@ class FeedNotifier extends Notifier<FeedState> {
     final idx = state.posts.indexWhere((p) => p.id == postId);
     if (idx == -1) return;
     try {
-      final raw = await _repository.sharePost(postId);
+      final raw = await _repository.sharePost(postId, {'channel': 'copy'});
       final count = (raw['data'] as Map<String, dynamic>?)?['share_count'] as int?;
       if (count != null) {
         updatePostInList(state.posts[idx].copyWith(shareCount: count));
       }
     } catch (_) {}
+  }
+
+  /// Share with a channel; returns the referral code for tracked links.
+  Future<String?> shareWithCode(String postId, String channel) async {
+    try {
+      final raw = await _repository.sharePost(postId, {'channel': channel});
+      final data = raw['data'] as Map<String, dynamic>?;
+      final count = data?['share_count'] as int?;
+      if (count != null) {
+        final idx = state.posts.indexWhere((p) => p.id == postId);
+        if (idx != -1) {
+          updatePostInList(state.posts[idx].copyWith(shareCount: count));
+        }
+      }
+      return data?['code'] as String?;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Record a qualified view; count updates only on success.

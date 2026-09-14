@@ -188,6 +188,12 @@ export interface Post {
     progress_data?: Record<string, unknown> | null;
     poll?: Poll | null;
     comment_count?: number;
+    repost_count?: number;
+    view_count?: number;
+    share_count?: number;
+    save_count?: number;
+    reaction_counts?: Record<string, number>;
+    user_reaction?: string | null;
     gym_tag_name?: string | null;
   } | null;
 }

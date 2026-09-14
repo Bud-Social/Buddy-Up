@@ -164,6 +164,12 @@ abstract class OriginalPostData with _$OriginalPostData {
     @JsonKey(name: 'progress_data') Map<String, dynamic>? progressData,
     Poll? poll,
     @JsonKey(name: 'comment_count') @Default(0) int commentCount,
+    @JsonKey(name: 'repost_count') @Default(0) int repostCount,
+    @JsonKey(name: 'view_count') @Default(0) int viewCount,
+    @JsonKey(name: 'share_count') @Default(0) int shareCount,
+    @JsonKey(name: 'save_count') @Default(0) int saveCount,
+    @JsonKey(name: 'reaction_counts') @Default(<String, int>{}) Map<String, int> reactionCounts,
+    @JsonKey(name: 'user_reaction') String? userReaction,
     @JsonKey(name: 'gym_tag_name') String? gymTagName,
     @JsonKey(name: 'created_at') required String createdAt,
   }) = _OriginalPostData;

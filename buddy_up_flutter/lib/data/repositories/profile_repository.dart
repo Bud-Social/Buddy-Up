@@ -56,6 +56,9 @@ abstract class ProfileRepository {
   @POST('/profiles/{username}/follow/')
   Future<void> followUser(@Path('username') String username);
 
+  @DELETE('/profiles/{username}/follow/')
+  Future<void> unfollowUser(@Path('username') String username);
+
   @POST('/profiles/{username}/block/')
   Future<void> blockUser(@Path('username') String username);
 

@@ -1,15 +1,16 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { PostShareSheet, canonicalPostUrl, isVideoPost } from '../PostShareSheet';
+import { PostShareSheet, canonicalPostUrl, isVideoPost, trackedShareUrl } from '../PostShareSheet';
 import { feedApi } from '@/api/feed';
 import type { Post } from '@/types';
 
 vi.mock('@/api/feed', () => ({
-  feedApi: { sharePost: vi.fn() },
+  feedApi: { sharePost: vi.fn(), getPostShares: vi.fn() },
 }));
 
 const mockSharePost = feedApi.sharePost as unknown as ReturnType<typeof vi.fn>;
+const mockGetShares = (feedApi as unknown as { getPostShares: ReturnType<typeof vi.fn> }).getPostShares;
 
 function makePost(overrides: Partial<Post> = {}): Post {
   return {
@@ -89,6 +90,7 @@ describe('isVideoPost / canonicalPostUrl', () => {
 describe('PostShareSheet share action', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetShares.mockResolvedValue({ success: true, data: [], message: '', errors: null, pagination: null });
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: vi.fn().mockResolvedValue(undefined) },
       configurable: true,
@@ -98,7 +100,7 @@ describe('PostShareSheet share action', () => {
   it('records the share and reports the authoritative count on copy', async () => {
     mockSharePost.mockResolvedValue({
       success: true,
-      data: { share_count: 6 },
+      data: { share_count: 6, code: 'abc123' },
       message: '',
       errors: null,
       pagination: null,
@@ -108,9 +110,12 @@ describe('PostShareSheet share action', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy post link' }));
 
-    await waitFor(() => expect(mockSharePost).toHaveBeenCalledWith('post-123'));
+    await waitFor(() => expect(mockSharePost).toHaveBeenCalledWith('post-123', 'copy'));
     await waitFor(() => expect(onShared).toHaveBeenCalledWith(6));
     expect(await screen.findByText('Link copied!')).toBeDefined();
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining('ref=abc123'),
+    );
   });
 
   it('shows an inline error and keeps stale state untouched on failure', async () => {
@@ -122,5 +127,27 @@ describe('PostShareSheet share action', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not record share');
     expect(onShared).not.toHaveBeenCalled();
+  });
+
+  it('builds tracked referral links', () => {
+    expect(trackedShareUrl('https://app.example/videos?start=p1', 'abc'))
+      .toBe('https://app.example/videos?start=p1&ref=abc');
+    expect(trackedShareUrl('https://app.example/feed/p1', 'abc'))
+      .toBe('https://app.example/feed/p1?ref=abc');
+  });
+
+  it('renders the shared-by attribution row', async () => {
+    mockGetShares.mockResolvedValue({
+      success: true,
+      data: [{
+        username: 'gymsam', display_name: 'Gym Sam', avatar_url: '',
+        channel: 'whatsapp', shared_at: new Date().toISOString(),
+        followed_by_viewer: true,
+      }],
+      message: '', errors: null, pagination: null,
+    });
+    renderSheet(makePost(), {});
+    expect(await screen.findByText('Shared by')).toBeDefined();
+    expect(await screen.findByTitle('Gym Sam (@gymsam)')).toBeDefined();
   });
 });

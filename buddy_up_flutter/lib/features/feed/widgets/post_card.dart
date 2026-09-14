@@ -40,6 +40,16 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Engagement reflects the ORIGINAL on repost rows so counts never zero out.
+    final orig = post.isRepost ? post.originalPostData : null;
+    final targetId = orig?.id ?? post.id;
+    final reactionCounts = orig?.reactionCounts ?? post.reactionCounts;
+    final userReaction = orig?.userReaction ?? post.userReaction;
+    final commentCount = orig?.commentCount ?? post.commentCount;
+    final repostCount = orig?.repostCount ?? post.repostCount;
+    final saveCount = orig?.saveCount ?? post.saveCount;
+    final shareCount = orig?.shareCount ?? post.shareCount;
+    final viewCount = orig?.viewCount ?? 0;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
       padding: const EdgeInsets.all(16),
@@ -92,13 +102,14 @@ class PostCard extends StatelessWidget {
           ],
           AiAnalysisCard(analysis: post.aiAnalysis),
           const SizedBox(height: 10),
-          _buildActionBar(context),
+          _buildActionBar(context, targetId, reactionCounts, userReaction,
+              commentCount, repostCount, saveCount, shareCount, viewCount),
           const SizedBox(height: 8),
           ReactionBar(
-            counts: post.reactionCounts,
-            userReaction: post.userReaction,
-            onReact: (r) => onReact?.call(post.id, r),
-            onUnreact: () => onReact?.call(post.id, ''),
+            counts: reactionCounts,
+            userReaction: userReaction,
+            onReact: (r) => onReact?.call(targetId, r),
+            onUnreact: () => onReact?.call(targetId, ''),
           ),
           if (post.gymTagName != null) ...[
             const SizedBox(height: 6),
@@ -190,48 +201,63 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActionBar(BuildContext context) {
+  Widget _buildActionBar(
+    BuildContext context,
+    String targetId,
+    Map<String, int> reactionCounts,
+    String? userReaction,
+    int commentCount,
+    int repostCount,
+    int saveCount,
+    int shareCount,
+    int viewCount,
+  ) {
     return Row(
       children: [
         _ActionButton(
-          icon: post.userReaction != null ? Icons.favorite : Icons.favorite_border,
-          color: post.userReaction != null ? BuddyColors.red : BuddyColors.textSecondary,
-          label: _formatCount(post.reactionCounts.values.fold(0, (a, b) => a + b)),
-          onTap: () => onReact?.call(post.id, 'fire'),
+          icon: userReaction != null ? Icons.favorite : Icons.favorite_border,
+          color: userReaction != null ? BuddyColors.red : BuddyColors.textSecondary,
+          label: _formatCount(reactionCounts.values.fold(0, (a, b) => a + b)),
+          onTap: () => onReact?.call(targetId, 'fire'),
         ),
         _ActionButton(
           icon: Icons.chat_bubble_outline,
-          label: _formatCount(post.commentCount),
-          onTap: () => _handleCommentTap(context),
+          label: _formatCount(commentCount),
+          onTap: () => _handleCommentTap(context, targetId),
         ),
         _ActionButton(
           icon: Icons.repeat,
           color: post.isRepostedByMe ? BuddyColors.green : BuddyColors.textSecondary,
-          label: _formatCount(post.repostCount),
+          label: _formatCount(repostCount),
           onTap: () => onRepost?.call(post.id),
         ),
         _ActionButton(
           icon: post.isSaved ? Icons.bookmark : Icons.bookmark_border,
           color: post.isSaved ? BuddyColors.green : BuddyColors.textSecondary,
-          label: _formatCount(post.saveCount),
-          onTap: () => onSave?.call(post.id),
+          label: _formatCount(saveCount),
+          onTap: () => onSave?.call(targetId),
+        ),
+        _ActionButton(
+          icon: Icons.visibility_outlined,
+          label: _formatCount(viewCount),
+          onTap: null,
         ),
         const Spacer(),
         _ActionButton(
           icon: Icons.share_outlined,
-          label: _formatCount(post.shareCount),
+          label: _formatCount(shareCount),
           onTap: () => onShare?.call(post.id),
         ),
       ],
     );
   }
 
-  void _handleCommentTap(BuildContext context) {
+  void _handleCommentTap(BuildContext context, String targetId) {
     if (post.commentsDisabled) {
       showToast(context, 'Comments are turned off for this post');
       return;
     }
-    onComment?.call(post.id);
+    onComment?.call(targetId);
   }
 
   Widget _buildWorkoutLog(BuildContext context) {    final data = post.workoutLogData!;

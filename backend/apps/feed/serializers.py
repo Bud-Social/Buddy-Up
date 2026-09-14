@@ -218,6 +218,17 @@ class PostSerializer(serializers.ModelSerializer):
         if obj.is_repost and obj.original_post:
             request = self.context.get('request')
             orig = obj.original_post
+            viewer_reaction = None
+            try:
+                if request and request.user.is_authenticated:
+                    mine = orig.reactions.filter(author=request.user.profile).first()
+                    viewer_reaction = normalize_reaction(mine.reaction_type) if mine else None
+            except Exception:  # noqa: BLE001 — best-effort
+                pass
+            orig_counts = Counter(
+                normalize_reaction(k) for k in
+                orig.reactions.values_list('reaction_type', flat=True)
+            )
             return {
                 'id': str(orig.id),
                 'post_type': orig.post_type,
@@ -239,6 +250,15 @@ class PostSerializer(serializers.ModelSerializer):
                 'quote_body': orig.quote_body,
                 'gym_tag_name': orig.gym_tag.name if orig.gym_tag else None,
                 'created_at': orig.created_at.isoformat(),
+                # Engagement always reflects the ORIGINAL so repost rows
+                # never show zeroed counts.
+                'reaction_counts': dict(orig_counts),
+                'user_reaction': viewer_reaction,
+                'comment_count': orig.comments.count(),
+                'repost_count': Post.objects.filter(original_post=orig, is_repost=True).count(),
+                'view_count': orig.view_count,
+                'share_count': orig.share_count,
+                'save_count': orig.saves.count(),
             }
         return None
 
@@ -246,16 +266,25 @@ class PostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not obj.is_repost or not obj.original_post_id:
             return []
-        request = self.context.get('request')
-        reposts = Post.objects.filter(
+        followed_ids = set()
+        try:
+            viewer = request.user.profile if request and request.user.is_authenticated else None
+            if viewer is not None and hasattr(viewer, 'following'):
+                followed_ids = set(viewer.following.values_list('followee_id', flat=True))
+        except Exception:  # noqa: BLE001 — attribution ordering is best-effort
+            pass
+        reposts = list(Post.objects.filter(
             original_post_id=obj.original_post_id,
             is_repost=True,
-        ).select_related('author')[:20]
+        ).select_related('author')[:20])
+        # TikTok-style attribution: accounts the viewer follows first.
+        reposts.sort(key=lambda r: (r.author_id not in followed_ids, r.created_at))
         return [
             {
                 'user_id': str(r.author.user_id),
                 'display_name': r.author.display_name,
                 'avatar_url': absolute_media_url(request, r.author.avatar_url),
+                'followed_by_viewer': r.author_id in followed_ids,
             }
             for r in reposts
         ]

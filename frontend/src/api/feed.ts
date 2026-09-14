@@ -99,8 +99,24 @@ export const feedApi = {
     apiClient.delete(`/feed/${postId}/save/`).then((r) => r.data),
 
   /** Record an outbound share. Returns the authoritative share count. */
-  sharePost: (postId: string) =>
-    apiClient.post<ApiResponse<{ share_count: number }>>(`/feed/${postId}/share/`).then((r) => r.data),
+  sharePost: (postId: string, channel?: string) =>
+    apiClient.post<ApiResponse<{ share_count: number; code: string }>>(
+      `/feed/${postId}/share/`,
+      channel ? { channel } : {},
+    ).then((r) => r.data),
+
+  /** Recent sharers, followed-first. Silent-friendly. */
+  getPostShares: (postId: string) =>
+    apiClient.get<ApiResponse<Array<{
+      username: string; display_name: string; avatar_url: string;
+      channel: string; shared_at: string; followed_by_viewer: boolean;
+    }>>>(`/feed/${postId}/shares/`).then((r) => r.data),
+
+  /** Attribute a tracked-link open (public; recipients may be logged out). */
+  openSharedLink: (code: string) =>
+    apiClient.post<ApiResponse<{ post_id: string; post_type: string }>>(
+      `/s/${code}/open/`, {},
+    ).then((r) => r.data),
 
   /** Record a qualified view (server throttles duplicates). Silent-friendly. */
   recordView: (postId: string) =>

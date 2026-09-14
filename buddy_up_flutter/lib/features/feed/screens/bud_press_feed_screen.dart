@@ -7,8 +7,10 @@ import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../../core/analytics/analytics_service.dart';
+import '../../../core/api/api_client.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
+import '../../../data/repositories/profile_repository.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/caption_overlay.dart';
 import '../../../shared/widgets/creative_overlays.dart';
@@ -165,14 +167,51 @@ class _BudPressFeedScreenState extends ConsumerState<BudPressFeedScreen> {
 }
 
 /// Bottom overlay shared by video and photo pages.
-class _PostMeta extends StatelessWidget {
+class _PostMeta extends ConsumerStatefulWidget {
   final Post post;
   final VoidCallback onProfileTap;
 
   const _PostMeta({required this.post, required this.onProfileTap});
 
   @override
+  ConsumerState<_PostMeta> createState() => _PostMetaState();
+}
+
+class _PostMetaState extends ConsumerState<_PostMeta> {
+  bool _following = false;
+  bool _pending = false;
+
+  Post get _post => widget.post;
+
+  static String _count(int n) {
+    if (n < 1000) return '$n';
+    if (n < 1000000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return '${(n / 1000000).toStringAsFixed(1)}m';
+  }
+
+  Future<void> _toggleFollow() async {
+    if (_pending) return;
+    setState(() {
+      _pending = true;
+      _following = !_following;
+    });
+    try {
+      final repo = ProfileRepository(ApiClient().dio);
+      if (_following) {
+        await repo.followUser(_post.authorData.username);
+      } else {
+        await repo.unfollowUser(_post.authorData.username);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _following = !_following);
+    } finally {
+      if (mounted) setState(() => _pending = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final post = _post;
     return SafeArea(
       top: false,
       child: Padding(
@@ -181,35 +220,80 @@ class _PostMeta extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            GestureDetector(
-              onTap: onProfileTap,
-              child: Row(
-                children: [
-                  Avatar(
-                    src: post.authorData.avatarUrl,
-                    alt: post.authorData.displayName,
-                    size: AvatarSize.sm,
-                    verificationStatus: post.authorData.verificationStatus,
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: widget.onProfileTap,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Avatar(
+                        src: post.authorData.avatarUrl,
+                        alt: post.authorData.displayName,
+                        size: AvatarSize.sm,
+                        verificationStatus: post.authorData.verificationStatus,
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            post.authorData.displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Text(
+                            '@${post.authorData.username}',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    post.authorData.displayName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                ),
+                const SizedBox(width: 8),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.visibility_outlined,
+                        color: Colors.white70, size: 13),
+                    const SizedBox(width: 3),
+                    Text(
+                      _count(post.viewCount),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '@${post.authorData.username}',
-                    style: const TextStyle(
-                      color: Colors.white70,
+                  ],
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: _pending ? null : _toggleFollow,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor:
+                        _following ? Colors.white70 : BuddyColors.green,
+                    side: BorderSide(
+                      color: _following ? Colors.white38 : BuddyColors.green,
+                    ),
+                    minimumSize: const Size(0, 30),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    textStyle: const TextStyle(
                       fontSize: 12,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ],
-              ),
+                  child: Text(_following ? 'Following' : 'Follow'),
+                ),
+              ],
             ),
             if (post.body.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -540,7 +624,65 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
     }
   }
 
-  void _handleReact() => _reactToPost(ref, _post);
+  /// Engagement targets the ORIGINAL on repost rows so counts never zero out.
+  String get _engagementId =>
+      _post.isRepost && _post.originalPostData != null ? _post.originalPostData!.id : _post.id;
+
+  Map<String, int> get _engagementCounts =>
+      _post.isRepost && _post.originalPostData != null
+          ? _post.originalPostData!.reactionCounts
+          : _post.reactionCounts;
+
+  String? get _engagementReaction =>
+      _post.isRepost && _post.originalPostData != null
+          ? _post.originalPostData!.userReaction
+          : _post.userReaction;
+
+  void _patchEngagement({String? userReaction, Map<String, int>? counts}) {
+    final orig = _post.originalPostData;
+    final updated = _post.copyWith(
+      userReaction: userReaction,
+      reactionCounts: counts ?? _post.reactionCounts,
+      originalPostData: orig == null
+          ? null
+          : orig.copyWith(
+              userReaction: userReaction,
+              reactionCounts: counts ?? orig.reactionCounts,
+            ),
+    );
+    ref.read(feedProvider.notifier).updatePostInList(updated);
+  }
+
+  Future<void> _handleReact() async {
+    const emoji = '💪';
+    final counts = Map<String, int>.from(_engagementCounts);
+    final prevReaction = _engagementReaction;
+    final prevCounts = Map<String, int>.from(counts);
+    if (prevReaction == emoji) {
+      counts[emoji] = (counts[emoji] ?? 1) - 1;
+      if (counts[emoji]! <= 0) counts.remove(emoji);
+      _patchEngagement(userReaction: null, counts: counts);
+      try {
+        await ref.read(feedRepositoryProvider).unreact(_engagementId);
+      } catch (_) {
+        _patchEngagement(userReaction: prevReaction, counts: prevCounts);
+      }
+      return;
+    }
+    if (prevReaction != null) {
+      counts[prevReaction] = (counts[prevReaction] ?? 1) - 1;
+      if (counts[prevReaction]! <= 0) counts.remove(prevReaction);
+    }
+    counts[emoji] = (counts[emoji] ?? 0) + 1;
+    _patchEngagement(userReaction: emoji, counts: counts);
+    try {
+      await ref
+          .read(feedRepositoryProvider)
+          .react(_engagementId, const ReactionInput(reactionType: emoji));
+    } catch (_) {
+      _patchEngagement(userReaction: prevReaction, counts: prevCounts);
+    }
+  }
 
   void _handleSave() => _savePost(ref, _post);
 
@@ -593,6 +735,18 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
         : (_media.durationMs ?? 0);
     final progress =
         duration > 0 ? (_position.inMilliseconds / duration).clamp(0.0, 1.0) : 0.0;
+    // Engagement reflects the ORIGINAL on repost rows.
+    final orig = _post.originalPostData;
+    final engagement = _post.isRepost && orig != null
+        ? _post.copyWith(
+            reactionCounts: orig.reactionCounts,
+            userReaction: orig.userReaction,
+            commentCount: orig.commentCount,
+            repostCount: orig.repostCount,
+            saveCount: orig.saveCount,
+            shareCount: orig.shareCount,
+          )
+        : _post;
 
     return Stack(
       fit: StackFit.expand,
@@ -638,7 +792,7 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
           right: 12,
           bottom: 120,
           child: _ActionRail(
-            post: _post,
+            post: engagement,
             onLike: _handleReact,
             onRepost: _handleRepost,
             onSave: _handleSave,

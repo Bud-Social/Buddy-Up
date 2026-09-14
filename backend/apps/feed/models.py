@@ -281,3 +281,44 @@ class PostMedia(TimestampedModel):
 
     def __str__(self):
         return f'{self.media_type}:{self.url[:60]}'
+
+
+def _share_code():
+    import secrets
+    return secrets.token_urlsafe(6)
+
+
+class PostShare(TimestampedModel):
+    """Outbound share attribution: who shared which post, where, and how
+    often the tracked link was opened. One row per (post, sharer) so each
+    sharer keeps a stable referral code across repeat shares."""
+
+    CHANNEL_CHOICES = [
+        ('native', 'Native sheet'),
+        ('copy', 'Copy link'),
+        ('whatsapp', 'WhatsApp'),
+        ('x', 'X'),
+        ('facebook', 'Facebook'),
+        ('telegram', 'Telegram'),
+        ('other', 'Other'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='share_records')
+    sharer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='post_shares')
+    code = models.CharField(max_length=16, unique=True, default=_share_code)
+    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, default='other')
+    clicks = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = 'feed_post_share'
+        constraints = [
+            models.UniqueConstraint(fields=['post', 'sharer'], name='unique_post_sharer'),
+        ]
+        indexes = [
+            models.Index(fields=['post', '-created_at']),
+            models.Index(fields=['code']),
+        ]
+
+    def __str__(self):
+        return f'{self.code} → {self.post_id}'

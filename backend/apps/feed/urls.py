@@ -15,6 +15,7 @@ urlpatterns = [
     path('<uuid:post_id>/repost/', views.RepostView.as_view(), name='repost'),
     path('<uuid:post_id>/save/', views.SaveView.as_view(), name='save'),
     path('<uuid:post_id>/share/', views.PostShareView.as_view(), name='share'),
+    path('<uuid:post_id>/shares/', views.PostSharesListView.as_view(), name='share_list'),
     path('<uuid:post_id>/view/', views.PostViewRecordView.as_view(), name='record_view'),
     path('<uuid:post_id>/pin/', views.PostPinView.as_view(), name='pin'),
     path('<uuid:post_id>/poll/vote/', views.PollVoteView.as_view(), name='poll_vote'),
