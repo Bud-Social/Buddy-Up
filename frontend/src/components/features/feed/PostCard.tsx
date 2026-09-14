@@ -4,14 +4,19 @@ import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
   MoreHorizontal, Dumbbell, Utensils, TrendingUp, MapPin, BarChart2,
   Maximize2, FileText, CheckSquare, CircleDot, ChevronLeft, ChevronRight,
-  Volume2, VolumeX, Share2, Eye,
+  Volume2, VolumeX, Share2, Eye, EyeOff, Flag, Ban, Undo2,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
-import { feedApi } from '@/api';
+import { feedApi, profilesApi } from '@/api';
+import { REPORT_REASONS } from '@/api/feed';
+import { useAuthStore } from '@/store/authStore';
+import { useToast } from '@/components/ui/Toast';
+import { track } from '@/lib/analytics';
+import { canonicalPostUrl } from './PostShareSheet';
 import { formatPostDate } from '@/utils/formatDate';
 import { toEmoji } from '@/utils/emojiUtils';
 import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
-import { RailAction, RAIL_ICON_SIZE, nextReactionState, totalReactions } from './RailAction';
+import { RailAction, RAIL_ICON_SIZE, nextReactionState, totalReactions, formatCount } from './RailAction';
 import { AuthorChip } from './AuthorChip';
 import { PostShareSheet } from './PostShareSheet';
 import { useRecordPostView } from './useRecordPostView';
@@ -247,7 +252,7 @@ function PollCard({ poll, postId }: { poll: NonNullable<Post['poll']>; postId: s
 
 /** One video page inside the carousel: muted autoplay-in-view, tap-to-unmute. */
 function CarouselVideoPage({
-  page, muted, canAutoplay, blur, captions, postId, onToggleMute, onAdvance, onViewRecorded,
+  page, muted, canAutoplay, blur, captions, postId, onToggleMute, onAdvance, onViewRecorded, onInteract,
 }: {
   page: MediaPage;
   muted: boolean;
@@ -259,6 +264,7 @@ function CarouselVideoPage({
   /** Sequential multi-clip posts: next video page when this one ends. */
   onAdvance?: () => void;
   onViewRecorded?: (viewCount: number) => void;
+  onInteract?: (action: 'cover') => void;
 }) {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -343,21 +349,23 @@ function CarouselVideoPage({
         {muted ? <VolumeX size={14} /> : <Volume2 size={14} />}
       </button>
       <button
-        onClick={(e) => { e.stopPropagation(); navigate(postId ? `/videos?start=${postId}` : '/videos'); }}
+        onClick={(e) => { e.stopPropagation(); onInteract?.('cover'); navigate(postId ? `/videos?start=${postId}` : '/videos'); }}
         className="absolute top-2 right-2 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover/video:opacity-100 transition-opacity"
         title="Open full-screen video feed"
+        aria-label="Open full-screen video feed"
       ><Maximize2 size={16} /></button>
     </div>
   );
 }
 
 function MediaGallery({
-  post, blurred, postId, onViewRecorded,
+  post, blurred, postId, onViewRecorded, onInteract,
 }: {
   post: { media?: PostMedia[] | null; media_urls?: string[] | null; captions?: PostCaption[] | null };
   blurred?: boolean;
   postId?: string;
   onViewRecorded?: (viewCount: number) => void;
+  onInteract?: (action: 'cover') => void;
 }) {
   const [idx, setIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -403,6 +411,7 @@ function MediaGallery({
                 postId={postId}
                 onToggleMute={() => setMuted((m) => !m)}
                 onViewRecorded={onViewRecorded}
+                onInteract={onInteract}
                 onAdvance={
                   pages.length > 1 && i < pages.length - 1 && pages[i + 1].type === 'video'
                     ? () => scrollToPage(i + 1)
@@ -475,13 +484,47 @@ function MediaGallery({
   );
 }
 
+// ─── Bud Press helpers ──────────────────────────────────────────────────────
+
+/** Bucket a focus duration for analytics (keeps the event low-cardinality). Pure helper, unit-tested. */
+export function bucketFocusDuration(ms: number): string {
+  if (ms < 1000) return '<1s';
+  if (ms < 3000) return '1-3s';
+  if (ms < 10000) return '3-10s';
+  return '10s+';
+}
+
+/** Prefer the server's message (notably the defensive 404s from hide/mute while the backend lands). */
+function serverMessage(err: unknown, fallback: string): string {
+  const e = err as { response?: { data?: { message?: string } } } | null;
+  const m = e?.response?.data?.message;
+  return typeof m === 'string' && m.length > 0 ? m : fallback;
+}
+
+/**
+ * Repost avatar pop/out keyframes. Scoped here (not globals.css) so the
+ * animation ships with the component that owns it. Both PostCard and the
+ * fullscreen feed render their own copy; the definition is identical.
+ */
+export function AvatarPopStyle() {
+  return (
+    <style>{`@keyframes budpress-avatar-pop{0%{opacity:0;transform:scale(.2)}60%{opacity:1;transform:scale(1.18)}100%{opacity:1;transform:scale(1)}}@keyframes budpress-avatar-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.2)}}`}</style>
+  );
+}
+
+type InteractAction = 'like' | 'comment' | 'repost' | 'save' | 'share' | 'profile_open' | 'cover';
+
 // ─── Main PostCard ────────────────────────────────────────────────────────────
 interface PostCardProps {
   post: Post;
   onComment?: (postId: string) => void;
+  /** Remove this card from the surrounding list (block). */
+  onRemove?: (postId: string) => void;
+  /** Remove every card by this author from the surrounding list (mute). */
+  onRemoveAuthor?: (username: string) => void;
 }
 
-export function PostCard({ post: initialPost, onComment }: PostCardProps) {
+export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAuthor }: PostCardProps) {
   const navigate = useNavigate();
   const [post] = useState(initialPost);
   // Engagement always reflects the ORIGINAL post: repost rows borrow the
@@ -513,6 +556,138 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
 
+  // ── Bud Press: viewer avatar overlay, menu, view recording, focus analytics ──
+  const { toast } = useToast();
+  const viewerAvatar = useAuthStore((s) => s.profile?.avatar_url);
+  const viewerName = useAuthStore((s) => s.profile?.display_name);
+  const [showViewerAvatar, setShowViewerAvatar] = useState(false);
+  const [avatarLeaving, setAvatarLeaving] = useState(false);
+  const avatarOutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuView, setMenuView] = useState<'main' | 'report' | 'block'>('main');
+  const [selectedReason, setSelectedReason] = useState<string>('spam');
+  const [reportDesc, setReportDesc] = useState('');
+  const [menuBusy, setMenuBusy] = useState(false);
+  const [hiddenByMe, setHiddenByMe] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const cardRef = useRef<HTMLElement | null>(null);
+  const focusStartRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (avatarOutTimer.current) clearTimeout(avatarOutTimer.current);
+  }, []);
+
+  const popViewerAvatarIn = useCallback(() => {
+    if (avatarOutTimer.current) { clearTimeout(avatarOutTimer.current); avatarOutTimer.current = null; }
+    setAvatarLeaving(false);
+    setShowViewerAvatar(true);
+  }, []);
+
+  const popViewerAvatarOut = useCallback(() => {
+    setAvatarLeaving(true);
+    if (avatarOutTimer.current) clearTimeout(avatarOutTimer.current);
+    avatarOutTimer.current = setTimeout(() => {
+      setShowViewerAvatar(false);
+      setAvatarLeaving(false);
+    }, 220);
+  }, []);
+
+  const interact = useCallback((action: InteractAction, extra?: Record<string, unknown>) => {
+    track('feed.post_interact', {
+      surface: 'feed',
+      object_type: 'post',
+      object_id: post.id,
+      properties: { action, ...(post.is_repost ? { is_repost: true } : {}), ...extra },
+    });
+  }, [post.id, post.is_repost]);
+
+  // Focus analytics: single IntersectionObserver per card, no per-frame work.
+  // Reports feed.post_focus (bucketed) when the card hides or unmounts.
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const report = () => {
+      if (focusStartRef.current == null) return;
+      const durationMs = Date.now() - focusStartRef.current;
+      focusStartRef.current = null;
+      if (durationMs >= 500) {
+        track('feed.post_focus', {
+          surface: 'feed',
+          object_type: 'post',
+          object_id: post.id,
+          properties: { duration_ms: durationMs, duration_bucket: bucketFocusDuration(durationMs) },
+        });
+      }
+    };
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) focusStartRef.current = Date.now();
+      else report();
+    }, { threshold: 0.5 });
+    obs.observe(el);
+    return () => {
+      report();
+      obs.disconnect();
+    };
+  }, [post.id]);
+
+  // Header view counter: record on real focus (in-view + active). The media
+  // carousel records the same post id on playback — the hook dedupes per
+  // session, and both paths update the shared count.
+  const handleViewRecorded = useCallback((n: number) => setViewCount(n), []);
+  const recordRef = useRecordPostView(post.id, { active: true, onRecorded: handleViewRecorded });
+  const setCardRefs = useCallback((node: HTMLElement | null) => {
+    cardRef.current = node;
+    recordRef(node as unknown as HTMLDivElement | null);
+  }, [recordRef]);
+
+  // Menu: close on outside-click / Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+        setMenuView('main');
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        setMenuView('main');
+        menuButtonRef.current?.focus();
+      }
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menuOpen]);
+
+  // Move focus into the menu when it opens / switches views.
+  useEffect(() => {
+    if (menuOpen) menuRef.current?.querySelector<HTMLElement>('[role="menuitem"], [role="menuitemradio"]')?.focus();
+  }, [menuOpen, menuView]);
+
+  const onMenuKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const items = Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]') ?? [],
+    ).filter((el) => !el.hasAttribute('disabled'));
+    if (items.length === 0) return;
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+    items[next]?.focus();
+  };
+
+  const closeMenu = useCallback(() => {
+    setMenuOpen(false);
+    setMenuView('main');
+  }, []);
+
   const likeCount = totalReactions(reactionCounts);
 
   /** One-tap toggles 💪 (optimistic w/ rollback). Long-press opens the picker. */
@@ -522,6 +697,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
     const next = nextReactionState(reactionCounts, userReaction, '💪');
     setReactionCounts(next.counts);
     setUserReaction(next.userReaction);
+    interact('like');
     try {
       if (next.removed) await feedApi.unreact(engagementId);
       else await feedApi.react(engagementId, '💪');
@@ -534,6 +710,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
   const handleReact = async (emojiStr: string) => {
     const emoji = toEmoji(emojiStr);
     setShowReactionPicker(false);
+    interact('like', emoji === '💪' ? undefined : { reaction: emoji });
     if (emoji === userReaction) {
       const prevCounts = reactionCounts;
       setUserReaction(null);
@@ -582,6 +759,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
     const prevCount = saveCount;
     setIsSaved(!prev);
     if (saveCount !== undefined) setSaveCount(Math.max(0, saveCount + (prev ? -1 : 1)));
+    interact('save');
     try {
       if (prev) await feedApi.unsave(engagementId);
       else await feedApi.save(engagementId);
@@ -597,6 +775,10 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
     const wasReposted = isRepostedByMe;
     setIsRepostedByMe(!wasReposted);
     setRepostCount(c => wasReposted ? Math.max(0, c - 1) : c + 1);
+    interact('repost');
+    // Viewer avatar pops into the reposters stack (in) or fades out (out).
+    if (!wasReposted) popViewerAvatarIn();
+    else popViewerAvatarOut();
     // Fresh repost on an original row: flash the card into repost design.
     if (!wasReposted && !post.is_repost) {
       setJustRepostedFlash(true);
@@ -612,6 +794,8 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
       // Rollback on error
       setIsRepostedByMe(wasReposted);
       setJustRepostedFlash(false);
+      if (!wasReposted) popViewerAvatarOut();
+      else popViewerAvatarIn();
       setRepostCount(c => wasReposted ? c + 1 : Math.max(0, c - 1));
     }
   };
@@ -630,9 +814,142 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
   const displayPost = (post.is_repost && post.original_post_data) ? post.original_post_data : post;
   const displayAuthor = displayPost.author_data;
 
+  const handleComment = () => {
+    interact('comment');
+    // The sheet itself lives in the parent (Feed / fullscreen / profile):
+    // opening it is the focus signal. Submit tracking needs CommentSheet
+    // instrumentation (follow-up — that file is outside this workstream).
+    track('feed.comment_focus', {
+      surface: 'feed',
+      object_type: 'post',
+      object_id: displayPost.id,
+    });
+    onComment?.(displayPost.id);
+  };
+
+  const openProfile = (username?: string) => {
+    if (!username) return;
+    interact('profile_open');
+    navigate(`/${username}`);
+  };
+
+  /** "Not interested": hide + swap the card for an inline undo row. The card
+   *  is only removed on success — a 404 (backend still landing) keeps it. */
+  const handleHide = async () => {
+    closeMenu();
+    if (menuBusy) return;
+    setMenuBusy(true);
+    try {
+      await feedApi.hidePost(post.id);
+      setHiddenByMe(true);
+      toast('success', "Not interested — we'll show you fewer posts like this.");
+    } catch (err) {
+      toast('error', serverMessage(err, 'Could not hide this post.'));
+    } finally {
+      setMenuBusy(false);
+    }
+  };
+
+  const handleUnhide = async () => {
+    try {
+      await feedApi.unhidePost(post.id);
+      setHiddenByMe(false);
+      toast('success', 'Post restored to your feed.');
+    } catch (err) {
+      toast('error', serverMessage(err, 'Could not restore this post.'));
+    }
+  };
+
+  const handleReportSubmit = async () => {
+    if (menuBusy) return;
+    setMenuBusy(true);
+    try {
+      let targetUser = displayAuthor?.user_id;
+      if (!targetUser && displayAuthor?.username) {
+        try {
+          const prof = await profilesApi.getProfile(displayAuthor.username);
+          targetUser = prof.data?.user_id ?? displayAuthor.username;
+        } catch {
+          targetUser = displayAuthor.username;
+        }
+      }
+      if (!targetUser) throw new Error('unknown author');
+      await feedApi.submitReport({
+        target_user: targetUser,
+        reason: selectedReason,
+        description: `Post ${post.id}${reportDesc.trim() ? ` — ${reportDesc.trim()}` : ''}`,
+        content_url: canonicalPostUrl(post),
+      });
+      closeMenu();
+      setReportDesc('');
+      toast('success', 'Thanks — our team will review this post.');
+    } catch (err) {
+      toast('error', serverMessage(err, 'Could not submit your report.'));
+    } finally {
+      setMenuBusy(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    const username = displayAuthor?.username;
+    if (!username || menuBusy) return;
+    setMenuBusy(true);
+    try {
+      await profilesApi.block(username);
+      closeMenu();
+      setDismissed(true);
+      onRemove?.(post.id);
+      toast('success', `Blocked @${username}.`);
+    } catch (err) {
+      toast('error', serverMessage(err, `Could not block @${username}.`));
+    } finally {
+      setMenuBusy(false);
+    }
+  };
+
+  /** "Don't suggest this creator": mute + drop every card by this author. */
+  const handleMute = async () => {
+    const username = displayAuthor?.username;
+    if (!username || menuBusy) return;
+    setMenuBusy(true);
+    try {
+      await feedApi.muteAuthor(username);
+      closeMenu();
+      setDismissed(true);
+      onRemoveAuthor?.(username);
+      toast('success', `Muted @${username} — you'll see fewer posts from them.`);
+    } catch (err) {
+      // Mute endpoint may 404 while the backend lands — keep the cards.
+      toast('error', serverMessage(err, `Could not mute @${username}.`));
+    } finally {
+      setMenuBusy(false);
+    }
+  };
+
+  if (dismissed) return null;
+
+  if (hiddenByMe) {
+    return (
+      <article
+        id={`post-${post.id}`}
+        className="flex items-center gap-2 bg-buddy-surface rounded-2xl border border-buddy-surface-raised p-4 text-sm text-buddy-text-secondary"
+      >
+        <EyeOff size={15} className="shrink-0" />
+        <span>Post hidden. We&rsquo;ll show you fewer like this.</span>
+        <button
+          onClick={() => void handleUnhide()}
+          className="ml-auto inline-flex items-center gap-1 text-buddy-green font-semibold hover:underline shrink-0"
+        >
+          <Undo2 size={13} /> Undo
+        </button>
+      </article>
+    );
+  }
+
   return (
     <article
       id={`post-${post.id}`}
+      ref={setCardRefs}
       className={`flex gap-1 bg-buddy-surface rounded-2xl border ${post.is_repost ? 'border-buddy-green/30 shadow-[0_0_15px_rgba(0,255,157,0.05)]' : 'border-buddy-surface-raised hover:border-buddy-green/20'} transition-colors select-none flex-col`}
     >
       {/* Repost header: TikTok-style "X reposted" attribution above the creator. */}
@@ -641,11 +958,27 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           key={post.is_repost ? 'repost-row' : 'just-reposted'}
           className="animate-in slide-in-from-top-2 fade-in duration-300 flex items-center gap-2 px-4 py-2 bg-buddy-green/10 border-l-4 border-buddy-green text-xs"
         >
+          <AvatarPopStyle />
           {(post as any).reposters && (post as any).reposters.length > 0 ? (
             <div className="flex items-center -space-x-2 flex-shrink-0">
               {(post as any).reposters.slice(0, 3).map((reposter: any, idx: number) => (
                 <Avatar key={reposter.user_id || idx} src={reposter.avatar_url} alt={reposter.display_name} size="xs" className="ring-2 ring-buddy-green/30" style={{ zIndex: 3 - idx }} verificationStatus={reposter.verification_status} />
               ))}
+              {showViewerAvatar && (
+                <span
+                  data-testid="repost-viewer-avatar"
+                  title={viewerName || 'You'}
+                  className="inline-flex origin-center"
+                  style={{
+                    zIndex: 4,
+                    animation: avatarLeaving
+                      ? 'budpress-avatar-out 220ms ease-in forwards'
+                      : 'budpress-avatar-pop 320ms cubic-bezier(.34,1.56,.64,1) both',
+                  }}
+                >
+                  <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" className="ring-2 ring-buddy-green" />
+                </span>
+              )}
               {(post as any).reposters.length > 3 && (
                 <div className="w-6 h-6 rounded-full bg-buddy-surface-raised text-[10px] font-bold flex items-center justify-center ring-2 ring-buddy-green/30">
                   +{(post as any).reposters.length - 3}
@@ -653,16 +986,32 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
               )}
             </div>
           ) : (
-            <button onClick={(e) => { e.stopPropagation(); navigate(`/${post.author_data?.username}`); }} className="flex-shrink-0">
-              <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name || 'User'} size="xs" className="ring-2 ring-buddy-green/30" verificationStatus={post.author_data?.verification_status} />
-            </button>
+            <div className="flex items-center flex-shrink-0">
+              <button onClick={(e) => { e.stopPropagation(); openProfile(post.author_data?.username); }} className="flex-shrink-0" aria-label={`View ${post.author_data?.display_name || 'author'} profile`}>
+                <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name || 'User'} size="xs" className="ring-2 ring-buddy-green/30" verificationStatus={post.author_data?.verification_status} />
+              </button>
+              {showViewerAvatar && (
+                <span
+                  data-testid="repost-viewer-avatar"
+                  title={viewerName || 'You'}
+                  className="inline-flex origin-center -ml-2"
+                  style={{
+                    animation: avatarLeaving
+                      ? 'budpress-avatar-out 220ms ease-in forwards'
+                      : 'budpress-avatar-pop 320ms cubic-bezier(.34,1.56,.64,1) both',
+                  }}
+                >
+                  <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" className="ring-2 ring-buddy-green" />
+                </span>
+              )}
+            </div>
           )}
           <div className="flex-1 min-w-0 flex items-center gap-1.5">
             <Repeat2 size={13} className="text-buddy-green shrink-0" />
             {justRepostedFlash && !post.is_repost ? (
               <span className="font-semibold text-buddy-green truncate">You reposted this</span>
             ) : (
-              <span className="font-semibold text-buddy-green cursor-pointer truncate" onClick={(e) => { e.stopPropagation(); navigate(`/${post.author_data?.username}`); }}>
+              <span className="font-semibold text-buddy-green cursor-pointer truncate" onClick={(e) => { e.stopPropagation(); openProfile(post.author_data?.username); }}>
                 {post.author_data?.display_name}
               </span>
             )}
@@ -708,9 +1057,158 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
                 )}
               </div>
             </div>
-            <button className="p-1 rounded-lg hover:bg-buddy-surface text-buddy-text-secondary flex-shrink-0" aria-label="More options">
-              <MoreHorizontal size={16} />
-            </button>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <span
+                data-testid="header-views"
+                title={`${viewCount} views`}
+                aria-label={`${viewCount} views`}
+                className="inline-flex items-center gap-1 text-[11px] font-medium tabular-nums text-buddy-text-secondary px-1"
+              >
+                <Eye size={13} aria-hidden /> {formatCount(viewCount)}
+              </span>
+              <div className="relative" ref={menuRef}>
+                <button
+                  ref={menuButtonRef}
+                  onClick={() => { setMenuView('main'); setMenuOpen((o) => !o); }}
+                  className="p-1 rounded-lg hover:bg-buddy-surface-raised text-buddy-text-secondary flex-shrink-0"
+                  aria-label="More options"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                >
+                  <MoreHorizontal size={16} />
+                </button>
+                {menuOpen && (
+                  <div
+                    role="menu"
+                    aria-label="Post options"
+                    onKeyDown={onMenuKeyDown}
+                    className="absolute right-0 top-full mt-1 z-30 w-64 rounded-xl border border-buddy-surface-raised bg-buddy-surface shadow-xl overflow-hidden"
+                  >
+                    {menuView === 'main' && (
+                      <>
+                        <button
+                          role="menuitem"
+                          onClick={() => { closeMenu(); interact('like'); void togglePump(); }}
+                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-buddy-text-primary hover:bg-buddy-surface-raised focus:bg-buddy-surface-raised focus:outline-none"
+                        >
+                          <Heart size={15} className="shrink-0 text-buddy-text-secondary" />
+                          {userReaction ? 'Unlike' : 'Like'}
+                        </button>
+                        <button
+                          role="menuitem"
+                          onClick={() => void handleHide()}
+                          disabled={menuBusy}
+                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-buddy-text-primary hover:bg-buddy-surface-raised focus:bg-buddy-surface-raised focus:outline-none disabled:opacity-50"
+                        >
+                          <EyeOff size={15} className="shrink-0 text-buddy-text-secondary" />
+                          Not interested
+                        </button>
+                        <button
+                          role="menuitem"
+                          onClick={() => setMenuView('report')}
+                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-buddy-text-primary hover:bg-buddy-surface-raised focus:bg-buddy-surface-raised focus:outline-none"
+                        >
+                          <Flag size={15} className="shrink-0 text-buddy-text-secondary" />
+                          Report
+                        </button>
+                        <button
+                          role="menuitem"
+                          onClick={() => setMenuView('block')}
+                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-buddy-text-primary hover:bg-buddy-surface-raised focus:bg-buddy-surface-raised focus:outline-none"
+                        >
+                          <Ban size={15} className="shrink-0 text-buddy-text-secondary" />
+                          Block @{displayAuthor?.username}
+                        </button>
+                        <button
+                          role="menuitem"
+                          onClick={() => void handleMute()}
+                          disabled={menuBusy}
+                          className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-buddy-text-primary hover:bg-buddy-surface-raised focus:bg-buddy-surface-raised focus:outline-none disabled:opacity-50"
+                        >
+                          <VolumeX size={15} className="shrink-0 text-buddy-text-secondary" />
+                          Don&rsquo;t suggest this creator
+                        </button>
+                      </>
+                    )}
+                    {menuView === 'report' && (
+                      <div className="p-3">
+                        <p id={`report-heading-${post.id}`} className="text-sm font-semibold text-buddy-text-primary mb-2">
+                          Why are you reporting this?
+                        </p>
+                        <div role="radiogroup" aria-labelledby={`report-heading-${post.id}`} className="max-h-44 overflow-y-auto space-y-0.5 mb-2">
+                          {REPORT_REASONS.map((r) => (
+                            <button
+                              key={r.value}
+                              role="menuitemradio"
+                              aria-checked={selectedReason === r.value}
+                              onClick={() => setSelectedReason(r.value)}
+                              className={`flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-[13px] focus:outline-none ${
+                                selectedReason === r.value
+                                  ? 'bg-buddy-green/10 text-buddy-green font-medium'
+                                  : 'text-buddy-text-primary hover:bg-buddy-surface-raised focus:bg-buddy-surface-raised'
+                              }`}
+                            >
+                              <span aria-hidden className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${selectedReason === r.value ? 'border-buddy-green' : 'border-buddy-text-secondary'}`}>
+                                {selectedReason === r.value && <span className="w-1.5 h-1.5 rounded-full bg-buddy-green" />}
+                              </span>
+                              {r.label}
+                            </button>
+                          ))}
+                        </div>
+                        <textarea
+                          value={reportDesc}
+                          onChange={(e) => setReportDesc(e.target.value)}
+                          placeholder="Details (optional)"
+                          rows={2}
+                          aria-label="Report details"
+                          className="w-full bg-buddy-surface-raised rounded-lg px-3 py-2 text-[13px] text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-1 focus:ring-buddy-green/40 resize-none"
+                        />
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => setMenuView('main')}
+                            className="flex-1 py-2 rounded-lg text-[13px] font-medium text-buddy-text-secondary hover:bg-buddy-surface-raised transition-colors"
+                          >
+                            Back
+                          </button>
+                          <button
+                            onClick={() => void handleReportSubmit()}
+                            disabled={menuBusy}
+                            className="flex-1 py-2 rounded-lg text-[13px] font-bold bg-buddy-green text-buddy-black hover:bg-buddy-green/90 transition-colors disabled:opacity-50"
+                          >
+                            {menuBusy ? 'Sending…' : 'Submit report'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {menuView === 'block' && (
+                      <div className="p-4">
+                        <p className="text-sm font-semibold text-buddy-text-primary">
+                          Block @{displayAuthor?.username}?
+                        </p>
+                        <p className="text-xs text-buddy-text-secondary mt-1">
+                          You won&rsquo;t see their posts or messages anymore.
+                        </p>
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            onClick={() => setMenuView('main')}
+                            className="flex-1 py-2 rounded-lg text-[13px] font-medium text-buddy-text-secondary hover:bg-buddy-surface-raised transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={() => void handleBlock()}
+                            disabled={menuBusy}
+                            className="flex-1 py-2 rounded-lg text-[13px] font-bold bg-buddy-red text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                          >
+                            {menuBusy ? 'Blocking…' : 'Block'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Body — masked client-side when the profanity filter is on */}
@@ -727,7 +1225,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
           {displayPost.post_type === 'poll' && (displayPost as any).poll && <PollCard poll={(displayPost as any).poll} postId={displayPost.id} />}
 
           {/* Media */}
-          <MediaGallery post={displayPost} blurred={post.moderation_status === 'flagged'} postId={post.id} onViewRecorded={setViewCount} />
+          <MediaGallery post={displayPost} blurred={post.moderation_status === 'flagged'} postId={post.id} onViewRecorded={handleViewRecorded} onInteract={(a) => interact(a)} />
 
           {/* Map */}
           {displayPost.location_lat != null && displayPost.location_lng != null && (
@@ -795,7 +1293,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
             icon={<MessageCircle size={RAIL_ICON_SIZE} />}
             count={displayPost.comment_count || 0}
             testId="rail-comment"
-            onClick={() => onComment?.(displayPost.id)}
+            onClick={() => handleComment()}
           />
 
           {/* Repost */}
@@ -831,6 +1329,7 @@ export function PostCard({ post: initialPost, onComment }: PostCardProps) {
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
               setShareAnchor({ top: r.top, left: r.left, bottom: r.bottom });
               setShowShareSheet(true);
+              interact('share');
             }}
           />
 

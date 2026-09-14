@@ -90,6 +90,27 @@ abstract class FeedRepository {
   @POST('/feed/{id}/pin/')
   Future<dynamic> pin(@Path('id') String postId);
 
+  /// Hide a post from the viewer's feed ("Not interested").
+  /// Backend may still be rolling out — callers must handle 404 defensively.
+  @POST('/feed/{id}/hide/')
+  Future<dynamic> hidePost(@Path('id') String postId);
+
+  @DELETE('/feed/{id}/hide/')
+  Future<void> unhidePost(@Path('id') String postId);
+
+  /// "Don't suggest this creator" — mute the author.
+  @POST('/profiles/{username}/mute/')
+  Future<dynamic> muteUser(@Path('username') String username);
+
+  @DELETE('/profiles/{username}/unmute/')
+  Future<void> unmuteUser(@Path('username') String username);
+
+  /// File a moderation report. Reason must be one of the backend
+  /// ModerationReport.REPORT_REASONS values (spam, harassment, hate_speech,
+  /// nudity, adult_ungated, violence, misinformation, impersonation, other).
+  @POST('/moderation/reports/')
+  Future<dynamic> submitModerationReport(@Body() Map<String, dynamic> body);
+
   @GET('/feed/saved/')
   Future<dynamic> getSavedPosts({
     @Query('collection') String? collection,

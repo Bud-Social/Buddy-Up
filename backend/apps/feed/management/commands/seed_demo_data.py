@@ -9,7 +9,6 @@ import wave
 
 from django.conf import settings
 from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -133,7 +132,7 @@ class Command(BaseCommand):
         else:
             self.stdout.write('Sound library already populated — skipping.')
 
-        created_posts = self._seed_demo_users_and_posts()
+        self._seed_demo_users_and_posts()
         self.stdout.write(
             f'Demo data ready. counts: '
             f'sounds={Sound.objects.filter(is_active=True).count()} '

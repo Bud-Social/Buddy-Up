@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from apps.feed.views import MuteAuthorView, UnmuteAuthorView
 
 app_name = 'profiles'
 urlpatterns = [
@@ -24,6 +25,8 @@ urlpatterns = [
     path('<str:username>/buddy/decline/', views.DeclineBuddyRequestView.as_view(), name='buddy_decline'),
     path('<str:username>/follow/', views.FollowUserView.as_view(), name='follow'),
     path('<str:username>/block/', views.BlockUserView.as_view(), name='block'),
+    path('<str:username>/mute/', MuteAuthorView.as_view(), name='mute_author'),
+    path('<str:username>/unmute/', UnmuteAuthorView.as_view(), name='unmute_author'),
     path('<str:username>/ping/', views.SendPingView.as_view(), name='ping'),
     path('<str:username>/buddies/', views.BuddiesListView.as_view(), name='buddies'),
     path('<str:username>/followers/', views.FollowersListView.as_view(), name='followers'),

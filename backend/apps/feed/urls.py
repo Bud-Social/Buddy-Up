@@ -16,6 +16,14 @@ urlpatterns = [
     path('<uuid:post_id>/save/', views.SaveView.as_view(), name='save'),
     path('<uuid:post_id>/share/', views.PostShareView.as_view(), name='share'),
     path('<uuid:post_id>/shares/', views.PostSharesListView.as_view(), name='share_list'),
+    path('<uuid:post_id>/hide/', views.PostHideView.as_view(), name='hide'),
+    # Bud Press "Don't suggest this creator". Canonical paths are
+    # /api/v1/profiles/<username>/mute|unmute/ — remount these two views in
+    # apps/profiles/urls.py (2-line follow-up, outside this workstream's
+    # owned files). Until then they are served under this feed namespace
+    # with identical trailing shapes.
+    path('<str:username>/mute/', views.MuteAuthorView.as_view(), name='mute_author'),
+    path('<str:username>/unmute/', views.UnmuteAuthorView.as_view(), name='unmute_author'),
     path('<uuid:post_id>/view/', views.PostViewRecordView.as_view(), name='record_view'),
     path('<uuid:post_id>/pin/', views.PostPinView.as_view(), name='pin'),
     path('<uuid:post_id>/poll/vote/', views.PollVoteView.as_view(), name='poll_vote'),

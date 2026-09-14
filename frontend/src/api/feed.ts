@@ -122,6 +122,31 @@ export const feedApi = {
   recordView: (postId: string) =>
     apiClient.post<ApiResponse<{ view_count: number }>>(`/feed/${postId}/view/`).then((r) => r.data),
 
+  /** Hide a post from the viewer's feed ("Not interested"). Defensive: the
+   *  backend may still be landing this — callers must handle 404 by keeping
+   *  the card and surfacing the server message. */
+  hidePost: (postId: string) =>
+    apiClient.post<ApiResponse<{ hidden?: boolean }>>(`/feed/${postId}/hide/`).then((r) => r.data),
+
+  /** Undo a hide (restores the post to the viewer's feed). */
+  unhidePost: (postId: string) =>
+    apiClient.delete<ApiResponse<{ hidden?: boolean }>>(`/feed/${postId}/hide/`).then((r) => r.data),
+
+  /** Mute a creator ("Don't suggest this creator"). Defensive: may 404 while
+   *  the backend lands — callers must not remove cards on failure. */
+  muteAuthor: (username: string) =>
+    apiClient.post<ApiResponse<null>>(`/profiles/${encodeURIComponent(username)}/mute/`).then((r) => r.data),
+
+  /** Undo a creator mute. */
+  unmuteAuthor: (username: string) =>
+    apiClient.delete<ApiResponse<null>>(`/profiles/${encodeURIComponent(username)}/unmute/`).then((r) => r.data),
+
+  /** File a moderation report against a user/post. target_user is the author's
+   *  user id (fall back to username only if the id is unknown — the server
+   *  validates). */
+  submitReport: (payload: { target_user: string; reason: string; description?: string; content_url?: string }) =>
+    apiClient.post<ApiResponse<{ id?: string }>>('/moderation/reports/', payload).then((r) => r.data),
+
   /** Owner-only per-post aggregates. May 404 while the backend lands. */
   getCreatorInsights: () =>
     apiClient.get<ApiResponse<CreatorInsightItem[]>>('/feed/creator/insights/').then((r) => r.data),
@@ -221,3 +246,18 @@ export const feedApi = {
     }).then((r) => r.data);
   },
 };
+
+/** Report reasons mirrored from backend ModerationReport.REPORT_REASONS. */
+export const REPORT_REASONS = [
+  { value: 'spam', label: 'Spam' },
+  { value: 'harassment', label: 'Harassment' },
+  { value: 'hate_speech', label: 'Hate Speech' },
+  { value: 'nudity', label: 'Nudity / Sexual Content' },
+  { value: 'adult_ungated', label: 'Adult Content Outside Mature Category' },
+  { value: 'violence', label: 'Violence' },
+  { value: 'misinformation', label: 'Misinformation' },
+  { value: 'impersonation', label: 'Impersonation' },
+  { value: 'other', label: 'Other' },
+] as const;
+
+export type ReportReason = (typeof REPORT_REASONS)[number]['value'];

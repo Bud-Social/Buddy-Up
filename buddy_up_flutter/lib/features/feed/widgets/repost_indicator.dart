@@ -8,16 +8,28 @@ class RepostIndicator extends StatelessWidget {
   final String username;
   final String? quoteBody;
 
+  /// Set when the viewer reposted: their avatar pops into the stack with a
+  /// scale/fade entrance (AnimatedSwitcher) and animates out on unrepost.
+  final bool viewerReposted;
+  final String? viewerAvatarUrl;
+  final String? viewerDisplayName;
+
   const RepostIndicator({
     super.key,
     this.reposters = const [],
     required this.username,
     this.quoteBody,
+    this.viewerReposted = false,
+    this.viewerAvatarUrl,
+    this.viewerDisplayName,
   });
 
   @override
   Widget build(BuildContext context) {
     final people = reposters.length > 1 ? reposters : null;
+    // When the viewer reposted but the backend hasn't echoed them back yet,
+    // still show the stack so the pop-in has a home.
+    final showStack = people != null || viewerReposted;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -32,8 +44,8 @@ class RepostIndicator extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    if (people != null) ...[
-                      _buildStackedAvatars(context, people),
+                    if (showStack) ...[
+                      _buildStackedAvatars(context, people ?? const []),
                       const SizedBox(width: 8),
                     ],
                     Flexible(
@@ -73,10 +85,22 @@ class RepostIndicator extends StatelessWidget {
   }
 
   Widget _buildStackedAvatars(BuildContext context, List<ReposterData> people) {
-    final visible = people.take(3).toList();
+    final viewerSlot = (viewerAvatarUrl ?? '').isNotEmpty;
+    // Skip a backend echo of the viewer — the animated slot below owns it.
+    final visible = people
+        .where((r) =>
+            !viewerSlot ||
+            r.avatarUrl != viewerAvatarUrl)
+        .take(3)
+        .toList();
     final overflow = people.length - visible.length;
+    // Width grows with the slot count; the viewer slot reserves space while
+    // scaled to 0 so the exit animation doesn't reflow the row.
+    final extra = (overflow > 0 ? 1 : 0) + (viewerSlot ? 1 : 0);
+    final slotCount = visible.length + extra;
     return SizedBox(
       height: 24,
+      width: (slotCount - 1) * 14.0 + 24,
       child: Stack(
         children: [
           for (var i = 0; i < visible.length; i++)
@@ -103,6 +127,31 @@ class RepostIndicator extends StatelessWidget {
                 child: Text(
                   '+$overflow',
                   style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 9, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          if (viewerSlot)
+            Positioned(
+              left: (visible.length + (overflow > 0 ? 1 : 0)) * 14.0,
+              child: AnimatedScale(
+                scale: viewerReposted ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutBack,
+                child: AnimatedOpacity(
+                  opacity: viewerReposted ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Container(
+                    key: const ValueKey('viewer-repost-avatar'),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: BuddyColors.green, width: 1.5),
+                    ),
+                    child: Avatar(
+                      src: viewerAvatarUrl,
+                      alt: viewerDisplayName ?? '?',
+                      size: AvatarSize.xs,
+                    ),
+                  ),
                 ),
               ),
             ),

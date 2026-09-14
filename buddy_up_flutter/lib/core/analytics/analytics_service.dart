@@ -36,10 +36,24 @@ class AnalyticsService {
   static const Duration _flushInterval = Duration(seconds: 5);
   static const int _flushThreshold = 10;
 
-  final Dio _dio = ApiClient().dio;
   final String _sessionId = _randomUuid();
   final List<Map<String, dynamic>> _buffer = <Map<String, dynamic>>[];
   bool _flushing = false;
+
+  /// Lazily created: ApiClient reads Env/dotenv, which may be unavailable in
+  /// tests or misconfigured builds. Analytics must never break a user flow
+  /// (see contract above), so a missing client degrades to a no-op flush.
+  Dio? _dio;
+
+  Dio? get _dioOrNull {
+    if (_dio != null) return _dio;
+    try {
+      return _dio = ApiClient().dio;
+    } catch (e) {
+      debugPrint('analytics unavailable: $e');
+      return null;
+    }
+  }
 
   /// Record an event. Never throws, never awaits network.
   void track(
@@ -71,8 +85,13 @@ class AnalyticsService {
     _flushing = true;
     final batch = List<Map<String, dynamic>>.of(_buffer);
     _buffer.clear();
+    final dio = _dioOrNull;
+    if (dio == null) {
+      _flushing = false;
+      return;
+    }
     try {
-      await _dio.post('/analytics/events/', data: {'events': batch});
+      await dio.post('/analytics/events/', data: {'events': batch});
     } on DioException catch (e) {
       // Expected when the endpoint is absent (404) or offline — silent in
       // release, visible in debug for wiring mistakes.

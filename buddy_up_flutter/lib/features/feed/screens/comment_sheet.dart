@@ -6,7 +6,6 @@ import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/input.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/models/post.dart';
 
 class CommentSheet extends ConsumerStatefulWidget {
   final String postId;
@@ -120,13 +119,17 @@ class _CommentSheetState extends ConsumerState<CommentSheet> {
   }
 
   void _submitComment() async {
-    final body = _commentController.text.trim();
-    if (body.isEmpty) return;
-    final repo = ref.read(feedRepositoryProvider);
-    try {
-      await repo.addComment(widget.postId, CommentCreateInput(body: body));
+    final error = await ref
+        .read(feedProvider.notifier)
+        .submitComment(widget.postId, _commentController.text);
+    if (!mounted) return;
+    if (error == null) {
       _commentController.clear();
       ref.invalidate(commentsProvider(widget.postId));
-    } catch (_) {}
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    }
   }
 }

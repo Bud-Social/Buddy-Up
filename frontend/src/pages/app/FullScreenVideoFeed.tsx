@@ -10,6 +10,9 @@ import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { PostPhotoCarousel } from '@/components/features/feed/PostPhotoCarousel';
 import { RailAction, RAIL_ICON_SIZE, nextReactionState, totalReactions } from '@/components/features/feed/RailAction';
 import { AuthorChip } from '@/components/features/feed/AuthorChip';
+import { Avatar } from '@/components/ui/Avatar';
+import { useAuthStore } from '@/store/authStore';
+import { track } from '@/lib/analytics';
 import { PostShareSheet } from '@/components/features/feed/PostShareSheet';
 import { useRecordPostView } from '@/components/features/feed/useRecordPostView';
 import {
@@ -137,6 +140,23 @@ function ViewRecorder({ postId, active, progress, onRecorded }: {
   return <div ref={ref} className="absolute inset-0 pointer-events-none" aria-hidden />;
 }
 
+/** Bucket a fullscreen dwell duration for analytics (low-cardinality). */
+function bucketDwell(ms: number): string {
+  if (ms < 1000) return '<1s';
+  if (ms < 3000) return '1-3s';
+  if (ms < 10000) return '3-10s';
+  return '10s+';
+}
+
+/** Repost avatar pop/out keyframes (see PostCard.AvatarPopStyle — same definition). */
+function FsAvatarPopStyle() {
+  return (
+    <style>{`@keyframes budpress-avatar-pop{0%{opacity:0;transform:scale(.2)}60%{opacity:1;transform:scale(1.18)}100%{opacity:1;transform:scale(1)}}@keyframes budpress-avatar-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.2)}}`}</style>
+  );
+}
+
+type FsInteractAction = 'like' | 'comment' | 'repost' | 'save' | 'share' | 'profile_open' | 'cover';
+
 export default function FullScreenVideoFeed() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -165,6 +185,48 @@ export default function FullScreenVideoFeed() {
   const hasMoreRef = useRef(true);
   const loadingLockRef = useRef(false);
   const touchOriginRef = useRef<{ x: number; y: number } | null>(null);
+
+  // ── Bud Press: repost avatar pop, focus + interaction analytics ──
+  const viewerAvatar = useAuthStore((s) => s.profile?.avatar_url);
+  const viewerName = useAuthStore((s) => s.profile?.display_name);
+  const [avatarPop, setAvatarPop] = useState<Record<string, 'in' | 'out'>>({});
+  const avatarTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  useEffect(() => () => {
+    Object.values(avatarTimers.current).forEach((t) => clearTimeout(t));
+  }, []);
+
+  const interact = useCallback((postId: string, action: FsInteractAction) => {
+    track('feed.post_interact', {
+      surface: 'video_feed',
+      object_type: 'post',
+      object_id: postId,
+      properties: { action },
+    });
+  }, []);
+
+  const showAvatarPop = useCallback((postId: string) => {
+    const pending = avatarTimers.current[postId];
+    if (pending) {
+      clearTimeout(pending);
+      delete avatarTimers.current[postId];
+    }
+    setAvatarPop((p) => ({ ...p, [postId]: 'in' }));
+  }, []);
+
+  const hideAvatarPop = useCallback((postId: string) => {
+    setAvatarPop((p) => ({ ...p, [postId]: 'out' }));
+    const pending = avatarTimers.current[postId];
+    if (pending) clearTimeout(pending);
+    avatarTimers.current[postId] = setTimeout(() => {
+      setAvatarPop((p) => {
+        if (!(postId in p)) return p;
+        const next = { ...p };
+        delete next[postId];
+        return next;
+      });
+      delete avatarTimers.current[postId];
+    }, 220);
+  }, []);
 
   const loadVideos = useCallback(async () => {
     if (!hasMoreRef.current || loadingLockRef.current) return;
@@ -247,6 +309,34 @@ export default function FullScreenVideoFeed() {
     }
   }, [activeIndex, items.length, loadVideos]);
 
+  // Slide dwell analytics: feed.post_focus (bucketed) when the active slide
+  // changes or the feed unmounts. Single timestamps, no per-frame work.
+  const dwellStartRef = useRef<number>(Date.now());
+  const dwellIdxRef = useRef(0);
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const reportDwell = useCallback((idx: number) => {
+    const post = itemsRef.current[idx]?.post;
+    if (!post) return;
+    const durationMs = Date.now() - dwellStartRef.current;
+    if (durationMs >= 500) {
+      track('feed.post_focus', {
+        surface: 'video_feed',
+        object_type: 'post',
+        object_id: post.id,
+        properties: { duration_ms: durationMs, duration_bucket: bucketDwell(durationMs) },
+      });
+    }
+  }, []);
+  useEffect(() => {
+    reportDwell(dwellIdxRef.current);
+    dwellIdxRef.current = activeIndex;
+    dwellStartRef.current = Date.now();
+  }, [activeIndex, reportDwell]);
+  useEffect(() => () => {
+    reportDwell(dwellIdxRef.current);
+  }, [reportDwell]);
+
   const togglePlay = (idx: number) => {
     const v = videoRefs.current[idx];
     if (!v) return; // photo-mode posts have no single video element
@@ -290,6 +380,7 @@ export default function FullScreenVideoFeed() {
     const prevCounts = src.reaction_counts || {};
     const next = nextReactionState(prevCounts, prevReaction, '💪');
     patchEngagement(idx, { user_reaction: next.userReaction, reaction_counts: next.counts });
+    interact(item.post.id, 'like');
     try {
       if (next.removed) await feedApi.unreact(targetId);
       else await feedApi.react(targetId, '💪');
@@ -308,6 +399,7 @@ export default function FullScreenVideoFeed() {
       ? post.original_post_data.save_count
       : post.save_count) || 0) + (next ? 1 : -1));
     patchEngagement(idx, { is_saved: next, save_count: nextCount });
+    interact(post.id, 'save');
     try {
       if (next) await feedApi.save(targetId);
       else await feedApi.unsave(targetId);
@@ -328,6 +420,9 @@ export default function FullScreenVideoFeed() {
       is_reposted_by_me: !wasReposted,
       repost_count: wasReposted ? Math.max(0, baseCount - 1) : baseCount + 1,
     });
+    interact(item.post.id, 'repost');
+    if (!wasReposted) showAvatarPop(item.post.id);
+    else hideAvatarPop(item.post.id);
     try {
       const res = await feedApi.repost(item.post.id);
       if (res.data) {
@@ -338,11 +433,29 @@ export default function FullScreenVideoFeed() {
       }
     } catch {
       // Rollback
+      if (!wasReposted) hideAvatarPop(item.post.id);
+      else showAvatarPop(item.post.id);
       patchEngagement(idx, {
         is_reposted_by_me: wasReposted,
         repost_count: wasReposted ? baseCount + 1 : Math.max(0, baseCount - 1),
       });
     }
+  };
+
+  /** Open comments for a slide (tracks focus + interaction for analytics). */
+  const openComments = (idx: number) => {
+    const item = items[idx];
+    if (!item) return;
+    const targetId = engagementIdOf(item.post);
+    interact(item.post.id, 'comment');
+    // The sheet itself is CommentSheet (outside this workstream): opening it
+    // is the focus signal; submit tracking needs sheet instrumentation.
+    track('feed.comment_focus', {
+      surface: 'video_feed',
+      object_type: 'post',
+      object_id: targetId,
+    });
+    setCommentPostId(targetId);
   };
 
   const patchItem = (idx: number, patch: Partial<Post>) =>
@@ -395,6 +508,7 @@ export default function FullScreenVideoFeed() {
     const username = post?.author_data?.username;
     if (!username) return;
     dismissSwipeHint();
+    if (post) interact(post.id, 'profile_open');
     navigate(`/${username}`, { state: { returnTo: `/videos?start=${post.id}` } });
   };
 
@@ -407,6 +521,7 @@ export default function FullScreenVideoFeed() {
       className="h-full w-full overflow-y-scroll snap-y snap-mandatory bg-black"
       style={{ scrollSnapType: 'y mandatory' }}
     >
+      <FsAvatarPopStyle />
       {isLoading && items.length === 0 && (
         <div className="h-full w-full flex flex-col items-center justify-center gap-3 text-buddy-text-secondary">
           <Loader2 size={32} className="animate-spin text-buddy-green" />
@@ -481,6 +596,20 @@ export default function FullScreenVideoFeed() {
               {post.is_repost && (
                 <p className="animate-in slide-in-from-top-2 fade-in duration-300 text-[11px] font-semibold text-buddy-green mb-1.5 flex items-center gap-1">
                   <Repeat2 size={11} /> {(post as any).reposters?.[0]?.display_name || post.author_data?.display_name} reposted
+                  {avatarPop[post.id] && (
+                    <span
+                      data-testid={`fs-repost-avatar-${post.id}`}
+                      title={viewerName || 'You'}
+                      className="inline-flex origin-center ml-0.5"
+                      style={{
+                        animation: avatarPop[post.id] === 'out'
+                          ? 'budpress-avatar-out 220ms ease-in forwards'
+                          : 'budpress-avatar-pop 320ms cubic-bezier(.34,1.56,.64,1) both',
+                      }}
+                    >
+                      <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" />
+                    </span>
+                  )}
                 </p>
               )}
               <div className="pointer-events-auto max-w-[70%]">
@@ -513,7 +642,7 @@ export default function FullScreenVideoFeed() {
                 icon={<MessageCircle size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
                 count={src.comment_count ?? 0}
                 testId={`fs-comment-${post.id}`}
-                onClick={(e) => { e.stopPropagation(); setCommentPostId(engagementIdOf(post)); }}
+                onClick={(e) => { e.stopPropagation(); openComments(idx); }}
               />
               <RailAction
                 tone="onDark"
@@ -544,6 +673,7 @@ export default function FullScreenVideoFeed() {
                 testId={`fs-share-${post.id}`}
                 onClick={(e) => {
                   e.stopPropagation();
+                  interact(post.id, 'share');
                   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
                   setShareAnchor({ top: r.top, left: r.left, bottom: r.bottom });
                   setShareIdx(idx);

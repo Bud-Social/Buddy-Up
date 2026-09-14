@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
-  Loader2, Users, ArrowRight, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp,
+  Loader2, Users, ArrowRight, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp, X,
 } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
 import { PostComposer } from '@/components/features/feed/PostComposer';
@@ -9,7 +9,7 @@ import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { VideoFeed } from '@/components/features/feed/VideoFeed';
 import { Card } from '@/components/ui/Card';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
-import { feedApi } from '@/api';
+import { feedApi, profilesApi } from '@/api';
 import { messagingApi, type Community } from '@/api/messaging';
 import { track } from '@/lib/analytics';
 import type { FeedTab } from '@/api/feed';
@@ -25,6 +25,25 @@ const TAB_ROUTES: Record<string, FeedTab> = {
 };
 
 const NEW_POSTS_POLL_MS = 45_000;
+
+const REMOVED_BANNER_MS = 6_000;
+
+/** Pure helpers for card removal (block drops one card, mute drops every card
+ *  showing the author — including repost rows that quote them). Unit-tested. */
+export function removePostFromList(posts: Post[], postId: string): Post[] {
+  return posts.filter((p) => p.id !== postId);
+}
+
+export function postShowsAuthor(p: Post, username: string): boolean {
+  return (
+    p.author_data?.username === username ||
+    p.original_post_data?.author_data?.username === username
+  );
+}
+
+export function removeAuthorFromList(posts: Post[], username: string): Post[] {
+  return posts.filter((p) => !postShowsAuthor(p, username));
+}
 
 export default function Feed() {
   const navigate = useNavigate();
@@ -57,6 +76,54 @@ export default function Feed() {
   const knownIdsRef = useRef<Set<string>>(new Set());
   const postsCountRef = useRef(0);
   useEffect(() => { postsCountRef.current = posts.length; }, [posts.length]);
+  // Ref mirror so removal handlers can snapshot the removed cards for undo.
+  const postsRef = useRef<Post[]>([]);
+  useEffect(() => { postsRef.current = posts; }, [posts]);
+
+  // Undo banner for block/mute removals (hide uses PostCard's inline undo).
+  const [removedBanner, setRemovedBanner] = useState<{
+    posts: Post[]; label: string; kind: 'block' | 'mute'; username: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!removedBanner) return;
+    const t = setTimeout(() => setRemovedBanner(null), REMOVED_BANNER_MS);
+    return () => clearTimeout(t);
+  }, [removedBanner]);
+
+  const handleRemovePost = (postId: string) => {
+    const gone = postsRef.current.filter((p) => p.id === postId);
+    if (gone.length > 0) {
+      const username = gone[0].author_data?.username ?? 'user';
+      setRemovedBanner({ posts: gone, label: `Blocked @${username}.`, kind: 'block', username });
+    }
+    setPosts((prev) => removePostFromList(prev, postId));
+  };
+
+  const handleRemoveAuthor = (username: string) => {
+    const gone = postsRef.current.filter((p) => postShowsAuthor(p, username));
+    if (gone.length > 0) {
+      setRemovedBanner({ posts: gone, label: `Muted @${username}.`, kind: 'mute', username });
+    }
+    setPosts((prev) => removeAuthorFromList(prev, username));
+  };
+
+  const undoRemoved = async () => {
+    const banner = removedBanner;
+    if (!banner) return;
+    setRemovedBanner(null);
+    try {
+      if (banner.kind === 'block') await profilesApi.unblock(banner.username);
+      else await feedApi.unmuteAuthor(banner.username);
+    } catch {
+      /* restore the cards regardless — the undo intent wins locally */
+    }
+    setPosts((prev) => {
+      const seen = new Set(prev.map((p) => p.id));
+      const restored = banner.posts.filter((p) => !seen.has(p.id));
+      restored.forEach((p) => knownIdsRef.current.add(p.id));
+      return [...restored, ...prev];
+    });
+  };
 
   useEffect(() => {
     messagingApi.getCommunities()
@@ -464,6 +531,8 @@ export default function Feed() {
               <div key={post.id} data-post-id={post.id} ref={registerPostCard}>
                 <PostCard
                   post={post}
+                  onRemove={handleRemovePost}
+                  onRemoveAuthor={handleRemoveAuthor}
                   onComment={(id) => {
                     track('feed.post_opened', {
                       surface: 'feed',
@@ -486,6 +555,28 @@ export default function Feed() {
             <div ref={observerRef} className="h-4" />
           </div>
         </>
+      )}
+
+      {removedBanner && (
+        <div
+          role="status"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 pl-4 pr-2 py-2.5 rounded-xl bg-buddy-surface-raised border border-buddy-surface shadow-xl animate-in fade-in slide-in-from-bottom-2"
+        >
+          <span className="text-sm text-buddy-text-primary whitespace-nowrap">{removedBanner.label}</span>
+          <button
+            onClick={() => void undoRemoved()}
+            className="text-sm font-bold text-buddy-green hover:underline px-1"
+          >
+            Undo
+          </button>
+          <button
+            onClick={() => setRemovedBanner(null)}
+            aria-label="Dismiss"
+            className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
       )}
 
       {commentPostId && (

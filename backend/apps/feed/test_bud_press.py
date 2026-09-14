@@ -17,7 +17,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
-from apps.feed.models import Comment, Post, PostMedia, Reaction, Save, Sound
+from apps.feed.models import Comment, HiddenPost, MutedAuthor, Post, PostMedia, Reaction, Save, Sound
 from apps.profiles.models import BuddyRelationship, Profile
 
 
@@ -852,3 +852,146 @@ class CreatorInsightsTests(TestCase):
         res = _client_for(self.viewer).get(self.url)
         ids = [item['post_id'] for item in res.data['data']['items']]
         self.assertNotIn(str(mine.id), ids)
+
+
+@override_settings(CELERY_TASK_ALWAYS_EAGER=False)
+class HideMuteTests(TestCase):
+    """Bud Press post menu: hide/unhide posts, mute/unmute authors, and the
+    resulting FeedView discovery exclusions."""
+
+    # NOTE: mute routes live in apps/feed/urls.py until the 2-line profiles
+    # remount lands (see urls.py comment). Canonical shapes are
+    # /api/v1/profiles/<username>/mute|unmute/; tests use the feed-namespace
+    # aliases with identical trailing shapes.
+    MUTE = '/api/v1/feed/{username}/mute/'
+    UNMUTE = '/api/v1/feed/{username}/unmute/'
+
+    def setUp(self):
+        self.author = _make_user('hide_author')
+        self.viewer = _make_user('hide_viewer')
+        self.post = Post.objects.create(
+            author=self.author.profile, post_type='text', body='Hide me',
+        )
+        self.hide_url = f'/api/v1/feed/{self.post.id}/hide/'
+
+    def _feed_ids(self, user, params=None):
+        res = _client_for(user).get('/api/v1/feed/', params or {'tab': 'for_you'})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        return {p['id'] for p in res.data['data']}
+
+    def test_requires_auth(self):
+        self.assertEqual(APIClient().post(self.hide_url).status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(APIClient().delete(self.hide_url).status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(
+            APIClient().post(self.MUTE.format(username='hide_author')).status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+    def test_hide_unhide_toggle_envelope(self):
+        hide = _client_for(self.viewer).post(self.hide_url)
+        self.assertEqual(hide.status_code, status.HTTP_200_OK)
+        self.assertEqual(hide.data, {
+            'success': True, 'data': {'hidden': True}, 'message': 'Post hidden.',
+            'errors': None, 'pagination': None,
+        })
+        self.assertTrue(HiddenPost.objects.filter(viewer=self.viewer.profile, post=self.post).exists())
+
+        # POST is idempotent — no duplicate row.
+        _client_for(self.viewer).post(self.hide_url)
+        self.assertEqual(HiddenPost.objects.filter(viewer=self.viewer.profile, post=self.post).count(), 1)
+
+        unhide = _client_for(self.viewer).delete(self.hide_url)
+        self.assertEqual(unhide.status_code, status.HTTP_200_OK)
+        self.assertEqual(unhide.data['data'], {'hidden': False})
+        self.assertIsNone(unhide.data['errors'])
+        self.assertIsNone(unhide.data['pagination'])
+        self.assertFalse(HiddenPost.objects.filter(viewer=self.viewer.profile, post=self.post).exists())
+
+        # DELETE without a hide is a no-op success.
+        again = _client_for(self.viewer).delete(self.hide_url)
+        self.assertEqual(again.status_code, status.HTTP_200_OK)
+        self.assertEqual(again.data['data'], {'hidden': False})
+
+    def test_hide_removed_post_returns_410(self):
+        self.post.moderation_status = 'removed'
+        self.post.save(update_fields=['moderation_status'])
+        res = _client_for(self.viewer).post(self.hide_url)
+        self.assertEqual(res.status_code, status.HTTP_410_GONE)
+        res = _client_for(self.viewer).delete(self.hide_url)
+        self.assertEqual(res.status_code, status.HTTP_410_GONE)
+
+    def test_hide_forbidden_post_returns_404(self):
+        buddies_post = Post.objects.create(
+            author=self.author.profile, post_type='text',
+            body='Buddies only', visibility='buddies',
+        )
+        res = _client_for(self.viewer).post(f'/api/v1/feed/{buddies_post.id}/hide/')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_mute_unmute_toggle_and_self_mute_400(self):
+        mute = _client_for(self.viewer).post(self.MUTE.format(username='hide_author'))
+        self.assertEqual(mute.status_code, status.HTTP_200_OK)
+        self.assertTrue(mute.data['success'])
+        self.assertIsNone(mute.data['errors'])
+        self.assertIsNone(mute.data['pagination'])
+        self.assertTrue(MutedAuthor.objects.filter(muter=self.viewer.profile, muted=self.author.profile).exists())
+        # Follows/buddies untouched — mute is lighter than block.
+        self.assertEqual(MutedAuthor.objects.filter(muter=self.viewer.profile, muted=self.author.profile).count(), 1)
+        _client_for(self.viewer).post(self.MUTE.format(username='hide_author'))
+        self.assertEqual(MutedAuthor.objects.filter(muter=self.viewer.profile, muted=self.author.profile).count(), 1)
+
+        unmute = _client_for(self.viewer).delete(self.UNMUTE.format(username='hide_author'))
+        self.assertEqual(unmute.status_code, status.HTTP_200_OK)
+        self.assertTrue(unmute.data['success'])
+        self.assertFalse(MutedAuthor.objects.filter(muter=self.viewer.profile, muted=self.author.profile).exists())
+
+        # DELETE without a mute is a no-op success.
+        again = _client_for(self.viewer).delete(self.UNMUTE.format(username='hide_author'))
+        self.assertEqual(again.status_code, status.HTTP_200_OK)
+
+        # Cannot mute yourself (mirrors BlockUserView).
+        me = _client_for(self.viewer).post(self.MUTE.format(username='hide_viewer'))
+        self.assertEqual(me.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(me.data['success'])
+
+    def test_hidden_post_absent_from_feed(self):
+        self.assertIn(str(self.post.id), self._feed_ids(self.viewer))
+        _client_for(self.viewer).post(self.hide_url)
+        self.assertNotIn(str(self.post.id), self._feed_ids(self.viewer))
+        # Other viewers still see it.
+        other = _make_user('hide_other')
+        self.assertIn(str(self.post.id), self._feed_ids(other))
+        # Unhide restores it.
+        _client_for(self.viewer).delete(self.hide_url)
+        self.assertIn(str(self.post.id), self._feed_ids(self.viewer))
+
+    def test_hidden_post_absent_from_meals_tab(self):
+        meal = Post.objects.create(
+            author=self.author.profile, post_type='meal', body='Lunch',
+        )
+        viewer_client = _client_for(self.viewer)
+        before = viewer_client.get('/api/v1/feed/', {'tab': 'meals'})
+        self.assertIn(str(meal.id), {p['id'] for p in before.data['data']})
+        viewer_client.post(f'/api/v1/feed/{meal.id}/hide/')
+        after = viewer_client.get('/api/v1/feed/', {'tab': 'meals'})
+        self.assertNotIn(str(meal.id), {p['id'] for p in after.data['data']})
+
+    def test_muted_author_absent_from_feed(self):
+        self.assertIn(str(self.post.id), self._feed_ids(self.viewer))
+        _client_for(self.viewer).post(self.MUTE.format(username='hide_author'))
+        self.assertNotIn(str(self.post.id), self._feed_ids(self.viewer))
+        # Only feed exclusion is asserted (direct detail stays reachable).
+        _client_for(self.viewer).delete(self.UNMUTE.format(username='hide_author'))
+        self.assertIn(str(self.post.id), self._feed_ids(self.viewer))
+
+    def test_muted_author_absent_from_videos_tab(self):
+        clip = Post.objects.create(
+            author=self.author.profile, post_type='short_video', body='clip',
+            media_urls=['https://res.cloudinary.com/demo/image/upload/muted.mp4'],
+        )
+        viewer_client = _client_for(self.viewer)
+        before = viewer_client.get('/api/v1/feed/', {'tab': 'videos'})
+        self.assertIn(str(clip.id), {p['id'] for p in before.data['data']})
+        viewer_client.post(self.MUTE.format(username='hide_author'))
+        after = viewer_client.get('/api/v1/feed/', {'tab': 'videos'})
+        self.assertNotIn(str(clip.id), {p['id'] for p in after.data['data']})

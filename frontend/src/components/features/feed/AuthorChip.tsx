@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Eye } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { profilesApi } from '@/api';
+import { track } from '@/lib/analytics';
 import { useAuthStore } from '@/store/authStore';
 import type { AuthorData } from '@/types';
 
@@ -66,7 +67,10 @@ export function AuthorChip({
 
   const goToProfile = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (author?.username) navigate(`/${author.username}`);
+    if (author?.username) {
+      track('feed.profile_open', { surface: 'feed', object_type: 'profile', object_id: author.username });
+      navigate(`/${author.username}`);
+    }
   };
 
   const toggleFollow = async (e: React.MouseEvent) => {

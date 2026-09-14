@@ -1,16 +1,42 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/analytics/analytics_service.dart';
+import '../../../core/auth/auth_provider.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/media_gallery.dart';
 import '../../../shared/widgets/reaction_bar.dart';
 import '../../../shared/widgets/toast.dart';
-import '../../../core/theme/app_theme.dart';
+import '../providers/feed_provider.dart';
 import 'repost_indicator.dart';
 import 'poll_widget.dart';
 import 'ai_analysis_card.dart';
 
-class PostCard extends StatelessWidget {
+/// How long a card must stay mounted before it counts as a real view.
+///
+/// Mirrors the Bud Press 2000ms active-play gate. Without a
+/// visibility-detector dependency the proxy is mount duration: ListView only
+/// builds near-viewport cards, and disposal cancels the timer.
+const _kViewFocusThreshold = Duration(seconds: 2);
+
+/// Human labels for the backend ModerationReport.REPORT_REASONS values.
+const _reportReasonLabels = <String, String>{
+  'spam': 'Spam or scam',
+  'harassment': 'Harassment or bullying',
+  'hate_speech': 'Hate speech',
+  'nudity': 'Nudity or sexual content',
+  'adult_ungated': 'Adult content outside mature areas',
+  'violence': 'Violence or danger',
+  'misinformation': 'Misinformation',
+  'impersonation': 'Impersonation',
+  'other': 'Something else',
+};
+
+class PostCard extends ConsumerStatefulWidget {
   final Post post;
   final void Function(String postId)? onLike;
   final void Function(String postId)? onComment;
@@ -39,17 +65,128 @@ class PostCard extends StatelessWidget {
   });
 
   @override
+  ConsumerState<PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends ConsumerState<PostCard> {
+  Timer? _viewTimer;
+  DateTime? _focusStart;
+  String? _trackedPostId;
+  bool _viewRecorded = false;
+
+  Post get _post => widget.post;
+
+  /// Engagement reflects the ORIGINAL on repost rows so counts never zero out.
+  OriginalPostData? get _orig =>
+      _post.isRepost ? _post.originalPostData : null;
+  String get _targetId => _orig?.id ?? _post.id;
+  Map<String, int> get _reactionCounts =>
+      _orig?.reactionCounts ?? _post.reactionCounts;
+  String? get _userReaction => _orig?.userReaction ?? _post.userReaction;
+  int get _commentCount => _orig?.commentCount ?? _post.commentCount;
+  int get _repostCount => _orig?.repostCount ?? _post.repostCount;
+  int get _saveCount => _orig?.saveCount ?? _post.saveCount;
+  int get _shareCount => _orig?.shareCount ?? _post.shareCount;
+  int get _viewCount => _orig?.viewCount ?? _post.viewCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _beginFocus();
+  }
+
+  @override
+  void didUpdateWidget(covariant PostCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.post.id != widget.post.id) {
+      _reportFocus();
+      _beginFocus();
+    }
+  }
+
+  @override
+  void dispose() {
+    _viewTimer?.cancel();
+    _reportFocus();
+    super.dispose();
+  }
+
+  void _beginFocus() {
+    _viewTimer?.cancel();
+    _viewRecorded = false;
+    _focusStart = DateTime.now();
+    _trackedPostId = widget.post.id;
+    _viewTimer = Timer(_kViewFocusThreshold, () {
+      if (!mounted) return;
+      _viewRecorded = true;
+      ref.read(feedProvider.notifier).recordViewById(widget.post.id);
+    });
+  }
+
+  /// Visibility-based focus time, reported on dispose/hide. Lightweight: a
+  /// single track call, no per-frame work.
+  void _reportFocus() {
+    final start = _focusStart;
+    _focusStart = null;
+    if (start == null) return;
+    final ms = DateTime.now().difference(start).inMilliseconds;
+    if (ms < 250) return; // Ignore transient builds/recycled rows.
+    AnalyticsService.instance.track(
+      'feed.post_focus',
+      surface: 'feed',
+      objectType: 'post',
+      objectId: _trackedPostId ?? widget.post.id,
+      properties: {'focus_ms': ms, 'view_recorded': _viewRecorded},
+    );
+  }
+
+  void _trackPostInteraction(String action) {
+    AnalyticsService.instance.track(
+      'feed.post_interaction',
+      surface: 'feed',
+      objectType: 'post',
+      objectId: _targetId,
+      properties: {'action': action},
+    );
+  }
+
+  void _openPostMenu() {
+    final messenger = ScaffoldMessenger.of(context);
+    final notifier = ref.read(feedProvider.notifier);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: BuddyColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => _PostMenuSheet(
+        post: _post,
+        targetId: _targetId,
+        messenger: messenger,
+        notifier: notifier,
+        onSave: widget.onSave,
+        onPin: widget.onPin,
+        onDelete: widget.onDelete,
+        onOpenReport: () => _openReportSheet(_post),
+      ),
+    );
+  }
+
+  void _openReportSheet(Post post) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: BuddyColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ReportSheet(post: post),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Engagement reflects the ORIGINAL on repost rows so counts never zero out.
-    final orig = post.isRepost ? post.originalPostData : null;
-    final targetId = orig?.id ?? post.id;
-    final reactionCounts = orig?.reactionCounts ?? post.reactionCounts;
-    final userReaction = orig?.userReaction ?? post.userReaction;
-    final commentCount = orig?.commentCount ?? post.commentCount;
-    final repostCount = orig?.repostCount ?? post.repostCount;
-    final saveCount = orig?.saveCount ?? post.saveCount;
-    final shareCount = orig?.shareCount ?? post.shareCount;
-    final viewCount = orig?.viewCount ?? 0;
+    final viewer = ref.watch(authProvider).profile;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
       padding: const EdgeInsets.all(16),
@@ -60,58 +197,66 @@ class PostCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (post.isRepost)
+          if (_post.isRepost)
             RepostIndicator(
-              reposters: post.reposters,
-              username: post.authorData.displayName,
-              quoteBody: post.quoteBody,
+              reposters: _post.reposters,
+              username: _post.authorData.displayName,
+              quoteBody: _post.quoteBody,
+              viewerReposted: _post.isRepostedByMe,
+              viewerAvatarUrl: viewer?.avatarUrl,
+              viewerDisplayName: viewer?.displayName,
             ),
           _buildHeader(context),
-          if (post.body.isNotEmpty) ...[
+          if (_post.body.isNotEmpty) ...[
             const SizedBox(height: 8),
             _buildBody(context),
           ],
-          if (post.mediaUrls.isNotEmpty || post.media.isNotEmpty) ...[
+          if (_post.mediaUrls.isNotEmpty || _post.media.isNotEmpty) ...[
             const SizedBox(height: 10),
             MediaGallery(
-              urls: post.mediaUrls,
-              media: post.media.isEmpty ? null : post.media,
-              postId: post.id,
+              urls: _post.mediaUrls,
+              media: _post.media.isEmpty ? null : _post.media,
+              postId: _post.id,
             ),
           ],
-          if (post.poll != null) ...[
+          if (_post.poll != null) ...[
             const SizedBox(height: 8),
             PollWidget(
-              poll: post.poll!,
-              postId: post.id,
-              onVote: onPollVote,
+              poll: _post.poll!,
+              postId: _post.id,
+              onVote: widget.onPollVote,
 
             ),
           ],
-          if (post.workoutLogData != null) ...[
+          if (_post.workoutLogData != null) ...[
             const SizedBox(height: 8),
             _buildWorkoutLog(context),
           ],
-          if (post.mealData != null) ...[
+          if (_post.mealData != null) ...[
             const SizedBox(height: 8),
             _buildMealData(context),
           ],
-          if (post.progressData != null) ...[
+          if (_post.progressData != null) ...[
             const SizedBox(height: 8),
             _buildProgressData(context),
           ],
-          AiAnalysisCard(analysis: post.aiAnalysis),
+          AiAnalysisCard(analysis: _post.aiAnalysis),
           const SizedBox(height: 10),
-          _buildActionBar(context, targetId, reactionCounts, userReaction,
-              commentCount, repostCount, saveCount, shareCount, viewCount),
+          _buildActionBar(context),
           const SizedBox(height: 8),
           ReactionBar(
-            counts: reactionCounts,
-            userReaction: userReaction,
-            onReact: (r) => onReact?.call(targetId, r),
-            onUnreact: () => onReact?.call(targetId, ''),
+            counts: _reactionCounts,
+            userReaction: _userReaction,
+            onReact: (r) {
+              _trackPostInteraction('like');
+              widget.onReact?.call(_targetId, r);
+            },
+            onUnreact: () {
+              _trackPostInteraction('unlike');
+              widget.onReact?.call(_targetId, '');
+            },
           ),
-          if (post.gymTagName != null) ...[
+          if (_post.gymTagName != null) ...[
             const SizedBox(height: 6),
             _buildGymTag(),
           ],
@@ -124,23 +269,29 @@ class PostCard extends StatelessWidget {
     return Row(
       children: [
         GestureDetector(
-          onTap: () => onProfileTap?.call(post.authorData.username),
+          onTap: () {
+            _trackPostInteraction('profile');
+            widget.onProfileTap?.call(_post.authorData.username);
+          },
           child: Avatar(
-            src: post.authorData.avatarUrl,
-            alt: post.authorData.displayName,
+            src: _post.authorData.avatarUrl,
+            alt: _post.authorData.displayName,
             size: AvatarSize.md,
-            verificationStatus: post.authorData.verificationStatus,
+            verificationStatus: _post.authorData.verificationStatus,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: GestureDetector(
-            onTap: () => onProfileTap?.call(post.authorData.username),
+            onTap: () {
+              _trackPostInteraction('profile');
+              widget.onProfileTap?.call(_post.authorData.username);
+            },
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  post.authorData.displayName,
+                  _post.authorData.displayName,
                   style: const TextStyle(
                     color: BuddyColors.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -148,7 +299,7 @@ class PostCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '@${post.authorData.username}',
+                  '@${_post.authorData.username}',
                   style: const TextStyle(
                     color: BuddyColors.textSecondary,
                     fontSize: 12,
@@ -159,32 +310,38 @@ class PostCard extends StatelessWidget {
           ),
         ),
         Text(
-          _formatTime(post.createdAt),
+          _formatTime(_post.createdAt),
           style: const TextStyle(
             color: BuddyColors.textSecondary,
             fontSize: 11,
           ),
         ),
         const SizedBox(width: 8),
-        PopupMenuButton<String>(
-          color: BuddyColors.surface,
-          icon: const Icon(Icons.more_horiz, color: BuddyColors.textSecondary, size: 20),
-          onSelected: (value) {
-            switch (value) {
-              case 'save':
-                onSave?.call(post.id);
-              case 'pin':
-                onPin?.call(post.id);
-              case 'delete':
-                onDelete?.call(post.id);
-            }
-          },
-          itemBuilder: (_) => [
-            const PopupMenuItem(value: 'save', child: Text('Save', style: TextStyle(color: BuddyColors.textPrimary))),
-            if (post.isPinned)
-              const PopupMenuItem(value: 'pin', child: Text('Unpin', style: TextStyle(color: BuddyColors.textPrimary))),
-            const PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: BuddyColors.red))),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.visibility_outlined,
+              size: 14,
+              color: BuddyColors.textSecondary,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              _formatCount(_viewCount),
+              key: const ValueKey('post-header-view-count'),
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.more_horiz,
+              color: BuddyColors.textSecondary, size: 20),
+          tooltip: 'Post options',
+          onPressed: _openPostMenu,
         ),
       ],
     );
@@ -192,7 +349,7 @@ class PostCard extends StatelessWidget {
 
   Widget _buildBody(BuildContext context) {
     return Text(
-      post.body,
+      _post.body,
       style: const TextStyle(
         color: BuddyColors.textPrimary,
         fontSize: 15,
@@ -201,66 +358,77 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActionBar(
-    BuildContext context,
-    String targetId,
-    Map<String, int> reactionCounts,
-    String? userReaction,
-    int commentCount,
-    int repostCount,
-    int saveCount,
-    int shareCount,
-    int viewCount,
-  ) {
+  Widget _buildActionBar(BuildContext context) {
     return Row(
       children: [
         _ActionButton(
-          icon: userReaction != null ? Icons.favorite : Icons.favorite_border,
-          color: userReaction != null ? BuddyColors.red : BuddyColors.textSecondary,
-          label: _formatCount(reactionCounts.values.fold(0, (a, b) => a + b)),
-          onTap: () => onReact?.call(targetId, 'fire'),
+          icon: _userReaction != null ? Icons.favorite : Icons.favorite_border,
+          color: _userReaction != null ? BuddyColors.red : BuddyColors.textSecondary,
+          label: _formatCount(_reactionCounts.values.fold(0, (a, b) => a + b)),
+          onTap: () {
+            _trackPostInteraction(
+                _userReaction != null ? 'unlike' : 'like');
+            widget.onReact?.call(_targetId, 'fire');
+          },
         ),
         _ActionButton(
           icon: Icons.chat_bubble_outline,
-          label: _formatCount(commentCount),
-          onTap: () => _handleCommentTap(context, targetId),
+          label: _formatCount(_commentCount),
+          onTap: () => _handleCommentTap(context),
         ),
         _ActionButton(
           icon: Icons.repeat,
-          color: post.isRepostedByMe ? BuddyColors.green : BuddyColors.textSecondary,
-          label: _formatCount(repostCount),
-          onTap: () => onRepost?.call(post.id),
+          color: _post.isRepostedByMe ? BuddyColors.green : BuddyColors.textSecondary,
+          label: _formatCount(_repostCount),
+          onTap: () {
+            _trackPostInteraction(
+                _post.isRepostedByMe ? 'unrepost' : 'repost');
+            widget.onRepost?.call(_post.id);
+          },
         ),
         _ActionButton(
-          icon: post.isSaved ? Icons.bookmark : Icons.bookmark_border,
-          color: post.isSaved ? BuddyColors.green : BuddyColors.textSecondary,
-          label: _formatCount(saveCount),
-          onTap: () => onSave?.call(targetId),
+          icon: _post.isSaved ? Icons.bookmark : Icons.bookmark_border,
+          color: _post.isSaved ? BuddyColors.green : BuddyColors.textSecondary,
+          label: _formatCount(_saveCount),
+          onTap: () {
+            _trackPostInteraction(_post.isSaved ? 'unsave' : 'save');
+            widget.onSave?.call(_targetId);
+          },
         ),
         _ActionButton(
           icon: Icons.visibility_outlined,
-          label: _formatCount(viewCount),
+          label: _formatCount(_viewCount),
           onTap: null,
         ),
         const Spacer(),
         _ActionButton(
           icon: Icons.share_outlined,
-          label: _formatCount(shareCount),
-          onTap: () => onShare?.call(post.id),
+          label: _formatCount(_shareCount),
+          onTap: () {
+            _trackPostInteraction('share');
+            widget.onShare?.call(_post.id);
+          },
         ),
       ],
     );
   }
 
-  void _handleCommentTap(BuildContext context, String targetId) {
-    if (post.commentsDisabled) {
+  void _handleCommentTap(BuildContext context) {
+    if (_post.commentsDisabled) {
       showToast(context, 'Comments are turned off for this post');
       return;
     }
-    onComment?.call(targetId);
+    _trackPostInteraction('comment');
+    AnalyticsService.instance.track(
+      'feed.comment_focus',
+      surface: 'feed',
+      objectType: 'post',
+      objectId: _targetId,
+    );
+    widget.onComment?.call(_targetId);
   }
 
-  Widget _buildWorkoutLog(BuildContext context) {    final data = post.workoutLogData!;
+  Widget _buildWorkoutLog(BuildContext context) {    final data = _post.workoutLogData!;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -291,7 +459,7 @@ class PostCard extends StatelessWidget {
   }
 
   Widget _buildMealData(BuildContext context) {
-    final data = post.mealData!;
+    final data = _post.mealData!;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -344,7 +512,7 @@ class PostCard extends StatelessWidget {
         const Icon(Icons.fitness_center, size: 14, color: BuddyColors.green),
         const SizedBox(width: 4),
         Text(
-          post.gymTagName!,
+          _post.gymTagName!,
           style: const TextStyle(color: BuddyColors.green, fontSize: 12),
         ),
       ],
@@ -367,6 +535,414 @@ class PostCard extends StatelessWidget {
     if (count < 1000) return count.toString();
     if (count < 1000000) return '${(count / 1000).toStringAsFixed(1)}k';
     return '${(count / 1000000).toStringAsFixed(1)}m';
+  }
+}
+
+/// Mobile-native post options sheet: engagement + moderation rows.
+///
+/// Legacy owner rows (save/pin/delete) render only when the host screen
+/// passes those callbacks, preserving PostCard's previous popup behaviour.
+class _PostMenuSheet extends ConsumerWidget {
+  final Post post;
+  final String targetId;
+  final ScaffoldMessengerState messenger;
+  final FeedNotifier notifier;
+  final void Function(String postId)? onSave;
+  final void Function(String postId)? onPin;
+  final void Function(String postId)? onDelete;
+  final VoidCallback onOpenReport;
+
+  const _PostMenuSheet({
+    required this.post,
+    required this.targetId,
+    required this.messenger,
+    required this.notifier,
+    this.onSave,
+    this.onPin,
+    this.onDelete,
+    required this.onOpenReport,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    Post live = post;
+    for (final p in ref.watch(feedProvider).posts) {
+      if (p.id == post.id) {
+        live = p;
+        break;
+      }
+    }
+    final orig = live.isRepost ? live.originalPostData : null;
+    final isLiked = (orig?.userReaction ?? live.userReaction) != null;
+    final username = live.authorData.username;
+
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Center(
+              child: SizedBox(
+                width: 40,
+                height: 4,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: BuddyColors.textSecondary,
+                    borderRadius: BorderRadius.all(Radius.circular(2)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _MenuRow(
+              icon: isLiked ? Icons.favorite : Icons.favorite_border,
+              label: isLiked ? 'Unlike' : 'Like',
+              onTap: () {
+                Navigator.of(context).pop();
+                notifier.toggleReactionForRow(
+                  rowId: post.id,
+                  targetId: targetId,
+                  emoji: 'fire',
+                );
+              },
+            ),
+            _MenuRow(
+              icon: Icons.visibility_off,
+              label: 'Not interested',
+              subtitle: 'See fewer posts like this',
+              onTap: () => _hidePost(context),
+            ),
+            _MenuRow(
+              icon: Icons.flag_outlined,
+              label: 'Report',
+              subtitle: 'Report this post to moderators',
+              onTap: () {
+                Navigator.of(context).pop();
+                onOpenReport();
+              },
+            ),
+            _MenuRow(
+              icon: Icons.block,
+              label: 'Block @$username',
+              subtitle: 'They won\'t be able to find or contact you',
+              onTap: () => _confirmBlock(context, username),
+            ),
+            _MenuRow(
+              icon: Icons.person_off_outlined,
+              label: 'Don\'t suggest this creator',
+              subtitle: 'Hide all posts from @$username',
+              onTap: () => _muteAuthor(context, username),
+            ),
+            if (onSave != null)
+              _MenuRow(
+                icon: live.isSaved ? Icons.bookmark : Icons.bookmark_border,
+                label: live.isSaved ? 'Unsave' : 'Save',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onSave!(targetId);
+                },
+              ),
+            if (onPin != null)
+              _MenuRow(
+                icon: Icons.push_pin_outlined,
+                label: live.isPinned ? 'Unpin' : 'Pin',
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onPin!(post.id);
+                },
+              ),
+            if (onDelete != null)
+              _MenuRow(
+                icon: Icons.delete_outline,
+                iconColor: BuddyColors.red,
+                label: 'Delete',
+                destructive: true,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  onDelete!(post.id);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _hidePost(BuildContext context) async {
+    Navigator.of(context).pop();
+    final err = await notifier.hidePostById(post.id);
+    if (err != null) {
+      // Defensive path (e.g. 404 while the backend rolls out): the provider
+      // restored the card, so only surface the server message.
+      messenger.showSnackBar(SnackBar(content: Text(err)));
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: const Text('Post hidden. You\'ll see fewer like this.'),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            final undoErr = await notifier.unhidePost(post);
+            if (undoErr != null) {
+              messenger.showSnackBar(SnackBar(content: Text(undoErr)));
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmBlock(BuildContext context, String username) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: BuddyColors.surface,
+        title: Text(
+          'Block @$username?',
+          style: const TextStyle(color: BuddyColors.textPrimary),
+        ),
+        content: const Text(
+          'They won\'t be able to find your profile or contact you. '
+          'Their posts will be removed from your feed.',
+          style: TextStyle(color: BuddyColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Block',
+                style: TextStyle(color: BuddyColors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+    Navigator.of(context).pop();
+    final err = await notifier.blockAuthor(username);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(err ?? '@$username blocked.'),
+      ),
+    );
+  }
+
+  Future<void> _muteAuthor(BuildContext context, String username) async {
+    Navigator.of(context).pop();
+    final err = await notifier.muteAuthor(username);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(err ?? 'You won\'t see posts from @$username anymore.'),
+      ),
+    );
+  }
+}
+
+/// Report flow: reason picker (backend REPORT_REASONS values) + optional
+/// details, submitted to POST /moderation/reports/.
+class _ReportSheet extends ConsumerStatefulWidget {
+  final Post post;
+
+  const _ReportSheet({required this.post});
+
+  @override
+  ConsumerState<_ReportSheet> createState() => _ReportSheetState();
+}
+
+class _ReportSheetState extends ConsumerState<_ReportSheet> {
+  String _reason = 'spam';
+  final TextEditingController _details = TextEditingController();
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _details.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    final notifier = ref.read(feedProvider.notifier);
+    // target_user is a user PK server-side; fall back to the username when
+    // the row didn't carry an id.
+    final target = widget.post.authorData.userId?.isNotEmpty == true
+        ? widget.post.authorData.userId!
+        : widget.post.authorData.username;
+    final err = await notifier.submitReport(
+      targetUser: target,
+      reason: _reason,
+      description: _details.text.trim(),
+      contentUrl: '/feed/${widget.post.id}',
+    );
+    if (!mounted) return;
+    setState(() => _submitting = false);
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(err ?? 'Thanks — our moderators will take a look.'),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final username = widget.post.authorData.username;
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          12,
+          16,
+          20 + MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Center(
+              child: SizedBox(
+                width: 40,
+                height: 4,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: BuddyColors.textSecondary,
+                    borderRadius: BorderRadius.all(Radius.circular(2)),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Report @$username\'s post',
+              style: const TextStyle(
+                color: BuddyColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Why are you reporting this?',
+              style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: SingleChildScrollView(
+                child: RadioGroup<String>(
+                  groupValue: _reason,
+                  onChanged: (v) {
+                    if (_submitting) return;
+                    setState(() => _reason = v ?? _reason);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final reason in FeedNotifier.reportReasons)
+                        RadioListTile<String>(
+                          value: reason,
+                          title: Text(
+                            _reportReasonLabels[reason] ?? reason,
+                            style: const TextStyle(
+                              color: BuddyColors.textPrimary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          activeColor: BuddyColors.green,
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _details,
+              enabled: !_submitting,
+              maxLines: 2,
+              maxLength: 1000,
+              style: const TextStyle(color: BuddyColors.textPrimary),
+              decoration: const InputDecoration(
+                hintText: 'Add details (optional)',
+                hintStyle: TextStyle(color: BuddyColors.textSecondary),
+                enabledBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: BuddyColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: BuddyColors.green),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: BuddyColors.green,
+                  foregroundColor: BuddyColors.black,
+                ),
+                onPressed: _submitting ? null : _submit,
+                child: Text(_submitting ? 'Submitting…' : 'Submit report'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MenuRow extends StatelessWidget {
+  final IconData icon;
+  final Color? iconColor;
+  final String label;
+  final String? subtitle;
+  final bool destructive;
+  final VoidCallback? onTap;
+
+  const _MenuRow({
+    required this.icon,
+    required this.label,
+    this.iconColor,
+    this.subtitle,
+    this.destructive = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      leading: Icon(icon, color: iconColor ?? BuddyColors.green),
+      title: Text(
+        label,
+        style: TextStyle(
+          color:
+              destructive ? BuddyColors.red : BuddyColors.textPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: subtitle == null
+          ? null
+          : Text(
+              subtitle!,
+              style: const TextStyle(
+                color: BuddyColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+      onTap: onTap,
+    );
   }
 }
 

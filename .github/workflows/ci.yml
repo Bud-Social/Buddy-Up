@@ -158,6 +158,11 @@ jobs:
       # Compile validation only — no signing, no simulator test, no upload.
       # Pod install runs as part of the build; no google-services.json is
       # present so Firebase degrades (see push_notification_service.dart).
+      # CODE_SIGNING_ALLOWED=NO + CODE_SIGNING_REQUIRED=NO fully disable
+      # Xcode's provisioning checks which can still trigger even with
+      # --no-codesign on some macOS runner / Xcode version combinations.
       - name: Build iOS (no codesign)
         working-directory: buddy_up_flutter
-        run: flutter build ios --no-codesign --release
+        run: |
+          flutter build ios --no-codesign --release \
+            --xcode-options="CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO DEVELOPMENT_TEAM=''"

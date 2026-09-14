@@ -94,7 +94,7 @@ def transcribe(media_url: str) -> dict:
     if not media_url:
         raise ValueError('media_url is required.')
 
-    model = _load_model()  # ImportError propagates → router returns 503
+    _load_model()  # ImportError propagates → router returns 503
     tmp_path = _download_to_temp(media_url)
     try:
         return transcribe_path(tmp_path)

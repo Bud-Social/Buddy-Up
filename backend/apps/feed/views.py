@@ -18,7 +18,7 @@ from rest_framework.response import Response
 
 from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
-from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, PostShare, Sound
+from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, PostShare, Sound, HiddenPost, MutedAuthor
 from .media_types import ALLOWED_EXTS, guess_media_type, url_extension
 from .serializers import (
     PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer,
@@ -27,7 +27,7 @@ from .serializers import (
     SavePostSerializer, PollCreateSerializer, OptionVoteSerializer,
     SoundSerializer, SoundCreateSerializer,
 )
-from apps.profiles.models import BuddyRelationship
+from apps.profiles.models import BuddyRelationship, Profile
 from apps.ai.audit import audit_ai_call
 from . import ai_ranking
 from apps.ai.client import ai_post
@@ -637,6 +637,21 @@ def _dedupe_reposts_for_viewer(posts, viewer_profile):
     ]
 
 
+def _apply_hide_mute_exclusions(queryset, user_profile):
+    """Exclude viewer-hidden posts and muted authors from a discovery queryset.
+
+    Applied to every FeedView discovery tab (for_you, following, videos,
+    videos_following, meals, progress, nearby) AND the ranked pool (which is
+    built from the same gated queryset). Subquery-based so it composes with
+    the existing audience/age-gating filters without extra round trips.
+    """
+    return queryset.exclude(
+        id__in=HiddenPost.objects.filter(viewer=user_profile).values('post_id')
+    ).exclude(
+        author_id__in=MutedAuthor.objects.filter(muter=user_profile).values('muted_id')
+    )
+
+
 def _next_link(request, cursor):
     """Build a pagination URL for the ranked feed, preserving other query params."""
     from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
@@ -683,7 +698,6 @@ def _rank_for_you(request, user_profile, queryset, buddy_ids, followed_ids, gym_
         key=lambda p: (-int(p.is_pinned), -score_by_id.get(str(p.id), {}).get('ml_score', 0.0)),
     )
 
-    reposted_original_ids = {p.original_post_id for p in ordered if p.is_repost and p.original_post_id}
     deduped = _dedupe_reposts_for_viewer(ordered, user_profile)
 
     # Persist rank + algorithm context per user for a short window so
@@ -777,6 +791,7 @@ class FeedView(views.APIView):
                     default=db_models.Value(10),
                 ),
             ).order_by('-rank', '-created_at')
+            queryset = _apply_hide_mute_exclusions(queryset, user_profile)
             queryset = gate_mature_queryset(request, queryset)
             # Video-ness is verified in Python over the pool only — the pool
             # itself is already narrowed by post_type below.
@@ -871,6 +886,8 @@ class FeedView(views.APIView):
                 ),
             ).order_by('-is_pinned', '-rank', '-created_at')
 
+            queryset = _apply_hide_mute_exclusions(queryset, user_profile)
+
             # Sprint B1: personalised ML ranking (additive; falls back to DB ranking)
             gated_queryset = gate_mature_queryset(request, queryset)
             ranked_response = _rank_for_you(
@@ -879,6 +896,10 @@ class FeedView(views.APIView):
             if ranked_response is not None:
                 return ranked_response
 
+        # following / meals / progress / nearby land here (for_you only falls
+        # through when the ranked pool is empty; its exclusions are already
+        # applied above, re-applying is a harmless no-op).
+        queryset = _apply_hide_mute_exclusions(queryset, user_profile)
         queryset = gate_mature_queryset(request, queryset)
 
         paginator = CursorPagination()
@@ -1725,6 +1746,89 @@ class PostViewRecordView(views.APIView):
             'message': 'View recorded.' if counted else 'View already counted.',
             'errors': None,
             'pagination': None,
+        })
+
+
+class PostHideView(views.APIView):
+    """POST hide / DELETE unhide a post for the viewer (Bud Press menu).
+
+    Toggle semantics: POST hides idempotently ({hidden: true}), DELETE
+    unhides idempotently ({hidden: false}). Uses the shared engagement gate
+    so hides on removed posts 410 like share/view. Hidden posts vanish from
+    every FeedView discovery tab for this viewer only.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, post_id):
+        post, error = _engagement_post_or_error_response(request, post_id)
+        if error is not None:
+            return error
+        HiddenPost.objects.get_or_create(viewer=request.user.profile, post=post)
+        return Response({
+            'success': True,
+            'data': {'hidden': True},
+            'message': 'Post hidden.',
+            'errors': None,
+            'pagination': None,
+        })
+
+    def delete(self, request, post_id):
+        post, error = _engagement_post_or_error_response(request, post_id)
+        if error is not None:
+            return error
+        HiddenPost.objects.filter(viewer=request.user.profile, post=post).delete()
+        return Response({
+            'success': True,
+            'data': {'hidden': False},
+            'message': 'Post unhidden.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class MuteAuthorView(views.APIView):
+    """POST .../<username>/mute/ — "Don't suggest this creator".
+
+    Mirrors BlockUserView conventions (400 on self, standard envelope) but
+    is deliberately lighter than block: no buddy/follow relationship is
+    deleted — the muted author's posts are only excluded from the muter's
+    FeedView discovery tabs.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, username):
+        target = get_object_or_404(Profile, username=username)
+        if target == request.user.profile:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You cannot mute yourself.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        MutedAuthor.objects.get_or_create(
+            muter=request.user.profile,
+            muted=target,
+        )
+        return Response({
+            'success': True, 'data': None,
+            'message': f'@{target.username} muted.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class UnmuteAuthorView(views.APIView):
+    """DELETE .../<username>/unmute/ — undo a MuteAuthorView mute."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, username):
+        target = get_object_or_404(Profile, username=username)
+        MutedAuthor.objects.filter(
+            muter=request.user.profile,
+            muted=target,
+        ).delete()
+        return Response({
+            'success': True, 'data': None,
+            'message': f'@{target.username} unmuted.',
+            'errors': None, 'pagination': None,
         })
 
 

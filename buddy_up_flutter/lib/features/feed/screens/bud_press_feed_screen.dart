@@ -8,6 +8,7 @@ import 'package:media_kit_video/media_kit_video.dart';
 
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/api/api_client.dart';
+import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
 import '../../../data/repositories/profile_repository.dart';
@@ -19,6 +20,7 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/toast.dart';
 import '../providers/feed_provider.dart';
+import '../widgets/repost_indicator.dart';
 import '../widgets/share_sheet.dart';
 
 /// Full-screen vertical video feed (Bud Press) over the `videos` tab posts.
@@ -142,7 +144,7 @@ class _BudPressFeedScreenState extends ConsumerState<BudPressFeedScreen> {
                   muted: _muted,
                   onToggleMute: () => setState(() => _muted = !_muted),
                 )
-              : _BudPressPhotoPage(post: post);
+              : _BudPressPhotoPage(post: post, active: i == _index);
         },
       ),
     );
@@ -195,6 +197,13 @@ class _PostMetaState extends ConsumerState<_PostMeta> {
       _pending = true;
       _following = !_following;
     });
+    AnalyticsService.instance.track(
+      'feed.post_interaction',
+      surface: 'bud_press',
+      objectType: 'post',
+      objectId: _post.id,
+      properties: {'action': _following ? 'follow' : 'unfollow'},
+    );
     try {
       final repo = ProfileRepository(ApiClient().dio);
       if (_following) {
@@ -209,9 +218,25 @@ class _PostMetaState extends ConsumerState<_PostMeta> {
     }
   }
 
+  void _trackProfileTap() {
+    AnalyticsService.instance.track(
+      'feed.post_interaction',
+      surface: 'bud_press',
+      objectType: 'post',
+      objectId: _post.id,
+      properties: {'action': 'profile'},
+    );
+    widget.onProfileTap();
+  }
+
   @override
   Widget build(BuildContext context) {
     final post = _post;
+    final viewer = ref.watch(authProvider).profile;
+    // Engagement reflects the ORIGINAL on repost rows so counts never zero out.
+    final viewCount = post.isRepost && post.originalPostData != null
+        ? post.originalPostData!.viewCount
+        : post.viewCount;
     return SafeArea(
       top: false,
       child: Padding(
@@ -220,10 +245,19 @@ class _PostMetaState extends ConsumerState<_PostMeta> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (post.isRepost)
+              RepostIndicator(
+                reposters: post.reposters,
+                username: post.authorData.displayName,
+                quoteBody: post.quoteBody,
+                viewerReposted: post.isRepostedByMe,
+                viewerAvatarUrl: viewer?.avatarUrl,
+                viewerDisplayName: viewer?.displayName,
+              ),
             Row(
               children: [
                 GestureDetector(
-                  onTap: widget.onProfileTap,
+                  onTap: _trackProfileTap,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -266,7 +300,7 @@ class _PostMetaState extends ConsumerState<_PostMeta> {
                         color: Colors.white70, size: 13),
                     const SizedBox(width: 3),
                     Text(
-                      _count(post.viewCount),
+                      _count(viewCount),
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 11,
@@ -314,6 +348,7 @@ class _PostMetaState extends ConsumerState<_PostMeta> {
 /// Right-rail action buttons (like / repost / save / comment / share / views).
 class _ActionRail extends StatelessWidget {
   final Post post;
+  final String? viewerAvatarUrl;
   final VoidCallback onLike;
   final VoidCallback onRepost;
   final VoidCallback onSave;
@@ -322,6 +357,7 @@ class _ActionRail extends StatelessWidget {
 
   const _ActionRail({
     required this.post,
+    this.viewerAvatarUrl,
     required this.onLike,
     required this.onRepost,
     required this.onSave,
@@ -338,6 +374,7 @@ class _ActionRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final likes = post.reactionCounts.values.fold(0, (a, b) => a + b);
+    final showRepostBadge = (viewerAvatarUrl ?? '').isNotEmpty;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -355,11 +392,44 @@ class _ActionRail extends StatelessWidget {
           onTap: onComment,
         ),
         const SizedBox(height: 18),
-        _RailButton(
-          icon: Icons.repeat,
-          color: post.isRepostedByMe ? BuddyColors.green : Colors.white,
-          label: _count(post.repostCount),
-          onTap: onRepost,
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            _RailButton(
+              icon: Icons.repeat,
+              color: post.isRepostedByMe ? BuddyColors.green : Colors.white,
+              label: _count(post.repostCount),
+              onTap: onRepost,
+            ),
+            // Viewer avatar pops in on repost, animates out on unrepost.
+            if (showRepostBadge)
+              Positioned(
+                right: -4,
+                top: -6,
+                child: AnimatedScale(
+                  scale: post.isRepostedByMe ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOutBack,
+                  child: AnimatedOpacity(
+                    opacity: post.isRepostedByMe ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      key: const ValueKey('bud-press-repost-avatar'),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: BuddyColors.green, width: 1.5),
+                      ),
+                      child: Avatar(
+                        src: viewerAvatarUrl,
+                        alt: '?',
+                        size: AvatarSize.xs,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
         const SizedBox(height: 18),
         _RailButton(
@@ -434,11 +504,35 @@ void _openComments(BuildContext context, Post post) {
     objectId: post.id,
     properties: {'feed_tab': 'videos'},
   );
+  AnalyticsService.instance.track(
+    'feed.post_interaction',
+    surface: 'bud_press',
+    objectType: 'post',
+    objectId: post.id,
+    properties: {'action': 'comment'},
+  );
+  AnalyticsService.instance.track(
+    'feed.comment_focus',
+    surface: 'bud_press',
+    objectType: 'post',
+    objectId: post.id,
+  );
   context.push('/feed/${post.id}');
+}
+
+void _trackRailInteraction(Post post, String action) {
+  AnalyticsService.instance.track(
+    'feed.post_interaction',
+    surface: 'bud_press',
+    objectType: 'post',
+    objectId: post.id,
+    properties: {'action': action},
+  );
 }
 
 Future<void> _reactToPost(WidgetRef ref, Post post) async {
   if (post.userReaction != null) return;
+  _trackRailInteraction(post, 'like');
   try {
     final raw = await ref.read(feedRepositoryProvider).react(
           post.id,
@@ -452,6 +546,7 @@ Future<void> _reactToPost(WidgetRef ref, Post post) async {
 
 Future<void> _savePost(WidgetRef ref, Post post) async {
   final repo = ref.read(feedRepositoryProvider);
+  _trackRailInteraction(post, post.isSaved ? 'unsave' : 'save');
   try {
     if (post.isSaved) {
       await repo.unsave(post.id);
@@ -496,6 +591,8 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
   int _lastTickMs = 0;
   Offset? _dragStart;
   final TrackAudioMixer _mixer = TrackAudioMixer();
+  DateTime? _focusStart;
+  String? _focusPostId;
 
   Post get _post => widget.post;
   PostMedia get _media => _post.media.isNotEmpty
@@ -509,6 +606,7 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
   void initState() {
     super.initState();
     _setupPlayer();
+    if (widget.active) _beginFocus();
   }
 
   void _setupPlayer() {
@@ -655,6 +753,8 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
 
   Future<void> _handleReact() async {
     const emoji = '💪';
+    _trackRailInteraction(
+        _post, _engagementReaction == emoji ? 'unlike' : 'like');
     final counts = Map<String, int>.from(_engagementCounts);
     final prevReaction = _engagementReaction;
     final prevCounts = Map<String, int>.from(counts);
@@ -684,26 +784,62 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
     }
   }
 
-  void _handleSave() => _savePost(ref, _post);
+  void _handleSave() {
+    _trackRailInteraction(_post, _post.isSaved ? 'unsave' : 'save');
+    _savePost(ref, _post);
+  }
 
   void _handleRepost() {
+    _trackRailInteraction(
+        _post, _post.isRepostedByMe ? 'unrepost' : 'repost');
     ref.read(feedProvider.notifier).toggleRepost(_post.id);
   }
 
-  void _handleShare() => ShareSheet.show(context, _post);
+  void _handleShare() {
+    _trackRailInteraction(_post, 'share');
+    ShareSheet.show(context, _post);
+  }
 
   void _handleComment() => _openComments(context, _post);
+
+  /// Visibility-based focus time for the active page, reported when the page
+  /// loses focus or is disposed. Single track call, no per-frame work.
+  void _beginFocus() {
+    _focusStart = DateTime.now();
+    _focusPostId = widget.post.id;
+  }
+
+  void _reportFocus() {
+    final start = _focusStart;
+    _focusStart = null;
+    if (start == null) return;
+    final ms = DateTime.now().difference(start).inMilliseconds;
+    if (ms < 250) return;
+    AnalyticsService.instance.track(
+      'feed.post_focus',
+      surface: 'bud_press',
+      objectType: 'post',
+      objectId: _focusPostId ?? widget.post.id,
+      properties: {'focus_ms': ms, 'view_recorded': _viewRecorded},
+    );
+  }
 
   @override
   void didUpdateWidget(covariant _BudPressVideoPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active != oldWidget.active) {
       if (widget.active) {
+        _beginFocus();
         _startPlayback();
       } else {
+        _reportFocus();
         _player?.pause();
         setState(() => _playing = false);
       }
+    }
+    if (widget.post.id != oldWidget.post.id && widget.active) {
+      _reportFocus();
+      _beginFocus();
     }
     if (widget.muted != oldWidget.muted) {
       _player?.setVolume(widget.muted ? 0 : _soundVolume);
@@ -721,6 +857,7 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
 
   @override
   void dispose() {
+    _reportFocus();
     _positionSub?.cancel();
     _player?.dispose();
     unawaited(_mixer.dispose());
@@ -763,6 +900,7 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
               final dy = (d.globalPosition.dy - start.dy).abs();
               // Deliberate left swipe opens the creator's profile.
               if (dx < -80 && dx.abs() > dy * 1.5) {
+                _trackRailInteraction(_post, 'profile');
                 context.push('/${_post.authorData.username}');
               }
             },
@@ -793,6 +931,7 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
           bottom: 120,
           child: _ActionRail(
             post: engagement,
+            viewerAvatarUrl: ref.watch(authProvider).profile?.avatarUrl,
             onLike: _handleReact,
             onRepost: _handleRepost,
             onSave: _handleSave,
@@ -845,7 +984,10 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
           bottom: 0,
           child: _PostMeta(
             post: _post,
-            onProfileTap: () => context.push('/${_post.authorData.username}'),
+            onProfileTap: () {
+              _trackRailInteraction(_post, 'profile');
+              context.push('/${_post.authorData.username}');
+            },
           ),
         ),
         // Progress bar.
@@ -883,8 +1025,9 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
 /// counter. No inline video here — video posts take the player path.
 class _BudPressPhotoPage extends ConsumerStatefulWidget {
   final Post post;
+  final bool active;
 
-  const _BudPressPhotoPage({required this.post});
+  const _BudPressPhotoPage({required this.post, this.active = false});
 
   @override
   ConsumerState<_BudPressPhotoPage> createState() => _BudPressPhotoPageState();
@@ -893,6 +1036,10 @@ class _BudPressPhotoPage extends ConsumerStatefulWidget {
 class _BudPressPhotoPageState extends ConsumerState<_BudPressPhotoPage> {
   final PageController _pageController = PageController();
   int _page = 0;
+  Timer? _viewTimer;
+  DateTime? _focusStart;
+  String? _focusPostId;
+  bool _viewRecorded = false;
 
   Post get _post => widget.post;
 
@@ -904,9 +1051,70 @@ class _BudPressPhotoPageState extends ConsumerState<_BudPressPhotoPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.active) _beginFocus();
+  }
+
+  @override
+  void didUpdateWidget(covariant _BudPressPhotoPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      _beginFocus();
+    } else if (!widget.active && oldWidget.active) {
+      _reportFocus();
+    }
+    if (widget.post.id != oldWidget.post.id && widget.active) {
+      _reportFocus();
+      _beginFocus();
+    }
+  }
+
+  /// Same 2s qualified-view gate as video pages and feed cards.
+  void _beginFocus() {
+    _viewTimer?.cancel();
+    _viewRecorded = false;
+    _focusStart = DateTime.now();
+    _focusPostId = widget.post.id;
+    _viewTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted || !widget.active) return;
+      _viewRecorded = true;
+      ref.read(feedProvider.notifier).recordViewById(widget.post.id);
+    });
+  }
+
+  void _reportFocus() {
+    _viewTimer?.cancel();
+    final start = _focusStart;
+    _focusStart = null;
+    if (start == null) return;
+    final ms = DateTime.now().difference(start).inMilliseconds;
+    if (ms < 250) return;
+    AnalyticsService.instance.track(
+      'feed.post_focus',
+      surface: 'bud_press',
+      objectType: 'post',
+      objectId: _focusPostId ?? widget.post.id,
+      properties: {'focus_ms': ms, 'view_recorded': _viewRecorded},
+    );
+  }
+
+  @override
   void dispose() {
+    _viewTimer?.cancel();
+    _reportFocus();
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _handleRepost() {
+    _trackRailInteraction(_post, _post.isRepostedByMe ? 'unrepost' : 'repost');
+    ref.read(feedProvider.notifier).toggleRepost(_post.id);
+  }
+
+  void _handleShare() {
+    _trackRailInteraction(_post, 'share');
+    ShareSheet.show(context, _post);
   }
 
   @override
@@ -958,11 +1166,12 @@ class _BudPressPhotoPageState extends ConsumerState<_BudPressPhotoPage> {
           bottom: 120,
           child: _ActionRail(
             post: post,
+            viewerAvatarUrl: ref.watch(authProvider).profile?.avatarUrl,
             onLike: () => _reactToPost(ref, post),
-            onRepost: () => ref.read(feedProvider.notifier).toggleRepost(post.id),
+            onRepost: _handleRepost,
             onSave: () => _savePost(ref, post),
             onComment: () => _openComments(context, post),
-            onShare: () => ShareSheet.show(context, post),
+            onShare: _handleShare,
           ),
         ),
         Positioned(
@@ -971,7 +1180,10 @@ class _BudPressPhotoPageState extends ConsumerState<_BudPressPhotoPage> {
           bottom: 0,
           child: _PostMeta(
             post: post,
-            onProfileTap: () => context.push('/${post.authorData.username}'),
+            onProfileTap: () {
+              _trackRailInteraction(post, 'profile');
+              context.push('/${post.authorData.username}');
+            },
           ),
         ),
       ],

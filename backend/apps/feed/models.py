@@ -322,3 +322,48 @@ class PostShare(TimestampedModel):
 
     def __str__(self):
         return f'{self.code} → {self.post_id}'
+
+
+class HiddenPost(TimestampedModel):
+    """Viewer-scoped post hide ("Not interested") for Bud Press discovery.
+
+    Hides the post from ALL FeedView discovery tabs for this viewer only.
+    The post itself is untouched (no counters, no moderation side effects).
+    """
+
+    viewer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='hidden_posts')
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='hidden_by')
+
+    class Meta:
+        db_table = 'feed_hidden_post'
+        unique_together = ('viewer', 'post')
+        indexes = [
+            models.Index(fields=['viewer', '-created_at']),
+            models.Index(fields=['post']),
+        ]
+
+    def __str__(self):
+        return f'{self.viewer_id} hides {self.post_id}'
+
+
+class MutedAuthor(TimestampedModel):
+    """Viewer-scoped author mute ("Don't suggest this creator").
+
+    Lighter than block: no buddy/follow relationship is touched — the
+    muted author's posts are only excluded from the muter's FeedView
+    discovery tabs (same pool as HiddenPost).
+    """
+
+    muter = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='authors_muted')
+    muted = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='muted_by')
+
+    class Meta:
+        db_table = 'feed_muted_author'
+        unique_together = ('muter', 'muted')
+        indexes = [
+            models.Index(fields=['muter', '-created_at']),
+            models.Index(fields=['muted']),
+        ]
+
+    def __str__(self):
+        return f'{self.muter_id} mutes {self.muted_id}'

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { RichText } from '@/components/ui/RichText';
 import { feedApi } from '@/api';
+import { track } from '@/lib/analytics';
 import type { Comment } from '@/types';
 
 interface CommentSheetProps {
@@ -41,6 +42,7 @@ export function CommentSheet({ postId, isOpen, onClose }: CommentSheetProps) {
       const res = await feedApi.comment(postId, { body: body.trim() });
       setComments((prev) => [res.data as unknown as Comment, ...prev]);
       setBody('');
+      track('feed.comment_submit', { surface: 'feed', object_type: 'post', object_id: postId });
     } catch {} finally { setIsLoading(false); }
   };
 

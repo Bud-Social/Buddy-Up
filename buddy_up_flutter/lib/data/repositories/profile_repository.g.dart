@@ -187,10 +187,10 @@ class _ProfileRepository implements ProfileRepository {
     final _result = await _dio.fetch<Map<String, dynamic>>(_options);
     late Map<String, dynamic> _value;
     try {
-      _value = _result.data!.map(
-        (k, dynamic v) =>
-            MapEntry(k, dynamic.fromJson(v as Map<String, dynamic>)),
-      );
+      // Hand-patched (was non-compiling `dynamic.fromJson`): retrofit_generator
+      // 10.2.8 mis-emits `Future<Map<String, dynamic>>` parsing. This matches
+      // what a fixed generator emits; safe to overwrite on regen.
+      _value = Map<String, dynamic>.from(_result.data!);
     } on Object catch (e, s) {
       errorLogger?.logError(e, s, _options, response: _result);
       rethrow;
