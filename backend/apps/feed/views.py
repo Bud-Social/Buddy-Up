@@ -1833,10 +1833,22 @@ class UnmuteAuthorView(views.APIView):
 
 
 class CreatorInsightsView(views.APIView):
-    """GET /api/v1/feed/creator/insights/ — per-post aggregates for the author."""
+    """GET /api/v1/feed/creator/insights/ — per-post aggregates for the author.
+
+    Returns engagement aggregates (views/likes/comments/reposts/saves/shares)
+    plus attention metrics derived from the `feed.post_focus` behavioral
+    events: per-post focus sessions, total focus/watch time and average focus
+    duration. For video posts the in-view focus duration is the watch-time
+    signal (the fullscreen Bud Press player emits focus events while playing),
+    so `watch_ms` is the focus-time sum on video posts. All attention fields
+    are additive and defensive — absent events simply yield zeros.
+    """
+
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        from apps.analytics.models import AnalyticsEvent
+
         profile = request.user.profile
         posts = (
             Post.objects.filter(author=profile, is_deleted=False)
@@ -1848,23 +1860,142 @@ class CreatorInsightsView(views.APIView):
             )
             .order_by('-created_at')
         )
-        items = [
-            {
-                'post_id': str(p.id),
-                'views': p.view_count,
-                'likes': p.likes_agg,
-                'comments': p.comments_agg,
-                'reposts': p.reposts_agg,
-                'saves': p.saves_agg,
-                'shares': p.share_count,
-                'created_at': p.created_at.isoformat(),
-                'visibility': p.visibility,
-            }
-            for p in posts
-        ]
+
+        # Aggregate focus/watch-time events for all of the author's posts in
+        # one query. object_id is stored as the post UUID string.
+        post_ids = [str(p.id) for p in posts]
+        focus_rows = (
+            AnalyticsEvent.objects.filter(
+                event_name='feed.post_focus',
+                object_id__in=post_ids,
+            )
+            .values_list('object_id', 'properties')
+            if post_ids else []
+        )
+        focus_by_post: dict[str, dict[str, int]] = {}
+        for object_id, props in focus_rows:
+            duration = 0
+            if isinstance(props, dict):
+                raw = props.get('duration_ms')
+                if isinstance(raw, (int, float)) and raw > 0:
+                    duration = int(raw)
+            if duration <= 0:
+                # Malformed/zero-duration rows are not real focus sessions.
+                continue
+            bucket = focus_by_post.setdefault(object_id, {'sessions': 0, 'total_ms': 0})
+            bucket['sessions'] += 1
+            bucket['total_ms'] += duration
+
+        # Playback heartbeats (feed.video_watch, emitted every few seconds of
+        # actual video playback) are the precise watch-time signal.
+        heartbeat_rows = (
+            AnalyticsEvent.objects.filter(
+                event_name='feed.video_watch',
+                object_id__in=post_ids,
+            )
+            .values_list('object_id', 'properties')
+            if post_ids else []
+        )
+        watch_by_post: dict[str, dict[str, int]] = {}
+        for object_id, props in heartbeat_rows:
+            delta = 0
+            if isinstance(props, dict):
+                raw = props.get('delta_ms')
+                if isinstance(raw, (int, float)) and raw > 0:
+                    delta = int(raw)
+            if delta <= 0:
+                continue
+            bucket = watch_by_post.setdefault(object_id, {'beats': 0, 'total_ms': 0})
+            bucket['beats'] += 1
+            bucket['total_ms'] += delta
+
+        items = []
+        totals = {
+            'views': 0, 'likes': 0, 'comments': 0, 'reposts': 0,
+            'saves': 0, 'shares': 0, 'interactions': 0,
+            'focus_sessions': 0, 'watch_ms': 0, 'total_focus_ms': 0,
+            'watch_heartbeats': 0,
+        }
+        for p in posts:
+            pid = str(p.id)
+            focus = focus_by_post.get(pid, {'sessions': 0, 'total_ms': 0})
+            sessions = focus['sessions']
+            total_ms = focus['total_ms']
+            avg_ms = int(round(total_ms / sessions)) if sessions > 0 else 0
+            # Watch time prefers precise playback heartbeats; falls back to the
+            # focus-time sum for video posts viewed before the heartbeat landed.
+            is_video = p.post_type in ('short_video', 'long_video')
+            beats = watch_by_post.get(pid, {'beats': 0, 'total_ms': 0})
+            if beats['total_ms'] > 0:
+                watch_ms = beats['total_ms']
+            elif is_video:
+                watch_ms = total_ms
+            else:
+                watch_ms = 0
+            interactions = (
+                p.likes_agg + p.comments_agg + p.reposts_agg
+                + p.saves_agg + (p.share_count or 0)
+            )
+
+            totals['views'] += p.view_count
+            totals['likes'] += p.likes_agg
+            totals['comments'] += p.comments_agg
+            totals['reposts'] += p.reposts_agg
+            totals['saves'] += p.saves_agg
+            totals['shares'] += p.share_count or 0
+            totals['interactions'] += interactions
+            totals['focus_sessions'] += sessions
+            totals['total_focus_ms'] += total_ms
+            totals['watch_ms'] += watch_ms
+            totals['watch_heartbeats'] += beats['beats']
+
+            items.append(
+                {
+                    'post_id': pid,
+                    'views': p.view_count,
+                    'likes': p.likes_agg,
+                    'comments': p.comments_agg,
+                    'reposts': p.reposts_agg,
+                    'saves': p.saves_agg,
+                    'shares': p.share_count,
+                    'interactions': interactions,
+                    'focus_sessions': sessions,
+                    'total_focus_ms': total_ms,
+                    'avg_focus_ms': avg_ms,
+                    'watch_ms': watch_ms,
+                    'watch_heartbeats': beats['beats'],
+                    'created_at': p.created_at.isoformat(),
+                    'visibility': p.visibility,
+                }
+            )
+
+        total_posts = len(items)
+        summary = {
+            'posts': total_posts,
+            'views': totals['views'],
+            'likes': totals['likes'],
+            'comments': totals['comments'],
+            'reposts': totals['reposts'],
+            'saves': totals['saves'],
+            'shares': totals['shares'],
+            'interactions': totals['interactions'],
+            'focus_sessions': totals['focus_sessions'],
+            'total_focus_ms': totals['total_focus_ms'],
+            # Average focus duration across all focus sessions (ms), 0 when none.
+            'avg_focus_ms': (
+                int(round(totals['total_focus_ms'] / totals['focus_sessions']))
+                if totals['focus_sessions'] > 0 else 0
+            ),
+            'watch_ms': totals['watch_ms'],
+            'watch_heartbeats': totals['watch_heartbeats'],
+            'engagement_rate_pct': (
+                round(100 * totals['interactions'] / totals['views'], 1)
+                if totals['views'] > 0 else 0.0
+            ),
+        }
         return Response({
             'success': True,
-            'data': {'items': items},
+            'data': {'items': items, 'summary': summary},
             'message': 'OK',
             'errors': None,
             'pagination': None,

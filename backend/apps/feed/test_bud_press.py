@@ -840,10 +840,106 @@ class CreatorInsightsTests(TestCase):
         )
         self.assertEqual(quiet['visibility'], 'buddies')
 
+        # Attention metrics: focus sessions, total/avg focus time and
+        # interactions rollup are present and zeroed without events.
+        self.assertEqual(row['focus_sessions'], 0)
+        self.assertEqual(row['avg_focus_ms'], 0)
+        self.assertEqual(row['watch_ms'], 0)
+        self.assertEqual(row['interactions'], 5)  # 1 like + 1 comment + 1 repost + 1 save + 1 share
+        summary = res.data['data']['summary']
+        self.assertEqual(summary['posts'], 2)
+        self.assertEqual(summary['interactions'], 5)
+        self.assertEqual(summary['focus_sessions'], 0)
+
+    def test_focus_events_aggregate_into_watch_and_avg(self):
+        from apps.analytics.models import AnalyticsEvent
+
+        video = Post.objects.create(
+            author=self.author.profile, post_type='short_video', body='Clip',
+        )
+        text = Post.objects.create(
+            author=self.author.profile, post_type='text', body='Text post',
+        )
+        for ms in (2_000, 4_000, 9_000):
+            AnalyticsEvent.objects.create(
+                event_name='feed.post_focus',
+                object_id=str(video.id),
+                properties={'duration_ms': ms, 'duration_bucket': '1-3s'},
+            )
+        AnalyticsEvent.objects.create(
+            event_name='feed.post_focus',
+            object_id=str(text.id),
+            properties={'duration_ms': 6_000, 'duration_bucket': '3-10s'},
+        )
+        # Junk rows that must be ignored: other posts, other events, bad ms.
+        other = Post.objects.create(author=self.viewer.profile, post_type='text', body='x')
+        AnalyticsEvent.objects.create(event_name='feed.post_focus', object_id=str(other.id), properties={'duration_ms': 99_000})
+        AnalyticsEvent.objects.create(event_name='feed.post_impression', object_id=str(video.id), properties={'duration_ms': 50_000})
+        AnalyticsEvent.objects.create(event_name='feed.post_focus', object_id=str(video.id), properties={'duration_ms': 'oops'})
+
+        res = _client_for(self.author).get(self.url)
+        by_id = {item['post_id']: item for item in res.data['data']['items']}
+
+        video_row = by_id[str(video.id)]
+        self.assertEqual(video_row['focus_sessions'], 3)
+        self.assertEqual(video_row['total_focus_ms'], 15_000)
+        self.assertEqual(video_row['avg_focus_ms'], 5_000)
+        # Video posts surface focus time as watch time.
+        self.assertEqual(video_row['watch_ms'], 15_000)
+
+        text_row = by_id[str(text.id)]
+        self.assertEqual(text_row['focus_sessions'], 1)
+        self.assertEqual(text_row['total_focus_ms'], 6_000)
+        self.assertEqual(text_row['avg_focus_ms'], 6_000)
+        self.assertEqual(text_row['watch_ms'], 0)  # non-video: no watch time
+
+        summary = res.data['data']['summary']
+        self.assertEqual(summary['focus_sessions'], 4)
+        self.assertEqual(summary['total_focus_ms'], 21_000)
+        self.assertEqual(summary['avg_focus_ms'], 5_250)
+        self.assertEqual(summary['watch_ms'], 15_000)
+
+    def test_heartbeat_events_take_watch_time_precedence(self):
+        from apps.analytics.models import AnalyticsEvent
+
+        video = Post.objects.create(
+            author=self.author.profile, post_type='short_video', body='Clip',
+        )
+        # Focus events would yield 10s of watch time on their own…
+        AnalyticsEvent.objects.create(
+            event_name='feed.post_focus', object_id=str(video.id),
+            properties={'duration_ms': 10_000, 'duration_bucket': '10s+'},
+        )
+        # …but precise playback heartbeats (5s each) win.
+        for delta in (5_000, 5_000, 5_000):
+            AnalyticsEvent.objects.create(
+                event_name='feed.video_watch', object_id=str(video.id),
+                properties={'delta_ms': delta},
+            )
+
+        res = _client_for(self.author).get(self.url)
+        row = res.data['data']['items'][0]
+        self.assertEqual(row['watch_ms'], 15_000)
+        self.assertEqual(row['watch_heartbeats'], 3)
+        # Focus metrics are still reported independently.
+        self.assertEqual(row['focus_sessions'], 1)
+        self.assertEqual(row['avg_focus_ms'], 10_000)
+
+        summary = res.data['data']['summary']
+        self.assertEqual(summary['watch_ms'], 15_000)
+        self.assertEqual(summary['watch_heartbeats'], 3)
+
     def test_empty_for_new_author(self):
         res = _client_for(self.author).get(self.url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        self.assertEqual(res.data['data'], {'items': []})
+        self.assertEqual(res.data['data']['items'], [])
+        # Account-level summary is always present, zeroed for new authors.
+        summary = res.data['data']['summary']
+        self.assertEqual(summary['posts'], 0)
+        self.assertEqual(summary['views'], 0)
+        self.assertEqual(summary['avg_focus_ms'], 0)
+        self.assertEqual(summary['watch_ms'], 0)
+        self.assertEqual(summary['engagement_rate_pct'], 0.0)
 
     def test_viewer_does_not_see_my_posts(self):
         mine = Post.objects.create(

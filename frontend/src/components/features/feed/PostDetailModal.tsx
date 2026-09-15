@@ -10,6 +10,7 @@ import { formatPostDate } from '@/utils/formatDate';
 import type { Post, Comment } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
 import { EmojiImg } from '@/utils/emojiUtils';
+import { RichText } from '@/components/ui/RichText';
 import { useNavigate } from 'react-router-dom';
 
 interface PostDetailModalProps {
@@ -79,7 +80,7 @@ function CommentRow({ comment, onReply }: { comment: Comment; onReply: (id: stri
           >
             {comment.author_data?.display_name}
           </button>
-          <p className="text-sm leading-relaxed mt-0.5 break-words">{comment.body}</p>
+          <p className="text-sm leading-relaxed mt-0.5 break-words"><RichText text={comment.body} /></p>
         </div>
         <div className="flex items-center gap-3 mt-1 px-1">
           <span className="text-[10px] text-buddy-text-secondary">{formatPostDate(comment.created_at)}</span>

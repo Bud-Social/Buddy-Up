@@ -594,6 +594,14 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
   DateTime? _focusStart;
   String? _focusPostId;
 
+  // ── Playback-heartbeat watch time (feed.video_watch) ────────────────────────
+  // Accumulates real playback time (active page AND player actually playing)
+  // in 1s ticks and emits an event every 5s, plus a partial flush on pause /
+  // page change / dispose so short watches are not lost.
+  static const int _watchHeartbeatIntervalMs = 5000;
+  Timer? _watchTicker;
+  int _watchBufferMs = 0;
+
   Post get _post => widget.post;
   PostMedia get _media => _post.media.isNotEmpty
       ? _post.media.first
@@ -607,6 +615,11 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
     super.initState();
     _setupPlayer();
     if (widget.active) _beginFocus();
+    _watchTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!widget.active || !_playing) return;
+      _watchBufferMs += 1000;
+      if (_watchBufferMs >= _watchHeartbeatIntervalMs) _flushWatch();
+    });
   }
 
   void _setupPlayer() {
@@ -618,7 +631,10 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
       if (mounted) setState(() => _duration = d);
     });
     player.stream.playing.listen((p) {
-      if (mounted) setState(() => _playing = p);
+      if (!mounted) return;
+      // Pause flushes any buffered playback time so short watches count.
+      if (!p && _playing) _flushWatch();
+      setState(() => _playing = p);
     });
     player.setVolume(widget.muted ? 0 : _soundVolume);
     _syncMixerTracks();
@@ -820,7 +836,40 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
       surface: 'bud_press',
       objectType: 'post',
       objectId: _focusPostId ?? widget.post.id,
-      properties: {'focus_ms': ms, 'view_recorded': _viewRecorded},
+      properties: {
+        // Web contract parity: duration_ms + low-cardinality bucket.
+        'duration_ms': ms,
+        'duration_bucket': _bucketFocusDuration(ms),
+        'focus_ms': ms, // legacy alias, kept for old dashboards
+        'view_recorded': _viewRecorded,
+      },
+    );
+  }
+
+  /// Buckets a focus duration (keeps the event low-cardinality). Mirrors the
+  /// web PostCard.bucketFocusDuration thresholds.
+  static String _bucketFocusDuration(int ms) {
+    if (ms < 1000) return '<1s';
+    if (ms < 3000) return '1-3s';
+    if (ms < 10000) return '3-10s';
+    return '10s+';
+  }
+
+  /// Emit a `feed.video_watch` heartbeat with the buffered playback time.
+  /// Never throws — analytics must not break playback.
+  void _flushWatch() {
+    final pending = _watchBufferMs;
+    _watchBufferMs = 0;
+    if (pending < 1000) return;
+    AnalyticsService.instance.track(
+      'feed.video_watch',
+      surface: 'bud_press',
+      objectType: 'post',
+      objectId: widget.post.id,
+      properties: {
+        'delta_ms': pending,
+        'position_ms': _position.inMilliseconds,
+      },
     );
   }
 
@@ -833,12 +882,14 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
         _startPlayback();
       } else {
         _reportFocus();
+        _flushWatch();
         _player?.pause();
         setState(() => _playing = false);
       }
     }
     if (widget.post.id != oldWidget.post.id && widget.active) {
       _reportFocus();
+      _flushWatch();
       _beginFocus();
     }
     if (widget.muted != oldWidget.muted) {
@@ -857,7 +908,9 @@ class _BudPressVideoPageState extends ConsumerState<_BudPressVideoPage> {
 
   @override
   void dispose() {
+    _watchTicker?.cancel();
     _reportFocus();
+    _flushWatch();
     _positionSub?.cancel();
     _player?.dispose();
     unawaited(_mixer.dispose());

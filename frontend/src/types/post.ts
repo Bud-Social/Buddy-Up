@@ -222,6 +222,33 @@ export interface CreatorInsightItem {
   reposts?: number;
   saves?: number;
   shares?: number;
+  /** likes + comments + reposts + saves + shares (author-facing activity). */
+  interactions?: number;
+  /** Number of qualified focus sessions (in-view ≥ 500ms) on this post. */
+  focus_sessions?: number;
+  /** Sum of all focus-session durations (ms). */
+  total_focus_ms?: number;
+  /** Mean focus-session duration (ms). */
+  avg_focus_ms?: number;
+  /** Focus-time sum on video posts — the watch-time signal (ms). */
+  watch_ms?: number;
   created_at?: string;
   visibility?: string;
+}
+
+/** Account-level rollup returned alongside the per-post items. */
+export interface CreatorInsightSummary {
+  posts?: number;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  reposts?: number;
+  saves?: number;
+  shares?: number;
+  interactions?: number;
+  focus_sessions?: number;
+  total_focus_ms?: number;
+  avg_focus_ms?: number;
+  watch_ms?: number;
+  engagement_rate_pct?: number;
 }

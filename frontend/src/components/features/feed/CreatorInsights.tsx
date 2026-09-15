@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react';
-import { BarChart3, Eye, Heart, MessageCircle, Repeat2, Bookmark, Share2, Loader2 } from 'lucide-react';
+import { BarChart3, Eye, Heart, MessageCircle, Repeat2, Bookmark, Share2, Loader2, Timer, Clock3, Zap } from 'lucide-react';
 import { feedApi } from '@/api/feed';
-import type { CreatorInsightItem } from '@/types';
+import type { CreatorInsightItem, CreatorInsightSummary } from '@/types';
 import { formatCount } from './RailAction';
 
 function num(v: number | undefined): number {
   return typeof v === 'number' && Number.isFinite(v) ? v : 0;
+}
+
+/** Human duration for focus/watch metrics: "1m 23s" / "12s" / "0s". */
+export function formatDuration(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  if (m === 0) return `${s}s`;
+  return `${m}m ${s}s`;
 }
 
 function timeAgo(iso?: string): string {
@@ -21,11 +30,13 @@ function timeAgo(iso?: string): string {
 
 /**
  * Owner-only per-post performance table (views / likes / comments / reposts /
- * saves / shares). Tolerant of a missing endpoint: shows an empty/error state
- * and never crashes.
+ * saves / shares) plus attention metrics: interactions, watch time and average
+ * focus time. Tolerant of a missing endpoint: shows an empty/error state and
+ * never crashes.
  */
 export function CreatorInsights() {
   const [items, setItems] = useState<CreatorInsightItem[] | null>(null);
+  const [summary, setSummary] = useState<CreatorInsightSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,7 +44,17 @@ export function CreatorInsights() {
     feedApi.getCreatorInsights()
       .then((res) => {
         if (cancelled) return;
-        setItems(Array.isArray(res.data) ? res.data : []);
+        // Defensive: the payload may be {items, summary} (current) or a bare
+        // array (older deploys of the endpoint).
+        if (Array.isArray(res.data)) {
+          setItems(res.data);
+          setSummary(null);
+        } else if (res.data && typeof res.data === 'object') {
+          setItems(Array.isArray(res.data.items) ? res.data.items : []);
+          setSummary(res.data.summary ?? null);
+        } else {
+          setItems([]);
+        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -72,26 +93,43 @@ export function CreatorInsights() {
       reposts: acc.reposts + num(it.reposts),
       saves: acc.saves + num(it.saves),
       shares: acc.shares + num(it.shares),
+      interactions: acc.interactions + num(it.interactions),
+      watch_ms: acc.watch_ms + num(it.watch_ms),
+      total_focus_ms: acc.total_focus_ms + num(it.total_focus_ms),
+      focus_sessions: acc.focus_sessions + num(it.focus_sessions),
     }),
-    { views: 0, likes: 0, comments: 0, reposts: 0, saves: 0, shares: 0 },
+    {
+      views: 0, likes: 0, comments: 0, reposts: 0, saves: 0, shares: 0,
+      interactions: 0, watch_ms: 0, total_focus_ms: 0, focus_sessions: 0,
+    },
   );
 
-  const summary: { key: string; label: string; value: number; icon: typeof Eye }[] = [
-    { key: 'views', label: 'Views', value: totals.views, icon: Eye },
-    { key: 'likes', label: 'Likes', value: totals.likes, icon: Heart },
-    { key: 'comments', label: 'Comments', value: totals.comments, icon: MessageCircle },
-    { key: 'reposts', label: 'Reposts', value: totals.reposts, icon: Repeat2 },
-    { key: 'saves', label: 'Saves', value: totals.saves, icon: Bookmark },
-    { key: 'shares', label: 'Shares', value: totals.shares, icon: Share2 },
+  // Prefer the server rollup; fall back to client-side aggregation.
+  const rollup = (key: keyof CreatorInsightSummary, fallback: number): number =>
+    num(summary?.[key] as number | undefined) || fallback;
+
+  const avgFocus = rollup('avg_focus_ms', 0)
+    || (totals.focus_sessions > 0 ? Math.round(totals.total_focus_ms / totals.focus_sessions) : 0);
+
+  const summaryTiles: { key: string; label: string; value: string; icon: typeof Eye }[] = [
+    { key: 'views', label: 'Views', value: formatCount(rollup('views', totals.views)), icon: Eye },
+    { key: 'interactions', label: 'Interactions', value: formatCount(rollup('interactions', totals.interactions)), icon: Zap },
+    { key: 'watch', label: 'Watch time', value: formatDuration(rollup('watch_ms', totals.watch_ms)), icon: Clock3 },
+    { key: 'avg_focus', label: 'Avg focus', value: formatDuration(avgFocus), icon: Timer },
+    { key: 'likes', label: 'Likes', value: formatCount(rollup('likes', totals.likes)), icon: Heart },
+    { key: 'comments', label: 'Comments', value: formatCount(rollup('comments', totals.comments)), icon: MessageCircle },
+    { key: 'reposts', label: 'Reposts', value: formatCount(rollup('reposts', totals.reposts)), icon: Repeat2 },
+    { key: 'saves', label: 'Saves', value: formatCount(rollup('saves', totals.saves)), icon: Bookmark },
+    { key: 'shares', label: 'Shares', value: formatCount(rollup('shares', totals.shares)), icon: Share2 },
   ];
 
   return (
     <div data-testid="creator-insights">
       <div className="grid grid-cols-3 gap-2 mb-3">
-        {summary.map(({ key, label, value, icon: Icon }) => (
-          <div key={key} className="bg-buddy-surface-raised rounded-xl py-2.5 px-2 text-center">
+        {summaryTiles.map(({ key, label, value, icon: Icon }) => (
+          <div key={key} className="bg-buddy-surface-raised rounded-xl py-2.5 px-2 text-center" data-testid={`insights-${key}`}>
             <Icon size={13} className="mx-auto text-buddy-green mb-1" />
-            <p className="font-mono font-bold text-base tabular-nums">{formatCount(value)}</p>
+            <p className="font-mono font-bold text-base tabular-nums">{value}</p>
             <p className="text-[11px] text-buddy-text-secondary">{label}</p>
           </div>
         ))}
@@ -106,17 +144,19 @@ export function CreatorInsights() {
               )}
               <span className="ml-auto shrink-0">{timeAgo(it.created_at)}</span>
             </div>
-            <div className="grid grid-cols-6 gap-1 text-center">
+            <div className="grid grid-cols-8 gap-1 text-center">
               {[
-                { label: 'Views', value: num(it.views) },
-                { label: 'Likes', value: num(it.likes) },
-                { label: 'Comments', value: num(it.comments) },
-                { label: 'Reposts', value: num(it.reposts) },
-                { label: 'Saves', value: num(it.saves) },
-                { label: 'Shares', value: num(it.shares) },
+                { label: 'Views', value: formatCount(num(it.views)) },
+                { label: 'Likes', value: formatCount(num(it.likes)) },
+                { label: 'Comments', value: formatCount(num(it.comments)) },
+                { label: 'Reposts', value: formatCount(num(it.reposts)) },
+                { label: 'Saves', value: formatCount(num(it.saves)) },
+                { label: 'Shares', value: formatCount(num(it.shares)) },
+                { label: 'Focus', value: formatDuration(num(it.avg_focus_ms)) },
+                { label: 'Watch', value: formatDuration(num(it.watch_ms)) },
               ].map(({ label, value }) => (
                 <div key={label}>
-                  <p className="font-mono font-bold text-sm tabular-nums">{formatCount(value)}</p>
+                  <p className="font-mono font-bold text-sm tabular-nums">{value}</p>
                   <p className="text-[10px] text-buddy-text-secondary">{label}</p>
                 </div>
               ))}

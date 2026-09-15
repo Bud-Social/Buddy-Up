@@ -7,8 +7,9 @@ import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../feed/providers/feed_provider.dart';
 
-/// Per-post performance for the signed-in creator: views, likes, comments,
-/// reposts, saves and shares. Mirrors the web CreatorInsights panel.
+/// Per-post performance for the signed-in creator: views, interactions,
+/// watch time, average focus time, likes, comments, reposts, saves and
+/// shares. Mirrors the web CreatorInsights panel.
 class CreatorInsightsScreen extends ConsumerStatefulWidget {
   const CreatorInsightsScreen({super.key});
 
@@ -30,6 +31,15 @@ class _CreatorInsightsScreenState
     Future.microtask(_load);
   }
 
+  /// Human duration for watch/focus metrics: "1m 23s" / "12s" / "0s".
+  static String _formatDuration(num ms) {
+    final totalSec = (ms / 1000).round().clamp(0, 1 << 31);
+    final m = totalSec ~/ 60;
+    final s = totalSec % 60;
+    if (m == 0) return '${s}s';
+    return '${m}m ${s}s';
+  }
+
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -39,21 +49,42 @@ class _CreatorInsightsScreenState
       final raw = await ref.read(feedRepositoryProvider).getCreatorInsights();
       final data = (raw['data'] as Map<String, dynamic>?) ?? {};
       final items = data['items'];
+      // Prefer the server account-level rollup; fall back to client totals.
+      final summary = (data['summary'] as Map?) == null
+          ? <String, dynamic>{}
+          : Map<String, dynamic>.from(data['summary'] as Map);
       final totals = <String, int>{};
+      for (final key in summary.keys) {
+        final v = summary[key];
+        if (v is num) totals[key] = v.toInt();
+      }
       final parsed = <Map<String, dynamic>>[];
       if (items is List) {
         for (final item in items) {
           if (item is! Map) continue;
           final row = Map<String, dynamic>.from(item);
           parsed.add(row);
+          // Server rollup wins; otherwise accumulate per-row client-side.
+          if (totals['interactions'] == null) {
+            final rowInteractions = (row['interactions'] as num?)?.toInt() ??
+                ((row['likes'] as num?)?.toInt() ?? 0) +
+                    ((row['comments'] as num?)?.toInt() ?? 0) +
+                    ((row['reposts'] as num?)?.toInt() ?? 0) +
+                    ((row['saves'] as num?)?.toInt() ?? 0) +
+                    ((row['shares'] as num?)?.toInt() ?? 0);
+            totals['interactions'] =
+                (totals['interactions'] ?? 0) + rowInteractions;
+          }
           for (final key in [
             'views',
             'likes',
             'comments',
             'reposts',
             'saves',
-            'shares'
+            'shares',
+            'watch_ms',
           ]) {
+            if (totals[key] != null) continue; // server rollup wins
             totals[key] =
                 (totals[key] ?? 0) + ((row[key] as num?)?.toInt() ?? 0);
           }
@@ -99,6 +130,9 @@ class _CreatorInsightsScreenState
                             runSpacing: 8,
                             children: [
                               _Total('Views', _totals['views'] ?? 0, Icons.visibility_outlined),
+                              _Total('Interactions', _totals['interactions'] ?? 0, Icons.bolt_outlined),
+                              _Total('Watch time', _totals['watch_ms'] ?? 0, Icons.play_circle_outline, duration: true),
+                              _Total('Avg focus', _totals['avg_focus_ms'] ?? 0, Icons.timer_outlined, duration: true),
                               _Total('Likes', _totals['likes'] ?? 0, Icons.favorite_border),
                               _Total('Comments', _totals['comments'] ?? 0, Icons.chat_bubble_outline),
                               _Total('Reposts', _totals['reposts'] ?? 0, Icons.repeat),
@@ -123,7 +157,9 @@ class _CreatorInsightsScreenState
                                 subtitle: Text(
                                   '${item['views'] ?? 0} views · ${item['likes'] ?? 0} likes · '
                                   '${item['comments'] ?? 0} comments · ${item['reposts'] ?? 0} reposts · '
-                                  '${item['saves'] ?? 0} saves · ${item['shares'] ?? 0} shares',
+                                  '${item['saves'] ?? 0} saves · ${item['shares'] ?? 0} shares\n'
+                                  'Focus ${_formatDuration((item['avg_focus_ms'] as num?) ?? 0)} · '
+                                  'Watch ${_formatDuration((item['watch_ms'] as num?) ?? 0)}',
                                   style: const TextStyle(
                                     color: BuddyColors.textSecondary,
                                     fontSize: 12,
@@ -150,12 +186,23 @@ class _Total extends StatelessWidget {
   final int value;
   final IconData icon;
 
-  const _Total(this.label, this.value, this.icon);
+  /// When true, [value] is a millisecond duration rendered as "1m 23s".
+  final bool duration;
+
+  const _Total(this.label, this.value, this.icon, {this.duration = false});
 
   static String _count(int n) {
     if (n < 1000) return '$n';
     if (n < 1000000) return '${(n / 1000).toStringAsFixed(1)}k';
     return '${(n / 1000000).toStringAsFixed(1)}m';
+  }
+
+  static String _duration(num ms) {
+    final totalSec = (ms / 1000).round().clamp(0, 1 << 31);
+    final m = totalSec ~/ 60;
+    final s = totalSec % 60;
+    if (m == 0) return '${s}s';
+    return '${m}m ${s}s';
   }
 
   @override
@@ -173,7 +220,7 @@ class _Total extends StatelessWidget {
           Icon(icon, size: 16, color: BuddyColors.green),
           const SizedBox(height: 4),
           Text(
-            _count(value),
+            duration ? _duration(value) : _count(value),
             style: const TextStyle(
               color: BuddyColors.textPrimary,
               fontWeight: FontWeight.w700,

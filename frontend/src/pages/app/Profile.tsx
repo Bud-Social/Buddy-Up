@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radio, Play, Clock, Users, Camera, Settings, Moon, Sun, Monitor, Contrast, Loader, MessageCircle, Shield, BarChart3 } from 'lucide-react';
+import { Radio, Play, Clock, Users, Camera, Settings, Moon, Sun, Monitor, Contrast, Loader, MessageCircle, Shield, BarChart3, Repeat } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -22,7 +22,7 @@ import { PostCard } from '@/components/features/feed/PostCard';
 import { CreatorInsights } from '@/components/features/feed/CreatorInsights';
 import { AchievementsTab } from '@/components/profile/AchievementsTab';
 
-type ProfileTab = 'posts' | 'lives' | 'gyms' | 'achievements';
+type ProfileTab = 'posts' | 'reposts' | 'lives' | 'gyms' | 'achievements';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -99,7 +99,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (activeTab === 'lives') fetchLives();
-    if (activeTab === 'posts') fetchPosts();
+    if (activeTab === 'posts' || activeTab === 'reposts') fetchPosts();
     if (activeTab === 'gyms') fetchGyms();
   }, [activeTab]);
 
@@ -277,10 +277,16 @@ export default function Profile() {
       )}
 
       <div className="flex border-b border-buddy-surface mb-4">
-        {(['posts', 'lives', 'gyms', 'achievements'] as ProfileTab[]).map((tab) => (
+        {(['posts', 'reposts', 'lives', 'gyms', 'achievements'] as ProfileTab[]).map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`flex-1 pb-3 text-sm font-medium capitalize ${activeTab === tab ? 'text-buddy-green border-b-2 border-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
-          >{tab}</button>
+          >
+            {tab === 'posts'
+              ? `Posts (${posts.filter((p) => !p.is_repost).length})`
+              : tab === 'reposts'
+              ? `Reposts (${posts.filter((p) => p.is_repost).length})`
+              : tab}
+          </button>
         ))}
       </div>
 
@@ -290,14 +296,31 @@ export default function Profile() {
             <div className="col-span-3 flex items-center justify-center py-20">
               <Loader size={24} className="animate-spin text-buddy-text-secondary" />
             </div>
-          ) : posts.length === 0 ? (
+          ) : posts.filter((p) => !p.is_repost).length === 0 ? (
             <div className="col-span-3 text-center py-20">
               <MessageCircle size={40} className="mx-auto text-buddy-text-secondary/30 mb-3" />
               <p className="text-buddy-text-secondary">No posts yet</p>
             </div>
           ) : (
             <div className="col-span-3 space-y-2">
-              {posts.map((post) => (
+              {posts.filter((p) => !p.is_repost).map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </div>
+          )
+        ) : activeTab === 'reposts' ? (
+          postsLoading ? (
+            <div className="col-span-3 flex items-center justify-center py-20">
+              <Loader size={24} className="animate-spin text-buddy-text-secondary" />
+            </div>
+          ) : posts.filter((p) => p.is_repost).length === 0 ? (
+            <div className="col-span-3 text-center py-20">
+              <Repeat size={40} className="mx-auto text-buddy-text-secondary/30 mb-3" />
+              <p className="text-buddy-text-secondary">No reposts yet</p>
+            </div>
+          ) : (
+            <div className="col-span-3 space-y-2">
+              {posts.filter((p) => p.is_repost).map((post) => (
                 <PostCard key={post.id} post={post} />
               ))}
             </div>

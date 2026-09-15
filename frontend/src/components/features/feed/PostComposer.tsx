@@ -942,7 +942,6 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
               className="w-full min-h-[80px] text-sm text-buddy-text-primary bg-transparent outline-none leading-relaxed"
               data-placeholder={placeholder || "What's on your mind? Use @ to mention people"}
               style={{ caretColor: '#00ff9d' }}
-              onFocus={() => setShowEmoji(false)}
             />
             {!content && (
               <p className="absolute top-0 left-0 text-sm text-buddy-text-secondary/50 pointer-events-none">

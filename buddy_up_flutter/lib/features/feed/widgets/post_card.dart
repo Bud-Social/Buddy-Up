@@ -395,11 +395,6 @@ class _PostCardState extends ConsumerState<PostCard> {
             widget.onSave?.call(_targetId);
           },
         ),
-        _ActionButton(
-          icon: Icons.visibility_outlined,
-          label: _formatCount(_viewCount),
-          onTap: null,
-        ),
         const Spacer(),
         _ActionButton(
           icon: Icons.share_outlined,

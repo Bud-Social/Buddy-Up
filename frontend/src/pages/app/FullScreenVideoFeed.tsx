@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Play, Pause, Volume2, VolumeX, Maximize, Minimize,
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
-  X, ChevronUp, Loader2, Share2, Eye,
+  X, ChevronUp, Loader2, Share2,
 } from 'lucide-react';
 import { feedApi } from '@/api/feed';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
@@ -15,6 +15,7 @@ import { useAuthStore } from '@/store/authStore';
 import { track } from '@/lib/analytics';
 import { PostShareSheet } from '@/components/features/feed/PostShareSheet';
 import { useRecordPostView } from '@/components/features/feed/useRecordPostView';
+import { usePlaybackHeartbeat } from '@/components/features/feed/usePlaybackHeartbeat';
 import {
   isSwipeLeftToProfile, shouldIgnoreSwipeOrigin,
 } from '@/components/features/feed/feedGestures';
@@ -75,7 +76,8 @@ const FeedVideoWithEdits = forwardRef<HTMLVideoElement, {
   muted: boolean;
   active: boolean;
   onTime?: (ms: number, durationSec: number) => void;
-}>(({ video, muted, active, onTime }, ref) => {
+  onPlayChange?: (playing: boolean) => void;
+}>(({ video, muted, active, onTime, onPlayChange }, ref) => {
   const [overlayTimeMs, setOverlayTimeMs] = useState(0);
   const edits = video.editMeta;
   const speed = edits?.speed && edits.speed !== 1 ? edits.speed : 1;
@@ -112,6 +114,8 @@ const FeedVideoWithEdits = forwardRef<HTMLVideoElement, {
         preload="auto"
         style={{ filter: filterCss || undefined }}
         className="w-full h-full object-contain"
+        onPlay={() => onPlayChange?.(true)}
+        onPause={() => onPlayChange?.(false)}
         onTimeUpdate={(e) => {
           const v = e.currentTarget;
           if (v.duration) onTime?.(v.currentTime * 1000, v.duration);
@@ -138,6 +142,14 @@ function ViewRecorder({ postId, active, progress, onRecorded }: {
 }) {
   const ref = useRecordPostView(postId, { active, progress, onRecorded });
   return <div ref={ref} className="absolute inset-0 pointer-events-none" aria-hidden />;
+}
+
+/** Per-slide watch-time heartbeat: emits feed.video_watch every 5s of real playback. */
+function PlaybackHeartbeat({ postId, active, playing, getPositionMs }: {
+  postId: string; active: boolean; playing: boolean; getPositionMs: () => number;
+}) {
+  usePlaybackHeartbeat(postId, { active, playing, getPositionMs });
+  return null;
 }
 
 /** Bucket a fullscreen dwell duration for analytics (low-cardinality). */
@@ -167,6 +179,9 @@ export default function FullScreenVideoFeed() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
+  // Whether the active slide's video is actually playing (drives the
+  // playback-heartbeat watch-time tracker).
+  const [playing, setPlaying] = useState(false);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const [shareIdx, setShareIdx] = useState<number | null>(null);
   const [shareAnchor, setShareAnchor] = useState<{ top: number; left: number; bottom: number } | null>(null);
@@ -559,9 +574,21 @@ export default function FullScreenVideoFeed() {
                 video={item.video!}
                 muted={isMuted}
                 active={active}
+                onPlayChange={(p) => { if (active) setPlaying(p); }}
                 onTime={(ms, durSec) => {
                   if (active && durSec > 0) setProgress((ms / 1000 / durSec) * 100);
                 }}
+              />
+            )}
+
+            {/* Watch-time heartbeat (real playback time, active slide only). */}
+            {!item.photoMode && (
+              <PlaybackHeartbeat
+                key={`hb-${post.id}`}
+                postId={post.id}
+                active={active}
+                playing={active && playing}
+                getPositionMs={() => (videoRefs.current[idx]?.currentTime ?? 0) * 1000}
               />
             )}
 
@@ -678,13 +705,6 @@ export default function FullScreenVideoFeed() {
                   setShareAnchor({ top: r.top, left: r.left, bottom: r.bottom });
                   setShareIdx(idx);
                 }}
-              />
-              <RailAction
-                tone="onDark"
-                label={`${post.view_count ?? 0} views`}
-                icon={<Eye size={RAIL_ICON_SIZE + 4} className="drop-shadow" />}
-                count={post.view_count ?? 0}
-                testId={`fs-views-${post.id}`}
               />
             </div>
 

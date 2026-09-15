@@ -1,6 +1,6 @@
 import type { AxiosProgressEvent } from 'axios';
 import { apiClient } from './client';
-import type { ApiResponse, Post, Comment, CreatorInsightItem } from '@/types';
+import type { ApiResponse, Post, Comment, CreatorInsightItem, CreatorInsightSummary } from '@/types';
 
 export type FeedTab = 'for_you' | 'following' | 'videos' | 'videos_following' | 'meals' | 'progress' | 'communities';
 
@@ -149,7 +149,7 @@ export const feedApi = {
 
   /** Owner-only per-post aggregates. May 404 while the backend lands. */
   getCreatorInsights: () =>
-    apiClient.get<ApiResponse<CreatorInsightItem[]>>('/feed/creator/insights/').then((r) => r.data),
+    apiClient.get<ApiResponse<{ items: CreatorInsightItem[]; summary?: CreatorInsightSummary }>>('/feed/creator/insights/').then((r) => r.data),
 
   getSaved: (collection?: string) =>
     apiClient.get<ApiResponse<Post[]>>('/feed/saved/', { params: collection ? { collection } : {} }).then((r) => r.data),

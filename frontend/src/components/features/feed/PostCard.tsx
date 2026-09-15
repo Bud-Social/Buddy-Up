@@ -1332,14 +1332,6 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
               interact('share');
             }}
           />
-
-          {/* Views */}
-          <RailAction
-            label={`${viewCount} views`}
-            icon={<Eye size={RAIL_ICON_SIZE} />}
-            count={viewCount}
-            testId="rail-views"
-          />
         </div>
       </div>
 

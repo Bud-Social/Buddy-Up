@@ -11,6 +11,7 @@
 import {
   useState, useEffect, useRef, useCallback, useMemo,
 } from 'react';
+import type { RefObject } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical, Check, CheckCheck,
@@ -39,6 +40,9 @@ import { useChatPreferences } from '@/store/chatPreferencesStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { getConversationIdentity, conversationSearchText } from '@/lib/conversationDisplay';
+import { RichText } from '@/components/ui/RichText';
+import { EmojiImg } from '@/utils/emojiUtils';
+import EmojiPickerLib, { Theme, EmojiStyle } from 'emoji-picker-react';
 
 // Quick emoji picker options
 const QUICK_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '👎', '🔥', '💪'];
@@ -210,43 +214,53 @@ function _MessageSkeleton() {
   );
 }
 
-function EmojiPicker({ onSelect, onClose }: { onSelect: (emoji: string) => void; onClose: () => void }) {
-  const categories = [
-    { label: 'Smileys', emojis: ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '😉', '😌', '😍', '🥰', '😘', '😗', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🫢', '🫣', '🤫', '🤔', '🫡', '🤐', '😐', '😑', '😶', '🫥', '😏', '😒', '🙄', '😬', '😮‍💨', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🥴', '😵', '🤯', '🥳', '🥺', '😢', '😭', '😤', '😡', '🤬', '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺', '👻', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'] },
-    { label: 'Gestures', emojis: ['👋', '🤚', '✋', '🖖', '🫱', '🫲', '🫳', '🫴', '👌', '🤌', '🤏', '✌️', '🤞', '🫰', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '🫵', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '🫶', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄', '🫦'] },
-    { label: 'Hearts', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🩷', '🩵', '🩶', '🤍', '🤎', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '❣️', '💔', '❤️‍🔥', '❤️‍🩹', '💌'] },
-    { label: 'Objects', emojis: ['🎉', '🎊', '🎈', '🎁', '🎀', '🪄', '🎲', '🧩', '🎯', '🏆', '🥇', '🥈', '🥉', '🏅', '🎖️', '🪪', '📱', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '💾', '💿', '📀', '🎮', '🕹️', '📸', '📹', '🎥', '📽️', '🎬', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏰', '⌚', '📡', '🔋', '🪫', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🧰', '🪛', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🪚', '🔩', '⚙️', '🧱', '🪃', '🪚', '🔫', '💣', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '🪬', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩻', '🩼', '🩺', '💉', '🩸', '💊', '🩹', '🩽', '🪥', '🪮', '🧴', '🧷', '🧹', '🧺', '🧻', '🪣', '🧼', '🫧', '🪒', '🧽', '🪞', '🪟', '🛎️', '🧳', '🪤', '🪜'] },
-  ];
+/**
+ * Composer emoji picker — the same Apple-style (emoji-picker-react) picker the
+ * post composer uses, so every surface shares one emoji look.
+ *
+ * Stays open for consecutive emoji input: it only closes when the user taps
+ * the emoji toggle again, clicks a separate place (outside click), or sends
+ * the message.
+ */
+function MessageEmojiPicker({ onPick, onClose, anchorRef }: {
+  onPick: (emoji: string) => void;
+  onClose: () => void;
+  anchorRef: RefObject<HTMLElement | null>;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const lastPickAt = useRef(0);
 
-  const [catIdx, setCatIdx] = useState(0);
+  useEffect(() => {
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (Date.now() - lastPickAt.current < 400) return; // ignore picks inside the panel
+      if (panelRef.current?.contains(e.target as Node)) return;
+      if (anchorRef.current?.contains(e.target as Node)) return; // toggle handles itself
+      onClose();
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('touchstart', onDown);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('touchstart', onDown);
+    };
+  }, [onClose, anchorRef]);
 
   return (
-    <div className="absolute bottom-full mb-2 left-0 z-50 bg-buddy-surface-raised border border-buddy-surface rounded-2xl shadow-2xl w-72 overflow-hidden"
-      onClick={(e) => e.stopPropagation()}>
-      <div className="flex overflow-x-auto gap-1 p-2 border-b border-buddy-surface scrollbar-none shrink-0">
-        {categories.map((cat, ci) => (
-          <button key={cat.label}
-            onClick={() => setCatIdx(ci)}
-            className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-              ci === catIdx ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
-            }`}
-          >
-            {cat.label}
-          </button>
-        ))}
-      </div>
-      <div className="p-2 max-h-48 overflow-y-auto">
-        <div className="flex flex-wrap gap-0.5">
-          {categories[catIdx].emojis.map((emoji) => (
-            <button key={emoji}
-              onClick={() => { onSelect(emoji); onClose(); }}
-              className="w-8 h-8 flex items-center justify-center text-lg hover:bg-buddy-surface rounded-lg transition-colors"
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div ref={panelRef} className="absolute bottom-full left-0 mb-2 z-50" data-testid="message-emoji-picker">
+      <EmojiPickerLib
+        theme={Theme.DARK}
+        emojiStyle={EmojiStyle.APPLE}
+        lazyLoadEmojis
+        searchDisabled={false}
+        skinTonesDisabled
+        previewConfig={{ showPreview: false }}
+        width={320}
+        height={350}
+        onEmojiClick={(emojiData) => {
+          lastPickAt.current = Date.now();
+          onPick(emojiData.emoji);
+        }}
+      />
     </div>
   );
 }
@@ -331,6 +345,7 @@ export default function Messages() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const emojiToggleRef = useRef<HTMLButtonElement>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeConvoRef = useRef<Conversation | null>(null);
   activeConvoRef.current = activeConvo;
@@ -584,6 +599,7 @@ export default function Messages() {
     else if (mediaMime && !mediaMime.startsWith('image/') && !mediaMime.startsWith('video/') && !mediaMime.startsWith('audio/') && finalType === 'text') finalType = 'document';
 
     setBody('');
+    setShowEmojiInput(false);
     if (isTyping) { setIsTyping(false); sendTypingStop(); }
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
 
@@ -1251,7 +1267,7 @@ export default function Messages() {
 
                           {/* Text body */}
                           {!isLocation && !isPoll && msg.body && (
-                            <p className="px-3 py-2 whitespace-pre-wrap break-words leading-snug">{msg.body}</p>
+                            <p className="px-3 py-2 whitespace-pre-wrap break-words leading-snug"><RichText text={msg.body} /></p>
                           )}
 
                           {/* Link preview */}
@@ -1328,8 +1344,8 @@ export default function Messages() {
                               <button
                                 key={emoji}
                                 onClick={() => { sendReact(msg.id, emoji); setShowEmojiPickerId(null); }}
-                                className="text-base hover:scale-125 transition-transform p-0.5"
-                              >{emoji}</button>
+                                className="hover:scale-125 transition-transform p-0.5"
+                              ><EmojiImg emoji={emoji} size={20} /></button>
                             ))}
                           </div>
                         )}
@@ -1365,7 +1381,7 @@ export default function Messages() {
                                 onClick={() => sendReact(msg.id, emoji)}
                                 className="flex items-center gap-1 bg-buddy-surface rounded-full px-2 py-0.5 text-xs hover:bg-buddy-surface-raised transition-colors"
                               >
-                                {emoji} <span className="opacity-70">{count}</span>
+                                <EmojiImg emoji={emoji} size={15} /> <span className="opacity-70">{count}</span>
                               </button>
                             ))}
                           </div>
@@ -1495,6 +1511,7 @@ export default function Messages() {
                   />
                   <div className="flex items-center gap-0.5 ml-1 shrink-0">
                     <button
+                      ref={emojiToggleRef}
                       onClick={() => setShowEmojiInput((v) => !v)}
                       className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-surface transition-colors relative"
                       title="Emoji"
@@ -1508,9 +1525,13 @@ export default function Messages() {
                     )}
                   </div>
                   {showEmojiInput && (
-                    <EmojiPicker
-                      onSelect={(emoji) => setBody((prev) => prev + emoji)}
+                    <MessageEmojiPicker
+                      onPick={(emoji) => {
+                        setBody((prev) => prev + emoji);
+                        inputRef.current?.focus();
+                      }}
                       onClose={() => setShowEmojiInput(false)}
+                      anchorRef={emojiToggleRef}
                     />
                   )}
                 </div>
