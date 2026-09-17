@@ -153,3 +153,78 @@ class TranscribeSsrfGuardTests(SimpleTestCase):
             getaddr.return_value = [(2, 1, 6, '', ('93.184.216.34', 0))]
             # Must not raise.
             self._guard('https://res.cloudinary.com/demo/video/upload/clip.mp4')
+
+
+def _banded_user():
+    from django.contrib.auth import get_user_model
+
+    return get_user_model().objects.create_user(
+        email='banded@example.com', password='TestPass123!',
+    )
+
+
+class BandedViewSetTests(TestCase):
+    def setUp(self):
+        from rest_framework.test import APIClient
+
+        self.client = APIClient()
+        self.client.force_authenticate(user=_banded_user())
+
+    def _mock_ok(self, payload):
+        resp = MagicMock()
+        resp.json.return_value = payload
+        return patch('apps.ai.views.ai_post', return_value=resp)
+
+    def test_nlp_classify_records_completed_job(self):
+        from apps.ai.models import AIPredictionJob
+
+        out = {'label': 'meirl', 'confidence': 0.95, 'method': 'banded_nlp_best'}
+        with self._mock_ok(out):
+            r = self.client.post('/api/v1/ai/banded/nlp-classify/', {'text': 'meirl'})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['label'], 'meirl')
+        job = AIPredictionJob.objects.get(pk=r.json()['job_id'])
+        self.assertEqual((job.task, job.status), ('banded_nlp', 'completed'))
+        self.assertEqual(job.confidence, 0.95)
+
+    def test_nlp_classify_rejects_empty_text(self):
+        r = self.client.post('/api/v1/ai/banded/nlp-classify/', {'text': '  '})
+        self.assertEqual(r.status_code, 400)
+
+    def test_vision_classify_requires_file(self):
+        r = self.client.post('/api/v1/ai/banded/vision-classify/', {})
+        self.assertEqual(r.status_code, 400)
+
+    def test_service_outage_marks_job_failed(self):
+        from apps.ai.models import AIPredictionJob
+
+        with patch('apps.ai.views.ai_post', side_effect=ConnectionError('down')):
+            r = self.client.post('/api/v1/ai/banded/rl-jepa-act/',
+                                 {'obs': [0.1] * 48}, format='json')
+        self.assertEqual(r.status_code, 503)
+        job = AIPredictionJob.objects.get(pk=r.json()['job_id'])
+        self.assertEqual((job.task, job.status), ('banded_rl_traj', 'failed'))
+
+    def test_rl_nlp_act_ok(self):
+        out = {'action': 3, 'probs': [0.2, 0.1, 0.2, 0.5], 'method': 'rl_nlp_policy'}
+        with self._mock_ok(out):
+            r = self.client.post('/api/v1/ai/banded/rl-nlp-act/', {'text': 'hi'})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['action'], 3)
+
+
+class RegisterBandedModelsTests(TestCase):
+    def test_registers_six_models_idempotently(self):
+        from django.core.management import call_command
+
+        from apps.ai.models import ModelMetadata
+
+        call_command('register_banded_models')
+        call_command('register_banded_models')
+        names = set(ModelMetadata.objects.values_list('name', flat=True))
+        for expected in ('banded_nlp_best', 'banded_vision_best', 'multimodal_fuse',
+                         'recsys_item_emb', 'rl_nlp_policy', 'rl_jepa_policy'):
+            self.assertIn(expected, names)
+        row = ModelMetadata.objects.get(name='banded_nlp_best')
+        self.assertTrue(row.is_active)
+        self.assertEqual(row.metrics['bagged_acc'], 0.963)

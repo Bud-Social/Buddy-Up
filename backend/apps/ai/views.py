@@ -138,6 +138,111 @@ class ModelMetadataViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'description']
 
 
+class BandedViewSet(viewsets.GenericViewSet):
+    """Sync inference through the six banded-ensemble research models.
+
+    Each action fans out to the AI service ``/api/v1/banded/*`` endpoints
+    (ONNX artifacts trained by notebooks/banded_*.ipynb on real batches)
+    and records an auditable AIPredictionJob. 503 when the artifact or the
+    AI service is unavailable — callers must treat these as assistive,
+    never authoritative (see moderation fallbacks).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def _run_job(self, request, task, service_path, input_data,
+                 payload=None, files=None, confidence_key='confidence'):
+        from django.conf import settings
+
+        job = AIPredictionJob.objects.create(
+            task=task, status='pending', input_data=input_data,
+        )
+        try:
+            resp = ai_post(
+                f'{settings.AI_SERVICE_URL}{service_path}',
+                json=payload, files=files, timeout=60,
+            )
+            resp.raise_for_status()
+            output = resp.json()
+        except Exception as exc:  # noqa: BLE001
+            job.status = 'failed'
+            job.error_message = str(exc)[:500]
+            job.save(update_fields=['status', 'error_message'])
+            return Response(
+                {'detail': f'Banded model unavailable: {exc}', 'job_id': job.pk},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        job.status = 'completed'
+        job.output_data = output
+        job.confidence = output.get(confidence_key)
+        job.completed_at = timezone.now()
+        job.save(update_fields=['status', 'output_data', 'confidence', 'completed_at'])
+        return Response({**output, 'job_id': job.pk})
+
+    @action(detail=False, methods=['post'], url_path='nlp-classify')
+    def nlp_classify(self, request):
+        text = request.data.get('text', '')
+        if not text or not text.strip():
+            return Response({'detail': 'text is required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return self._run_job(request, 'banded_nlp', '/api/v1/banded/nlp/classify',
+                             {'text_chars': len(text)}, payload={'text': text})
+
+    @action(detail=False, methods=['post'], url_path='vision-classify')
+    def vision_classify(self, request):
+        upload = request.FILES.get('file')
+        if not upload:
+            return Response({'detail': 'file is required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return self._run_job(
+            request, 'banded_vision', '/api/v1/banded/vision/classify',
+            {'filename': upload.name, 'size': upload.size},
+            files={'file': (upload.name, upload.read(),
+                            upload.content_type or 'image/jpeg')},
+        )
+
+    @action(detail=False, methods=['post'], url_path='multimodal-score')
+    def multimodal_score(self, request):
+        embeddings = request.data.get('embeddings', [])
+        if not embeddings:
+            return Response({'detail': 'embeddings is required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return self._run_job(request, 'banded_multimodal',
+                             '/api/v1/banded/multimodal/score',
+                             {'n': len(embeddings)}, payload={'embeddings': embeddings},
+                             confidence_key='confidence')
+
+    @action(detail=False, methods=['post'], url_path='recsys-embed')
+    def recsys_embed(self, request):
+        item_ids = request.data.get('item_ids', [])
+        if not item_ids:
+            return Response({'detail': 'item_ids is required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return self._run_job(request, 'banded_recsys', '/api/v1/banded/recsys/embed',
+                             {'n_items': len(item_ids)}, payload={'item_ids': item_ids},
+                             confidence_key='confidence')
+
+    @action(detail=False, methods=['post'], url_path='rl-nlp-act')
+    def rl_nlp_act(self, request):
+        text = request.data.get('text', '')
+        if not text or not text.strip():
+            return Response({'detail': 'text is required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return self._run_job(request, 'banded_rl_text', '/api/v1/banded/rl-nlp/act',
+                             {'text_chars': len(text)}, payload={'text': text},
+                             confidence_key='confidence')
+
+    @action(detail=False, methods=['post'], url_path='rl-jepa-act')
+    def rl_jepa_act(self, request):
+        obs = request.data.get('obs', [])
+        if not obs:
+            return Response({'detail': 'obs is required'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        return self._run_job(request, 'banded_rl_traj', '/api/v1/banded/rl-jepa/act',
+                             {'obs_dim': len(obs)}, payload={'obs': obs},
+                             confidence_key='confidence')
+
+
 class APIKeyViewSet(viewsets.ModelViewSet):
     queryset = APIKey.objects.all()
     serializer_class = APIKeySerializer

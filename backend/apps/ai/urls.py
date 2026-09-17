@@ -6,6 +6,7 @@ from . import views
 router = DefaultRouter()
 router.register(r'predictions', views.AIPredictionJobViewSet)
 router.register(r'visual-search', views.VisualSearchViewSet, basename='visual-search')
+router.register(r'banded', views.BandedViewSet, basename='banded')
 router.register(r'models', views.ModelMetadataViewSet)
 router.register(r'api-keys', views.APIKeyViewSet)
 

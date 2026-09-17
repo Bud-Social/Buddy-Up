@@ -28,6 +28,12 @@ class AIPredictionJob(TimestampedModel):
         ('text_to_speech', 'Text To Speech'),
         ('visual_search_embedding', 'Visual Search Embedding'),
         ('transcription', 'Transcription'),
+        ('banded_nlp', 'Banded NLP Ensemble'),
+        ('banded_vision', 'Banded Vision Ensemble'),
+        ('banded_multimodal', 'Banded Multimodal JEPA'),
+        ('banded_rl_text', 'Banded RL+NLP Policy'),
+        ('banded_recsys', 'Banded Recommender'),
+        ('banded_rl_traj', 'Banded RL+JEPA Policy'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
