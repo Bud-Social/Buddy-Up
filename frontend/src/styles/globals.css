@@ -75,6 +75,44 @@ html.ambient {
   }
 }
 
+/* ── Landing hero: bicolor BuddyUp wordmark ("Buddy" white / "Up" green, swapping) ── */
+@keyframes buddy-duo-swap {
+  0%, 100% { color: #ffffff; }
+  50% { color: #00c896; }
+}
+
+.buddy-duo-swap {
+  animation: buddy-duo-swap 6s ease-in-out infinite;
+}
+
+.buddy-duo-swap-rev {
+  animation: buddy-duo-swap 6s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
+/* ── Typewriter caret ── */
+@keyframes caret-blink {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+}
+
+.type-caret {
+  animation: caret-blink 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .buddy-duo-swap,
+  .buddy-duo-swap-rev {
+    animation: none;
+  }
+  .buddy-duo-swap-rev {
+    color: #00c896;
+  }
+  .type-caret {
+    animation: none;
+  }
+}
+
 @layer components {
   .rep-ring {
     @apply rounded-full border-2 border-buddy-green p-0.5;

@@ -10,6 +10,8 @@ import { APP_DOWNLOAD_URLS, APP_URL } from '@/config/downloads';
 import { FUNDRAISER_URL, PLEDGE_FORM_URL } from '@/config/support';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
 import { WaitlistForm } from '@/components/features/support/WaitlistForm';
+import { Typewriter } from '@/components/features/landing/Typewriter';
+import { X } from 'lucide-react';
 
 const features = {
   live: {
@@ -77,6 +79,7 @@ const pricingTiers = [
 export default function Landing() {
   const [activeFeature, setActiveFeature] = useState('live');
   const [supportOpen, setSupportOpen] = useState(false);
+  const [heroWaitlistOpen, setHeroWaitlistOpen] = useState(false);
   const { isMobile, isTablet, isDesktop, os } = useDeviceType();
   const [canInstall, setCanInstall] = useState(false);
   const deferredPrompt = useRef<{ prompt: () => void } | null>(null);
@@ -105,9 +108,16 @@ export default function Landing() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-buddy-green/5 to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto px-6 pt-24 pb-36 text-center relative z-10">
-          <div className="flex justify-center mb-6">
-            <Logo size="xl" className="mx-auto" />
+          <div className="flex justify-center items-center gap-3 mb-4">
+            <Logo size="xl" type="icon" />
+            <span className="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none">
+              <span className="buddy-duo-swap">Buddy</span>
+              <span className="buddy-duo-swap-rev">Up</span>
+            </span>
           </div>
+          <p className="font-mono text-buddy-green text-base sm:text-lg mb-6 min-h-[1.75em]" aria-hidden="true">
+            <Typewriter />
+          </p>
           <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
             Find your<br />
             <span className="text-buddy-green">fitness family.</span>
@@ -115,20 +125,55 @@ export default function Landing() {
           <p className="text-lg sm:text-xl text-buddy-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
             Train with buddies, join live workouts, eat better, and stay accountable — all in one place.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="#waitlist">
-              <Button size="lg" className="text-base px-10 py-4 rounded-2xl shadow-lg shadow-buddy-green/25">
-                Join Waiting List — Launching November
-              </Button>
-            </a>
-            <a href="#how-it-works">
-              <Button size="lg" variant="outline" className="text-base px-10 py-4 rounded-2xl gap-2">
-                <Play size={18} /> Watch how it works
-              </Button>
-            </a>
-            <Button size="lg" variant="outline" className="text-base px-10 py-4 rounded-2xl" onClick={() => setSupportOpen(true)}>
-              Fund Us
-            </Button>
+          <div className="w-full max-w-2xl mx-auto">
+            {/* CTAs — collapse away when the waiting list form opens */}
+            <div
+              className={`grid transition-all duration-500 ease-out ${
+                heroWaitlistOpen ? 'grid-rows-[0fr] opacity-0 pointer-events-none' : 'grid-rows-[1fr] opacity-100'
+              }`}
+              aria-hidden={heroWaitlistOpen}
+            >
+              <div className="overflow-hidden">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center py-1">
+                  <Button
+                    size="lg"
+                    className="text-base px-10 py-4 rounded-2xl shadow-lg shadow-buddy-green/25"
+                    onClick={() => setHeroWaitlistOpen(true)}
+                  >
+                    Join Waiting List — Launching November
+                  </Button>
+                  <a href="#how-it-works">
+                    <Button size="lg" variant="outline" className="text-base px-10 py-4 rounded-2xl gap-2">
+                      <Play size={18} /> Watch how it works
+                    </Button>
+                  </a>
+                  <Button size="lg" variant="outline" className="text-base px-10 py-4 rounded-2xl" onClick={() => setSupportOpen(true)}>
+                    Fund Us
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {/* Waiting list form — expands in place of the CTAs */}
+            <div
+              className={`grid transition-all duration-500 ease-out ${
+                heroWaitlistOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+              }`}
+              aria-hidden={!heroWaitlistOpen}
+            >
+              <div className="overflow-hidden">
+                <Card className="p-6 sm:p-8 bg-buddy-surface text-left relative">
+                  <button
+                    type="button"
+                    onClick={() => setHeroWaitlistOpen(false)}
+                    aria-label="Close waiting list form"
+                    className="absolute top-3 right-3 p-2 text-buddy-text-secondary hover:text-buddy-text-primary rounded-lg hover:bg-buddy-surface-raised transition-colors"
+                  >
+                    <X size={18} />
+                  </button>
+                  <WaitlistForm />
+                </Card>
+              </div>
+            </div>
           </div>
           <p className="mt-8 text-sm text-buddy-text-secondary">
             Join 500,000+ people already training together
@@ -234,10 +279,15 @@ export default function Landing() {
       {/* ── 5. TESTIMONIALS ── */}
       <section className="max-w-6xl mx-auto px-6 py-24">
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">What Our <span className="text-buddy-green">Community</span> Says</h2>
-        <p className="text-buddy-text-secondary text-center mb-16">Real people. Real results.</p>
+        <p className="text-buddy-text-secondary text-center mb-16">
+          Early feedback from our test users during the private beta. Real reviews coming at launch.
+        </p>
         <div className="grid md:grid-cols-2 gap-6">
           {testimonials.map(({ name, goal, quote, avatar }) => (
             <Card key={name} className="p-6 bg-buddy-surface-raised">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-buddy-text-secondary border border-buddy-surface rounded-full px-2.5 py-1 mb-4">
+                <User size={12} /> Test user
+              </span>
               <div className="flex gap-1 mb-3">
                 {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={14} className="text-buddy-gold fill-buddy-gold" />)}
               </div>
@@ -251,6 +301,16 @@ export default function Landing() {
               </div>
             </Card>
           ))}
+        </div>
+        <div className="text-center mt-12">
+          <a href="#waitlist">
+            <Button variant="outline" size="lg" className="gap-2">
+              <Star size={18} /> Leave a review
+            </Button>
+          </a>
+          <p className="mt-3 text-sm text-buddy-text-secondary">
+            Public reviews open at launch — join the waiting list to be invited first.
+          </p>
         </div>
       </section>
 
