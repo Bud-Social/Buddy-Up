@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Star, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor } from 'lucide-react';
+import { Check, Star, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
 import { Logo } from '@/components/ui/Logo';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { APP_DOWNLOAD_URLS, APP_URL } from '@/config/downloads';
+import { FUNDRAISER_URL, PLEDGE_FORM_URL } from '@/config/support';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
+import { WaitlistForm } from '@/components/features/support/WaitlistForm';
 
 const features = {
   live: {
@@ -360,7 +362,45 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── 10. FOOTER ── */}
+      {/* ── 10. SUPPORT + WAITLIST ── */}
+      <section className="max-w-5xl mx-auto px-6 py-24">
+        <h2 className="font-display text-3xl font-extrabold text-center mb-4">
+          Fuel the <span className="text-buddy-green">mission</span>
+        </h2>
+        <p className="text-buddy-text-secondary text-center mb-12 max-w-2xl mx-auto">
+          BuddyUp is free for everyone. Chip in, pledge funding, or join the waitlist to shape what ships next.
+        </p>
+        <div className="grid md:grid-cols-2 gap-6 min-w-0 [&>div]:min-w-0">
+          <Card className="p-8 bg-buddy-surface flex flex-col">
+            <h3 className="font-heading text-xl font-semibold mb-2">Support BuddyUp</h3>
+            <p className="text-sm text-buddy-text-secondary mb-6">
+              Your contribution keeps the lights on and new features coming.
+            </p>
+            <div className="grid sm:grid-cols-2 gap-3 mt-auto">
+              {FUNDRAISER_URL ? (
+                <Button onClick={() => setSupportOpen(true)} className="w-full">
+                  <Heart size={16} /> Donate
+                </Button>
+              ) : null}
+              {PLEDGE_FORM_URL ? (
+                <Button onClick={() => setSupportOpen(true)} variant="outline" className="w-full">
+                  <ClipboardList size={16} /> Pledge funding
+                </Button>
+              ) : null}
+              {!FUNDRAISER_URL && !PLEDGE_FORM_URL ? (
+                <Button onClick={() => setSupportOpen(true)} className="w-full sm:col-span-2">
+                  <Heart size={16} /> Support us
+                </Button>
+              ) : null}
+            </div>
+          </Card>
+          <Card className="p-8 bg-buddy-surface">
+            <WaitlistForm />
+          </Card>
+        </div>
+      </section>
+
+      {/* ── 11. FOOTER ── */}
       <footer className="border-t border-buddy-surface py-16">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid md:grid-cols-4 gap-8 mb-12">

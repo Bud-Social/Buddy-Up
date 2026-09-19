@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'apps.gamification',
     'apps.guardians',
     'apps.alarms',
+    'apps.waitlist',
 ]
 
 MIDDLEWARE = [
