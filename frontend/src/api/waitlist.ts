@@ -5,6 +5,7 @@ export interface WaitlistEntry {
   id: number;
   email: string;
   name: string;
+  country: string;
   source: string;
   created_at: string;
 }
@@ -12,6 +13,7 @@ export interface WaitlistEntry {
 export async function joinWaitlist(payload: {
   email: string;
   name?: string;
+  country: string;
   source?: string;
 }): Promise<ApiResponse<WaitlistEntry>> {
   const { data } = await apiClient.post<ApiResponse<WaitlistEntry>>('/waitlist/', {

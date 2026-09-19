@@ -4,12 +4,19 @@ import { BellRing, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { joinWaitlist } from '@/api/waitlist';
+import { COUNTRIES } from '@/config/countries';
+import { useVisitorCountry } from '@/hooks/useVisitorCountry';
 
 export function WaitlistForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [country, setCountry] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  // Best-effort guess (Vercel geo header / browser locale) to pre-select
+  // the country; the user can always change it and must confirm it.
+  const visitorCountry = useVisitorCountry();
+  const countryGuess = country || visitorCountry || '';
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -19,7 +26,11 @@ export function WaitlistForm() {
     try {
       // The Google Sheet mirror happens server-side (apps.waitlist.sheets) —
       // the webhook URL is deliberately not present in the client bundle.
-      const res = await joinWaitlist({ email: email.trim(), name: name.trim() });
+      const res = await joinWaitlist({
+        email: email.trim(),
+        name: name.trim(),
+        country: countryGuess,
+      });
       setMessage(res.message || 'You joined the waitlist.');
       setStatus('done');
     } catch (err) {
@@ -78,6 +89,30 @@ export function WaitlistForm() {
         placeholder="you@example.com"
         autoComplete="email"
       />
+      <div className="w-full">
+        <label
+          htmlFor="waitlist-country"
+          className="block text-sm font-medium text-buddy-text-secondary mb-1.5"
+        >
+          Country
+        </label>
+        <select
+          id="waitlist-country"
+          required
+          value={countryGuess}
+          onChange={(e) => setCountry(e.target.value)}
+          className={`w-full appearance-none bg-buddy-surface border rounded-xl px-4 py-3 text-buddy-text-primary font-body transition-colors focus:outline-none focus:ring-2 min-h-touch focus:ring-buddy-green/30 border-transparent ${COUNTRIES.includes(countryGuess) ? '' : 'text-buddy-text-secondary/50'}`}
+        >
+          <option value="" disabled>
+            Select your country…
+          </option>
+          {COUNTRIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
       {status === 'error' && (
         <p className="text-sm text-red-500" role="alert">{message}</p>
       )}
