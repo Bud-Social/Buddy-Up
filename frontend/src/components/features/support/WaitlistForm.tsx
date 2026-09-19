@@ -4,6 +4,7 @@ import { BellRing, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { joinWaitlist } from '@/api/waitlist';
+import { SHEETS_WEBHOOK_URL } from '@/config/support';
 
 export function WaitlistForm() {
   const [name, setName] = useState('');
@@ -21,7 +22,7 @@ export function WaitlistForm() {
         joinWaitlist({ email: email.trim(), name: name.trim() }),
         // Mirror to Google Sheet if webhook is configured (fire-and-forget, no-cors)
         (() => {
-          const sheetsUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+          const sheetsUrl = SHEETS_WEBHOOK_URL;
           if (!sheetsUrl) return Promise.resolve();
           const fd = new FormData();
           fd.append('name', name.trim());
