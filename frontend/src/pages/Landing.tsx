@@ -116,11 +116,11 @@ export default function Landing() {
             Train with buddies, join live workouts, eat better, and stay accountable — all in one place.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/signup">
+            <a href="#waitlist">
               <Button size="lg" className="text-base px-10 py-4 rounded-2xl shadow-lg shadow-buddy-green/25">
-                Get Started — It's Free
+                Join Waiting List — Launching November
               </Button>
-            </Link>
+            </a>
             <a href="#how-it-works">
               <Button size="lg" variant="outline" className="text-base px-10 py-4 rounded-2xl gap-2">
                 <Play size={18} /> Watch how it works
@@ -363,7 +363,7 @@ export default function Landing() {
       </section>
 
       {/* ── 10. SUPPORT + WAITLIST ── */}
-      <section className="max-w-5xl mx-auto px-6 py-24">
+      <section id="waitlist" className="max-w-5xl mx-auto px-6 py-24">
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">
           Fuel the <span className="text-buddy-green">mission</span>
         </h2>

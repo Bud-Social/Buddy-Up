@@ -17,7 +17,19 @@ export function WaitlistForm() {
     setStatus('loading');
     setMessage('');
     try {
-      const res = await joinWaitlist({ email: email.trim(), name: name.trim() });
+      const [res] = await Promise.all([
+        joinWaitlist({ email: email.trim(), name: name.trim() }),
+        // Mirror to Google Sheet if webhook is configured (fire-and-forget, no-cors)
+        (() => {
+          const sheetsUrl = import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK_URL;
+          if (!sheetsUrl) return Promise.resolve();
+          const fd = new FormData();
+          fd.append('name', name.trim());
+          fd.append('email', email.trim());
+          fd.append('source', 'landing');
+          return fetch(sheetsUrl, { method: 'POST', mode: 'no-cors', body: fd }).catch(() => {});
+        })(),
+      ]);
       setMessage(res.message || 'You joined the waitlist.');
       setStatus('done');
     } catch (err) {
@@ -54,10 +66,10 @@ export function WaitlistForm() {
     <form onSubmit={handleSubmit} className="space-y-3" noValidate={false}>
       <div className="flex items-center gap-2 mb-1">
         <BellRing size={20} className="text-buddy-green" />
-        <h3 className="font-heading font-semibold">Join the waitlist</h3>
+        <h3 className="font-heading font-semibold">Join the Waiting List</h3>
       </div>
       <p className="text-sm text-buddy-text-secondary">
-        Be first in when new BuddyUp features drop. No spam, one email when it matters.
+        We launch in November 2026. Join the list and be first through the door.
       </p>
       <Input
         label="Name (optional)"
