@@ -226,7 +226,6 @@ def fetch_multimodal(dest: Path, budget_mb: int, seed: int):
     import numpy as np
     import pandas as pd
     import torch
-    import wave
 
     rng = random.Random(seed)
     per_mod = budget_mb / 5
@@ -245,7 +244,7 @@ def fetch_multimodal(dest: Path, budget_mb: int, seed: int):
         Image.open(p).convert("RGB").resize((32, 32)))).permute(2, 0, 1)
         for p, _ in img_files])
     mods["image"] = XI.reshape(len(XI), -1).float()  # (B, 3072), toks=1
-    labels["image"] = torch.tensor([l for _, l in img_files], dtype=torch.long)
+    labels["image"] = torch.tensor([lbl for _, lbl in img_files], dtype=torch.long)
     meta["towers"]["image"] = {"feat": 3072, "toks": 1, "task": "nsfw-binary",
                                "nclass": 2}
 
@@ -404,7 +403,7 @@ def fetch_recsys(dest: Path, budget_mb: int, seed: int):
     items = {r: i for i, r in enumerate(tr["recipe_id"].unique())}
     va = va[va["user_id"].isin(users) & va["recipe_id"].isin(items)]
     U = torch.tensor(tr["user_id"].map(users).to_numpy(), dtype=torch.long)
-    I = torch.tensor(tr["recipe_id"].map(items).to_numpy(), dtype=torch.long)
+    IT = torch.tensor(tr["recipe_id"].map(items).to_numpy(), dtype=torch.long)
     y = torch.tensor((tr["rating"].to_numpy(float) >= 4).astype(float))
     val = {"u": torch.tensor(va["user_id"].map(users).to_numpy(), dtype=torch.long),
            "i": torch.tensor(va["recipe_id"].map(items).to_numpy(), dtype=torch.long)}
@@ -412,8 +411,8 @@ def fetch_recsys(dest: Path, budget_mb: int, seed: int):
     # rankers trained without negatives never leave chance-level
     import random as _r
     _rr = _r.Random(seed)
-    obs = set(zip(U.tolist(), I.tolist())) | set(zip(val["u"].tolist(),
-                                                     val["i"].tolist()))
+    obs = set(zip(U.tolist(), IT.tolist())) | set(zip(val["u"].tolist(),
+                                                      val["i"].tolist()))
     need, neg_u, neg_i = int(y.sum().item()), [], []
     while len(neg_u) < need:
         for a, b in zip([_rr.randrange(len(users)) for _ in range(need * 2)],
@@ -425,7 +424,7 @@ def fetch_recsys(dest: Path, budget_mb: int, seed: int):
                 if len(neg_u) >= need:
                     break
     U = torch.cat([U, torch.tensor(neg_u)])
-    I = torch.cat([I, torch.tensor(neg_i)])
+    IT = torch.cat([IT, torch.tensor(neg_i)])
     y = torch.cat([y, torch.zeros(len(neg_u))])
     names = pd.read_csv(fc / "RAW_recipes.csv", usecols=["id", "name"])
     name_of = dict(zip(names["id"], names["name"].fillna("")))
@@ -434,7 +433,7 @@ def fetch_recsys(dest: Path, budget_mb: int, seed: int):
     man = {"task": "recsys", "n_users": len(users), "n_items": len(items),
            "content_dim": 16, "source": "food.com ratings>=4 pos, recipe-name content",
            "n": len(U)}
-    dest = _write_batch(dest, man, {"U": U, "I": I, "y": y,
+    dest = _write_batch(dest, man, {"U": U, "I": IT, "y": y,
                                     "val_u": val["u"], "val_i": val["i"], "C": C})
     print(f"recsys: {len(U)} pairs, {len(users)} users x {len(items)} items -> "
           f"{_mb((dest / 'tensors.pt').stat().st_size)} at {dest}")
@@ -454,7 +453,7 @@ def fetch_rl_traj(dest: Path, budget_mb: int, seed: int):
 
     env = gym.make("CartPole-v1")
     N = min(30_000, max(3_000, int(budget_mb * 1e6 / 500)))
-    O, A, R, O2 = [], [], [], []
+    OBS, A, R, O2 = [], [], [], []
 
     def tile(o):
         return np.tile(np.asarray(o, dtype=np.float32), 12)[:48]
@@ -464,7 +463,7 @@ def fetch_rl_traj(dest: Path, budget_mb: int, seed: int):
     for _ in range(N):
         a = int(rng.integers(2))
         o2, r, term, trunc, _ = env.step(a)
-        O.append(tile(o))
+        OBS.append(tile(o))
         A.append(a)
         R.append(float(r))
         O2.append(tile(o2))
@@ -473,7 +472,7 @@ def fetch_rl_traj(dest: Path, budget_mb: int, seed: int):
             o, _ = env.reset()
     man = {"task": "rl_traj", "obs": 48, "na": 2, "n": N,
            "source": "CartPole-v1 random rollouts, obs tiled 4->48"}
-    return _write_batch(dest, man, {"o": torch.tensor(np.stack(O)),
+    return _write_batch(dest, man, {"o": torch.tensor(np.stack(OBS)),
                                     "a": torch.tensor(A, dtype=torch.long),
                                     "r": torch.tensor(R),
                                     "o2": torch.tensor(np.stack(O2))})
