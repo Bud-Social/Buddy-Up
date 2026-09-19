@@ -29,6 +29,7 @@ frontend/dist-node/
 .env.prod
 .env.local
 .env.*.local
+.env.snap
 
 # ── AI Service datasets (DVC-managed, not committed to git) ─────────
 backend/ai_service/data/*
