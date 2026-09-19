@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { router } from './router';
 import { ThemeProvider } from './components/layout/ThemeProvider';
 import { ToastProvider } from './components/ui/Toast';
@@ -58,6 +59,7 @@ export function App() {
           <AuthInitializer>
             <RouterProvider router={router} future={{ v7_startTransition: true }} />
             <PWAUpdateBanner />
+            <Analytics />
           </AuthInitializer>
         </ToastProvider>
       </ThemeProvider>
