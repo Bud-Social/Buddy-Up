@@ -389,7 +389,7 @@ SOCIAL_AUTH_LOGIN_REDIRECT_URL = '/feed'
 
 CSRF_TRUSTED_ORIGINS = os.environ.get(
     'CSRF_TRUSTED_ORIGINS',
-    'https://buddyup.app,https://buddy-up-tan.vercel.app,https://*.up.railway.app,https://*.vercel.app',
+    'https://buddyup.app,https://buddy-up-tan.vercel.app,https://*.up.railway.app,https://*.vercel.app,https://*.containers.snapdeploy.app',
 ).split(',')
 SOCIAL_AUTH_LOGIN_ERROR_URL = '/login'
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['email', 'profile']

@@ -20,13 +20,13 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '.up.railway.app',
     '.vercel.app',
+    '.containers.snapdeploy.app',
     'buddyup.app',
     'www.buddyup.app',
     'api.buddyup.app',
 ] + [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h.strip()]
 
 CORS_ALLOWED_ORIGINS = [
-    'https://buddy-up-tan.vercel.app',
     'https://buddyup.app',
     'https://www.buddyup.app',
     # buddyupfit.com / buddyupfit.co.ke — current production frontend domains
