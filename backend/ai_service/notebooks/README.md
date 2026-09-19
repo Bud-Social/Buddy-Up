@@ -41,6 +41,24 @@ imported), seeds python/numpy/TF/torch, and exposes the resolved run paths:
 `run-metadata.json` under `OUTPUT_ROOT` (the model-ci promotion gate accepts a
 `run-metadata.json` next to the artifact as the metric source).
 
+## Running on Kaggle (`kaggle_training.ipynb`)
+
+`kaggle_training.ipynb` is the Kaggle harness for every notebook in this folder:
+auth → data → train → export → publish. The reference pipeline implemented
+end-to-end is `toxicity_classifier` (text moderation); the other models reuse
+their own notebook with cells 1–3 of the Kaggle harness prepended.
+
+- **Auth**: the token is resolved in order — Kaggle Secret `KAGGLE_API_TOKEN` →
+  environment → literal fallback. Prefer the Secret path; a literal `KGAT_…`
+  token in committed code must be rotated immediately.
+- **Data**: attaches/pulls the `<you>/buddy-up-data` Kaggle dataset (the
+  DVC-tracked corpora), falling back to the repo `data/` dir + synthetic
+  bootstrap labels when a corpus is unavailable.
+- **Export/publish**: ONNX (fp32 + dynamic INT8) + vectorizer vocab + model
+  card + `run-metadata.json` under `/kaggle/working/buddyup-output`, then
+  published as a new version of the `<you>/buddyup-models` Kaggle dataset
+  (kagglehub `dataset_upload`, CLI fallback documented in the cell).
+
 ## Running locally
 
 The cell-1 bootstrap of every notebook is kernel-location independent: it walks
