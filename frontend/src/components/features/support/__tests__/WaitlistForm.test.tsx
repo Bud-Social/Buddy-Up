@@ -15,7 +15,7 @@ describe('WaitlistForm', () => {
 
   it('renders email field and submit button', () => {
     render(<WaitlistForm />);
-    expect(screen.getByText('Join the waitlist')).toBeDefined();
+    expect(screen.getByText('Join the Waiting List')).toBeDefined();
     expect(screen.getByRole('button', { name: 'Notify me' })).toBeDefined();
   });
 
@@ -28,12 +28,15 @@ describe('WaitlistForm', () => {
     fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
       target: { value: 'a@b.c' },
     });
+    fireEvent.change(screen.getByLabelText('Country'), {
+      target: { value: 'Kenya' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Notify me' }));
     await waitFor(() => {
       expect(screen.getByText("You're on the list")).toBeDefined();
     });
     expect(mockJoin).toHaveBeenCalledWith(
-      expect.objectContaining({ email: 'a@b.c' }),
+      expect.objectContaining({ email: 'a@b.c', country: 'Kenya' }),
     );
   });
 
