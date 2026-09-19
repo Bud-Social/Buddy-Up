@@ -75,10 +75,13 @@ html.ambient {
   }
 }
 
-/* ── Landing hero: bicolor BuddyUp wordmark ("Buddy" white / "Up" green, swapping) ── */
+/* ── Bicolor BuddyUp wordmark ("Buddy" / "Up", colors swapping) ──
+ * The "white" phase follows the active theme's primary text color
+ * (--buddy-text-primary-rgb) so the wordmark stays visible in light,
+ * high-contrast, and ambient themes — not just dark. */
 @keyframes buddy-duo-swap {
-  0%, 100% { color: #ffffff; }
-  50% { color: #00c896; }
+  0%, 100% { color: rgb(var(--buddy-text-primary-rgb, 255 255 255)); }
+  50% { color: var(--buddy-green, #00c896); }
 }
 
 .buddy-duo-swap {
@@ -106,7 +109,7 @@ html.ambient {
     animation: none;
   }
   .buddy-duo-swap-rev {
-    color: #00c896;
+    color: var(--buddy-green, #00c896);
   }
   .type-caret {
     animation: none;

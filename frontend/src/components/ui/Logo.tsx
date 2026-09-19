@@ -28,8 +28,9 @@ export function Logo({ size = 'md', className = '', type = 'full' }: LogoProps) 
 
   if (type === 'text') {
     return (
-      <span className={`font-display font-extrabold bg-gradient-to-r from-buddy-green to-buddy-electric bg-clip-text text-transparent ${sizeMap[size].text} ${className}`}>
-        BuddyUp
+      <span className={`font-display font-extrabold ${sizeMap[size].text} ${className}`}>
+        <span className="buddy-duo-swap">Buddy</span>
+        <span className="buddy-duo-swap-rev">Up</span>
       </span>
     );
   }
@@ -49,8 +50,9 @@ export function Logo({ size = 'md', className = '', type = 'full' }: LogoProps) 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {img}
-      <span className={`font-display font-extrabold bg-gradient-to-r from-buddy-green to-buddy-electric bg-clip-text text-transparent ${sizeMap[size].text}`}>
-        BuddyUp
+      <span className={`font-display font-extrabold ${sizeMap[size].text}`}>
+        <span className="buddy-duo-swap">Buddy</span>
+        <span className="buddy-duo-swap-rev">Up</span>
       </span>
     </div>
   );
