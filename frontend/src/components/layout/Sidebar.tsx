@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, MessageCircle, Bell, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, BrainCircuit, Activity, UsersRound } from 'lucide-react';
+import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, MessageCircle, Bell, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, BrainCircuit, Activity, UsersRound, HeartHandshake } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useAuthStore } from '@/store/authStore';
 import { Logo } from '@/components/ui/Logo';
+import { SupportDialog } from '@/components/features/support/SupportDialog';
 
 const main = [
   { to: '/feed', icon: Home, label: 'Home' },
@@ -19,6 +21,7 @@ const main = [
 const bottom = [{ to: '/settings', icon: Settings, label: 'Settings' }, { to: '/help', icon: HelpCircle, label: 'Help' }];
 
 export function Sidebar({ inDrawer = false }: { inDrawer?: boolean }) {
+  const [supportOpen, setSupportOpen] = useState(false);
   const unread = useNotificationStore((s) => s.unreadCount);
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
@@ -45,12 +48,19 @@ export function Sidebar({ inDrawer = false }: { inDrawer?: boolean }) {
             <span className="w-[18px] shrink-0 flex justify-center"><Icon size={18} /></span><span className={`${labelCls} transition-all duration-300`}>{label}</span>
           </NavLink>
         ))}
+        <button
+          onClick={() => setSupportOpen(true)}
+          className="flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl mb-1 w-full text-sm font-medium transition-colors text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised"
+        >
+          <span className="w-[18px] shrink-0 flex justify-center"><HeartHandshake size={18} /></span><span className={`${labelCls} transition-all duration-300`}>Fund Us</span>
+        </button>
         {!inDrawer && (
           <button onClick={toggle} className="flex items-center justify-center lg:justify-start gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised transition-colors mt-1">
             <span className="w-[18px] shrink-0 flex justify-center">{collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}</span><span className={`${labelCls} transition-all duration-300`}>{collapsed ? 'Expand' : 'Collapse'}</span>
           </button>
         )}
       </div>
+      <SupportDialog open={supportOpen} onClose={() => setSupportOpen(false)} />
     </aside>
   );
 }

@@ -4,6 +4,7 @@ import Account from './Account';
 import Verifications from './Verifications';
 import Privacy from './Privacy';
 import Notifications from './Notifications';
+import AlarmCenter from './AlarmCenter';
 import Security from './Security';
 import Blocked from './Blocked';
 import Activity from './Activity';
@@ -19,6 +20,7 @@ const SECTION_COMPONENTS: Record<string, React.ComponentType> = {
   verifications: Verifications,
   privacy: Privacy,
   notifications: Notifications,
+  alarms: AlarmCenter,
   security: Security,
   blocked: Blocked,
   activity: Activity,

@@ -8,6 +8,8 @@ interface ImportMetaEnv {
   readonly VITE_CLOUDINARY_CLOUD_NAME: string;
   readonly VITE_FIREBASE_CONFIG: string;
   readonly VITE_FLUTTERWAVE_PUBLIC_KEY: string;
+  readonly VITE_FUNDRAISER_URL?: string;
+  readonly VITE_PLEDGE_FORM_URL?: string;
 }
 
 interface ImportMeta {

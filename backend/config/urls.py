@@ -24,6 +24,7 @@ urlpatterns = [
     path('api/v1/notifications/', include('apps.notifications.urls')),
     path('api/v1/moderation/', include('apps.moderation.urls')),
     path('api/v1/verification/', include('apps.verification.urls')),
+    path('api/v1/alarms/', include('apps.alarms.urls')),
     path('api/v1/ai/', include('apps.ai.urls')),
     path('api/v1/analytics/', include('apps.analytics.urls')),
     path('api/v1/', include('apps.gamification.urls')),

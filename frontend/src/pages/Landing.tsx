@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Logo } from '@/components/ui/Logo';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { APP_DOWNLOAD_URLS, APP_URL } from '@/config/downloads';
+import { SupportDialog } from '@/components/features/support/SupportDialog';
 
 const features = {
   live: {
@@ -73,6 +74,7 @@ const pricingTiers = [
 
 export default function Landing() {
   const [activeFeature, setActiveFeature] = useState('live');
+  const [supportOpen, setSupportOpen] = useState(false);
   const { isMobile, isTablet, isDesktop, os } = useDeviceType();
   const [canInstall, setCanInstall] = useState(false);
   const deferredPrompt = useRef<{ prompt: () => void } | null>(null);
@@ -122,6 +124,9 @@ export default function Landing() {
                 <Play size={18} /> Watch how it works
               </Button>
             </a>
+            <Button size="lg" variant="outline" className="text-base px-10 py-4 rounded-2xl" onClick={() => setSupportOpen(true)}>
+              Fund Us
+            </Button>
           </div>
           <p className="mt-8 text-sm text-buddy-text-secondary">
             Join 500,000+ people already training together
@@ -385,6 +390,7 @@ export default function Landing() {
                 <Link to="/medical-disclaimer" className="block hover:text-buddy-text-primary">Medical Disclaimer</Link>
                 <Link to="/sponsorship-policy" className="block hover:text-buddy-text-primary">Sponsorship Policy</Link>
                 <Link to="/help" className="block hover:text-buddy-text-primary">Help</Link>
+                <button onClick={() => setSupportOpen(true)} className="block hover:text-buddy-text-primary">Fund Us</button>
               </div>
             </div>
           </div>
@@ -399,6 +405,7 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+      <SupportDialog open={supportOpen} onClose={() => setSupportOpen(false)} />
     </div>
   );
 }

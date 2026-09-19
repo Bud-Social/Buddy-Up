@@ -1,5 +1,5 @@
 import {
-  Activity, Bell, CreditCard, Download, Eye, Globe, HelpCircle, Lock,
+  Activity, Bell, BellRing, CreditCard, Download, Eye, Globe, HelpCircle, Lock,
   Shield, Sun, User, UserX, UsersRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -17,6 +17,7 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
   { id: 'verifications', label: 'Verifications', icon: Shield, desc: 'Age & professional verification' },
   { id: 'privacy', label: 'Privacy', icon: Eye, desc: 'Visibility, activity status, content rating' },
   { id: 'notifications', label: 'Notifications', icon: Bell, desc: 'Push, email, quiet hours, categories' },
+  { id: 'alarms', label: 'Alarm Center', icon: BellRing, desc: 'Wake-up alarms, sounds, shares' },
   { id: 'security', label: 'Security', icon: Lock, desc: '2FA, passkeys, active sessions' },
   { id: 'blocked', label: 'Blocked Users', icon: UserX, desc: 'Manage blocked accounts' },
   { id: 'activity', label: 'Activity Log', icon: Activity, desc: 'View your account activity history' },
