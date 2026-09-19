@@ -39,7 +39,7 @@ class WaitlistViewSet(
         # Mirror the new signup to the Google Sheet. Server-side so the
         # webhook URL is never exposed to the browser; fire-and-forget.
         entry = serializer.instance
-        mirror_to_sheets_later(entry.email, entry.name, entry.source)
+        mirror_to_sheets_later(entry.email, entry.name, entry.country, entry.source)
         return Response(
             {'success': True, 'data': serializer.data,
              'message': 'You joined the waitlist.', 'errors': None, 'pagination': None},

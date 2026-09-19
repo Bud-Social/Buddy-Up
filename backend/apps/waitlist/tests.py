@@ -9,22 +9,33 @@ from rest_framework.test import APIClient
 from apps.waitlist.models import WaitlistEntry
 
 
+# Keep the Sheets mirror off for these tests even when the environment
+# (e.g. a docker container with GOOGLE_SHEETS_WEBHOOK_URL set) provides it —
+# otherwise a signup test would POST a junk row to the real spreadsheet.
+@mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': ''})
 class WaitlistSignupTests(TestCase):
     def setUp(self):
         self.client = APIClient()
 
     def test_create_signup_returns_201(self):
         res = self.client.post('/api/v1/waitlist/', {
-            'email': 'Early@Example.com', 'name': 'Early Bird',
+            'email': 'Early@Example.com', 'name': 'Early Bird', 'country': 'Kenya',
         }, format='json')
         assert res.status_code == status.HTTP_201_CREATED
         body = res.json()
         assert body['success'] is True
         assert body['data']['email'] == 'early@example.com'
+        assert body['data']['country'] == 'Kenya'
         assert WaitlistEntry.objects.count() == 1
 
+    def test_country_is_required(self):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'nocountry@example.com',
+        }, format='json')
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+
     def test_duplicate_email_is_idempotent(self):
-        WaitlistEntry.objects.create(email='dup@example.com', source='landing')
+        WaitlistEntry.objects.create(email='dup@example.com', source='landing', country='Kenya')
         res = self.client.post('/api/v1/waitlist/', {
             'email': 'DUP@example.com',
         }, format='json')
@@ -39,7 +50,7 @@ class WaitlistSignupTests(TestCase):
         assert res.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_list_requires_staff(self):
-        WaitlistEntry.objects.create(email='a@example.com', source='landing')
+        WaitlistEntry.objects.create(email='a@example.com', source='landing', country='Kenya')
         res = self.client.get('/api/v1/waitlist/')
         assert res.status_code in (
             status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN,
@@ -67,20 +78,21 @@ class SheetsMirrorTests(TestCase):
 
         thread_mock.side_effect = _InlineThread
         res = self.client.post('/api/v1/waitlist/', {
-            'email': 'mirror@example.com', 'name': 'Mirror',
+            'email': 'mirror@example.com', 'name': 'Mirror', 'country': 'Kenya',
         }, format='json')
         assert res.status_code == status.HTTP_201_CREATED
         args, kwargs = post_mock.call_args
         assert args[0] == 'https://script.example/exec'
         assert kwargs['data'] == {
-            'email': 'mirror@example.com', 'name': 'Mirror', 'source': 'landing',
+            'email': 'mirror@example.com', 'name': 'Mirror',
+            'country': 'Kenya', 'source': 'landing',
         }
 
     @mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': ''})
     @mock.patch('apps.waitlist.sheets.requests.post')
     def test_no_mirror_when_unset(self, post_mock):
         res = self.client.post('/api/v1/waitlist/', {
-            'email': 'nomirror@example.com',
+            'email': 'nomirror@example.com', 'country': 'Kenya',
         }, format='json')
         assert res.status_code == status.HTTP_201_CREATED
         post_mock.assert_not_called()
@@ -89,7 +101,7 @@ class SheetsMirrorTests(TestCase):
     @mock.patch('apps.waitlist.sheets.requests.post', side_effect=Exception('boom'))
     def test_mirror_failure_does_not_break_signup(self, post_mock):
         res = self.client.post('/api/v1/waitlist/', {
-            'email': 'flaky@example.com',
+            'email': 'flaky@example.com', 'country': 'Kenya',
         }, format='json')
         assert res.status_code == status.HTTP_201_CREATED
         assert WaitlistEntry.objects.filter(email='flaky@example.com').exists()

@@ -29,11 +29,13 @@ CORS_ALLOWED_ORIGINS = [
     'https://buddy-up-tan.vercel.app',
     'https://buddyup.app',
     'https://www.buddyup.app',
-    # buddyupfit.com — current production frontend domain (Vercel). Without
-    # these, browser preflights from the landing page fail with
-    # "No 'Access-Control-Allow-Origin' header".
+    # buddyupfit.com / buddyupfit.co.ke — current production frontend domains
+    # (Vercel). Without these, browser preflights from the landing page fail
+    # with "No 'Access-Control-Allow-Origin' header".
     'https://buddyupfit.com',
     'https://www.buddyupfit.com',
+    'https://buddyupfit.co.ke',
+    'https://www.buddyupfit.co.ke',
 ]
 # Env-supplied origins must never crash deploys (corsheaders.E013 turns a
 # single malformed entry into SystemCheckError → container unhealthy →

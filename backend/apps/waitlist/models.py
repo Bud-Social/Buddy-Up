@@ -7,6 +7,9 @@ class WaitlistEntry(TimestampedModel):
 
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=80, blank=True)
+    # Full country name from the signup form (e.g. "Kenya"); required at the
+    # API layer (blank only as a DB default for rows predating the field).
+    country = models.CharField(max_length=56, default='', blank=True)
     source = models.CharField(max_length=40, default='landing')
 
     class Meta:
