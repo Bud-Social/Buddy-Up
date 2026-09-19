@@ -108,16 +108,19 @@ export default function Landing() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-buddy-green/5 to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto px-6 pt-24 pb-36 text-center relative z-10">
-          <div className="flex justify-center items-center gap-3 mb-4">
-            <Logo size="xl" type="icon" />
-            <span className="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none">
-              <span className="buddy-duo-swap">Buddy</span>
-              <span className="buddy-duo-swap-rev">Up</span>
+          <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mb-6">
+            <span className="flex items-center gap-3">
+              <Logo size="xl" type="icon" />
+              <span className="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none">
+                <span className="buddy-duo-swap">Buddy</span>
+                <span className="buddy-duo-swap-rev">Up</span>
+              </span>
+            </span>
+            {/* Typewriter tagline rides on the name line (wraps below it on small screens) */}
+            <span className="font-mono text-buddy-green text-base sm:text-xl self-end pb-1 sm:pb-2 min-h-[1.5em]" aria-hidden="true">
+              <Typewriter />
             </span>
           </div>
-          <p className="font-mono text-buddy-green text-base sm:text-lg mb-6 min-h-[1.75em]" aria-hidden="true">
-            <Typewriter />
-          </p>
           <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
             Find your<br />
             <span className="text-buddy-green">fitness family.</span>
