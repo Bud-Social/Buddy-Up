@@ -4,7 +4,6 @@ import { BellRing, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { joinWaitlist } from '@/api/waitlist';
-import { SHEETS_WEBHOOK_URL } from '@/config/support';
 
 export function WaitlistForm() {
   const [name, setName] = useState('');
@@ -18,19 +17,9 @@ export function WaitlistForm() {
     setStatus('loading');
     setMessage('');
     try {
-      const [res] = await Promise.all([
-        joinWaitlist({ email: email.trim(), name: name.trim() }),
-        // Mirror to Google Sheet if webhook is configured (fire-and-forget, no-cors)
-        (() => {
-          const sheetsUrl = SHEETS_WEBHOOK_URL;
-          if (!sheetsUrl) return Promise.resolve();
-          const fd = new FormData();
-          fd.append('name', name.trim());
-          fd.append('email', email.trim());
-          fd.append('source', 'landing');
-          return fetch(sheetsUrl, { method: 'POST', mode: 'no-cors', body: fd }).catch(() => {});
-        })(),
-      ]);
+      // The Google Sheet mirror happens server-side (apps.waitlist.sheets) —
+      // the webhook URL is deliberately not present in the client bundle.
+      const res = await joinWaitlist({ email: email.trim(), name: name.trim() });
       setMessage(res.message || 'You joined the waitlist.');
       setStatus('done');
     } catch (err) {

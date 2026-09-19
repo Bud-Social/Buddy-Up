@@ -10,8 +10,6 @@ interface ImportMetaEnv {
   readonly VITE_FLUTTERWAVE_PUBLIC_KEY: string;
   readonly VITE_FUNDRAISER_URL?: string;
   readonly VITE_PLEDGE_FORM_URL?: string;
-  readonly GOOGLE_SHEETS_WEBHOOK_URL?: string;
-  readonly VITE_GOOGLE_SHEETS_WEBHOOK_URL?: string;
 }
 
 interface ImportMeta {

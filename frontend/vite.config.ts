@@ -4,9 +4,6 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig({
-  // VITE_ is the standard client-exposure prefix. GOOGLE_SHEETS_WEBHOOK_URL is
-  // additionally exposed unprefixed because that is how it is set on Vercel.
-  envPrefix: ['VITE_', 'GOOGLE_SHEETS_WEBHOOK_URL'],
   plugins: [
     react(),
     VitePWA({
