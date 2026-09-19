@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from .models import WaitlistEntry
 from .serializers import WaitlistEntrySerializer
+from .sheets import mirror_to_sheets_later
 
 
 class WaitlistViewSet(
@@ -35,6 +36,10 @@ class WaitlistViewSet(
         })
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        # Mirror the new signup to the Google Sheet. Server-side so the
+        # webhook URL is never exposed to the browser; fire-and-forget.
+        entry = serializer.instance
+        mirror_to_sheets_later(entry.email, entry.name, entry.source)
         return Response(
             {'success': True, 'data': serializer.data,
              'message': 'You joined the waitlist.', 'errors': None, 'pagination': None},

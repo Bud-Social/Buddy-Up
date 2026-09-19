@@ -1,5 +1,7 @@
 """Tests for the public waitlist signup (apps.waitlist)."""
 
+from unittest import mock
+
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -42,3 +44,52 @@ class WaitlistSignupTests(TestCase):
         assert res.status_code in (
             status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN,
         )
+
+
+class SheetsMirrorTests(TestCase):
+    """The Google Sheets relay runs server-side with a hidden webhook URL."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    @mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': 'https://script.example/exec'})
+    @mock.patch('apps.waitlist.sheets.threading.Thread')
+    @mock.patch('apps.waitlist.sheets.requests.post')
+    def test_signup_mirrors_to_sheets(self, post_mock, thread_mock):
+        # Run the mirror's daemon-thread target inline so the assertion is
+        # deterministic (no race with the real thread scheduler).
+        class _InlineThread:
+            def __init__(self, target, args=(), **_kw):
+                self._target, self._args = target, args
+
+            def start(self):
+                self._target(*self._args)
+
+        thread_mock.side_effect = _InlineThread
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'mirror@example.com', 'name': 'Mirror',
+        }, format='json')
+        assert res.status_code == status.HTTP_201_CREATED
+        args, kwargs = post_mock.call_args
+        assert args[0] == 'https://script.example/exec'
+        assert kwargs['data'] == {
+            'email': 'mirror@example.com', 'name': 'Mirror', 'source': 'landing',
+        }
+
+    @mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': ''})
+    @mock.patch('apps.waitlist.sheets.requests.post')
+    def test_no_mirror_when_unset(self, post_mock):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'nomirror@example.com',
+        }, format='json')
+        assert res.status_code == status.HTTP_201_CREATED
+        post_mock.assert_not_called()
+
+    @mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': 'https://script.example/exec'})
+    @mock.patch('apps.waitlist.sheets.requests.post', side_effect=Exception('boom'))
+    def test_mirror_failure_does_not_break_signup(self, post_mock):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'flaky@example.com',
+        }, format='json')
+        assert res.status_code == status.HTTP_201_CREATED
+        assert WaitlistEntry.objects.filter(email='flaky@example.com').exists()
