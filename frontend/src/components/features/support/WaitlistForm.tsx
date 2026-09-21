@@ -24,8 +24,9 @@ export function WaitlistForm() {
     setStatus('loading');
     setMessage('');
     try {
-      // The Google Sheet mirror happens server-side (apps.waitlist.sheets) —
-      // the webhook URL is deliberately not present in the client bundle.
+      // The signup is written by the same-origin Vercel function (api/waitlist.ts)
+      // to Supabase, which also mirrors to Google Sheets server-side — the
+      // webhook URL and service key are deliberately not in the client bundle.
       const res = await joinWaitlist({
         email: email.trim(),
         name: name.trim(),

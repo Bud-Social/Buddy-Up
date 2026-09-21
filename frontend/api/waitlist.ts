@@ -1,0 +1,171 @@
+/**
+ * Vercel serverless function: POST /api/waitlist
+ *
+ * Replaces the Django waitlist endpoint pre-launch. Same-origin from the
+ * frontend, so the browser needs no CORS preflight; the origin checks below
+ * exist only as a safety net for cross-origin tools/curl.
+ *
+ * Secrets (Supabase service key, Google Sheets webhook URL) live in Vercel
+ * ENVIRONMENT VARIABLES — plain names, NOT VITE_-prefixed, so they are never
+ * inlined into the client bundle. Required:
+ *   SUPABASE_URL                 e.g. https://xxxx.supabase.co
+ *   SUPABASE_SERVICE_ROLE_KEY    service key (bypasses RLS; server-side only)
+ *   GOOGLE_SHEETS_WEBHOOK_URL    optional — Apps Script exec URL for the mirror
+ *
+ * Writes to Supabase table `waitlist_entry`
+ * (email PK, name, country, source, created_at default now(), RLS on, no policies).
+ */
+
+interface WaitlistBody {
+  email?: unknown;
+  name?: unknown;
+  country?: unknown;
+  source?: unknown;
+}
+
+type VercelReq = {
+  method?: string;
+  headers: Record<string, string | string[] | undefined>;
+  body?: unknown;
+};
+
+type VercelRes = {
+  statusCode: number;
+  setHeader(key: string, value: string): void;
+  end(data?: string): void;
+};
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const ALLOWED_ORIGINS = new Set([
+  'https://buddyupfit.com',
+  'https://www.buddyupfit.com',
+  'https://buddyupfit.co.ke',
+  'https://www.buddyupfit.co.ke',
+]);
+const MIRROR_TIMEOUT_MS = 4000;
+
+function json(res: VercelRes, status: number, body: unknown): void {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(body));
+}
+
+function fail(res: VercelRes, status: number, message: string): void {
+  json(res, status, { success: false, message, data: null, errors: null });
+}
+
+/** Race the fire-and-forget sheet mirror against a hard timeout so a hung
+ * webhook can never delay the signup response (same policy as the Django
+ * version's daemon thread). Failures are swallowed by design. */
+async function mirrorToSheets(entry: { email: string; name: string; country: string; source: string }): Promise<void> {
+  const url = (process.env.GOOGLE_SHEETS_WEBHOOK_URL || '').trim();
+  if (!url) return;
+  await Promise.race([
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        email: entry.email,
+        name: entry.name,
+        country: entry.country,
+        source: entry.source,
+      }),
+    }).catch(() => undefined),
+    new Promise((resolve) => setTimeout(resolve, MIRROR_TIMEOUT_MS)),
+  ]);
+}
+
+export default async function handler(req: VercelReq, res: VercelRes): Promise<void> {
+  const origin = Array.isArray(req.headers.origin) ? req.headers.origin[0] : req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
+
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    fail(res, 405, 'Method not allowed');
+    return;
+  }
+
+  const sbUrl = (process.env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const sbKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
+  if (!sbUrl || !sbKey) {
+    console.error('waitlist: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not configured');
+    fail(res, 500, 'Service is not configured. Please try again later.');
+    return;
+  }
+
+  const body = (typeof req.body === 'string' ? safeParse(req.body) : req.body) as WaitlistBody | null;
+  if (!body) {
+    fail(res, 400, 'Invalid request body.');
+    return;
+  }
+
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const name = typeof body.name === 'string' ? body.name.trim().slice(0, 80) : '';
+  const country = typeof body.country === 'string' ? body.country.trim().slice(0, 56) : '';
+  const source = typeof body.source === 'string' && body.source.trim() ? body.source.trim().slice(0, 40) : 'landing';
+
+  if (!EMAIL_RE.test(email) || email.length > 254) {
+    fail(res, 400, 'Please enter a valid email address.');
+    return;
+  }
+  if (!country) {
+    fail(res, 400, 'Please select your country.');
+    return;
+  }
+
+  const entry = { email, name, country, source };
+
+  // Upsert on the email primary key: re-joining never duplicates or errors.
+  let saved = false;
+  try {
+    const sbRes = await fetch(`${sbUrl}/rest/v1/waitlist_entry?on_conflict=email`, {
+      method: 'POST',
+      headers: {
+        apikey: sbKey,
+        Authorization: `Bearer ${sbKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(entry),
+    });
+    saved = sbRes.ok;
+    if (!saved) {
+      console.error('waitlist: supabase insert failed', sbRes.status, (await sbRes.text()).slice(0, 300));
+    }
+  } catch (err) {
+    console.error('waitlist: supabase insert threw', err);
+  }
+
+  if (!saved) {
+    fail(res, 502, 'Could not save your signup. Please try again in a moment.');
+    return;
+  }
+
+  await mirrorToSheets(entry);
+
+  json(res, 200, {
+    success: true,
+    message: "You're on the list. We'll email you when it's your turn.",
+    data: entry,
+    errors: null,
+    pagination: null,
+  });
+}
+
+function safeParse(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
