@@ -1,23 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [
-        { "type": "host", "value": "buddyupfit.com" },
-        { "type": "header", "key": "x-vercel-ip-country", "value": "KE" }
-      ],
-      "destination": "https://buddyupfit.co.ke/:path*",
-      "permanent": false
-    },
-    {
-      "source": "/:path*",
-      "has": [
-        { "type": "host", "value": "www.buddyupfit.com" },
-        { "type": "header", "key": "x-vercel-ip-country", "value": "KE" }
-      ],
-      "destination": "https://buddyupfit.co.ke/:path*",
-      "permanent": false
-    }
-  ]
+  "redirects": []
 }
+

@@ -28,7 +28,13 @@ export default defineConfig({
         // Web-push handlers live here (loaded inside the generated SW).
         // There must be exactly ONE service worker: the generated /sw.js.
         importScripts: ['/service-worker-push.js'],
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // NOTE: deliberately NO 'html' in globPatterns. Precaching index.html
+        // made the precache route short-circuit navigations and serve stale
+        // builds to returning visitors — updates never appeared until a
+        // double reload. Navigations now go network-first via the navigation
+        // runtime rule below; offline.html is still auto-precached as the
+        // navigateFallback for offline visits.
+        globPatterns: ['**/*.{js,css,svg,png,ico,woff2}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -52,8 +58,10 @@ export default defineConfig({
             urlPattern: /^https:\/\/.*\.(png|jpg|jpeg|webp|avif|gif|svg)(\?.*)?$/i,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'image-cache',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 7 },
+              // -v2 names: existing visitors' old runtime caches are orphaned
+              // on activate instead of continuing to serve week-old images.
+              cacheName: 'image-cache-v2',
+              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },
@@ -61,7 +69,7 @@ export default defineConfig({
             urlPattern: /^\/api\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'api-cache-v2',
               expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
               networkTimeoutSeconds: 10,
               cacheableResponse: { statuses: [0, 200] },
@@ -71,8 +79,12 @@ export default defineConfig({
             urlPattern: /^\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'navigation-cache',
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 },
+              // Fallback-only HTML cache: short timeout so online visitors
+              // always get the fresh deployment, short TTL so a cached page
+              // never outlives an hour.
+              cacheName: 'navigation-cache-v2',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 },
+              networkTimeoutSeconds: 3,
               cacheableResponse: { statuses: [0, 200] },
             },
           },
