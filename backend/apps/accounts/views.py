@@ -936,6 +936,7 @@ class GoogleLoginView(views.APIView):
         serializer = GoogleLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         credential = serializer.validated_data['credential']
+        data_access_consent = serializer.validated_data.get('data_access_consent', False)
 
         if not GOOGLE_AUTH_AVAILABLE and not settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY:
             return Response({
@@ -1001,6 +1002,18 @@ class GoogleLoginView(views.APIView):
         user, created = _provision_social_user(email, 'google_id', google_id, name=name, picture=picture)
         if created:
             _log_event(user, 'registered', request, metadata={'method': 'google'})
+
+        # Persist the explicit data-access consent (mirrors the registration
+        # consent_log structure) so it's auditable per account.
+        if data_access_consent:
+            log = dict(user.consent_log or {})
+            log.update({
+                'google_data_access_consent': True,
+                'google_data_access_consent_at': timezone.now().isoformat(),
+                'ip': _get_client_ip(request),
+            })
+            user.consent_log = log
+            user.save(update_fields=['consent_log'])
 
         data, challenged = _finalize_social_login(user, 'google', request)
         message = 'Additional verification required.' if challenged else (

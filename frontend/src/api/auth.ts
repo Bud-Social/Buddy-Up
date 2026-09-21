@@ -130,7 +130,12 @@ export const authApi = {
     ).then((r) => r.data),
   forgotPassword: (email: string) => apiClient.post<ApiResponse<null>>('/auth/forgot-password/', { email }).then((r) => r.data),
   resetPassword: (email: string, token: string, new_password: string) => apiClient.post<ApiResponse<null>>('/auth/reset-password/', { email, token, new_password }).then((r) => r.data),
-  googleLogin: (credential: string) => apiClient.post<ApiResponse<TokenResponse>>('/auth/google/', { credential }).then((r) => r.data),
+  googleLogin: (credential: string, dataAccessConsent?: boolean) =>
+    apiClient.post<ApiResponse<TokenResponse>>('/auth/google/', {
+      credential,
+      // Explicit data-access consent (set by the GoogleConsentGate modal).
+      ...(dataAccessConsent ? { data_access_consent: true } : {}),
+    }).then((r) => r.data),
   appleLogin: (access_token: string) => apiClient.post<ApiResponse<TokenResponse>>('/auth/apple/', { access_token }).then((r) => r.data),
 
   changePassword: (current_password: string, new_password: string) =>

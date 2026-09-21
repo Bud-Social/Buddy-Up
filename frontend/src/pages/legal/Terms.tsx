@@ -16,7 +16,7 @@ export default function Terms() {
       </LegalSection>
 
       <LegalSection title="2. Account Security">
-        <p>You are responsible for your account credentials and for activity under your account. Enable two-factor authentication where available. Notify us immediately at <strong>security@buddyup.app</strong> if you suspect unauthorised access.</p>
+        <p>You are responsible for your account credentials and for activity under your account. Enable two-factor authentication where available. Notify us immediately at <strong>security@buddyup.com</strong> if you suspect unauthorised access.</p>
       </LegalSection>
 
       <LegalSection title="3. Service Description">
@@ -83,7 +83,7 @@ export default function Terms() {
       </LegalSection>
 
       <LegalSection title="17. Contact">
-        <p>BuddyUp Ltd., Nairobi, Kenya. For questions about these Terms, contact <strong>legal@buddyup.app</strong>. For safety concerns, contact <strong>safety@buddyup.app</strong>.</p>
+        <p>BuddyUp Ltd., Nairobi, Kenya. For questions about these Terms, contact <strong>legal@buddyup.com</strong>. For safety concerns, contact <strong>report@buddyup.co.ke</strong>.</p>
       </LegalSection>
     </LegalPage>
   );

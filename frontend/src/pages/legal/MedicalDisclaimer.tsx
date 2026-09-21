@@ -55,7 +55,7 @@ export default function MedicalDisclaimer() {
       </LegalSection>
 
       <LegalSection title="8. Contact">
-        <p>If you have concerns about content or a safety matter, contact <strong>safety@buddyup.app</strong>. For medical concerns, consult a qualified healthcare professional.</p>
+        <p>If you have concerns about content or a safety matter, contact <strong>report@buddyup.co.ke</strong>. For medical concerns, consult a qualified healthcare professional.</p>
       </LegalSection>
     </LegalPage>
   );

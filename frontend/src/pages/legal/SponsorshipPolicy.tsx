@@ -63,7 +63,7 @@ export default function SponsorshipPolicy() {
       </LegalSection>
 
       <LegalSection title="7. Questions">
-        <p>For questions about this policy or a specific disclosure, contact <strong>safety@buddyup.app</strong>.</p>
+        <p>For questions about this policy or a specific disclosure, contact <strong>report@buddyup.co.ke</strong>.</p>
       </LegalSection>
     </LegalPage>
   );

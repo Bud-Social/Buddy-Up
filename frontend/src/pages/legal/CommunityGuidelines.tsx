@@ -78,7 +78,7 @@ export default function CommunityGuidelines() {
       </LegalSection>
 
       <LegalSection title="8. Reporting">
-        <p>Report violations via the Report button on any post, comment, or profile, or email <strong>safety@buddyup.app</strong>. Reports are reviewed within 24 hours; severe categories are escalated within 1 hour. Reports involving imminent harm bypass the queue.</p>
+        <p>Report violations via the Report button on any post, comment, or profile, or email <strong>report@buddyup.co.ke</strong>. Reports are reviewed within 24 hours; severe categories are escalated within 1 hour. Reports involving imminent harm bypass the queue.</p>
         <LegalNotice>
           Health misinformation, medical claims, and undisclosed sponsorships are automatically flagged by our moderation systems and always reviewed by a human moderator before action.
         </LegalNotice>

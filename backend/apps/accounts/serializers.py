@@ -170,6 +170,9 @@ class TOTPDisableSerializer(serializers.Serializer):
 
 class GoogleLoginSerializer(serializers.Serializer):
     credential = serializers.CharField()
+    # Explicit data-access consent collected by the frontend consent gate
+    # before the credential is exchanged. Persisted to user.consent_log.
+    data_access_consent = serializers.BooleanField(required=False, default=False)
 
 
 class AppleLoginSerializer(serializers.Serializer):

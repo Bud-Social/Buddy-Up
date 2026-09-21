@@ -59,7 +59,7 @@ export default function CookiePolicy() {
       </LegalSection>
 
       <LegalSection title="8. Contact">
-        <p>For questions about our cookie practices, contact us at <strong>privacy@buddyup.app</strong>.</p>
+        <p>For questions about our cookie practices, contact us at <strong>privacy@buddyup.com</strong>.</p>
       </LegalSection>
     </LegalPage>
   );

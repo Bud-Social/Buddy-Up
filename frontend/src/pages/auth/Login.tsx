@@ -8,6 +8,7 @@ import { Shield } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { authApi } from '@/api';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
+import { GoogleConsentGate } from '@/components/auth/GoogleConsentGate';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -43,6 +44,9 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [reactivatePrompt, setReactivatePrompt] = useState<ReactivatePrompt | null>(null);
+  /** Google credential captured from the sign-in button — held (not exchanged)
+   * until the user grants explicit data-access consent in GoogleConsentGate. */
+  const [googleCredential, setGoogleCredential] = useState<string | null>(null);
 
   /** Handle a successful login-init response: OTP step or verification redirect. */
   const processLoginResponse = (res: Awaited<ReturnType<typeof authApi.login>>) => {
@@ -146,7 +150,7 @@ export default function Login() {
     setError('');
     setIsLoading(true);
     try {
-      const res = await authApi.googleLogin(credential);
+      const res = await authApi.googleLogin(credential, true);
       const data = res.data as typeof res.data & { require_totp?: boolean; temp_token?: string; require_age_setup?: boolean };
       if (data.require_totp && data.temp_token) {
         setTempToken(data.temp_token);
@@ -204,7 +208,7 @@ export default function Login() {
 
             <div className="mt-6 pt-6 border-t border-buddy-surface-raised space-y-3">
               {GOOGLE_CLIENT_ID ? (
-                <GoogleAuthButton label="Continue with Google" onSuccess={handleGoogleSuccess} onError={setError} />
+                <GoogleAuthButton label="Continue with Google" onSuccess={setGoogleCredential} onError={setError} />
               ) : (
                 <button type="button" disabled
                   className="w-full flex items-center justify-center gap-3 px-4 py-2.5 rounded-xl border border-buddy-surface-raised text-sm font-medium text-buddy-text-secondary opacity-50 cursor-not-allowed"
@@ -310,6 +314,18 @@ export default function Login() {
           </Button>
         </div>
       </Modal>
+
+      <GoogleConsentGate
+        open={googleCredential !== null}
+        mode="login"
+        isLoading={isLoading}
+        onAllow={() => {
+          const credential = googleCredential;
+          setGoogleCredential(null);
+          if (credential) void handleGoogleSuccess(credential);
+        }}
+        onCancel={() => setGoogleCredential(null)}
+      />
     </div>
   );
 }

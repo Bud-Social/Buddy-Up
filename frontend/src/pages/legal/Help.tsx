@@ -32,7 +32,7 @@ const FAQ = [
   },
   {
     q: 'How do I get in touch with support?',
-    a: 'Email support@buddyup.app for account help, safety@buddyup.app for safety or content concerns, and privacy@buddyup.app for data protection requests.',
+    a: 'Email support@buddyup.com for account help, report@buddyup.co.ke for safety or content concerns, and privacy@buddyup.com for data protection requests.',
   },
 ];
 
@@ -58,8 +58,8 @@ export default function Help() {
         <p>You can report content in three ways:</p>
         <ul className="list-disc list-inside space-y-1">
           <li><strong>In-app:</strong> the Report button on any post, comment, profile, or live session</li>
-          <li><strong>By email:</strong> <strong>safety@buddyup.app</strong> for content or safety concerns</li>
-          <li><strong>For data matters:</strong> <strong>privacy@buddyup.app</strong></li>
+          <li><strong>By email:</strong> <strong>report@buddyup.co.ke</strong> for content or safety concerns</li>
+          <li><strong>For data matters:</strong> <strong>privacy@buddyup.com</strong></li>
         </ul>
         <p className="mt-2">Emergency or imminent-harm situations are escalated immediately. You can report anonymously and our team will keep your identity private where possible.</p>
       </LegalSection>
@@ -67,7 +67,7 @@ export default function Help() {
       <LegalSection title="Regulatory Complaints">
         <p>If you believe content violates Kenya's consumer protection, advertising, or data protection laws, you may:</p>
         <ul className="list-disc list-inside space-y-1">
-          <li>Email <strong>safety@buddyup.app</strong> and we will review within the statutory window</li>
+          <li>Email <strong>report@buddyup.co.ke</strong> and we will review within the statutory window</li>
           <li>Lodge a complaint with the Kenya Office of the Data Protection Commissioner (ODPC) for data matters</li>
           <li>Report to the relevant consumer protection authority in your jurisdiction</li>
         </ul>

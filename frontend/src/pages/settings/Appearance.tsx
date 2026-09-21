@@ -56,7 +56,7 @@ export default function Appearance() {
         <Card className="p-4">
           <p className="text-sm font-medium mb-1">Accessibility</p>
           <p className="text-xs text-buddy-text-secondary">WCAG AA compliant. Touch targets minimum 48px. Screen reader support.</p>
-          <button onClick={() => window.open('mailto:support@buddyup.app?subject=Accessibility', '_blank')}
+          <button onClick={() => window.open('mailto:support@buddyup.com?subject=Accessibility', '_blank')}
             className="text-xs text-buddy-green hover:text-buddy-green-deep mt-2">
             Report an accessibility issue
           </button>

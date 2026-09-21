@@ -117,6 +117,7 @@ const MedicalDisclaimer = lazy(() => import('@/pages/legal/MedicalDisclaimer'));
 const SponsorshipPolicy = lazy(() => import('@/pages/legal/SponsorshipPolicy'));
 const AdultContentPolicy = lazy(() => import('@/pages/legal/AdultContentPolicy'));
 const Help = lazy(() => import('@/pages/legal/Help'));
+const About = lazy(() => import('@/pages/about/About'));
 
 const Landing = lazy(() => import('@/pages/Landing'));
 
@@ -157,6 +158,7 @@ export const router = createBrowserRouter([
   { path: '/sponsorship-policy', element: <SWrapper><SponsorshipPolicy /></SWrapper> },
   { path: '/adult-content-policy', element: <SWrapper><AdultContentPolicy /></SWrapper> },
   { path: '/help', element: <SWrapper><Help /></SWrapper> },
+  { path: '/about', element: <SWrapper><About /></SWrapper> },
   {
     element: <AuthGuard />,
     children: [

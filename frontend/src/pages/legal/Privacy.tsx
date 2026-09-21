@@ -81,7 +81,7 @@ export default function Privacy() {
           <li><strong>Restriction & Objection</strong> — restrict processing or object to marketing</li>
           <li><strong>Complain</strong> — lodge a complaint with the Kenya Office of the Data Protection Commissioner (ODPC)</li>
         </ul>
-        <p className="mt-2">Use Settings → Your Data to export or delete, or email <strong>privacy@buddyup.app</strong>. We respond within the statutory window.</p>
+        <p className="mt-2">Use Settings → Your Data to export or delete, or email <strong>privacy@buddyup.com</strong>. We respond within the statutory window.</p>
       </LegalSection>
 
       <LegalSection title="8. Security">
@@ -105,7 +105,7 @@ export default function Privacy() {
       </LegalSection>
 
       <LegalSection title="13. Contact">
-        <p>Data Protection Officer, BuddyUp Ltd., Nairobi, Kenya. Email: <strong>dpo@buddyup.app</strong>. Postal address to be registered with ODPC.</p>
+        <p>Data Protection Officer, BuddyUp Ltd., Nairobi, Kenya. Email: <strong>dpo@buddyup.com</strong>. Postal address to be registered with ODPC.</p>
       </LegalSection>
     </LegalPage>
   );

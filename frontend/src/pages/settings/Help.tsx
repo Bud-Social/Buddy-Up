@@ -4,7 +4,7 @@ import { SectionShell } from './SectionShell';
 
 const LINKS: Array<{ label: string; desc: string; link?: string; mailto?: string }> = [
   { label: 'Help Centre', desc: 'FAQs, reporting, and support contacts', link: '/help' },
-  { label: 'Report a Problem', desc: 'Report bugs, abusive content, or safety concerns', mailto: 'mailto:support@buddyup.app' },
+  { label: 'Report a Problem', desc: 'Report bugs, abusive content, or safety concerns', mailto: 'mailto:support@buddyup.com' },
   { label: 'Community Guidelines', desc: 'Read our rules for respectful interaction', link: '/community-guidelines' },
   { label: 'Safety Centre', desc: 'Resources and tools for staying safe', link: '/community-guidelines' },
   { label: 'Medical Disclaimer', desc: 'Scope of health and wellness information', link: '/medical-disclaimer' },
@@ -13,7 +13,7 @@ const LINKS: Array<{ label: string; desc: string; link?: string; mailto?: string
   { label: 'Terms of Service', desc: 'Our terms and conditions', link: '/terms' },
   { label: 'Privacy Policy', desc: 'How we handle your data', link: '/privacy' },
   { label: 'Cookie Policy', desc: 'How we use cookies', link: '/cookie-policy' },
-  { label: 'Contact Support', desc: 'Email us at support@buddyup.app', mailto: 'mailto:support@buddyup.app' },
+  { label: 'Contact Support', desc: 'Email us at support@buddyup.com', mailto: 'mailto:support@buddyup.com' },
 ];
 
 export default function Help() {

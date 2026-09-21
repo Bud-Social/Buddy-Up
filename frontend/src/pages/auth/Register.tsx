@@ -7,6 +7,7 @@ import { getPasswordStrength } from '@/utils/passwordStrength';
 import { calculateAge } from '@/utils/ageCheck';
 import { authApi } from '@/api';
 import { useAuthStore } from '@/store/authStore';
+import { GoogleConsentGate } from '@/components/auth/GoogleConsentGate';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
@@ -71,33 +72,44 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [ageError, setAgeError] = useState('');
+  /** Google credential returned from the OAuth redirect — held until the user
+   * grants explicit data-access consent; never exchanged automatically. */
+  const [googleConsentToken, setGoogleConsentToken] = useState<string | null>(null);
 
   // Drop any stale session (e.g. a half-onboarded social account) so the
   // register request goes out anonymous and cannot hit consent gates —
-  // unless we're returning from Google OAuth with a credential to exchange.
+  // unless we're returning from Google OAuth with a credential, in which case
+  // the consent gate is shown first and the exchange happens on "Allow".
   useEffect(() => {
     const googleToken = searchParams.get('google_token');
-    if (!googleToken) {
-      logout();
-      return;
-    }
-    // Complete Google sign-up: exchange the OAuth credential for a session.
     logout();
-    authApi.googleLogin(googleToken)
-      .then((res) => {
-        const data = res.data as typeof res.data & { require_age_setup?: boolean; onboarding_required?: boolean };
-        setTokens(data.access, data.refresh);
-        setUser(data.user, data.profile);
-        if (data.require_age_setup) navigate('/onboarding?step=age');
-        else if (data.onboarding_required) navigate('/onboarding');
-        else navigate('/feed');
-      })
-      .catch((err: unknown) => {
-        const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
-        setError(data?.message || 'Google sign-in failed. Please try again.');
-      });
+    if (googleToken) setGoogleConsentToken(googleToken);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleGoogleConsentAllow = async () => {
+    const googleToken = googleConsentToken;
+    if (!googleToken) return;
+    setGoogleConsentToken(null);
+    // Clean the credential out of the URL so a refresh can't replay it.
+    navigate('/signup', { replace: true });
+    setError('');
+    setIsLoading(true);
+    try {
+      const res = await authApi.googleLogin(googleToken, true);
+      const data = res.data as typeof res.data & { require_age_setup?: boolean; onboarding_required?: boolean };
+      setTokens(data.access, data.refresh);
+      setUser(data.user, data.profile);
+      if (data.require_age_setup) navigate('/onboarding?step=age');
+      else if (data.onboarding_required) navigate('/onboarding');
+      else navigate('/feed');
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      setError(data?.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const pwStrength = useMemo(() => getPasswordStrength(password), [password]);
   const requiresParentalCoowner = age !== null && age >= 16 && age < 18;
@@ -248,6 +260,13 @@ export default function Register() {
           </p>
         </div>
       </Card>
+      <GoogleConsentGate
+        open={googleConsentToken !== null}
+        mode="signup"
+        isLoading={isLoading}
+        onAllow={handleGoogleConsentAllow}
+        onCancel={() => setGoogleConsentToken(null)}
+      />
     </div>
   );
 }

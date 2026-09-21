@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Star, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList } from 'lucide-react';
+import { Check, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList, Globe, HeartPulse, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Avatar } from '@/components/ui/Avatar';
 import { Logo } from '@/components/ui/Logo';
 import { useDeviceType } from '@/hooks/useDeviceType';
+import { isReducedMotionEnabled } from '@/lib/reducedMotion';
 import { APP_DOWNLOAD_URLS, APP_URL } from '@/config/downloads';
 import { FUNDRAISER_URL, PLEDGE_FORM_URL } from '@/config/support';
+import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
 import { WaitlistForm } from '@/components/features/support/WaitlistForm';
 import { Typewriter } from '@/components/features/landing/Typewriter';
@@ -41,12 +42,44 @@ const features = {
   },
 };
 
-const testimonials = [
-  { name: 'Sarah K.', goal: 'Lost 15kg in 6 months', quote: 'BuddyUp changed everything. Having a buddy to check in with daily kept me accountable like nothing else could.', avatar: '' },
-  { name: 'James M.', goal: 'Ran first marathon', quote: 'The Random Drop feature is genius. I\'ve met 12 new running buddies and we train together every week now.', avatar: '' },
-  { name: 'Coach Grace', goal: 'Built 100+ client community', quote: 'As a trainer, BuddyUp\'s gym feature let me build a thriving community. The live scheduling tools are incredible.', avatar: '' },
-  { name: 'Aisha O.', goal: 'Reversed pre-diabetes', quote: 'The meal plans from verified nutritionists, combined with AI personalisation, completely transformed how I eat.', avatar: '' },
+/** Lifetime goals — the mission section that replaced beta testimonials. */
+const lifetimeGoals = [
+  { icon: Handshake, title: 'Help a million people find their fitness family', desc: 'Accountability works when it comes from real people who know your name. We want a million BuddyUp members who check in on each other daily.' },
+  { icon: Heart, title: 'Keep the core free, forever', desc: 'The buddy system, public gyms, and open live sessions never go behind a paywall. Premium buys extras — never the essentials.' },
+  { icon: Radio, title: '100,000 live sessions every month', desc: 'From Nairobi living rooms to global studios — live workouts running in every time zone, hosted by real people.' },
+  { icon: Globe, title: 'Africa-first, world-ready', desc: 'Built in Nairobi, launched for Kenya first — M-Pesa payments, low-data mode, Swahili — then taken to the world.' },
+  { icon: GraduationCap, title: 'A thriving verified-trainer economy', desc: 'Thousands of certified trainers and nutritionists earning a sustainable living from verified profiles, sessions, and programmes.' },
+  { icon: HeartPulse, title: 'Health outcomes, not vanity metrics', desc: 'We measure success in streaks kept, consistency built, and wellbeing improved — not just before-and-after photos.' },
 ];
+
+/**
+ * Roadmap: real scenarios our community keeps raising that BuddyUp does not
+ * address yet. Shipped honestly as "planned" — no fake screenshots.
+ */
+const plannedFeatures = [
+  { horizon: 'Near', title: 'M-Pesa & mobile-money top-ups', desc: 'Top up your BuddyUp wallet and pay trainers or gym subscriptions directly with M-Pesa, Airtel Money, and cards.' },
+  { horizon: 'Near', title: 'Low-data & offline-lite mode', desc: 'A stripped-down experience that survives patchy connectivity — train, log your session offline, sync when you\'re back.' },
+  { horizon: 'Near', title: 'Schedule-compatible buddy matching', desc: 'Buddy suggestions that fit around your work hours and commute — not just your fitness level.' },
+  { horizon: 'Soon', title: 'SMS & WhatsApp accountability nudges', desc: 'Miss a session? Your buddy — and BuddyUp — can nudge you where you actually read messages.' },
+  { horizon: 'Soon', title: 'Gym QR check-ins', desc: 'Scan in at partner gyms, prove attendance, and let your streaks count real-world visits.' },
+  { horizon: 'Soon', title: 'Wearable & health-app sync', desc: 'Pull steps, heart rate, and sleep from your watch into your progress feed automatically.' },
+  { horizon: 'Soon', title: 'Streak rewards & team challenges', desc: 'Winter leagues, corporate team challenges, and rewards you can actually redeem.' },
+  { horizon: 'Later', title: 'Swahili & local-language interface', desc: 'The whole app, fully localised — starting with Swahili and expanding from there.' },
+  { horizon: 'Later', title: 'AI form-check & adaptive plans', desc: 'Camera-based form feedback on your lifts, and meal plans that adapt week to week based on your logs.' },
+];
+
+const horizonStyles: Record<string, string> = {
+  Near: 'text-buddy-green border-buddy-green/30 bg-buddy-green/10',
+  Soon: 'text-buddy-electric border-buddy-electric/30 bg-buddy-electric/10',
+  Later: 'text-buddy-gold border-buddy-gold/30 bg-buddy-gold/10',
+};
+
+const horizonIcons: Record<string, React.ReactNode> = {
+  Near: <Smartphone size={28} className="text-buddy-green" />,
+  Soon: <Sparkles size={28} className="text-buddy-electric" />,
+  Later: <Flame size={28} className="text-buddy-gold" />,
+};
+
 
 const pricingTiers = [
   {
@@ -78,6 +111,10 @@ const pricingTiers = [
 
 export default function Landing() {
   const [activeFeature, setActiveFeature] = useState('live');
+  /** Auto-rotation of the feature showcase. Stops for good once the user
+   * picks a tab manually; pauses while hovered/focused. */
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [featurePaused, setFeaturePaused] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [heroWaitlistOpen, setHeroWaitlistOpen] = useState(false);
   const { isMobile, isTablet, isDesktop, os } = useDeviceType();
@@ -101,6 +138,22 @@ export default function Landing() {
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+  // Auto-rotate the "Everything in one place" tabs every 5s. Honours the
+  // reduced-motion preference (device + app setting), pauses on hover/focus,
+  // and stops permanently after a manual tab selection.
+  useEffect(() => {
+    if (!autoRotate || featurePaused) return;
+    if (isReducedMotionEnabled()) return;
+    try {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    } catch { /* matchMedia unavailable — continue */ }
+    const order = ['live', 'gyms', 'trainers', 'mealPlans', 'buddyFeed'];
+    const id = window.setInterval(() => {
+      setActiveFeature((current) => order[(order.indexOf(current) + 1) % order.length]);
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [autoRotate, featurePaused]);
 
   return (
     <div className="min-h-screen bg-buddy-black overflow-x-hidden">
@@ -227,7 +280,13 @@ export default function Landing() {
       </section>
 
       {/* ── 4. FEATURE SHOWCASE ── */}
-      <section className="max-w-6xl mx-auto px-6 py-24">
+      <section
+        className="max-w-6xl mx-auto px-6 py-24"
+        onMouseEnter={() => setFeaturePaused(true)}
+        onMouseLeave={() => setFeaturePaused(false)}
+        onFocus={() => setFeaturePaused(true)}
+        onBlur={() => setFeaturePaused(false)}
+      >
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">Everything in <span className="text-buddy-green">One Place</span></h2>
         <p className="text-buddy-text-secondary text-center mb-12">All the tools you need to reach your fitness goals.</p>
 
@@ -241,10 +300,14 @@ export default function Landing() {
               buddyFeed: <Newspaper size={16} />,
             };
             return (
-              <button key={key} onClick={() => setActiveFeature(key)}
+              <button
+                key={key}
+                onClick={() => { setActiveFeature(key); setAutoRotate(false); }}
+                aria-pressed={activeFeature === key}
                 className={`px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors flex items-center gap-2 ${
                   activeFeature === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary border border-buddy-surface'
-                }`}>{tabIcons[key]} {features[key as keyof typeof features].title}</button>
+                }`}
+              >{tabIcons[key]} {features[key as keyof typeof features].title}</button>
             );
           })}
         </div>
@@ -270,7 +333,7 @@ export default function Landing() {
                   gyms: <Dumbbell size={96} className="text-buddy-green" />,
                   trainers: <GraduationCap size={96} className="text-buddy-green" />,
                   mealPlans: <Utensils size={96} className="text-buddy-green" />,
-                  buddyFeed: <Newspaper size={96} className="text-buddy-green" />,
+                  buddyFeed: <Sparkles size={96} className="text-buddy-green" />,
                 };
                 return featureIcons[activeFeature];
               })()}
@@ -279,40 +342,51 @@ export default function Landing() {
         </Card>
       </section>
 
-      {/* ── 5. TESTIMONIALS ── */}
+      {/* ── 5. OUR MISSION + ROADMAP ── */}
       <section className="max-w-6xl mx-auto px-6 py-24">
-        <h2 className="font-display text-3xl font-extrabold text-center mb-4">What Our <span className="text-buddy-green">Community</span> Says</h2>
-        <p className="text-buddy-text-secondary text-center mb-16">
-          Early feedback from our test users during the private beta. Real reviews coming at launch.
+        <h2 className="font-display text-3xl font-extrabold text-center mb-4">Our <span className="text-buddy-green">Mission</span></h2>
+        <p className="text-buddy-text-secondary text-center mb-16 max-w-2xl mx-auto">
+          BuddyUp exists to make consistency social. These are the goals we're building towards.
         </p>
-        <div className="grid md:grid-cols-2 gap-6">
-          {testimonials.map(({ name, goal, quote, avatar }) => (
-            <Card key={name} className="p-6 bg-buddy-surface-raised">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-buddy-text-secondary border border-buddy-surface rounded-full px-2.5 py-1 mb-4">
-                <User size={12} /> Test user
-              </span>
-              <div className="flex gap-1 mb-3">
-                {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={14} className="text-buddy-gold fill-buddy-gold" />)}
+        <div className="grid md:grid-cols-3 gap-6 min-w-0 [&>div]:min-w-0">
+          {lifetimeGoals.map(({ icon: Icon, title, desc }) => (
+            <Card key={title} className="p-8 bg-buddy-surface-raised">
+              <div className="mb-6 flex justify-center"><Icon size={48} className="text-buddy-green" /></div>
+              <h3 className="font-heading text-xl font-semibold mb-3">{title}</h3>
+              <p className="text-buddy-text-secondary">{desc}</p>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      {/* ── 5b. ROADMAP (planned, not shipped) ── */}
+      <section className="max-w-6xl mx-auto px-6 py-24">
+        <h2 className="font-display text-3xl font-extrabold text-center mb-4">What's <span className="text-buddy-green">Coming Next</span></h2>
+        <p className="text-buddy-text-secondary text-center mb-16 max-w-2xl mx-auto">
+          Real requests from our community that we haven't built yet — shown honestly as planned, not shipped.
+        </p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 min-w-0 [&>div]:min-w-0">
+          {plannedFeatures.map(({ title, horizon, desc }) => (
+            <Card key={title} className="p-6 bg-buddy-surface">
+              <div className="flex items-center justify-between mb-4">
+                {horizonIcons[horizon]}
+                <span className={`text-[11px] font-semibold uppercase tracking-wide border rounded-full px-2.5 py-1 ${horizonStyles[horizon]}`}>
+                  Planned · {horizon}
+                </span>
               </div>
-              <p className="text-sm text-buddy-text-primary mb-4 italic leading-relaxed">"{quote}"</p>
-              <div className="flex items-center gap-3">
-                <Avatar src={avatar} alt={name} size="md" />
-                <div>
-                  <p className="text-sm font-medium">{name}</p>
-                  <p className="text-xs text-buddy-green">{goal}</p>
-                </div>
-              </div>
+              <h3 className="font-heading text-lg font-semibold mb-2">{title}</h3>
+              <p className="text-sm text-buddy-text-secondary">{desc}</p>
             </Card>
           ))}
         </div>
         <div className="text-center mt-12">
           <a href="#waitlist">
             <Button variant="outline" size="lg" className="gap-2">
-              <Star size={18} /> Leave a review
+              <Sparkles size={18} /> Suggest a feature
             </Button>
           </a>
           <p className="mt-3 text-sm text-buddy-text-secondary">
-            Public reviews open at launch — join the waiting list to be invited first.
+            Join the waiting list and shape what ships next.
           </p>
         </div>
       </section>
@@ -466,7 +540,7 @@ export default function Landing() {
       {/* ── 11. FOOTER ── */}
       <footer className="border-t border-buddy-surface py-16">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
+          <div className="grid md:grid-cols-5 gap-8 mb-12">
             <div>
               <Logo size="md" className="mb-2" />
               <p className="text-sm text-buddy-text-secondary">Find your fitness family.</p>
@@ -493,7 +567,18 @@ export default function Landing() {
                 <Link to="/medical-disclaimer" className="block hover:text-buddy-text-primary">Medical Disclaimer</Link>
                 <Link to="/sponsorship-policy" className="block hover:text-buddy-text-primary">Sponsorship Policy</Link>
                 <Link to="/help" className="block hover:text-buddy-text-primary">Help</Link>
+                <Link to="/about" className="block hover:text-buddy-text-primary">About Us</Link>
                 <button onClick={() => setSupportOpen(true)} className="block hover:text-buddy-text-primary">Fund Us</button>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-heading font-semibold text-sm mb-4">Contact</h4>
+              <div className="space-y-2 text-sm text-buddy-text-secondary">
+                <a href={mailtoLink('info')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.info}</a>
+                <a href={mailtoLink('support')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.support}</a>
+                <a href={mailtoLink('report')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.report}</a>
+                <a href={mailtoLink('sponsor')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.sponsor}</a>
+                <a href={mailtoLink('contact')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.contact}</a>
               </div>
             </div>
           </div>
