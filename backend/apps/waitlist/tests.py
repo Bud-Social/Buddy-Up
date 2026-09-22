@@ -92,6 +92,47 @@ class WaitlistSignupTests(TestCase):
         assert res.status_code == status.HTTP_201_CREATED
         assert res.json()['data']['interest'] == 'trainer'
 
+    def test_corporate_lead_requires_company_and_city(self):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'hr@acme.co', 'country': 'Kenya',
+            'interest': 'corporate', 'metadata': {},
+        }, format='json')
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_corporate_lead_with_details_returns_201(self):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'hr@acme.co', 'country': 'Kenya',
+            'interest': 'corporate',
+            'metadata': {'company_name': 'Acme Ltd', 'city': 'Nairobi',
+                         'team_size': '11–50', 'packages': ['challenges']},
+        }, format='json')
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.json()['data']['interest'] == 'corporate'
+
+    def test_organiser_supplier_distributor_leads(self):
+        cases = [
+            ('organiser', {'brand': 'Nairobi Run Club', 'city': 'Nairobi',
+                           'event_types': ['fitness'], 'audience': '50–200'}),
+            ('supplier', {'business': 'FitFuel', 'city': 'Nairobi',
+                          'categories': ['supplements'], 'has_shop': False}),
+            ('distributor', {'business': 'GymEquip EA', 'city': 'Nairobi',
+                             'coverage': 'Kenya', 'offerings': 'Machines'}),
+        ]
+        for i, (interest, metadata) in enumerate(cases):
+            res = self.client.post('/api/v1/waitlist/', {
+                'email': f'lead{i}@example.com', 'country': 'Kenya',
+                'interest': interest, 'metadata': metadata,
+            }, format='json')
+            assert res.status_code == status.HTTP_201_CREATED, res.json()
+            assert res.json()['data']['interest'] == interest
+
+    def test_supplier_lead_requires_business_and_city(self):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'shop@example.com', 'country': 'Kenya',
+            'interest': 'supplier', 'metadata': {},
+        }, format='json')
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+
 
 @mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': ''})
 class PublicIntakeTests(TestCase):

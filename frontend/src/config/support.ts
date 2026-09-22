@@ -3,6 +3,7 @@ export interface SupportLinks {
   pledgeFormUrl: string;
   gymSuiteFormUrl: string;
   trainerIntakeFormUrl: string;
+  partnershipFormUrl: string;
 }
 
 type EnvRecord = Record<string, string | undefined>;
@@ -17,6 +18,7 @@ export function getSupportLinks(env: EnvRecord = (import.meta.env as unknown as 
     pledgeFormUrl: readUrl(env, 'VITE_PLEDGE_FORM_URL'),
     gymSuiteFormUrl: readUrl(env, 'VITE_GYM_SUITE_FORM_URL'),
     trainerIntakeFormUrl: readUrl(env, 'VITE_TRAINER_INTAKE_FORM_URL'),
+    partnershipFormUrl: readUrl(env, 'VITE_PARTNERSHIP_FORM_URL'),
   };
 }
 
@@ -25,6 +27,7 @@ export const FUNDRAISER_URL = SUPPORT_LINKS.fundraiserUrl;
 export const PLEDGE_FORM_URL = SUPPORT_LINKS.pledgeFormUrl;
 export const GYM_SUITE_FORM_URL = SUPPORT_LINKS.gymSuiteFormUrl;
 export const TRAINER_INTAKE_FORM_URL = SUPPORT_LINKS.trainerIntakeFormUrl;
+export const PARTNERSHIP_FORM_URL = SUPPORT_LINKS.partnershipFormUrl;
 
 // NOTE: the Google Sheets webhook is intentionally NOT exposed to the client.
 // Waitlist signups are relayed to the sheet server-side by the backend

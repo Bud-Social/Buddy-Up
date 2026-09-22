@@ -13,12 +13,14 @@ describe('support links', () => {
       VITE_PLEDGE_FORM_URL: 'https://example.com/pledge',
       VITE_GYM_SUITE_FORM_URL: 'https://example.com/gym',
       VITE_TRAINER_INTAKE_FORM_URL: 'https://example.com/trainers',
+      VITE_PARTNERSHIP_FORM_URL: 'https://example.com/partners',
     });
     expect(links).toEqual({
       fundraiserUrl: 'https://example.com/fund',
       pledgeFormUrl: 'https://example.com/pledge',
       gymSuiteFormUrl: 'https://example.com/gym',
       trainerIntakeFormUrl: 'https://example.com/trainers',
+      partnershipFormUrl: 'https://example.com/partners',
     });
     expect(isSupportConfigured(links)).toBe(true);
     expect(isGymSuiteConfigured(links)).toBe(true);
@@ -32,6 +34,7 @@ describe('support links', () => {
       pledgeFormUrl: '',
       gymSuiteFormUrl: '',
       trainerIntakeFormUrl: '',
+      partnershipFormUrl: '',
     });
     expect(isSupportConfigured(links)).toBe(false);
     expect(isGymSuiteConfigured(links)).toBe(false);

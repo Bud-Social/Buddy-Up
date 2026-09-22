@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList, Globe, HeartPulse, Sparkles, Activity, CalendarDays, BookOpen, Building2, BellRing } from 'lucide-react';
+import { Check, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList, Globe, HeartPulse, Sparkles, Activity, CalendarDays, BookOpen, Building2, BellRing, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { isReducedMotionEnabled } from '@/lib/reducedMotion';
 import { APP_DOWNLOAD_URLS, APP_URL } from '@/config/downloads';
-import { FUNDRAISER_URL, PLEDGE_FORM_URL, GYM_SUITE_FORM_URL, TRAINER_INTAKE_FORM_URL } from '@/config/support';
+import { FUNDRAISER_URL, PLEDGE_FORM_URL, GYM_SUITE_FORM_URL, TRAINER_INTAKE_FORM_URL, PARTNERSHIP_FORM_URL } from '@/config/support';
 import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
 import { WaitlistForm, requestWaitlistInterest } from '@/components/features/support/WaitlistForm';
@@ -83,8 +83,9 @@ const plannedFeatures = [
   { horizon: 'Soon', title: 'Gym QR check-ins', desc: 'Scan in at partner gyms, prove attendance, and let your streaks count real-world visits.' },
   { horizon: 'Soon', title: 'Wearable & health-app sync', desc: 'Pull steps, heart rate, and sleep from your watch into your progress feed automatically.' },
   { horizon: 'Soon', title: 'Corporate awareness packages', desc: 'Team step-count challenges, branded gym spaces, sponsored events, and workplace wellness campaigns for companies that want healthier teams.' },
+  { horizon: 'Soon', title: 'Group & family access packages', desc: 'One plan for the whole household or crew — shared memberships, family challenges, and group streaks that keep everyone accountable.' },
   { horizon: 'Soon', title: 'Streak rewards & team challenges', desc: 'Winter leagues, corporate team challenges, and rewards you can actually redeem.' },
-  { horizon: 'Later', title: 'Swahili & local-language interface', desc: 'The whole app, fully localised — starting with Swahili and expanding from there.' },
+  { horizon: 'Later', title: 'Multilanguage interface', desc: 'The whole app in your language — starting with Swahili and expanding from there.' },
 ];
 
 const horizonStyles: Record<string, string> = {
@@ -408,15 +409,25 @@ export default function Landing() {
           ))}
         </div>
         <div className="text-center mt-12">
-          <Button
-            variant="outline"
-            size="lg"
-            className="gap-2"
-            onClick={() => setSuggestOpen((v) => !v)}
-            aria-expanded={suggestOpen}
-          >
-            <Sparkles size={18} /> Suggest a feature
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2"
+              onClick={() => setSuggestOpen((v) => !v)}
+              aria-expanded={suggestOpen}
+            >
+              <Sparkles size={18} /> Suggest a feature
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="gap-2"
+              onClick={() => requestWaitlistInterest('corporate')}
+            >
+              <Briefcase size={18} /> Corporate waiting list
+            </Button>
+          </div>
           <p className="mt-3 text-sm text-buddy-text-secondary">
             Tell us what to build next — straight to the product team.
           </p>
@@ -599,9 +610,10 @@ export default function Landing() {
           <Card className="p-8 bg-buddy-surface flex flex-col">
             <h3 className="font-heading text-xl font-semibold mb-2">Support BuddyUp</h3>
             <p className="text-sm text-buddy-text-secondary mb-6">
-              Your contribution keeps the lights on and new features coming.
+              Your contribution keeps the lights on and new features coming. Brands can
+              partner with us to reach Kenya&apos;s fitness family.
             </p>
-            <div className="grid sm:grid-cols-2 gap-3 mt-auto">
+            <div className="flex flex-col gap-3 mt-auto">
               {FUNDRAISER_URL ? (
                 <Button onClick={() => setSupportOpen(true)} className="w-full">
                   <Heart size={16} /> Donate
@@ -612,8 +624,19 @@ export default function Landing() {
                   <ClipboardList size={16} /> Pledge funding
                 </Button>
               ) : null}
-              {!FUNDRAISER_URL && !PLEDGE_FORM_URL ? (
-                <Button onClick={() => setSupportOpen(true)} className="w-full sm:col-span-2">
+              {PARTNERSHIP_FORM_URL ? (
+                <a href={PARTNERSHIP_FORM_URL} target="_blank" rel="noreferrer noopener" className="w-full">
+                  <Button variant="outline" className="w-full border-buddy-gold/50 text-buddy-gold hover:bg-buddy-gold/10">
+                    <Briefcase size={16} /> Partnership proposal for brands
+                  </Button>
+                </a>
+              ) : (
+                <Button onClick={() => setSupportOpen(true)} variant="outline" className="w-full border-buddy-gold/50 text-buddy-gold hover:bg-buddy-gold/10">
+                  <Briefcase size={16} /> Partnership proposal for brands
+                </Button>
+              )}
+              {!FUNDRAISER_URL && !PLEDGE_FORM_URL && !PARTNERSHIP_FORM_URL ? (
+                <Button onClick={() => setSupportOpen(true)} className="w-full">
                   <Heart size={16} /> Support us
                 </Button>
               ) : null}

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import axios from 'axios';
-import { BellRing, Check, Dumbbell, GraduationCap, User } from 'lucide-react';
+import { BellRing, Briefcase, CalendarDays, Check, Dumbbell, GraduationCap, Store, Truck, User } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { joinWaitlist, type WaitlistInterest } from '@/api/waitlist';
@@ -19,11 +19,37 @@ const INTERESTS: { key: WaitlistInterest; label: string; icon: typeof User }[] =
   { key: 'user', label: 'Member', icon: User },
   { key: 'gym', label: 'Gym', icon: Dumbbell },
   { key: 'trainer', label: 'Trainer', icon: GraduationCap },
+  { key: 'corporate', label: 'Corporate', icon: Briefcase },
+  { key: 'organiser', label: 'Events', icon: CalendarDays },
+  { key: 'supplier', label: 'Supplier', icon: Store },
+  { key: 'distributor', label: 'Distributor', icon: Truck },
 ];
 
 const GYM_TYPES = ['physical', 'virtual', 'hybrid'];
 const GYM_SIZES = ['Just me', '2–10 members', '11–50 members', '50+ members'];
 const TRAINER_ROLES = ['trainer', 'practitioner'];
+const TEAM_SIZES = ['1–10', '11–50', '51–200', '200+'];
+const CORPORATE_PACKAGES = [
+  { value: 'challenges', label: 'Team challenges' },
+  { value: 'branded_space', label: 'Branded gym space' },
+  { value: 'sponsored_events', label: 'Sponsored events' },
+  { value: 'awareness', label: 'Awareness campaigns' },
+];
+const EVENT_TYPES = [
+  { value: 'fitness', label: 'Fitness classes' },
+  { value: 'competition', label: 'Competitions' },
+  { value: 'workshop', label: 'Workshops' },
+  { value: 'social', label: 'Social meetups' },
+  { value: 'wellness', label: 'Wellness retreats' },
+];
+const AUDIENCE_SIZES = ['Under 50', '50–200', '200–1,000', '1,000+'];
+const PRODUCT_CATEGORIES = [
+  { value: 'supplements', label: 'Supplements' },
+  { value: 'equipment', label: 'Gym equipment' },
+  { value: 'apparel', label: 'Apparel & gear' },
+  { value: 'nutrition', label: 'Nutrition & meal prep' },
+  { value: 'digital', label: 'Digital products' },
+];
 
 export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: WaitlistInterest }) {
   const [interest, setInterest] = useState<WaitlistInterest>(initialInterest);
@@ -44,6 +70,27 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
   const [credential, setCredential] = useState('');
   const [mobile, setMobile] = useState(false);
   const [virtual, setVirtual] = useState(false);
+  // Corporate-specific lead details.
+  const [companyName, setCompanyName] = useState('');
+  const [teamSize, setTeamSize] = useState(TEAM_SIZES[0]);
+  const [packages, setPackages] = useState<string[]>([]);
+  const [corporateMessage, setCorporateMessage] = useState('');
+  // Organiser / supplier / distributor lead details (shared business name).
+  const [businessName, setBusinessName] = useState('');
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
+  const [audienceSize, setAudienceSize] = useState(AUDIENCE_SIZES[0]);
+  const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [hasShop, setHasShop] = useState(false);
+  const [coverage, setCoverage] = useState('');
+  const [offerings, setOfferings] = useState('');
+
+  function togglePackage(value: string) {
+    setPackages((prev) => prev.includes(value) ? prev.filter((p) => p !== value) : [...prev, value]);
+  }
+
+  function toggleInList(list: string[], value: string, set: (v: string[]) => void) {
+    set(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  }
 
   // Best-effort guess (Vercel geo header / browser locale) to pre-select
   // the country; the user can always change it and must confirm it.
@@ -53,7 +100,7 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
   useEffect(() => {
     const handler = (e: Event) => {
       const next = (e as CustomEvent<WaitlistInterest>).detail;
-      if (next === 'user' || next === 'gym' || next === 'trainer') {
+      if (INTERESTS.some((i) => i.key === next)) {
         setInterest(next);
         setStatus('idle');
         setMessage('');
@@ -80,7 +127,27 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
               specialties: specialties.split(',').map((s) => s.trim()).filter(Boolean),
               credential: credential.trim(), mobile, virtual,
             }
-          : {};
+          : interest === 'corporate'
+            ? {
+                company_name: companyName.trim(), city: city.trim(),
+                team_size: teamSize, packages, message: corporateMessage.trim(),
+              }
+            : interest === 'organiser'
+              ? {
+                  brand: businessName.trim(), city: city.trim(),
+                  event_types: eventTypes, audience: audienceSize,
+                }
+              : interest === 'supplier'
+                ? {
+                    business: businessName.trim(), city: city.trim(),
+                    categories: productCategories, has_shop: hasShop,
+                  }
+                : interest === 'distributor'
+                  ? {
+                      business: businessName.trim(), city: city.trim(),
+                      coverage: coverage.trim(), offerings: offerings.trim(),
+                    }
+                  : {};
     try {
       // The signup is written by the same-origin Vercel function (api/waitlist.ts)
       // to Supabase, which also mirrors to Google Sheets server-side — the
@@ -133,7 +200,7 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
       <p className="text-sm text-buddy-text-secondary">
         We are launching in November. Join the list and be first through the door.
       </p>
-      <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Waitlist type">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2" role="tablist" aria-label="Waitlist type">
         {INTERESTS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -253,6 +320,223 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
               <input type="checkbox" checked={virtual} onChange={(e) => setVirtual(e.target.checked)} className="rounded accent-buddy-green" />
               <span>I coach online</span>
             </label>
+          </div>
+        </>
+      )}
+      {interest === 'corporate' && (
+        <>
+          <Input
+            label="Company / organisation"
+            type="text"
+            required
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="Acme Ltd"
+            autoComplete="organization"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="City"
+              type="text"
+              required
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Nairobi"
+              autoComplete="address-level2"
+            />
+            <div className="w-full">
+              <label htmlFor="waitlist-team-size" className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
+                Team size
+              </label>
+              <select
+                id="waitlist-team-size"
+                value={teamSize}
+                onChange={(e) => setTeamSize(e.target.value)}
+                className="w-full appearance-none bg-buddy-surface border rounded-xl px-4 py-3 text-buddy-text-primary font-body transition-colors focus:outline-none focus:ring-2 min-h-touch focus:ring-buddy-green/30 border-transparent"
+              >
+                {TEAM_SIZES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="w-full">
+            <p className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
+              Packages of interest
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {CORPORATE_PACKAGES.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => togglePackage(p.value)}
+                  aria-pressed={packages.includes(p.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${packages.includes(p.value) ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface-raised text-buddy-text-secondary hover:border-buddy-green/40'}`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="w-full">
+            <label htmlFor="waitlist-corporate-message" className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
+              Anything we should know? (optional)
+            </label>
+            <textarea
+              id="waitlist-corporate-message"
+              value={corporateMessage}
+              onChange={(e) => setCorporateMessage(e.target.value)}
+              placeholder="Goals, timelines, team interests…"
+              rows={2}
+              maxLength={1000}
+              className="w-full bg-buddy-surface border border-transparent rounded-xl px-4 py-3 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30 resize-none min-h-touch"
+            />
+          </div>
+        </>
+      )}
+      {interest === 'organiser' && (
+        <>
+          <Input
+            label="Event brand / organisation"
+            type="text"
+            required
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            placeholder="Nairobi Run Club"
+            autoComplete="organization"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="City"
+              type="text"
+              required
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Nairobi"
+              autoComplete="address-level2"
+            />
+            <div className="w-full">
+              <label htmlFor="waitlist-audience" className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
+                Typical audience
+              </label>
+              <select
+                id="waitlist-audience"
+                value={audienceSize}
+                onChange={(e) => setAudienceSize(e.target.value)}
+                className="w-full appearance-none bg-buddy-surface border rounded-xl px-4 py-3 text-buddy-text-primary font-body transition-colors focus:outline-none focus:ring-2 min-h-touch focus:ring-buddy-green/30 border-transparent"
+              >
+                {AUDIENCE_SIZES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="w-full">
+            <p className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
+              Event types you run
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {EVENT_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  type="button"
+                  onClick={() => toggleInList(eventTypes, t.value, setEventTypes)}
+                  aria-pressed={eventTypes.includes(t.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${eventTypes.includes(t.value) ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface-raised text-buddy-text-secondary hover:border-buddy-green/40'}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+      {interest === 'supplier' && (
+        <>
+          <Input
+            label="Business / shop name"
+            type="text"
+            required
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            placeholder="FitFuel Supplies"
+            autoComplete="organization"
+          />
+          <Input
+            label="City"
+            type="text"
+            required
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="Nairobi"
+            autoComplete="address-level2"
+          />
+          <div className="w-full">
+            <p className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
+              What do you supply?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {PRODUCT_CATEGORIES.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => toggleInList(productCategories, c.value, setProductCategories)}
+                  aria-pressed={productCategories.includes(c.value)}
+                  className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${productCategories.includes(c.value) ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface-raised text-buddy-text-secondary hover:border-buddy-green/40'}`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <label className="flex items-start gap-2 text-sm text-buddy-text-secondary cursor-pointer">
+            <input type="checkbox" checked={hasShop} onChange={(e) => setHasShop(e.target.checked)} className="mt-1 rounded accent-buddy-green" />
+            <span>We have a physical shop or outlet.</span>
+          </label>
+        </>
+      )}
+      {interest === 'distributor' && (
+        <>
+          <Input
+            label="Business name"
+            type="text"
+            required
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            placeholder="GymEquip East Africa"
+            autoComplete="organization"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="City"
+              type="text"
+              required
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Nairobi"
+              autoComplete="address-level2"
+            />
+            <Input
+              label="Coverage"
+              type="text"
+              value={coverage}
+              onChange={(e) => setCoverage(e.target.value)}
+              placeholder="Kenya, Uganda…"
+            />
+          </div>
+          <div className="w-full">
+            <label htmlFor="waitlist-offerings" className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
+              Equipment & services you distribute
+            </label>
+            <textarea
+              id="waitlist-offerings"
+              value={offerings}
+              onChange={(e) => setOfferings(e.target.value)}
+              placeholder="e.g. Strength machines, flooring, installation & maintenance"
+              rows={2}
+              maxLength={1000}
+              className="w-full bg-buddy-surface border border-transparent rounded-xl px-4 py-3 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30 resize-none min-h-touch"
+            />
           </div>
         </>
       )}

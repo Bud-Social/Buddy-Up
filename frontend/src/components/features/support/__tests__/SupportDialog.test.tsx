@@ -11,6 +11,7 @@ vi.mock('@/config/support', async (importOriginal) => {
       pledgeFormUrl: '',
       gymSuiteFormUrl: '',
       trainerIntakeFormUrl: '',
+      partnershipFormUrl: '',
     },
   };
 });
@@ -24,7 +25,8 @@ describe('SupportDialog', () => {
     render(<SupportDialog open onClose={() => {}} />);
     expect(screen.getByText('Donate')).toBeDefined();
     expect(screen.getByText('Pledge Funding')).toBeDefined();
-    expect(screen.getAllByText(/Coming soon/).length).toBe(2);
+    expect(screen.getByText('Partnership Proposal for Brands')).toBeDefined();
+    expect(screen.getAllByText(/Coming soon/).length).toBe(3);
     expect(screen.queryByRole('link')).toBeNull();
   });
 });

@@ -12,6 +12,7 @@ interface ImportMetaEnv {
   readonly VITE_PLEDGE_FORM_URL?: string;
   readonly VITE_GYM_SUITE_FORM_URL?: string;
   readonly VITE_TRAINER_INTAKE_FORM_URL?: string;
+  readonly VITE_PARTNERSHIP_FORM_URL?: string;
   /** Two-letter country code of the visitor (see useVisitorCountry). */
   readonly VITE_USER_COUNTRY?: string;
 }

@@ -17,7 +17,7 @@ const milestones = [
   { when: 'The idea', what: 'Two friends kept failing at 5am runs alone — and never missed one together. BuddyUp started as the answer to "why isn\'t there an app for this?"' },
   { when: 'Private beta', what: 'A closed group of test users trained, posted, and broke things — shaping everything from Random Drops to the age-verification flow.' },
   { when: 'Launching November', what: 'Public launch across Kenya: gyms, verified trainers, live sessions, and the buddy system — free at the core.' },
-  { when: 'What\'s next', what: 'Offline-lite mode, SMS & WhatsApp nudges, corporate wellness packages, Swahili, wearables — see the full roadmap on the landing page.' },
+  { when: 'What\'s next', what: 'Offline-lite mode, SMS & WhatsApp nudges, corporate wellness packages, group & family plans, multilanguage support, wearables — see the full roadmap on the landing page.' },
 ];
 
 export default function About() {

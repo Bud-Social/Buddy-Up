@@ -22,6 +22,10 @@ class WaitlistEntrySerializer(serializers.ModelSerializer):
     REQUIRED_METADATA = {
         'gym': ['gym_name', 'city', 'gym_type'],
         'trainer': ['role', 'city'],
+        'corporate': ['company_name', 'city'],
+        'organiser': ['brand', 'city'],
+        'supplier': ['business', 'city'],
+        'distributor': ['business', 'city'],
     }
 
     def validate(self, attrs):

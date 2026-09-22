@@ -119,7 +119,8 @@ export default async function handler(req: VercelReq, res: VercelRes): Promise<v
   const name = typeof body.name === 'string' ? body.name.trim().slice(0, 80) : '';
   const country = typeof body.country === 'string' ? body.country.trim().slice(0, 56) : '';
   const source = typeof body.source === 'string' && body.source.trim() ? body.source.trim().slice(0, 40) : 'landing';
-  const interest = body.interest === 'gym' || body.interest === 'trainer' ? body.interest : 'user';
+  const ALLOWED_INTERESTS = new Set(['gym', 'trainer', 'corporate', 'organiser', 'supplier', 'distributor']);
+  const interest = typeof body.interest === 'string' && ALLOWED_INTERESTS.has(body.interest) ? body.interest : 'user';
   // Free-form lead details, size-capped; required keys per interest so gym
   // and trainer signups carry analysable intent, not just an email.
   const metadata = body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)
@@ -147,6 +148,24 @@ export default async function handler(req: VercelReq, res: VercelRes): Promise<v
     const city = typeof metadata.city === 'string' ? metadata.city.trim() : '';
     if (!city) {
       fail(res, 400, 'Please tell us your city.');
+      return;
+    }
+  }
+  if (interest === 'corporate') {
+    const company = typeof metadata.company_name === 'string' ? metadata.company_name.trim() : '';
+    const city = typeof metadata.city === 'string' ? metadata.city.trim() : '';
+    if (!company || !city) {
+      fail(res, 400, 'Please tell us your company name and city.');
+      return;
+    }
+  }
+  if (interest === 'organiser' || interest === 'supplier' || interest === 'distributor') {
+    const who = interest === 'organiser'
+      ? (typeof metadata.brand === 'string' ? metadata.brand.trim() : '')
+      : (typeof metadata.business === 'string' ? metadata.business.trim() : '');
+    const city = typeof metadata.city === 'string' ? metadata.city.trim() : '';
+    if (!who || !city) {
+      fail(res, 400, 'Please tell us your business name and city.');
       return;
     }
   }

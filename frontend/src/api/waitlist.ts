@@ -1,7 +1,9 @@
 import axios from 'axios';
 import type { ApiResponse } from '@/types/api';
 
-export type WaitlistInterest = 'user' | 'gym' | 'trainer';
+export type WaitlistInterest =
+  | 'user' | 'gym' | 'trainer' | 'corporate'
+  | 'organiser' | 'supplier' | 'distributor';
 
 export interface WaitlistEntry {
   id: number;
