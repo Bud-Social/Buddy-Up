@@ -1,5 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "redirects": []
+  "redirects": [],
+  "headers": [
+    {
+      "source": "/((?!$|about$|help$|terms$|privacy$|community-guidelines$|cookie-policy$|medical-disclaimer$|sponsorship-policy$|adult-content-policy$|robots.txt$|sitemap.xml$|llms.txt$|manifest.webmanifest$|icons/.*|favicon-.*|logo-.*|sw.js$|offline.html$|service-worker-push.js$|assets/.*).*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    }
+  ]
 }
 

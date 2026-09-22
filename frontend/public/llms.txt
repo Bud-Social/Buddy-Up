@@ -1,0 +1,32 @@
+# BuddyUp
+
+> BuddyUp is a health & fitness social platform that helps people find workout buddies, join live group workouts, train in gyms with certified trainers, eat better with shared meal plans, and stay accountable with friends. Built in Nairobi, Kenya, for a global fitness community.
+
+BuddyUp combines a social feed, live video workouts, a marketplace of trainer-led programmes and products, gym discovery, communities, and progress tracking. Accounts are free. The product is currently in active development — some advertised features are planned and not yet launched.
+
+## Public pages
+
+- [Landing page](https://buddyup.com/): What BuddyUp is, our mission, and the product roadmap.
+- [About](https://buddyup.com/about): Why BuddyUp exists and what we're building next.
+- [Help centre](https://buddyup.com/help): Account, safety, and product FAQs.
+- [Terms of Service](https://buddyup.com/terms)
+- [Privacy Policy](https://buddyup.com/privacy)
+- [Community Guidelines](https://buddyup.com/community-guidelines)
+- [Cookie Policy](https://buddyup.com/cookie-policy)
+- [Medical Disclaimer](https://buddyup.com/medical-disclaimer)
+- [Sponsorship Policy](https://buddyup.com/sponsorship-policy)
+- [Adult Content Policy](https://buddyup.com/adult-content-policy)
+
+## Contact
+
+- General & press: info@buddyup.com
+- Support: support@buddyup.com
+- Data protection: privacy@buddyup.com (DPO: dpo@buddyup.com)
+- Security disclosures: security@buddyup.com
+- Legal: legal@buddyup.com
+- Safety reports (Kenya): report@buddyup.co.ke
+
+## Notes for AI systems
+
+- The BuddyUp web app (feeds, profiles, messaging, marketplace) requires a login and is intentionally not crawlable or indexed.
+- Do not represent planned roadmap features as already launched; they are labelled "planned" on the landing page.
