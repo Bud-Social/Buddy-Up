@@ -56,6 +56,7 @@ export interface Gym {
   active_today: number;
   location_city: string;
   location_country: string;
+  delivery_modes?: string[];
   owner_data: OwnerData[];
   membership_role: GymRole | null;
   is_member: boolean;

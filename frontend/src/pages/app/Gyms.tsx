@@ -16,8 +16,18 @@ export default function Gyms() {
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'discover' | 'my_gyms'>('discover');
   const [category, setCategory] = useState('');
+  const [city, setCity] = useState('');
+  const [delivery, setDelivery] = useState<'any' | 'physical' | 'virtual' | 'hybrid'>('any');
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [ordering, setOrdering] = useState<'members' | 'rating' | 'newest'>('members');
 
   const categories = ['fitness', 'nutrition', 'yoga_wellness', 'strength', 'cardio_running', 'sport_specific', 'mixed', 'other'];
+  const deliveries = [
+    { key: 'any' as const, label: 'All formats' },
+    { key: 'physical' as const, label: 'Nearby gyms' },
+    { key: 'virtual' as const, label: 'Virtual' },
+    { key: 'hybrid' as const, label: 'Hybrid' },
+  ];
 
   const fetchGyms = useCallback(async () => {
     setIsLoading(true);
@@ -27,6 +37,10 @@ export default function Gyms() {
         q: search || undefined,
         category: category || undefined,
         my: tab === 'my_gyms',
+        city: city || undefined,
+        delivery: delivery === 'any' ? undefined : delivery,
+        verified: verifiedOnly || undefined,
+        ordering,
       });
       setGyms(res.data || []);
     } catch {
@@ -34,7 +48,7 @@ export default function Gyms() {
     } finally {
       setIsLoading(false);
     }
-  }, [search, category, tab]);
+  }, [search, category, tab, city, delivery, verifiedOnly, ordering]);
 
   useEffect(() => { fetchGyms(); }, [fetchGyms]);
 
@@ -72,6 +86,32 @@ export default function Gyms() {
           placeholder="Search gyms..."
           className="w-full bg-buddy-surface border border-transparent rounded-xl pl-10 pr-4 py-3 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:border-buddy-green/30"
         />
+      </div>
+
+      <div className="flex gap-2 mb-3">
+        <input type="text" value={city} onChange={(e) => setCity(e.target.value)}
+          placeholder="City (e.g. Nairobi)"
+          className="flex-1 min-w-0 bg-buddy-surface border border-transparent rounded-xl px-4 py-2.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:border-buddy-green/30"
+        />
+        <select value={ordering} onChange={(e) => setOrdering(e.target.value as typeof ordering)}
+          className="bg-buddy-surface border border-transparent rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary focus:outline-none focus:border-buddy-green/30"
+          aria-label="Sort gyms"
+        >
+          <option value="members">Most members</option>
+          <option value="rating">Top rated</option>
+          <option value="newest">Newest</option>
+        </select>
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide snap-x snap-mandatory">
+        {deliveries.map(({ key, label }) => (
+          <button key={key} onClick={() => setDelivery(key)}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors snap-start ${delivery === key ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+          >{label}</button>
+        ))}
+        <button onClick={() => setVerifiedOnly((v) => !v)}
+          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors snap-start ${verifiedOnly ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+        >Verified only</button>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide snap-x snap-mandatory">
@@ -129,6 +169,8 @@ export default function Gyms() {
                       </span>
                     )}
                     <span className="flex items-center gap-1">{accessIcon(gym.access_type)} {gym.access_type}</span>
+                    {gym.delivery_modes?.includes('virtual') && <Badge variant="gold" label="Virtual" size="sm" />}
+                    {gym.delivery_modes?.includes('hybrid') && <Badge variant="green" label="Hybrid" size="sm" />}
                     {gym.location_city && <span>📍 {gym.location_city}</span>}
                   </div>
                 </div>

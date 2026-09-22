@@ -438,3 +438,99 @@ class GymDonationTests(TestCase):
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
 
+
+
+class GymDiscoveryFilterTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(email='finder@test.com', password='TestPass123!')
+        self.user.dob_hash = hash_dob(date(2000, 6, 15))
+        self.user.email_verified = True
+        self.user.save()
+        self.profile = Profile.objects.create(
+            user=self.user, username='gymfinder', display_name='Gym Finder',
+        )
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+
+        from .models import VenueLocation
+        self.physical = Gym.objects.create(
+            name='Nairobi Iron House', handle='nairobi-iron', category='fitness',
+            access_type='public', is_verified=True,
+            location_city='Nairobi', location_country='Kenya',
+        )
+        VenueLocation.objects.create(
+            gym=self.physical, name='Main floor', city='Nairobi', country='Kenya',
+            latitude='-1.292100', longitude='36.821900', is_primary=True, is_active=True,
+        )
+        GymReview.objects.create(gym=self.physical, reviewer=self.profile, rating=5)
+
+        self.virtual = Gym.objects.create(
+            name='Cloud Strength Club', handle='cloud-strength', category='fitness',
+            access_type='public',
+        )
+        GymSchedulePost.objects.create(
+            gym=self.virtual, author=self.profile, title='Online HIIT',
+            activity_type='hiit', location_mode='online',
+        )
+
+        self.hybrid = Gym.objects.create(
+            name='Hybrid Athletics', handle='hybrid-athletics', category='fitness',
+            access_type='public', location_city='Nairobi', location_country='Kenya',
+        )
+        VenueLocation.objects.create(
+            gym=self.hybrid, name='Westlands branch', city='Nairobi', country='Kenya',
+            latitude='-1.263400', longitude='36.802800', is_active=True,
+        )
+        GymSchedulePost.objects.create(
+            gym=self.hybrid, author=self.profile, title='Hybrid strength',
+            activity_type='strength', location_mode='hybrid',
+        )
+
+        self.far = Gym.objects.create(
+            name='Lagos Lift Lab', handle='lagos-lift', category='fitness',
+            access_type='public', location_city='Lagos', location_country='Nigeria',
+        )
+        VenueLocation.objects.create(
+            gym=self.far, name='Ikeja branch', city='Lagos', country='Nigeria',
+            latitude='6.524400', longitude='3.379200', is_active=True,
+        )
+
+    def _handles(self, params):
+        res = self.client.get('/api/v1/gyms/', params)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        return [g['handle'] for g in res.json()['data']]
+
+    def test_delivery_virtual_includes_hybrid(self):
+        handles = self._handles({'delivery': 'virtual'})
+        self.assertIn('cloud-strength', handles)
+        self.assertIn('hybrid-athletics', handles)
+        self.assertNotIn('nairobi-iron', handles)
+
+    def test_delivery_hybrid_requires_both(self):
+        self.assertEqual(set(self._handles({'delivery': 'hybrid'})), {'hybrid-athletics'})
+
+    def test_verified_only(self):
+        self.assertEqual(set(self._handles({'verified': 'true'})), {'nairobi-iron'})
+
+    def test_min_rating(self):
+        self.assertEqual(set(self._handles({'min_rating': '4'})), {'nairobi-iron'})
+
+    def test_nearby_nairobi(self):
+        handles = self._handles({'lat': '-1.2921', 'lng': '36.8219', 'radius_km': '50'})
+        self.assertIn('nairobi-iron', handles)
+        self.assertIn('hybrid-athletics', handles)
+        self.assertNotIn('lagos-lift', handles)
+        self.assertNotIn('cloud-strength', handles)
+
+    def test_city_country_filters(self):
+        self.assertIn('lagos-lift', self._handles({'city': 'Lagos'}))
+        self.assertNotIn('lagos-lift', self._handles({'country': 'Kenya'}))
+
+    def test_delivery_modes_exposed(self):
+        res = self.client.get('/api/v1/gyms/', {'q': 'Hybrid Athletics'})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        modes = res.json()['data'][0]['delivery_modes']
+        self.assertIn('physical', modes)
+        self.assertIn('virtual', modes)
+        self.assertIn('hybrid', modes)

@@ -326,6 +326,9 @@ class VerificationSubmissionViewSet(
                 profile.verification_status = 'shop'
             elif submission.verification_type == 'gym':
                 profile.verification_status = 'gym'
+                if submission.gym_id:
+                    from apps.gyms.models import Gym
+                    Gym.objects.filter(id=submission.gym_id).update(is_verified=True)
             profile.save(update_fields=['verification_status'])
 
             doc_ids = serializer.validated_data.get('document_ids', [])

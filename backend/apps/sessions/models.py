@@ -15,9 +15,17 @@ class TrainerProfile(TimestampedModel):
     average_rating = models.FloatField(default=0.0)
     review_count = models.IntegerField(default=0)
     total_sessions_completed = models.IntegerField(default=0)
+    # Discovery facets: offers mobile (travels to client) and/or virtual sessions.
+    is_mobile = models.BooleanField(default=False)
+    is_virtual = models.BooleanField(default=False)
+    intro_video_url = models.URLField(blank=True, default='')
 
     class Meta:
         db_table = 'sessions_trainer_profile'
+        indexes = [
+            models.Index(fields=['is_mobile', 'is_virtual']),
+            models.Index(fields=['-average_rating', '-review_count']),
+        ]
 
 
 class Availability(TimestampedModel):

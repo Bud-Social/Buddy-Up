@@ -120,7 +120,10 @@ class VenueLocation(TimestampedModel):
 
     class Meta:
         db_table = 'gyms_venue_location'
-        indexes = [models.Index(fields=['gym', 'is_active'], name='gyms_venue_gym_id_8fe6c1_idx')]
+        indexes = [
+            models.Index(fields=['gym', 'is_active'], name='gyms_venue_gym_id_8fe6c1_idx'),
+            models.Index(fields=['is_active', 'latitude', 'longitude'], name='gyms_venue_geo_idx'),
+        ]
 
 
 class AttendanceRecord(TimestampedModel):

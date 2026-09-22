@@ -151,3 +151,81 @@ class ShopCertUploadTests(TestCase):
         stored_name = app.id_document_url.rstrip('/').rsplit('/', 1)[-1]
         self.assertRegex(stored_name, r'^[0-9a-f]{32}\.pdf$')
         self.assertNotIn('my degree', app.id_document_url)
+
+
+class EventDiscoveryFilterTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from apps.gyms.models import Gym
+        from apps.marketplace.models import MarketplaceEvent
+
+        self.user = User.objects.create_user(email='fan@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='fan', display_name='Fan')
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+
+        start = timezone.now() + timedelta(days=3)
+        end = start + timedelta(hours=2)
+        self.gym = Gym.objects.create(
+            name='Verified Arena', handle='verified-arena', category='fitness',
+            access_type='public', is_verified=True,
+            location_city='Nairobi', location_country='Kenya',
+        )
+        self.physical = MarketplaceEvent.objects.create(
+            creator=self.profile, title='Nairobi Sunrise Run', description='5k run',
+            event_type='in_person', location='Karura Forest, Nairobi',
+            location_lat=-1.2421, location_lng=36.8273,
+            start_datetime=start, end_datetime=end, category='fitness',
+        )
+        self.online = MarketplaceEvent.objects.create(
+            creator=self.profile, title='Global Breathwork Basics', description='online session',
+            event_type='online', online_url='https://example.com/live',
+            start_datetime=start, end_datetime=end, category='wellness', is_free=True,
+        )
+        self.gym_event = MarketplaceEvent.objects.create(
+            creator=self.profile, gym=self.gym, title='Arena Hybrid Games',
+            description='hybrid competition', event_type='hybrid',
+            location='Verified Arena, Nairobi',
+            start_datetime=start, end_datetime=end, category='competition',
+        )
+
+    def _titles(self, params):
+        res = self.client.get('/api/v1/marketplace/events/', params)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        return [e['title'] for e in res.json()['data']]
+
+    def test_event_type_filter(self):
+        self.assertEqual(set(self._titles({'event_type': 'online'})), {'Global Breathwork Basics'})
+
+    def test_text_search(self):
+        self.assertEqual(set(self._titles({'q': 'breathwork'})), {'Global Breathwork Basics'})
+
+    def test_city_filter(self):
+        titles = set(self._titles({'city': 'Nairobi'}))
+        self.assertIn('Nairobi Sunrise Run', titles)
+        self.assertIn('Arena Hybrid Games', titles)
+        self.assertNotIn('Global Breathwork Basics', titles)
+
+    def test_nearby_filter(self):
+        titles = set(self._titles({'lat': '-1.2921', 'lng': '36.8219', 'radius_km': '50'}))
+        self.assertEqual(titles, {'Nairobi Sunrise Run'})
+
+    def test_verified_only(self):
+        titles = set(self._titles({'verified': 'true'}))
+        self.assertEqual(titles, {'Arena Hybrid Games'})
+
+    def test_gym_handle_filter(self):
+        self.assertEqual(set(self._titles({'gym': 'verified-arena'})), {'Arena Hybrid Games'})
+
+    def test_free_only(self):
+        titles = set(self._titles({'is_free': 'true'}))
+        self.assertIn('Global Breathwork Basics', titles)
+
+    def test_serializer_exposes_new_fields(self):
+        res = self.client.get('/api/v1/marketplace/events/', {'q': 'Sunrise'})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        event = res.json()['data'][0]
+        self.assertAlmostEqual(event['location_lat'], -1.2421)
+        self.assertIn('verification_status', event['creator_data'])

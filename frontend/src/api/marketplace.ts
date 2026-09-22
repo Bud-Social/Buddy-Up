@@ -109,10 +109,11 @@ export interface ProductMP {
 
 export interface MarketplaceEvent {
   id: string;
-  creator_data: { username: string; display_name: string; avatar_url: string };
-  gym_data: { id: string; name: string; handle: string; logo_url: string } | null;
-  shop_data: { id: string; name: string; handle: string } | null;
+  creator_data: { username: string; display_name: string; avatar_url: string; verification_status?: string };
+  gym_data: { id: string; name: string; handle: string; logo_url: string; is_verified?: boolean } | null;
+  shop_data: { id: string; name: string; handle: string; verification_status?: string } | null;
   shop_id: string | null;
+  gym_id: string | null;
   title: string;
   description: string;
   cover_image_url: string;
@@ -120,6 +121,8 @@ export interface MarketplaceEvent {
   gallery_urls: string[];
   event_type: string;
   location: string;
+  location_lat?: number | null;
+  location_lng?: number | null;
   online_url: string;
   start_datetime: string;
   end_datetime: string;
@@ -387,8 +390,17 @@ export const marketplaceApi = {
   deleteProduct: (productId: string) =>
     apiClient.delete<ApiResponse<null>>(`/marketplace/products/${productId}/`).then((r) => r.data),
 
-  getEvents: (scope: 'upcoming' | 'past' | 'all' = 'upcoming') =>
-    apiClient.get<ApiResponse<any[]>>('/marketplace/events/', { params: { scope } }).then((r) => r.data),
+  getEvents: (
+    scope: 'upcoming' | 'past' | 'all' = 'upcoming',
+    filters: {
+      q?: string; category?: string; event_type?: string; city?: string;
+      gym?: string; shop_id?: string; verified?: boolean; is_free?: boolean;
+      lat?: number; lng?: number; radius_km?: number;
+    } = {},
+  ) =>
+    apiClient.get<ApiResponse<any[]>>('/marketplace/events/', {
+      params: { scope, ...filters },
+    }).then((r) => r.data),
 
   getEvent: (eventId: string) =>
     apiClient.get<ApiResponse<any>>(`/marketplace/events/${eventId}/`).then((r) => r.data),

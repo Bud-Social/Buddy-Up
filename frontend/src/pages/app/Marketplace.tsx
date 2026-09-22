@@ -398,6 +398,9 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
   const [events, setEvents] = useState<any[]>([]);
   const [scope, setScope] = useState<'upcoming' | 'past' | 'all'>('upcoming');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [formatFilter, setFormatFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -405,14 +408,18 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
     setIsLoading(true);
     setError('');
     try {
-      const res = await marketplaceApi.getEvents(scope);
+      const res = await marketplaceApi.getEvents(scope, {
+        q: search || undefined,
+        event_type: formatFilter === 'all' ? undefined : formatFilter,
+        verified: verifiedOnly || undefined,
+      });
       setEvents(res.data || []);
     } catch {
       setError('Could not load events. Check your connection.');
     } finally {
       setIsLoading(false);
     }
-  }, [scope]);
+  }, [scope, search, formatFilter, verifiedOnly]);
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
@@ -453,6 +460,37 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
       </div>
 
       {/* Category Filter Pill Bar */}
+      <div className="flex gap-2 mb-3">
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search events..."
+          className="flex-1 min-w-0 bg-buddy-surface border border-transparent rounded-xl px-4 py-2.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:border-buddy-green/30" />
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-1 scrollbar-hide snap-x snap-mandatory">
+        {[
+          { key: 'all' as const, label: 'All formats' },
+          { key: 'in_person' as const, label: 'In person' },
+          { key: 'online' as const, label: 'Virtual' },
+          { key: 'hybrid' as const, label: 'Hybrid' },
+        ].map(({ key, label }) => (
+          <button key={key} onClick={() => setFormatFilter(key)}
+            className={`flex-shrink-0 px-3 py-1 rounded-full text-xs whitespace-nowrap transition-colors snap-start font-medium ${
+              formatFilter === key
+                ? 'bg-buddy-electric text-white'
+                : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+        <button onClick={() => setVerifiedOnly((v) => !v)}
+          className={`flex-shrink-0 px-3 py-1 rounded-full text-xs whitespace-nowrap transition-colors snap-start font-medium ${
+            verifiedOnly
+              ? 'bg-buddy-green text-buddy-black'
+              : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+          }`}
+        >
+          Verified only
+        </button>
+      </div>
       <div className="flex gap-2 overflow-x-auto pb-3 mb-3 scrollbar-hide snap-x snap-mandatory">
         <button
           onClick={() => setCategoryFilter('all')}

@@ -11,6 +11,13 @@ class WaitlistEntry(TimestampedModel):
     # API layer (blank only as a DB default for rows predating the field).
     country = models.CharField(max_length=56, default='', blank=True)
     source = models.CharField(max_length=40, default='landing')
+    # Prelaunch lead routing: general users, gym founders, or trainers.
+    interest = models.CharField(
+        max_length=20, default='user',
+        choices=[('user', 'User'), ('gym', 'Gym'), ('trainer', 'Trainer')],
+    )
+    # Optional lead details (gym name/city/size, trainer specialty, ...).
+    metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'waitlist_entry'

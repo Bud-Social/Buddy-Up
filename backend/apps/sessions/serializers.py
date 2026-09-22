@@ -6,12 +6,24 @@ from .models import (
 
 class TrainerProfileSerializer(serializers.ModelSerializer):
     profile_data = serializers.SerializerMethodField()
+    affiliated_gyms = serializers.SerializerMethodField()
 
     class Meta:
         model = TrainerProfile
         fields = ['profile_id', 'specialties', 'certifications', 'years_experience',
                    'languages', 'session_types', 'pricing', 'average_rating',
-                   'review_count', 'total_sessions_completed', 'profile_data']
+                   'review_count', 'total_sessions_completed',
+                   'is_mobile', 'is_virtual', 'intro_video_url',
+                   'affiliated_gyms', 'profile_data']
+        read_only_fields = ['profile_id', 'average_rating', 'review_count',
+                            'total_sessions_completed', 'affiliated_gyms', 'profile_data']
+
+    def get_affiliated_gyms(self, obj):
+        from apps.gyms.models import GymMembership
+        memberships = GymMembership.objects.filter(
+            member=obj.profile, role='trainer', subscription_active=True,
+        ).select_related('gym')
+        return [{'handle': m.gym.handle, 'name': m.gym.name} for m in memberships]
 
     def get_profile_data(self, obj):
         return {

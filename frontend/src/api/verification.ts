@@ -20,6 +20,8 @@ export interface VerificationSubmission {
   status: string;
   documents: VerificationDocument[];
   notes: string;
+  gym: string | null;
+  gym_name: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
   submitted_at: string | null;
@@ -47,7 +49,7 @@ export const verificationApi = {
 
   createSubmission: (verificationType: string, documentIds: string[], notes?: string, credential?: {
     credential_title?: string; credential_issuer?: string; credential_id?: string;
-    issued_date?: string; scope_of_practice?: string;
+    issued_date?: string; scope_of_practice?: string; gym_handle?: string;
   }) =>
     apiClient.post<ApiResponse<VerificationSubmission>>('/verification/submissions/', {
       verification_type: verificationType, document_ids: documentIds, notes, ...credential,

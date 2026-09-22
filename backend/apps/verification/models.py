@@ -114,6 +114,12 @@ class VerificationSubmission(TimestampedModel):
         'profiles.Profile', on_delete=models.CASCADE,
         related_name='verification_submissions',
     )
+    # Gym verification links to a specific gym so approval can flip that
+    # gym's verified flag (previously only the person's status changed).
+    gym = models.ForeignKey(
+        'gyms.Gym', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='verification_submissions',
+    )
     verification_type = models.CharField(max_length=20, choices=VERIFICATION_TYPES)
     status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='draft')
     documents = models.ManyToManyField(VerificationDocument, related_name='submissions')

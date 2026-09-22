@@ -126,9 +126,9 @@ export default function About() {
             </div>
           </div>
           <div className="mt-8">
-            <Link to="/signup">
+            <a href="/#waitlist">
               <Button size="lg" className="w-full sm:w-auto">Join the waiting list</Button>
-            </Link>
+            </a>
           </div>
         </div>
       </section>

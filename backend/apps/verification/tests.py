@@ -271,3 +271,49 @@ class VerificationDocumentDeliveryTests(TestCase):
         response = self.client.get(f'/api/v1/verification/documents/{doc.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['file_url'], 'https://legacy-cdn.example.com/id.jpg')
+
+
+class GymVerificationLinkTests(TestCase):
+    def setUp(self):
+        from apps.gyms.models import Gym
+        self.gym = Gym.objects.create(
+            name='Linked Gym', handle='linked-gym', category='fitness',
+            access_type='public',
+        )
+        self.profile = _make_user('gymfounder@test.com')
+        self.client = APIClient()
+        refresh = RefreshToken.for_user(self.profile.user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+
+        staff_user = User.objects.create_user(email='staff@test.com', password='TestPass123!')
+        staff_user.is_staff = True
+        staff_user.save()
+        self.staff = APIClient()
+        staff_refresh = RefreshToken.for_user(staff_user)
+        self.staff.credentials(HTTP_AUTHORIZATION=f'Bearer {staff_refresh.access_token}')
+        self.base = '/api/v1/verification/submissions'
+
+    def test_gym_handle_links_submission_and_approval_verifies_gym(self):
+        res = self.client.post(self.base + '/', {
+            'verification_type': 'gym',
+            'gym_handle': 'linked-gym',
+            'credential_title': 'Business Registration',
+            'credential_issuer': 'BRS Kenya',
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        sid = res.json()['id']
+
+        res = self.staff.post(f'{self.base}/{sid}/review/', {'action': 'approve'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        self.gym.refresh_from_db()
+        self.profile.refresh_from_db()
+        self.assertTrue(self.gym.is_verified)
+        self.assertEqual(self.profile.verification_status, 'gym')
+
+    def test_unknown_gym_handle_rejected(self):
+        res = self.client.post(self.base + '/', {
+            'verification_type': 'gym',
+            'gym_handle': 'no-such-gym',
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)

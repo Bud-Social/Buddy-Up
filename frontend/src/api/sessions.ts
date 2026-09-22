@@ -12,6 +12,10 @@ export interface TrainerProfile {
   average_rating: number;
   review_count: number;
   total_sessions_completed: number;
+  is_mobile?: boolean;
+  is_virtual?: boolean;
+  intro_video_url?: string;
+  affiliated_gyms?: { handle: string; name: string }[];
   profile_data: {
     username: string;
     display_name: string;
@@ -65,9 +69,22 @@ export interface AsyncProgramme {
   created_at: string;
 }
 
+export interface TrainerListParams {
+  specialty?: string;
+  location?: string;
+  verified?: boolean;
+  min_rating?: number;
+  virtual?: boolean;
+  mobile?: boolean;
+  gym?: string;
+}
+
 export const sessionsApi = {
-  getTrainers: (specialty?: string) =>
-    apiClient.get<ApiResponse<TrainerProfile[]>>('/sessions/trainers/', { params: specialty ? { specialty } : {} }).then((r) => r.data),
+  getTrainers: (params?: string | TrainerListParams) => {
+    const query: TrainerListParams =
+      typeof params === 'string' ? { specialty: params } : (params ?? {});
+    return apiClient.get<ApiResponse<TrainerProfile[]>>('/sessions/trainers/', { params: query }).then((r) => r.data);
+  },
 
   getTrainer: (username: string) =>
     apiClient.get<ApiResponse<TrainerProfile>>(`/sessions/trainers/${username}/`).then((r) => r.data),

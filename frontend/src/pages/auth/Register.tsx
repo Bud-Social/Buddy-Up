@@ -59,6 +59,10 @@ export default function Register() {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState(() => {
+    const preset = searchParams.get('role');
+    return preset === 'trainer' || preset === 'practitioner' ? preset : 'user';
+  });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [accepted16, setAccepted16] = useState(false);
   const [dobDay, setDobDay] = useState('');
@@ -145,7 +149,7 @@ export default function Register() {
       const d = parseInt(dobDay), m = parseInt(dobMonth), y = parseInt(dobYear);
       const dob = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const res = await authApi.register({
-        email, password, dob,
+        email, password, dob, role,
         accepted_terms: acceptedTerms, accepted_privacy: true, accepted_guidelines: true, is_16_plus: true,
         ...(computedAge < 18 && {
           guardian_name: guardianName,
@@ -212,6 +216,26 @@ export default function Register() {
                   </div>
                   <p className="text-xs mt-1" style={{ color: pwStrength.color.replace('bg-', '#').replace('buddy-green', '00C896').replace('buddy-red', 'FF4757').replace('buddy-orange', 'FF6B35').replace('buddy-electric', '7B61FF') }}>{pwStrength.label}</p>
                 </div>
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-buddy-text-primary mb-2">I&apos;m joining as</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: 'user', label: 'Member' },
+                  { value: 'trainer', label: 'Trainer' },
+                  { value: 'practitioner', label: 'Practitioner' },
+                ].map((r) => (
+                  <button key={r.value} type="button" onClick={() => setRole(r.value)}
+                    className={`px-3 py-2 rounded-xl border text-sm transition-colors ${role === r.value ? 'border-buddy-green bg-buddy-green/10 text-buddy-text-primary font-medium' : 'border-buddy-surface-raised text-buddy-text-secondary hover:border-buddy-green/40'}`}>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              {role !== 'user' && (
+                <p className="text-xs text-buddy-text-secondary mt-1.5">
+                  Trainers and practitioners verify credentials after signup to unlock bookings and payouts.
+                </p>
               )}
             </div>
             <label className="flex items-start gap-2 text-sm text-buddy-text-secondary cursor-pointer">

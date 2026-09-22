@@ -21,8 +21,23 @@ export interface CreateGymPayload {
   category_pricing?: Omit<GymCategoryPricing, 'id' | 'category_name'>[];
 }
 
+export interface GymListParams {
+  q?: string;
+  category?: string;
+  my?: boolean;
+  city?: string;
+  country?: string;
+  verified?: boolean;
+  min_rating?: number;
+  delivery?: 'any' | 'physical' | 'virtual' | 'hybrid';
+  lat?: number;
+  lng?: number;
+  radius_km?: number;
+  ordering?: 'members' | 'rating' | 'newest';
+}
+
 export const gymsApi = {
-  list: (params: { q?: string; category?: string; my?: boolean } = {}) =>
+  list: (params: GymListParams = {}) =>
     apiClient.get<ApiResponse<Gym[]>>('/gyms/', { params }).then((r) => r.data),
 
   create: (data: CreateGymPayload) =>

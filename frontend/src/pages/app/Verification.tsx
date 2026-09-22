@@ -27,7 +27,7 @@ const SCOPE_OPTIONS = [
   { value: 'clinical', label: 'Clinical Practice' },
 ];
 
-const NEEDS_CREDENTIALS = ['trainer', 'practitioner', 'shop'];
+const NEEDS_CREDENTIALS = ['trainer', 'practitioner', 'shop', 'gym'];
 
 export default function Verification() {
   const { toast } = useToast();
@@ -45,6 +45,7 @@ export default function Verification() {
   const [credentialId, setCredentialId] = useState('');
   const [issuedDate, setIssuedDate] = useState('');
   const [scopeOfPractice, setScopeOfPractice] = useState('');
+  const [gymHandle, setGymHandle] = useState('');
 
   const fetchSubmissions = async () => {
     setIsLoading(true);
@@ -74,6 +75,7 @@ export default function Verification() {
         credential_id: credentialId || undefined,
         issued_date: issuedDate || undefined,
         scope_of_practice: scopeOfPractice || undefined,
+        gym_handle: selectedType === 'gym' ? gymHandle.trim() || undefined : undefined,
       });
       toast('success', 'Verification submission created!');
       setShowSubmitModal(false);
@@ -85,6 +87,7 @@ export default function Verification() {
       setCredentialId('');
       setIssuedDate('');
       setScopeOfPractice('');
+      setGymHandle('');
       fetchSubmissions();
     } catch {
       toast('error', 'Failed to create verification submission');
@@ -173,9 +176,11 @@ export default function Verification() {
               {sub.status === 'rejected' && sub.documents?.[0]?.rejection_reason && (
                 <p className="text-xs text-buddy-red mt-2">Reason: {sub.documents[0].rejection_reason}</p>
               )}
-              {(sub.credential_title || sub.scope_of_practice) && (
+              {(sub.credential_title || sub.scope_of_practice || sub.gym_name) && (
                 <div className="mt-2 space-y-0.5 text-xs text-buddy-text-secondary">
-                  {sub.credential_title && (
+                  {sub.gym_name && (
+                    <p><span className="font-medium">Gym:</span> {sub.gym_name}</p>
+                  )}                  {sub.credential_title && (
                     <p><span className="font-medium">Credential:</span> {sub.credential_title}{sub.credential_issuer ? ` — ${sub.credential_issuer}` : ''}{sub.credential_id ? ` (${sub.credential_id})` : ''}</p>
                   )}
                   {sub.scope_of_practice && (
@@ -217,6 +222,9 @@ export default function Verification() {
             <div className="space-y-3 rounded-xl border border-buddy-surface-raised p-3">
               <p className="text-xs font-medium text-buddy-text-secondary uppercase tracking-wide">Credential Details</p>
               <Input label="Credential Title" placeholder="e.g. Certified Personal Trainer, Business Registration" value={credentialTitle} onChange={(e) => setCredentialTitle(e.target.value)} />
+              {selectedType === 'gym' && (
+                <Input label="Gym Handle" placeholder="e.g. nairobi-iron" value={gymHandle} onChange={(e) => setGymHandle(e.target.value)} />
+              )}
               <Input label="Issuer" placeholder="e.g. REPs Kenya, ACSM, Registrar of Companies" value={credentialIssuer} onChange={(e) => setCredentialIssuer(e.target.value)} />
               <Input label="Credential / Registration ID" placeholder="e.g. Certification number" value={credentialId} onChange={(e) => setCredentialId(e.target.value)} />
               <div>

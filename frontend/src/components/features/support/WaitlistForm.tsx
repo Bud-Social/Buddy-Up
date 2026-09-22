@@ -71,7 +71,7 @@ export function WaitlistForm() {
         <h3 className="font-heading font-semibold">Join the Waiting List</h3>
       </div>
       <p className="text-sm text-buddy-text-secondary">
-        We launch in November 2026. Join the list and be first through the door.
+        We are launching in November. Join the list and be first through the door.
       </p>
       <Input
         label="Name (optional)"

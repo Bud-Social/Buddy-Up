@@ -487,9 +487,9 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = MarketplaceEvent
         fields = [
-            'id', 'creator_data', 'gym_data', 'shop_data', 'shop_id', 'title', 'description',
+            'id', 'creator_data', 'gym_data', 'shop_data', 'shop_id', 'gym_id', 'title', 'description',
             'cover_image_url', 'promo_video_url', 'gallery_urls',
-            'event_type', 'location', 'online_url',
+            'event_type', 'location', 'location_lat', 'location_lng', 'online_url',
             'start_datetime', 'end_datetime', 'timezone', 'recurrence',
             'capacity', 'ticket_tiers',
             'ticket_price_artifacts', 'is_free',
@@ -506,17 +506,20 @@ class MarketplaceEventSerializer(serializers.ModelSerializer):
             'username': obj.creator.username,
             'display_name': obj.creator.display_name,
             'avatar_url': obj.creator.avatar_url,
+            'verification_status': obj.creator.verification_status,
         }
 
     def get_gym_data(self, obj):
         if not obj.gym:
             return None
-        return {'id': str(obj.gym.id), 'name': obj.gym.name, 'handle': obj.gym.handle, 'logo_url': obj.gym.logo_url}
+        return {'id': str(obj.gym.id), 'name': obj.gym.name, 'handle': obj.gym.handle,
+                'logo_url': obj.gym.logo_url, 'is_verified': obj.gym.is_verified}
 
     def get_shop_data(self, obj):
         if not obj.shop:
             return None
-        return {'id': str(obj.shop.id), 'name': obj.shop.name, 'handle': obj.shop.handle}
+        return {'id': str(obj.shop.id), 'name': obj.shop.name, 'handle': obj.shop.handle,
+                'verification_status': obj.shop.verification_status}
 
     def get_is_registered(self, obj):
         request = self.context.get('request')
@@ -598,6 +601,8 @@ class CreateEventSerializer(serializers.Serializer):
     cover_image_url = serializers.URLField(required=False, allow_blank=True)
     event_type = serializers.ChoiceField(choices=['in_person', 'online', 'hybrid'], default='in_person')
     location = serializers.CharField(required=False, allow_blank=True, max_length=300)
+    location_lat = serializers.FloatField(required=False, allow_null=True, default=None)
+    location_lng = serializers.FloatField(required=False, allow_null=True, default=None)
     online_url = serializers.URLField(required=False, allow_blank=True)
     start_datetime = serializers.DateTimeField()
     end_datetime = serializers.DateTimeField()

@@ -17,19 +17,29 @@ export default function Trainers() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [specialty, setSpecialty] = useState('');
+  const [location, setLocation] = useState('');
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [virtualOnly, setVirtualOnly] = useState(false);
+  const [mobileOnly, setMobileOnly] = useState(false);
 
   const fetchTrainers = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
-      const res = await sessionsApi.getTrainers(specialty || undefined);
+      const res = await sessionsApi.getTrainers({
+        specialty: specialty || undefined,
+        location: location || undefined,
+        verified: verifiedOnly || undefined,
+        virtual: virtualOnly || undefined,
+        mobile: mobileOnly || undefined,
+      });
       setTrainers(res.data || []);
     } catch {
       setError('Could not load trainers. Check your connection.');
     } finally {
       setIsLoading(false);
     }
-  }, [specialty]);
+  }, [specialty, location, verifiedOnly, virtualOnly, mobileOnly]);
 
   useEffect(() => { fetchTrainers(); }, [fetchTrainers]);
 
@@ -47,6 +57,23 @@ export default function Trainers() {
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-buddy-text-secondary" />
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search trainers..."
           className="w-full bg-buddy-surface border border-transparent rounded-xl pl-10 pr-4 py-3 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:border-buddy-green/30" />
+      </div>
+
+      <div className="flex gap-2 mb-3">
+        <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City or country (e.g. Nairobi)"
+          className="flex-1 min-w-0 bg-buddy-surface border border-transparent rounded-xl px-4 py-2.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:border-buddy-green/30" />
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide snap-x snap-mandatory">
+        {[
+          { key: 'verified' as const, label: 'Verified only', active: verifiedOnly, toggle: () => setVerifiedOnly((v) => !v) },
+          { key: 'virtual' as const, label: 'Virtual', active: virtualOnly, toggle: () => setVirtualOnly((v) => !v) },
+          { key: 'mobile' as const, label: 'Mobile', active: mobileOnly, toggle: () => setMobileOnly((v) => !v) },
+        ].map(({ key, label, active, toggle }) => (
+          <button key={key} onClick={toggle}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors snap-start ${active ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+          >{label}</button>
+        ))}
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide snap-x snap-mandatory">
@@ -82,7 +109,14 @@ export default function Trainers() {
                     <h3 className="font-heading font-semibold text-sm">{t.profile_data.display_name}</h3>
                     {t.profile_data.verification_status === 'trainer' && <Badge variant="green" label="Certified" size="sm" />}
                     {t.profile_data.verification_status === 'practitioner' && <Badge variant="gold" label="Practitioner" size="sm" />}
+                    {(t.is_virtual || t.session_types?.some((s) => ['1on1_live', 'group_live', 'async', 'nutrition'].includes(s))) && <Badge variant="green" label="Virtual" size="sm" />}
+                    {(t.is_mobile || t.session_types?.includes('in_person')) && <Badge variant="gold" label="Mobile" size="sm" />}
                   </div>
+                  {t.affiliated_gyms && t.affiliated_gyms.length > 0 && (
+                    <p className="text-xs text-buddy-text-secondary mt-0.5 truncate">
+                      Affiliated: {t.affiliated_gyms.map((g) => g.name).join(', ')}
+                    </p>
+                  )}
                   <p className="text-xs text-buddy-text-secondary mt-0.5">@{t.profile_data.username}</p>
                   <div className="flex items-center gap-3 mt-1.5 text-xs text-buddy-text-secondary">
                     {t.review_count > 0 && (

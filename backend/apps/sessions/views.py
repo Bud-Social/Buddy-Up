@@ -30,7 +30,46 @@ class TrainerListView(views.APIView):
 
     def get(self, request):
         specialty = request.query_params.get('specialty', '')
+        location = request.query_params.get('location', '').strip()
+        verified_only = request.query_params.get('verified') == 'true'
+        virtual_only = request.query_params.get('virtual') == 'true'
+        mobile_only = request.query_params.get('mobile') == 'true'
+        gym_handle = request.query_params.get('gym', '').strip()
+        try:
+            min_rating = float(request.query_params.get('min_rating', '') or 0)
+        except (TypeError, ValueError):
+            min_rating = 0
         qs = TrainerProfile.objects.filter(profile__role__in=['trainer', 'practitioner']).select_related('profile')
+        if location:
+            qs = qs.filter(
+                db_models.Q(profile__location_city__icontains=location)
+                | db_models.Q(profile__location_country__icontains=location)
+            )
+        if verified_only:
+            qs = qs.filter(profile__verification_status__in=['trainer', 'practitioner'])
+        if min_rating > 0:
+            qs = qs.filter(average_rating__gte=min_rating)
+        if virtual_only:
+            # Explicit flag, or offers a remote-capable session type.
+            qs = qs.filter(
+                db_models.Q(is_virtual=True)
+                | db_models.Q(session_types__contains=['1on1_live'])
+                | db_models.Q(session_types__contains=['group_live'])
+                | db_models.Q(session_types__contains=['async'])
+                | db_models.Q(session_types__contains=['nutrition'])
+            )
+        if mobile_only:
+            qs = qs.filter(
+                db_models.Q(is_mobile=True)
+                | db_models.Q(session_types__contains=['in_person'])
+            )
+        if gym_handle:
+            from apps.gyms.models import GymMembership
+            trainer_ids = GymMembership.objects.filter(
+                gym__handle__iexact=gym_handle, role='trainer',
+                subscription_active=True,
+            ).values_list('member__trainer_profile__id', flat=True)
+            qs = qs.filter(id__in=trainer_ids)
         qs = qs.order_by('-average_rating', '-review_count')
         if specialty:
             qs = [t for t in qs if specialty in (t.specialties or [])]
@@ -57,7 +96,8 @@ class TrainerDetailView(views.APIView):
     def patch(self, request, username):
         profile = get_object_or_404(Profile, username=username, user_id=request.user.id)
         trainer, _ = TrainerProfile.objects.get_or_create(profile=profile)
-        allowed = ['specialties', 'certifications', 'languages', 'session_types', 'pricing']
+        allowed = ['specialties', 'certifications', 'languages', 'session_types', 'pricing',
+                   'is_mobile', 'is_virtual', 'intro_video_url']
         for k in allowed:
             if k in request.data:
                 setattr(trainer, k, request.data[k])
@@ -119,6 +159,29 @@ class BookingCreateView(views.APIView):
         pricing = trainer.pricing or {}
         session_key = f"{data['session_type']}_{data['duration_minutes']}"
         fee = pricing.get(session_key, {'dumbbell': 2})
+
+        # Prevent double-booking: reject when the requested window overlaps
+        # an existing live booking for this trainer.
+        new_start = data.get('scheduled_at')
+        if new_start is not None:
+            from datetime import timedelta as _td
+            new_end = new_start + _td(minutes=data['duration_minutes'])
+            clash = BookingSession.objects.filter(
+                trainer=trainer_profile,
+                status__in=['pending', 'confirmed', 'in_progress'],
+                scheduled_at__isnull=False,
+                scheduled_at__lt=new_end,
+            )
+            for existing in clash.iterator():
+                existing_end = existing.scheduled_at + _td(
+                    minutes=existing.duration_minutes or 0,
+                )
+                if existing_end > new_start:
+                    return Response({
+                        'success': False, 'data': None,
+                        'message': 'This trainer is already booked at that time.',
+                        'errors': None, 'pagination': None,
+                    }, status=status.HTTP_409_CONFLICT)
 
         booking = BookingSession.objects.create(
             client=request.user.profile,

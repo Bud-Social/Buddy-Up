@@ -86,6 +86,7 @@ class SheetsMirrorTests(TestCase):
         assert kwargs['data'] == {
             'email': 'mirror@example.com', 'name': 'Mirror',
             'country': 'Kenya', 'source': 'landing',
+            'interest': 'user', 'metadata': '{}',
         }
 
     @mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': ''})

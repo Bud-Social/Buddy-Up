@@ -82,6 +82,84 @@ class TrainerTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
+class TrainerDiscoveryFilterTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(email='client@test.com', password='TestPass123!')
+        self.user.dob_hash = hash_dob(date(2000, 6, 15))
+        self.user.email_verified = True
+        self.user.save()
+        self.profile = Profile.objects.create(
+            user=self.user, username='client1', display_name='Client One',
+            artifact_balance={'dumbbell': 100},
+        )
+        _auth_client(self.client)
+        self.trainer_user, self.trainer_profile, self.tp = _setup_trainer()
+        self.trainer_profile.location_city = 'Nairobi'
+        self.trainer_profile.location_country = 'Kenya'
+        self.trainer_profile.save(update_fields=['location_city', 'location_country'])
+
+    def _usernames(self, params):
+        res = self.client.get('/api/v1/sessions/trainers/', params)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        return [t['profile_data']['username'] for t in res.data['data']]
+
+    def test_virtual_filter_matches_remote_session_types(self):
+        # No explicit flag, but offers 1:1 live sessions.
+        self.tp.session_types = ['1on1_live']
+        self.tp.save(update_fields=['session_types'])
+        self.assertIn('trainer1', self._usernames({'virtual': 'true'}))
+
+    def test_virtual_flag(self):
+        self.tp.is_virtual = True
+        self.tp.save(update_fields=['is_virtual'])
+        self.assertIn('trainer1', self._usernames({'virtual': 'true'}))
+
+    def test_mobile_filter_excludes_by_default(self):
+        self.assertNotIn('trainer1', self._usernames({'mobile': 'true'}))
+        self.tp.is_mobile = True
+        self.tp.save(update_fields=['is_mobile'])
+        self.assertIn('trainer1', self._usernames({'mobile': 'true'}))
+
+    def test_location_filter(self):
+        self.assertIn('trainer1', self._usernames({'location': 'Nairobi'}))
+        self.assertNotIn('trainer1', self._usernames({'location': 'Lagos'}))
+
+    def test_verified_filter(self):
+        self.assertNotIn('trainer1', self._usernames({'verified': 'true'}))
+        self.trainer_profile.verification_status = 'trainer'
+        self.trainer_profile.save(update_fields=['verification_status'])
+        self.assertIn('trainer1', self._usernames({'verified': 'true'}))
+
+    def test_gym_affiliation_filter(self):
+        from apps.gyms.models import Gym, GymMembership
+        gym = Gym.objects.create(
+            name='Affiliated Gym', handle='affiliated-gym', category='fitness',
+            access_type='public',
+        )
+        GymMembership.objects.create(
+            gym=gym, member=self.trainer_profile, role='trainer',
+        )
+        self.assertIn('trainer1', self._usernames({'gym': 'affiliated-gym'}))
+        self.assertNotIn('trainer1', self._usernames({'gym': 'other-gym'}))
+
+    def test_affiliated_gyms_exposed(self):
+        from apps.gyms.models import Gym, GymMembership
+        gym = Gym.objects.create(
+            name='Affiliated Gym', handle='affiliated-gym', category='fitness',
+            access_type='public',
+        )
+        GymMembership.objects.create(
+            gym=gym, member=self.trainer_profile, role='trainer',
+        )
+        res = self.client.get('/api/v1/sessions/trainers/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        entry = [t for t in res.data['data']
+                 if t['profile_data']['username'] == 'trainer1'][0]
+        self.assertEqual(entry['affiliated_gyms'],
+                         [{'handle': 'affiliated-gym', 'name': 'Affiliated Gym'}])
+
+
 class BookingTests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -114,6 +192,28 @@ class BookingTests(TestCase):
             'duration_minutes': 60,
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_402_PAYMENT_REQUIRED)
+
+    def test_overlapping_booking_rejected(self):
+        start = timezone.now() + timedelta(days=2)
+        first = self.client.post(f'/api/v1/sessions/book/{self.trainer_profile.username}/', {
+            'session_type': '1on1_live',
+            'scheduled_at': start.isoformat(),
+            'duration_minutes': 60,
+        }, format='json')
+        self.assertEqual(first.status_code, status.HTTP_201_CREATED)
+        clash = self.client.post(f'/api/v1/sessions/book/{self.trainer_profile.username}/', {
+            'session_type': '1on1_live',
+            'scheduled_at': (start + timedelta(minutes=30)).isoformat(),
+            'duration_minutes': 60,
+        }, format='json')
+        self.assertEqual(clash.status_code, status.HTTP_409_CONFLICT)
+        # Abutting the first booking is fine.
+        ok = self.client.post(f'/api/v1/sessions/book/{self.trainer_profile.username}/', {
+            'session_type': '1on1_live',
+            'scheduled_at': (start + timedelta(minutes=60)).isoformat(),
+            'duration_minutes': 60,
+        }, format='json')
+        self.assertEqual(ok.status_code, status.HTTP_201_CREATED)
 
     def test_book_then_start_then_complete_then_review(self):
         # Book

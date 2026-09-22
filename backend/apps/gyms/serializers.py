@@ -34,6 +34,7 @@ class GymSerializer(serializers.ModelSerializer):
     recent_reviewers = serializers.SerializerMethodField()
     categories = GymCategorySerializer(many=True, read_only=True)
     category_pricing = GymCategoryPricingSerializer(many=True, read_only=True)
+    delivery_modes = serializers.SerializerMethodField()
 
     class Meta:
         model = Gym
@@ -45,11 +46,29 @@ class GymSerializer(serializers.ModelSerializer):
             'is_verified', 'is_reviews_enabled', 'is_donations_enabled',
             'average_rating', 'review_count', 'recent_reviewers',
             'rules', 'tags', 'member_count', 'active_today',
-            'location_city', 'location_country',
+            'location_city', 'location_country', 'delivery_modes',
             'owner_data', 'membership_role', 'is_member',
             'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'member_count', 'is_verified', 'created_at', 'updated_at']
+
+    def get_delivery_modes(self, obj):
+        has_physical = getattr(obj, 'has_physical', None)
+        has_virtual = getattr(obj, 'has_virtual', None)
+        if has_physical is None:
+            has_physical = obj.venues.filter(is_active=True).exists()
+        if has_virtual is None:
+            has_virtual = obj.schedule_posts.filter(
+                location_mode__in=['online', 'hybrid'],
+            ).exists()
+        modes = []
+        if has_physical:
+            modes.append('physical')
+        if has_virtual:
+            modes.append('virtual')
+        if has_physical and has_virtual:
+            modes.append('hybrid')
+        return modes
 
     def get_owner_data(self, obj):
         owners = GymMembership.objects.filter(gym=obj, role__in=['owner', 'co_owner']).select_related('member')

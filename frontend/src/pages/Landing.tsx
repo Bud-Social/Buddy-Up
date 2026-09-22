@@ -7,7 +7,7 @@ import { Logo } from '@/components/ui/Logo';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { isReducedMotionEnabled } from '@/lib/reducedMotion';
 import { APP_DOWNLOAD_URLS, APP_URL } from '@/config/downloads';
-import { FUNDRAISER_URL, PLEDGE_FORM_URL } from '@/config/support';
+import { FUNDRAISER_URL, PLEDGE_FORM_URL, GYM_SUITE_FORM_URL, TRAINER_INTAKE_FORM_URL } from '@/config/support';
 import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
 import { WaitlistForm } from '@/components/features/support/WaitlistForm';
@@ -22,13 +22,13 @@ const features = {
   },
   gyms: {
     title: 'Gyms',
-    desc: 'Create or join fitness communities with built-in live schedules, member feeds, and subscription tiers.',
-    points: ['Public, private, or secret gyms', 'Trainer & moderator roles', 'Gym wallet with revenue splits', 'Weekly live schedule'],
+    desc: 'Discover nearby, virtual, and hybrid gyms — or register your own fitness community with live schedules, member feeds, and subscription tiers.',
+    points: ['Nearby, virtual & hybrid discovery', 'Public, private, or secret gyms', 'Trainer & moderator roles', 'Gym wallet with revenue splits', 'Verified badges & member reviews'],
   },
   trainers: {
     title: 'Trainers',
-    desc: 'Find certified trainers and health practitioners. Book 1:1 sessions, buy programmes, and get verified.',
-    points: ['Verified badges & reviews', 'Session booking & escrow', 'Async training programmes', 'Availability calendar'],
+    desc: 'Find certified trainers and health practitioners — mobile, near you, virtual, verified, or affiliated with your gym. Book 1:1 sessions, buy programmes, and train with confidence.',
+    points: ['Mobile, nearby & virtual pros', 'Verified badges & reviews', 'Gym-affiliated trainers', 'Session booking & escrow', 'Async training programmes', 'Availability calendar'],
   },
   mealPlans: {
     title: 'Meal Plans',
@@ -161,19 +161,20 @@ export default function Landing() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-buddy-green/5 to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto px-6 pt-24 pb-36 text-center relative z-10">
-          <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mb-6">
-            <span className="flex items-center gap-3">
-              <Logo size="xl" type="icon" />
-              <span className="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none">
-                <span className="buddy-duo-swap">Buddy</span>
-                <span className="buddy-duo-swap-rev">Up</span>
-              </span>
-            </span>
-            {/* Typewriter tagline rides on the name line (wraps below it on small screens) */}
-            <span className="font-mono text-buddy-green text-base sm:text-xl self-end pb-1 sm:pb-2 min-h-[1.5em]" aria-hidden="true">
-              <Typewriter />
+          <div className="flex justify-center items-center gap-3 mb-4">
+            <Logo size="xl" type="icon" />
+            <span className="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none">
+              <span className="buddy-duo-swap">Buddy</span>
+              <span className="buddy-duo-swap-rev">Up</span>
             </span>
           </div>
+          {/* Typewriter tagline sits on its own line below the logo lockup. */}
+          <p className="font-mono text-buddy-green text-base sm:text-xl min-h-[1.5em] mb-2">
+            <span className="sr-only">Buddy Up Fit (Bud). Your Bud is waiting. Find your fitness family.</span>
+            <span aria-hidden="true">
+              <Typewriter />
+            </span>
+          </p>
           <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
             Find your<br />
             <span className="text-buddy-green">fitness family.</span>
@@ -396,12 +397,27 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto px-6 text-center">
           <GraduationCap size={48} className="text-buddy-electric mx-auto" />
           <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Are you a trainer or health professional?</h2>
-          <p className="text-buddy-text-secondary max-w-xl mx-auto mb-8">
+          <p className="text-buddy-text-secondary max-w-xl mx-auto mb-4">
             BuddyUp helps you reach clients, run live sessions, and build your fitness community. Verified profiles. Real revenue.
           </p>
-          <Link to="/signup">
-            <Button size="lg" variant="secondary" className="gap-2">Join as a Trainer <ChevronRight size={18} /></Button>
-          </Link>
+          <p className="text-sm text-buddy-text-secondary max-w-xl mx-auto mb-8">
+            Train where your clients are — in person, online, or on the move. Prelaunch onboarding
+            collects your intro video and credentials for verification.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/signup?role=trainer">
+              <Button size="lg" variant="secondary" className="gap-2">Join as a Trainer <ChevronRight size={18} /></Button>
+            </Link>
+            {TRAINER_INTAKE_FORM_URL ? (
+              <a href={TRAINER_INTAKE_FORM_URL} target="_blank" rel="noreferrer noopener">
+                <Button size="lg" variant="outline" className="gap-2">Book a prelaunch slot</Button>
+              </a>
+            ) : (
+              <a href="#waitlist">
+                <Button size="lg" variant="outline" className="gap-2">Join the waiting list</Button>
+              </a>
+            )}
+          </div>
         </div>
       </section>
 
@@ -410,12 +426,27 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto px-6 text-center">
           <Dumbbell size={48} className="text-buddy-green mx-auto" />
           <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Start your own gym on BuddyUp</h2>
-          <p className="text-buddy-text-secondary max-w-xl mx-auto mb-8">
+          <p className="text-buddy-text-secondary max-w-xl mx-auto mb-4">
             Build a paid or free fitness community. Set a schedule. Grow your tribe.
           </p>
-          <Link to="/signup">
-            <Button size="lg" className="gap-2">Create a Gym <Dumbbell size={18} /></Button>
-          </Link>
+          <p className="text-sm text-buddy-text-secondary max-w-xl mx-auto mb-8">
+            List your nearby physical space, run virtual classes, or do both as a hybrid gym —
+            with verified badges and member reviews at launch.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link to="/signup">
+              <Button size="lg" className="gap-2">Create a Gym <Dumbbell size={18} /></Button>
+            </Link>
+            {GYM_SUITE_FORM_URL ? (
+              <a href={GYM_SUITE_FORM_URL} target="_blank" rel="noreferrer noopener">
+                <Button size="lg" variant="outline" className="gap-2">Book a gym-suite slot</Button>
+              </a>
+            ) : (
+              <a href="#waitlist">
+                <Button size="lg" variant="outline" className="gap-2">Join the waiting list</Button>
+              </a>
+            )}
+          </div>
         </div>
       </section>
 
@@ -447,6 +478,13 @@ export default function Landing() {
             </Card>
           ))}
         </div>
+        <p className="text-center text-sm text-buddy-text-secondary mt-10">
+          Not ready to sign up?{' '}
+          <a href="#waitlist" className="text-buddy-green hover:underline font-semibold">
+            Join the waiting list for the November launch
+          </a>
+          .
+        </p>
       </section>
 
       {/* ── 9. APP DOWNLOAD ── */}

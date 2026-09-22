@@ -18,7 +18,7 @@ from common.pagination import PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
 from .models import (
     Gym, GymMembership, GymCategory, GymOnboardingChecklist,
-    JoinRequest, GymInvite, GymMembershipException,
+    JoinRequest, GymInvite, GymMembershipException, VenueLocation,
 )
 from .serializers import (
     GymSerializer, CreateGymSerializer, GymMembershipSerializer,
@@ -177,7 +177,32 @@ class GymListView(views.APIView):
     def get(self, request):
         q = request.query_params.get('q', '')
         category = request.query_params.get('category', '')
+        city = request.query_params.get('city', '').strip()
+        country = request.query_params.get('country', '').strip()
+        verified_only = request.query_params.get('verified') == 'true'
+        delivery = (request.query_params.get('delivery') or 'any').strip().lower()
+        ordering = (request.query_params.get('ordering') or 'members').strip().lower()
         my_gyms = request.query_params.get('my') == 'true'
+        radius_km = request.query_params.get('radius_km', '')
+
+        try:
+            min_rating = float(request.query_params.get('min_rating', '') or 0)
+        except (TypeError, ValueError):
+            min_rating = 0
+
+        lat = lng = None
+        try:
+            if request.query_params.get('lat') not in (None, ''):
+                lat = float(request.query_params.get('lat'))
+            if request.query_params.get('lng') not in (None, ''):
+                lng = float(request.query_params.get('lng'))
+        except (TypeError, ValueError):
+            lat = lng = None
+        try:
+            radius_km = float(radius_km or 25)
+        except (TypeError, ValueError):
+            radius_km = 25
+        radius_km = min(max(radius_km, 1), 200)
 
         if my_gyms:
             gym_ids = GymMembership.objects.filter(
@@ -196,9 +221,69 @@ class GymListView(views.APIView):
         if category:
             queryset = queryset.filter(categories__name=category)
 
+        if city:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(location_city__icontains=city)
+                | Q(venues__city__icontains=city, venues__is_active=True)
+            )
+
+        if country:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(location_country__icontains=country)
+                | Q(venues__country__icontains=country, venues__is_active=True)
+            )
+
+        if verified_only:
+            queryset = queryset.filter(is_verified=True)
+
+        # Delivery facets: a gym is physical when it has an active venue and
+        # virtual when it runs online/hybrid schedule posts. Hybrid = both.
+        queryset = queryset.annotate(
+            has_physical=db_models.Exists(
+                VenueLocation.objects.filter(gym=db_models.OuterRef('pk'), is_active=True)
+            ),
+            has_virtual=db_models.Exists(
+                GymSchedulePost.objects.filter(
+                    gym=db_models.OuterRef('pk'), location_mode__in=['online', 'hybrid'],
+                )
+            ),
+            avg_rating=db_models.Avg('reviews__rating'),
+        )
+        if delivery == 'physical':
+            queryset = queryset.filter(has_physical=True)
+        elif delivery == 'virtual':
+            queryset = queryset.filter(has_virtual=True)
+        elif delivery == 'hybrid':
+            queryset = queryset.filter(has_physical=True, has_virtual=True)
+
+        if min_rating > 0:
+            queryset = queryset.filter(avg_rating__gte=min_rating)
+
+        if lat is not None and lng is not None:
+            import math
+            lat_delta = radius_km / 111.0
+            lng_delta = radius_km / max(111.0 * abs(math.cos(math.radians(lat))), 1e-6)
+            queryset = queryset.filter(
+                venues__is_active=True,
+                venues__latitude__isnull=False,
+                venues__longitude__isnull=False,
+                venues__latitude__gte=lat - lat_delta,
+                venues__latitude__lte=lat + lat_delta,
+                venues__longitude__gte=lng - lng_delta,
+                venues__longitude__lte=lng + lng_delta,
+            )
+
+        queryset = queryset.distinct()
         queryset = gate_mature_queryset(request, queryset)
 
-        queryset = queryset.order_by('-member_count')
+        if ordering == 'rating':
+            queryset = queryset.order_by('-avg_rating', '-member_count')
+        elif ordering == 'newest':
+            queryset = queryset.order_by('-created_at')
+        else:
+            queryset = queryset.order_by('-member_count')
 
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request)

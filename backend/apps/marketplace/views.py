@@ -1275,6 +1275,12 @@ class EventListView(views.APIView):
         category = request.query_params.get('category')
         event_type = request.query_params.get('event_type')
         gym_id = request.query_params.get('gym_id')
+        gym_handle = (request.query_params.get('gym') or '').strip()
+        shop_id = request.query_params.get('shop_id')
+        query = (request.query_params.get('q') or '').strip()
+        city = (request.query_params.get('city') or '').strip()
+        verified_only = request.query_params.get('verified') == 'true'
+        free_only = request.query_params.get('is_free') == 'true'
         upcoming_only = request.query_params.get('upcoming', 'true').lower() == 'true'
         scope = request.query_params.get('scope', '')
         if category:
@@ -1283,6 +1289,56 @@ class EventListView(views.APIView):
             qs = qs.filter(event_type=event_type)
         if gym_id:
             qs = qs.filter(gym_id=gym_id)
+        if gym_handle:
+            qs = qs.filter(gym__handle__iexact=gym_handle)
+        if shop_id:
+            qs = qs.filter(shop_id=shop_id)
+        if query:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(title__icontains=query) | Q(description__icontains=query)
+                | Q(location__icontains=query)
+            )
+        if city:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(location__icontains=city)
+                | Q(gym__location_city__icontains=city)
+                | Q(gym__venues__city__icontains=city, gym__venues__is_active=True)
+            )
+        if verified_only:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(shop__verification_status='verified')
+                | Q(gym__is_verified=True)
+                | Q(creator__verification_status__in=['trainer', 'practitioner', 'id'])
+            )
+        if free_only:
+            qs = qs.filter(is_free=True)
+        # Note: events carry no ratings of their own; quality facets come
+        # from the affiliated gym/shop/creator verification instead.
+        lat = lng = None
+        try:
+            if request.query_params.get('lat') not in (None, ''):
+                lat = float(request.query_params.get('lat'))
+            if request.query_params.get('lng') not in (None, ''):
+                lng = float(request.query_params.get('lng'))
+        except (TypeError, ValueError):
+            lat = lng = None
+        try:
+            radius_km = float(request.query_params.get('radius_km') or 25)
+        except (TypeError, ValueError):
+            radius_km = 25
+        radius_km = min(max(radius_km, 1), 200)
+        if lat is not None and lng is not None:
+            import math
+            lat_delta = radius_km / 111.0
+            lng_delta = radius_km / max(111.0 * abs(math.cos(math.radians(lat))), 1e-6)
+            qs = qs.filter(
+                location_lat__isnull=False, location_lng__isnull=False,
+                location_lat__gte=lat - lat_delta, location_lat__lte=lat + lat_delta,
+                location_lng__gte=lng - lng_delta, location_lng__lte=lng + lng_delta,
+            )
         from django.utils import timezone as tz
         if scope == 'past':
             qs = qs.filter(start_datetime__lt=tz.now())
@@ -1290,6 +1346,7 @@ class EventListView(views.APIView):
             pass
         elif upcoming_only:
             qs = qs.filter(start_datetime__gte=tz.now())
+        qs = qs.distinct().order_by('start_datetime')
         qs = gate_mature_queryset(request, qs)
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
@@ -1358,7 +1415,8 @@ class EventDetailView(views.APIView):
         if event.creator != request.user.profile:
             return Response({'success': False, 'message': 'Permission denied.'}, status=403)
         updatable = ['title', 'description', 'cover_image_url', 'promo_video_url', 'gallery_urls',
-                     'event_type', 'location', 'online_url', 'start_datetime', 'end_datetime',
+                     'event_type', 'location', 'location_lat', 'location_lng', 'online_url',
+                     'start_datetime', 'end_datetime',
                      'timezone', 'capacity', 'ticket_price_artifacts', 'is_free', 'is_published',
                      'tags', 'category', 'agenda', 'recurrence', 'ticket_tiers',
                      'early_bird_enabled', 'early_bird_deadline', 'early_bird_price_artifacts',
