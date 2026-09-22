@@ -13,7 +13,9 @@
  *   GOOGLE_SHEETS_WEBHOOK_URL    optional — Apps Script exec URL for the mirror
  *
  * Writes to Supabase table `waitlist_entry`
- * (email PK, name, country, source, created_at default now(), RLS on, no policies).
+ * (email PK, name, country, source, interest, details, created_at default
+ * now(), RLS on, no policies). Required Supabase columns beyond the original
+ * four: `interest text default 'user'`, `details jsonb default '{}'`.
  */
 
 interface WaitlistBody {
@@ -21,6 +23,8 @@ interface WaitlistBody {
   name?: unknown;
   country?: unknown;
   source?: unknown;
+  interest?: unknown;
+  metadata?: unknown;
 }
 
 type VercelReq = {
@@ -57,7 +61,7 @@ function fail(res: VercelRes, status: number, message: string): void {
 /** Race the fire-and-forget sheet mirror against a hard timeout so a hung
  * webhook can never delay the signup response (same policy as the Django
  * version's daemon thread). Failures are swallowed by design. */
-async function mirrorToSheets(entry: { email: string; name: string; country: string; source: string }): Promise<void> {
+async function mirrorToSheets(entry: { email: string; name: string; country: string; source: string; interest: string; details: string }): Promise<void> {
   const url = (process.env.GOOGLE_SHEETS_WEBHOOK_URL || '').trim();
   if (!url) return;
   await Promise.race([
@@ -69,6 +73,8 @@ async function mirrorToSheets(entry: { email: string; name: string; country: str
         name: entry.name,
         country: entry.country,
         source: entry.source,
+        interest: entry.interest,
+        details: entry.details,
       }),
     }).catch(() => undefined),
     new Promise((resolve) => setTimeout(resolve, MIRROR_TIMEOUT_MS)),
@@ -113,6 +119,13 @@ export default async function handler(req: VercelReq, res: VercelRes): Promise<v
   const name = typeof body.name === 'string' ? body.name.trim().slice(0, 80) : '';
   const country = typeof body.country === 'string' ? body.country.trim().slice(0, 56) : '';
   const source = typeof body.source === 'string' && body.source.trim() ? body.source.trim().slice(0, 40) : 'landing';
+  const interest = body.interest === 'gym' || body.interest === 'trainer' ? body.interest : 'user';
+  // Free-form lead details, size-capped; required keys per interest so gym
+  // and trainer signups carry analysable intent, not just an email.
+  const metadata = body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)
+    ? body.metadata as Record<string, unknown>
+    : {};
+  const details = JSON.stringify(metadata).slice(0, 4000);
 
   if (!EMAIL_RE.test(email) || email.length > 254) {
     fail(res, 400, 'Please enter a valid email address.');
@@ -122,8 +135,23 @@ export default async function handler(req: VercelReq, res: VercelRes): Promise<v
     fail(res, 400, 'Please select your country.');
     return;
   }
+  if (interest === 'gym') {
+    const gymName = typeof metadata.gym_name === 'string' ? metadata.gym_name.trim() : '';
+    const city = typeof metadata.city === 'string' ? metadata.city.trim() : '';
+    if (!gymName || !city) {
+      fail(res, 400, 'Please tell us your gym name and city.');
+      return;
+    }
+  }
+  if (interest === 'trainer') {
+    const city = typeof metadata.city === 'string' ? metadata.city.trim() : '';
+    if (!city) {
+      fail(res, 400, 'Please tell us your city.');
+      return;
+    }
+  }
 
-  const entry = { email, name, country, source };
+  const entry = { email, name, country, source, interest, details };
 
   // Upsert on the email primary key: re-joining never duplicates or errors.
   let saved = false;

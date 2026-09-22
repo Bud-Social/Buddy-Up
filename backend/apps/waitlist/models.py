@@ -25,3 +25,69 @@ class WaitlistEntry(TimestampedModel):
 
     def __str__(self):
         return self.email
+
+
+class FeatureSuggestion(TimestampedModel):
+    """Public feature suggestion from the landing-page roadmap section."""
+
+    CATEGORY_CHOICES = [
+        ('gyms', 'Gyms'),
+        ('trainers', 'Trainers'),
+        ('events', 'Events'),
+        ('programmes', 'Programmes'),
+        ('analytics', 'Analytics'),
+        ('app', 'App Experience'),
+        ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('reviewing', 'Reviewing'),
+        ('planned', 'Planned'),
+        ('shipped', 'Shipped'),
+        ('declined', 'Declined'),
+    ]
+
+    title = models.CharField(max_length=120)
+    description = models.TextField(max_length=2000)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    email = models.EmailField(blank=True, default='')
+    name = models.CharField(max_length=80, blank=True, default='')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+
+    class Meta:
+        db_table = 'waitlist_feature_suggestion'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+
+
+class ContactInquiry(TimestampedModel):
+    """Public quick-contact message from the landing-page footer."""
+
+    TOPIC_CHOICES = [
+        ('general', 'General'),
+        ('support', 'Support'),
+        ('gyms', 'Gyms & Partnerships'),
+        ('trainers', 'Trainers'),
+        ('press', 'Press'),
+    ]
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+    ]
+
+    name = models.CharField(max_length=80)
+    email = models.EmailField()
+    topic = models.CharField(max_length=20, choices=TOPIC_CHOICES, default='general')
+    subject = models.CharField(max_length=120, blank=True, default='')
+    message = models.TextField(max_length=2000)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+
+    class Meta:
+        db_table = 'waitlist_contact_inquiry'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.topic}: {self.email}'

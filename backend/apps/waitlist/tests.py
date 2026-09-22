@@ -56,6 +56,91 @@ class WaitlistSignupTests(TestCase):
             status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN,
         )
 
+    def test_gym_lead_requires_gym_details(self):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'gym@example.com', 'name': 'Founder', 'country': 'Kenya',
+            'interest': 'gym', 'metadata': {},
+        }, format='json')
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_gym_lead_with_details_returns_201(self):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'gym@example.com', 'name': 'Founder', 'country': 'Kenya',
+            'interest': 'gym',
+            'metadata': {'gym_name': 'Iron House', 'city': 'Nairobi',
+                         'gym_type': 'hybrid', 'onboard_coaches': True},
+        }, format='json')
+        assert res.status_code == status.HTTP_201_CREATED
+        body = res.json()
+        assert body['data']['interest'] == 'gym'
+        assert body['data']['metadata']['gym_name'] == 'Iron House'
+
+    def test_trainer_lead_requires_city(self):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'coach@example.com', 'country': 'Kenya',
+            'interest': 'trainer', 'metadata': {'role': 'trainer'},
+        }, format='json')
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_trainer_lead_with_details_returns_201(self):
+        res = self.client.post('/api/v1/waitlist/', {
+            'email': 'coach@example.com', 'country': 'Kenya',
+            'interest': 'trainer',
+            'metadata': {'role': 'practitioner', 'city': 'Kisumu',
+                         'specialties': ['yoga'], 'virtual': True},
+        }, format='json')
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.json()['data']['interest'] == 'trainer'
+
+
+@mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': ''})
+class PublicIntakeTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_suggestion_create_returns_201(self):
+        res = self.client.post('/api/v1/waitlist/suggestions/', {
+            'title': 'Corporate step challenge',
+            'description': 'Let companies run month-long step challenges.',
+            'category': 'gyms',
+            'email': 'fan@example.com',
+        }, format='json')
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.json()['success'] is True
+
+    def test_suggestion_requires_title_and_description(self):
+        res = self.client.post('/api/v1/waitlist/suggestions/', {
+            'title': '',
+        }, format='json')
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_suggestion_list_requires_staff(self):
+        res = self.client.get('/api/v1/waitlist/suggestions/')
+        assert res.status_code in (
+            status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_contact_create_returns_201(self):
+        res = self.client.post('/api/v1/waitlist/contact/', {
+            'name': 'Alex', 'email': 'alex@example.com', 'topic': 'gyms',
+            'subject': 'Partner onboarding',
+            'message': 'We run three branches in Nairobi.',
+        }, format='json')
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.json()['success'] is True
+
+    def test_contact_requires_message(self):
+        res = self.client.post('/api/v1/waitlist/contact/', {
+            'name': 'Alex', 'email': 'alex@example.com',
+        }, format='json')
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_contact_list_requires_staff(self):
+        res = self.client.get('/api/v1/waitlist/contact/')
+        assert res.status_code in (
+            status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN,
+        )
+
 
 class SheetsMirrorTests(TestCase):
     """The Google Sheets relay runs server-side with a hidden webhook URL."""

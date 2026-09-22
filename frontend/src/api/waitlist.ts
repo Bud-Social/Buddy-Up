@@ -1,12 +1,16 @@
 import axios from 'axios';
 import type { ApiResponse } from '@/types/api';
 
+export type WaitlistInterest = 'user' | 'gym' | 'trainer';
+
 export interface WaitlistEntry {
   id: number;
   email: string;
   name: string;
   country: string;
   source: string;
+  interest: WaitlistInterest;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -21,9 +25,12 @@ export async function joinWaitlist(payload: {
   name?: string;
   country: string;
   source?: string;
+  interest?: WaitlistInterest;
+  metadata?: Record<string, unknown>;
 }): Promise<ApiResponse<WaitlistEntry>> {
   const { data } = await axios.post<ApiResponse<WaitlistEntry>>('/api/waitlist', {
     source: 'landing',
+    interest: 'user',
     ...payload,
   });
   return data;

@@ -9,6 +9,8 @@ export const CONTACT_EMAILS = {
   info: 'info@buddyup.com',
   /** Account & technical help (Settings → Help, accessibility). */
   support: 'support@buddyup.com',
+  /** Public landing-page contact — single inbox for all inbound. */
+  direct: 'support@buddyupfit.com',
   /** Help-centre quick contact (How-it-works / FAQ pages). */
   help: 'help@buddyup.co.ke',
   /** Abuse, safety & content reports (replaces the old safety@ inbox). */

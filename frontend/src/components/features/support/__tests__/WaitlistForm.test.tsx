@@ -54,4 +54,61 @@ describe('WaitlistForm', () => {
       expect(screen.getByRole('alert')).toBeDefined();
     });
   });
+
+  it('submits gym leads with gym details', async () => {
+    mockJoin.mockResolvedValue({
+      success: true, data: { email: 'g@gym.co' },
+      message: 'You joined the waitlist.', errors: null, pagination: null,
+    });
+    render(<WaitlistForm initialInterest="gym" />);
+    fireEvent.change(screen.getByPlaceholderText('Nairobi Iron House'), {
+      target: { value: 'Iron House' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Nairobi'), {
+      target: { value: 'Nairobi' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
+      target: { value: 'g@gym.co' },
+    });
+    fireEvent.change(screen.getByLabelText('Country'), {
+      target: { value: 'Kenya' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Notify me' }));
+    await waitFor(() => {
+      expect(screen.getByText("You're on the list")).toBeDefined();
+    });
+    expect(mockJoin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interest: 'gym',
+        metadata: expect.objectContaining({ gym_name: 'Iron House', city: 'Nairobi' }),
+      }),
+    );
+  });
+
+  it('submits trainer leads with trainer details', async () => {
+    mockJoin.mockResolvedValue({
+      success: true, data: { email: 't@coach.me' },
+      message: 'You joined the waitlist.', errors: null, pagination: null,
+    });
+    render(<WaitlistForm initialInterest="trainer" />);
+    fireEvent.change(screen.getByPlaceholderText('Nairobi'), {
+      target: { value: 'Kisumu' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
+      target: { value: 't@coach.me' },
+    });
+    fireEvent.change(screen.getByLabelText('Country'), {
+      target: { value: 'Kenya' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Notify me' }));
+    await waitFor(() => {
+      expect(screen.getByText("You're on the list")).toBeDefined();
+    });
+    expect(mockJoin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interest: 'trainer',
+        metadata: expect.objectContaining({ city: 'Kisumu', role: 'trainer' }),
+      }),
+    );
+  });
 });

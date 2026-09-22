@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList, Globe, HeartPulse, Sparkles } from 'lucide-react';
+import { Check, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList, Globe, HeartPulse, Sparkles, Activity, CalendarDays, BookOpen, Building2, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
@@ -10,7 +10,10 @@ import { APP_DOWNLOAD_URLS, APP_URL } from '@/config/downloads';
 import { FUNDRAISER_URL, PLEDGE_FORM_URL, GYM_SUITE_FORM_URL, TRAINER_INTAKE_FORM_URL } from '@/config/support';
 import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
-import { WaitlistForm } from '@/components/features/support/WaitlistForm';
+import { WaitlistForm, requestWaitlistInterest } from '@/components/features/support/WaitlistForm';
+import { SuggestionForm } from '@/components/features/support/SuggestionForm';
+import { ContactForm } from '@/components/features/support/ContactForm';
+import { Modal } from '@/components/ui/Modal';
 import { Typewriter } from '@/components/features/landing/Typewriter';
 import { X } from 'lucide-react';
 
@@ -40,6 +43,21 @@ const features = {
     desc: 'Share workouts, meals, progress, and moments with your fitness family.',
     points: ['7 post types to share', 'Fitness-themed reactions', 'Workout & meal log cards', 'Progress transformations'],
   },
+  analytics: {
+    title: 'Activity Analytics',
+    desc: 'Track every run, walk, hike, and ride with GPS — plus strength, cardio, HIIT, and yoga sessions. Distances, paces, streaks, and progress reports in one dashboard.',
+    points: ['GPS tracking for runs, walks, hikes & rides', 'Strength, cardio, HIIT & yoga logs', 'Streaks that keep you honest', 'Shareable progress reports'],
+  },
+  events: {
+    title: 'Events',
+    desc: 'Find sunrise runs, hybrid competitions, workshops, and community meetups — in person, virtual, or both. Grab a ticket and show up.',
+    points: ['In-person, virtual & hybrid events', 'Tickets with QR check-in', 'Gym & trainer-hosted', 'Free and paid entry'],
+  },
+  programmes: {
+    title: 'Training Programmes',
+    desc: 'Follow structured multi-week programmes from verified trainers — strength blocks, run plans, and conditioning, with progress tracking built in.',
+    points: ['Multi-week structured plans', 'Verified trainer authors', 'Progress & enrolment tracking', 'Bundle with 1:1 sessions'],
+  },
 };
 
 /** Lifetime goals — the mission section that replaced beta testimonials. */
@@ -49,6 +67,8 @@ const lifetimeGoals = [
   { icon: Radio, title: '100,000 live sessions every month', desc: 'From Nairobi living rooms to global studios — live workouts running in every time zone, hosted by real people.' },
   { icon: Globe, title: 'Africa-first, world-ready', desc: 'Built in Nairobi, launched for Kenya first — M-Pesa payments, low-data mode, Swahili — then taken to the world.' },
   { icon: GraduationCap, title: 'A thriving verified-trainer economy', desc: 'Thousands of certified trainers and nutritionists earning a sustainable living from verified profiles, sessions, and programmes.' },
+  { icon: Dumbbell, title: 'Gyms in every format', desc: 'Physical gyms around the corner, virtual gyms in your living room, and hybrid gyms doing both — all with verified badges and member reviews.' },
+  { icon: CalendarDays, title: 'Events & programmes for everyone', desc: 'From weekend fun runs to multi-week training blocks — community events and structured programmes that keep the whole fitness family moving.' },
   { icon: HeartPulse, title: 'Health outcomes, not vanity metrics', desc: 'We measure success in streaks kept, consistency built, and wellbeing improved — not just before-and-after photos.' },
 ];
 
@@ -57,15 +77,14 @@ const lifetimeGoals = [
  * address yet. Shipped honestly as "planned" — no fake screenshots.
  */
 const plannedFeatures = [
-  { horizon: 'Near', title: 'M-Pesa & mobile-money top-ups', desc: 'Top up your BuddyUp wallet and pay trainers or gym subscriptions directly with M-Pesa, Airtel Money, and cards.' },
   { horizon: 'Near', title: 'Low-data & offline-lite mode', desc: 'A stripped-down experience that survives patchy connectivity — train, log your session offline, sync when you\'re back.' },
   { horizon: 'Near', title: 'Schedule-compatible buddy matching', desc: 'Buddy suggestions that fit around your work hours and commute — not just your fitness level.' },
-  { horizon: 'Soon', title: 'SMS & WhatsApp accountability nudges', desc: 'Miss a session? Your buddy — and BuddyUp — can nudge you where you actually read messages.' },
+  { horizon: 'Soon', title: 'SMS & WhatsApp delivery for nudges', desc: 'Session reminders, streak nudges, and accountability pings already live in-app — coming to SMS and WhatsApp, where you actually read messages.' },
   { horizon: 'Soon', title: 'Gym QR check-ins', desc: 'Scan in at partner gyms, prove attendance, and let your streaks count real-world visits.' },
   { horizon: 'Soon', title: 'Wearable & health-app sync', desc: 'Pull steps, heart rate, and sleep from your watch into your progress feed automatically.' },
+  { horizon: 'Soon', title: 'Corporate awareness packages', desc: 'Team step-count challenges, branded gym spaces, sponsored events, and workplace wellness campaigns for companies that want healthier teams.' },
   { horizon: 'Soon', title: 'Streak rewards & team challenges', desc: 'Winter leagues, corporate team challenges, and rewards you can actually redeem.' },
   { horizon: 'Later', title: 'Swahili & local-language interface', desc: 'The whole app, fully localised — starting with Swahili and expanding from there.' },
-  { horizon: 'Later', title: 'AI form-check & adaptive plans', desc: 'Camera-based form feedback on your lifts, and meal plans that adapt week to week based on your logs.' },
 ];
 
 const horizonStyles: Record<string, string> = {
@@ -117,6 +136,8 @@ export default function Landing() {
   const [featurePaused, setFeaturePaused] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
   const [heroWaitlistOpen, setHeroWaitlistOpen] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [installWaitlistOpen, setInstallWaitlistOpen] = useState(false);
   const { isMobile, isTablet, isDesktop, os } = useDeviceType();
   const [canInstall, setCanInstall] = useState(false);
   const deferredPrompt = useRef<{ prompt: () => void } | null>(null);
@@ -148,7 +169,7 @@ export default function Landing() {
     try {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     } catch { /* matchMedia unavailable — continue */ }
-    const order = ['live', 'gyms', 'trainers', 'mealPlans', 'buddyFeed'];
+    const order = ['live', 'gyms', 'trainers', 'analytics', 'events', 'programmes', 'mealPlans', 'buddyFeed'];
     const id = window.setInterval(() => {
       setActiveFeature((current) => order[(order.indexOf(current) + 1) % order.length]);
     }, 5000);
@@ -292,11 +313,14 @@ export default function Landing() {
         <p className="text-buddy-text-secondary text-center mb-12">All the tools you need to reach your fitness goals.</p>
 
         <div className="flex flex-wrap sm:flex-nowrap sm:overflow-x-auto gap-2 mb-8 scrollbar-hide sm:justify-center justify-center px-2 [scroll-padding-left:0.5rem]">
-          {['live', 'gyms', 'trainers', 'mealPlans', 'buddyFeed'].map((key) => {
+          {['live', 'gyms', 'trainers', 'analytics', 'events', 'programmes', 'mealPlans', 'buddyFeed'].map((key) => {
             const tabIcons: Record<string, React.ReactNode> = {
               live: <Radio size={16} />,
               gyms: <Dumbbell size={16} />,
               trainers: <GraduationCap size={16} />,
+              analytics: <Activity size={16} />,
+              events: <CalendarDays size={16} />,
+              programmes: <BookOpen size={16} />,
               mealPlans: <Utensils size={16} />,
               buddyFeed: <Newspaper size={16} />,
             };
@@ -333,6 +357,9 @@ export default function Landing() {
                   live: <Radio size={96} className="text-buddy-green" />,
                   gyms: <Dumbbell size={96} className="text-buddy-green" />,
                   trainers: <GraduationCap size={96} className="text-buddy-green" />,
+                  analytics: <Activity size={96} className="text-buddy-green" />,
+                  events: <CalendarDays size={96} className="text-buddy-green" />,
+                  programmes: <BookOpen size={96} className="text-buddy-green" />,
                   mealPlans: <Utensils size={96} className="text-buddy-green" />,
                   buddyFeed: <Sparkles size={96} className="text-buddy-green" />,
                 };
@@ -381,57 +408,75 @@ export default function Landing() {
           ))}
         </div>
         <div className="text-center mt-12">
-          <a href="#waitlist">
-            <Button variant="outline" size="lg" className="gap-2">
-              <Sparkles size={18} /> Suggest a feature
-            </Button>
-          </a>
+          <Button
+            variant="outline"
+            size="lg"
+            className="gap-2"
+            onClick={() => setSuggestOpen((v) => !v)}
+            aria-expanded={suggestOpen}
+          >
+            <Sparkles size={18} /> Suggest a feature
+          </Button>
           <p className="mt-3 text-sm text-buddy-text-secondary">
-            Join the waiting list and shape what ships next.
+            Tell us what to build next — straight to the product team.
           </p>
+        </div>
+        <div
+          className={`grid transition-all duration-500 ease-out ${
+            suggestOpen ? 'grid-rows-[1fr] opacity-100 mt-8' : 'grid-rows-[0fr] opacity-0 pointer-events-none'
+          }`}
+          aria-hidden={!suggestOpen}
+        >
+          <div className="overflow-hidden">
+            <Card className="p-6 sm:p-8 bg-buddy-surface text-left max-w-2xl mx-auto">
+              <SuggestionForm />
+            </Card>
+          </div>
         </div>
       </section>
 
       {/* ── 6. TRAINERS CTA ── */}
-      <section className="bg-buddy-surface py-24">
+      <section className="py-24">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <GraduationCap size={48} className="text-buddy-electric mx-auto" />
+          <GraduationCap size={48} className="text-buddy-green mx-auto" />
           <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Are you a trainer or health professional?</h2>
           <p className="text-buddy-text-secondary max-w-xl mx-auto mb-4">
             BuddyUp helps you reach clients, run live sessions, and build your fitness community. Verified profiles. Real revenue.
           </p>
           <p className="text-sm text-buddy-text-secondary max-w-xl mx-auto mb-8">
-            Train where your clients are — in person, online, or on the move. Prelaunch onboarding
+            Train where your clients are — in person, online, or on the move. Already coaching at a
+            gym? Bring your classes and clients with you. Prelaunch onboarding
             collects your intro video and credentials for verification.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup?role=trainer">
-              <Button size="lg" variant="secondary" className="gap-2">Join as a Trainer <ChevronRight size={18} /></Button>
+              <Button size="lg" className="gap-2">Join as a Trainer <ChevronRight size={18} /></Button>
             </Link>
             {TRAINER_INTAKE_FORM_URL ? (
               <a href={TRAINER_INTAKE_FORM_URL} target="_blank" rel="noreferrer noopener">
                 <Button size="lg" variant="outline" className="gap-2">Book a prelaunch slot</Button>
               </a>
             ) : (
-              <a href="#waitlist">
-                <Button size="lg" variant="outline" className="gap-2">Join the waiting list</Button>
-              </a>
+              <Button size="lg" variant="outline" className="gap-2" onClick={() => requestWaitlistInterest('trainer')}>
+                Join the trainer waiting list
+              </Button>
             )}
           </div>
         </div>
       </section>
 
       {/* ── 7. GYM FOUNDERS CTA ── */}
-      <section className="py-24">
+      <section className="py-24 border-t border-buddy-surface">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <Dumbbell size={48} className="text-buddy-green mx-auto" />
-          <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Start your own gym on BuddyUp</h2>
+          <Building2 size={48} className="text-buddy-green mx-auto" />
+          <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Run a gym? Bring it to BuddyUp</h2>
           <p className="text-buddy-text-secondary max-w-xl mx-auto mb-4">
             Build a paid or free fitness community. Set a schedule. Grow your tribe.
           </p>
           <p className="text-sm text-buddy-text-secondary max-w-xl mx-auto mb-8">
             List your nearby physical space, run virtual classes, or do both as a hybrid gym —
-            with verified badges and member reviews at launch.
+            with verified badges and member reviews at launch. Gyms can also offload their
+            coaches onto the platform, so your trainers keep earning between floor shifts.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup">
@@ -442,9 +487,9 @@ export default function Landing() {
                 <Button size="lg" variant="outline" className="gap-2">Book a gym-suite slot</Button>
               </a>
             ) : (
-              <a href="#waitlist">
-                <Button size="lg" variant="outline" className="gap-2">Join the waiting list</Button>
-              </a>
+              <Button size="lg" variant="outline" className="gap-2" onClick={() => requestWaitlistInterest('gym')}>
+                Join the gym waiting list
+              </Button>
             )}
           </div>
         </div>
@@ -493,6 +538,11 @@ export default function Landing() {
           <Download size={48} className="mx-auto text-buddy-green mb-6" />
           <h2 className="font-display text-3xl font-extrabold mb-4">Train anytime, anywhere</h2>
           <p className="text-buddy-text-secondary mb-8">{isMobile || isTablet ? 'Get the BuddyUp app on your phone.' : 'Get the BuddyUp app on any device.'}</p>
+          <div className="mb-8">
+            <Button size="lg" variant="outline" className="gap-2" onClick={() => setInstallWaitlistOpen(true)}>
+              <BellRing size={18} /> Notify me when the app is out
+            </Button>
+          </div>
           <div className="flex gap-4 justify-center flex-wrap">
             {isMobile && os === 'android' && (
               <a href={APP_DOWNLOAD_URLS.androidApk} className="inline-flex items-center gap-3 bg-buddy-black rounded-2xl px-6 py-4 hover:bg-buddy-surface-raised transition-colors">
@@ -578,7 +628,7 @@ export default function Landing() {
       {/* ── 11. FOOTER ── */}
       <footer className="border-t border-buddy-surface py-16">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="grid md:grid-cols-5 gap-8 mb-12">
+          <div className="grid md:grid-cols-4 gap-8 mb-12">
             <div>
               <Logo size="md" className="mb-2" />
               <p className="text-sm text-buddy-text-secondary">Find your fitness family.</p>
@@ -609,16 +659,21 @@ export default function Landing() {
                 <button onClick={() => setSupportOpen(true)} className="block hover:text-buddy-text-primary">Fund Us</button>
               </div>
             </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-8 mb-12 border-t border-buddy-surface pt-12">
             <div>
               <h4 className="font-heading font-semibold text-sm mb-4">Contact</h4>
-              <div className="space-y-2 text-sm text-buddy-text-secondary">
-                <a href={mailtoLink('info')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.info}</a>
-                <a href={mailtoLink('support')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.support}</a>
-                <a href={mailtoLink('report')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.report}</a>
-                <a href={mailtoLink('sponsor')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.sponsor}</a>
-                <a href={mailtoLink('contact')} className="block hover:text-buddy-text-primary break-all">{CONTACT_EMAILS.contact}</a>
-              </div>
+              <p className="text-sm text-buddy-text-secondary mb-2">
+                Prefer email? Reach us directly at{' '}
+                <a href={mailtoLink('direct')} className="text-buddy-green hover:underline break-all">{CONTACT_EMAILS.direct}</a>
+              </p>
+              <p className="text-xs text-buddy-text-secondary">
+                Partnerships, gym onboarding, press, or support — one inbox, routed to the right team.
+              </p>
             </div>
+            <Card className="p-6 bg-buddy-surface">
+              <ContactForm />
+            </Card>
           </div>
           <div className="border-t border-buddy-surface pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-xs text-buddy-text-secondary">&copy; 2026 BuddyUp. All rights reserved.</p>
@@ -632,6 +687,9 @@ export default function Landing() {
         </div>
       </footer>
       <SupportDialog open={supportOpen} onClose={() => setSupportOpen(false)} />
+      <Modal isOpen={installWaitlistOpen} onClose={() => setInstallWaitlistOpen(false)} title="Get notified at launch" size="md">
+        <WaitlistForm />
+      </Modal>
     </div>
   );
 }
