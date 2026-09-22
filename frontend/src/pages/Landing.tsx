@@ -203,8 +203,12 @@ export default function Landing() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-buddy-green/5 to-transparent pointer-events-none" />
         <div className="max-w-6xl mx-auto px-6 pt-24 pb-36 text-center relative z-10">
-          <div className="flex justify-center items-center gap-3 mb-4">
-            <Logo size="xl" type="icon" />
+          {/* Icon centred on its own line (nudged slightly right of true centre),
+              wordmark centred beneath it. */}
+          <div className="flex flex-col items-center gap-3 mb-4">
+            <div className="translate-x-2 sm:translate-x-3">
+              <Logo size="xl" type="icon" />
+            </div>
             <span className="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none">
               <span className="buddy-duo-swap">Buddy</span>
               <span className="buddy-duo-swap-rev">Up</span>
