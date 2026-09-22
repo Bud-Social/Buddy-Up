@@ -178,7 +178,7 @@ export default function Onboarding() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-buddy-black">
       <Card className="w-full max-w-lg p-8 bg-buddy-surface">
         <h1 className="font-display text-3xl font-extrabold text-center mb-2">
-          Welcome to <span className="text-buddy-green">BuddyUp</span>
+          Welcome to <span className="text-buddy-green">BuddyUp Fit</span>
         </h1>
 
         {/* ── AGE ── */}

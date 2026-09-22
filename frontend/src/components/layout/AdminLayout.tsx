@@ -57,7 +57,7 @@ export function AdminLayout() {
         <Outlet />
       </main>
       <footer className="border-t border-buddy-surface-raised py-4">
-        <p className="text-center text-xs text-buddy-text-secondary">BuddyUp ML dashboard — model registry, training runs & system health</p>
+        <p className="text-center text-xs text-buddy-text-secondary">BuddyUp Fit ML dashboard — model registry, training runs & system health</p>
       </footer>
     </div>
   );

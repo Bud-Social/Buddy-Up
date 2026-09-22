@@ -320,7 +320,7 @@ class AnalyticsReportShareView(views.APIView):
         body = request.data.get('body', '').strip()
         if not body:
             body = (
-                f"📊 My {period} BuddyUp progress report — "
+                f"📊 My {period} BuddyUp Fit progress report — "
                 f"{summary['workouts']['count']} workouts, "
                 f"{summary['activity']['total_distance_km']}km walked/run."
             )

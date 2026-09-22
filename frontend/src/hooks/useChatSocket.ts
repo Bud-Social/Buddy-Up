@@ -1,5 +1,5 @@
 /**
- * useChatSocket – manages a single WebSocket connection to a BuddyUp chat conversation.
+ * useChatSocket – manages a single WebSocket connection to a BuddyUp Fit chat conversation.
  * Handles reconnection, event dispatching and typing debounce.
  */
 import { useEffect, useRef, useCallback } from 'react';

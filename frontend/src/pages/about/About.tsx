@@ -14,7 +14,7 @@ const values = [
 ];
 
 const milestones = [
-  { when: 'The idea', what: 'Two friends kept failing at 5am runs alone — and never missed one together. BuddyUp started as the answer to "why isn\'t there an app for this?"' },
+  { when: 'The idea', what: 'Two friends kept failing at 5am runs alone — and never missed one together. BuddyUp Fit started as the answer to "why isn\'t there an app for this?"' },
   { when: 'Private beta', what: 'A closed group of test users trained, posted, and broke things — shaping everything from Random Drops to the age-verification flow.' },
   { when: 'Launching November', what: 'Public launch across Kenya: gyms, verified trainers, live sessions, and the buddy system — free at the core.' },
   { when: 'What\'s next', what: 'Offline-lite mode, SMS & WhatsApp nudges, corporate wellness packages, group & family plans, multilanguage support, wearables — see the full roadmap on the landing page.' },
@@ -36,7 +36,7 @@ export default function About() {
             <span className="text-buddy-green">consistency social.</span>
           </h1>
           <p className="text-lg text-buddy-text-secondary max-w-2xl mx-auto leading-relaxed">
-            BuddyUp pairs you with real accountability partners, live workouts, and communities
+            BuddyUp Fit pairs you with real accountability partners, live workouts, and communities
             that notice when you show up — and when you don't.
           </p>
         </div>
@@ -53,7 +53,7 @@ export default function About() {
             stayed in bed.
           </p>
           <p>
-            BuddyUp exists for that moment. Instead of another dashboard, it gives you people: a
+            BuddyUp Fit exists for that moment. Instead of another dashboard, it gives you people: a
             buddy matched to your goals and schedule, a gym community that counts on you, live
             sessions where showing up is the whole point, and trainers who are verified before they
             ever take a shilling.

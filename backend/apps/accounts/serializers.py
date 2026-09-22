@@ -51,7 +51,7 @@ class RegisterSerializer(serializers.Serializer):
     def validate(self, data):
         age = calculate_age(data['dob'])
         if age < 16:
-            raise serializers.ValidationError({'dob': 'BuddyUp is for users aged 16 and over. You cannot create an account at this time.'})
+            raise serializers.ValidationError({'dob': 'BuddyUp Fit is for users aged 16 and over. You cannot create an account at this time.'})
         data['age'] = age
 
         # 16–17 year olds must provide a verified parental co-owner.

@@ -10,12 +10,12 @@ logger = logging.getLogger(__name__)
 @shared_task
 def send_guardian_invite_existing_email(link_id, guardian_name, invite_email):
     """Invite an existing teen account holder to accept a guardian link."""
-    subject = 'BuddyUp family connection request'
+    subject = 'BuddyUp Fit family connection request'
     message = (
         f'Hi!\n\n'
-        f'{guardian_name} wants to connect as your parental co-owner on BuddyUp.\n\n'
-        f'Open BuddyUp, go to Settings > Family, and accept the connection.\n\n'
-        f'— The BuddyUp team'
+        f'{guardian_name} wants to connect as your parental co-owner on BuddyUp Fit.\n\n'
+        f'Open BuddyUp Fit, go to Settings > Family, and accept the connection.\n\n'
+        f'— The BuddyUp Fit team'
     )
     try:
         send_mail(
@@ -33,13 +33,13 @@ def send_guardian_invite_existing_email(link_id, guardian_name, invite_email):
 @shared_task
 def send_guardian_invite_new_email(link_id, guardian_name, invite_email, accept_url):
     """Welcome a newly provisioned teen account with its password-setup link."""
-    subject = 'Your BuddyUp teen account is ready'
+    subject = 'Your BuddyUp Fit teen account is ready'
     message = (
         f'Hi!\n\n'
-        f'{guardian_name} created a BuddyUp teen account for you. '
+        f'{guardian_name} created a BuddyUp Fit teen account for you. '
         f'Set your password: {accept_url}\n\n'
         f'The link can be used once.\n\n'
-        f'— The BuddyUp team'
+        f'— The BuddyUp Fit team'
     )
     try:
         send_mail(

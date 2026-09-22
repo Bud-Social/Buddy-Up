@@ -49,7 +49,7 @@ export default function Appearance() {
           <p className="text-sm font-medium mb-1">App icon</p>
           <div className="grid grid-cols-2 gap-2">
             {[
-              { value: 'logo' as const, label: 'BuddyUp logo', desc: 'The platform mark', src: '/icons/icon-192.png' },
+              { value: 'logo' as const, label: 'BuddyUp Fit logo', desc: 'The platform mark', src: '/icons/icon-192.png' },
               { value: 'clock' as const, label: 'Clock', desc: 'Alternate stopwatch mark', src: '/icons/icon-clock-192.png' },
             ].map(({ value, label, desc, src }) => (
               <button key={value} onClick={() => setAppIcon(value)}

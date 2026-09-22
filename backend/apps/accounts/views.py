@@ -360,7 +360,7 @@ class VerifyRegistrationOTPView(views.APIView):
                 },
                 'profile': ProfileSerializer(profile).data,
             },
-            'message': 'Email verified successfully. Welcome to BuddyUp!',
+            'message': 'Email verified successfully. Welcome to BuddyUp Fit!',
             'errors': None,
             'pagination': None,
         }, status=status.HTTP_200_OK)
@@ -623,7 +623,7 @@ class TOTPSetupView(views.APIView):
         secret = pyotp.random_base32()
         provisioning_uri = pyotp.totp.TOTP(secret).provisioning_uri(
             name=request.user.email,
-            issuer_name='BuddyUp',
+            issuer_name='BuddyUp Fit',
         )
 
         qr = qrcode.make(provisioning_uri)
@@ -1617,7 +1617,7 @@ def _webauthn_rp():
     """Relying-party configuration for passkeys."""
     rp_id = os.environ.get('WEBAUTHN_RP_ID', 'buddyup.app')
     origin = os.environ.get('WEBAUTHN_ORIGIN', f'https://{rp_id}')
-    return rp_id, 'BuddyUp', origin
+    return rp_id, 'BuddyUp Fit', origin
 
 
 # WebAuthn challenges live for five minutes and are single-use: the finish
@@ -2029,7 +2029,7 @@ class SocialAgeSetupView(views.APIView):
         return Response({
             'success': True,
             'data': {**payload, 'age': age, 'is_adult': user.is_adult},
-            'message': 'Age verified. Welcome to BuddyUp!',
+            'message': 'Age verified. Welcome to BuddyUp Fit!',
             'errors': None, 'pagination': None,
         })
 

@@ -71,7 +71,7 @@ class FlutterwaveClient:
         return self._request('POST', 'transfers', json={
             'account_bank': recipient_id,
             'amount': amount,
-            'narration': narration or 'BuddyUp withdrawal',
+            'narration': narration or 'BuddyUp Fit withdrawal',
             'currency': 'KES',
             'reference': f'bw-{uuid.uuid4().hex[:12]}',
         })

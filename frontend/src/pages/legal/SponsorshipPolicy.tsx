@@ -4,7 +4,7 @@ export default function SponsorshipPolicy() {
   return (
     <LegalPage
       title="Sponsorship & Disclosure Policy"
-      subtitle="BuddyUp is built on trust. When creators are compensated or gifted in exchange for content, that connection must be disclosed clearly and prominently."
+      subtitle="BuddyUp Fit is built on trust. When creators are compensated or gifted in exchange for content, that connection must be disclosed clearly and prominently."
       updatedAt="August 2026"
     >
       <LegalSection title="1. What Counts as a Material Connection">
@@ -45,7 +45,7 @@ export default function SponsorshipPolicy() {
       </LegalSection>
 
       <LegalSection title="4. Platforms for Disclosure">
-        <p>When a BuddyUp content link is shared on external platforms, the disclosure obligation applies there too. Creators must comply with the advertising disclosure rules of the country where the audience is located, including Kenya's Consumer Protection Act.</p>
+        <p>When a BuddyUp Fit content link is shared on external platforms, the disclosure obligation applies there too. Creators must comply with the advertising disclosure rules of the country where the audience is located, including Kenya's Consumer Protection Act.</p>
       </LegalSection>
 
       <LegalSection title="5. Detection & Enforcement">

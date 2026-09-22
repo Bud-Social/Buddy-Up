@@ -167,7 +167,7 @@ export function PostShareSheet({
     if (typeof nav.share === 'function') {
       try {
         const url = await trackedLink('native');
-        await nav.share({ title: 'BuddyUp', text: shareText, url });
+        await nav.share({ title: 'BuddyUp Fit', text: shareText, url });
         onClose();
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;

@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/*.svg', 'favicon-*.png'],
       manifest: {
-        name: 'BuddyUp',
-        short_name: 'BuddyUp',
+        name: 'BuddyUp Fit',
+        short_name: 'BuddyUp Fit',
         description: 'Health & fitness social platform — train with buddies, join live workouts, eat better.',
         theme_color: '#0A0A0A',
         background_color: '#0A0A0A',

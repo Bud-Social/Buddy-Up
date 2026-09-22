@@ -10,7 +10,7 @@ interface SupportDialogProps {
 
 export function SupportDialog({ open, onClose }: SupportDialogProps) {
   return (
-    <Modal isOpen={open} onClose={onClose} title="Support BuddyUp" size="md">
+    <Modal isOpen={open} onClose={onClose} title="Support BuddyUp Fit" size="md">
       <p className="text-sm text-buddy-text-secondary mb-4">
         Help us keep building your fitness family. Donate to our fundraiser, pledge funding,
         or partner your brand with us to power what&apos;s next.
@@ -22,7 +22,7 @@ export function SupportDialog({ open, onClose }: SupportDialogProps) {
               <Heart size={28} className="text-buddy-green mb-3" />
               <h3 className="font-heading font-semibold mb-1">Donate</h3>
               <p className="text-sm text-buddy-text-secondary">
-                Chip in to our fundraiser and keep BuddyUp free for everyone.
+                Chip in to our fundraiser and keep BuddyUp Fit free for everyone.
               </p>
             </Card>
           </a>

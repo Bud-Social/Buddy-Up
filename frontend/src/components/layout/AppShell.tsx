@@ -53,7 +53,7 @@ export function AppShell() {
             >
               {mobileOpen && !isTablet ? <X size={20} /> : <Menu size={20} />}
             </button>
-            <span className="font-display font-bold text-sm text-buddy-text-primary">BuddyUp</span>
+            <span className="font-display font-bold text-sm text-buddy-text-primary">BuddyUp Fit</span>
           </header>
         )}
         <main className={`flex-1 pb-20 md:pb-0 transition-all duration-300 ${sidebarMargin}`}>

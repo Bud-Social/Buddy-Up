@@ -62,7 +62,7 @@ const features = {
 
 /** Lifetime goals — the mission section that replaced beta testimonials. */
 const lifetimeGoals = [
-  { icon: Handshake, title: 'Help a million people find their fitness family', desc: 'Accountability works when it comes from real people who know your name. We want a million BuddyUp members who check in on each other daily.' },
+  { icon: Handshake, title: 'Help a million people find their fitness family', desc: 'Accountability works when it comes from real people who know your name. We want a million BuddyUp Fit members who check in on each other daily.' },
   { icon: Heart, title: 'Keep the core free, forever', desc: 'The buddy system, public gyms, and open live sessions never go behind a paywall. Premium buys extras — never the essentials.' },
   { icon: Radio, title: '100,000 live sessions every month', desc: 'From Nairobi living rooms to global studios — live workouts running in every time zone, hosted by real people.' },
   { icon: Globe, title: 'Africa-first, world-ready', desc: 'Built in Nairobi, launched for Kenya first — M-Pesa payments, low-data mode, Swahili — then taken to the world.' },
@@ -73,7 +73,7 @@ const lifetimeGoals = [
 ];
 
 /**
- * Roadmap: real scenarios our community keeps raising that BuddyUp does not
+ * Roadmap: real scenarios our community keeps raising that BuddyUp Fit does not
  * address yet. Shipped honestly as "planned" — no fake screenshots.
  */
 const plannedFeatures = [
@@ -208,6 +208,7 @@ export default function Landing() {
             <span className="font-display font-extrabold text-5xl sm:text-6xl md:text-7xl leading-none">
               <span className="buddy-duo-swap">Buddy</span>
               <span className="buddy-duo-swap-rev">Up</span>
+              <span className="text-buddy-green"> Fit</span>
             </span>
           </div>
           {/* Typewriter tagline sits on its own line below the logo lockup. */}
@@ -282,7 +283,7 @@ export default function Landing() {
 
       {/* ── 2. VALUE PROPS ── */}
       <section className="max-w-6xl mx-auto px-6 py-24">
-        <h2 className="font-display text-3xl font-extrabold text-center mb-16">Why <span className="text-buddy-green">BuddyUp</span>?</h2>
+        <h2 className="font-display text-3xl font-extrabold text-center mb-16">Why <span className="text-buddy-green">BuddyUp Fit</span>?</h2>
         <div className="grid md:grid-cols-3 gap-8 min-w-0 [&>div]:min-w-0">
           {[
             { icon: Handshake, title: 'Find Your Buddy', desc: 'Connect with people who match your fitness level, goals, and schedule.' },
@@ -395,7 +396,7 @@ export default function Landing() {
       <section className="max-w-6xl mx-auto px-6 py-24">
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">Our <span className="text-buddy-green">Mission</span></h2>
         <p className="text-buddy-text-secondary text-center mb-16 max-w-2xl mx-auto">
-          BuddyUp exists to make consistency social. These are the goals we're building towards.
+          BuddyUp Fit exists to make consistency social. These are the goals we're building towards.
         </p>
         <div className="grid md:grid-cols-3 gap-6 min-w-0 [&>div]:min-w-0">
           {lifetimeGoals.map(({ icon: Icon, title, desc }) => (
@@ -472,7 +473,7 @@ export default function Landing() {
           <GraduationCap size={48} className="text-buddy-green mx-auto" />
           <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Are you a trainer or health professional?</h2>
           <p className="text-buddy-text-secondary max-w-xl mx-auto mb-4">
-            BuddyUp helps you reach clients, run live sessions, and build your fitness community. Verified profiles. Real revenue.
+            BuddyUp Fit helps you reach clients, run live sessions, and build your fitness community. Verified profiles. Real revenue.
           </p>
           <p className="text-sm text-buddy-text-secondary max-w-xl mx-auto mb-8">
             Train where your clients are — in person, online, or on the move. Already coaching at a
@@ -500,7 +501,7 @@ export default function Landing() {
       <section className="py-24 border-t border-buddy-surface">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <Building2 size={48} className="text-buddy-green mx-auto" />
-          <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Run a gym? Bring it to BuddyUp</h2>
+          <h2 className="font-display text-3xl font-extrabold mt-6 mb-4">Run a gym? Bring it to BuddyUp Fit</h2>
           <p className="text-buddy-text-secondary max-w-xl mx-auto mb-4">
             Build a paid or free fitness community. Set a schedule. Grow your tribe.
           </p>
@@ -568,7 +569,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto px-6 text-center">
           <Download size={48} className="mx-auto text-buddy-green mb-6" />
           <h2 className="font-display text-3xl font-extrabold mb-4">Train anytime, anywhere</h2>
-          <p className="text-buddy-text-secondary mb-8">{isMobile || isTablet ? 'Get the BuddyUp app on your phone.' : 'Get the BuddyUp app on any device.'}</p>
+          <p className="text-buddy-text-secondary mb-8">{isMobile || isTablet ? 'Get the BuddyUp Fit app on your phone.' : 'Get the BuddyUp Fit app on any device.'}</p>
           <div className="mb-8">
             <Button size="lg" variant="outline" className="gap-2" onClick={() => setInstallWaitlistOpen(true)}>
               <BellRing size={18} /> Notify me when the app is out
@@ -580,7 +581,7 @@ export default function Landing() {
                 {isInstalled ? (
                   <a href={APP_URL} className="inline-flex items-center gap-3 bg-buddy-green text-buddy-black rounded-2xl px-6 py-4 hover:brightness-110 transition-all w-full justify-center font-heading font-semibold">
                     <Smartphone size={24} />
-                    <div className="text-left"><p className="text-xs opacity-70">Installed</p><p className="font-heading font-semibold">Open BuddyUp app</p></div>
+                    <div className="text-left"><p className="text-xs opacity-70">Installed</p><p className="font-heading font-semibold">Open BuddyUp Fit app</p></div>
                   </a>
                 ) : canInstall ? (
                   <button
@@ -589,7 +590,7 @@ export default function Landing() {
                     className="inline-flex items-center gap-3 bg-buddy-green text-buddy-black rounded-2xl px-6 py-4 hover:brightness-110 transition-all w-full justify-center"
                   >
                     <Download size={24} />
-                    <div className="text-left"><p className="text-xs opacity-70">Free · under a minute</p><p className="font-heading font-semibold">Install BuddyUp app</p></div>
+                    <div className="text-left"><p className="text-xs opacity-70">Free · under a minute</p><p className="font-heading font-semibold">Install BuddyUp Fit app</p></div>
                   </button>
                 ) : os === 'ios' ? (
                   <Card className="p-5 bg-buddy-black text-left w-full">
@@ -597,7 +598,7 @@ export default function Landing() {
                     <ol className="text-sm text-buddy-text-secondary space-y-1.5 list-decimal list-inside">
                       <li>Tap the <span className="text-buddy-text-primary font-medium">Share</span> button below</li>
                       <li>Choose <span className="text-buddy-text-primary font-medium">Add to Home Screen</span></li>
-                      <li>Tap <span className="text-buddy-text-primary font-medium">Add</span> — find BuddyUp on your home screen</li>
+                      <li>Tap <span className="text-buddy-text-primary font-medium">Add</span> — find BuddyUp Fit on your home screen</li>
                     </ol>
                   </Card>
                 ) : (
@@ -606,7 +607,7 @@ export default function Landing() {
                     <ol className="text-sm text-buddy-text-secondary space-y-1.5 list-decimal list-inside">
                       <li>Tap the <span className="text-buddy-text-primary font-medium">⋮ menu</span> (top right)</li>
                       <li>Choose <span className="text-buddy-text-primary font-medium">Install app</span> or <span className="text-buddy-text-primary font-medium">Add to Home screen</span></li>
-                      <li>Confirm — find BuddyUp on your home screen</li>
+                      <li>Confirm — find BuddyUp Fit on your home screen</li>
                     </ol>
                   </Card>
                 )}
@@ -621,7 +622,7 @@ export default function Landing() {
                   className="inline-flex items-center gap-3 bg-buddy-black rounded-2xl px-6 py-4 hover:bg-buddy-surface-raised transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full justify-center"
                 >
                   <Monitor size={24} className="text-buddy-text-secondary" />
-                  <div className="text-left"><p className="text-xs text-buddy-text-secondary">Desktop & PWA</p><p className="font-heading font-semibold">{canInstall ? 'Install BuddyUp' : 'Open Web App'}</p></div>
+                  <div className="text-left"><p className="text-xs text-buddy-text-secondary">Desktop & PWA</p><p className="font-heading font-semibold">{canInstall ? 'Install BuddyUp Fit' : 'Open Web App'}</p></div>
                 </button>
                 {!canInstall && (
                   <a href={APP_URL} className="text-sm text-buddy-green hover:underline">Use the web app directly</a>
@@ -631,7 +632,7 @@ export default function Landing() {
           </div>
           {isDesktop && !canInstall && (
             <p className="text-xs text-buddy-text-secondary mt-6">
-              On desktop you can install BuddyUp as a PWA from your browser's address bar, or use it directly in the browser.
+              On desktop you can install BuddyUp Fit as a PWA from your browser's address bar, or use it directly in the browser.
             </p>
           )}
         </div>
@@ -643,11 +644,11 @@ export default function Landing() {
           Fuel the <span className="text-buddy-green">mission</span>
         </h2>
         <p className="text-buddy-text-secondary text-center mb-12 max-w-2xl mx-auto">
-          BuddyUp is free for everyone. Chip in, pledge funding, or join the waitlist to shape what ships next.
+          BuddyUp Fit is free for everyone. Chip in, pledge funding, or join the waitlist to shape what ships next.
         </p>
         <div className="grid md:grid-cols-2 gap-6 min-w-0 [&>div]:min-w-0">
           <Card className="p-8 bg-buddy-surface flex flex-col">
-            <h3 className="font-heading text-xl font-semibold mb-2">Support BuddyUp</h3>
+            <h3 className="font-heading text-xl font-semibold mb-2">Support BuddyUp Fit</h3>
             <p className="text-sm text-buddy-text-secondary mb-6">
               Your contribution keeps the lights on and new features coming. Brands can
               partner with us to reach Kenya&apos;s fitness family.
@@ -666,7 +667,7 @@ export default function Landing() {
                   <span>
                     <span className="block font-heading font-semibold text-sm">Donate</span>
                     <span className="block text-xs text-buddy-text-secondary mt-0.5">
-                      Chip in to keep BuddyUp free for everyone.
+                      Chip in to keep BuddyUp Fit free for everyone.
                     </span>
                   </span>
                 </a>
@@ -787,7 +788,7 @@ export default function Landing() {
             </Card>
           </div>
           <div className="border-t border-buddy-surface pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-xs text-buddy-text-secondary">&copy; 2026 BuddyUp. All rights reserved.</p>
+            <p className="text-xs text-buddy-text-secondary">&copy; 2026 BuddyUp Fit. All rights reserved.</p>
             <div className="flex gap-6 text-sm text-buddy-text-secondary">
               <span className="hover:text-buddy-text-primary cursor-pointer">Instagram</span>
               <span className="hover:text-buddy-text-primary cursor-pointer">TikTok</span>

@@ -30,10 +30,10 @@ def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
 
     username = user.email.split('@')[0]
     subject = {
-        'registration': 'Verify your BuddyUp email',
-        'login': 'Your BuddyUp login code',
-        'password_reset': 'Reset your BuddyUp password',
-    }.get(purpose, 'Your BuddyUp verification code')
+        'registration': 'Verify your BuddyUp Fit email',
+        'login': 'Your BuddyUp Fit login code',
+        'password_reset': 'Reset your BuddyUp Fit password',
+    }.get(purpose, 'Your BuddyUp Fit verification code')
 
     logo_url = getattr(settings, 'EMAIL_LOGO_URL', '') or (
         f"{getattr(settings, 'PUBLIC_FRONTEND_URL', 'https://buddyup.app').rstrip('/')}"
@@ -102,7 +102,7 @@ def send_otp_sms(user_id: str, otp: str):
             data={
                 'username': settings.AFRICASTALKING_USERNAME,
                 'to': user.phone,
-                'message': f'Your BuddyUp verification code is {otp}. It expires in 10 minutes.',
+                'message': f'Your BuddyUp Fit verification code is {otp}. It expires in 10 minutes.',
             },
             timeout=(3.05, 10),
         )
@@ -129,7 +129,7 @@ def send_welcome_email(user_id: str):
     plain = strip_tags(html)
 
     send_mail(
-        subject='Welcome to BuddyUp!',
+        subject='Welcome to BuddyUp Fit!',
         message=plain,
         html_message=html,
         from_email=settings.DEFAULT_FROM_EMAIL,
@@ -157,7 +157,7 @@ def send_login_alert_email(user_id: str, ip_address: str, device: str):
     plain = strip_tags(html)
 
     send_mail(
-        subject='New login to your BuddyUp account',
+        subject='New login to your BuddyUp Fit account',
         message=plain,
         html_message=html,
         from_email=settings.DEFAULT_FROM_EMAIL,
@@ -175,8 +175,8 @@ def send_security_notification_email(user_id: str, action: str, ip_address: str 
         return
     detail = f' from IP address {ip_address}' if ip_address else ''
     send_mail(
-        subject=f'BuddyUp security alert: {action}',
-        message=(f'{action} was made to your BuddyUp account{detail}. '
+        subject=f'BuddyUp Fit security alert: {action}',
+        message=(f'{action} was made to your BuddyUp Fit account{detail}. '
                  'If you did not make this change, sign in and secure your account immediately.'),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[user.email],
@@ -356,7 +356,7 @@ def export_user_data(user_id: str):
         download_url = default_storage.url(saved)
 
         send_mail(
-            'Your BuddyUp data export is ready',
+            'Your BuddyUp Fit data export is ready',
             f'Your data export is ready. Download it here (valid while your account is active):\n\n{download_url}\n\nIf the link does not work, request a new export from Settings.',
             getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'noreply@buddyup.app',
             [user.email],
@@ -369,7 +369,7 @@ def export_user_data(user_id: str):
         # not be left waiting on a silent worker failure.
         try:
             send_mail(
-                'Your BuddyUp data export failed',
+                'Your BuddyUp Fit data export failed',
                 'We could not generate your data export. Please request a new one '
                 'from Settings; if this keeps happening, contact support.',
                 getattr(settings, 'DEFAULT_FROM_EMAIL', None) or 'noreply@buddyup.app',

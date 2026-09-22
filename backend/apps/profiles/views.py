@@ -200,7 +200,7 @@ class OnboardingView(views.APIView):
                 'profile': ProfileSerializer(profile, context={'request': request}).data,
                 'onboarding_plan': onboarding_plan,
             },
-            'message': 'Onboarding complete. Welcome to BuddyUp!',
+            'message': 'Onboarding complete. Welcome to BuddyUp Fit!',
             'errors': None,
             'pagination': None,
         })
@@ -350,7 +350,7 @@ class SendBuddyRequestView(views.APIView):
                 notify_buddy_accepted(str(request.user.profile.user_id), str(target.user_id))
                 return Response({
                     'success': True, 'data': {'status': 'confirmed'},
-                    'message': f'You and @{target.username} are now BuddyUp Buddies! 🎉',
+                    'message': f'You and @{target.username} are now BuddyUp Fit Buddies! 🎉',
                     'errors': None, 'pagination': None,
                 })
 
@@ -399,7 +399,7 @@ class AcceptBuddyRequestView(views.APIView):
 
         return Response({
             'success': True, 'data': {'status': 'confirmed'},
-            'message': f'You and @{target.username} are now BuddyUp Buddies! 🎉',
+            'message': f'You and @{target.username} are now BuddyUp Fit Buddies! 🎉',
             'errors': None, 'pagination': None,
         })
 
@@ -769,7 +769,7 @@ class ProfileRecommendationsView(views.APIView):
             return {'code': f'verified_{candidate.role}', 'text': f'Recommended {label}'}
         if source == 'ai':
             return {'code': 'fitness_match', 'text': 'Matches your fitness profile'}
-        return {'code': 'popular_nearby', 'text': 'Popular in the BuddyUp community'}
+        return {'code': 'popular_nearby', 'text': 'Popular in the BuddyUp Fit community'}
 
     def _result(self, request, profile, candidate, source, score=None):
         return {

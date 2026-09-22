@@ -1,7 +1,7 @@
 """Inference engine for the six banded-ensemble research models.
 
 Each model was trained by its notebook in ``notebooks/banded_*.ipynb`` /
-``multimodal_*`` / ``rl_*`` (PyTorch, real BuddyUp + public batches) and
+``multimodal_*`` / ``rl_*`` (PyTorch, real BuddyUp Fit + public batches) and
 exported to ONNX in the model cache dir. Artifacts resolve through
 ``ml.serving.artifact_path`` (unversioned ``<name>.onnx`` aliases), so a
 ``ModelMetadata`` row flip + file drop is all a promotion takes.
@@ -98,7 +98,7 @@ def classify_image_vision(image_bytes: bytes) -> dict:
     """Cheap Neutral-vs-NSFW pre-filter (32px banded vision head).
 
     Complements the NudeNet path in moderation_engine: fast, offline, and
-    trained on BuddyUp's own NSFW corpus. Escalate to NudeNet on 'flag'.
+    trained on BuddyUp Fit's own NSFW corpus. Escalate to NudeNet on 'flag'.
     """
     from io import BytesIO
 

@@ -1,7 +1,7 @@
 """Render a comprehensive analytics report as a branded PNG with watermark.
 
 Uses Pillow to compose a dark-themed report card from the aggregated summary,
-overlays the BuddyUp logo as a watermark, and uploads the result to the
+overlays the BuddyUp Fit logo as a watermark, and uploads the result to the
 configured media storage (Cloudinary/local).
 """
 import io

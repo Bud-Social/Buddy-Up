@@ -1,5 +1,5 @@
 """
-Unified WebSocket consumers for BuddyUp messaging, live rooms, and gym chat.
+Unified WebSocket consumers for BuddyUp Fit messaging, live rooms, and gym chat.
 """
 import hashlib
 import time

@@ -4,7 +4,7 @@ export default function CommunityGuidelines() {
   return (
     <LegalPage
       title="Community Guidelines"
-      subtitle="BuddyUp exists to help people find their fitness family. These guidelines keep our community safe, inclusive, and focused on health and wellness."
+      subtitle="BuddyUp Fit exists to help people find their fitness family. These guidelines keep our community safe, inclusive, and focused on health and wellness."
       updatedAt="August 2026"
     >
       <LegalSection title="1. Health & Safety">
@@ -62,7 +62,7 @@ export default function CommunityGuidelines() {
         <div className="space-y-2">
           <p><strong>Host controls.</strong> Hosts may mute, remove, and ban viewers. Recording requires explicit consent from the host and visible participants.</p>
           <p><strong>Viewer conduct.</strong> No doxxing, no sexual content, no medical advice, no commercial solicitation outside authorised paid sessions.</p>
-          <p><strong>Safety.</strong> Every live session shows the host's emergency contact and a BuddyUp safety shortcut.</p>
+          <p><strong>Safety.</strong> Every live session shows the host's emergency contact and a BuddyUp Fit safety shortcut.</p>
         </div>
       </LegalSection>
 

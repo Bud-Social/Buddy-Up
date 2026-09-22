@@ -188,7 +188,7 @@ export default function Login() {
             <h1 className="font-display text-3xl font-extrabold text-center mb-2">
               Welcome <span className="text-buddy-green">Back</span>
             </h1>
-            <p className="text-buddy-text-secondary text-center mb-8">Log in to your BuddyUp account</p>
+            <p className="text-buddy-text-secondary text-center mb-8">Log in to your BuddyUp Fit account</p>
 
             <form onSubmit={handleCredentialsSubmit} className="space-y-4">
               {error && (

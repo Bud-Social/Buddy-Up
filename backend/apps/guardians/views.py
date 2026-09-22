@@ -335,6 +335,6 @@ class GuardianAcceptInviteView(views.APIView):
         return Response({
             'success': True,
             'data': GuardianLinkSerializer(link, context={'request': request}).data,
-            'message': 'Password set. Your BuddyUp account is ready.',
+            'message': 'Password set. Your BuddyUp Fit account is ready.',
             'errors': None, 'pagination': None,
         })

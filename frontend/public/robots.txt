@@ -1,4 +1,4 @@
-# BuddyUp — crawler policy
+# BuddyUp Fit — crawler policy
 # Only the public marketing pages are crawlable. Everything else (the
 # logged-in app, auth flows, user profiles, admin) is private.
 

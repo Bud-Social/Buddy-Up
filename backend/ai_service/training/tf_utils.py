@@ -266,7 +266,7 @@ def mlflow_log(meta: dict, tracking_uri: str | None = None, run_name: str = '',
                api_url: str = '', api_token: str = ''):
     """Log metrics/artifacts to MLflow if configured; else print model-card JSON.
 
-    Also persists the run to the BuddyUp ML dashboard via post_training_run().
+    Also persists the run to the BuddyUp Fit ML dashboard via post_training_run().
     """
     if tracking_uri:
         import mlflow

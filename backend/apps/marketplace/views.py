@@ -200,7 +200,7 @@ class ShopListView(views.APIView):
             str(request.user.id),
             'shop_created',
             f'Your shop "{shop.name}" is live! 🛍️',
-            'Start adding your services to reach buyers on BuddyUp.',
+            'Start adding your services to reach buyers on BuddyUp Fit.',
             {'shop_id': str(shop.id), 'shop_handle': shop.handle},
         )
 
@@ -652,7 +652,7 @@ class RegisterCreatorView(views.APIView):
             str(request.user.id),
             'shop_created',
             f'Your shop "{shop.name}" is live! 🛍️',
-            'Start adding your services to reach buyers on BuddyUp.',
+            'Start adding your services to reach buyers on BuddyUp Fit.',
             {'shop_id': str(shop.id), 'shop_handle': shop.handle},
         )
 

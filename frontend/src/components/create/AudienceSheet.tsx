@@ -13,7 +13,7 @@ interface AudienceSheetProps {
 }
 
 const OPTIONS: Array<{ value: Visibility; label: string; desc: string; icon: React.ElementType }> = [
-  { value: 'public', label: 'Public', desc: 'Anyone on BuddyUp', icon: Globe },
+  { value: 'public', label: 'Public', desc: 'Anyone on BuddyUp Fit', icon: Globe },
   { value: 'buddies', label: 'Buddies', desc: 'People you follow & your followers', icon: Users },
   { value: 'gym_members', label: 'Gym Members', desc: 'Members of your tagged gym', icon: Dumbbell },
   { value: 'private', label: 'Only Me', desc: 'Private — visible to you only', icon: Lock },

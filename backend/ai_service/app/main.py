@@ -16,7 +16,7 @@ from .routers import (
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title='BuddyUp AI Service',
+    title='BuddyUp Fit AI Service',
     description='AI/ML microservice for Buddy-Up platform',
     version='1.0.0',
 )

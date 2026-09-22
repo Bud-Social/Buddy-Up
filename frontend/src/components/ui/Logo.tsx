@@ -40,7 +40,7 @@ export function Logo({ size = 'md', className = '', type = 'full' }: LogoProps) 
   const img = (
     <img
       src={getLogoSrc(effectiveTheme)}
-      alt="BuddyUp Logo"
+      alt="BuddyUp Fit Logo"
       className={`object-contain rounded-xl transition-opacity duration-300 ${heightClass} ${className}`}
     />
   );

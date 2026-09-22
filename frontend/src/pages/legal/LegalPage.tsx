@@ -8,7 +8,7 @@ interface LegalPageProps {
 }
 
 /**
- * Shared shell for BuddyUp legal / policy pages.
+ * Shared shell for BuddyUp Fit legal / policy pages.
  * Keeps typography, spacing, and the "last updated" header consistent so the
  * Terms, Privacy, Guidelines, Cookie, Medical Disclaimer and Sponsorship pages
  * all render as a coherent set.

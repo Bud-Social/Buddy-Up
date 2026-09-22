@@ -568,14 +568,14 @@ class CalendarSyncView(views.APIView):
             return dt.strftime('%Y%m%dT%H%M%SZ') if dt else ''
 
         uid = f'{booking.id}@buddyup'
-        summary = f'BuddyUp Session – {booking.get_session_type_display()}'
+        summary = f'BuddyUp Fit Session – {booking.get_session_type_display()}'
         organizer_name = booking.trainer.display_name
         attendee_name = booking.client.display_name
 
         ics = (
             'BEGIN:VCALENDAR\r\n'
             'VERSION:2.0\r\n'
-            'PRODID:-//BuddyUp//Sessions//EN\r\n'
+            'PRODID:-//BuddyUp Fit//Sessions//EN\r\n'
             'CALSCALE:GREGORIAN\r\n'
             'METHOD:PUBLISH\r\n'
             'BEGIN:VEVENT\r\n'

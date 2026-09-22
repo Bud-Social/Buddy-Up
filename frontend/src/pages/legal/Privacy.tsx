@@ -4,7 +4,7 @@ export default function Privacy() {
   return (
     <LegalPage
       title="Privacy Policy"
-      subtitle="BuddyUp processes your personal data in accordance with the Kenya Data Protection Act 2019 and applicable law. This policy explains what we collect, why, how long we keep it, and your rights."
+      subtitle="BuddyUp Fit processes your personal data in accordance with the Kenya Data Protection Act 2019 and applicable law. This policy explains what we collect, why, how long we keep it, and your rights."
       updatedAt="August 2026"
     >
       <LegalSection title="1. Data We Collect">
@@ -89,7 +89,7 @@ export default function Privacy() {
       </LegalSection>
 
       <LegalSection title="9. Children's Privacy">
-        <p>BuddyUp is not directed to users under 16. Users aged 16–17 may use the service only with a verified parental co-owner. If we learn that we have collected data from a user under 16, we will delete it promptly and terminate the account.</p>
+        <p>BuddyUp Fit is not directed to users under 16. Users aged 16–17 may use the service only with a verified parental co-owner. If we learn that we have collected data from a user under 16, we will delete it promptly and terminate the account.</p>
       </LegalSection>
 
       <LegalSection title="10. Automated Decisions & AI">
@@ -97,7 +97,7 @@ export default function Privacy() {
       </LegalSection>
 
       <LegalSection title="11. Cookies & Local Storage">
-        <p>BuddyUp uses only strictly necessary cookies by default. Functional and analytics cookies require your consent and can be changed at any time from the cookie banner or Settings. No advertising, cross-site tracking, or fingerprinting.</p>
+        <p>BuddyUp Fit uses only strictly necessary cookies by default. Functional and analytics cookies require your consent and can be changed at any time from the cookie banner or Settings. No advertising, cross-site tracking, or fingerprinting.</p>
       </LegalSection>
 
       <LegalSection title="12. Changes to This Policy">
@@ -105,7 +105,7 @@ export default function Privacy() {
       </LegalSection>
 
       <LegalSection title="13. Contact">
-        <p>Data Protection Officer, BuddyUp Ltd., Nairobi, Kenya. Email: <strong>dpo@buddyup.com</strong>. Postal address to be registered with ODPC.</p>
+        <p>Data Protection Officer, BuddyUp Fit Ltd., Nairobi, Kenya. Email: <strong>dpo@buddyup.com</strong>. Postal address to be registered with ODPC.</p>
       </LegalSection>
     </LegalPage>
   );

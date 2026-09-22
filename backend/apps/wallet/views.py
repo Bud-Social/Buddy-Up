@@ -786,7 +786,7 @@ class WithdrawView(views.APIView):
             recipient_resp = fw.create_transfer_recipient(
                 bank_code=bank_code,
                 account_number=bank_account,
-                name=account_name or 'BuddyUp User',
+                name=account_name or 'BuddyUp Fit User',
             )
 
             if recipient_resp.success and recipient_resp.data:

@@ -4,7 +4,7 @@ export default function CookiePolicy() {
   return (
     <LegalPage
       title="Cookie Policy"
-      subtitle="How BuddyUp uses cookies and similar technologies on our website and platform."
+      subtitle="How BuddyUp Fit uses cookies and similar technologies on our website and platform."
       updatedAt="August 2026"
     >
       <LegalSection title="1. What Are Cookies?">
@@ -12,7 +12,7 @@ export default function CookiePolicy() {
       </LegalSection>
 
       <LegalSection title="2. How We Use Cookies">
-        <p>BuddyUp uses only strictly necessary cookies by default. No tracking, advertising, or third-party analytics cookies are deployed without your consent.</p>
+        <p>BuddyUp Fit uses only strictly necessary cookies by default. No tracking, advertising, or third-party analytics cookies are deployed without your consent.</p>
       </LegalSection>
 
       <LegalSection title="3. Cookie Categories">
@@ -44,7 +44,7 @@ export default function CookiePolicy() {
       </LegalSection>
 
       <LegalSection title="5. PWA Storage">
-        <p>When using BuddyUp as a Progressive Web App (PWA) on your mobile device, we use local storage and IndexedDB for offline functionality and performance. This data remains on your device and is not transmitted to our servers.</p>
+        <p>When using BuddyUp Fit as a Progressive Web App (PWA) on your mobile device, we use local storage and IndexedDB for offline functionality and performance. This data remains on your device and is not transmitted to our servers.</p>
       </LegalSection>
 
       <LegalSection title="6. Versioned Consent">

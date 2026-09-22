@@ -755,7 +755,7 @@ export default function CreatorStudio() {
           <div className="space-y-6">
             {!hasShop && (
               <Card className="p-5 bg-buddy-electric/10 border-buddy-electric/30 text-center space-y-3">
-                <p className="text-sm font-medium">Become a creator to start selling on BuddyUp.</p>
+                <p className="text-sm font-medium">Become a creator to start selling on BuddyUp Fit.</p>
                 <Button onClick={handleRegisterCreator} className="bg-buddy-electric text-buddy-black font-bold">Register as Creator</Button>
               </Card>
             )}
@@ -898,7 +898,7 @@ export default function CreatorStudio() {
           </div>
         ) : shops.length === 0 ? (
           <div className="text-center py-10 space-y-4 bg-buddy-surface/30 rounded-xl">
-            <p className="text-sm text-buddy-text-secondary">You're not a creator yet. Register to start selling your services on BuddyUp.</p>
+            <p className="text-sm text-buddy-text-secondary">You're not a creator yet. Register to start selling your services on BuddyUp Fit.</p>
             <Button onClick={handleRegisterCreator} className="bg-buddy-electric text-buddy-black font-bold">Register as Creator</Button>
             <p className="text-[11px] text-buddy-text-secondary">or</p>
             <Button onClick={() => navigate('/marketplace/shops/create')} variant="outline" className="text-buddy-electric">Set up a custom shop</Button>

@@ -11,7 +11,7 @@ const FAQ = [
     a: 'Posts are automatically screened for prohibited content including medical claims, undisclosed sponsorships, and safety violations. Every automatic flag is reviewed by a human moderator before action. You can appeal within 14 days.',
   },
   {
-    q: 'What counts as a medical claim on BuddyUp?',
+    q: 'What counts as a medical claim on BuddyUp Fit?',
     a: 'Any content claiming a meal plan or programme "treats", "cures", or "manages" a medical condition. Sharing your own experience is fine; giving professional advice outside a verified practitioner relationship is not. See the Medical Disclaimer.',
   },
   {
@@ -27,7 +27,7 @@ const FAQ = [
     a: 'Go to Settings → Your Data. You can export a full JSON archive of your data or request account deletion. Deletion takes effect after a 30-day grace period during which you can recover the account.',
   },
   {
-    q: 'I am 16 or 17. How do I use BuddyUp?',
+    q: 'I am 16 or 17. How do I use BuddyUp Fit?',
     a: 'Users aged 16–17 must be co-owned by a verified parent or guardian. You will be asked to provide their name and contact details during registration.',
   },
   {
@@ -85,7 +85,7 @@ export default function Help() {
           <li><Link to="/adult-content-policy" className="text-buddy-accent hover:underline">Adult Content Policy</Link></li>
         </ul>
         <LegalNotice>
-          BuddyUp is a fitness and wellness platform, not a medical service. If you are experiencing a medical emergency, contact your local emergency services immediately.
+          BuddyUp Fit is a fitness and wellness platform, not a medical service. If you are experiencing a medical emergency, contact your local emergency services immediately.
         </LegalNotice>
       </LegalSection>
     </LegalPage>

@@ -73,7 +73,7 @@ export default function FamilyAccept() {
         ) : (
           <>
             <p className="text-sm text-buddy-text-secondary mb-4">
-              Welcome to BuddyUp! Set a password to activate the account linked to your guardian.
+              Welcome to BuddyUp Fit! Set a password to activate the account linked to your guardian.
             </p>
             <form onSubmit={handleAccept} className="space-y-3">
               {error && (

@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     # management commands; has no concrete models so no migrations.
     'common',
 
-    # BuddyUp apps
+    # BuddyUp Fit apps
     'apps.accounts',
     'apps.profiles',
     'apps.feed',
@@ -334,7 +334,7 @@ SIMPLE_JWT = {
 
 # Spectacular
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'BuddyUp API',
+    'TITLE': 'BuddyUp Fit API',
     'DESCRIPTION': 'Health & fitness social platform API',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,

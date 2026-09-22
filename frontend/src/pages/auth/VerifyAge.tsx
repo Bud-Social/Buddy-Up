@@ -40,7 +40,7 @@ export default function VerifyAge() {
     const age = calculateAge(dob);
 
     if (age < 16) {
-      setError('BuddyUp is for users aged 16 and over. You cannot create an account at this time.');
+      setError('BuddyUp Fit is for users aged 16 and over. You cannot create an account at this time.');
       setIsLoading(false);
       return;
     }

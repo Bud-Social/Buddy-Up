@@ -109,7 +109,7 @@ class ContactInquiryViewSet(PublicIntakeViewSet):
         try:
             from django.core.mail import send_mail
             send_mail(
-                subject=f'[BuddyUp contact] {inquiry.topic}: {inquiry.subject or inquiry.name}',
+                subject=f'[BuddyUp Fit contact] {inquiry.topic}: {inquiry.subject or inquiry.name}',
                 message=f'From: {inquiry.name} <{inquiry.email}>\n\n{inquiry.message}',
                 from_email=None,
                 recipient_list=[destination],

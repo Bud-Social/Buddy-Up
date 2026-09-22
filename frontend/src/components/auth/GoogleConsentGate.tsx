@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/Button';
 
 /**
  * Explicit data-access consent gate shown before a Google credential is ever
- * exchanged for a BuddyUp session. Mirrors Google's sign-in scopes
+ * exchanged for a BuddyUp Fit session. Mirrors Google's sign-in scopes
  * (`openid profile email`) — nothing else is ever requested or read.
  */
 const ACCESSED_ITEMS = [
-  'Your Google email address — used as your BuddyUp account ID and for security emails.',
+  'Your Google email address — used as your BuddyUp Fit account ID and for security emails.',
   'Your full name — used to pre-fill your display name during onboarding.',
   'Your profile picture — used as your default avatar until you upload one.',
 ];
@@ -34,7 +34,7 @@ export function GoogleConsentGate({
     <Modal isOpen={open} onClose={onCancel} title="Before you continue…" size="sm">
       <p className="text-sm text-buddy-text-secondary mb-4">
         {mode === 'signup'
-          ? 'To create your BuddyUp account, we would like to access the following from your Google account:'
+          ? 'To create your BuddyUp Fit account, we would like to access the following from your Google account:'
           : 'To sign you in, we would like to access the following from your Google account:'}
       </p>
       <ul className="space-y-2.5 mb-4">
@@ -47,7 +47,7 @@ export function GoogleConsentGate({
       </ul>
       <div className="bg-buddy-surface rounded-xl p-3 mb-4">
         <p className="text-xs text-buddy-text-secondary leading-relaxed">
-          BuddyUp only uses this information to create or sign in to your account. We never
+          BuddyUp Fit only uses this information to create or sign in to your account. We never
           post, send, or read anything on your behalf, and we never touch your Google
           contacts, files, or calendar. This is the only data Google shares with us.
         </p>

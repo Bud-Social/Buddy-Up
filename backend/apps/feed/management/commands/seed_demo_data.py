@@ -20,7 +20,7 @@ SR = 44100
 
 TRACK_SPECS = [
     # (name, artist, seconds, chord root, pattern)
-    ('Emerald Dawn', 'BuddyUp Studio', 12.0, 55.0, 'lift'),
+    ('Emerald Dawn', 'BuddyUp Fit Studio', 12.0, 55.0, 'lift'),
     ('Neon Pulse', 'DJ Kilo', 14.0, 65.4, 'four'),
     ('Iron Progress', 'The Liftmasters', 15.0, 49.0, 'hard'),
     ('Sunset Zen', 'Mellow Bud', 18.0, 61.7, 'chill'),

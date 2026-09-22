@@ -4,23 +4,23 @@ export default function MedicalDisclaimer() {
   return (
     <LegalPage
       title="Medical & Wellness Disclaimer"
-      subtitle="Please read this before using BuddyUp's fitness, nutrition, meal-plan, or health-related features. This is not medical advice."
+      subtitle="Please read this before using BuddyUp Fit's fitness, nutrition, meal-plan, or health-related features. This is not medical advice."
       updatedAt="August 2026"
     >
-      <LegalSection title="1. BuddyUp Is Not a Medical Service">
-        <p>BuddyUp is a fitness and accountability platform. It does not provide medical advice, diagnosis, treatment, or care. Nothing on the platform — including workout programmes, meal plans, coach guidance, AI-generated recommendations, health insights, or progress analysis — is a substitute for professional medical judgement.</p>
+      <LegalSection title="1. BuddyUp Fit Is Not a Medical Service">
+        <p>BuddyUp Fit is a fitness and accountability platform. It does not provide medical advice, diagnosis, treatment, or care. Nothing on the platform — including workout programmes, meal plans, coach guidance, AI-generated recommendations, health insights, or progress analysis — is a substitute for professional medical judgement.</p>
         <LegalNotice tone="red">
           If you have a medical condition, injury, or persistent symptoms, or if you are pregnant, nursing, or taking medication that could be affected by exercise or diet, consult a qualified healthcare professional before starting any programme.
         </LegalNotice>
       </LegalSection>
 
       <LegalSection title="2. General Wellness vs Medical Nutrition Therapy">
-        <p>BuddyUp content is general wellness information: healthy eating patterns, activity-supportive habits, and education about food choices. It is not personalised medical nutrition therapy (MNT), which is a clinical treatment delivered by registered dietitians or other appropriately credentialed professionals to prevent, treat, or manage specific medical conditions.</p>
-        <p className="mt-2">Meal plans, recipe collections, and coaching provided on BuddyUp are general wellness resources. They are not designed to diagnose, treat, cure, or manage any disease. Content that frames nutrition as managing a diagnosed condition (for example, "use this plan to control blood glucose for diabetes") is not permitted outside a verified practitioner relationship.</p>
+        <p>BuddyUp Fit content is general wellness information: healthy eating patterns, activity-supportive habits, and education about food choices. It is not personalised medical nutrition therapy (MNT), which is a clinical treatment delivered by registered dietitians or other appropriately credentialed professionals to prevent, treat, or manage specific medical conditions.</p>
+        <p className="mt-2">Meal plans, recipe collections, and coaching provided on BuddyUp Fit are general wellness resources. They are not designed to diagnose, treat, cure, or manage any disease. Content that frames nutrition as managing a diagnosed condition (for example, "use this plan to control blood glucose for diabetes") is not permitted outside a verified practitioner relationship.</p>
       </LegalSection>
 
       <LegalSection title="3. Scope of Practice of Coaches & Trainers">
-        <p>Fitness coaches and personal trainers on BuddyUp provide general fitness and wellness coaching within their verified scope. They are generally not licensed to:</p>
+        <p>Fitness coaches and personal trainers on BuddyUp Fit provide general fitness and wellness coaching within their verified scope. They are generally not licensed to:</p>
         <ul className="list-disc list-inside space-y-1">
           <li>Diagnose or treat medical conditions</li>
           <li>Prescribe personalised meal plans based on a medical diagnosis</li>
@@ -31,7 +31,7 @@ export default function MedicalDisclaimer() {
       </LegalSection>
 
       <LegalSection title="4. No Guarantee of Outcomes">
-        <p>Fitness, weight, and health outcomes depend on many individual factors. BuddyUp does not guarantee any specific result. Promises of guaranteed results, "quick fixes", or fast weight loss should be treated with caution and are not endorsed by the platform. If something sounds too good to be true, it probably is.</p>
+        <p>Fitness, weight, and health outcomes depend on many individual factors. BuddyUp Fit does not guarantee any specific result. Promises of guaranteed results, "quick fixes", or fast weight loss should be treated with caution and are not endorsed by the platform. If something sounds too good to be true, it probably is.</p>
       </LegalSection>
 
       <LegalSection title="5. Red Flags to Watch For">
@@ -51,7 +51,7 @@ export default function MedicalDisclaimer() {
       </LegalSection>
 
       <LegalSection title="7. Your Responsibility">
-        <p>You are responsible for your own health and safety decisions. Listen to your body, start gradually, and seek professional guidance when needed. Never disregard professional medical advice because of something you read on BuddyUp.</p>
+        <p>You are responsible for your own health and safety decisions. Listen to your body, start gradually, and seek professional guidance when needed. Never disregard professional medical advice because of something you read on BuddyUp Fit.</p>
       </LegalSection>
 
       <LegalSection title="8. Contact">

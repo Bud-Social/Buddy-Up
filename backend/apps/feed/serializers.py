@@ -82,7 +82,7 @@ class CommentSerializer(serializers.ModelSerializer):
 
     def get_author_data(self, obj):
         if obj.is_anonymous:
-            return {'display_name': 'Anonymous BuddyUp Member', 'username': '', 'avatar_url': ''}
+            return {'display_name': 'Anonymous BuddyUp Fit Member', 'username': '', 'avatar_url': ''}
         request = self.context.get('request')
         return {
             'user_id': str(obj.author.user_id),
@@ -160,7 +160,7 @@ class PostSerializer(serializers.ModelSerializer):
 
     def get_author_data(self, obj):
         if obj.is_anonymous:
-            return {'display_name': 'Anonymous BuddyUp Member', 'username': '', 'avatar_url': ''}
+            return {'display_name': 'Anonymous BuddyUp Fit Member', 'username': '', 'avatar_url': ''}
         request = self.context.get('request')
         return {
             'user_id': str(obj.author.user_id),

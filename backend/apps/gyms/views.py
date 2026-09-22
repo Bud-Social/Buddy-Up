@@ -1108,7 +1108,7 @@ class InviteCreateView(views.APIView):
         if email and not username:
             from django.core.mail import send_mail
             send_mail(
-                f"You've been invited to join {gym.name} on BuddyUp!",
+                f"You've been invited to join {gym.name} on BuddyUp Fit!",
                 f"{request.user.profile.display_name} has invited you to join their gym: {gym.name}.\n\nSign up and join here: http://localhost:3002/gyms/{gym.handle}",
                 settings.DEFAULT_FROM_EMAIL or 'noreply@buddyup.com',
                 [email],

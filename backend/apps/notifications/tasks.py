@@ -139,7 +139,7 @@ def send_buddy_request_notification(from_profile_id: str, to_profile_id: str):
     notification = Notification.objects.create(
         recipient=to_profile,
         notification_type='buddy_request',
-        title=f'{from_profile.display_name} wants to be your BuddyUp buddy! 💪',
+        title=f'{from_profile.display_name} wants to be your BuddyUp Fit buddy! 💪',
         body=f'@{from_profile.username} sent you a buddy request.',
         metadata={'from_user_id': str(from_profile.user_id), 'from_username': from_profile.username,
                    'from_display_name': from_profile.display_name, 'from_avatar_url': from_profile.avatar_url},
@@ -167,14 +167,14 @@ def send_buddy_accepted_notification(from_profile_id: str, to_profile_id: str):
 
     n1 = Notification.objects.create(
         recipient=from_profile, notification_type='buddy_accepted',
-        title=f'You and {to_profile.display_name} are now BuddyUp Buddies! 🎉',
+        title=f'You and {to_profile.display_name} are now BuddyUp Fit Buddies! 🎉',
         body=f'Start a conversation with @{to_profile.username}.',
         metadata={'from_user_id': str(to_profile.user_id), 'from_username': to_profile.username,
                    'from_display_name': to_profile.display_name, 'from_avatar_url': to_profile.avatar_url},
     )
     n2 = Notification.objects.create(
         recipient=to_profile, notification_type='buddy_accepted',
-        title=f'You and {from_profile.display_name} are now BuddyUp Buddies! 🎉',
+        title=f'You and {from_profile.display_name} are now BuddyUp Fit Buddies! 🎉',
         body=f'Start a conversation with @{from_profile.username}.',
         metadata={'from_user_id': str(from_profile.user_id), 'from_username': from_profile.username,
                    'from_display_name': from_profile.display_name, 'from_avatar_url': from_profile.avatar_url},
@@ -317,7 +317,7 @@ def send_daily_digest():
             Notification.objects.create(
                 recipient=profile, notification_type='payment_received',
                 title=f'You have {count} unread notifications',
-                body='Check BuddyUp to see what you missed!',
+                body='Check BuddyUp Fit to see what you missed!',
                 metadata={'count': count},
             )
 

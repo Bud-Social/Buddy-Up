@@ -13,14 +13,14 @@ export function BuddyUpCertification() {
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
           Application Submitted
         </h3>
-        <p className="text-sm text-buddy-text-secondary">We'll review your application for the BuddyUp Certification badge shortly.</p>
+        <p className="text-sm text-buddy-text-secondary">We'll review your application for the BuddyUp Fit Certification badge shortly.</p>
       </Card>
     );
   }
 
   return (
     <Card className="p-4 border-buddy-gold/30 bg-gradient-to-br from-buddy-gold/10 to-transparent">
-      <h3 className="font-bold text-buddy-gold mb-2">Get BuddyUp Certified</h3>
+      <h3 className="font-bold text-buddy-gold mb-2">Get BuddyUp Fit Certified</h3>
       <p className="text-xs text-buddy-text-secondary mb-4">Earn trust and visibility with a verified creator badge.</p>
       
       {step === 0 && (

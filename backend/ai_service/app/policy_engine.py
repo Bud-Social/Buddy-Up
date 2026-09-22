@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 # Policy guardrail engine.
 #
 # Two lightweight, deterministic detectors that enforce the platform's legal
-# guardrails from the BuddyUp governance + fitness/meal-plan regulation research:
+# guardrails from the BuddyUp Fit governance + fitness/meal-plan regulation research:
 #
 #   1. analyze_health_claims(text)  → scope-of-practice check for nutrition /
 #      fitness / wellness content. Flags wording that implies diagnosing,

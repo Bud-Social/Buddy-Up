@@ -75,7 +75,7 @@ html.ambient {
   }
 }
 
-/* ── Bicolor BuddyUp wordmark ("Buddy" / "Up", colors swapping) ──
+/* ── Bicolor BuddyUp Fit wordmark ("Buddy" / "Up", colors swapping) ──
  * The "white" phase follows the active theme's primary text color
  * (--buddy-text-primary-rgb) so the wordmark stays visible in light,
  * high-contrast, and ambient themes — not just dark. */

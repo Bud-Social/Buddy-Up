@@ -130,7 +130,7 @@ export default function Register() {
     const dob = new Date(y, m - 1, d);
     const computed = calculateAge(dob);
     if (computed < 16) {
-      setAgeError('BuddyUp is for users aged 16 and over. You cannot create an account at this time.');
+      setAgeError('BuddyUp Fit is for users aged 16 and over. You cannot create an account at this time.');
       return;
     }
     if (computed < 18 && !guardianName && !guardianEmail && !guardianPhone) {
@@ -170,7 +170,7 @@ export default function Register() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-buddy-black">
       <Card className="w-full max-w-md p-8 bg-buddy-surface">
         <h1 className="font-display text-3xl font-extrabold text-center mb-2">
-          Join <span className="text-buddy-green">BuddyUp</span>
+          Join <span className="text-buddy-green">BuddyUp Fit</span>
         </h1>
         <p className="text-buddy-text-secondary text-center mb-6">
           Step {step} of 2: {step === 1 ? 'Account Details' : 'Age Verification'}
@@ -258,12 +258,12 @@ export default function Register() {
               <Input label="Month" type="number" min={1} max={12} value={dobMonth} onChange={(e) => setDobMonth(e.target.value)} placeholder="MM" required />
               <Input label="Year" type="number" value={dobYear} onChange={(e) => setDobYear(e.target.value)} placeholder="YYYY" required />
             </div>
-            <p className="text-xs text-buddy-orange">BuddyUp is for users aged 16 and over. Underage accounts will be blocked.</p>
+            <p className="text-xs text-buddy-orange">BuddyUp Fit is for users aged 16 and over. Underage accounts will be blocked.</p>
             {requiresParentalCoowner && (
               <div className="space-y-3 rounded-xl border border-buddy-orange/30 bg-buddy-orange/5 p-4">
                 <div>
                   <p className="text-sm font-medium text-buddy-text-primary">Parental Co-Owner Required</p>
-                  <p className="text-xs text-buddy-text-secondary mt-0.5">You are 16–17, so BuddyUp requires a parent or guardian co-owner to supervise your account. Provide at least one contact detail.</p>
+                  <p className="text-xs text-buddy-text-secondary mt-0.5">You are 16–17, so BuddyUp Fit requires a parent or guardian co-owner to supervise your account. Provide at least one contact detail.</p>
                 </div>
                 <Input label="Guardian Name" value={guardianName} onChange={(e) => setGuardianName(e.target.value)} placeholder="Parent or guardian's name" maxLength={120} />
                 <Input label="Guardian Email" type="email" value={guardianEmail} onChange={(e) => setGuardianEmail(e.target.value)} placeholder="guardian@example.com" />

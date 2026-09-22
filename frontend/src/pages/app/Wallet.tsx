@@ -267,7 +267,7 @@ function BuyTab({ refetch }: { refetch: () => void }) {
           setIsPurchasing(false);
         },
         customizations: {
-          title: 'BuddyUp',
+          title: 'BuddyUp Fit',
           description: 'Purchase Artifacts',
           logo: 'https://buddyup.app/logo.png',
         },
