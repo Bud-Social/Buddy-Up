@@ -18,6 +18,8 @@ const THEMES = [
 export default function Appearance() {
   const theme = useThemeStore((s) => s.theme);
   const setTheme = useThemeStore((s) => s.setTheme);
+  const appIcon = useThemeStore((s) => s.appIcon);
+  const setAppIcon = useThemeStore((s) => s.setAppIcon);
   const [reducedMotion, setReducedMotion] = useState(isReducedMotionEnabled());
 
   const handleReducedMotion = (checked: boolean) => {
@@ -41,6 +43,27 @@ export default function Appearance() {
               </button>
             ))}
           </div>
+        </Card>
+
+        <Card className="p-4 space-y-3">
+          <p className="text-sm font-medium mb-1">App icon</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: 'logo' as const, label: 'BuddyUp logo', desc: 'The platform mark', src: '/icons/icon-192.png' },
+              { value: 'clock' as const, label: 'Clock', desc: 'Alternate stopwatch mark', src: '/icons/icon-clock-192.png' },
+            ].map(({ value, label, desc, src }) => (
+              <button key={value} onClick={() => setAppIcon(value)}
+                aria-pressed={appIcon === value}
+                className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-colors ${appIcon === value ? 'border-buddy-green bg-buddy-green/10' : 'border-buddy-surface hover:border-buddy-text-secondary/30'}`}>
+                <img src={src} alt="" className="w-10 h-10 rounded-xl flex-shrink-0" />
+                <span>
+                  <span className="block text-sm font-medium">{label}</span>
+                  <span className="block text-[10px] text-buddy-text-secondary leading-tight">{desc}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-buddy-text-secondary">Changes your tab icon and home-screen icon on this device.</p>
         </Card>
 
         <Card className="p-4">

@@ -119,6 +119,7 @@ const STYLE_ID = 'buddyup-theme-override';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const effectiveTheme = useThemeStore((s) => s.effectiveTheme);
+  const appIcon = useThemeStore((s) => s.appIcon);
 
   useEffect(() => {
     const r = document.documentElement;
@@ -129,9 +130,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       metaThemeColor.setAttribute('content', metaColors[effectiveTheme] || '#0A0A0A');
     }
 
+    // App icon preference: platform logo by default, clock as the secondary
+    // option. Applies to the tab favicon and the iOS home-screen icon.
+    const iconHref =
+      appIcon === 'clock' ? '/icons/icon-clock-192.png' : favicons[effectiveTheme] || '/favicon-dark.png';
     const favicon = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null;
     if (favicon) {
-      favicon.href = favicons[effectiveTheme] || '/favicon-dark.png';
+      favicon.href = iconHref;
+    }
+    const touchIcon = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement | null;
+    if (touchIcon) {
+      touchIcon.href = appIcon === 'clock' ? '/icons/icon-clock-192.png' : '/icons/icon-192.png';
     }
 
     let style = document.getElementById(STYLE_ID) as HTMLStyleElement;
@@ -141,7 +150,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       document.head.appendChild(style);
     }
     style.textContent = generateThemeCSS(themes[effectiveTheme] || themes.dark);
-  }, [effectiveTheme]);
+  }, [effectiveTheme, appIcon]);
 
   return <>{children}</>;
 }

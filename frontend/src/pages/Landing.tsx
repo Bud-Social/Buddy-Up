@@ -615,9 +615,10 @@ export default function Landing() {
             </p>
             <div className="flex flex-col gap-3 mt-auto">
               {FUNDRAISER_URL ? (
-                <button
-                  type="button"
-                  onClick={() => setSupportOpen(true)}
+                <a
+                  href={FUNDRAISER_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
                   className="flex items-start gap-3 rounded-2xl border border-buddy-surface-raised p-4 text-left hover:bg-buddy-surface-raised transition-colors"
                 >
                   <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-green/15 flex items-center justify-center">
@@ -629,12 +630,13 @@ export default function Landing() {
                       Chip in to keep BuddyUp free for everyone.
                     </span>
                   </span>
-                </button>
+                </a>
               ) : null}
               {PLEDGE_FORM_URL ? (
-                <button
-                  type="button"
-                  onClick={() => setSupportOpen(true)}
+                <a
+                  href={PLEDGE_FORM_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
                   className="flex items-start gap-3 rounded-2xl border border-buddy-surface-raised p-4 text-left hover:bg-buddy-surface-raised transition-colors"
                 >
                   <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-green/15 flex items-center justify-center">
@@ -646,7 +648,7 @@ export default function Landing() {
                       Pledge now — we&apos;ll be in touch about next steps.
                     </span>
                   </span>
-                </button>
+                </a>
               ) : null}
               {PARTNERSHIP_FORM_URL ? (
                 <a
