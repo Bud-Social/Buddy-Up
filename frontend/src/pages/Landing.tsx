@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList, Globe, HeartPulse, Sparkles, Activity, CalendarDays, BookOpen, Building2, BellRing, Briefcase } from 'lucide-react';
+import { Check, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList, Globe, HeartPulse, Sparkles, Activity, CalendarDays, BookOpen, Building2, BellRing, Briefcase, Users, UsersRound, MessageCircle, QrCode, Watch, Trophy, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
@@ -77,15 +77,15 @@ const lifetimeGoals = [
  * address yet. Shipped honestly as "planned" — no fake screenshots.
  */
 const plannedFeatures = [
-  { horizon: 'Near', title: 'Low-data & offline-lite mode', desc: 'A stripped-down experience that survives patchy connectivity — train, log your session offline, sync when you\'re back.' },
-  { horizon: 'Near', title: 'Schedule-compatible buddy matching', desc: 'Buddy suggestions that fit around your work hours and commute — not just your fitness level.' },
-  { horizon: 'Soon', title: 'SMS & WhatsApp delivery for nudges', desc: 'Session reminders, streak nudges, and accountability pings already live in-app — coming to SMS and WhatsApp, where you actually read messages.' },
-  { horizon: 'Soon', title: 'Gym QR check-ins', desc: 'Scan in at partner gyms, prove attendance, and let your streaks count real-world visits.' },
-  { horizon: 'Soon', title: 'Wearable & health-app sync', desc: 'Pull steps, heart rate, and sleep from your watch into your progress feed automatically.' },
-  { horizon: 'Soon', title: 'Corporate awareness packages', desc: 'Team step-count challenges, branded gym spaces, sponsored events, and workplace wellness campaigns for companies that want healthier teams.' },
-  { horizon: 'Soon', title: 'Group & family access packages', desc: 'One plan for the whole household or crew — shared memberships, family challenges, and group streaks that keep everyone accountable.' },
-  { horizon: 'Soon', title: 'Streak rewards & team challenges', desc: 'Winter leagues, corporate team challenges, and rewards you can actually redeem.' },
-  { horizon: 'Later', title: 'Multilanguage interface', desc: 'The whole app in your language — starting with Swahili and expanding from there.' },
+  { horizon: 'Near', icon: Smartphone, title: 'Low-data & offline-lite mode', desc: 'A stripped-down experience that survives patchy connectivity — train, log your session offline, sync when you\'re back.' },
+  { horizon: 'Near', icon: Users, title: 'Schedule-compatible buddy matching', desc: 'Buddy suggestions that fit around your work hours and commute — not just your fitness level.' },
+  { horizon: 'Soon', icon: MessageCircle, title: 'SMS & WhatsApp delivery for nudges', desc: 'Session reminders, streak nudges, and accountability pings already live in-app — coming to SMS and WhatsApp, where you actually read messages.' },
+  { horizon: 'Soon', icon: QrCode, title: 'Gym QR check-ins', desc: 'Scan in at partner gyms, prove attendance, and let your streaks count real-world visits.' },
+  { horizon: 'Soon', icon: Watch, title: 'Wearable & health-app sync', desc: 'Pull steps, heart rate, and sleep from your watch into your progress feed automatically.' },
+  { horizon: 'Soon', icon: Building2, title: 'Corporate awareness packages', desc: 'Team step-count challenges, branded gym spaces, sponsored events, and workplace wellness campaigns for companies that want healthier teams.' },
+  { horizon: 'Soon', icon: UsersRound, title: 'Group & family access packages', desc: 'One plan for the whole household or crew — shared memberships, family challenges, and group streaks that keep everyone accountable.' },
+  { horizon: 'Soon', icon: Trophy, title: 'Streak rewards & team challenges', desc: 'Winter leagues, corporate team challenges, and rewards you can actually redeem.' },
+  { horizon: 'Later', icon: Languages, title: 'Multilanguage interface', desc: 'The whole app in your language — starting with Swahili and expanding from there.' },
 ];
 
 const horizonStyles: Record<string, string> = {
@@ -94,10 +94,10 @@ const horizonStyles: Record<string, string> = {
   Later: 'text-buddy-gold border-buddy-gold/30 bg-buddy-gold/10',
 };
 
-const horizonIcons: Record<string, React.ReactNode> = {
-  Near: <Smartphone size={28} className="text-buddy-green" />,
-  Soon: <Sparkles size={28} className="text-buddy-electric" />,
-  Later: <Flame size={28} className="text-buddy-gold" />,
+const horizonIconColors: Record<string, string> = {
+  Near: 'text-buddy-green',
+  Soon: 'text-buddy-electric',
+  Later: 'text-buddy-gold',
 };
 
 
@@ -395,10 +395,10 @@ export default function Landing() {
           Real requests from our community that we haven't built yet — shown honestly as planned, not shipped.
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 min-w-0 [&>div]:min-w-0">
-          {plannedFeatures.map(({ title, horizon, desc }) => (
+          {plannedFeatures.map(({ title, horizon, desc, icon: Icon }) => (
             <Card key={title} className="p-6 bg-buddy-surface">
               <div className="flex items-center justify-between mb-4">
-                {horizonIcons[horizon]}
+                <Icon size={28} className={horizonIconColors[horizon]} />
                 <span className={`text-[11px] font-semibold uppercase tracking-wide border rounded-full px-2.5 py-1 ${horizonStyles[horizon]}`}>
                   Planned · {horizon}
                 </span>

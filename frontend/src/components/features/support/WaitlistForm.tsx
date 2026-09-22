@@ -34,6 +34,7 @@ const CORPORATE_PACKAGES = [
   { value: 'branded_space', label: 'Branded gym space' },
   { value: 'sponsored_events', label: 'Sponsored events' },
   { value: 'awareness', label: 'Awareness campaigns' },
+  { value: 'other', label: 'Other' },
 ];
 const EVENT_TYPES = [
   { value: 'fitness', label: 'Fitness classes' },
@@ -41,6 +42,7 @@ const EVENT_TYPES = [
   { value: 'workshop', label: 'Workshops' },
   { value: 'social', label: 'Social meetups' },
   { value: 'wellness', label: 'Wellness retreats' },
+  { value: 'other', label: 'Other' },
 ];
 const AUDIENCE_SIZES = ['Under 50', '50–200', '200–1,000', '1,000+'];
 const PRODUCT_CATEGORIES = [
@@ -49,6 +51,7 @@ const PRODUCT_CATEGORIES = [
   { value: 'apparel', label: 'Apparel & gear' },
   { value: 'nutrition', label: 'Nutrition & meal prep' },
   { value: 'digital', label: 'Digital products' },
+  { value: 'other', label: 'Other' },
 ];
 
 export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: WaitlistInterest }) {
@@ -74,12 +77,15 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
   const [companyName, setCompanyName] = useState('');
   const [teamSize, setTeamSize] = useState(TEAM_SIZES[0]);
   const [packages, setPackages] = useState<string[]>([]);
+  const [packagesOther, setPackagesOther] = useState('');
   const [corporateMessage, setCorporateMessage] = useState('');
   // Organiser / supplier / distributor lead details (shared business name).
   const [businessName, setBusinessName] = useState('');
   const [eventTypes, setEventTypes] = useState<string[]>([]);
+  const [eventTypesOther, setEventTypesOther] = useState('');
   const [audienceSize, setAudienceSize] = useState(AUDIENCE_SIZES[0]);
   const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [categoriesOther, setCategoriesOther] = useState('');
   const [hasShop, setHasShop] = useState(false);
   const [coverage, setCoverage] = useState('');
   const [offerings, setOfferings] = useState('');
@@ -130,17 +136,21 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
           : interest === 'corporate'
             ? {
                 company_name: companyName.trim(), city: city.trim(),
-                team_size: teamSize, packages, message: corporateMessage.trim(),
+                team_size: teamSize, packages,
+                packages_other: packagesOther.trim(),
+                message: corporateMessage.trim(),
               }
             : interest === 'organiser'
               ? {
                   brand: businessName.trim(), city: city.trim(),
-                  event_types: eventTypes, audience: audienceSize,
+                  event_types: eventTypes, event_types_other: eventTypesOther.trim(),
+                  audience: audienceSize,
                 }
               : interest === 'supplier'
                 ? {
                     business: businessName.trim(), city: city.trim(),
-                    categories: productCategories, has_shop: hasShop,
+                    categories: productCategories,
+                    categories_other: categoriesOther.trim(), has_shop: hasShop,
                   }
                 : interest === 'distributor'
                   ? {
@@ -378,6 +388,16 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
               ))}
             </div>
           </div>
+          {packages.includes('other') && (
+            <Input
+              label="Please specify"
+              type="text"
+              value={packagesOther}
+              onChange={(e) => setPackagesOther(e.target.value)}
+              placeholder="What package do you have in mind?"
+              maxLength={200}
+            />
+          )}
           <div className="w-full">
             <label htmlFor="waitlist-corporate-message" className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
               Anything we should know? (optional)
@@ -449,6 +469,16 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
               ))}
             </div>
           </div>
+          {eventTypes.includes('other') && (
+            <Input
+              label="Please specify"
+              type="text"
+              value={eventTypesOther}
+              onChange={(e) => setEventTypesOther(e.target.value)}
+              placeholder="What kind of events do you run?"
+              maxLength={200}
+            />
+          )}
         </>
       )}
       {interest === 'supplier' && (
@@ -489,6 +519,16 @@ export function WaitlistForm({ initialInterest = 'user' }: { initialInterest?: W
               ))}
             </div>
           </div>
+          {productCategories.includes('other') && (
+            <Input
+              label="Please specify"
+              type="text"
+              value={categoriesOther}
+              onChange={(e) => setCategoriesOther(e.target.value)}
+              placeholder="What do you supply?"
+              maxLength={200}
+            />
+          )}
           <label className="flex items-start gap-2 text-sm text-buddy-text-secondary cursor-pointer">
             <input type="checkbox" checked={hasShop} onChange={(e) => setHasShop(e.target.checked)} className="mt-1 rounded accent-buddy-green" />
             <span>We have a physical shop or outlet.</span>

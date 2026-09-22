@@ -177,4 +177,42 @@ describe('WaitlistForm', () => {
       }),
     );
   });
+
+  it('submits organiser Other category with explanation', async () => {
+    mockJoin.mockResolvedValue({
+      success: true, data: { email: 'crew@run.club' },
+      message: 'You joined the waitlist.', errors: null, pagination: null,
+    });
+    render(<WaitlistForm initialInterest="organiser" />);
+    fireEvent.change(screen.getByPlaceholderText('Nairobi Run Club'), {
+      target: { value: 'Run Club' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('Nairobi'), {
+      target: { value: 'Nairobi' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
+      target: { value: 'crew@run.club' },
+    });
+    fireEvent.change(screen.getByLabelText('Country'), {
+      target: { value: 'Kenya' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Competitions' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Other' }));
+    fireEvent.change(screen.getByPlaceholderText('What kind of events do you run?'), {
+      target: { value: 'Trail series' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Notify me' }));
+    await waitFor(() => {
+      expect(screen.getByText("You're on the list")).toBeDefined();
+    });
+    expect(mockJoin).toHaveBeenCalledWith(
+      expect.objectContaining({
+        interest: 'organiser',
+        metadata: expect.objectContaining({
+          brand: 'Run Club', event_types: ['competition', 'other'],
+          event_types_other: 'Trail series',
+        }),
+      }),
+    );
+  });
 });
