@@ -78,3 +78,12 @@ frontend/tsconfig.tsbuildinfo
 frontend/tsconfig.node.tsbuildinfo
 backend/coverage.xml
 backend/.coverage
+
+# ── Confidential business documents (NEVER track or commit) ─────────
+# Cofounder agreements, equity terms, and company strategy are private.
+docs/cofounders/
+docs/bud_strategy_2026.md
+docs/Bud_Strategy_2026.docx
+docs/Bud_Strategy_2026.odt
+docs/business_model_strategy.md
+docs/security-posture-*.md
