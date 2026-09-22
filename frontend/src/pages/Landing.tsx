@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { isReducedMotionEnabled } from '@/lib/reducedMotion';
-import { APP_DOWNLOAD_URLS, APP_URL } from '@/config/downloads';
+import { APP_URL } from '@/config/downloads';
 import { FUNDRAISER_URL, PLEDGE_FORM_URL, GYM_SUITE_FORM_URL, TRAINER_INTAKE_FORM_URL, PARTNERSHIP_FORM_URL } from '@/config/support';
 import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
@@ -141,6 +141,7 @@ export default function Landing() {
   const [installWaitlistOpen, setInstallWaitlistOpen] = useState(false);
   const { isMobile, isTablet, isDesktop, os } = useDeviceType();
   const [canInstall, setCanInstall] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
   const deferredPrompt = useRef<{ prompt: () => void } | null>(null);
 
   const installPwa = async () => {
@@ -148,17 +149,36 @@ export default function Landing() {
     if (prompt) {
       prompt.prompt();
       deferredPrompt.current = null;
+      setCanInstall(false);
     }
   };
 
   useEffect(() => {
-    const handler = (e: Event) => {
+    const promptHandler = (e: Event) => {
       e.preventDefault();
       deferredPrompt.current = e as unknown as { prompt: () => void };
       setCanInstall(true);
     };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    const installedHandler = () => {
+      setIsInstalled(true);
+      setCanInstall(false);
+      deferredPrompt.current = null;
+    };
+    // Already running as the installed app (Android standalone or iOS home-screen).
+    try {
+      if (
+        window.matchMedia('(display-mode: standalone)').matches
+        || (window.navigator as unknown as { standalone?: boolean }).standalone === true
+      ) {
+        setIsInstalled(true);
+      }
+    } catch { /* matchMedia unavailable — ignore */ }
+    window.addEventListener('beforeinstallprompt', promptHandler);
+    window.addEventListener('appinstalled', installedHandler);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', promptHandler);
+      window.removeEventListener('appinstalled', installedHandler);
+    };
   }, []);
 
   // Auto-rotate the "Everything in one place" tabs every 5s. Honours the
@@ -555,23 +575,42 @@ export default function Landing() {
             </Button>
           </div>
           <div className="flex gap-4 justify-center flex-wrap">
-            {isMobile && os === 'android' && (
-              <a href={APP_DOWNLOAD_URLS.androidApk} className="inline-flex items-center gap-3 bg-buddy-black rounded-2xl px-6 py-4 hover:bg-buddy-surface-raised transition-colors">
-                <Play size={24} className="text-buddy-text-secondary" />
-                <div className="text-left"><p className="text-xs text-buddy-text-secondary">Get it on</p><p className="font-heading font-semibold">Google Play</p></div>
-              </a>
-            )}
-            {isMobile && os === 'ios' && (
-              <a href={APP_DOWNLOAD_URLS.appStore} className="inline-flex items-center gap-3 bg-buddy-black rounded-2xl px-6 py-4 hover:bg-buddy-surface-raised transition-colors">
-                <Smartphone size={24} className="text-buddy-text-secondary" />
-                <div className="text-left"><p className="text-xs text-buddy-text-secondary">Download on the</p><p className="font-heading font-semibold">App Store</p></div>
-              </a>
-            )}
-            {(isMobile || isTablet) && os !== 'android' && os !== 'ios' && (
-              <a href={APP_DOWNLOAD_URLS.androidApk} className="inline-flex items-center gap-3 bg-buddy-black rounded-2xl px-6 py-4 hover:bg-buddy-surface-raised transition-colors">
-                <Play size={24} className="text-buddy-text-secondary" />
-                <div className="text-left"><p className="text-xs text-buddy-text-secondary">Get it on</p><p className="font-heading font-semibold">Google Play</p></div>
-              </a>
+            {(isMobile || isTablet) && (
+              <div className="flex flex-col items-center gap-4 w-full max-w-md">
+                {isInstalled ? (
+                  <a href={APP_URL} className="inline-flex items-center gap-3 bg-buddy-green text-buddy-black rounded-2xl px-6 py-4 hover:brightness-110 transition-all w-full justify-center font-heading font-semibold">
+                    <Smartphone size={24} />
+                    <div className="text-left"><p className="text-xs opacity-70">Installed</p><p className="font-heading font-semibold">Open BuddyUp app</p></div>
+                  </a>
+                ) : canInstall ? (
+                  <button
+                    type="button"
+                    onClick={installPwa}
+                    className="inline-flex items-center gap-3 bg-buddy-green text-buddy-black rounded-2xl px-6 py-4 hover:brightness-110 transition-all w-full justify-center"
+                  >
+                    <Download size={24} />
+                    <div className="text-left"><p className="text-xs opacity-70">Free · under a minute</p><p className="font-heading font-semibold">Install BuddyUp app</p></div>
+                  </button>
+                ) : os === 'ios' ? (
+                  <Card className="p-5 bg-buddy-black text-left w-full">
+                    <p className="font-heading font-semibold text-sm mb-2">Install in 3 taps</p>
+                    <ol className="text-sm text-buddy-text-secondary space-y-1.5 list-decimal list-inside">
+                      <li>Tap the <span className="text-buddy-text-primary font-medium">Share</span> button below</li>
+                      <li>Choose <span className="text-buddy-text-primary font-medium">Add to Home Screen</span></li>
+                      <li>Tap <span className="text-buddy-text-primary font-medium">Add</span> — find BuddyUp on your home screen</li>
+                    </ol>
+                  </Card>
+                ) : (
+                  <Card className="p-5 bg-buddy-black text-left w-full">
+                    <p className="font-heading font-semibold text-sm mb-2">Install in 3 taps</p>
+                    <ol className="text-sm text-buddy-text-secondary space-y-1.5 list-decimal list-inside">
+                      <li>Tap the <span className="text-buddy-text-primary font-medium">⋮ menu</span> (top right)</li>
+                      <li>Choose <span className="text-buddy-text-primary font-medium">Install app</span> or <span className="text-buddy-text-primary font-medium">Add to Home screen</span></li>
+                      <li>Confirm — find BuddyUp on your home screen</li>
+                    </ol>
+                  </Card>
+                )}
+              </div>
             )}
             {isDesktop && (
               <div className="flex flex-col items-center gap-4 w-full max-w-md">
