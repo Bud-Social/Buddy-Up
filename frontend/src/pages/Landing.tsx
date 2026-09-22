@@ -615,25 +615,72 @@ export default function Landing() {
             </p>
             <div className="flex flex-col gap-3 mt-auto">
               {FUNDRAISER_URL ? (
-                <Button onClick={() => setSupportOpen(true)} className="w-full">
-                  <Heart size={16} /> Donate
-                </Button>
+                <button
+                  type="button"
+                  onClick={() => setSupportOpen(true)}
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-surface-raised p-4 text-left hover:bg-buddy-surface-raised transition-colors"
+                >
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-green/15 flex items-center justify-center">
+                    <Heart size={18} className="text-buddy-green" />
+                  </span>
+                  <span>
+                    <span className="block font-heading font-semibold text-sm">Donate</span>
+                    <span className="block text-xs text-buddy-text-secondary mt-0.5">
+                      Chip in to keep BuddyUp free for everyone.
+                    </span>
+                  </span>
+                </button>
               ) : null}
               {PLEDGE_FORM_URL ? (
-                <Button onClick={() => setSupportOpen(true)} variant="outline" className="w-full">
-                  <ClipboardList size={16} /> Pledge funding
-                </Button>
+                <button
+                  type="button"
+                  onClick={() => setSupportOpen(true)}
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-surface-raised p-4 text-left hover:bg-buddy-surface-raised transition-colors"
+                >
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-green/15 flex items-center justify-center">
+                    <ClipboardList size={18} className="text-buddy-green" />
+                  </span>
+                  <span>
+                    <span className="block font-heading font-semibold text-sm">Pledge funding</span>
+                    <span className="block text-xs text-buddy-text-secondary mt-0.5">
+                      Pledge now — we&apos;ll be in touch about next steps.
+                    </span>
+                  </span>
+                </button>
               ) : null}
               {PARTNERSHIP_FORM_URL ? (
-                <a href={PARTNERSHIP_FORM_URL} target="_blank" rel="noreferrer noopener" className="w-full">
-                  <Button variant="outline" className="w-full border-buddy-gold/50 text-buddy-gold hover:bg-buddy-gold/10">
-                    <Briefcase size={16} /> Partnership proposal for brands
-                  </Button>
+                <a
+                  href={PARTNERSHIP_FORM_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-gold/40 p-4 text-left hover:bg-buddy-gold/10 transition-colors"
+                >
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-gold/15 flex items-center justify-center">
+                    <Briefcase size={18} className="text-buddy-gold" />
+                  </span>
+                  <span>
+                    <span className="block font-heading font-semibold text-sm">Partnership proposal for brands</span>
+                    <span className="block text-xs text-buddy-text-secondary mt-0.5">
+                      Sponsor challenges, events, and gym spaces.
+                    </span>
+                  </span>
                 </a>
               ) : (
-                <Button onClick={() => setSupportOpen(true)} variant="outline" className="w-full border-buddy-gold/50 text-buddy-gold hover:bg-buddy-gold/10">
-                  <Briefcase size={16} /> Partnership proposal for brands
-                </Button>
+                <button
+                  type="button"
+                  onClick={() => setSupportOpen(true)}
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-gold/40 p-4 text-left hover:bg-buddy-gold/10 transition-colors"
+                >
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-gold/15 flex items-center justify-center">
+                    <Briefcase size={18} className="text-buddy-gold" />
+                  </span>
+                  <span>
+                    <span className="block font-heading font-semibold text-sm">Partnership proposal for brands</span>
+                    <span className="block text-xs text-buddy-text-secondary mt-0.5">
+                      Sponsor challenges, events, and gym spaces.
+                    </span>
+                  </span>
+                </button>
               )}
               {!FUNDRAISER_URL && !PLEDGE_FORM_URL && !PARTNERSHIP_FORM_URL ? (
                 <Button onClick={() => setSupportOpen(true)} className="w-full">
