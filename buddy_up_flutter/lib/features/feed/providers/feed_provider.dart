@@ -77,7 +77,6 @@ class FeedNotifier extends Notifier<FeedState> {
       final cacheKey = 'feed_$t';
       final raw = await withCache(ref as dynamic, cacheKey, () => _repository.getFeed(
         tab: t,
-        excludePostTypes: t == 'for_you' ? 'meal' : null,
       ));
       final data = raw['data'];
       final pagination = raw['pagination'] as Map<String, dynamic>?;
@@ -99,7 +98,6 @@ class FeedNotifier extends Notifier<FeedState> {
       final raw = await _repository.getFeed(
         tab: state.activeTab,
         cursor: state.cursor,
-        excludePostTypes: state.activeTab == 'for_you' ? 'meal' : null,
       );
       final data = raw['data'];
       final pagination = raw['pagination'] as Map<String, dynamic>?;

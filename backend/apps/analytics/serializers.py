@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ActivityRecord, WorkoutLog, MealLog, BodyMetric
+from .models import ActivityRecord, WorkoutLog, BodyMetric
 
 
 class ActivityRecordSerializer(serializers.ModelSerializer):
@@ -53,23 +53,6 @@ class WorkoutLogSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         for field in ('sets', 'reps', 'duration_minutes'):
-            if attrs.get(field) is not None and attrs[field] < 0:
-                raise serializers.ValidationError({field: 'Value cannot be negative.'})
-        return attrs
-
-
-class MealLogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MealLog
-        fields = [
-            'id', 'meal_type', 'source_event_id', 'provenance', 'food_name', 'description', 'calories',
-            'protein_g', 'carbs_g', 'fat_g', 'photo_url', 'source',
-            'logged_at', 'created_at', 'updated_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
-
-    def validate(self, attrs):
-        for field in ('calories', 'protein_g', 'carbs_g', 'fat_g'):
             if attrs.get(field) is not None and attrs[field] < 0:
                 raise serializers.ValidationError({field: 'Value cannot be negative.'})
         return attrs

@@ -10,10 +10,10 @@ from rest_framework import views, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
-from .models import ActivityRecord, WorkoutLog, MealLog, BodyMetric, AnalyticsReport
+from .models import ActivityRecord, WorkoutLog, BodyMetric, AnalyticsReport
 from .serializers import (
     ActivityRecordSerializer, WorkoutLogSerializer,
-    MealLogSerializer, BodyMetricSerializer,
+    BodyMetricSerializer,
 )
 from . import engine
 from . import report as report_service
@@ -105,45 +105,6 @@ class WorkoutLogView(BaseOwnedView):
         }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
 
-class MealLogView(BaseOwnedView):
-    model = MealLog
-    serializer_class = MealLogSerializer
-    date_field = 'logged_at'
-    parser_classes = (MultiPartParser, FormParser)
-
-    def post(self, request):
-        data = request.data.copy()
-        photo = request.FILES.get('photo')
-        if photo:
-            ext = os.path.splitext(photo.name)[1].lower() or '.jpg'
-            filename = f'meal_snaps/{uuid.uuid4().hex}{ext}'
-            saved = default_storage.save(filename, ContentFile(photo.read()))
-            data['photo_url'] = request.build_absolute_uri(default_storage.url(saved))
-
-        # Auto-analyze the meal photo if nutrition wasn't provided manually.
-        if not data.get('calories') and photo:
-            photo.seek(0)
-            analyzed = engine.analyze_meal_photo(request, photo)
-            if analyzed:
-                for key in ('calories', 'protein_g', 'carbs_g', 'fat_g'):
-                    if not data.get(key) and analyzed.get(key) is not None:
-                        data[key] = analyzed[key]
-                if not data.get('food_name') and analyzed.get('food_name'):
-                    data['food_name'] = analyzed['food_name']
-
-        serializer = MealLogSerializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        event_id = serializer.validated_data.get('source_event_id')
-        obj, created = MealLog.objects.get_or_create(
-            user=request.user.profile, source_event_id=event_id,
-            defaults=serializer.validated_data,
-        ) if event_id else (serializer.save(user=request.user.profile), True)
-        return Response({
-            'success': True, 'data': MealLogSerializer(obj).data,
-            'message': 'Meal logged.', 'errors': None, 'pagination': None,
-        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
-
-
 class BodyMetricView(BaseOwnedView):
     model = BodyMetric
     serializer_class = BodyMetricSerializer
@@ -207,35 +168,6 @@ class BodyReadWeightView(views.APIView):
         return Response({
             'success': True, 'data': reading,
             'message': 'Weight reading complete.', 'errors': None, 'pagination': None,
-        })
-
-
-class MealAnalyzeView(views.APIView):
-    """Proxies a meal photo to the AI service and returns nutrition details."""
-
-    permission_classes = [permissions.IsAuthenticated]
-    parser_classes = (MultiPartParser, FormParser)
-
-    def post(self, request):
-        photo = request.FILES.get('photo')
-        if not photo:
-            return Response({
-                'success': False, 'data': None,
-                'message': 'No meal photo provided.',
-                'errors': 'photo field is required.', 'pagination': None,
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        analyzed = engine.analyze_meal_photo(request, photo)
-        if analyzed is None:
-            return Response({
-                'success': False, 'data': None,
-                'message': 'Meal analysis service unavailable.',
-                'errors': None, 'pagination': None,
-            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-        return Response({
-            'success': True, 'data': analyzed,
-            'message': 'Meal analysis complete.', 'errors': None, 'pagination': None,
         })
 
 
@@ -390,8 +322,7 @@ class AnalyticsReportShareView(views.APIView):
             body = (
                 f"📊 My {period} BuddyUp progress report — "
                 f"{summary['workouts']['count']} workouts, "
-                f"{summary['activity']['total_distance_km']}km walked/run, "
-                f"{summary['nutrition']['total_calories']:.0f} kcal logged."
+                f"{summary['activity']['total_distance_km']}km walked/run."
             )
 
         requested_visibility = request.data.get('visibility', 'public')
@@ -400,10 +331,9 @@ class AnalyticsReportShareView(views.APIView):
 
         post = Post.objects.create(
             author=profile,
-            post_type='progress',
+            post_type='photo',
             body=body,
             media_urls=[image_url] if image_url else [],
-            progress_data={'report_period': period, 'summary': summary},
             visibility=requested_visibility,
         )
 

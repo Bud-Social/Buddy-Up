@@ -1,7 +1,7 @@
 """Aggregation engine for the comprehensive user analytics feature.
 
 Pulls from dedicated tracking models plus existing platform data
-(feed workout/meal posts, live attendance, wallet transactions,
+(feed workout posts, live attendance, wallet transactions,
 marketplace/session purchases) to produce per-category summaries and a
 single comprehensive report payload.
 """
@@ -12,7 +12,7 @@ from datetime import timedelta
 
 from django.db.models import Sum, Avg, Count
 from django.utils import timezone
-from .models import ActivityRecord, WorkoutLog, MealLog, BodyMetric
+from .models import ActivityRecord, WorkoutLog, BodyMetric
 from apps.feed.models import Post
 from apps.lives.models import LiveAttendee
 from apps.wallet.models import ArtifactTransaction
@@ -152,88 +152,13 @@ def summarize_activity(profile, cutoff):
     }
 
 
-def summarize_nutrition(profile, cutoff):
-    """Meal intake from the tracker + legacy feed meal posts."""
-    from_post = _period_filter(
-        Post.objects.filter(author=profile, post_type='meal', meal_data__isnull=False),
-        cutoff,
-    )
-    qs = MealLog.objects.filter(user=profile)
-    if cutoff:
-        qs = qs.filter(logged_at__gte=cutoff)
-
-    total_meals = qs.count() + from_post.count()
-    total_calories = qs.aggregate(c=Sum('calories'))['c'] or 0.0
-    total_protein = qs.aggregate(p=Sum('protein_g'))['p'] or 0.0
-    total_carbs = qs.aggregate(c=Sum('carbs_g'))['c'] or 0.0
-    total_fat = qs.aggregate(f=Sum('fat_g'))['f'] or 0.0
-
-    for p in from_post:
-        data = _as_dict(p.meal_data)
-        total_calories += (data.get('calories') or 0)
-
-    by_type = list(
-        qs.values('meal_type').annotate(
-            count=Count('id'),
-            calories=Sum('calories'),
-        ).order_by('-count')
-    )
-    for entry in by_type:
-        entry['label'] = dict(MealLog.MEAL_TYPES).get(entry['meal_type'], entry['meal_type'])
-        entry['calories'] = round(entry['calories'] or 0, 1)
-
-    avg_daily = round(total_calories / 7, 1) if cutoff and cutoff > timezone.now() - timedelta(days=14) and total_meals else None
-
-    recent = list(
-        qs.order_by('-logged_at')[:10].values(
-            'id', 'meal_type', 'food_name', 'description', 'calories',
-            'protein_g', 'carbs_g', 'fat_g', 'photo_url', 'logged_at',
-        )
-    )
-    return {
-        'count': total_meals,
-        'total_calories': round(total_calories, 1),
-        'total_protein_g': round(total_protein, 1),
-        'total_carbs_g': round(total_carbs, 1),
-        'total_fat_g': round(total_fat, 1),
-        'by_type': by_type,
-        'avg_daily_calories': avg_daily,
-        'recent': recent,
-    }
-
-
 def summarize_body(profile, cutoff=None):
-    """Weight / body-composition progress, including weights shared in
-    progress-type feed posts (progress_data.weight_kg)."""
+    """Weight / body-composition progress from tracked body metrics."""
     metrics = BodyMetric.objects.filter(user=profile).order_by('measured_at')
     first = metrics.first()
     latest = metrics.last()
 
-    # Feed progress posts carry the user's shared weight — fold them into the
-    # series so "share progress" posts are first-class body data.
-    progress_points = []
-    progress_posts = _period_filter(
-        Post.objects.filter(author=profile, post_type='progress', progress_data__isnull=False),
-        cutoff,
-    ).order_by('created_at').values('created_at', 'progress_data')
-    for p in progress_posts:
-        data = p.get('progress_data') or {}
-        weight = data.get('weight_kg') or data.get('weight') or (data.get('summary') or {}).get('weight_kg')
-        try:
-            weight = float(weight) if weight is not None else None
-        except (TypeError, ValueError):
-            weight = None
-        if weight and weight > 0:
-            progress_points.append({
-                'weight_kg': weight,
-                'measured_at': p['created_at'],
-                'source': 'feed_progress_post',
-            })
-
     series = list(metrics.values('id', 'weight_kg', 'body_fat_pct', 'measured_at', 'photo_url', 'scale_photo_url'))
-    series += [{'id': None, 'weight_kg': pp['weight_kg'], 'body_fat_pct': None,
-                'measured_at': pp['measured_at'], 'photo_url': None,
-                'scale_photo_url': None} for pp in progress_points]
     series.sort(key=lambda s: s['measured_at'])
 
     weighted = [s for s in series if s.get('weight_kg')]
@@ -242,7 +167,7 @@ def summarize_body(profile, cutoff=None):
 
     weight_change = round((latest['weight_kg'] - first['weight_kg']), 1) if first and latest else None
     return {
-        'count': metrics.count() + len(progress_points),
+        'count': metrics.count(),
         'start_weight_kg': (first or {}).get('weight_kg'),
         'latest_weight_kg': (latest or {}).get('weight_kg'),
         'weight_change_kg': weight_change,
@@ -337,7 +262,6 @@ def build_summary(profile, period='all'):
     cutoff = period_cutoff(period)
     workouts = summarize_workouts(profile, cutoff)
     activity = summarize_activity(profile, cutoff)
-    nutrition = summarize_nutrition(profile, cutoff)
     body = summarize_body(profile)
     lives = summarize_lives(profile, cutoff)
     spending = summarize_spending(profile, cutoff)
@@ -353,7 +277,6 @@ def build_summary(profile, period='all'):
         },
         'workouts': workouts,
         'activity': activity,
-        'nutrition': nutrition,
         'body': body,
         'lives': lives,
         'spending': spending,
@@ -392,34 +315,5 @@ def read_weight_from_photo(request, photo) -> dict | None:
         'unit': data.get('unit', 'kg'),
         'confidence': data.get('confidence', 0.0),
         'method': data.get('method', ''),
-        'safety_notice': 'AI output is informational only, not medical advice.',
-    }
-
-
-def analyze_meal_photo(request, photo) -> dict | None:
-    """Send a meal photo to the AI service and extract nutrition details."""
-    data = _call_ai_service(
-        '/api/v1/food/recognize',
-        files={'file': (photo.name, photo.read(), photo.content_type or 'image/jpeg')},
-    )
-    if data is None or not data.get('items'):
-        return None
-    from apps.ai.audit import audit_ai_call
-    audit_ai_call('meal_analyze', input_data={'filename': photo.name}, output_data=data,
-                  metadata={k: data.get(k) for k in ('confidence', 'correction', 'fallback_used', 'fallback_reason', 'cost_usd', 'latency_ms')})
-
-    top = data['items'][0]
-    nutrition = top.get('nutrition', {}) or {}
-    return {
-        'food_name': top.get('item'),
-        'calories': round(float(data.get('total_calories', nutrition.get('calories', 0) or 0)), 1),
-        'protein_g': round(float(data.get('total_protein', nutrition.get('protein', 0) or 0)), 1),
-        'carbs_g': round(float(data.get('total_carbs', nutrition.get('carbs', 0) or 0)), 1),
-        'fat_g': round(float(data.get('total_fat', nutrition.get('fat', 0) or 0)), 1),
-        'confidence': data.get('confidence'),
-        'correction': {},
-        'fallback_used': bool(data.get('fallback_used', False)),
-        'cost_usd': data.get('cost_usd'),
-        'latency_ms': data.get('latency_ms'),
         'safety_notice': 'AI output is informational only, not medical advice.',
     }

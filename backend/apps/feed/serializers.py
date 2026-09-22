@@ -149,7 +149,6 @@ class PostSerializer(serializers.ModelSerializer):
         'id', 'post_type', 'body', 'is_anonymous', 'gym_tag_id', 'gym_tag_name',
         'visibility', 'is_repost', 'original_post_id', 'quote_body',
         'location_label', 'location_lat', 'location_lng', 'workout_log_data',
-        'meal_data', 'progress_data',
         'media_urls', 'media', 'tags', 'view_count', 'share_count', 'moderation_status',
         'content_rating', 'comments_disabled',
         'author_data', 'reaction_counts', 'user_reaction',
@@ -244,8 +243,6 @@ class PostSerializer(serializers.ModelSerializer):
                 'location_label': orig.location_label,
                 'location_lat': orig.location_lat,
                 'location_lng': orig.location_lng,
-                'meal_data': orig.meal_data,
-                'progress_data': orig.progress_data,
                 'workout_log_data': orig.workout_log_data,
                 'quote_body': orig.quote_body,
                 'gym_tag_name': orig.gym_tag.name if orig.gym_tag else None,
@@ -333,7 +330,6 @@ class PostCreateSerializer(serializers.ModelSerializer):
         fields = [
             'post_type', 'body', 'is_anonymous', 'gym_tag', 'visibility',
             'location_label', 'location_lat', 'location_lng', 'workout_log_data',
-            'meal_data', 'progress_data',
             'media_urls', 'tags', 'content_rating', 'comments_disabled',
         ]
 
@@ -357,7 +353,7 @@ class DraftSerializer(serializers.ModelSerializer):
             'location_label', 'location_lat', 'location_lng',
             'media_urls', 'tags', 'poll_question',
             'poll_options', 'poll_allow_multiple', 'poll_min_selections',
-            'poll_max_selections', 'meal_data', 'progress_data',
+            'poll_max_selections',
             'mentioned_user_ids', 'is_anonymous', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

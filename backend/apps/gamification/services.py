@@ -13,7 +13,7 @@ from django.db.models.functions import Coalesce
 from django.db import models as db_models
 from django.utils import timezone
 
-from apps.analytics.models import ActivityRecord, WorkoutLog, MealLog, BodyMetric
+from apps.analytics.models import ActivityRecord, WorkoutLog, BodyMetric
 from apps.feed.models import Post
 from apps.lives.models import LiveAttendee
 
@@ -50,7 +50,6 @@ def compute_metrics(profile, since=None) -> dict:
 
     activities = windowed(ActivityRecord.objects.filter(user=profile), 'started_at')
     workouts = windowed(WorkoutLog.objects.filter(user=profile), 'performed_at')
-    meals = windowed(MealLog.objects.filter(user=profile), 'created_at')
 
     total_distance_m = activities.aggregate(v=Coalesce(Sum('distance_meters'), 0.0))['v'] or 0.0
     total_duration_s = activities.aggregate(v=Coalesce(Sum('duration_seconds'), 0))['v'] or 0
@@ -62,7 +61,6 @@ def compute_metrics(profile, since=None) -> dict:
         'activities_duration_hours': round(total_duration_s / 3600.0, 3),
         'activities_steps': int(total_steps),
         'workouts_logged': workouts.count(),
-        'meals_logged': meals.count(),
         'body_metrics_logged': BodyMetric.objects.filter(user=profile).count(),
         'posts_created': windowed(Post.objects.filter(author=profile), 'created_at').count(),
         'lives_attended': LiveAttendee.objects.filter(user=profile).count(),
@@ -75,7 +73,6 @@ METRIC_LABELS = {
     'activities_duration_hours': 'hours active',
     'activities_steps': 'steps tracked',
     'workouts_logged': 'workouts logged',
-    'meals_logged': 'meals logged',
     'body_metrics_logged': 'body check-ins',
     'posts_created': 'posts created',
     'lives_attended': 'lives attended',

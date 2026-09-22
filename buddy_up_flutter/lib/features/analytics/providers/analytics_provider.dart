@@ -125,40 +125,6 @@ class AnalyticsLogNotifier extends Notifier<AnalyticsHistoryState> {
     }
   }
 
-  Future<Map<String, dynamic>?> logMeal(Map<String, dynamic> data) async {
-    try {
-      final raw = await _repository.createMeal(data);
-      return raw['data'] as Map<String, dynamic>?;
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
-      return null;
-    }
-  }
-
-  Future<Map<String, dynamic>?> logMealWithPhoto(
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final raw = await _repository.createMealWithPhoto(data);
-      return raw['data'] as Map<String, dynamic>?;
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
-      return null;
-    }
-  }
-
-  Future<Map<String, dynamic>?> analyzeMealPhoto(
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final raw = await _repository.analyzeMealPhoto(data);
-      return raw['data'] as Map<String, dynamic>?;
-    } catch (e) {
-      state = state.copyWith(error: e.toString());
-      return null;
-    }
-  }
-
   Future<Map<String, dynamic>?> logBodyMetric(Map<String, dynamic> data) async {
     try {
       final raw = await _repository.createBodyMetric(data);

@@ -7,7 +7,6 @@ import '../providers/analytics_provider.dart';
 import 'overview_tab.dart';
 import 'workouts_tab.dart';
 import 'activity_tab.dart';
-import 'meals_tab.dart';
 import 'body_tab.dart';
 import 'report_tab.dart';
 
@@ -23,7 +22,6 @@ const List<({String key, String label, IconData icon})> _tabs = [
   (key: 'overview', label: 'Overview', icon: Icons.dashboard_outlined),
   (key: 'workouts', label: 'Workouts', icon: Icons.fitness_center),
   (key: 'activity', label: 'Activity', icon: Icons.directions_run),
-  (key: 'meals', label: 'Nutrition', icon: Icons.restaurant),
   (key: 'body', label: 'Body', icon: Icons.monitor_weight_outlined),
   (key: 'report', label: 'Report', icon: Icons.bar_chart),
 ];
@@ -134,7 +132,6 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen>
                 OverviewTab(summary: state.summary),
                 WorkoutsTab(summary: state.summary?.workouts),
                 ActivityTab(summary: state.summary?.activity),
-                MealsTab(summary: state.summary?.nutrition),
                 BodyTab(summary: state.summary?.body),
                 ReportTab(period: period),
               ],

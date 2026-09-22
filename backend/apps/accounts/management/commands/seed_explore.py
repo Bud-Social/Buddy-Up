@@ -110,7 +110,7 @@ COMMENT_TEXTS = [
 
 REACTION_TYPES = ['fire', 'heart', 'clap', 'muscle', 'strength', 'applause', 'love']
 
-POST_TYPES = ['text', 'photo', 'workout_log', 'meal', 'progress', 'moment', 'poll']
+POST_TYPES = ['text', 'photo', 'workout_log', 'moment', 'poll']
 
 GENDER_PRONOUNS = ['she/her', 'he/him', 'they/them', '']
 

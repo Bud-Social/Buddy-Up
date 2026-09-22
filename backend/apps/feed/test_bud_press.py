@@ -1061,16 +1061,17 @@ class HideMuteTests(TestCase):
         _client_for(self.viewer).delete(self.hide_url)
         self.assertIn(str(self.post.id), self._feed_ids(self.viewer))
 
-    def test_hidden_post_absent_from_meals_tab(self):
-        meal = Post.objects.create(
-            author=self.author.profile, post_type='meal', body='Lunch',
+    def test_hidden_post_absent_from_videos_tab(self):
+        clip = Post.objects.create(
+            author=self.author.profile, post_type='short_video', body='Lunch clip',
+            media_urls=['https://cdn.example.com/media/clips/lunch.mp4'],
         )
         viewer_client = _client_for(self.viewer)
-        before = viewer_client.get('/api/v1/feed/', {'tab': 'meals'})
-        self.assertIn(str(meal.id), {p['id'] for p in before.data['data']})
-        viewer_client.post(f'/api/v1/feed/{meal.id}/hide/')
-        after = viewer_client.get('/api/v1/feed/', {'tab': 'meals'})
-        self.assertNotIn(str(meal.id), {p['id'] for p in after.data['data']})
+        before = viewer_client.get('/api/v1/feed/', {'tab': 'videos'})
+        self.assertIn(str(clip.id), {p['id'] for p in before.data['data']})
+        viewer_client.post(f'/api/v1/feed/{clip.id}/hide/')
+        after = viewer_client.get('/api/v1/feed/', {'tab': 'videos'})
+        self.assertNotIn(str(clip.id), {p['id'] for p in after.data['data']})
 
     def test_muted_author_absent_from_feed(self):
         self.assertIn(str(self.post.id), self._feed_ids(self.viewer))

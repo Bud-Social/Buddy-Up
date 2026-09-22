@@ -554,14 +554,6 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
             ),
           ),
           GoRoute(
-            path: '/feed/meals',
-            builder: (_, _) => const FeedScreen(initialTab: 'meals'),
-          ),
-          GoRoute(
-            path: '/feed/progress',
-            builder: (_, _) => const FeedScreen(initialTab: 'progress'),
-          ),
-          GoRoute(
             path: '/feed/communities',
             builder: (_, _) => const FeedScreen(initialTab: 'communities'),
           ),

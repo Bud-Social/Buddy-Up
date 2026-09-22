@@ -22,10 +22,6 @@ void main() {
     expect(summary.workouts.totalVolume, greaterThanOrEqualTo(0));
     expect(summary.workouts.mostTrained, isNotNull);
     expect(summary.activity.totalDistanceKm, greaterThanOrEqualTo(0));
-    expect(summary.nutrition.totalCalories, greaterThanOrEqualTo(0));
-    expect(summary.nutrition.totalProteinG, greaterThanOrEqualTo(0));
-    expect(summary.nutrition.totalCarbsG, greaterThanOrEqualTo(0));
-    expect(summary.nutrition.totalFatG, greaterThanOrEqualTo(0));
     expect(summary.body.startWeightKg, greaterThanOrEqualTo(0));
     expect(summary.body.latestWeightKg, greaterThanOrEqualTo(0));
     expect(summary.spending.giftsSent.category, isNotNull);

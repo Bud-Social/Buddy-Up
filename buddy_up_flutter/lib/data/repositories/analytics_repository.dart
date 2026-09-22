@@ -34,27 +34,6 @@ abstract class AnalyticsRepository {
   @DELETE('/analytics/workouts/{id}/')
   Future<void> deleteWorkout(@Path('id') String id);
 
-  @GET('/analytics/meals/')
-  Future<dynamic> getMeals();
-
-  @POST('/analytics/meals/')
-  Future<dynamic> createMeal(@Body() Map<String, dynamic> data);
-
-  @POST('/analytics/meals/')
-  @MultiPart()
-  Future<dynamic> createMealWithPhoto(
-    @Part() Map<String, dynamic> data,
-  );
-
-  @POST('/analytics/meals/analyze/')
-  @MultiPart()
-  Future<dynamic> analyzeMealPhoto(
-    @Part() Map<String, dynamic> data,
-  );
-
-  @DELETE('/analytics/meals/{id}/')
-  Future<void> deleteMeal(@Path('id') String id);
-
   @GET('/analytics/body/')
   Future<dynamic> getBodyMetrics();
 

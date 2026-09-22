@@ -1717,592 +1717,6 @@ as List<ActivityRecent>,
 
 
 /// @nodoc
-mixin _$MealRecent {
-
- String get id;@JsonKey(name: 'meal_type') String get mealType;@JsonKey(name: 'food_name') String get foodName; String get description; double? get calories;@JsonKey(name: 'protein_g') double? get proteinG;@JsonKey(name: 'carbs_g') double? get carbsG;@JsonKey(name: 'fat_g') double? get fatG;@JsonKey(name: 'photo_url') String get photoUrl;@JsonKey(name: 'logged_at') String? get loggedAt;
-/// Create a copy of MealRecent
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$MealRecentCopyWith<MealRecent> get copyWith => _$MealRecentCopyWithImpl<MealRecent>(this as MealRecent, _$identity);
-
-  /// Serializes this MealRecent to a JSON map.
-  Map<String, dynamic> toJson();
-
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MealRecent&&(identical(other.id, id) || other.id == id)&&(identical(other.mealType, mealType) || other.mealType == mealType)&&(identical(other.foodName, foodName) || other.foodName == foodName)&&(identical(other.description, description) || other.description == description)&&(identical(other.calories, calories) || other.calories == calories)&&(identical(other.proteinG, proteinG) || other.proteinG == proteinG)&&(identical(other.carbsG, carbsG) || other.carbsG == carbsG)&&(identical(other.fatG, fatG) || other.fatG == fatG)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.loggedAt, loggedAt) || other.loggedAt == loggedAt));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,id,mealType,foodName,description,calories,proteinG,carbsG,fatG,photoUrl,loggedAt);
-
-@override
-String toString() {
-  return 'MealRecent(id: $id, mealType: $mealType, foodName: $foodName, description: $description, calories: $calories, proteinG: $proteinG, carbsG: $carbsG, fatG: $fatG, photoUrl: $photoUrl, loggedAt: $loggedAt)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $MealRecentCopyWith<$Res>  {
-  factory $MealRecentCopyWith(MealRecent value, $Res Function(MealRecent) _then) = _$MealRecentCopyWithImpl;
-@useResult
-$Res call({
- String id,@JsonKey(name: 'meal_type') String mealType,@JsonKey(name: 'food_name') String foodName, String description, double? calories,@JsonKey(name: 'protein_g') double? proteinG,@JsonKey(name: 'carbs_g') double? carbsG,@JsonKey(name: 'fat_g') double? fatG,@JsonKey(name: 'photo_url') String photoUrl,@JsonKey(name: 'logged_at') String? loggedAt
-});
-
-
-
-
-}
-/// @nodoc
-class _$MealRecentCopyWithImpl<$Res>
-    implements $MealRecentCopyWith<$Res> {
-  _$MealRecentCopyWithImpl(this._self, this._then);
-
-  final MealRecent _self;
-  final $Res Function(MealRecent) _then;
-
-/// Create a copy of MealRecent
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? mealType = null,Object? foodName = null,Object? description = null,Object? calories = freezed,Object? proteinG = freezed,Object? carbsG = freezed,Object? fatG = freezed,Object? photoUrl = null,Object? loggedAt = freezed,}) {
-  return _then(_self.copyWith(
-id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,mealType: null == mealType ? _self.mealType : mealType // ignore: cast_nullable_to_non_nullable
-as String,foodName: null == foodName ? _self.foodName : foodName // ignore: cast_nullable_to_non_nullable
-as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String,calories: freezed == calories ? _self.calories : calories // ignore: cast_nullable_to_non_nullable
-as double?,proteinG: freezed == proteinG ? _self.proteinG : proteinG // ignore: cast_nullable_to_non_nullable
-as double?,carbsG: freezed == carbsG ? _self.carbsG : carbsG // ignore: cast_nullable_to_non_nullable
-as double?,fatG: freezed == fatG ? _self.fatG : fatG // ignore: cast_nullable_to_non_nullable
-as double?,photoUrl: null == photoUrl ? _self.photoUrl : photoUrl // ignore: cast_nullable_to_non_nullable
-as String,loggedAt: freezed == loggedAt ? _self.loggedAt : loggedAt // ignore: cast_nullable_to_non_nullable
-as String?,
-  ));
-}
-
-}
-
-
-/// Adds pattern-matching-related methods to [MealRecent].
-extension MealRecentPatterns on MealRecent {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _MealRecent value)?  $default,{required TResult orElse(),}){
-final _that = this;
-switch (_that) {
-case _MealRecent() when $default != null:
-return $default(_that);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _MealRecent value)  $default,){
-final _that = this;
-switch (_that) {
-case _MealRecent():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _MealRecent value)?  $default,){
-final _that = this;
-switch (_that) {
-case _MealRecent() when $default != null:
-return $default(_that);case _:
-  return null;
-
-}
-}
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'meal_type')  String mealType, @JsonKey(name: 'food_name')  String foodName,  String description,  double? calories, @JsonKey(name: 'protein_g')  double? proteinG, @JsonKey(name: 'carbs_g')  double? carbsG, @JsonKey(name: 'fat_g')  double? fatG, @JsonKey(name: 'photo_url')  String photoUrl, @JsonKey(name: 'logged_at')  String? loggedAt)?  $default,{required TResult orElse(),}) {final _that = this;
-switch (_that) {
-case _MealRecent() when $default != null:
-return $default(_that.id,_that.mealType,_that.foodName,_that.description,_that.calories,_that.proteinG,_that.carbsG,_that.fatG,_that.photoUrl,_that.loggedAt);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'meal_type')  String mealType, @JsonKey(name: 'food_name')  String foodName,  String description,  double? calories, @JsonKey(name: 'protein_g')  double? proteinG, @JsonKey(name: 'carbs_g')  double? carbsG, @JsonKey(name: 'fat_g')  double? fatG, @JsonKey(name: 'photo_url')  String photoUrl, @JsonKey(name: 'logged_at')  String? loggedAt)  $default,) {final _that = this;
-switch (_that) {
-case _MealRecent():
-return $default(_that.id,_that.mealType,_that.foodName,_that.description,_that.calories,_that.proteinG,_that.carbsG,_that.fatG,_that.photoUrl,_that.loggedAt);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'meal_type')  String mealType, @JsonKey(name: 'food_name')  String foodName,  String description,  double? calories, @JsonKey(name: 'protein_g')  double? proteinG, @JsonKey(name: 'carbs_g')  double? carbsG, @JsonKey(name: 'fat_g')  double? fatG, @JsonKey(name: 'photo_url')  String photoUrl, @JsonKey(name: 'logged_at')  String? loggedAt)?  $default,) {final _that = this;
-switch (_that) {
-case _MealRecent() when $default != null:
-return $default(_that.id,_that.mealType,_that.foodName,_that.description,_that.calories,_that.proteinG,_that.carbsG,_that.fatG,_that.photoUrl,_that.loggedAt);case _:
-  return null;
-
-}
-}
-
-}
-
-/// @nodoc
-@JsonSerializable()
-
-class _MealRecent implements MealRecent {
-  const _MealRecent({this.id = '', @JsonKey(name: 'meal_type') this.mealType = '', @JsonKey(name: 'food_name') this.foodName = '', this.description = '', this.calories, @JsonKey(name: 'protein_g') this.proteinG, @JsonKey(name: 'carbs_g') this.carbsG, @JsonKey(name: 'fat_g') this.fatG, @JsonKey(name: 'photo_url') this.photoUrl = '', @JsonKey(name: 'logged_at') this.loggedAt});
-  factory _MealRecent.fromJson(Map<String, dynamic> json) => _$MealRecentFromJson(json);
-
-@override@JsonKey() final  String id;
-@override@JsonKey(name: 'meal_type') final  String mealType;
-@override@JsonKey(name: 'food_name') final  String foodName;
-@override@JsonKey() final  String description;
-@override final  double? calories;
-@override@JsonKey(name: 'protein_g') final  double? proteinG;
-@override@JsonKey(name: 'carbs_g') final  double? carbsG;
-@override@JsonKey(name: 'fat_g') final  double? fatG;
-@override@JsonKey(name: 'photo_url') final  String photoUrl;
-@override@JsonKey(name: 'logged_at') final  String? loggedAt;
-
-/// Create a copy of MealRecent
-/// with the given fields replaced by the non-null parameter values.
-@override @JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-_$MealRecentCopyWith<_MealRecent> get copyWith => __$MealRecentCopyWithImpl<_MealRecent>(this, _$identity);
-
-@override
-Map<String, dynamic> toJson() {
-  return _$MealRecentToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MealRecent&&(identical(other.id, id) || other.id == id)&&(identical(other.mealType, mealType) || other.mealType == mealType)&&(identical(other.foodName, foodName) || other.foodName == foodName)&&(identical(other.description, description) || other.description == description)&&(identical(other.calories, calories) || other.calories == calories)&&(identical(other.proteinG, proteinG) || other.proteinG == proteinG)&&(identical(other.carbsG, carbsG) || other.carbsG == carbsG)&&(identical(other.fatG, fatG) || other.fatG == fatG)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.loggedAt, loggedAt) || other.loggedAt == loggedAt));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,id,mealType,foodName,description,calories,proteinG,carbsG,fatG,photoUrl,loggedAt);
-
-@override
-String toString() {
-  return 'MealRecent(id: $id, mealType: $mealType, foodName: $foodName, description: $description, calories: $calories, proteinG: $proteinG, carbsG: $carbsG, fatG: $fatG, photoUrl: $photoUrl, loggedAt: $loggedAt)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class _$MealRecentCopyWith<$Res> implements $MealRecentCopyWith<$Res> {
-  factory _$MealRecentCopyWith(_MealRecent value, $Res Function(_MealRecent) _then) = __$MealRecentCopyWithImpl;
-@override @useResult
-$Res call({
- String id,@JsonKey(name: 'meal_type') String mealType,@JsonKey(name: 'food_name') String foodName, String description, double? calories,@JsonKey(name: 'protein_g') double? proteinG,@JsonKey(name: 'carbs_g') double? carbsG,@JsonKey(name: 'fat_g') double? fatG,@JsonKey(name: 'photo_url') String photoUrl,@JsonKey(name: 'logged_at') String? loggedAt
-});
-
-
-
-
-}
-/// @nodoc
-class __$MealRecentCopyWithImpl<$Res>
-    implements _$MealRecentCopyWith<$Res> {
-  __$MealRecentCopyWithImpl(this._self, this._then);
-
-  final _MealRecent _self;
-  final $Res Function(_MealRecent) _then;
-
-/// Create a copy of MealRecent
-/// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? mealType = null,Object? foodName = null,Object? description = null,Object? calories = freezed,Object? proteinG = freezed,Object? carbsG = freezed,Object? fatG = freezed,Object? photoUrl = null,Object? loggedAt = freezed,}) {
-  return _then(_MealRecent(
-id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,mealType: null == mealType ? _self.mealType : mealType // ignore: cast_nullable_to_non_nullable
-as String,foodName: null == foodName ? _self.foodName : foodName // ignore: cast_nullable_to_non_nullable
-as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String,calories: freezed == calories ? _self.calories : calories // ignore: cast_nullable_to_non_nullable
-as double?,proteinG: freezed == proteinG ? _self.proteinG : proteinG // ignore: cast_nullable_to_non_nullable
-as double?,carbsG: freezed == carbsG ? _self.carbsG : carbsG // ignore: cast_nullable_to_non_nullable
-as double?,fatG: freezed == fatG ? _self.fatG : fatG // ignore: cast_nullable_to_non_nullable
-as double?,photoUrl: null == photoUrl ? _self.photoUrl : photoUrl // ignore: cast_nullable_to_non_nullable
-as String,loggedAt: freezed == loggedAt ? _self.loggedAt : loggedAt // ignore: cast_nullable_to_non_nullable
-as String?,
-  ));
-}
-
-
-}
-
-
-/// @nodoc
-mixin _$NutritionSummary {
-
- int get count;@JsonKey(name: 'total_calories') double get totalCalories;@JsonKey(name: 'total_protein_g') double get totalProteinG;@JsonKey(name: 'total_carbs_g') double get totalCarbsG;@JsonKey(name: 'total_fat_g') double get totalFatG;@JsonKey(name: 'by_type') List<ActivityTypeBreakdown> get byType;@JsonKey(name: 'avg_daily_calories') double? get avgDailyCalories; List<MealRecent> get recent;
-/// Create a copy of NutritionSummary
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$NutritionSummaryCopyWith<NutritionSummary> get copyWith => _$NutritionSummaryCopyWithImpl<NutritionSummary>(this as NutritionSummary, _$identity);
-
-  /// Serializes this NutritionSummary to a JSON map.
-  Map<String, dynamic> toJson();
-
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is NutritionSummary&&(identical(other.count, count) || other.count == count)&&(identical(other.totalCalories, totalCalories) || other.totalCalories == totalCalories)&&(identical(other.totalProteinG, totalProteinG) || other.totalProteinG == totalProteinG)&&(identical(other.totalCarbsG, totalCarbsG) || other.totalCarbsG == totalCarbsG)&&(identical(other.totalFatG, totalFatG) || other.totalFatG == totalFatG)&&const DeepCollectionEquality().equals(other.byType, byType)&&(identical(other.avgDailyCalories, avgDailyCalories) || other.avgDailyCalories == avgDailyCalories)&&const DeepCollectionEquality().equals(other.recent, recent));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,count,totalCalories,totalProteinG,totalCarbsG,totalFatG,const DeepCollectionEquality().hash(byType),avgDailyCalories,const DeepCollectionEquality().hash(recent));
-
-@override
-String toString() {
-  return 'NutritionSummary(count: $count, totalCalories: $totalCalories, totalProteinG: $totalProteinG, totalCarbsG: $totalCarbsG, totalFatG: $totalFatG, byType: $byType, avgDailyCalories: $avgDailyCalories, recent: $recent)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $NutritionSummaryCopyWith<$Res>  {
-  factory $NutritionSummaryCopyWith(NutritionSummary value, $Res Function(NutritionSummary) _then) = _$NutritionSummaryCopyWithImpl;
-@useResult
-$Res call({
- int count,@JsonKey(name: 'total_calories') double totalCalories,@JsonKey(name: 'total_protein_g') double totalProteinG,@JsonKey(name: 'total_carbs_g') double totalCarbsG,@JsonKey(name: 'total_fat_g') double totalFatG,@JsonKey(name: 'by_type') List<ActivityTypeBreakdown> byType,@JsonKey(name: 'avg_daily_calories') double? avgDailyCalories, List<MealRecent> recent
-});
-
-
-
-
-}
-/// @nodoc
-class _$NutritionSummaryCopyWithImpl<$Res>
-    implements $NutritionSummaryCopyWith<$Res> {
-  _$NutritionSummaryCopyWithImpl(this._self, this._then);
-
-  final NutritionSummary _self;
-  final $Res Function(NutritionSummary) _then;
-
-/// Create a copy of NutritionSummary
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? count = null,Object? totalCalories = null,Object? totalProteinG = null,Object? totalCarbsG = null,Object? totalFatG = null,Object? byType = null,Object? avgDailyCalories = freezed,Object? recent = null,}) {
-  return _then(_self.copyWith(
-count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
-as int,totalCalories: null == totalCalories ? _self.totalCalories : totalCalories // ignore: cast_nullable_to_non_nullable
-as double,totalProteinG: null == totalProteinG ? _self.totalProteinG : totalProteinG // ignore: cast_nullable_to_non_nullable
-as double,totalCarbsG: null == totalCarbsG ? _self.totalCarbsG : totalCarbsG // ignore: cast_nullable_to_non_nullable
-as double,totalFatG: null == totalFatG ? _self.totalFatG : totalFatG // ignore: cast_nullable_to_non_nullable
-as double,byType: null == byType ? _self.byType : byType // ignore: cast_nullable_to_non_nullable
-as List<ActivityTypeBreakdown>,avgDailyCalories: freezed == avgDailyCalories ? _self.avgDailyCalories : avgDailyCalories // ignore: cast_nullable_to_non_nullable
-as double?,recent: null == recent ? _self.recent : recent // ignore: cast_nullable_to_non_nullable
-as List<MealRecent>,
-  ));
-}
-
-}
-
-
-/// Adds pattern-matching-related methods to [NutritionSummary].
-extension NutritionSummaryPatterns on NutritionSummary {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _NutritionSummary value)?  $default,{required TResult orElse(),}){
-final _that = this;
-switch (_that) {
-case _NutritionSummary() when $default != null:
-return $default(_that);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _NutritionSummary value)  $default,){
-final _that = this;
-switch (_that) {
-case _NutritionSummary():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _NutritionSummary value)?  $default,){
-final _that = this;
-switch (_that) {
-case _NutritionSummary() when $default != null:
-return $default(_that);case _:
-  return null;
-
-}
-}
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int count, @JsonKey(name: 'total_calories')  double totalCalories, @JsonKey(name: 'total_protein_g')  double totalProteinG, @JsonKey(name: 'total_carbs_g')  double totalCarbsG, @JsonKey(name: 'total_fat_g')  double totalFatG, @JsonKey(name: 'by_type')  List<ActivityTypeBreakdown> byType, @JsonKey(name: 'avg_daily_calories')  double? avgDailyCalories,  List<MealRecent> recent)?  $default,{required TResult orElse(),}) {final _that = this;
-switch (_that) {
-case _NutritionSummary() when $default != null:
-return $default(_that.count,_that.totalCalories,_that.totalProteinG,_that.totalCarbsG,_that.totalFatG,_that.byType,_that.avgDailyCalories,_that.recent);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int count, @JsonKey(name: 'total_calories')  double totalCalories, @JsonKey(name: 'total_protein_g')  double totalProteinG, @JsonKey(name: 'total_carbs_g')  double totalCarbsG, @JsonKey(name: 'total_fat_g')  double totalFatG, @JsonKey(name: 'by_type')  List<ActivityTypeBreakdown> byType, @JsonKey(name: 'avg_daily_calories')  double? avgDailyCalories,  List<MealRecent> recent)  $default,) {final _that = this;
-switch (_that) {
-case _NutritionSummary():
-return $default(_that.count,_that.totalCalories,_that.totalProteinG,_that.totalCarbsG,_that.totalFatG,_that.byType,_that.avgDailyCalories,_that.recent);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int count, @JsonKey(name: 'total_calories')  double totalCalories, @JsonKey(name: 'total_protein_g')  double totalProteinG, @JsonKey(name: 'total_carbs_g')  double totalCarbsG, @JsonKey(name: 'total_fat_g')  double totalFatG, @JsonKey(name: 'by_type')  List<ActivityTypeBreakdown> byType, @JsonKey(name: 'avg_daily_calories')  double? avgDailyCalories,  List<MealRecent> recent)?  $default,) {final _that = this;
-switch (_that) {
-case _NutritionSummary() when $default != null:
-return $default(_that.count,_that.totalCalories,_that.totalProteinG,_that.totalCarbsG,_that.totalFatG,_that.byType,_that.avgDailyCalories,_that.recent);case _:
-  return null;
-
-}
-}
-
-}
-
-/// @nodoc
-@JsonSerializable()
-
-class _NutritionSummary implements NutritionSummary {
-  const _NutritionSummary({this.count = 0, @JsonKey(name: 'total_calories') this.totalCalories = 0, @JsonKey(name: 'total_protein_g') this.totalProteinG = 0, @JsonKey(name: 'total_carbs_g') this.totalCarbsG = 0, @JsonKey(name: 'total_fat_g') this.totalFatG = 0, @JsonKey(name: 'by_type') final  List<ActivityTypeBreakdown> byType = const <ActivityTypeBreakdown>[], @JsonKey(name: 'avg_daily_calories') this.avgDailyCalories, final  List<MealRecent> recent = const <MealRecent>[]}): _byType = byType,_recent = recent;
-  factory _NutritionSummary.fromJson(Map<String, dynamic> json) => _$NutritionSummaryFromJson(json);
-
-@override@JsonKey() final  int count;
-@override@JsonKey(name: 'total_calories') final  double totalCalories;
-@override@JsonKey(name: 'total_protein_g') final  double totalProteinG;
-@override@JsonKey(name: 'total_carbs_g') final  double totalCarbsG;
-@override@JsonKey(name: 'total_fat_g') final  double totalFatG;
- final  List<ActivityTypeBreakdown> _byType;
-@override@JsonKey(name: 'by_type') List<ActivityTypeBreakdown> get byType {
-  if (_byType is EqualUnmodifiableListView) return _byType;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_byType);
-}
-
-@override@JsonKey(name: 'avg_daily_calories') final  double? avgDailyCalories;
- final  List<MealRecent> _recent;
-@override@JsonKey() List<MealRecent> get recent {
-  if (_recent is EqualUnmodifiableListView) return _recent;
-  // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_recent);
-}
-
-
-/// Create a copy of NutritionSummary
-/// with the given fields replaced by the non-null parameter values.
-@override @JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-_$NutritionSummaryCopyWith<_NutritionSummary> get copyWith => __$NutritionSummaryCopyWithImpl<_NutritionSummary>(this, _$identity);
-
-@override
-Map<String, dynamic> toJson() {
-  return _$NutritionSummaryToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _NutritionSummary&&(identical(other.count, count) || other.count == count)&&(identical(other.totalCalories, totalCalories) || other.totalCalories == totalCalories)&&(identical(other.totalProteinG, totalProteinG) || other.totalProteinG == totalProteinG)&&(identical(other.totalCarbsG, totalCarbsG) || other.totalCarbsG == totalCarbsG)&&(identical(other.totalFatG, totalFatG) || other.totalFatG == totalFatG)&&const DeepCollectionEquality().equals(other._byType, _byType)&&(identical(other.avgDailyCalories, avgDailyCalories) || other.avgDailyCalories == avgDailyCalories)&&const DeepCollectionEquality().equals(other._recent, _recent));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,count,totalCalories,totalProteinG,totalCarbsG,totalFatG,const DeepCollectionEquality().hash(_byType),avgDailyCalories,const DeepCollectionEquality().hash(_recent));
-
-@override
-String toString() {
-  return 'NutritionSummary(count: $count, totalCalories: $totalCalories, totalProteinG: $totalProteinG, totalCarbsG: $totalCarbsG, totalFatG: $totalFatG, byType: $byType, avgDailyCalories: $avgDailyCalories, recent: $recent)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class _$NutritionSummaryCopyWith<$Res> implements $NutritionSummaryCopyWith<$Res> {
-  factory _$NutritionSummaryCopyWith(_NutritionSummary value, $Res Function(_NutritionSummary) _then) = __$NutritionSummaryCopyWithImpl;
-@override @useResult
-$Res call({
- int count,@JsonKey(name: 'total_calories') double totalCalories,@JsonKey(name: 'total_protein_g') double totalProteinG,@JsonKey(name: 'total_carbs_g') double totalCarbsG,@JsonKey(name: 'total_fat_g') double totalFatG,@JsonKey(name: 'by_type') List<ActivityTypeBreakdown> byType,@JsonKey(name: 'avg_daily_calories') double? avgDailyCalories, List<MealRecent> recent
-});
-
-
-
-
-}
-/// @nodoc
-class __$NutritionSummaryCopyWithImpl<$Res>
-    implements _$NutritionSummaryCopyWith<$Res> {
-  __$NutritionSummaryCopyWithImpl(this._self, this._then);
-
-  final _NutritionSummary _self;
-  final $Res Function(_NutritionSummary) _then;
-
-/// Create a copy of NutritionSummary
-/// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? count = null,Object? totalCalories = null,Object? totalProteinG = null,Object? totalCarbsG = null,Object? totalFatG = null,Object? byType = null,Object? avgDailyCalories = freezed,Object? recent = null,}) {
-  return _then(_NutritionSummary(
-count: null == count ? _self.count : count // ignore: cast_nullable_to_non_nullable
-as int,totalCalories: null == totalCalories ? _self.totalCalories : totalCalories // ignore: cast_nullable_to_non_nullable
-as double,totalProteinG: null == totalProteinG ? _self.totalProteinG : totalProteinG // ignore: cast_nullable_to_non_nullable
-as double,totalCarbsG: null == totalCarbsG ? _self.totalCarbsG : totalCarbsG // ignore: cast_nullable_to_non_nullable
-as double,totalFatG: null == totalFatG ? _self.totalFatG : totalFatG // ignore: cast_nullable_to_non_nullable
-as double,byType: null == byType ? _self._byType : byType // ignore: cast_nullable_to_non_nullable
-as List<ActivityTypeBreakdown>,avgDailyCalories: freezed == avgDailyCalories ? _self.avgDailyCalories : avgDailyCalories // ignore: cast_nullable_to_non_nullable
-as double?,recent: null == recent ? _self._recent : recent // ignore: cast_nullable_to_non_nullable
-as List<MealRecent>,
-  ));
-}
-
-
-}
-
-
-/// @nodoc
 mixin _$BodySeriesPoint {
 
  String get id;@JsonKey(name: 'weight_kg') double get weightKg;@JsonKey(name: 'body_fat_pct') double? get bodyFatPct;@JsonKey(name: 'measured_at') String? get measuredAt;@JsonKey(name: 'photo_url') String get photoUrl;@JsonKey(name: 'scale_photo_url') String get scalePhotoUrl;
@@ -4132,7 +3546,7 @@ as double?,
 /// @nodoc
 mixin _$AnalyticsSummaryData {
 
- String get period; AnalyticsUserInfo get user; WorkoutSummary get workouts; ActivitySummary get activity; NutritionSummary get nutrition; BodySummary get body; LivesSummary get lives; SpendingSummary get spending; ProgrammesSummary get programmes;
+ String get period; AnalyticsUserInfo get user; WorkoutSummary get workouts; ActivitySummary get activity; BodySummary get body; LivesSummary get lives; SpendingSummary get spending; ProgrammesSummary get programmes;
 /// Create a copy of AnalyticsSummaryData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4145,16 +3559,16 @@ $AnalyticsSummaryDataCopyWith<AnalyticsSummaryData> get copyWith => _$AnalyticsS
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is AnalyticsSummaryData&&(identical(other.period, period) || other.period == period)&&(identical(other.user, user) || other.user == user)&&(identical(other.workouts, workouts) || other.workouts == workouts)&&(identical(other.activity, activity) || other.activity == activity)&&(identical(other.nutrition, nutrition) || other.nutrition == nutrition)&&(identical(other.body, body) || other.body == body)&&(identical(other.lives, lives) || other.lives == lives)&&(identical(other.spending, spending) || other.spending == spending)&&(identical(other.programmes, programmes) || other.programmes == programmes));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AnalyticsSummaryData&&(identical(other.period, period) || other.period == period)&&(identical(other.user, user) || other.user == user)&&(identical(other.workouts, workouts) || other.workouts == workouts)&&(identical(other.activity, activity) || other.activity == activity)&&(identical(other.body, body) || other.body == body)&&(identical(other.lives, lives) || other.lives == lives)&&(identical(other.spending, spending) || other.spending == spending)&&(identical(other.programmes, programmes) || other.programmes == programmes));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,period,user,workouts,activity,nutrition,body,lives,spending,programmes);
+int get hashCode => Object.hash(runtimeType,period,user,workouts,activity,body,lives,spending,programmes);
 
 @override
 String toString() {
-  return 'AnalyticsSummaryData(period: $period, user: $user, workouts: $workouts, activity: $activity, nutrition: $nutrition, body: $body, lives: $lives, spending: $spending, programmes: $programmes)';
+  return 'AnalyticsSummaryData(period: $period, user: $user, workouts: $workouts, activity: $activity, body: $body, lives: $lives, spending: $spending, programmes: $programmes)';
 }
 
 
@@ -4165,11 +3579,11 @@ abstract mixin class $AnalyticsSummaryDataCopyWith<$Res>  {
   factory $AnalyticsSummaryDataCopyWith(AnalyticsSummaryData value, $Res Function(AnalyticsSummaryData) _then) = _$AnalyticsSummaryDataCopyWithImpl;
 @useResult
 $Res call({
- String period, AnalyticsUserInfo user, WorkoutSummary workouts, ActivitySummary activity, NutritionSummary nutrition, BodySummary body, LivesSummary lives, SpendingSummary spending, ProgrammesSummary programmes
+ String period, AnalyticsUserInfo user, WorkoutSummary workouts, ActivitySummary activity, BodySummary body, LivesSummary lives, SpendingSummary spending, ProgrammesSummary programmes
 });
 
 
-$AnalyticsUserInfoCopyWith<$Res> get user;$WorkoutSummaryCopyWith<$Res> get workouts;$ActivitySummaryCopyWith<$Res> get activity;$NutritionSummaryCopyWith<$Res> get nutrition;$BodySummaryCopyWith<$Res> get body;$LivesSummaryCopyWith<$Res> get lives;$SpendingSummaryCopyWith<$Res> get spending;$ProgrammesSummaryCopyWith<$Res> get programmes;
+$AnalyticsUserInfoCopyWith<$Res> get user;$WorkoutSummaryCopyWith<$Res> get workouts;$ActivitySummaryCopyWith<$Res> get activity;$BodySummaryCopyWith<$Res> get body;$LivesSummaryCopyWith<$Res> get lives;$SpendingSummaryCopyWith<$Res> get spending;$ProgrammesSummaryCopyWith<$Res> get programmes;
 
 }
 /// @nodoc
@@ -4182,14 +3596,13 @@ class _$AnalyticsSummaryDataCopyWithImpl<$Res>
 
 /// Create a copy of AnalyticsSummaryData
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? user = null,Object? workouts = null,Object? activity = null,Object? nutrition = null,Object? body = null,Object? lives = null,Object? spending = null,Object? programmes = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? period = null,Object? user = null,Object? workouts = null,Object? activity = null,Object? body = null,Object? lives = null,Object? spending = null,Object? programmes = null,}) {
   return _then(_self.copyWith(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
 as AnalyticsUserInfo,workouts: null == workouts ? _self.workouts : workouts // ignore: cast_nullable_to_non_nullable
 as WorkoutSummary,activity: null == activity ? _self.activity : activity // ignore: cast_nullable_to_non_nullable
-as ActivitySummary,nutrition: null == nutrition ? _self.nutrition : nutrition // ignore: cast_nullable_to_non_nullable
-as NutritionSummary,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as ActivitySummary,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
 as BodySummary,lives: null == lives ? _self.lives : lives // ignore: cast_nullable_to_non_nullable
 as LivesSummary,spending: null == spending ? _self.spending : spending // ignore: cast_nullable_to_non_nullable
 as SpendingSummary,programmes: null == programmes ? _self.programmes : programmes // ignore: cast_nullable_to_non_nullable
@@ -4222,15 +3635,6 @@ $ActivitySummaryCopyWith<$Res> get activity {
   
   return $ActivitySummaryCopyWith<$Res>(_self.activity, (value) {
     return _then(_self.copyWith(activity: value));
-  });
-}/// Create a copy of AnalyticsSummaryData
-/// with the given fields replaced by the non-null parameter values.
-@override
-@pragma('vm:prefer-inline')
-$NutritionSummaryCopyWith<$Res> get nutrition {
-  
-  return $NutritionSummaryCopyWith<$Res>(_self.nutrition, (value) {
-    return _then(_self.copyWith(nutrition: value));
   });
 }/// Create a copy of AnalyticsSummaryData
 /// with the given fields replaced by the non-null parameter values.
@@ -4350,10 +3754,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  NutritionSummary nutrition,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _AnalyticsSummaryData() when $default != null:
-return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.nutrition,_that.body,_that.lives,_that.spending,_that.programmes);case _:
+return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body,_that.lives,_that.spending,_that.programmes);case _:
   return orElse();
 
 }
@@ -4371,10 +3775,10 @@ return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.nutr
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  NutritionSummary nutrition,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes)  $default,) {final _that = this;
 switch (_that) {
 case _AnalyticsSummaryData():
-return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.nutrition,_that.body,_that.lives,_that.spending,_that.programmes);case _:
+return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body,_that.lives,_that.spending,_that.programmes);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4391,10 +3795,10 @@ return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.nutr
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  NutritionSummary nutrition,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String period,  AnalyticsUserInfo user,  WorkoutSummary workouts,  ActivitySummary activity,  BodySummary body,  LivesSummary lives,  SpendingSummary spending,  ProgrammesSummary programmes)?  $default,) {final _that = this;
 switch (_that) {
 case _AnalyticsSummaryData() when $default != null:
-return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.nutrition,_that.body,_that.lives,_that.spending,_that.programmes);case _:
+return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.body,_that.lives,_that.spending,_that.programmes);case _:
   return null;
 
 }
@@ -4406,14 +3810,13 @@ return $default(_that.period,_that.user,_that.workouts,_that.activity,_that.nutr
 @JsonSerializable()
 
 class _AnalyticsSummaryData implements AnalyticsSummaryData {
-  const _AnalyticsSummaryData({this.period = 'all', this.user = const AnalyticsUserInfo(), this.workouts = const WorkoutSummary(), this.activity = const ActivitySummary(), this.nutrition = const NutritionSummary(), this.body = const BodySummary(), this.lives = const LivesSummary(), this.spending = const SpendingSummary(), this.programmes = const ProgrammesSummary()});
+  const _AnalyticsSummaryData({this.period = 'all', this.user = const AnalyticsUserInfo(), this.workouts = const WorkoutSummary(), this.activity = const ActivitySummary(), this.body = const BodySummary(), this.lives = const LivesSummary(), this.spending = const SpendingSummary(), this.programmes = const ProgrammesSummary()});
   factory _AnalyticsSummaryData.fromJson(Map<String, dynamic> json) => _$AnalyticsSummaryDataFromJson(json);
 
 @override@JsonKey() final  String period;
 @override@JsonKey() final  AnalyticsUserInfo user;
 @override@JsonKey() final  WorkoutSummary workouts;
 @override@JsonKey() final  ActivitySummary activity;
-@override@JsonKey() final  NutritionSummary nutrition;
 @override@JsonKey() final  BodySummary body;
 @override@JsonKey() final  LivesSummary lives;
 @override@JsonKey() final  SpendingSummary spending;
@@ -4432,16 +3835,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AnalyticsSummaryData&&(identical(other.period, period) || other.period == period)&&(identical(other.user, user) || other.user == user)&&(identical(other.workouts, workouts) || other.workouts == workouts)&&(identical(other.activity, activity) || other.activity == activity)&&(identical(other.nutrition, nutrition) || other.nutrition == nutrition)&&(identical(other.body, body) || other.body == body)&&(identical(other.lives, lives) || other.lives == lives)&&(identical(other.spending, spending) || other.spending == spending)&&(identical(other.programmes, programmes) || other.programmes == programmes));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AnalyticsSummaryData&&(identical(other.period, period) || other.period == period)&&(identical(other.user, user) || other.user == user)&&(identical(other.workouts, workouts) || other.workouts == workouts)&&(identical(other.activity, activity) || other.activity == activity)&&(identical(other.body, body) || other.body == body)&&(identical(other.lives, lives) || other.lives == lives)&&(identical(other.spending, spending) || other.spending == spending)&&(identical(other.programmes, programmes) || other.programmes == programmes));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,period,user,workouts,activity,nutrition,body,lives,spending,programmes);
+int get hashCode => Object.hash(runtimeType,period,user,workouts,activity,body,lives,spending,programmes);
 
 @override
 String toString() {
-  return 'AnalyticsSummaryData(period: $period, user: $user, workouts: $workouts, activity: $activity, nutrition: $nutrition, body: $body, lives: $lives, spending: $spending, programmes: $programmes)';
+  return 'AnalyticsSummaryData(period: $period, user: $user, workouts: $workouts, activity: $activity, body: $body, lives: $lives, spending: $spending, programmes: $programmes)';
 }
 
 
@@ -4452,11 +3855,11 @@ abstract mixin class _$AnalyticsSummaryDataCopyWith<$Res> implements $AnalyticsS
   factory _$AnalyticsSummaryDataCopyWith(_AnalyticsSummaryData value, $Res Function(_AnalyticsSummaryData) _then) = __$AnalyticsSummaryDataCopyWithImpl;
 @override @useResult
 $Res call({
- String period, AnalyticsUserInfo user, WorkoutSummary workouts, ActivitySummary activity, NutritionSummary nutrition, BodySummary body, LivesSummary lives, SpendingSummary spending, ProgrammesSummary programmes
+ String period, AnalyticsUserInfo user, WorkoutSummary workouts, ActivitySummary activity, BodySummary body, LivesSummary lives, SpendingSummary spending, ProgrammesSummary programmes
 });
 
 
-@override $AnalyticsUserInfoCopyWith<$Res> get user;@override $WorkoutSummaryCopyWith<$Res> get workouts;@override $ActivitySummaryCopyWith<$Res> get activity;@override $NutritionSummaryCopyWith<$Res> get nutrition;@override $BodySummaryCopyWith<$Res> get body;@override $LivesSummaryCopyWith<$Res> get lives;@override $SpendingSummaryCopyWith<$Res> get spending;@override $ProgrammesSummaryCopyWith<$Res> get programmes;
+@override $AnalyticsUserInfoCopyWith<$Res> get user;@override $WorkoutSummaryCopyWith<$Res> get workouts;@override $ActivitySummaryCopyWith<$Res> get activity;@override $BodySummaryCopyWith<$Res> get body;@override $LivesSummaryCopyWith<$Res> get lives;@override $SpendingSummaryCopyWith<$Res> get spending;@override $ProgrammesSummaryCopyWith<$Res> get programmes;
 
 }
 /// @nodoc
@@ -4469,14 +3872,13 @@ class __$AnalyticsSummaryDataCopyWithImpl<$Res>
 
 /// Create a copy of AnalyticsSummaryData
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? user = null,Object? workouts = null,Object? activity = null,Object? nutrition = null,Object? body = null,Object? lives = null,Object? spending = null,Object? programmes = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? period = null,Object? user = null,Object? workouts = null,Object? activity = null,Object? body = null,Object? lives = null,Object? spending = null,Object? programmes = null,}) {
   return _then(_AnalyticsSummaryData(
 period: null == period ? _self.period : period // ignore: cast_nullable_to_non_nullable
 as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
 as AnalyticsUserInfo,workouts: null == workouts ? _self.workouts : workouts // ignore: cast_nullable_to_non_nullable
 as WorkoutSummary,activity: null == activity ? _self.activity : activity // ignore: cast_nullable_to_non_nullable
-as ActivitySummary,nutrition: null == nutrition ? _self.nutrition : nutrition // ignore: cast_nullable_to_non_nullable
-as NutritionSummary,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as ActivitySummary,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
 as BodySummary,lives: null == lives ? _self.lives : lives // ignore: cast_nullable_to_non_nullable
 as LivesSummary,spending: null == spending ? _self.spending : spending // ignore: cast_nullable_to_non_nullable
 as SpendingSummary,programmes: null == programmes ? _self.programmes : programmes // ignore: cast_nullable_to_non_nullable
@@ -4510,15 +3912,6 @@ $ActivitySummaryCopyWith<$Res> get activity {
   
   return $ActivitySummaryCopyWith<$Res>(_self.activity, (value) {
     return _then(_self.copyWith(activity: value));
-  });
-}/// Create a copy of AnalyticsSummaryData
-/// with the given fields replaced by the non-null parameter values.
-@override
-@pragma('vm:prefer-inline')
-$NutritionSummaryCopyWith<$Res> get nutrition {
-  
-  return $NutritionSummaryCopyWith<$Res>(_self.nutrition, (value) {
-    return _then(_self.copyWith(nutrition: value));
   });
 }/// Create a copy of AnalyticsSummaryData
 /// with the given fields replaced by the non-null parameter values.

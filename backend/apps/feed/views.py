@@ -35,17 +35,6 @@ from apps.ai.client import ai_post
 logger = logging.getLogger(__name__)
 
 
-def _as_dict_meal(value):
-    """Coerce a JSONField value (dict or JSON-encoded string) into a dict."""
-    if isinstance(value, str):
-        try:
-            parsed = json.loads(value)
-            return parsed if isinstance(parsed, dict) else {}
-        except (ValueError, TypeError):
-            return {}
-    return value if isinstance(value, dict) else {}
-
-
 def _looks_like_video(url: str) -> bool:
     if not url:
         return False
@@ -641,7 +630,7 @@ def _apply_hide_mute_exclusions(queryset, user_profile):
     """Exclude viewer-hidden posts and muted authors from a discovery queryset.
 
     Applied to every FeedView discovery tab (for_you, following, videos,
-    videos_following, meals, progress, nearby) AND the ranked pool (which is
+    videos_following, nearby) AND the ranked pool (which is
     built from the same gated queryset). Subquery-based so it composes with
     the existing audience/age-gating filters without extra round trips.
     """
@@ -837,16 +826,6 @@ class FeedView(views.APIView):
                 author_id__in=followed_ids,
                 moderation_status='clean',
             ).filter(_audience_q(user_profile)).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
-        elif tab == 'meals':
-            queryset = FeedPost.objects.filter(
-                post_type='meal',
-                moderation_status='clean',
-            ).filter(_audience_q(user_profile)).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
-        elif tab == 'progress':
-            queryset = FeedPost.objects.filter(
-                post_type='progress',
-                moderation_status='clean',
-            ).filter(_audience_q(user_profile)).select_related('author', 'gym_tag').order_by('-is_pinned', '-created_at')
         elif tab == 'nearby':
             queryset = FeedPost.objects.filter(
                 moderation_status='clean',
@@ -872,7 +851,6 @@ class FeedView(views.APIView):
             ).filter(_audience_q(user_profile))
             if post_type and post_type in dict(Post.POST_TYPES):
                 queryset = queryset.filter(post_type=post_type)
-            # Meals own their tab — keep For You general unless asked otherwise.
             exclude_raw = request.query_params.get('exclude_post_types', '')
             exclude_types = [t.strip() for t in exclude_raw.split(',') if t.strip() in dict(Post.POST_TYPES)]
             if exclude_types:
@@ -896,7 +874,7 @@ class FeedView(views.APIView):
             if ranked_response is not None:
                 return ranked_response
 
-        # following / meals / progress / nearby land here (for_you only falls
+        # following / nearby land here (for_you only falls
         # through when the ranked pool is empty; its exclusions are already
         # applied above, re-applying is a harmless no-op).
         queryset = _apply_hide_mute_exclusions(queryset, user_profile)
@@ -1081,39 +1059,6 @@ class CreatePostView(views.APIView):
         serializer.is_valid(raise_exception=True)
         validated = serializer.validated_data
         validated['media_urls'] = post_media_urls
-
-        # Auto-analyze meal photos into nutrition details when not provided.
-        if validated.get('post_type') == 'meal':
-            meal_data = validated.get('meal_data')
-            if not meal_data or not meal_data.get('calories'):
-                import requests as http_requests
-
-                image_url = next((u for u in post_media_urls if not _looks_like_video(u)), None)
-                if image_url:
-                    try:
-                        resp = http_requests.get(image_url, timeout=10)
-                        if resp.status_code == 200:
-                            ai_resp = ai_post(
-                                f'{settings.AI_SERVICE_URL}/api/v1/food/recognize',
-                                files={'file': ('meal.jpg', resp.content, resp.headers.get('content-type', 'image/jpeg'))},
-                                timeout=30,
-                            )
-                            if ai_resp.status_code == 200:
-                                ai_data = ai_resp.json()
-                                if ai_data.get('items'):
-                                    from apps.ai.audit import audit_ai_call
-                                    audit_ai_call('meal_analyze_feed', input_data={'post_id': 'pending', 'url': image_url}, output_data=ai_data)
-                                    top = ai_data['items'][0]
-                                    nutrition = top.get('nutrition', {}) or {}
-                                    base = _as_dict_meal(meal_data)
-                                    base['food_name'] = base.get('food_name') or top.get('item')
-                                    base['calories'] = base.get('calories') or round(float(ai_data.get('total_calories', nutrition.get('calories', 0) or 0)), 1)
-                                    base['protein_g'] = base.get('protein_g') or round(float(ai_data.get('total_protein', nutrition.get('protein', 0) or 0)), 1)
-                                    base['carbs_g'] = base.get('carbs_g') or round(float(ai_data.get('total_carbs', nutrition.get('carbs', 0) or 0)), 1)
-                                    base['fat_g'] = base.get('fat_g') or round(float(ai_data.get('total_fat', nutrition.get('fat', 0) or 0)), 1)
-                                    validated['meal_data'] = base
-                    except Exception as exc:  # noqa: BLE001
-                        logger.warning('Meal photo auto-analysis failed: %s', exc)
 
         try:
             with transaction.atomic():
@@ -2119,12 +2064,7 @@ class HealthInsightsView(views.APIView):
             entry['date'] = p['created_at'].isoformat()
             workouts.append({'workout_log_data': entry})
 
-        meal_posts = Post.objects.filter(
-            author=profile, post_type='meal',
-            meal_data__isnull=False, created_at__gte=cutoff,
-        ).order_by('created_at').values('meal_data')
-
-        meals = [{'meal_data': dict(m['meal_data'])} for m in meal_posts if m['meal_data']]
+        meals = []
 
         streak = {
             'days': profile.streak_days,

@@ -56,7 +56,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         final repo = ref.read(feedRepositoryProvider);
         final raw = await repo.getFeed(
           tab: tab,
-          excludePostTypes: tab == 'for_you' ? 'meal' : null,
         );
         final incoming = (raw['data'] as List? ?? [])
             .map((e) => Post.fromJson(e as Map<String, dynamic>))
@@ -100,10 +99,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
         return '/feed/following';
       case 'communities':
         return '/feed/communities';
-      case 'meals':
-        return '/feed/meals';
-      case 'progress':
-        return '/feed/progress';
       default:
         return '/feed';
     }
@@ -158,8 +153,6 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
       'following',
       if (hasCommunities) 'communities',
       'videos',
-      'meals',
-      'progress',
     ];
 
     return Scaffold(

@@ -457,10 +457,9 @@ class ExportDataTests(TempMediaStorageMixin, TestCase):
             user=self.user, refresh_token_hash=hashlib.sha256(b'x').hexdigest(),
             device_name='Phone', ip_address='127.0.0.1', device_id='device-a',
         )
-        from apps.analytics.models import ActivityRecord, BodyMetric, MealLog, WorkoutLog
+        from apps.analytics.models import ActivityRecord, BodyMetric, WorkoutLog
         ActivityRecord.objects.create(user=profile, activity_type='run', distance_meters=1000)
         WorkoutLog.objects.create(user=profile, exercise='Squat')
-        MealLog.objects.create(user=profile, food_name='Oats')
         BodyMetric.objects.create(user=profile, weight_kg=80.0)
         definition = AchievementDefinition.objects.create(
             code='first-run', title='First Run', description='Run once',
@@ -506,7 +505,7 @@ class ExportDataTests(TempMediaStorageMixin, TestCase):
             self.assertEqual(session['device_id'], 'device-a')
 
         analytics = payload['analytics']
-        for key in ('activity_records', 'workout_logs', 'meal_logs', 'body_metrics'):
+        for key in ('activity_records', 'workout_logs', 'body_metrics'):
             self.assertEqual(len(analytics[key]), 1, f'analytics.{key} expected')
 
         self.assertEqual(payload['achievements'][0]['definition__code'], 'first-run')

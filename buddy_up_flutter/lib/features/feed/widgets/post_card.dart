@@ -232,14 +232,6 @@ class _PostCardState extends ConsumerState<PostCard> {
             const SizedBox(height: 8),
             _buildWorkoutLog(context),
           ],
-          if (_post.mealData != null) ...[
-            const SizedBox(height: 8),
-            _buildMealData(context),
-          ],
-          if (_post.progressData != null) ...[
-            const SizedBox(height: 8),
-            _buildProgressData(context),
-          ],
           AiAnalysisCard(analysis: _post.aiAnalysis),
           const SizedBox(height: 10),
           _buildActionBar(context),
@@ -448,54 +440,6 @@ class _PostCardState extends ConsumerState<PostCard> {
               '${data['sets'] ?? '?'} sets × ${data['reps'] ?? '?'} reps',
               style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
             ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMealData(BuildContext context) {
-    final data = _post.mealData!;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: BuddyColors.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.restaurant, color: BuddyColors.green, size: 18),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              data['meal'] as String? ?? 'Meal',
-              style: const TextStyle(color: BuddyColors.textPrimary),
-            ),
-          ),
-          if (data['calories'] != null)
-            Text(
-              '${data['calories']} cal',
-              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressData(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: BuddyColors.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.trending_up, color: BuddyColors.green, size: 18),
-          SizedBox(width: 6),
-          Text(
-            'Progress update',
-            style: TextStyle(color: BuddyColors.textPrimary),
-          ),
         ],
       ),
     );

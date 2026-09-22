@@ -169,10 +169,6 @@ class _ReportTabState extends ConsumerState<ReportTab> {
                   '${formatNumber(s.activity.totalDistanceKm, decimals: 1)} km',
                 ),
                 _reportStat(
-                  'Calories Logged',
-                  formatNumber(s.nutrition.totalCalories),
-                ),
-                _reportStat(
                   'Weight',
                   s.body.latestWeightKg != null
                       ? '${formatNumber(s.body.latestWeightKg!, decimals: 1)} kg'

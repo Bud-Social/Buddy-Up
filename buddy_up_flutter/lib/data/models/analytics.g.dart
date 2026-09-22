@@ -155,68 +155,6 @@ Map<String, dynamic> _$ActivitySummaryToJson(_ActivitySummary instance) =>
       'recent': instance.recent,
     };
 
-_MealRecent _$MealRecentFromJson(Map<String, dynamic> json) => _MealRecent(
-  id: json['id'] as String? ?? '',
-  mealType: json['meal_type'] as String? ?? '',
-  foodName: json['food_name'] as String? ?? '',
-  description: json['description'] as String? ?? '',
-  calories: (json['calories'] as num?)?.toDouble(),
-  proteinG: (json['protein_g'] as num?)?.toDouble(),
-  carbsG: (json['carbs_g'] as num?)?.toDouble(),
-  fatG: (json['fat_g'] as num?)?.toDouble(),
-  photoUrl: json['photo_url'] as String? ?? '',
-  loggedAt: json['logged_at'] as String?,
-);
-
-Map<String, dynamic> _$MealRecentToJson(_MealRecent instance) =>
-    <String, dynamic>{
-      'id': instance.id,
-      'meal_type': instance.mealType,
-      'food_name': instance.foodName,
-      'description': instance.description,
-      'calories': instance.calories,
-      'protein_g': instance.proteinG,
-      'carbs_g': instance.carbsG,
-      'fat_g': instance.fatG,
-      'photo_url': instance.photoUrl,
-      'logged_at': instance.loggedAt,
-    };
-
-_NutritionSummary _$NutritionSummaryFromJson(Map<String, dynamic> json) =>
-    _NutritionSummary(
-      count: (json['count'] as num?)?.toInt() ?? 0,
-      totalCalories: (json['total_calories'] as num?)?.toDouble() ?? 0,
-      totalProteinG: (json['total_protein_g'] as num?)?.toDouble() ?? 0,
-      totalCarbsG: (json['total_carbs_g'] as num?)?.toDouble() ?? 0,
-      totalFatG: (json['total_fat_g'] as num?)?.toDouble() ?? 0,
-      byType:
-          (json['by_type'] as List<dynamic>?)
-              ?.map(
-                (e) =>
-                    ActivityTypeBreakdown.fromJson(e as Map<String, dynamic>),
-              )
-              .toList() ??
-          const <ActivityTypeBreakdown>[],
-      avgDailyCalories: (json['avg_daily_calories'] as num?)?.toDouble(),
-      recent:
-          (json['recent'] as List<dynamic>?)
-              ?.map((e) => MealRecent.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          const <MealRecent>[],
-    );
-
-Map<String, dynamic> _$NutritionSummaryToJson(_NutritionSummary instance) =>
-    <String, dynamic>{
-      'count': instance.count,
-      'total_calories': instance.totalCalories,
-      'total_protein_g': instance.totalProteinG,
-      'total_carbs_g': instance.totalCarbsG,
-      'total_fat_g': instance.totalFatG,
-      'by_type': instance.byType,
-      'avg_daily_calories': instance.avgDailyCalories,
-      'recent': instance.recent,
-    };
-
 _BodySeriesPoint _$BodySeriesPointFromJson(Map<String, dynamic> json) =>
     _BodySeriesPoint(
       id: json['id'] as String? ?? '',
@@ -388,9 +326,6 @@ _AnalyticsSummaryData _$AnalyticsSummaryDataFromJson(
   activity: json['activity'] == null
       ? const ActivitySummary()
       : ActivitySummary.fromJson(json['activity'] as Map<String, dynamic>),
-  nutrition: json['nutrition'] == null
-      ? const NutritionSummary()
-      : NutritionSummary.fromJson(json['nutrition'] as Map<String, dynamic>),
   body: json['body'] == null
       ? const BodySummary()
       : BodySummary.fromJson(json['body'] as Map<String, dynamic>),
@@ -412,7 +347,6 @@ Map<String, dynamic> _$AnalyticsSummaryDataToJson(
   'user': instance.user,
   'workouts': instance.workouts,
   'activity': instance.activity,
-  'nutrition': instance.nutrition,
   'body': instance.body,
   'lives': instance.lives,
   'spending': instance.spending,

@@ -106,44 +106,6 @@ abstract class ActivitySummary with _$ActivitySummary {
 }
 
 @freezed
-abstract class MealRecent with _$MealRecent {
-  const factory MealRecent({
-    @Default('') String id,
-    @JsonKey(name: 'meal_type') @Default('') String mealType,
-    @JsonKey(name: 'food_name') @Default('') String foodName,
-    @Default('') String description,
-    double? calories,
-    @JsonKey(name: 'protein_g') double? proteinG,
-    @JsonKey(name: 'carbs_g') double? carbsG,
-    @JsonKey(name: 'fat_g') double? fatG,
-    @JsonKey(name: 'photo_url') @Default('') String photoUrl,
-    @JsonKey(name: 'logged_at') String? loggedAt,
-  }) = _MealRecent;
-
-  factory MealRecent.fromJson(Map<String, dynamic> json) =>
-      _$MealRecentFromJson(json);
-}
-
-@freezed
-abstract class NutritionSummary with _$NutritionSummary {
-  const factory NutritionSummary({
-    @Default(0) int count,
-    @JsonKey(name: 'total_calories') @Default(0) double totalCalories,
-    @JsonKey(name: 'total_protein_g') @Default(0) double totalProteinG,
-    @JsonKey(name: 'total_carbs_g') @Default(0) double totalCarbsG,
-    @JsonKey(name: 'total_fat_g') @Default(0) double totalFatG,
-    @JsonKey(name: 'by_type')
-    @Default(<ActivityTypeBreakdown>[])
-    List<ActivityTypeBreakdown> byType,
-    @JsonKey(name: 'avg_daily_calories') double? avgDailyCalories,
-    @Default(<MealRecent>[]) List<MealRecent> recent,
-  }) = _NutritionSummary;
-
-  factory NutritionSummary.fromJson(Map<String, dynamic> json) =>
-      _$NutritionSummaryFromJson(json);
-}
-
-@freezed
 abstract class BodySeriesPoint with _$BodySeriesPoint {
   const factory BodySeriesPoint({
     @Default('') String id,
@@ -259,7 +221,6 @@ abstract class AnalyticsSummaryData with _$AnalyticsSummaryData {
     @Default(AnalyticsUserInfo()) AnalyticsUserInfo user,
     @Default(WorkoutSummary()) WorkoutSummary workouts,
     @Default(ActivitySummary()) ActivitySummary activity,
-    @Default(NutritionSummary()) NutritionSummary nutrition,
     @Default(BodySummary()) BodySummary body,
     @Default(LivesSummary()) LivesSummary lives,
     @Default(SpendingSummary()) SpendingSummary spending,

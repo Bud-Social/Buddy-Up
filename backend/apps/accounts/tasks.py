@@ -215,7 +215,7 @@ def _hard_delete_user(user):
     if profile is not None:
         Post.objects.filter(author=profile).update(
             body='[Deleted Account]', is_anonymous=True,
-            media_urls=[], workout_log_data=None, meal_data=None, progress_data=None,
+            media_urls=[], workout_log_data=None,
         )
         Comment.objects.filter(author=profile).update(
             body='[Deleted Account]', is_anonymous=True,
@@ -288,7 +288,7 @@ def export_user_data(user_id: str):
     from apps.wallet.models import ArtifactTransaction
     from apps.sessions.models import BookingSession
     from apps.notifications.models import Notification, NotificationPreference
-    from apps.analytics.models import ActivityRecord, WorkoutLog, MealLog, BodyMetric
+    from apps.analytics.models import ActivityRecord, WorkoutLog, BodyMetric
     from apps.gamification.models import UserAchievement
 
     try:
@@ -338,7 +338,6 @@ def export_user_data(user_id: str):
             'analytics': {
                 'activity_records': list(ActivityRecord.objects.filter(user=profile).values()),
                 'workout_logs': list(WorkoutLog.objects.filter(user=profile).values()),
-                'meal_logs': list(MealLog.objects.filter(user=profile).values()),
                 'body_metrics': list(BodyMetric.objects.filter(user=profile).values()),
             },
             'achievements': list(UserAchievement.objects.filter(profile=profile).values(

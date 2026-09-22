@@ -19,8 +19,6 @@ class FeedTabBar extends StatelessWidget {
     'following': 'Following',
     'communities': 'Communities',
     'videos': 'Bud Press',
-    'meals': 'Meals',
-    'progress': 'Progress',
   };
 
   @override

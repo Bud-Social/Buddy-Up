@@ -15,19 +15,9 @@ import '../../../core/upload/cloudinary_uploader.dart';
 import '../../../core/utils/constants.dart';
 import '../../../data/models/post.dart';
 import '../../community/providers/community_provider.dart';
-import '../../marketplace/providers/marketplace_provider.dart';
 import '../providers/feed_provider.dart';
 import 'location_picker_screen.dart';
 import 'video_studio_screen.dart';
-
-const List<({String key, String label})> _mealTypes = [
-  (key: 'breakfast', label: 'Breakfast'),
-  (key: 'lunch', label: 'Lunch'),
-  (key: 'dinner', label: 'Dinner'),
-  (key: 'snack', label: 'Snack'),
-  (key: 'drink', label: 'Drink'),
-  (key: 'other', label: 'Other'),
-];
 
 const List<String> _docExtensions = [
   'pdf', 'doc', 'docx', 'xls', 'xlsx',
@@ -103,13 +93,6 @@ class PostComposerScreen extends ConsumerStatefulWidget {
 
 class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   final TextEditingController _bodyController = TextEditingController();
-  final TextEditingController _foodController = TextEditingController();
-  final TextEditingController _mealDescController = TextEditingController();
-  final TextEditingController _caloriesController = TextEditingController();
-  final TextEditingController _proteinController = TextEditingController();
-  final TextEditingController _carbsController = TextEditingController();
-  final TextEditingController _fatController = TextEditingController();
-  final TextEditingController _weightController = TextEditingController();
   final TextEditingController _pollQuestionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   final List<TextEditingController> _pollOptionControllers = [];
@@ -138,17 +121,6 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
 
   // Studio audience result.
   bool _commentsEnabled = true;
-
-  // Meal
-  String _mealType = 'breakfast';
-  final List<ComposerMedia> _mealPhotos = [];
-  bool _analyzingMeal = false;
-
-  // Progress
-  String _weightUnit = 'kg';
-  String _progressMode = 'transformation';
-  final List<ComposerMedia> _beforePhotos = [];
-  final List<ComposerMedia> _afterPhotos = [];
 
   bool _isSubmitting = false;
   // TikTok-style publish stages: Finalizing → Uploading (overall %) → Creating.
@@ -321,13 +293,6 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     _draftDebounce?.cancel();
     _bodyController.removeListener(_scheduleDraftSave);
     _bodyController.dispose();
-    _foodController.dispose();
-    _mealDescController.dispose();
-    _caloriesController.dispose();
-    _proteinController.dispose();
-    _carbsController.dispose();
-    _fatController.dispose();
-    _weightController.dispose();
     _pollQuestionController.dispose();
     for (final c in _pollOptionControllers) {
       c.dispose();
@@ -340,14 +305,6 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       case 'poll':
         return _pollQuestionController.text.trim().isNotEmpty &&
             _pollOptionControllers.where((c) => c.text.trim().isNotEmpty).length >= 2;
-      case 'meal':
-        return _foodController.text.trim().isNotEmpty ||
-            _caloriesController.text.trim().isNotEmpty ||
-            _mealPhotos.isNotEmpty;
-      case 'progress':
-        return _weightController.text.trim().isNotEmpty ||
-            _beforePhotos.isNotEmpty ||
-            _afterPhotos.isNotEmpty;
       default:
         return _bodyController.text.trim().isNotEmpty ||
             _media.isNotEmpty ||
@@ -420,86 +377,6 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         for (final f in files.take(remaining)) {
           setState(() => _media.add(ComposerMedia(path: f.path, name: f.name, type: 'image')));
         }
-    }
-  }
-
-  Future<void> _addMealPhotos() async {
-    final files = await _picker.pickMultiImage(imageQuality: 85);
-    if (files.isEmpty) return;
-    for (final f in files) {
-      setState(() => _mealPhotos.add(ComposerMedia(path: f.path, name: f.name, type: 'image')));
-    }
-    if (_foodController.text.trim().isEmpty || _caloriesController.text.trim().isEmpty) {
-      await _analyzeMealPhoto(files.first);
-    }
-  }
-
-  Future<void> _analyzeMealPhoto(XFile file) async {
-    setState(() => _analyzingMeal = true);
-    try {
-      final repo = ref.read(marketplaceRepositoryProvider);
-      final form = dio.FormData.fromMap({
-        'file': await dio.MultipartFile.fromFile(file.path, filename: file.name),
-      });
-      final raw = await repo.recognizeFood(form);
-      final data = raw['data'];
-      if (data is Map<String, dynamic>) {
-        _applyMealAnalysis(data);
-      }
-    } catch (_) {
-      // food analyser unavailable – leave fields manual
-    } finally {
-      if (mounted) setState(() => _analyzingMeal = false);
-    }
-  }
-
-  void _applyMealAnalysis(Map<String, dynamic> data) {
-    final items = data['items'];
-    Map<String, dynamic>? first = items is List && items.isNotEmpty && items.first is Map
-        ? (items.first as Map).cast<String, dynamic>()
-        : null;
-    final nutrition = first?['nutrition'];
-    final n = nutrition is Map ? nutrition.cast<String, dynamic>() : null;
-
-    final itemName = first?['item'] as String?;
-    final totalCal = data['total_calories'] ?? n?['calories'];
-    final totalProtein = data['total_protein'] ?? n?['protein'];
-    final totalCarbs = data['total_carbs'] ?? n?['carbs'];
-    final totalFat = data['total_fat'] ?? n?['fat'];
-
-    if (itemName != null && itemName.isNotEmpty && _foodController.text.trim().isEmpty) {
-      _foodController.text = itemName;
-    }
-    void fill(TextEditingController c, dynamic v) {
-      if (c.text.trim().isEmpty && v is num) {
-        c.text = v.toStringAsFixed(1);
-      }
-    }
-
-    final any = totalCal ?? totalProtein ?? totalCarbs ?? totalFat ?? itemName;
-    if (!mounted) return;
-    if (any != null) {
-      fill(_caloriesController, totalCal);
-      fill(_proteinController, totalProtein);
-      fill(_carbsController, totalCarbs);
-      fill(_fatController, totalFat);
-      _snack('Nutrition detected — review before sharing.', error: false);
-    } else {
-      _snack('Could not analyze the meal photo. Enter details manually.');
-    }
-  }
-
-  Future<void> _addProgressPhoto({required bool before}) async {
-    final files = await _picker.pickMultiImage(imageQuality: 85);
-    for (final f in files) {
-      setState(() {
-        final item = ComposerMedia(path: f.path, name: f.name, type: 'image');
-        if (before) {
-          _beforePhotos.add(item);
-        } else {
-          _afterPhotos.add(item);
-        }
-      });
     }
   }
 
@@ -582,25 +459,6 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             '${_pollMinSelections < 1 ? 1 : (_pollMinSelections > maxSel ? maxSel : _pollMinSelections)}';
         data['poll_max_selections'] = '$maxSel';
       }
-    } else if (_postType == 'meal') {
-      data['meal_data'] = jsonEncode({
-        'meal_type': _mealType,
-        'food_name': _foodController.text.trim(),
-        'description': _mealDescController.text.trim(),
-        'calories': _numOrNull(_caloriesController.text),
-        'protein_g': _numOrNull(_proteinController.text),
-        'carbs_g': _numOrNull(_carbsController.text),
-        'fat_g': _numOrNull(_fatController.text),
-      });
-      data['media'] = _mealPhotos.map(_fileToMultipart).toList();
-    } else if (_postType == 'progress') {
-      data['progress_data'] = jsonEncode({
-        'weight': _numOrNull(_weightController.text),
-        'weight_unit': _weightUnit,
-        'mode': _progressMode,
-        'before_count': _beforePhotos.length,
-      });
-      data['media'] = [..._beforePhotos, ..._afterPhotos].map(_fileToMultipart).toList();
     } else {
       // text / photo / video
       final uploadable =
@@ -665,8 +523,6 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       );
     }
   }
-
-  num? _numOrNull(String s) => num.tryParse(s.trim());
 
   /// TikTok-style publish pipeline:
   /// 1. *Finalizing* — video compression runs once here, before any upload.
@@ -822,10 +678,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
             _buildTypeSelector(),
             const SizedBox(height: 16),
             if (_postType == 'poll') _buildPollBuilder(),
-            if (_postType == 'meal') _buildMealForm(),
-            if (_postType == 'progress') _buildProgressForm(),
-            if (_postType != 'poll' && _postType != 'meal' && _postType != 'progress')
-              _buildTextPost(),
+            if (_postType != 'poll') _buildTextPost(),
             const SizedBox(height: 16),
             const Divider(),
             _buildOptionTile(
@@ -852,8 +705,6 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       ('photo', Icons.photo, 'Photo'),
       ('video', Icons.videocam, 'Video'),
       ('poll', Icons.poll, 'Poll'),
-      ('meal', Icons.restaurant, 'Meal'),
-      ('progress', Icons.trending_up, 'Progress'),
     ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -1045,259 +896,6 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           icon: const Icon(Icons.add_circle_outline, size: 20),
           color: value >= ceiling ? BuddyColors.textSecondary : BuddyColors.green,
           onPressed: value >= ceiling ? null : () => onChanged(value + 1),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMealForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Wrap(
-          spacing: 6,
-          runSpacing: 6,
-          children: _mealTypes
-              .map((t) => ChoiceChip(
-                    label: Text(t.label),
-                    selected: _mealType == t.key,
-                    onSelected: (_) => setState(() => _mealType = t.key),
-                    selectedColor: BuddyColors.green.withValues(alpha: 0.25),
-                    labelStyle: TextStyle(
-                      color: _mealType == t.key
-                          ? BuddyColors.green
-                          : BuddyColors.textPrimary,
-                      fontSize: 12,
-                    ),
-                    backgroundColor: BuddyColors.surfaceRaised,
-                    side: const BorderSide(color: BuddyColors.surfaceRaised),
-                  ))
-              .toList(),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _foodController,
-          style: const TextStyle(color: BuddyColors.textPrimary),
-          decoration: const InputDecoration(labelText: 'Food name'),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _mealDescController,
-          maxLines: 2,
-          style: const TextStyle(color: BuddyColors.textPrimary),
-          decoration: const InputDecoration(labelText: 'Description (optional)'),
-        ),
-        const SizedBox(height: 12),
-        if (_mealPhotos.isNotEmpty) ...[
-          _buildMediaGallery(_mealPhotos, (i) => setState(() => _mealPhotos.removeAt(i))),
-          const SizedBox(height: 8),
-        ],
-        GestureDetector(
-          onTap: _analyzingMeal ? null : _addMealPhotos,
-          child: Container(
-            height: 96,
-            decoration: BoxDecoration(
-              color: BuddyColors.surfaceRaised,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: BuddyColors.border),
-            ),
-            child: _analyzingMeal
-                ? const Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2.5, color: BuddyColors.green),
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          'Analyzing meal…',
-                          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  )
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.photo_camera_outlined, color: BuddyColors.textSecondary, size: 22),
-                      SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          'Snap one or more photos to auto-fill nutrition',
-                          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _caloriesController,
-                style: const TextStyle(color: BuddyColors.textPrimary),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Calories'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: _proteinController,
-                style: const TextStyle(color: BuddyColors.textPrimary),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Protein (g)'),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _carbsController,
-                style: const TextStyle(color: BuddyColors.textPrimary),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Carbs (g)'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextField(
-                controller: _fatController,
-                style: const TextStyle(color: BuddyColors.textPrimary),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Fat (g)'),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProgressForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'transformation', label: Text('Transformation')),
-            ButtonSegment(value: 'milestone', label: Text('Milestone')),
-          ],
-          selected: {_progressMode},
-          onSelectionChanged: (s) => setState(() => _progressMode = s.first),
-          style: const ButtonStyle(
-            backgroundColor: WidgetStatePropertyAll(BuddyColors.surface),
-            foregroundColor: WidgetStatePropertyAll(BuddyColors.textPrimary),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _weightController,
-                style: const TextStyle(color: BuddyColors.textPrimary),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Weight (optional)'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'kg', label: Text('kg')),
-                ButtonSegment(value: 'lbs', label: Text('lbs')),
-              ],
-              selected: {_weightUnit},
-              onSelectionChanged: (s) => setState(() => _weightUnit = s.first),
-              style: const ButtonStyle(
-                backgroundColor: WidgetStatePropertyAll(BuddyColors.surfaceRaised),
-                foregroundColor: WidgetStatePropertyAll(BuddyColors.textPrimary),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: _buildProgressBucket(
-                title: 'BEFORE',
-                color: BuddyColors.textSecondary,
-                photos: _beforePhotos,
-                onAdd: () => _addProgressPhoto(before: true),
-                onRemove: (i) => setState(() => _beforePhotos.removeAt(i)),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _buildProgressBucket(
-                title: _progressMode == 'transformation' ? 'AFTER' : 'SNAP',
-                color: BuddyColors.green,
-                photos: _afterPhotos,
-                onAdd: () => _addProgressPhoto(before: false),
-                onRemove: (i) => setState(() => _afterPhotos.removeAt(i)),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProgressBucket({
-    required String title,
-    required Color color,
-    required List<ComposerMedia> photos,
-    required VoidCallback onAdd,
-    required void Function(int) onRemove,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.5),
-        ),
-        const SizedBox(height: 8),
-        if (photos.isNotEmpty)
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: List.generate(photos.length, (i) => _buildSmallThumb(photos[i], () => onRemove(i))),
-          ),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: onAdd,
-          child: Container(
-            height: 120,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: BuddyColors.surfaceRaised,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: BuddyColors.border),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.add_a_photo, color: BuddyColors.textSecondary, size: 24),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
         ),
       ],
     );

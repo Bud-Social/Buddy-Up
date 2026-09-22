@@ -12,8 +12,6 @@ class Post(TimestampedModel, SoftDeleteModel):
         ('short_video', 'Short Video (BuddyClip)'),
         ('long_video', 'Long Video (BuddySession)'),
         ('workout_log', 'Workout Log'),
-        ('meal', 'Meal'),
-        ('progress', 'Progress'),
         ('moment', 'Moment (Story)'),
         ('poll', 'Poll'),
     ]
@@ -44,8 +42,6 @@ class Post(TimestampedModel, SoftDeleteModel):
     location_lat = models.FloatField(null=True, blank=True)
     location_lng = models.FloatField(null=True, blank=True)
     workout_log_data = models.JSONField(null=True, blank=True)
-    meal_data = models.JSONField(null=True, blank=True)
-    progress_data = models.JSONField(null=True, blank=True)
     media_urls = models.JSONField(default=list)
     tags = models.JSONField(default=list)
     view_count = models.IntegerField(default=0)
@@ -202,8 +198,6 @@ class Draft(TimestampedModel):
     poll_allow_multiple = models.BooleanField(default=False)
     poll_min_selections = models.PositiveSmallIntegerField(default=1)
     poll_max_selections = models.PositiveSmallIntegerField(default=1)
-    meal_data = models.JSONField(default=dict, blank=True)
-    progress_data = models.JSONField(default=dict, blank=True)
     mentioned_user_ids = models.JSONField(default=list)
     is_anonymous = models.BooleanField(default=False)
 

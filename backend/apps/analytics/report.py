@@ -102,7 +102,6 @@ def render_report_image(summary, period_label):
     y = 360
     workouts = summary.get('workouts', {})
     activity = summary.get('activity', {})
-    nutrition = summary.get('nutrition', {})
     body = summary.get('body', {})
     lives = summary.get('lives', {})
     spending = summary.get('spending', {})
@@ -113,7 +112,7 @@ def render_report_image(summary, period_label):
     cols = [
         ('Workouts', str(workouts.get('count', 0)), value_font),
         ('Activity', str(activity.get('count', 0)) + ' sessions', value_font),
-        ('Meals', str(nutrition.get('count', 0)), value_font),
+        ('Body', f"{body.get('latest_weight_kg', 0)} kg" if body.get('latest_weight_kg') else '—', value_font),
         ('Streak', str(user.get('streak_days', 0)) + ' days', value_font),
     ]
     col_w = 250
@@ -151,17 +150,6 @@ def render_report_image(summary, period_label):
 
     col = left
     y += 30
-
-    # Nutrition
-    rows = [
-        ('Total calories', f"{nutrition.get('total_calories', 0)} kcal"),
-        ('Protein', f"{nutrition.get('total_protein_g', 0)} g"),
-        ('Carbs', f"{nutrition.get('total_carbs_g', 0)} g"),
-        ('Fat', f"{nutrition.get('total_fat_g', 0)} g"),
-    ]
-    y = _draw_section(draw, col, y, 'NUTRITION', rows, header_font, row_font, row_font, 280)
-    col = right
-    y = 1150
 
     # Body
     weight_change = body.get('weight_change_kg')

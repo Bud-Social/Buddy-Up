@@ -93,56 +93,6 @@ class WorkoutLog(TimestampedModel):
         return f'{self.get_workout_type_display()} {self.exercise}'
 
 
-class MealLog(TimestampedModel):
-    """A logged meal with nutrition breakdown."""
-
-    MEAL_TYPES = [
-        ('breakfast', 'Breakfast'),
-        ('lunch', 'Lunch'),
-        ('dinner', 'Dinner'),
-        ('snack', 'Snack'),
-        ('drink', 'Drink'),
-        ('other', 'Other'),
-    ]
-    SOURCE_CHOICES = [
-        ('manual', 'Manual'),
-        ('photo', 'Photo recognition'),
-        ('meal_plan', 'Meal plan'),
-    ]
-
-    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='meal_logs')
-    source_event_id = models.CharField(max_length=120, null=True, blank=True)
-    provenance = models.JSONField(default=dict, blank=True)
-    meal_type = models.CharField(max_length=20, choices=MEAL_TYPES, default='other')
-    food_name = models.CharField(max_length=200, blank=True)
-    description = models.TextField(blank=True)
-    calories = models.FloatField(null=True, blank=True)
-    protein_g = models.FloatField(null=True, blank=True)
-    carbs_g = models.FloatField(null=True, blank=True)
-    fat_g = models.FloatField(null=True, blank=True)
-    photo_url = models.URLField(blank=True)
-    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='manual')
-    logged_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        db_table = 'analytics_meal_log'
-        ordering = ['-logged_at', '-created_at']
-        indexes = [
-            models.Index(fields=['user', '-logged_at']),
-            models.Index(fields=['user', 'meal_type']),
-        ]
-        constraints = [models.UniqueConstraint(fields=['user', 'source_event_id'], name='analytics_meal_source_event_unique')]
-
-    def clean(self):
-        from django.core.exceptions import ValidationError
-        if self.calories is not None and self.calories < 0:
-            raise ValidationError({'calories': 'Calories cannot be negative.'})
-
-    def __str__(self):
-        return f'{self.get_meal_type_display()} {self.food_name or self.calories}'
-
-
 class BodyMetric(TimestampedModel):
     """A weight/body-composition check-in with optional body + scale photos."""
 

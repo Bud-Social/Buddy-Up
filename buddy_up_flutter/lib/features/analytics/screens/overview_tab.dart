@@ -21,7 +21,6 @@ class OverviewTab extends ConsumerWidget {
 
     final distance = s.activity.totalDistanceKm;
     final workoutCal = s.workouts.totalCaloriesBurned;
-    final mealCal = s.nutrition.totalCalories;
     final activeCal = s.activity.totalCaloriesBurned;
     final weight = s.body.latestWeightKg;
 
@@ -65,12 +64,6 @@ class OverviewTab extends ConsumerWidget {
                 accent: BuddyColors.gold,
               ),
               StatCard(
-                label: 'Calories Logged',
-                value: formatNumber(mealCal),
-                icon: Icons.local_fire_department,
-                accent: BuddyColors.red,
-              ),
-              StatCard(
                 label: 'Weight',
                 value: weight != null
                     ? '${formatNumber(weight, decimals: 1)} kg'
@@ -78,51 +71,6 @@ class OverviewTab extends ConsumerWidget {
                 icon: Icons.monitor_weight_outlined,
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          SectionHeader(
-            title: 'Macros',
-            icon: Icons.pie_chart_outline,
-            trailing: Text(
-              '${formatNumber(s.nutrition.totalCalories)} kcal',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                fontSize: 13,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-            ),
-            child: Column(
-              children: [
-                MacroBar(
-                  label: 'Protein',
-                  value: s.nutrition.totalProteinG,
-                  max: 120,
-                  color: BuddyColors.green,
-                ),
-                const SizedBox(height: 12),
-                MacroBar(
-                  label: 'Carbs',
-                  value: s.nutrition.totalCarbsG,
-                  max: 180,
-                  color: BuddyColors.gold,
-                ),
-                const SizedBox(height: 12),
-                MacroBar(
-                  label: 'Fat',
-                  value: s.nutrition.totalFatG,
-                  max: 70,
-                  color: BuddyColors.red,
-                ),
-              ],
-            ),
           ),
           const SizedBox(height: 16),
           const SectionHeader(

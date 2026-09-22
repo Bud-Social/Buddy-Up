@@ -159,8 +159,6 @@ _OriginalPostData _$OriginalPostDataFromJson(Map<String, dynamic> json) =>
       postType: json['post_type'] as String? ?? 'text',
       locationLabel: json['location_label'] as String?,
       workoutLogData: json['workout_log_data'] as Map<String, dynamic>?,
-      mealData: json['meal_data'] as Map<String, dynamic>?,
-      progressData: json['progress_data'] as Map<String, dynamic>?,
       poll: json['poll'] == null
           ? null
           : Poll.fromJson(json['poll'] as Map<String, dynamic>),
@@ -189,8 +187,6 @@ Map<String, dynamic> _$OriginalPostDataToJson(_OriginalPostData instance) =>
       'post_type': instance.postType,
       'location_label': instance.locationLabel,
       'workout_log_data': instance.workoutLogData,
-      'meal_data': instance.mealData,
-      'progress_data': instance.progressData,
       'poll': instance.poll,
       'comment_count': instance.commentCount,
       'repost_count': instance.repostCount,
@@ -225,8 +221,6 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
       (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
       const <String>[],
   workoutLogData: json['workout_log_data'] as Map<String, dynamic>?,
-  mealData: json['meal_data'] as Map<String, dynamic>?,
-  progressData: json['progress_data'] as Map<String, dynamic>?,
   locationLabel: json['location_label'] as String? ?? '',
   viewCount: (json['view_count'] as num?)?.toInt() ?? 0,
   reactionCounts:
@@ -279,8 +273,6 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'commentsDisabled': instance.commentsDisabled,
   'tags': instance.tags,
   'workout_log_data': instance.workoutLogData,
-  'meal_data': instance.mealData,
-  'progress_data': instance.progressData,
   'location_label': instance.locationLabel,
   'view_count': instance.viewCount,
   'reaction_counts': instance.reactionCounts,

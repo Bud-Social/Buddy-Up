@@ -16,13 +16,11 @@ const List<String> postTypes = [
   'short_video',
   'long_video',
   'workout_log',
-  'meal',
-  'progress',
   'moment',
   'poll',
 ];
 
-const List<String> feedTabs = ['for_you', 'following', 'videos', 'meals', 'progress'];
+const List<String> feedTabs = ['for_you', 'following', 'videos'];
 
 const List<String> liveCategories = [
   'strength',

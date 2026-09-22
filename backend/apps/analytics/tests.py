@@ -6,16 +6,12 @@ from apps.accounts.models import User
 from apps.profiles.models import Profile
 
 from .models import AnalyticsEvent
-from .serializers import ActivityRecordSerializer, MealLogSerializer
+from .serializers import ActivityRecordSerializer
 
 
 class AnalyticsValidationTests(SimpleTestCase):
     def test_rejects_negative_activity_values(self):
         serializer = ActivityRecordSerializer(data={'duration_seconds': -1})
-        self.assertFalse(serializer.is_valid())
-
-    def test_rejects_negative_meal_nutrition(self):
-        serializer = MealLogSerializer(data={'calories': -1})
         self.assertFalse(serializer.is_valid())
 
 
@@ -34,7 +30,7 @@ class EventIngestionTests(TestCase):
         resp = self._post([
             {'event_name': 'feed.post_impression', 'object_type': 'post', 'object_id': 'abc',
              'properties': {'feed_tab': 'for_you', 'rank': 3}, 'consent': {'analytics': True}},
-            {'event_name': 'feed.tab_selected', 'properties': {'feed_tab': 'meals'}, 'consent': {'analytics': True}},
+            {'event_name': 'feed.tab_selected', 'properties': {'feed_tab': 'videos'}, 'consent': {'analytics': True}},
         ])
         self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(resp.data['data']['accepted'], 2)
