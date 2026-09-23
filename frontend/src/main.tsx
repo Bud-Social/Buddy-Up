@@ -12,7 +12,6 @@ initReducedMotion();
 if (typeof window !== 'undefined') {
   const controllerURL =
     ('serviceWorker' in navigator && navigator.serviceWorker.controller?.scriptURL) || 'none';
-  // eslint-disable-next-line no-console
   console.info(`[buddyup] build=${__BUILD_TIME__} sw-controller=${controllerURL}`);
 }
 
