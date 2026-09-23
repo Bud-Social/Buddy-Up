@@ -89,15 +89,15 @@ const plannedFeatures = [
 ];
 
 const horizonStyles: Record<string, string> = {
-  Near: 'text-buddy-green border-buddy-green/30 bg-buddy-green/10',
-  Soon: 'text-buddy-electric border-buddy-electric/30 bg-buddy-electric/10',
-  Later: 'text-buddy-gold border-buddy-gold/30 bg-buddy-gold/10',
+  Near: 'text-buddy-text-secondary border-buddy-surface-raised bg-buddy-surface-raised/40',
+  Soon: 'text-buddy-text-secondary border-buddy-surface-raised bg-buddy-surface-raised/40',
+  Later: 'text-buddy-text-secondary border-buddy-surface-raised bg-buddy-surface-raised/40',
 };
 
 const horizonIconColors: Record<string, string> = {
   Near: 'text-buddy-green',
-  Soon: 'text-buddy-electric',
-  Later: 'text-buddy-gold',
+  Soon: 'text-buddy-green',
+  Later: 'text-buddy-green',
 };
 
 
