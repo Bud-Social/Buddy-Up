@@ -94,10 +94,17 @@ const horizonStyles: Record<string, string> = {
   Later: 'text-buddy-text-secondary border-buddy-surface-raised bg-buddy-surface-raised/40',
 };
 
-const horizonIconColors: Record<string, string> = {
+// Horizon is encoded once, on the icon chip — never as a full-card tint.
+const horizonChip: Record<string, string> = {
+  Near: 'bg-buddy-green/10',
+  Soon: 'bg-buddy-gold/10',
+  Later: 'bg-buddy-surface-raised',
+};
+
+const horizonChipIcon: Record<string, string> = {
   Near: 'text-buddy-green',
-  Soon: 'text-buddy-green',
-  Later: 'text-buddy-green',
+  Soon: 'text-buddy-gold',
+  Later: 'text-buddy-text-secondary',
 };
 
 
@@ -423,7 +430,9 @@ export default function Landing() {
           {plannedFeatures.map(({ title, horizon, desc, icon: Icon }) => (
             <Card key={title} className="p-6 bg-buddy-surface">
               <div className="flex items-center justify-between mb-4">
-                <Icon size={28} className={horizonIconColors[horizon]} />
+                <span className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 ${horizonChip[horizon]}`}>
+                  <Icon size={24} className={horizonChipIcon[horizon]} />
+                </span>
                 <span className={`text-[11px] font-semibold uppercase tracking-wide border rounded-full px-2.5 py-1 ${horizonStyles[horizon]}`}>
                   Planned · {horizon}
                 </span>
