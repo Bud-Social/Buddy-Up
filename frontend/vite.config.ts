@@ -83,12 +83,13 @@ export default defineConfig({
             urlPattern: /^\/.*/i,
             handler: 'NetworkFirst',
             options: {
-              // Fallback-only HTML cache: short timeout so online visitors
-              // always get the fresh deployment, short TTL so a cached page
-              // never outlives an hour.
+              // Fallback-only HTML cache: generous timeout so slow mobile
+              // networks never trip the offline page while online (a 3s
+              // timeout served offline.html on every slow document fetch),
+              // short TTL so a cached page never outlives an hour.
               cacheName: 'navigation-cache-v2',
               expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 },
-              networkTimeoutSeconds: 3,
+              networkTimeoutSeconds: 10,
               cacheableResponse: { statuses: [0, 200] },
             },
           },

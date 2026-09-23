@@ -32,7 +32,17 @@ export function usePWAUpdate(): PWAUpdateState {
   const update = () => {
     if (registration && registration.waiting) {
       registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      window.location.reload();
+      // Wait for the new worker to take control before reloading —
+      // reloading immediately races it and the old worker keeps control.
+      const done = () => window.location.reload();
+      const timeout = setTimeout(done, 2000);
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        clearTimeout(timeout);
+        done();
+      }, { once: true });
+    } else {
+      registration?.update().catch(() => undefined);
+      setTimeout(() => window.location.reload(), 1500);
     }
   };
 

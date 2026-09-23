@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0A0A0A" />
-  <title>Offline — BuddyUp</title>
+  <title>Offline — BuddyUp Fit</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -43,9 +43,14 @@
       <path d="M50 30v20l15 10" stroke="#00C896" stroke-width="5" stroke-linecap="round"/>
     </svg>
     <h1>You're offline</h1>
-    <p>Connect to the internet to keep using BuddyUp. Your saved content will be available once you're back online.</p>
+    <p>Connect to the internet to keep using BuddyUp Fit. Your saved content will be available once you're back online.</p>
     <button class="btn" onclick="window.location.reload()">Try Again</button>
     <p class="status">BuddyUp will automatically resume when connectivity is restored.</p>
   </div>
+  <script>
+    // Auto-recover the moment the browser reports connectivity again —
+    // no manual site-data archaeology required.
+    window.addEventListener('online', function () { window.location.reload(); });
+  </script>
 </body>
 </html>
