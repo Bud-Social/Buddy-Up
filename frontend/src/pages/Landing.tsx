@@ -84,7 +84,7 @@ const plannedFeatures = [
   { horizon: 'Soon', icon: Watch, title: 'Wearable & health-app sync', desc: 'Pull steps, heart rate, and sleep from your watch into your progress feed automatically.' },
   { horizon: 'Soon', icon: Building2, title: 'Corporate awareness packages', desc: 'Team step-count challenges, branded gym spaces, sponsored events, and workplace wellness campaigns for companies that want healthier teams.' },
   { horizon: 'Soon', icon: UsersRound, title: 'Group & family access packages', desc: 'One plan for the whole household or crew — shared memberships, family challenges, and group streaks that keep everyone accountable.' },
-  { horizon: 'Soon', icon: Trophy, title: 'Streak rewards & team challenges', desc: 'Winter leagues, corporate team challenges, and rewards you can actually redeem.' },
+  { horizon: 'Soon', icon: Trophy, title: 'Streak rewards & seasonal leagues', desc: 'Holiday leagues, community challenges, and rewards you can actually redeem — earned through consistency, not spending.' },
   { horizon: 'Later', icon: Languages, title: 'Multilanguage interface', desc: 'The whole app in your language — starting with Swahili and expanding from there.' },
 ];
 
