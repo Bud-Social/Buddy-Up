@@ -31,6 +31,7 @@ export function Logo({ size = 'md', className = '', type = 'full' }: LogoProps) 
       <span className={`font-display font-extrabold ${sizeMap[size].text} ${className}`}>
         <span className="buddy-duo-swap">Buddy</span>
         <span className="buddy-duo-swap-rev">Up</span>
+        <span className="text-buddy-green"> Fit</span>
       </span>
     );
   }
@@ -53,6 +54,7 @@ export function Logo({ size = 'md', className = '', type = 'full' }: LogoProps) 
       <span className={`font-display font-extrabold ${sizeMap[size].text}`}>
         <span className="buddy-duo-swap">Buddy</span>
         <span className="buddy-duo-swap-rev">Up</span>
+        <span className="text-buddy-green"> Fit</span>
       </span>
     </div>
   );
