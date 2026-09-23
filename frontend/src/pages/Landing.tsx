@@ -699,10 +699,10 @@ export default function Landing() {
                   href={PARTNERSHIP_FORM_URL}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="flex items-start gap-3 rounded-2xl border border-buddy-gold/40 p-4 text-left hover:bg-buddy-gold/10 transition-colors"
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-surface-raised p-4 text-left hover:bg-buddy-surface-raised transition-colors"
                 >
-                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-gold/15 flex items-center justify-center">
-                    <Briefcase size={18} className="text-buddy-gold" />
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-green/15 flex items-center justify-center">
+                    <Briefcase size={18} className="text-buddy-green" />
                   </span>
                   <span>
                     <span className="block font-heading font-semibold text-sm">Partnership proposal for brands</span>
@@ -715,10 +715,10 @@ export default function Landing() {
                 <button
                   type="button"
                   onClick={() => setSupportOpen(true)}
-                  className="flex items-start gap-3 rounded-2xl border border-buddy-gold/40 p-4 text-left hover:bg-buddy-gold/10 transition-colors"
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-surface-raised p-4 text-left hover:bg-buddy-surface-raised transition-colors"
                 >
-                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-gold/15 flex items-center justify-center">
-                    <Briefcase size={18} className="text-buddy-gold" />
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-green/15 flex items-center justify-center">
+                    <Briefcase size={18} className="text-buddy-green" />
                   </span>
                   <span>
                     <span className="block font-heading font-semibold text-sm">Partnership proposal for brands</span>
@@ -733,10 +733,10 @@ export default function Landing() {
                   href={INVESTOR_FORM_URL}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="flex items-start gap-3 rounded-2xl border border-buddy-electric/40 p-4 text-left hover:bg-buddy-electric/10 transition-colors"
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-surface-raised p-4 text-left hover:bg-buddy-surface-raised transition-colors"
                 >
-                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-electric/15 flex items-center justify-center">
-                    <TrendingUp size={18} className="text-buddy-electric" />
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-green/15 flex items-center justify-center">
+                    <TrendingUp size={18} className="text-buddy-green" />
                   </span>
                   <span>
                     <span className="block font-heading font-semibold text-sm">Investor relations</span>
@@ -749,10 +749,10 @@ export default function Landing() {
                 <button
                   type="button"
                   onClick={() => setSupportOpen(true)}
-                  className="flex items-start gap-3 rounded-2xl border border-buddy-electric/40 p-4 text-left hover:bg-buddy-electric/10 transition-colors"
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-surface-raised p-4 text-left hover:bg-buddy-surface-raised transition-colors"
                 >
-                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-electric/15 flex items-center justify-center">
-                    <TrendingUp size={18} className="text-buddy-electric" />
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-green/15 flex items-center justify-center">
+                    <TrendingUp size={18} className="text-buddy-green" />
                   </span>
                   <span>
                     <span className="block font-heading font-semibold text-sm">Investor relations</span>

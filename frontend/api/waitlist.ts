@@ -199,21 +199,36 @@ export default async function handler(req: VercelReq, res: VercelRes): Promise<v
   const entry = { email, name, country, source, interest, details };
 
   // Upsert on the email primary key: re-joining never duplicates or errors.
+  // Staged insert: some deployments predate the interest/details columns, so
+  // fall back to slimmer payloads instead of failing the signup. The Sheets
+  // mirror always carries the full payload regardless of stage.
+  const headers = {
+    apikey: sbKey,
+    Authorization: `Bearer ${sbKey}`,
+    'Content-Type': 'application/json',
+    Prefer: 'resolution=merge-duplicates,return=minimal',
+  };
+  const stages: { label: string; body: unknown }[] = [
+    { label: 'full', body: entry },
+    { label: 'no-details', body: { email, name, country, source, interest } },
+    { label: 'legacy', body: { email, name, country, source } },
+  ];
   let saved = false;
   try {
-    const sbRes = await fetch(`${sbUrl}/rest/v1/waitlist_entry?on_conflict=email`, {
-      method: 'POST',
-      headers: {
-        apikey: sbKey,
-        Authorization: `Bearer ${sbKey}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=minimal',
-      },
-      body: JSON.stringify(entry),
-    });
-    saved = sbRes.ok;
-    if (!saved) {
-      console.error('waitlist: supabase insert failed', sbRes.status, (await sbRes.text()).slice(0, 300));
+    for (const stage of stages) {
+      const sbRes = await fetch(`${sbUrl}/rest/v1/waitlist_entry?on_conflict=email`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(stage.body),
+      });
+      saved = sbRes.ok;
+      if (saved) {
+        if (stage.label !== 'full') {
+          console.error(`waitlist: supabase saved at fallback stage=${stage.label} interest=${interest}`);
+        }
+        break;
+      }
+      console.error(`waitlist: supabase stage=${stage.label} failed`, sbRes.status, (await sbRes.text()).slice(0, 300));
     }
   } catch (err) {
     console.error('waitlist: supabase insert threw', err);

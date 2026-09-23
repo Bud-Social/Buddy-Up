@@ -57,7 +57,7 @@ export function SupportDialog({ open, onClose }: SupportDialogProps) {
         {SUPPORT_LINKS.partnershipFormUrl ? (
           <a href={SUPPORT_LINKS.partnershipFormUrl} target="_blank" rel="noreferrer noopener" className="block sm:col-span-2">
             <Card className="p-5 h-full hover:bg-buddy-surface-raised transition-colors cursor-pointer">
-              <Briefcase size={28} className="text-buddy-gold mb-3" />
+              <Briefcase size={28} className="text-buddy-green mb-3" />
               <h3 className="font-heading font-semibold mb-1">Partnership Proposal for Brands</h3>
               <p className="text-sm text-buddy-text-secondary">
                 Sponsor challenges, events, and gym spaces — put your brand in front of
@@ -67,7 +67,7 @@ export function SupportDialog({ open, onClose }: SupportDialogProps) {
           </a>
         ) : (
           <Card className="p-5 h-full opacity-60 sm:col-span-2" aria-disabled="true">
-            <Briefcase size={28} className="text-buddy-gold mb-3" />
+            <Briefcase size={28} className="text-buddy-green mb-3" />
             <h3 className="font-heading font-semibold mb-1">Partnership Proposal for Brands</h3>
             <p className="text-sm text-buddy-text-secondary">
               Coming soon — the partnership form is not configured in this build.
@@ -77,7 +77,7 @@ export function SupportDialog({ open, onClose }: SupportDialogProps) {
         {SUPPORT_LINKS.investorFormUrl ? (
           <a href={SUPPORT_LINKS.investorFormUrl} target="_blank" rel="noreferrer noopener" className="block sm:col-span-2">
             <Card className="p-5 h-full hover:bg-buddy-surface-raised transition-colors cursor-pointer">
-              <TrendingUp size={28} className="text-buddy-electric mb-3" />
+              <TrendingUp size={28} className="text-buddy-green mb-3" />
               <h3 className="font-heading font-semibold mb-1">Investor Relations</h3>
               <p className="text-sm text-buddy-text-secondary">
                 Backing BuddyUp Fit? Tell us about yourself and we&apos;ll set up a conversation.
@@ -86,7 +86,7 @@ export function SupportDialog({ open, onClose }: SupportDialogProps) {
           </a>
         ) : (
           <Card className="p-5 h-full opacity-60 sm:col-span-2" aria-disabled="true">
-            <TrendingUp size={28} className="text-buddy-electric mb-3" />
+            <TrendingUp size={28} className="text-buddy-green mb-3" />
             <h3 className="font-heading font-semibold mb-1">Investor Relations</h3>
             <p className="text-sm text-buddy-text-secondary">
               Coming soon — the investor form is not configured in this build.

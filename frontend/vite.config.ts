@@ -8,7 +8,11 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/*.svg', 'favicon-*.png'],
+      // offline.html is precached explicitly (it is the navigateFallback, and
+      // workbox throws non-precached-url at SW install when the fallback is
+      // missing from the precache manifest). index.html stays OUT of the
+      // precache deliberately — see globPatterns note below.
+      includeAssets: ['icons/*.svg', 'favicon-*.png', 'offline.html'],
       manifest: {
         name: 'BuddyUp Fit',
         short_name: 'BuddyUp Fit',
