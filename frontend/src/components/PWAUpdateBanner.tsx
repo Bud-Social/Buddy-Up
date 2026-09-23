@@ -33,10 +33,16 @@ export function PWAUpdateBanner() {
   }, [recheck]);
 
   useEffect(() => {
+    const onUpdateAvailable = () => setNeedsUpdate(true);
+    window.addEventListener('buddyup:sw-update', onUpdateAvailable);
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistration().then((reg) => {
         if (reg) {
           setRegistration(reg);
+          // Backup path: catch an update that finished before this mounted.
+          if (reg.waiting && navigator.serviceWorker.controller) {
+            setNeedsUpdate(true);
+          }
           reg.addEventListener('updatefound', () => {
             reg.installing?.addEventListener('statechange', () => {
               if (reg.installing?.state === 'installed' && navigator.serviceWorker.controller) {
@@ -47,6 +53,7 @@ export function PWAUpdateBanner() {
         }
       });
     }
+    return () => window.removeEventListener('buddyup:sw-update', onUpdateAvailable);
   }, []);
 
   const update = () => {
