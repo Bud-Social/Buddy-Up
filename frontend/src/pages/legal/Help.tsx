@@ -82,7 +82,6 @@ export default function Help() {
           <li><Link to="/cookie-policy" className="text-buddy-accent hover:underline">Cookie Policy</Link></li>
           <li><Link to="/medical-disclaimer" className="text-buddy-accent hover:underline">Medical &amp; Wellness Disclaimer</Link></li>
           <li><Link to="/sponsorship-policy" className="text-buddy-accent hover:underline">Sponsorship &amp; Disclosure Policy</Link></li>
-          <li><Link to="/adult-content-policy" className="text-buddy-accent hover:underline">Adult Content Policy</Link></li>
         </ul>
         <LegalNotice>
           BuddyUp Fit is a fitness and wellness platform, not a medical service. If you are experiencing a medical emergency, contact your local emergency services immediately.
