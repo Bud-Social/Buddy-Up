@@ -13,11 +13,15 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // offline.html is precached explicitly (it is the navigateFallback, and
-      // workbox throws non-precached-url at SW install when the fallback is
-      // missing from the precache manifest). index.html stays OUT of the
-      // precache deliberately — see globPatterns note below.
-      includeAssets: ['icons/*.svg', 'favicon-*.png', 'offline.html'],
+      // Custom service worker (src/sw.js) instead of generateSW: the generated
+      // SW registers its NavigationRoute BEFORE runtime routes, so every
+      // navigation was answered with the precached offline.html without ever
+      // touching the network — the whole site looked permanently offline.
+      // src/sw.js implements network-first navigations with offline.html as
+      // a true last-resort only. See the route-order notes there.
+      strategies: 'injectManifest',
+      filename: 'sw.js',
+      srcDir: 'src',
       manifest: {
         name: 'BuddyUp Fit',
         short_name: 'BuddyUp Fit',
@@ -33,74 +37,17 @@ export default defineConfig({
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: {
-        // Web-push handlers live here (loaded inside the generated SW).
-        // There must be exactly ONE service worker: the generated /sw.js.
-        importScripts: ['/service-worker-push.js'],
-        // NOTE: deliberately NO 'html' in globPatterns. Precaching index.html
-        // made the precache route short-circuit navigations and serve stale
-        // builds to returning visitors — updates never appeared until a
-        // double reload. Navigations now go network-first via the navigation
-        // runtime rule below; offline.html is still auto-precached as the
-        // navigateFallback for offline visits.
+      injectManifest: {
+        // NOTE: deliberately NO 'html' in globPatterns — index.html must not
+        // be precached (serving the app shell from precache made updates
+        // never appear until a double reload). Navigations go network-first
+        // via the route in src/sw.js; offline.html is precached explicitly
+        // below as the last-resort fallback. Bump its revision whenever
+        // offline.html changes.
         globPatterns: ['**/*.{js,css,svg,png,ico,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 30 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/.*\.(png|jpg|jpeg|webp|avif|gif|svg)(\?.*)?$/i,
-            handler: 'CacheFirst',
-            options: {
-              // -v2 names: existing visitors' old runtime caches are orphaned
-              // on activate instead of continuing to serve week-old images.
-              cacheName: 'image-cache-v2',
-              expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            urlPattern: /^\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache-v2',
-              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 5 },
-              networkTimeoutSeconds: 10,
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            urlPattern: /^\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              // Fallback-only HTML cache: generous timeout so slow mobile
-              // networks never trip the offline page while online (a 3s
-              // timeout served offline.html on every slow document fetch),
-              // short TTL so a cached page never outlives an hour.
-              cacheName: 'navigation-cache-v2',
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 },
-              networkTimeoutSeconds: 10,
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
+        additionalManifestEntries: [
+          { url: '/offline.html', revision: 'offline-rescue-2026-09-23' },
         ],
-        navigateFallback: '/offline.html',
-        navigateFallbackDenylist: [/\/api\//],
       },
     }),
   ],

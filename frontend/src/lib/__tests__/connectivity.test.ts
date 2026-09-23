@@ -6,7 +6,7 @@ describe('verifyOnline', () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true });
     await expect(verifyOnline(fetchMock)).resolves.toBe(true);
     expect(fetchMock).toHaveBeenCalledWith(
-      '/offline.html',
+      '/api/v1/health/',
       expect.objectContaining({ method: 'HEAD', cache: 'no-store' }),
     );
   });

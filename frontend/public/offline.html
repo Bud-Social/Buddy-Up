@@ -48,9 +48,49 @@
     <p class="status">BuddyUp Fit will automatically resume when connectivity is restored.</p>
   </div>
   <script>
-    // Auto-recover the moment the browser reports connectivity again —
-    // no manual site-data archaeology required.
-    window.addEventListener('online', function () { window.location.reload(); });
+    // Escape hatch (?clear-sw=1): unregister every service worker, wipe all
+    // caches, then reload clean — mirrors the support link in main.tsx.
+    if (location.search.indexOf('clear-sw=1') !== -1) {
+      var wipe = Promise.resolve();
+      if ('serviceWorker' in navigator) {
+        wipe = wipe.then(function () {
+          return navigator.serviceWorker.getRegistrations().then(function (regs) {
+            return Promise.all(regs.map(function (r) { return r.unregister(); }));
+          });
+        });
+      }
+      if ('caches' in window) {
+        wipe = wipe.then(function () {
+          return caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+          });
+        });
+      }
+      wipe.then(function () { window.location.replace('/'); });
+    }
+
+    // Recovery for anyone who reached this page while actually online:
+    // ask the browser to re-check /sw.js right now instead of waiting for
+    // its 24h update cadence, and reload the moment a new worker takes
+    // control of this tab — the fixed worker no longer serves this page
+    // for navigations, so the reload lands in the real app.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        window.location.reload();
+      });
+      var pokeSW = function () {
+        navigator.serviceWorker.getRegistration().then(function (reg) {
+          if (reg) reg.update();
+        });
+      };
+      pokeSW();
+      window.addEventListener('online', function () {
+        pokeSW();
+        window.location.reload();
+      });
+    } else {
+      window.addEventListener('online', function () { window.location.reload(); });
+    }
   </script>
 </body>
 </html>
