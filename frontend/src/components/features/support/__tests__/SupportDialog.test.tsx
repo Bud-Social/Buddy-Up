@@ -12,6 +12,7 @@ vi.mock('@/config/support', async (importOriginal) => {
       gymSuiteFormUrl: '',
       trainerIntakeFormUrl: '',
       partnershipFormUrl: '',
+      investorFormUrl: '',
     },
   };
 });
@@ -26,7 +27,8 @@ describe('SupportDialog', () => {
     expect(screen.getByText('Donate')).toBeDefined();
     expect(screen.getByText('Pledge Funding')).toBeDefined();
     expect(screen.getByText('Partnership Proposal for Brands')).toBeDefined();
-    expect(screen.getAllByText(/Coming soon/).length).toBe(3);
+    expect(screen.getByText('Investor Relations')).toBeDefined();
+    expect(screen.getAllByText(/Coming soon/).length).toBe(4);
     expect(screen.queryByRole('link')).toBeNull();
   });
 });

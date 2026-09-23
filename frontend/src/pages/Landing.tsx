@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList, Globe, HeartPulse, Sparkles, Activity, CalendarDays, BookOpen, Building2, BellRing, Briefcase, Users, UsersRound, MessageCircle, QrCode, Watch, Trophy, Languages } from 'lucide-react';
+import { Check, ChevronRight, Play, Download, Radio, Dumbbell, Handshake, Flame, Search, User, GraduationCap, Utensils, Newspaper, Smartphone, Monitor, Heart, ClipboardList, Globe, HeartPulse, Sparkles, Activity, CalendarDays, BookOpen, Building2, BellRing, Briefcase, Users, UsersRound, MessageCircle, QrCode, Watch, Trophy, Languages, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Logo } from '@/components/ui/Logo';
 import { useDeviceType } from '@/hooks/useDeviceType';
 import { isReducedMotionEnabled } from '@/lib/reducedMotion';
 import { APP_URL } from '@/config/downloads';
-import { FUNDRAISER_URL, PLEDGE_FORM_URL, GYM_SUITE_FORM_URL, TRAINER_INTAKE_FORM_URL, PARTNERSHIP_FORM_URL } from '@/config/support';
+import { FUNDRAISER_URL, PLEDGE_FORM_URL, GYM_SUITE_FORM_URL, TRAINER_INTAKE_FORM_URL, PARTNERSHIP_FORM_URL, INVESTOR_FORM_URL } from '@/config/support';
 import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
 import { WaitlistForm, requestWaitlistInterest } from '@/components/features/support/WaitlistForm';
@@ -728,7 +728,41 @@ export default function Landing() {
                   </span>
                 </button>
               )}
-              {!FUNDRAISER_URL && !PLEDGE_FORM_URL && !PARTNERSHIP_FORM_URL ? (
+              {INVESTOR_FORM_URL ? (
+                <a
+                  href={INVESTOR_FORM_URL}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-electric/40 p-4 text-left hover:bg-buddy-electric/10 transition-colors"
+                >
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-electric/15 flex items-center justify-center">
+                    <TrendingUp size={18} className="text-buddy-electric" />
+                  </span>
+                  <span>
+                    <span className="block font-heading font-semibold text-sm">Investor relations</span>
+                    <span className="block text-xs text-buddy-text-secondary mt-0.5">
+                      Backing BuddyUp Fit? Let&apos;s talk.
+                    </span>
+                  </span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSupportOpen(true)}
+                  className="flex items-start gap-3 rounded-2xl border border-buddy-electric/40 p-4 text-left hover:bg-buddy-electric/10 transition-colors"
+                >
+                  <span className="flex-shrink-0 w-10 h-10 rounded-full bg-buddy-electric/15 flex items-center justify-center">
+                    <TrendingUp size={18} className="text-buddy-electric" />
+                  </span>
+                  <span>
+                    <span className="block font-heading font-semibold text-sm">Investor relations</span>
+                    <span className="block text-xs text-buddy-text-secondary mt-0.5">
+                      Backing BuddyUp Fit? Let&apos;s talk.
+                    </span>
+                  </span>
+                </button>
+              )}
+              {!FUNDRAISER_URL && !PLEDGE_FORM_URL && !PARTNERSHIP_FORM_URL && !INVESTOR_FORM_URL ? (
                 <Button onClick={() => setSupportOpen(true)} className="w-full">
                   <Heart size={16} /> Support us
                 </Button>

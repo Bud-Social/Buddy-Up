@@ -5,12 +5,17 @@
  * frontend, so the browser needs no CORS preflight; the origin checks below
  * exist only as a safety net for cross-origin tools/curl.
  *
- * Secrets (Supabase service key, Google Sheets webhook URL) live in Vercel
- * ENVIRONMENT VARIABLES — plain names, NOT VITE_-prefixed, so they are never
- * inlined into the client bundle. Required:
+ * Secrets (Supabase service key, Google Sheets webhook URLs, mirror key)
+ * live in Vercel ENVIRONMENT VARIABLES — plain names, NOT VITE_-prefixed,
+ * so they are never inlined into the client bundle. Required:
  *   SUPABASE_URL                 e.g. https://xxxx.supabase.co
  *   SUPABASE_SERVICE_ROLE_KEY    service key (bypasses RLS; server-side only)
- *   GOOGLE_SHEETS_WEBHOOK_URL    optional — Apps Script exec URL for the mirror
+ *   GOOGLE_SHEETS_WEBHOOK_URL    optional — users-sheet Apps Script exec URL
+ *   CONS_ALL_SHEETS              optional — consolidated-sheet exec URL
+ *                                (non-user interests; falls back to the
+ *                                users webhook when unset)
+ *   SHEETS_MIRROR_KEY            optional — secret sent only to the
+ *                                consolidated webhook
  *
  * Writes to Supabase table `waitlist_entry`
  * (email PK, name, country, source, interest, details, created_at default
@@ -60,22 +65,43 @@ function fail(res: VercelRes, status: number, message: string): void {
 
 /** Race the fire-and-forget sheet mirror against a hard timeout so a hung
  * webhook can never delay the signup response (same policy as the Django
- * version's daemon thread). Failures are swallowed by design. */
+ * version's daemon thread). Failures are swallowed by design.
+ *
+ * Dual-sheet routing (mirrors backend/apps/waitlist/sheets.py):
+ * - `user` interest → users sheet (GOOGLE_SHEETS_WEBHOOK_URL, no key).
+ * - every other interest → consolidated sheet (CONS_ALL_SHEETS),
+ *   authenticated with SHEETS_MIRROR_KEY. Falls back to the users sheet
+ *   when CONS_ALL_SHEETS is unset so a lead is never silently dropped. */
+const CONSOLIDATED_INTERESTS = new Set([
+  'gym', 'trainer', 'corporate', 'organiser', 'supplier',
+  'distributor', 'partnership', 'investor',
+]);
+
 async function mirrorToSheets(entry: { email: string; name: string; country: string; source: string; interest: string; details: string }): Promise<void> {
-  const url = (process.env.GOOGLE_SHEETS_WEBHOOK_URL || '').trim();
+  const usersUrl = (process.env.GOOGLE_SHEETS_WEBHOOK_URL || '').trim();
+  const consUrl = (process.env.CONS_ALL_SHEETS || '').trim();
+  const consKey = (process.env.SHEETS_MIRROR_KEY || '').trim();
+  let url = usersUrl;
+  let key = '';
+  if (CONSOLIDATED_INTERESTS.has(entry.interest) && consUrl) {
+    url = consUrl;
+    key = consKey;
+  }
   if (!url) return;
+  const params: Record<string, string> = {
+    email: entry.email,
+    name: entry.name,
+    country: entry.country,
+    source: entry.source,
+    interest: entry.interest,
+    details: entry.details,
+  };
+  if (key) params.key = key;
   await Promise.race([
     fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        email: entry.email,
-        name: entry.name,
-        country: entry.country,
-        source: entry.source,
-        interest: entry.interest,
-        details: entry.details,
-      }),
+      body: new URLSearchParams(params),
     }).catch(() => undefined),
     new Promise((resolve) => setTimeout(resolve, MIRROR_TIMEOUT_MS)),
   ]);

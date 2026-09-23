@@ -135,6 +135,56 @@ class WaitlistSignupTests(TestCase):
 
 
 @mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': ''})
+class MirrorRoutingTests(TestCase):
+    def test_user_interest_routes_to_users_sheet(self):
+        from apps.waitlist.sheets import resolve_mirror_target
+        with mock.patch.dict('os.environ', {
+            'GOOGLE_SHEETS_WEBHOOK_URL': 'https://users.example/exec',
+            'CONS_ALL_SHEETS': 'https://cons.example/exec',
+            'SHEETS_MIRROR_KEY': 'secret',
+        }):
+            url, key = resolve_mirror_target('user')
+            assert url == 'https://users.example/exec'
+            assert key == ''
+
+    def test_segment_interests_route_to_consolidated_sheet_with_key(self):
+        from apps.waitlist.sheets import resolve_mirror_target
+        with mock.patch.dict('os.environ', {
+            'GOOGLE_SHEETS_WEBHOOK_URL': 'https://users.example/exec',
+            'CONS_ALL_SHEETS': 'https://cons.example/exec',
+            'SHEETS_MIRROR_KEY': 'secret',
+        }):
+            for interest in ('gym', 'trainer', 'corporate', 'organiser',
+                             'supplier', 'distributor', 'partnership',
+                             'investor'):
+                url, key = resolve_mirror_target(interest)
+                assert url == 'https://cons.example/exec', interest
+                assert key == 'secret', interest
+
+    def test_consolidated_falls_back_to_users_sheet_when_unset(self):
+        from apps.waitlist.sheets import resolve_mirror_target
+        with mock.patch.dict('os.environ', {
+            'GOOGLE_SHEETS_WEBHOOK_URL': 'https://users.example/exec',
+            'CONS_ALL_SHEETS': '',
+            'SHEETS_MIRROR_KEY': 'secret',
+        }):
+            url, key = resolve_mirror_target('gym')
+            assert url == 'https://users.example/exec'
+            assert key == ''
+
+    def test_unknown_interest_falls_back_to_users_sheet(self):
+        from apps.waitlist.sheets import resolve_mirror_target
+        with mock.patch.dict('os.environ', {
+            'GOOGLE_SHEETS_WEBHOOK_URL': 'https://users.example/exec',
+            'CONS_ALL_SHEETS': 'https://cons.example/exec',
+            'SHEETS_MIRROR_KEY': 'secret',
+        }):
+            url, key = resolve_mirror_target('something-new')
+            assert url == 'https://users.example/exec'
+            assert key == ''
+
+
+@mock.patch.dict('os.environ', {'GOOGLE_SHEETS_WEBHOOK_URL': ''})
 class PublicIntakeTests(TestCase):
     def setUp(self):
         self.client = APIClient()

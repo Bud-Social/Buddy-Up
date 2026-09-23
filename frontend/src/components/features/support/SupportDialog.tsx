@@ -1,4 +1,4 @@
-import { Briefcase, ClipboardList, Heart } from 'lucide-react';
+import { Briefcase, ClipboardList, Heart, TrendingUp } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { Card } from '@/components/ui/Card';
 import { SUPPORT_LINKS } from '@/config/support';
@@ -71,6 +71,25 @@ export function SupportDialog({ open, onClose }: SupportDialogProps) {
             <h3 className="font-heading font-semibold mb-1">Partnership Proposal for Brands</h3>
             <p className="text-sm text-buddy-text-secondary">
               Coming soon — the partnership form is not configured in this build.
+            </p>
+          </Card>
+        )}
+        {SUPPORT_LINKS.investorFormUrl ? (
+          <a href={SUPPORT_LINKS.investorFormUrl} target="_blank" rel="noreferrer noopener" className="block sm:col-span-2">
+            <Card className="p-5 h-full hover:bg-buddy-surface-raised transition-colors cursor-pointer">
+              <TrendingUp size={28} className="text-buddy-electric mb-3" />
+              <h3 className="font-heading font-semibold mb-1">Investor Relations</h3>
+              <p className="text-sm text-buddy-text-secondary">
+                Backing BuddyUp Fit? Tell us about yourself and we&apos;ll set up a conversation.
+              </p>
+            </Card>
+          </a>
+        ) : (
+          <Card className="p-5 h-full opacity-60 sm:col-span-2" aria-disabled="true">
+            <TrendingUp size={28} className="text-buddy-electric mb-3" />
+            <h3 className="font-heading font-semibold mb-1">Investor Relations</h3>
+            <p className="text-sm text-buddy-text-secondary">
+              Coming soon — the investor form is not configured in this build.
             </p>
           </Card>
         )}
