@@ -24,7 +24,7 @@ export default function Help() {
       <div className="space-y-2">
         {LINKS.map(({ label, desc, link, mailto }) => (
           <Card key={label} className="p-4 hover:bg-buddy-surface-raised cursor-pointer transition-colors"
-            onClick={() => { if (mailto) window.open(mailto, '_blank'); else if (link) navigate(link); }}>
+            onClick={() => { if (mailto) window.open(mailto, '_blank', 'noopener,noreferrer'); else if (link) navigate(link); }}>
             <p className="text-sm font-medium">{label}</p>
             <p className="text-xs text-buddy-text-secondary">{desc}</p>
           </Card>

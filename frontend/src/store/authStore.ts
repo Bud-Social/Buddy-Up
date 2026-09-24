@@ -35,6 +35,13 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         wsManager.setAccessToken(null);
         wsManager.disconnectAll();
+        // Purge service-worker runtime caches so no authenticated response
+        // survives logout on disk (shared-device hygiene). Also clears caches
+        // written by older SW versions that cached /api/ responses.
+        if (typeof caches !== 'undefined') {
+          caches.delete('api-cache-v3');
+          caches.delete('navigation-cache-v3');
+        }
         set({ isAuthenticated: false, accessToken: null, refreshToken: null, user: null, profile: null, isLoading: false });
       },
       setLoading: (loading) => set({ isLoading: loading }),

@@ -15,7 +15,9 @@
  * Route order below is load-bearing, first match wins:
  *   1. precache          — hashed build assets (cache-first, revisoned)
  *   2. fonts / images    — cache-first runtime caches
- *   3. /api/ GET         — network-first, short TTL cache
+ *   3. /api/ GET         — network-only, NEVER cached (authenticated responses
+ *                          may contain personal data; caching them would leave
+ *                          it on disk after logout, readable on shared devices)
  *   4. same-origin GET   — network-first: navigations get fresh HTML when
  *                          online, cached shell on slow networks, and the
  *                          precached offline.html ONLY as the last resort
@@ -29,7 +31,7 @@ import {
   precacheAndRoute,
 } from 'workbox-precaching';
 import { registerRoute, setCatchHandler } from 'workbox-routing';
-import { CacheFirst, NetworkFirst } from 'workbox-strategies';
+import { CacheFirst, NetworkFirst, NetworkOnly } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
 
@@ -69,11 +71,11 @@ registerRoute(
 registerRoute(
   ({ url, request }) =>
     request.method === 'GET' && url.origin === self.location.origin && url.pathname.startsWith('/api/'),
-  new NetworkFirst({
-    cacheName: 'api-cache-v3',
-    networkTimeoutSeconds: 10,
-    plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 5 }), cacheable()],
-  }),
+  // Security: API responses are authenticated and may contain personal data.
+  // They must never touch a disk cache — a previous version cached them for
+  // 5 minutes ('api-cache-v3'); that cache is deleted on activate below and
+  // on client logout (see authStore).
+  new NetworkOnly(),
 );
 
 // Navigations (and any other same-origin GET not claimed above): network
@@ -99,4 +101,22 @@ setCatchHandler(async ({ event }) => {
     return offlineHandler({ event, request: event.request });
   }
   return Response.error();
+});
+
+// Delete runtime caches written by older SW versions. In particular
+// 'api-cache-v3' may still hold authenticated API responses from the
+// previous network-first /api/ route — purge it unconditionally on activate.
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    (async () => {
+      if (self.caches) {
+        const names = await self.caches.keys();
+        await Promise.all(
+          names
+            .filter((name) => name.startsWith('api-cache-'))
+            .map((name) => self.caches.delete(name)),
+        );
+      }
+    })(),
+  );
 });

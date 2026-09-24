@@ -11,7 +11,12 @@ export default function VerifyAge() {
   const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
-  const redirectTo = params.get('redirect') || '/signup';
+  // Guard against open redirects: only same-origin absolute paths are allowed
+  // (same validation as Login.tsx applies to ?next).
+  const redirectTo = (() => {
+    const next = params.get('redirect');
+    return next && next.startsWith('/') && !next.startsWith('//') ? next : '/signup';
+  })();
 
   const [day, setDay] = useState('');
   const [month, setMonth] = useState('');

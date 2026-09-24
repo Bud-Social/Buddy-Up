@@ -60,7 +60,7 @@ export default function DocumentPreview({ url, name, mime, onClose }: DocPreview
       const a = document.createElement('a'); a.href = dlUrl; a.download = name; a.click();
       URL.revokeObjectURL(dlUrl);
     } catch {
-      window.open(url, '_blank');
+      window.open(url, '_blank', 'noopener,noreferrer');
     }
   };
 

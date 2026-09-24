@@ -1194,7 +1194,7 @@ export default function Messages() {
                                     }}
                                   />
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank'); }}
+                                    onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank', 'noopener,noreferrer'); }}
                                     className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-black/80 rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity text-white backdrop-blur-sm shadow-sm"
                                     title="Download"
                                   >
@@ -1210,7 +1210,7 @@ export default function Messages() {
                                       <span className="text-[10px] ml-auto opacity-60">{Math.round((msg.metadata.duration_ms as number) / 1000)}s</span>
                                     ) : null}
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank'); }}
+                                      onClick={(e) => { e.stopPropagation(); window.open(msg.media_url, '_blank', 'noopener,noreferrer'); }}
                                       className="p-1 hover:text-buddy-green transition-colors ml-auto"
                                       title="Download"
                                     >
@@ -1235,7 +1235,7 @@ export default function Messages() {
                                           const blobUrl = URL.createObjectURL(blob);
                                           setPreviewFileUrl({ url: msg.media_url!, name: msg.file_name || 'Document', mime: msg.media_mime || 'application/octet-stream', blobUrl });
                                         } catch {
-                                          window.open(msg.media_url!, '_blank');
+                                          window.open(msg.media_url!, '_blank', 'noopener,noreferrer');
                                         }
                                       }}
                                       className="text-left text-[11px] font-medium opacity-70 hover:opacity-100 transition-opacity underline-offset-2 hover:underline mt-0.5"
@@ -1252,7 +1252,7 @@ export default function Messages() {
                                         const a = document.createElement('a'); a.href = url; a.download = msg.file_name || 'file'; a.click();
                                         URL.revokeObjectURL(url);
                                       } catch {
-                                        window.open(msg.media_url!, '_blank');
+                                        window.open(msg.media_url!, '_blank', 'noopener,noreferrer');
                                       }
                                     }}
                                     className={`p-2 rounded-full transition-colors shrink-0 ${isMine ? 'hover:bg-buddy-black/10 text-buddy-black' : 'hover:bg-white/10 text-buddy-text-secondary hover:text-white'}`}

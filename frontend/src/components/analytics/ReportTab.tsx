@@ -35,7 +35,7 @@ export function ReportTab({ period }: Props) {
     try {
       const res = await analyticsApi.downloadReport(period);
       if (res.data?.image_url) {
-        window.open(res.data.image_url, '_blank');
+        window.open(res.data.image_url, '_blank', 'noopener,noreferrer');
       }
     } catch {
       setError('Failed to download report.');
