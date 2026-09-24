@@ -4,6 +4,7 @@ import { Check, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { submitSuggestion } from '@/api/contact';
+import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 
 const CATEGORIES = [
   { value: 'gyms', label: 'Gyms' },
@@ -124,7 +125,12 @@ export function SuggestionForm({ onDone }: { onDone?: () => void }) {
         />
       </div>
       {status === 'error' && (
-        <p className="text-sm text-red-500" role="alert">{message}</p>
+        <p className="text-sm text-red-500" role="alert">
+          {message}{' '}
+          <a href={mailtoLink('direct', `Feature suggestion — ${title}`)} className="underline hover:no-underline">
+            Or email it to {CONTACT_EMAILS.direct}
+          </a>
+        </p>
       )}
       <Button type="submit" className="w-full" disabled={status === 'loading'}>
         {status === 'loading' ? 'Sending…' : 'Send suggestion'}

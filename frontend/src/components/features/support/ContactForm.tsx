@@ -4,6 +4,7 @@ import { Check, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { submitContact } from '@/api/contact';
+import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 
 const TOPICS = [
   { value: 'general', label: 'General' },
@@ -135,7 +136,12 @@ export function ContactForm() {
         />
       </div>
       {status === 'error' && (
-        <p className="text-sm text-red-500" role="alert">{error}</p>
+        <p className="text-sm text-red-500" role="alert">
+          {error}{' '}
+          <a href={mailtoLink('direct', `Contact form — ${topic}`)} className="underline hover:no-underline">
+            Or email us directly at {CONTACT_EMAILS.direct}
+          </a>
+        </p>
       )}
       <Button type="submit" className="w-full" disabled={status === 'loading'}>
         {status === 'loading' ? 'Sending…' : 'Send message'}
