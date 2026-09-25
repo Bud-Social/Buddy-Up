@@ -6,6 +6,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
+    "types": ["node"],
     "emitDeclarationOnly": true,
     "declaration": true,
     "outDir": "./dist-node"
