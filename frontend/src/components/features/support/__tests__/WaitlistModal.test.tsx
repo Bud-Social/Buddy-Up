@@ -30,4 +30,10 @@ describe('WaitlistModal', () => {
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('shows the tier name in the title when one is passed', () => {
+    render(<WaitlistModal isOpen onClose={() => {}} interest="trainer" tier="Premium" />);
+    expect(screen.getByText('Join the waiting list — Premium')).toBeDefined();
+    expect(screen.queryByText('Join the waiting list — launching November')).toBeNull();
+  });
 });

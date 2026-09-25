@@ -165,8 +165,8 @@ export default function Landing() {
   const [installWaitlistOpen, setInstallWaitlistOpen] = useState(false);
   /** Popup waitlist for the "Get Started"-family CTAs — the signup flow is
    * closed prelaunch, so these buttons pop the waiting list instead. */
-  const [waitlistModal, setWaitlistModal] = useState<{ open: boolean; interest: WaitlistInterest }>({ open: false, interest: 'user' });
-  const openWaitlist = (interest: WaitlistInterest = 'user') => setWaitlistModal({ open: true, interest });
+  const [waitlistModal, setWaitlistModal] = useState<{ open: boolean; interest: WaitlistInterest; tier?: string }>({ open: false, interest: 'user' });
+  const openWaitlist = (interest: WaitlistInterest = 'user', tier?: string) => setWaitlistModal({ open: true, interest, tier });
   const closeWaitlist = () => setWaitlistModal((m) => ({ ...m, open: false }));
   const { isMobile, isTablet, isDesktop, os } = useDeviceType();
   const [canInstall, setCanInstall] = useState(false);
@@ -516,7 +516,7 @@ export default function Landing() {
             collects your intro video and credentials for verification.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="gap-2" onClick={() => openWaitlist('trainer')}>
+            <Button size="lg" className="gap-2" onClick={() => openWaitlist('trainer', 'Trainer')}>
               Join as a Trainer <ChevronRight size={18} />
             </Button>
             {TRAINER_INTAKE_FORM_URL ? (
@@ -524,7 +524,7 @@ export default function Landing() {
                 <Button size="lg" variant="outline" className="gap-2">Book a prelaunch slot</Button>
               </a>
             ) : (
-              <Button size="lg" variant="outline" className="gap-2" onClick={() => openWaitlist('trainer')}>
+              <Button size="lg" variant="outline" className="gap-2" onClick={() => openWaitlist('trainer', 'Trainer')}>
                 Join the trainer waiting list
               </Button>
             )}
@@ -546,7 +546,7 @@ export default function Landing() {
             coaches onto the platform, so your trainers keep earning between floor shifts.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="gap-2" onClick={() => openWaitlist('gym')}>
+            <Button size="lg" className="gap-2" onClick={() => openWaitlist('gym', 'Gym')}>
               Create a Gym <Dumbbell size={18} />
             </Button>
             {GYM_SUITE_FORM_URL ? (
@@ -554,7 +554,7 @@ export default function Landing() {
                 <Button size="lg" variant="outline" className="gap-2">Book a gym-suite slot</Button>
               </a>
             ) : (
-              <Button size="lg" variant="outline" className="gap-2" onClick={() => openWaitlist('gym')}>
+              <Button size="lg" variant="outline" className="gap-2" onClick={() => openWaitlist('gym', 'Gym')}>
                 Join the gym waiting list
               </Button>
             )}
@@ -588,7 +588,7 @@ export default function Landing() {
                   <li key={f} className="flex items-start gap-2 text-sm"><Check size={14} className="text-buddy-green mt-0.5 flex-shrink-0" />{f}</li>
                 ))}
               </ul>
-              <Button variant={tier.popular ? 'primary' : 'outline'} className="w-full" onClick={() => openWaitlist(tier.interest)}>
+              <Button variant={tier.popular ? 'primary' : 'outline'} className="w-full" onClick={() => openWaitlist(tier.interest, tier.name)}>
                 {tier.cta}
               </Button>
             </Card>
@@ -872,7 +872,7 @@ export default function Landing() {
         </div>
       </footer>
       <SupportDialog open={supportOpen} onClose={() => setSupportOpen(false)} />
-      <WaitlistModal isOpen={waitlistModal.open} onClose={closeWaitlist} interest={waitlistModal.interest} />
+      <WaitlistModal isOpen={waitlistModal.open} onClose={closeWaitlist} interest={waitlistModal.interest} tier={waitlistModal.tier} />
       <Modal isOpen={installWaitlistOpen} onClose={() => setInstallWaitlistOpen(false)} title="Get notified at launch" size="md">
         <WaitlistForm />
       </Modal>
