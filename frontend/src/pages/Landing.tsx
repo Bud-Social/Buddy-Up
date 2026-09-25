@@ -129,7 +129,7 @@ const pricingTiers: PricingTier[] = [
     period: '/month',
     color: 'border-buddy-surface',
     features: ['Buddy system', 'Basic feed & posts', 'Join public gyms', 'Open Sweat lives', 'Reactions & comments', '5 artifacts/month'],
-    cta: 'Get Started Free',
+    cta: 'Join the Waiting List — Free',
     interest: 'user',
   },
   {
@@ -139,7 +139,7 @@ const pricingTiers: PricingTier[] = [
     color: 'border-buddy-green',
     popular: true,
     features: ['Everything in Free', 'Create private gyms', 'Full live suite', 'Priority feed ranking', 'Custom workout plans', '50 artifacts/month', 'Analytics dashboard'],
-    cta: 'Go Premium',
+    cta: 'Join the Waiting List — Premium',
     interest: 'user',
   },
   {
@@ -148,7 +148,7 @@ const pricingTiers: PricingTier[] = [
     period: '/month',
     color: 'border-buddy-electric',
     features: ['Everything in Premium', 'Verified trainer badge', 'Session booking & escrow', 'Sell programmes', 'Advanced analytics', 'Revenue dashboard', '200 artifacts/month'],
-    cta: 'Become a Pro',
+    cta: 'Join the Waiting List — Trainer Pro',
     interest: 'trainer',
   },
 ];
@@ -565,7 +565,11 @@ export default function Landing() {
       {/* ── 8. PRICING ── */}
       <section className="max-w-5xl mx-auto px-6 py-24">
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">Simple <span className="text-buddy-green">Pricing</span></h2>
-        <p className="text-buddy-text-secondary text-center mb-16">Start free. Upgrade when you're ready.</p>
+        <p className="text-buddy-text-secondary text-center mb-3">Start free. Upgrade when you're ready.</p>
+        <p className="text-center text-xs text-buddy-text-secondary mb-16">
+          <span className="inline-block px-3 py-1 rounded-full bg-buddy-green/10 text-buddy-green font-semibold mr-2">Launching November</span>
+          Prices shown are planned launch pricing — joining adds you to the waiting list.
+        </p>
         <div className="grid md:grid-cols-3 gap-6 min-w-0 [&>div]:min-w-0">
           {pricingTiers.map((tier) => (
             <Card key={tier.name}
@@ -591,9 +595,9 @@ export default function Landing() {
           ))}
         </div>
         <p className="text-center text-sm text-buddy-text-secondary mt-10">
-          Not ready to sign up?{' '}
+          Beat the launch rush —{' '}
           <a href="#waitlist" className="text-buddy-green hover:underline font-semibold">
-            Join the waiting list for the November launch
+            join the waiting list for the November launch
           </a>
           .
         </p>
