@@ -63,7 +63,7 @@ export function App() {
       <ThemeProvider>
         <ToastProvider>
           <AuthInitializer>
-            <RouterProvider router={router} future={{ v7_startTransition: true }} />
+            <RouterProvider router={router} />
             <PWAUpdateBanner />
             <Analytics />
           </AuthInitializer>

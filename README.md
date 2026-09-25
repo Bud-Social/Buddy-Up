@@ -131,6 +131,38 @@ Open these inbound ports in the host firewall: `80/tcp`, `443/tcp`,
 Replay files remain on the internal MinIO service and are exposed through
 `https://buddyup.app/replays/`.
 
+### Production API CORS preflight (redirect guardrail)
+
+Browsers refuse to follow redirects on CORS preflight (`OPTIONS`) responses.
+If the API host answers a preflight with a 301/302/307/308 — e.g. an
+apex→`www` or http→https redirect rule at Cloudflare/snapdeploy — every
+cross-origin `apiClient` call fails with an opaque CORS error even though the
+backend is healthy. Verify after any DNS/proxy change:
+
+```bash
+cd frontend && npm run check:preflight -- https://api.buddyup.app
+```
+
+If it fails with a redirect, either (a) make the host serve `OPTIONS` with
+200 directly (Cloudflare: use a proxy/page rule, not a redirect rule), or
+(b) point `VITE_API_BASE_URL` at the redirect target's origin so no redirect
+is ever issued. The web origin (`https://buddyupfit.com`) must be in the
+backend `CSRF_TRUSTED_ORIGINS`/CORS allowlist, and `x-device-id` must stay in
+`CORS_ALLOW_HEADERS` (cookie-based refresh depends on its preflight).
+
+### Security deployment checklist
+
+- `Content-Security-Policy-Report-Only` ships in `frontend/vercel.json`.
+  Watch console reports after deploy, then flip the header to
+  `Content-Security-Policy` (enforcing) once clean.
+- **Google Maps key**: the Maps JS key (`VITE_GOOGLE_MAPS_KEY`) is public by
+  design once bundled. Restrict it in the Google Cloud console to
+  "Websites" with referrer `https://buddyupfit.com/*` (and previews), and
+  disable APIs you don't use on that key.
+- **Agora**: `manage.py check` raises `lives.W001` in production when
+  `AGORA_APP_ID` is set but `AGORA_APP_CERTIFICATE` is not (open RTC
+  channels). Set the certificate or unset the App ID.
+
 ### Option 1: Railway (managed)
 
 1. Connect GitHub repo to Railway

@@ -63,7 +63,11 @@ def generate_agora_token(channel_name, uid=0, role='publisher', token_expire_sec
         logger.warning('AGORA_APP_ID not configured')
         return None
     if not app_certificate:
-        logger.debug('AGORA_APP_CERTIFICATE not set — non-secure mode, no token needed')
+        logger.warning(
+            'AGORA_APP_CERTIFICATE not set — non-secure mode: RTC channels are '
+            'open to anyone holding the App ID (deploy check lives.W001 also '
+            'flags this at startup).'
+        )
         return None
 
     role_int = 1 if role == 'publisher' else 2
