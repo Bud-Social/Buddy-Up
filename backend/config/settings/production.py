@@ -80,9 +80,12 @@ SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
-# The frontend is a separate SPA; explicitly list its origins rather than
-# allowing credentials from arbitrary origins.
-CORS_ALLOW_CREDENTIALS = False
+# The frontend is a separate SPA on a different registrable domain, so the
+# httpOnly refresh cookie is a cross-site cookie: credentials must be allowed
+# (the auth cookie flow depends on this). Origins remain an exact allowlist,
+# and the refresh endpoint additionally requires the X-Device-Id custom
+# header (preflight-gated) when authenticating via cookie.
+CORS_ALLOW_CREDENTIALS = True
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 

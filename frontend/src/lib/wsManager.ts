@@ -46,8 +46,15 @@ class WsManager {
       this.disconnecting.delete(path);
       this.sockets.delete(path);
     }
-    const url = `${this.baseUrl}/${path}${this.accessToken ? `?token=${this.accessToken}` : ''}`;
-    const ws = new WebSocket(url);
+    // SECURITY: never put the token in the query string — URLs end up in
+    // access logs, proxies and referrers. Browsers can't set custom headers
+    // on WebSocket connects, so the token rides in the Sec-WebSocket-Protocol
+    // subprotocol list (['bearer', <token>]); the backend strips and reads it
+    // from there. Native clients still use the legacy ?token= query param.
+    const url = `${this.baseUrl}/${path}`;
+    const ws = this.accessToken
+      ? new WebSocket(url, ['bearer', this.accessToken])
+      : new WebSocket(url);
     ws.onopen = () => { this.attempts.set(path, 0); };
     ws.onmessage = (e) => { try { const d = JSON.parse(e.data); this.handlers.get(path)?.forEach((h) => h(d)); } catch {} };
     ws.onclose = (evt) => {

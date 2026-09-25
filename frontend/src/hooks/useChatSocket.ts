@@ -95,8 +95,10 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
       wsRef.current = null;
     }
 
-    const url = `${WS_BASE}/ws/conversation/${conversationId}/?token=${currentToken}`;
-    const ws = new WebSocket(url);
+    // SECURITY: token rides in Sec-WebSocket-Protocol (['bearer', token]) —
+    // never in the query string, which leaks into logs/proxies/referrers.
+    const url = `${WS_BASE}/ws/conversation/${conversationId}/`;
+    const ws = new WebSocket(url, ['bearer', currentToken]);
     wsRef.current = ws;
 
     ws.onopen = () => {

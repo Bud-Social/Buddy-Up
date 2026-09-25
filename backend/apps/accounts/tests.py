@@ -171,7 +171,8 @@ class AuthTests(TestCase):
         refresh_token = login_verified.data['data']['refresh']
 
         refresh_data = {'refresh': refresh_token}
-        response = self.client.post(self.refresh_url, refresh_data, format='json')
+        response = self.client.post(
+            self.refresh_url, refresh_data, format='json', HTTP_X_DEVICE_ID='device-a')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data['data'])
 

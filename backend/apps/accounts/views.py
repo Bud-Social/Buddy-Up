@@ -95,6 +95,54 @@ def _get_tokens_for_user(user, remember_me=False):
     }
 
 
+REFRESH_COOKIE_NAME = 'buddyup_refresh'
+
+
+def _refresh_cookie_kwargs():
+    """Cookie flags for the refresh-token cookie.
+
+    The web client (buddyupfit.com) and the API (api.buddyup.app) are on
+    DIFFERENT registrable domains, i.e. cross-site — so production needs
+    SameSite=None; Secure. CSRF is bounded by the CORS origin allowlist plus
+    a preflight-forcing custom header on the refresh call, and a cross-site
+    attacker can never read the (opaque) response. In development (plain
+    http://localhost) SameSite=None is rejected by browsers, so we use Lax,
+    which covers the same-site localhost pair (frontend port vs API port).
+    """
+    if settings.DEBUG:
+        return {'samesite': 'Lax'}
+    return {'samesite': 'None', 'secure': True}
+
+
+def _set_refresh_cookie(response, refresh_token):
+    """Attach the refresh token as an httpOnly cookie for browser clients.
+
+    Web keeps the long-lived refresh token out of localStorage entirely; it
+    exists only inside this cookie and is rotated (and re-set) on every use.
+    Native clients keep consuming the JSON body and ignore the cookie.
+    Path is scoped to /auth/ so it only rides on auth endpoints.
+    """
+    response.set_cookie(
+        REFRESH_COOKIE_NAME,
+        refresh_token,
+        max_age=int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds()),
+        httponly=True,
+        path='/auth/',
+        **_refresh_cookie_kwargs(),
+    )
+
+
+def _clear_refresh_cookie(response):
+    response.set_cookie(
+        REFRESH_COOKIE_NAME,
+        '',
+        max_age=0,
+        httponly=True,
+        path='/auth/',
+        **_refresh_cookie_kwargs(),
+    )
+
+
 def _create_device_session(user, refresh_token, request):
     token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
     DeviceSession.objects.create(
@@ -343,7 +391,7 @@ class VerifyRegistrationOTPView(views.APIView):
         _log_event(user, 'email_verified', request)
 
         from apps.profiles.serializers import ProfileSerializer
-        return Response({
+        response = Response({
             'success': True,
             'data': {
                 'access': tokens['access'],
@@ -364,6 +412,8 @@ class VerifyRegistrationOTPView(views.APIView):
             'errors': None,
             'pagination': None,
         }, status=status.HTTP_200_OK)
+        _set_refresh_cookie(response, tokens['refresh'])
+        return response
 
 
 class LoginView(views.APIView):
@@ -585,7 +635,7 @@ class VerifyLoginOTPView(views.APIView):
         from apps.profiles.serializers import ProfileSerializer
         profile = ProfileSerializer(user.profile).data
 
-        return Response({
+        response = Response({
             'success': True,
             'data': {
                 'access': tokens['access'],
@@ -607,6 +657,8 @@ class VerifyLoginOTPView(views.APIView):
             'errors': None,
             'pagination': None,
         })
+        _set_refresh_cookie(response, tokens['refresh'])
+        return response
 
 
 class TOTPSetupView(views.APIView):
@@ -801,7 +853,7 @@ class TOTPChallengeView(views.APIView):
         from apps.profiles.serializers import ProfileSerializer
         profile = ProfileSerializer(_ensure_social_profile(user)).data
 
-        return Response({
+        response = Response({
             'success': True,
             'data': {
                 'access': tokens['access'],
@@ -823,6 +875,8 @@ class TOTPChallengeView(views.APIView):
             'errors': None,
             'pagination': None,
         })
+        _set_refresh_cookie(response, tokens['refresh'])
+        return response
 
 
 def _generate_username(base: str) -> str:
@@ -1019,13 +1073,16 @@ class GoogleLoginView(views.APIView):
         message = 'Additional verification required.' if challenged else (
             'Account created. Please complete age verification to finish setting up.'
             if data.get('require_age_setup') else 'Google login successful.')
-        return Response({
+        response = Response({
             'success': True,
             'data': data,
             'message': message,
             'errors': None,
             'pagination': None,
         })
+        if not challenged:
+            _set_refresh_cookie(response, data['refresh'])
+        return response
 
 class AppleLoginView(views.APIView):
     permission_classes = [permissions.AllowAny]
@@ -1100,13 +1157,16 @@ class AppleLoginView(views.APIView):
             message = 'Additional verification required.' if challenged else (
                 'Account created. Please complete age verification to finish setting up.'
                 if data.get('require_age_setup') else 'Apple login successful.')
-            return Response({
+            response = Response({
                 'success': True,
                 'data': data,
                 'message': message,
                 'errors': None,
                 'pagination': None,
             })
+            if not challenged:
+                _set_refresh_cookie(response, data['refresh'])
+            return response
 
         except Exception as e:  # noqa: BLE001
             return Response({
@@ -1117,39 +1177,67 @@ class AppleLoginView(views.APIView):
 
 
 class LogoutView(views.APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    # AllowAny: the web client logs out with a plain fetch that carries no
+    # Authorization header (the access token is memory-only now) but MUST
+    # still clear the httpOnly refresh cookie and deactivate the session.
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        refresh_token = request.data.get('refresh')
+        refresh_token = request.data.get('refresh') or request.COOKIES.get(REFRESH_COOKIE_NAME)
         if refresh_token:
             token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
-            DeviceSession.objects.filter(
-                user=request.user, refresh_token_hash=token_hash
-            ).update(is_active=False)
+            if request.user and request.user.is_authenticated:
+                DeviceSession.objects.filter(
+                    user=request.user, refresh_token_hash=token_hash
+                ).update(is_active=False)
+            else:
+                # Anonymous logout (expired access token): deactivate by the
+                # token hash alone — the hash is itself the capability.
+                DeviceSession.objects.filter(
+                    refresh_token_hash=token_hash, is_active=True
+                ).update(is_active=False)
             try:
                 token = RefreshToken(refresh_token)
                 token.blacklist()
             except Exception:  # noqa: BLE001
                 pass
 
-        return Response({
+        response = Response({
             'success': True,
             'data': None,
             'message': 'Logged out successfully',
             'errors': None,
             'pagination': None,
         })
+        _clear_refresh_cookie(response)
+        return response
 
 
 class TokenRefreshView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        refresh_token = request.data.get('refresh')
+        # Cookie first (web): the browser client keeps no refresh token in
+        # localStorage, so it authenticates the refresh via the httpOnly
+        # cookie. Native clients keep posting it in the body. When the token
+        # came from the cookie, the rotated token is returned ONLY via the
+        # Set-Cookie header — never in the response body — so an XSS on the
+        # web origin cannot mint long-lived sessions.
+        cookie_token = request.COOKIES.get(REFRESH_COOKIE_NAME)
+        refresh_token = cookie_token or request.data.get('refresh')
         if not refresh_token:
             return Response({
                 'success': False, 'data': None,
                 'message': 'Refresh token is required.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if cookie_token and not _get_device_id(request):
+            # Cookie-authenticated refresh must be a real CORS-negotiated
+            # request: the X-Device-Id custom header forces a preflight, so a
+            # cross-site page can never reach this path with cookies attached.
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Missing device context.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1201,16 +1289,22 @@ class TokenRefreshView(views.APIView):
                     DeviceSession.objects.filter(id=session.id, is_active=True).update(last_active=timezone.now())
 
             data = {'access': access}
-            if new_refresh:
+            # Native clients need the rotated refresh token in the body;
+            # cookie clients receive it via Set-Cookie only — never in a
+            # response body that web JS could read.
+            if new_refresh and not cookie_token:
                 data['refresh'] = new_refresh
 
-            return Response({
+            response = Response({
                 'success': True,
                 'data': data,
                 'message': 'Token refreshed',
                 'errors': None,
                 'pagination': None,
             })
+            if new_refresh and cookie_token:
+                _set_refresh_cookie(response, new_refresh)
+            return response
         except Exception:  # noqa: BLE001
             return Response({
                 'success': False, 'data': None,
@@ -1882,10 +1976,13 @@ class PasskeyLoginFinishView(views.APIView):
         message = 'Additional verification required.' if challenged else (
             'Please complete age verification to finish setting up.'
             if payload.get('require_age_setup') else 'Passkey login successful.')
-        return Response({
+        response = Response({
             'success': True, 'data': payload, 'message': message,
             'errors': None, 'pagination': None,
         })
+        if not challenged:
+            _set_refresh_cookie(response, payload['refresh'])
+        return response
 
 
 class PasskeyListView(views.APIView):
@@ -2026,12 +2123,15 @@ class SocialAgeSetupView(views.APIView):
         _log_event(user, 'age_verified', request, metadata={'method': 'social_signup'})
 
         payload, challenged = _finalize_social_login(user, f'{request.data.get("provider", "social")}', request)
-        return Response({
+        response = Response({
             'success': True,
             'data': {**payload, 'age': age, 'is_adult': user.is_adult},
             'message': 'Age verified. Welcome to BuddyUp Fit!',
             'errors': None, 'pagination': None,
         })
+        if not challenged:
+            _set_refresh_cookie(response, payload['refresh'])
+        return response
 
 
 class VerifyAgeView(views.APIView):

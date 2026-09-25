@@ -18,6 +18,51 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
+const doRefresh = async (): Promise<string> => {
+  const refreshToken = useAuthStore.getState().refreshToken;
+  // SECURITY: the web client authenticates the refresh via the httpOnly
+  // refresh cookie (backend sets it at login and re-sets it, rotated, on
+  // every refresh). A body token is sent ONLY while migrating legacy
+  // sessions that still have one in storage — after the first successful
+  // refresh the cookie takes over and nothing token-shaped is persisted.
+  // X-Device-Id is required for cookie-authenticated refreshes: being a
+  // custom header it forces a CORS preflight, which bounds CSRF to the
+  // backend's origin allowlist.
+  const res = await axios.post(
+    `${API_BASE_URL}/auth/token/refresh/`,
+    refreshToken ? { refresh: refreshToken } : {},
+    { withCredentials: true, headers: { 'Content-Type': 'application/json', 'X-Device-Id': getDeviceId() } },
+  );
+  const { access, refresh: newRefresh } = res.data?.data || res.data;
+  if (!access) throw new Error('No access token in response');
+  // The rotated refresh token (when present — body/migration path) stays in
+  // memory only; cookie clients never receive it in the body at all.
+  useAuthStore.getState().setTokens(access, newRefresh ?? null);
+  return access;
+};
+
+/**
+ * Refresh the access token. Deduplicated: concurrent callers share one
+ * in-flight refresh (the backend rotates refresh tokens, so firing two in
+ * parallel would invalidate the first rotation).
+ */
+export const refreshAccessToken = (): Promise<string> => {
+  if (isRefreshing) {
+    return new Promise((resolve, reject) => { failedQueue.push({ resolve, reject }); });
+  }
+  isRefreshing = true;
+  return doRefresh()
+    .then((access) => { processQueue(null, access); return access; })
+    .catch((e) => { processQueue(e, null); throw e; })
+    .finally(() => { isRefreshing = false; });
+};
+
+/** True when the refresh failed with a definitive client error (session gone). */
+export const isAuthRefreshRejection = (e: unknown): boolean => {
+  const status = (e as { response?: { status?: number } })?.response?.status;
+  return !!status && status >= 400 && status < 500;
+};
+
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = useAuthStore.getState().accessToken;
   if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -33,30 +78,19 @@ apiClient.interceptors.response.use(
     const url = orig?.url || '';
     const isAuthFlow = /\/auth\/(login|register|token\/refresh|google|apple|verify-login-otp|verify-registration-otp|totp\/challenge|forgot-password|reset-password|social\/age-setup)\//.test(url);
     if (error.response?.status === 401 && !orig._retry && !isAuthFlow) {
-      const refreshToken = useAuthStore.getState().refreshToken;
-      if (!refreshToken) {
-        useAuthStore.getState().logout();
-        throw error;
-      }
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve: (t: string) => { orig.headers.Authorization = `Bearer ${t}`; resolve(apiClient(orig)); }, reject });
-        });
-      }
-      orig._retry = true; isRefreshing = true;
+      orig._retry = true;
       try {
-        const r = await axios.post(`${API_BASE_URL}/auth/token/refresh/`, { refresh: refreshToken });
-        const { access, refresh: newRefresh } = r.data?.data || r.data;
-        if (!access) throw new Error('No access token in response');
-        useAuthStore.getState().setTokens(access, newRefresh || refreshToken);
-        processQueue(null, access);
+        const access = await refreshAccessToken();
         orig.headers.Authorization = `Bearer ${access}`;
         return apiClient(orig);
       } catch (e) {
-        processQueue(e, null);
-        useAuthStore.getState().logout();
+        // Only a definitive auth rejection (4xx) ends the session — a
+        // network hiccup must not log the user out.
+        if (isAuthRefreshRejection(e)) {
+          useAuthStore.getState().logout();
+        }
         throw error;
-      } finally { isRefreshing = false; }
+      }
     }
     // Consent gate: the backend blocks app APIs until the current policies are
     // accepted. Route the user to onboarding, where the acceptance happens.

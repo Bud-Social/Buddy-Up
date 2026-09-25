@@ -76,6 +76,11 @@ from corsheaders.defaults import default_headers  # noqa: E402
 
 CORS_ALLOW_HEADERS = [*default_headers, 'idempotency-key', 'x-device-id']
 
+# The web client (buddyupfit.com) calls this API (api.buddyup.app) with
+# credentials: the httpOnly refresh cookie set by the auth endpoints. Exact
+# origin allowlist only — never combine credentials with a wildcard origin.
+CORS_ALLOW_CREDENTIALS = True
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [

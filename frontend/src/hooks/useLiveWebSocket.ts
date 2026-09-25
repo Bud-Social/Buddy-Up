@@ -64,8 +64,10 @@ export function useLiveWebSocket(liveId: string | undefined) {
   const connect = useCallback(() => {
     if (!liveId || !accessToken) return;
 
-    const url = `${WS_BASE}/ws/live/${liveId}/?token=${accessToken}`;
-    const ws = new WebSocket(url);
+    // SECURITY: token rides in Sec-WebSocket-Protocol (['bearer', token]) —
+    // never in the query string, which leaks into logs/proxies/referrers.
+    const url = `${WS_BASE}/ws/live/${liveId}/`;
+    const ws = new WebSocket(url, ['bearer', accessToken]);
     wsRef.current = ws;
 
     ws.onopen = () => {
