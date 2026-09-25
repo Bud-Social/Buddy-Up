@@ -11,6 +11,8 @@ import { FUNDRAISER_URL, PLEDGE_FORM_URL, GYM_SUITE_FORM_URL, TRAINER_INTAKE_FOR
 import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
 import { WaitlistForm, requestWaitlistInterest } from '@/components/features/support/WaitlistForm';
+import { WaitlistModal } from '@/components/features/support/WaitlistModal';
+import type { WaitlistInterest } from '@/api/waitlist';
 import { SuggestionForm } from '@/components/features/support/SuggestionForm';
 import { ContactForm } from '@/components/features/support/ContactForm';
 import { Modal } from '@/components/ui/Modal';
@@ -108,7 +110,19 @@ const horizonChipIcon: Record<string, string> = {
 };
 
 
-const pricingTiers = [
+interface PricingTier {
+  name: string;
+  price: string;
+  period: string;
+  color: string;
+  popular?: boolean;
+  features: string[];
+  cta: string;
+  /** Which waitlist interest tab the CTA preselects (popped instead of signup). */
+  interest: WaitlistInterest;
+}
+
+const pricingTiers: PricingTier[] = [
   {
     name: 'Free',
     price: '$0',
@@ -116,6 +130,7 @@ const pricingTiers = [
     color: 'border-buddy-surface',
     features: ['Buddy system', 'Basic feed & posts', 'Join public gyms', 'Open Sweat lives', 'Reactions & comments', '5 artifacts/month'],
     cta: 'Get Started Free',
+    interest: 'user',
   },
   {
     name: 'Premium',
@@ -125,6 +140,7 @@ const pricingTiers = [
     popular: true,
     features: ['Everything in Free', 'Create private gyms', 'Full live suite', 'Priority feed ranking', 'Custom workout plans', '50 artifacts/month', 'Analytics dashboard'],
     cta: 'Go Premium',
+    interest: 'user',
   },
   {
     name: 'Trainer Pro',
@@ -133,6 +149,7 @@ const pricingTiers = [
     color: 'border-buddy-electric',
     features: ['Everything in Premium', 'Verified trainer badge', 'Session booking & escrow', 'Sell programmes', 'Advanced analytics', 'Revenue dashboard', '200 artifacts/month'],
     cta: 'Become a Pro',
+    interest: 'trainer',
   },
 ];
 
@@ -146,6 +163,11 @@ export default function Landing() {
   const [heroWaitlistOpen, setHeroWaitlistOpen] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [installWaitlistOpen, setInstallWaitlistOpen] = useState(false);
+  /** Popup waitlist for the "Get Started"-family CTAs — the signup flow is
+   * closed prelaunch, so these buttons pop the waiting list instead. */
+  const [waitlistModal, setWaitlistModal] = useState<{ open: boolean; interest: WaitlistInterest }>({ open: false, interest: 'user' });
+  const openWaitlist = (interest: WaitlistInterest = 'user') => setWaitlistModal({ open: true, interest });
+  const closeWaitlist = () => setWaitlistModal((m) => ({ ...m, open: false }));
   const { isMobile, isTablet, isDesktop, os } = useDeviceType();
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -494,15 +516,15 @@ export default function Landing() {
             collects your intro video and credentials for verification.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/signup?role=trainer">
-              <Button size="lg" className="gap-2">Join as a Trainer <ChevronRight size={18} /></Button>
-            </Link>
+            <Button size="lg" className="gap-2" onClick={() => openWaitlist('trainer')}>
+              Join as a Trainer <ChevronRight size={18} />
+            </Button>
             {TRAINER_INTAKE_FORM_URL ? (
               <a href={TRAINER_INTAKE_FORM_URL} target="_blank" rel="noreferrer noopener">
                 <Button size="lg" variant="outline" className="gap-2">Book a prelaunch slot</Button>
               </a>
             ) : (
-              <Button size="lg" variant="outline" className="gap-2" onClick={() => requestWaitlistInterest('trainer')}>
+              <Button size="lg" variant="outline" className="gap-2" onClick={() => openWaitlist('trainer')}>
                 Join the trainer waiting list
               </Button>
             )}
@@ -524,15 +546,15 @@ export default function Landing() {
             coaches onto the platform, so your trainers keep earning between floor shifts.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/signup">
-              <Button size="lg" className="gap-2">Create a Gym <Dumbbell size={18} /></Button>
-            </Link>
+            <Button size="lg" className="gap-2" onClick={() => openWaitlist('gym')}>
+              Create a Gym <Dumbbell size={18} />
+            </Button>
             {GYM_SUITE_FORM_URL ? (
               <a href={GYM_SUITE_FORM_URL} target="_blank" rel="noreferrer noopener">
                 <Button size="lg" variant="outline" className="gap-2">Book a gym-suite slot</Button>
               </a>
             ) : (
-              <Button size="lg" variant="outline" className="gap-2" onClick={() => requestWaitlistInterest('gym')}>
+              <Button size="lg" variant="outline" className="gap-2" onClick={() => openWaitlist('gym')}>
                 Join the gym waiting list
               </Button>
             )}
@@ -562,9 +584,9 @@ export default function Landing() {
                   <li key={f} className="flex items-start gap-2 text-sm"><Check size={14} className="text-buddy-green mt-0.5 flex-shrink-0" />{f}</li>
                 ))}
               </ul>
-              <Link to="/signup">
-                <Button variant={tier.popular ? 'primary' : 'outline'} className="w-full">{tier.cta}</Button>
-              </Link>
+              <Button variant={tier.popular ? 'primary' : 'outline'} className="w-full" onClick={() => openWaitlist(tier.interest)}>
+                {tier.cta}
+              </Button>
             </Card>
           ))}
         </div>
@@ -846,6 +868,7 @@ export default function Landing() {
         </div>
       </footer>
       <SupportDialog open={supportOpen} onClose={() => setSupportOpen(false)} />
+      <WaitlistModal isOpen={waitlistModal.open} onClose={closeWaitlist} interest={waitlistModal.interest} />
       <Modal isOpen={installWaitlistOpen} onClose={() => setInstallWaitlistOpen(false)} title="Get notified at launch" size="md">
         <WaitlistForm />
       </Modal>
