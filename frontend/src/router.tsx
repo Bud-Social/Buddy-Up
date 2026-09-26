@@ -11,7 +11,7 @@ const PUBLIC_ROUTES = [
   '/forgot-password', '/reset-password',
   '/terms', '/privacy', '/community-guidelines', '/cookie-policy',
   '/medical-disclaimer', '/sponsorship-policy', '/adult-content-policy', '/help',
-  '/about', '/careers', '/contact',
+  '/about', '/careers', '/contact', '/services',
   '/totp-setup', '/totp-challenge',
   // Guardian invite landing: unauthenticated visitors are redirected by the
   // page itself so the invite token survives via ?next=.
@@ -122,6 +122,7 @@ const Help = lazy(() => import('@/pages/legal/Help'));
 const About = lazy(() => import('@/pages/about/About'));
 const Careers = lazy(() => import('@/pages/Careers'));
 const Contact = lazy(() => import('@/pages/Contact'));
+const Services = lazy(() => import('@/pages/Services'));
 
 const Landing = lazy(() => import('@/pages/Landing'));
 
@@ -170,6 +171,7 @@ export const router = createBrowserRouter([
   { path: '/about', element: <SWrapper><About /></SWrapper> },
   { path: '/careers', element: <SWrapper><Careers /></SWrapper> },
   { path: '/contact', element: <SWrapper><Contact /></SWrapper> },
+  { path: '/services', element: <SWrapper><Services /></SWrapper> },
   {
     element: <AuthGuard />,
     children: [

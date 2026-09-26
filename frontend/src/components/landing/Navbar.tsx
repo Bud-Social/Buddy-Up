@@ -8,14 +8,14 @@ import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 
 const SERVICES: { icon: typeof Radio; title: string; desc: string; to: string }[] = [
-  { icon: Radio, title: 'Live Workouts', desc: 'HIIT, yoga, strength — live or on demand.', to: '/#showcase' },
-  { icon: Dumbbell, title: 'Gyms', desc: 'Nearby, virtual, and hybrid communities.', to: '/#showcase' },
-  { icon: GraduationCap, title: 'Trainers & Practitioners', desc: 'Verified pros, mobile or online.', to: '/#showcase' },
-  { icon: MessagesSquare, title: 'Communities & Messaging', desc: 'Group chats that notice when you show up.', to: '/#showcase' },
-  { icon: CalendarDays, title: 'Events', desc: 'Runs, games, and workshops near you.', to: '/#showcase' },
-  { icon: Utensils, title: 'Marketplace', desc: 'Meal plans, programmes, and gear.', to: '/#showcase' },
-  { icon: BookOpen, title: 'Training Programmes', desc: 'Structured multi-week plans.', to: '/#showcase' },
-  { icon: Activity, title: 'Activity Analytics', desc: 'Runs, walks, hikes — tracked and streaked.', to: '/#showcase' },
+  { icon: Radio, title: 'Live Workouts', desc: 'HIIT, yoga, strength — live or on demand.', to: '/services#service-live' },
+  { icon: Dumbbell, title: 'Gyms', desc: 'Nearby, virtual, and hybrid communities.', to: '/services#service-gyms' },
+  { icon: GraduationCap, title: 'Trainers & Practitioners', desc: 'Verified pros, mobile or online.', to: '/services#service-trainers' },
+  { icon: MessagesSquare, title: 'Communities & Messaging', desc: 'Group chats that notice when you show up.', to: '/services#service-communities' },
+  { icon: CalendarDays, title: 'Events', desc: 'Runs, games, and workshops near you.', to: '/services#service-events' },
+  { icon: Utensils, title: 'Marketplace', desc: 'Meal plans, programmes, and gear.', to: '/services#service-marketplace' },
+  { icon: BookOpen, title: 'Training Programmes', desc: 'Structured multi-week plans.', to: '/services#service-programmes' },
+  { icon: Activity, title: 'Activity Analytics', desc: 'Runs, walks, hikes — tracked and streaked.', to: '/services#service-analytics' },
 ];
 
 const NAV_LINKS = [

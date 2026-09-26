@@ -17,6 +17,7 @@ describe('Navbar', () => {
     fireEvent.click(screen.getByText('Services'));
     expect(screen.getByText('Live Workouts')).toBeDefined();
     expect(screen.getByText('Activity Analytics')).toBeDefined();
+    expect(screen.getByText('Live Workouts').closest('a')).toHaveAttribute('href', '/services#service-live');
   });
 
   it('opens the mobile menu', () => {

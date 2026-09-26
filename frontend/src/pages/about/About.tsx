@@ -100,7 +100,7 @@ export default function About() {
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {services.map(({ icon: Icon, title, desc }) => (
-            <Link key={title} to="/#showcase" className="bg-buddy-surface rounded-2xl p-5 hover:bg-buddy-surface-raised transition-colors">
+            <Link key={title} to="/services" className="bg-buddy-surface rounded-2xl p-5 hover:bg-buddy-surface-raised transition-colors">
               <Icon size={24} className="text-buddy-green mb-3" />
               <h3 className="font-heading text-sm font-semibold mb-1">{title}</h3>
               <p className="text-xs text-buddy-text-secondary">{desc}</p>

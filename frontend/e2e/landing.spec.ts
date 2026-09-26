@@ -31,6 +31,13 @@ test('contact page loads with form', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Send message' })).toBeVisible();
 });
 
+test('services page loads with all eight services', async ({ page }) => {
+  await page.goto('/services');
+  await expect(page.locator('h1')).toContainText('in one place');
+  await expect(page.getByText('Activity Analytics').first()).toBeVisible();
+  await expect(page.getByText('Training Programmes').first()).toBeVisible();
+});
+
 test('landing page has value prop cards', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('text=Find Your Buddy')).toBeVisible();
