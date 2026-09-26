@@ -69,6 +69,6 @@ class ContactInquirySerializer(serializers.ModelSerializer):
 class CareerApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = CareerApplication
-        fields = ['id', 'name', 'email', 'role', 'portfolio_url', 'message',
-                  'status', 'created_at']
+        fields = ['id', 'name', 'email', 'role', 'portfolio_url', 'resume_url',
+                  'message', 'status', 'created_at']
         read_only_fields = ['id', 'status', 'created_at']

@@ -44,12 +44,21 @@ create table if not exists public.career_application (
   email         text        not null,
   role          text        not null,
   portfolio_url text,
+  resume_url    text,
   message       text        not null,
   status        text        not null default 'new',
   created_at    timestamptz not null default now()
 );
 
 alter table public.career_application enable row level security;
+
+-- Resumes land in a PRIVATE `career-resumes` bucket (create it under
+-- Storage with Private access; the service key bypasses bucket policies).
+-- Only the storage path is stored on the row; review files in the
+-- Supabase dashboard. Run once:
+--   insert into storage.buckets (id, name, public) values
+--     ('career-resumes', 'career-resumes', false)
+--   on conflict (id) do nothing;
 
 create index if not exists career_application_status_created_idx
   on public.career_application (status, created_at desc);

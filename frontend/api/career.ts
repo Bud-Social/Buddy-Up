@@ -11,15 +11,24 @@
  *   SUPABASE_SERVICE_ROLE_KEY    service key (bypasses RLS; server-side only)
  *
  * Writes to Supabase table `career_application`
- * (name, email, role, portfolio_url, message, created_at default now(),
- * RLS on, no policies — reachable only through the service-role key).
+ * (name, email, role, portfolio_url, resume_url, message,
+ * created_at default now(), RLS on, no policies — reachable only through
+ * the service-role key). Resumes go to the private `career-resumes`
+ * storage bucket; only the storage path is stored on the row.
  */
+
+interface ResumeFile {
+  name?: unknown;
+  type?: unknown;
+  data?: unknown;
+}
 
 interface CareerBody {
   name?: unknown;
   email?: unknown;
   role?: unknown;
   portfolio_url?: unknown;
+  resume?: unknown;
   message?: unknown;
 }
 
@@ -43,6 +52,13 @@ const ALLOWED_ORIGINS = new Set([
   'https://www.buddyupfit.co.ke',
 ]);
 const MAX_ROLE_LEN = 120;
+const ALLOWED_RESUME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
+const MAX_RESUME_BYTES = 5 * 1024 * 1024;
+const RESUME_BUCKET = 'career-resumes';
 
 function json(res: VercelRes, status: number, body: unknown): void {
   res.statusCode = status;
@@ -133,7 +149,56 @@ export default async function handler(req: VercelReq, res: VercelRes): Promise<v
     return;
   }
 
-  const application = { name, email, role, portfolio_url: portfolioUrl || null, message };
+  // Optional resume: base64 JSON payload (Vercel request cap is ~4.5MB, so
+  // 5MB pre-encoding would already fail — the client pre-checks size).
+  let resumeUrl: string | null = null;
+  const resume = body.resume as ResumeFile | null | undefined;
+  if (resume) {
+    const rawName = typeof resume.name === 'string' ? resume.name : '';
+    const mime = typeof resume.type === 'string' ? resume.type : '';
+    const b64 = typeof resume.data === 'string' ? resume.data : '';
+    const cleanName = rawName.replace(/[^a-zA-Z0-9._-]/g, '').slice(-80) || 'resume';
+    if (!ALLOWED_RESUME_TYPES.has(mime)) {
+      fail(res, 400, 'Resume must be a PDF or Word document.');
+      return;
+    }
+    let bytes: Buffer;
+    try {
+      bytes = Buffer.from(b64, 'base64');
+    } catch {
+      fail(res, 400, 'Resume file could not be read.');
+      return;
+    }
+    if (bytes.length === 0 || bytes.length > MAX_RESUME_BYTES) {
+      fail(res, 400, 'Resume must be under 5MB.');
+      return;
+    }
+    const objectPath = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}/${cleanName}`;
+    try {
+      const upRes = await fetch(`${sbUrl}/storage/v1/object/${RESUME_BUCKET}/${objectPath}`, {
+        method: 'POST',
+        headers: {
+          apikey: sbKey,
+          Authorization: `Bearer ${sbKey}`,
+          'Content-Type': mime,
+          'x-upsert': 'false',
+        },
+        body: new Uint8Array(bytes),
+      });
+      if (!upRes.ok) {
+        console.error('career: resume upload failed', upRes.status, (await upRes.text()).slice(0, 300));
+        fail(res, 502, 'Could not save your resume. Please try again in a moment.');
+        return;
+      }
+      resumeUrl = `${RESUME_BUCKET}/${objectPath}`;
+    } catch (err) {
+      console.error('career: resume upload threw', err);
+      fail(res, 502, 'Could not save your resume. Please try again in a moment.');
+      return;
+    }
+  }
+
+  const application = { name, email, role, portfolio_url: portfolioUrl || null, resume_url: resumeUrl, message };
 
   let saved = false;
   try {

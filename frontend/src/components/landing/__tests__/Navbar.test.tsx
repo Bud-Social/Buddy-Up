@@ -68,6 +68,10 @@ describe('Careers page', () => {
       screen.getByPlaceholderText('Your experience, your fitness story, why BuddyUp Fit…'),
       { target: { value: 'I build apps.' } },
     );
+    const file = new File(['resume-bytes'], 'resume.pdf', { type: 'application/pdf' });
+    fireEvent.change(screen.getByLabelText(/Resume \(PDF or Word/i), {
+      target: { files: [file] },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Submit application' }));
     await waitFor(() => {
       expect(screen.getByText('Application received')).toBeDefined();

@@ -50,9 +50,24 @@ export default function Careers() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [portfolioUrl, setPortfolioUrl] = useState('');
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [error, setError] = useState('');
+
+  const MAX_RESUME_BYTES = 5 * 1024 * 1024;
+
+  function readFileAsBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = typeof reader.result === 'string' ? reader.result : '';
+        resolve(result.includes(',') ? result.split(',')[1] : result);
+      };
+      reader.onerror = () => reject(new Error('unreadable'));
+      reader.readAsDataURL(file);
+    });
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -60,11 +75,25 @@ export default function Careers() {
     setStatus('loading');
     setError('');
     try {
+      let resume: { name: string; type: string; data: string } | undefined;
+      if (resumeFile) {
+        if (resumeFile.size > MAX_RESUME_BYTES) {
+          setError('Resume must be under 5MB.');
+          setStatus('error');
+          return;
+        }
+        resume = {
+          name: resumeFile.name,
+          type: resumeFile.type,
+          data: await readFileAsBase64(resumeFile),
+        };
+      }
       await submitCareer({
         name: name.trim(),
         email: email.trim(),
         role,
         portfolio_url: portfolioUrl.trim() || undefined,
+        resume,
         message: message.trim(),
       });
       setStatus('done');
@@ -188,6 +217,23 @@ export default function Careers() {
                 <Input label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" />
               </div>
               <Input label="Portfolio / LinkedIn / GitHub (optional)" type="url" value={portfolioUrl} onChange={(e) => setPortfolioUrl(e.target.value)} placeholder="https://…" />
+              <div className="w-full">
+                <label htmlFor="career-resume" className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
+                  Resume (PDF or Word, max 5MB, optional)
+                </label>
+                <input
+                  id="career-resume"
+                  type="file"
+                  accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)}
+                  className="w-full bg-buddy-black border border-transparent rounded-xl px-4 py-3 text-sm text-buddy-text-secondary file:mr-3 file:rounded-lg file:border-0 file:bg-buddy-green/15 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-buddy-green focus:outline-none focus:ring-2 focus:ring-buddy-green/30 min-h-touch"
+                />
+                {resumeFile && (
+                  <p className="text-xs text-buddy-text-secondary mt-1.5">
+                    Attached: {resumeFile.name} ({Math.round(resumeFile.size / 1024)} KB)
+                  </p>
+                )}
+              </div>
               <div className="w-full">
                 <label htmlFor="career-message" className="block text-sm font-medium text-buddy-text-secondary mb-1.5">
                   Why you? (cover note)

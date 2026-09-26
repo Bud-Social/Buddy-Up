@@ -22,6 +22,7 @@ export interface CareerPayload {
   email: string;
   role: string;
   portfolio_url?: string;
+  resume?: { name: string; type: string; data: string };
   message: string;
 }
 

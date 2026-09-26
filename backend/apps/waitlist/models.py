@@ -112,6 +112,8 @@ class CareerApplication(TimestampedModel):
     email = models.EmailField()
     role = models.CharField(max_length=120)
     portfolio_url = models.URLField(blank=True, default='')
+    resume_url = models.CharField(max_length=300, blank=True, default='',
+                                  help_text='Supabase Storage path of the uploaded resume.')
     message = models.TextField(max_length=2000)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
 

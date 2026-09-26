@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { AppShell } from '@/components/layout/AppShell';
 import { AdminLayout } from '@/components/layout/AdminLayout';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ScrollToHash } from '@/components/ScrollToHash';
 import { useAuthStore } from '@/store/authStore';
 
 const PUBLIC_ROUTES = [
@@ -136,7 +137,12 @@ function PageLoader() {
 }
 
 function SWrapper({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <ScrollToHash />
+      {children}
+    </Suspense>
+  );
 }
 
 export const router = createBrowserRouter([
