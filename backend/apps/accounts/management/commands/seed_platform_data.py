@@ -7,7 +7,7 @@ from django.utils import timezone
 from apps.accounts.models import User
 from apps.profiles.models import Profile
 from apps.gyms.models import Gym, GymMembership, GymSchedulePost, GymReview, VenueLocation
-from apps.sessions.models import TrainerProfile, Availability, BookingSession, Review
+from apps.sessions.models import TrainerProfile, Availability, BookingSession, Review as SessionReview
 from apps.marketplace.models import (
     Shop, ShopMembership, MarketplaceEvent, EventMedia, MealPlan,
     TrainingProgramme, Product, DiscountCode,
@@ -562,7 +562,6 @@ class Command(BaseCommand):
                         artifact_fee={'dumbbell': 10},
                         status='completed',
                     )
-                    from apps.sessions.models import Review as SessionReview
                     SessionReview.objects.get_or_create(
                         session=past, client=client,
                         defaults={'trainer': trainer, 'rating': 5,
