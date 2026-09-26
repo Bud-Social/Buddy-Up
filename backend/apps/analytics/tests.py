@@ -15,6 +15,31 @@ class AnalyticsValidationTests(SimpleTestCase):
         self.assertFalse(serializer.is_valid())
 
 
+class SummaryContractTests(TestCase):
+    """The summary response must always include every section key the
+    clients read unconditionally — a missing key crashes the apps."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='summary@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='summaryuser', display_name='Summary User')
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    def test_summary_includes_nutrition_block(self):
+        from . import engine
+        summary = engine.build_summary(self.profile, 'month')
+        self.assertIn('nutrition', summary)
+        for key in ('count', 'total_calories', 'total_protein_g',
+                    'total_carbs_g', 'total_fat_g', 'by_type',
+                    'avg_daily_calories', 'recent'):
+            self.assertIn(key, summary['nutrition'])
+
+    def test_summary_endpoint_returns_nutrition(self):
+        resp = self.client.get('/api/v1/analytics/summary/', {'period': 'month'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('nutrition', resp.data['data'])
+
+
 class EventIngestionTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(email='events@example.com', password='TestPass123!')

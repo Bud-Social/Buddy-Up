@@ -136,7 +136,7 @@ export interface AnalyticsSummaryData {
   };
   workouts: WorkoutSummary;
   activity: ActivitySummary;
-  nutrition: NutritionSummary;
+  nutrition?: NutritionSummary;
   body: BodySummary;
   lives: LivesSummary;
   spending: SpendingSummary;

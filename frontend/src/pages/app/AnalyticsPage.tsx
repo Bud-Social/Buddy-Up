@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Activity as ActivityIcon, Dumbbell, Utensils, Scale, FileBarChart2, LayoutDashboard } from 'lucide-react';
+import { Activity as ActivityIcon, Dumbbell, Scale, FileBarChart2, LayoutDashboard } from 'lucide-react';
 import type { AnalyticsPeriod } from '@/types/analytics';
 import { OverviewTab } from '@/components/analytics/OverviewTab';
 import { ActivityTab } from '@/components/analytics/ActivityTab';
 import { WorkoutsTab } from '@/components/analytics/WorkoutsTab';
-import { MealsTab } from '@/components/analytics/MealsTab';
 import { BodyTab } from '@/components/analytics/BodyTab';
 import { ReportTab } from '@/components/analytics/ReportTab';
 
@@ -20,10 +19,12 @@ const TABS = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'activity', label: 'Activity', icon: ActivityIcon },
   { key: 'workouts', label: 'Workouts', icon: Dumbbell },
-  { key: 'meals', label: 'Nutrition', icon: Utensils },
   { key: 'body', label: 'Body', icon: Scale },
   { key: 'report', label: 'Report', icon: FileBarChart2 },
 ] as const;
+// NOTE: the Nutrition tab is intentionally hidden — meal logging was removed
+// backend-side (MealLog deleted) and its endpoints no longer exist. Restore
+// the tab only together with a backend meal-logging API.
 
 type TabKey = (typeof TABS)[number]['key'];
 
@@ -38,7 +39,7 @@ export default function AnalyticsPage() {
         <div>
           <h1 className="font-display text-2xl font-bold">Analytics</h1>
           <p className="text-sm text-buddy-text-secondary mt-0.5">
-            Your activity, nutrition, body and spending — in one report.
+            Your activity, body and spending — in one report.
           </p>
         </div>
         <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 flex-wrap">
@@ -77,7 +78,6 @@ export default function AnalyticsPage() {
         {tab === 'overview' && <OverviewTab period={period} />}
         {tab === 'activity' && <ActivityTab />}
         {tab === 'workouts' && <WorkoutsTab period={period} />}
-        {tab === 'meals' && <MealsTab period={period} />}
         {tab === 'body' && <BodyTab />}
         {tab === 'report' && <ReportTab period={period} />}
       </div>

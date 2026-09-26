@@ -39,7 +39,7 @@ class WsManager {
 
   connect(path: string): WebSocket {
     const existing = this.sockets.get(path);
-    if (existing && existing.readyState === WebSocket.OPEN) return existing;
+    if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) return existing;
     if (existing) {
       this.disconnecting.add(path);
       existing.close();
@@ -65,6 +65,13 @@ class WsManager {
       // the attempt cap below.
       const authRejected = evt.code === 4001 || evt.code === 4003;
       if (!this.disconnecting.has(path) && !authRejected && this.accessToken) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            `[ws] ${path} closed (code=${evt.code || 'none'} reason=${evt.reason || 'none'}). ` +
+            `Attempt ${(this.attempts.get(path) || 0) + 1}/10. ` +
+            `If code is 1006 the server is unreachable — is daphne + redis up on ${this.baseUrl}?`,
+          );
+        }
         this.reconnect(path);
       }
       this.disconnecting.delete(path);

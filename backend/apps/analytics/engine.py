@@ -236,6 +236,27 @@ def summarize_spending(profile, cutoff):
     }
 
 
+def summarize_nutrition(profile, cutoff):
+    """Nutrition log totals.
+
+    The MealLog model was deliberately removed (migration 0005) along with
+    the meals achievements, so there is no per-meal data to aggregate. The
+    key is still returned — with honest zeros — because the web Overview /
+    Report tabs and Flutter read ``summary.nutrition`` unconditionally, and
+    a missing key crashes them. When meal logging returns, aggregate here.
+    """
+    return {
+        'count': 0,
+        'total_calories': 0,
+        'total_protein_g': 0,
+        'total_carbs_g': 0,
+        'total_fat_g': 0,
+        'by_type': [],
+        'avg_daily_calories': None,
+        'recent': [],
+    }
+
+
 def summarize_programmes(profile, cutoff):
     """Programme/product purchases + async progress."""
     from apps.marketplace.models import TrainingProgrammePurchase, MealPlanPurchase
@@ -266,6 +287,7 @@ def build_summary(profile, period='all'):
     lives = summarize_lives(profile, cutoff)
     spending = summarize_spending(profile, cutoff)
     programmes = summarize_programmes(profile, cutoff)
+    nutrition = summarize_nutrition(profile, cutoff)
 
     return json_safe({
         'period': period,
@@ -281,6 +303,7 @@ def build_summary(profile, period='all'):
         'lives': lives,
         'spending': spending,
         'programmes': programmes,
+        'nutrition': nutrition,
     })
 
 

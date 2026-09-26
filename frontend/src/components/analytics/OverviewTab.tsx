@@ -45,7 +45,7 @@ export function OverviewTab({ period }: Props) {
   }, [summary]);
 
   const macroData = useMemo(() => {
-    if (!summary) return [];
+    if (!summary?.nutrition || summary.nutrition.count === 0) return [];
     const n = summary.nutrition;
     return [
       { name: 'Protein', value: Math.round(n.total_protein_g), color: COLORS[0] },
@@ -77,7 +77,10 @@ export function OverviewTab({ period }: Props) {
     );
   }
 
-  const { activity, workouts, nutrition, body, spending, lives, programmes } = summary;
+  // Nutrition logging was removed backend-side (see engine.summarize_nutrition);
+  // the whole section hides when the backend reports no nutrition data.
+  const nutrition = summary?.nutrition && summary.nutrition.count > 0 ? summary.nutrition : null;
+  const { activity, workouts, body, spending, lives, programmes } = summary;
   const weightChange = body.weight_change_kg ?? 0;
 
   return (
@@ -86,7 +89,9 @@ export function OverviewTab({ period }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Distance" value={`${formatKm(activity.total_distance_km)} km`} sub={`${activity.count} activities`} icon={<ActivityIcon size={18} />} />
         <StatCard label="Workouts" value={formatNumber(workouts.count)} sub={workouts.most_trained ? `${titleCase(workouts.most_trained)} most trained` : 'No workouts yet'} icon={<Dumbbell size={18} />} />
-        <StatCard label="Calories Logged" value={formatNumber(nutrition.total_calories)} sub={`${formatNumber(nutrition.count)} meals`} icon={<Utensils size={18} />} />
+        {nutrition && (
+          <StatCard label="Calories Logged" value={formatNumber(nutrition.total_calories)} sub={`${formatNumber(nutrition.count)} meals`} icon={<Utensils size={18} />} />
+        )}
         <StatCard label="Weight" value={body.latest_weight_kg ? `${body.latest_weight_kg} kg` : '—'} sub={`${weightChange >= 0 ? '+' : ''}${weightChange} kg this period`} icon={<Scale size={18} />} />
       </div>
 
@@ -162,7 +167,8 @@ export function OverviewTab({ period }: Props) {
         </Card>
       </div>
 
-      {/* Nutrition macros */}
+      {/* Nutrition macros — hidden while backend reports no nutrition data */}
+      {macroData.length > 0 && (
       <Card className="p-4">
         <h3 className="font-heading font-semibold mb-3">Nutrition — Macro Totals</h3>
         <div className="flex flex-wrap gap-3">
@@ -177,6 +183,7 @@ export function OverviewTab({ period }: Props) {
           ))}
         </div>
       </Card>
+      )}
     </div>
   );
 }

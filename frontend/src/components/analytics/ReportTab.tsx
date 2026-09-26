@@ -93,7 +93,7 @@ export function ReportTab({ period }: Props) {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Workouts" value={formatNumber(s.workouts.count)} sub={`${formatNumber(s.workouts.total_calories_burned)} kcal`} />
             <StatCard label="Distance" value={`${formatKm(s.activity.total_distance_km)} km`} sub={`${formatDuration(s.activity.total_duration_seconds)} active`} />
-            <StatCard label="Calories Logged" value={formatNumber(s.nutrition.total_calories)} sub={`${formatNumber(s.nutrition.count)} meals`} />
+            <StatCard label="Calories Logged" value={formatNumber(s.nutrition?.total_calories ?? 0)} sub={`${formatNumber(s.nutrition?.count ?? 0)} meals`} />
             <StatCard label="Body" value={s.body.latest_weight_kg ? `${s.body.latest_weight_kg} kg` : '—'} sub={`${s.body.count} check-ins`} />
           </div>
 
