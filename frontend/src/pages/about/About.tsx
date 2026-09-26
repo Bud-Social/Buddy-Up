@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Handshake, Heart, Radio, Globe, ShieldCheck, TrendingUp, ArrowLeft } from 'lucide-react';
+import { Handshake, Heart, Radio, Globe, ShieldCheck, TrendingUp, ArrowLeft, Dumbbell, GraduationCap, MessagesSquare, CalendarDays, Utensils, Activity, BookOpen } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
+import { Navbar } from '@/components/landing/Navbar';
 import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
 
 const values = [
@@ -20,13 +21,25 @@ const milestones = [
   { when: 'What\'s next', what: 'Offline-lite mode, SMS & WhatsApp nudges, corporate wellness packages, group & family plans, multilanguage support, wearables — see the full roadmap on the landing page.' },
 ];
 
+const services = [
+  { icon: Radio, title: 'Live Workouts', desc: 'Drop into live sessions or host your own.' },
+  { icon: Dumbbell, title: 'Gyms', desc: 'Nearby, virtual, and hybrid communities.' },
+  { icon: GraduationCap, title: 'Trainers & Practitioners', desc: 'Verified pros, mobile or online.' },
+  { icon: MessagesSquare, title: 'Communities & Messaging', desc: 'Group chats that keep you accountable.' },
+  { icon: CalendarDays, title: 'Events', desc: 'Runs, games, and workshops near you.' },
+  { icon: Utensils, title: 'Marketplace', desc: 'Meal plans, programmes, and gear.' },
+  { icon: BookOpen, title: 'Training Programmes', desc: 'Structured multi-week plans.' },
+  { icon: Activity, title: 'Activity Analytics', desc: 'Every run, walk, and lift — tracked.' },
+];
+
 export default function About() {
   return (
     <div className="min-h-screen bg-buddy-black overflow-x-hidden">
+      <Navbar />
       {/* ── HERO ── */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-buddy-green/5 to-transparent pointer-events-none" />
-        <div className="max-w-4xl mx-auto px-6 pt-20 pb-16 text-center relative z-10">
+        <div className="max-w-4xl mx-auto px-6 pt-28 pb-16 text-center relative z-10">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-buddy-text-secondary hover:text-buddy-text-primary transition-colors mb-10">
             <ArrowLeft size={16} /> Back to home
           </Link>
@@ -75,6 +88,23 @@ export default function About() {
               <h3 className="font-heading text-lg font-semibold mb-2">{title}</h3>
               <p className="text-sm text-buddy-text-secondary">{desc}</p>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── WHAT WE OFFER ── */}
+      <section className="max-w-6xl mx-auto px-6 py-16">
+        <h2 className="font-display text-3xl font-extrabold text-center mb-4">What <span className="text-buddy-green">BuddyUp Fit</span> offers</h2>
+        <p className="text-buddy-text-secondary text-center mb-12 max-w-2xl mx-auto">
+          Everything your fitness life needs, in one place — buddies, gyms, trainers, events, and the numbers that prove you&apos;re improving.
+        </p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {services.map(({ icon: Icon, title, desc }) => (
+            <Link key={title} to="/#showcase" className="bg-buddy-surface rounded-2xl p-5 hover:bg-buddy-surface-raised transition-colors">
+              <Icon size={24} className="text-buddy-green mb-3" />
+              <h3 className="font-heading text-sm font-semibold mb-1">{title}</h3>
+              <p className="text-xs text-buddy-text-secondary">{desc}</p>
+            </Link>
           ))}
         </div>
       </section>

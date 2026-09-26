@@ -2,8 +2,9 @@ from rest_framework import mixins, status, viewsets
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 
-from .models import ContactInquiry, FeatureSuggestion, WaitlistEntry
+from .models import CareerApplication, ContactInquiry, FeatureSuggestion, WaitlistEntry
 from .serializers import (
+    CareerApplicationSerializer,
     ContactInquirySerializer,
     FeatureSuggestionSerializer,
     WaitlistEntrySerializer,
@@ -117,3 +118,16 @@ class ContactInquiryViewSet(PublicIntakeViewSet):
             )
         except Exception:  # noqa: BLE001 — intake must never fail on email
             logger.warning('Contact inquiry staff notification failed', exc_info=True)
+
+
+class CareerApplicationViewSet(PublicIntakeViewSet):
+    queryset = CareerApplication.objects.all()
+    serializer_class = CareerApplicationSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return self._created_response(
+            serializer, 'Application received — we reply to shortlisted candidates.',
+        )

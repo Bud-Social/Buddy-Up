@@ -7,6 +7,7 @@ router = DefaultRouter()
 router.register(r'', views.WaitlistViewSet, basename='waitlist')
 router.register(r'suggestions', views.FeatureSuggestionViewSet, basename='suggestion')
 router.register(r'contact', views.ContactInquiryViewSet, basename='contact')
+router.register(r'careers', views.CareerApplicationViewSet, basename='career')
 
 app_name = 'waitlist'
 urlpatterns = [

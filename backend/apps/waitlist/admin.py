@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import ContactInquiry, FeatureSuggestion, WaitlistEntry
+from .models import CareerApplication, ContactInquiry, FeatureSuggestion, WaitlistEntry
 
 
 @admin.register(WaitlistEntry)
@@ -24,4 +24,12 @@ class ContactInquiryAdmin(admin.ModelAdmin):
     list_display = ('email', 'name', 'topic', 'status', 'created_at')
     list_filter = ('topic', 'status')
     search_fields = ('email', 'name', 'subject', 'message')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(CareerApplication)
+class CareerApplicationAdmin(admin.ModelAdmin):
+    list_display = ('email', 'name', 'role', 'status', 'created_at')
+    list_filter = ('role', 'status')
+    search_fields = ('email', 'name', 'role', 'message')
     readonly_fields = ('created_at',)

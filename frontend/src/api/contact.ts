@@ -17,6 +17,14 @@ export interface ContactPayload {
   message: string;
 }
 
+export interface CareerPayload {
+  name: string;
+  email: string;
+  role: string;
+  portfolio_url?: string;
+  message: string;
+}
+
 export async function submitSuggestion(
   payload: SuggestionPayload,
 ): Promise<ApiResponse<{ id: number }>> {
@@ -37,6 +45,16 @@ export async function submitContact(
   // bypasses the Django backend.
   const { data } = await axios.post<ApiResponse<{ id: number }>>(
     '/api/contact', payload,
+  );
+  return data;
+}
+
+export async function submitCareer(
+  payload: CareerPayload,
+): Promise<ApiResponse<{ id: number }>> {
+  // Same-origin Vercel serverless function (`api/career.ts`) → Supabase.
+  const { data } = await axios.post<ApiResponse<{ id: number }>>(
+    '/api/career', payload,
   );
   return data;
 }

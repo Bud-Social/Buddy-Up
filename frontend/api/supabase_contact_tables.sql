@@ -35,3 +35,21 @@ create index if not exists contact_inquiry_created_at_idx
   on public.contact_inquiry (created_at desc);
 create index if not exists feature_suggestion_status_created_idx
   on public.feature_suggestion (status, created_at desc);
+
+-- Careers-page job applications (api/career.ts). Same RLS posture:
+-- enabled, no policies, service-role key only.
+create table if not exists public.career_application (
+  id            bigint generated always as identity primary key,
+  name          text        not null,
+  email         text        not null,
+  role          text        not null,
+  portfolio_url text,
+  message       text        not null,
+  status        text        not null default 'new',
+  created_at    timestamptz not null default now()
+);
+
+alter table public.career_application enable row level security;
+
+create index if not exists career_application_status_created_idx
+  on public.career_application (status, created_at desc);

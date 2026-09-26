@@ -9,6 +9,7 @@ import { isReducedMotionEnabled } from '@/lib/reducedMotion';
 import { APP_URL } from '@/config/downloads';
 import { FUNDRAISER_URL, PLEDGE_FORM_URL, GYM_SUITE_FORM_URL, TRAINER_INTAKE_FORM_URL, PARTNERSHIP_FORM_URL, INVESTOR_FORM_URL } from '@/config/support';
 import { CONTACT_EMAILS, mailtoLink } from '@/config/contact';
+import { Navbar } from '@/components/landing/Navbar';
 import { SupportDialog } from '@/components/features/support/SupportDialog';
 import { WaitlistForm, requestWaitlistInterest } from '@/components/features/support/WaitlistForm';
 import { WaitlistModal } from '@/components/features/support/WaitlistModal';
@@ -228,6 +229,7 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-buddy-black overflow-x-hidden">
+      <Navbar />
       {/* ── 1. HERO ── */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-buddy-green/5 to-transparent pointer-events-none" />
@@ -358,7 +360,8 @@ export default function Landing() {
 
       {/* ── 4. FEATURE SHOWCASE ── */}
       <section
-        className="max-w-6xl mx-auto px-6 py-24"
+        id="showcase"
+        className="max-w-6xl mx-auto px-6 py-24 scroll-mt-16"
         onMouseEnter={() => setFeaturePaused(true)}
         onMouseLeave={() => setFeaturePaused(false)}
         onFocus={() => setFeaturePaused(true)}
@@ -678,7 +681,7 @@ export default function Landing() {
       </section>
 
       {/* ── 10. SUPPORT + WAITLIST ── */}
-      <section id="waitlist" className="max-w-5xl mx-auto px-6 py-24">
+      <section id="waitlist" className="max-w-5xl mx-auto px-6 py-24 scroll-mt-16">
         <h2 className="font-display text-3xl font-extrabold text-center mb-4">
           Fuel the <span className="text-buddy-green">mission</span>
         </h2>
@@ -841,6 +844,8 @@ export default function Landing() {
                 <Link to="/sponsorship-policy" className="block hover:text-buddy-text-primary">Sponsorship Policy</Link>
                 <Link to="/help" className="block hover:text-buddy-text-primary">Help</Link>
                 <Link to="/about" className="block hover:text-buddy-text-primary">About Us</Link>
+                <Link to="/careers" className="block hover:text-buddy-text-primary">Careers</Link>
+                <Link to="/contact" className="block hover:text-buddy-text-primary">Contact Us</Link>
                 <button onClick={() => setSupportOpen(true)} className="block hover:text-buddy-text-primary">Fund Us</button>
               </div>
             </div>

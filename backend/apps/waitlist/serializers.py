@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import ContactInquiry, FeatureSuggestion, WaitlistEntry
+from .models import CareerApplication, ContactInquiry, FeatureSuggestion, WaitlistEntry
 
 
 class WaitlistEntrySerializer(serializers.ModelSerializer):
@@ -62,5 +62,13 @@ class ContactInquirySerializer(serializers.ModelSerializer):
     class Meta:
         model = ContactInquiry
         fields = ['id', 'name', 'email', 'topic', 'subject', 'message',
+                  'status', 'created_at']
+        read_only_fields = ['id', 'status', 'created_at']
+
+
+class CareerApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CareerApplication
+        fields = ['id', 'name', 'email', 'role', 'portfolio_url', 'message',
                   'status', 'created_at']
         read_only_fields = ['id', 'status', 'created_at']

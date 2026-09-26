@@ -11,6 +11,26 @@ test('landing page has CTA buttons', async ({ page }) => {
   await expect(getStarted).toBeVisible();
 });
 
+test('landing navbar links to about, careers, contact', async ({ page }) => {
+  await page.goto('/');
+  const nav = page.locator('nav[aria-label="Primary"]');
+  await expect(nav.getByText('About Us')).toBeVisible();
+  await expect(nav.getByText('Careers')).toBeVisible();
+  await expect(nav.getByText('Contact Us')).toBeVisible();
+});
+
+test('careers page loads with roles and form', async ({ page }) => {
+  await page.goto('/careers');
+  await expect(page.locator('h1')).toContainText('fitness family');
+  await expect(page.getByText('Founding Mobile Engineer').first()).toBeVisible();
+});
+
+test('contact page loads with form', async ({ page }) => {
+  await page.goto('/contact');
+  await expect(page.locator('h1')).toContainText('human');
+  await expect(page.getByRole('button', { name: 'Send message' })).toBeVisible();
+});
+
 test('landing page has value prop cards', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('text=Find Your Buddy')).toBeVisible();

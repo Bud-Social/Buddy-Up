@@ -95,3 +95,29 @@ class ContactInquiry(TimestampedModel):
 
     def __str__(self):
         return f'{self.topic}: {self.email}'
+
+
+class CareerApplication(TimestampedModel):
+    """Public job application from the careers page."""
+
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('reviewing', 'Reviewing'),
+        ('interview', 'Interview'),
+        ('offer', 'Offer'),
+        ('declined', 'Declined'),
+    ]
+
+    name = models.CharField(max_length=80)
+    email = models.EmailField()
+    role = models.CharField(max_length=120)
+    portfolio_url = models.URLField(blank=True, default='')
+    message = models.TextField(max_length=2000)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+
+    class Meta:
+        db_table = 'waitlist_career_application'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.role}: {self.email}'

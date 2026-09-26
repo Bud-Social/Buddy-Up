@@ -232,6 +232,28 @@ class PublicIntakeTests(TestCase):
             status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN,
         )
 
+    def test_career_create_returns_201(self):
+        res = self.client.post('/api/v1/waitlist/careers/', {
+            'name': 'Wanjiku', 'email': 'wanjiku@example.com',
+            'role': 'Founding Mobile Engineer',
+            'portfolio_url': 'https://example.com/work',
+            'message': '5 years of Flutter and fitness apps.',
+        }, format='json')
+        assert res.status_code == status.HTTP_201_CREATED
+        assert res.json()['success'] is True
+
+    def test_career_requires_role_and_message(self):
+        res = self.client.post('/api/v1/waitlist/careers/', {
+            'name': 'Wanjiku', 'email': 'wanjiku@example.com',
+        }, format='json')
+        assert res.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_career_list_requires_staff(self):
+        res = self.client.get('/api/v1/waitlist/careers/')
+        assert res.status_code in (
+            status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN,
+        )
+
 
 class SheetsMirrorTests(TestCase):
     """The Google Sheets relay runs server-side with a hidden webhook URL."""

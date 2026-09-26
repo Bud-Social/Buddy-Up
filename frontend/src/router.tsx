@@ -10,6 +10,7 @@ const PUBLIC_ROUTES = [
   '/forgot-password', '/reset-password',
   '/terms', '/privacy', '/community-guidelines', '/cookie-policy',
   '/medical-disclaimer', '/sponsorship-policy', '/adult-content-policy', '/help',
+  '/about', '/careers', '/contact',
   '/totp-setup', '/totp-challenge',
   // Guardian invite landing: unauthenticated visitors are redirected by the
   // page itself so the invite token survives via ?next=.
@@ -118,6 +119,8 @@ const SponsorshipPolicy = lazy(() => import('@/pages/legal/SponsorshipPolicy'));
 const AdultContentPolicy = lazy(() => import('@/pages/legal/AdultContentPolicy'));
 const Help = lazy(() => import('@/pages/legal/Help'));
 const About = lazy(() => import('@/pages/about/About'));
+const Careers = lazy(() => import('@/pages/Careers'));
+const Contact = lazy(() => import('@/pages/Contact'));
 
 const Landing = lazy(() => import('@/pages/Landing'));
 
@@ -159,6 +162,8 @@ export const router = createBrowserRouter([
   { path: '/adult-content-policy', element: <SWrapper><AdultContentPolicy /></SWrapper> },
   { path: '/help', element: <SWrapper><Help /></SWrapper> },
   { path: '/about', element: <SWrapper><About /></SWrapper> },
+  { path: '/careers', element: <SWrapper><Careers /></SWrapper> },
+  { path: '/contact', element: <SWrapper><Contact /></SWrapper> },
   {
     element: <AuthGuard />,
     children: [
