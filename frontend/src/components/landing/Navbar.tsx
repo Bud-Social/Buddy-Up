@@ -72,11 +72,13 @@ export function Navbar() {
           <Logo size="md" />
         </Link>
 
-        {/* Desktop links */}
+        {/* Desktop links — every item shares one box model so all labels
+            sit on exactly the same baseline (text-only links and the
+            icon-bearing Services button included). */}
         <div className="hidden md:flex items-center gap-1">
           <Link
             to="/about"
-            className="px-4 py-2 text-sm text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
+            className="inline-flex items-center px-4 py-2 text-sm leading-6 text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
           >
             About Us
           </Link>
@@ -87,9 +89,9 @@ export function Navbar() {
               aria-haspopup="true"
               onClick={() => setServicesOpen((v) => !v)}
               onMouseEnter={() => setServicesOpen(true)}
-              className="flex items-center gap-1 px-4 py-2 text-sm text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
+              className="inline-flex items-center gap-1 px-4 py-2 text-sm leading-6 text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
             >
-              Services <ChevronDown size={14} className={`transition-transform ${servicesOpen ? 'rotate-180' : ''}`} />
+              Services <ChevronDown size={14} className={`shrink-0 transition-transform ${servicesOpen ? 'rotate-180' : ''}`} />
             </button>
             {servicesOpen && (
               <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[32rem]">
@@ -118,7 +120,7 @@ export function Navbar() {
             <Link
               key={to}
               to={to}
-              className="px-4 py-2 text-sm text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
+              className="inline-flex items-center px-4 py-2 text-sm leading-6 text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
             >
               {label}
             </Link>
@@ -126,9 +128,6 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/login" className="text-sm text-buddy-text-secondary hover:text-buddy-text-primary transition-colors">
-            Log in
-          </Link>
           <Button size="sm" onClick={goWaitlist}>Join waiting list</Button>
         </div>
 
@@ -171,11 +170,8 @@ export function Navbar() {
               </Link>
             ))}
           </div>
-          <div className="flex gap-3 pt-1">
-            <Link to="/login" onClick={() => setMobileOpen(false)} className="flex-1">
-              <Button variant="outline" className="w-full">Log in</Button>
-            </Link>
-            <Button className="flex-1" onClick={goWaitlist}>Join waiting list</Button>
+          <div className="pt-1">
+            <Button className="w-full" onClick={goWaitlist}>Join waiting list</Button>
           </div>
         </div>
       )}
