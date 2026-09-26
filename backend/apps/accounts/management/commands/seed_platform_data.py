@@ -6,13 +6,17 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.profiles.models import Profile
-from apps.gyms.models import Gym, GymMembership
-from apps.sessions.models import TrainerProfile, Availability
+from apps.gyms.models import Gym, GymMembership, GymSchedulePost, GymReview, VenueLocation
+from apps.sessions.models import TrainerProfile, Availability, BookingSession, Review
 from apps.marketplace.models import (
     Shop, ShopMembership, MarketplaceEvent, EventMedia, MealPlan,
     TrainingProgramme, Product, DiscountCode,
 )
 from apps.feed.models import Post, Comment, Reaction
+from apps.lives.models import BuddyLive, LiveAttendee
+from apps.analytics.models import ActivityRecord, WorkoutLog, BodyMetric
+from apps.notifications.models import Notification
+from apps.waitlist.models import WaitlistEntry
 
 # ---------------------------------------------------------------------------
 # Static assets (Cloudinary URLs already uploaded for the demo events).
@@ -34,7 +38,9 @@ UNSPLASH = {
 class Command(BaseCommand):
     help = (
         'Populates the database with demo users, gyms, trainer profiles, shops, '
-        'marketplace content, events (with media) and feed posts. Idempotent - '
+        'marketplace content, events (with media), feed posts, lives, session '
+        'bookings, gym schedules, reviews, analytics, wallet balances, '
+        'notifications and waitlist entries. Idempotent - '
         'safe to run multiple times. Run after `python manage.py migrate` on a '
         'fresh database.'
     )
@@ -43,8 +49,10 @@ class Command(BaseCommand):
         random.seed(42)
         now = timezone.now()
         self._users_and_profiles()
-        trainers = list(Profile.objects.filter(role='trainer'))
-        all_profiles = list(Profile.objects.all())
+        # Deterministic ordering: guards below assume the same profiles are
+        # picked on every run, otherwise re-runs seed different profiles.
+        trainers = list(Profile.objects.filter(role='trainer').order_by('user_id'))
+        all_profiles = list(Profile.objects.order_by('user_id'))
         self._gyms(all_profiles)
         self._trainers(trainers)
         self._shops(trainers)
@@ -54,6 +62,15 @@ class Command(BaseCommand):
         self._events(trainers, now)
         self._discount_codes(trainers)
         self._feed(all_profiles)
+        self._venues()
+        self._schedule_posts(all_profiles, now)
+        self._lives(trainers, all_profiles, now)
+        self._bookings(trainers, all_profiles, now)
+        self._reviews(trainers, all_profiles)
+        self._analytics(all_profiles, now)
+        self._wallets(all_profiles)
+        self._notifications(all_profiles)
+        self._waitlist()
         self.stdout.write(self.style.SUCCESS('populate_db: done.'))
 
     # -- 1. Users & profiles -------------------------------------------------
@@ -447,3 +464,204 @@ class Command(BaseCommand):
                     Reaction.objects.get_or_create(
                         post=post, author=commenter,
                         defaults={'reaction_type': random.choice(['fire', 'heart', 'clap', 'muscle'])})
+
+    # -- 11. Physical venues (powers nearby discovery) -------------------------
+    def _venues(self):
+        spots = [
+            ('Iron Palace', 'Kimathi Street, Nairobi', 'Nairobi', 'Kenya', -1.2921, 36.8219),
+            ('Zen Flow Yoga', 'Riverside Drive, Nairobi', 'Nairobi', 'Kenya', -1.2634, 36.8028),
+            ('Urban Fitness', 'Moi Avenue, Mombasa', 'Mombasa', 'Kenya', -4.0435, 39.6682),
+        ]
+        for handle_suffix, (name, address, city, country, lat, lng) in enumerate(spots, start=1):
+            try:
+                gym = Gym.objects.get(handle=f'gym-{handle_suffix}')
+            except Gym.DoesNotExist:
+                continue
+            venue, created = VenueLocation.objects.get_or_create(
+                gym=gym, name='Main floor',
+                defaults={'address': address, 'city': city, 'country': country,
+                          'latitude': lat, 'longitude': lng,
+                          'is_primary': True, 'is_active': True},
+            )
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'  + venue: {name}'))
+
+    # -- 12. Gym schedule posts (physical / virtual / hybrid mix) --------------
+    def _schedule_posts(self, all_profiles, now):
+        gyms = list(Gym.objects.order_by('handle')[:3])
+        modes = ['in_house', 'online', 'hybrid']
+        kinds = [('hiit', 'Morning HIIT Blast'), ('yoga', 'Sunrise Yoga Flow'),
+                 ('strength', 'Strength & Conditioning'), ('cardio', 'Lunch Express Cardio')]
+        for i, gym in enumerate(gyms):
+            author = random.choice(all_profiles)
+            for j, (activity, title) in enumerate(kinds[:3]):
+                start = now + timedelta(days=i + 1, hours=j * 3)
+                post, created = GymSchedulePost.objects.get_or_create(
+                    gym=gym, title=f'{title} @ {gym.name}',
+                    defaults={'author': author, 'activity_type': activity,
+                              'location_mode': modes[(i + j) % 3],
+                              'content': f'{title} — all levels welcome.',
+                              'start_time': start,
+                              'end_time': start + timedelta(hours=1),
+                              'max_slots': 20, 'timezone': 'Africa/Nairobi'},
+                )
+                if created:
+                    self.stdout.write(self.style.SUCCESS(f'  + schedule: {post.title}'))
+
+    # -- 13. Lives (one per format, past + upcoming) ----------------------------
+    def _lives(self, trainers, all_profiles, now):
+        hosts = (trainers or all_profiles)[:3]
+        formats = [
+            ('open_sweat', 'Open Sweat: Full-Body Friday', 2),
+            ('gym_live', 'Iron Palace Saturday Lifting Club', 4),
+            ('pt_session_live', '1:1 Form Check with Coach', 1),
+            ('random_drop', 'Random Drop: Mystery Workout', -2),
+            ('audio', 'Morning Motivation Talk', 6),
+        ]
+        for i, (live_type, title, days) in enumerate(formats):
+            host = hosts[i % len(hosts)]
+            live, created = BuddyLive.objects.get_or_create(
+                title=title,
+                defaults={'host': host, 'live_type': live_type, 'category': 'fitness',
+                          'access': 'public',
+                          'status': 'live' if days == 1 else ('ended' if days < 0 else 'scheduled'),
+                          'scheduled_for': now + timedelta(days=days),
+                          'started_at': now - timedelta(hours=1) if days < 0 else None,
+                          'ended_at': now if days < 0 else None,
+                          'viewer_peak': random.randint(20, 300)},
+            )
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'  + live: {title}'))
+            for p in random.sample(all_profiles, min(4, len(all_profiles))):
+                if p != host:
+                    LiveAttendee.objects.get_or_create(
+                        live=live, user=p, defaults={'role': 'attendee'})
+
+    # -- 14. Session bookings (upcoming + completed + review) -------------------
+    def _bookings(self, trainers, all_profiles, now):
+        clients = [p for p in all_profiles if p not in trainers][:3]
+        for i, trainer in enumerate(trainers[:2]):
+            for j, client in enumerate(clients):
+                if BookingSession.objects.filter(client=client, trainer=trainer).exists():
+                    continue
+                start = now + timedelta(days=i + j + 1, hours=10)
+                booking, created = BookingSession.objects.get_or_create(
+                    client=client, trainer=trainer,
+                    session_type='1on1_live', scheduled_at=start,
+                    defaults={'duration_minutes': 60,
+                              'artifact_fee': {'dumbbell': 10},
+                              'notes': 'Demo booking for presentation.',
+                              'status': 'confirmed'},
+                )
+                if created and j == 0:
+                    past = BookingSession.objects.create(
+                        client=client, trainer=trainer,
+                        session_type='1on1_live',
+                        scheduled_at=now - timedelta(days=3),
+                        duration_minutes=60,
+                        artifact_fee={'dumbbell': 10},
+                        status='completed',
+                    )
+                    from apps.sessions.models import Review as SessionReview
+                    SessionReview.objects.get_or_create(
+                        session=past, client=client,
+                        defaults={'trainer': trainer, 'rating': 5,
+                                  'body': 'Great session, highly recommended!'})
+                    self.stdout.write(self.style.SUCCESS(
+                        f'  + booking: {client.username} x {trainer.username}'))
+
+    # -- 15. Gym reviews --------------------------------------------------------
+    def _reviews(self, trainers, all_profiles):
+        bodies = ['Clean equipment and great coaches.', 'Love the morning classes!',
+                  'Good vibe, gets busy after work.']
+        for gym in Gym.objects.order_by('handle')[:3]:
+            for i, reviewer in enumerate(random.sample(all_profiles, min(3, len(all_profiles)))):
+                review, created = GymReview.objects.get_or_create(
+                    gym=gym, reviewer=reviewer,
+                    defaults={'rating': random.choice([4, 5, 5]),
+                              'comment': bodies[i % len(bodies)]},
+                )
+                if created:
+                    self.stdout.write(self.style.SUCCESS(
+                        f'  + gym review: {gym.handle} {review.rating}*'))
+
+    # -- 16. Analytics (runs, walks, hikes, workouts, body) --------------------
+    def _analytics(self, all_profiles, now):
+        for i, profile in enumerate(all_profiles[:4]):
+            if ActivityRecord.objects.filter(user=profile).exists():
+                continue
+            for j, (atype, km, mins) in enumerate(
+                    [('run', 5.2, 32), ('walk', 2.1, 28), ('hike', 8.4, 95), ('cycle', 15.0, 48)]):
+                ActivityRecord.objects.get_or_create(
+                    user=profile, activity_type=atype,
+                    started_at=now - timedelta(days=j + 1),
+                    defaults={'source': 'gps',
+                              'duration_seconds': mins * 60,
+                              'distance_meters': km * 1000,
+                              'calories_burned': round(km * 60),
+                              'steps': int(km * 1400)},
+                )
+            WorkoutLog.objects.get_or_create(
+                user=profile, workout_type='strength', performed_at=now - timedelta(days=1),
+                defaults={'exercise': 'Back squat', 'sets': 4, 'reps': 8,
+                          'weight_kg': 60, 'duration_minutes': 45, 'calories_burned': 320},
+            )
+            BodyMetric.objects.get_or_create(
+                user=profile, measured_at=now - timedelta(days=2),
+                defaults={'weight_kg': 70 + i, 'body_fat_pct': 18.5},
+            )
+        self.stdout.write(self.style.SUCCESS('  + analytics activity/workouts/body'))
+
+    # -- 17. Wallet balances -----------------------------------------------------
+    def _wallets(self, all_profiles):
+        for profile in all_profiles[:5]:
+            balance = profile.artifact_balance or {}
+            if balance.get('dumbbell', 0) >= 500:
+                continue
+            balance.update({'dumbbell': balance.get('dumbbell', 0) + 500,
+                            'barbell': balance.get('barbell', 0) + 50})
+            profile.artifact_balance = balance
+            profile.save(update_fields=['artifact_balance'])
+        self.stdout.write(self.style.SUCCESS('  + wallet balances topped up'))
+
+    # -- 18. Notifications -------------------------------------------------------
+    def _notifications(self, all_profiles):
+        samples = [
+            ('session_reminder', 'Session in 1 hour', 'Your 1:1 with Coach starts soon.', 'high'),
+            ('streak_milestone', '7-day streak!', 'A full week of consistency. Keep going.', 'normal'),
+            ('live_starting', 'Iron Palace is live', 'Saturday Lifting Club just started.', 'normal'),
+            ('gym_invite', 'You are invited', 'Join Zen Flow Yoga on BuddyUp Fit.', 'normal'),
+        ]
+        for profile in all_profiles[:3]:
+            for ntype, title, body, priority in samples:
+                Notification.objects.get_or_create(
+                    recipient=profile, notification_type=ntype, title=title,
+                    defaults={'body': body, 'priority': priority},
+                )
+        self.stdout.write(self.style.SUCCESS('  + notifications'))
+
+    # -- 19. Waitlist entries (all segments) --------------------------------------
+    def _waitlist(self):
+        samples = [
+            ('member@demo.com', 'Demo Member', 'Kenya', 'landing', 'user', {}),
+            ('gym@demo.com', 'Gym Founder', 'Kenya', 'landing', 'gym',
+             {'gym_name': 'Demo Iron House', 'city': 'Nairobi', 'gym_type': 'hybrid'}),
+            ('coach@demo.com', 'Demo Coach', 'Kenya', 'landing', 'trainer',
+             {'role': 'trainer', 'city': 'Nairobi', 'specialties': ['strength']}),
+            ('hr@demo.com', 'HR Lead', 'Kenya', 'landing', 'corporate',
+             {'company_name': 'Demo Ltd', 'city': 'Nairobi', 'team_size': '11–50'}),
+            ('events@demo.com', 'Events Lead', 'Kenya', 'landing', 'organiser',
+             {'brand': 'Demo Runs', 'city': 'Nairobi', 'event_types': ['fitness']}),
+            ('shop@demo.com', 'Shop Owner', 'Kenya', 'landing', 'supplier',
+             {'business': 'Demo Supplements', 'city': 'Nairobi'}),
+            ('dist@demo.com', 'Distributor', 'Kenya', 'landing', 'distributor',
+             {'business': 'Demo Equip', 'city': 'Nairobi', 'coverage': 'Kenya'}),
+        ]
+        for email, name, country, source, interest, metadata in samples:
+            _, created = WaitlistEntry.objects.get_or_create(
+                email=email,
+                defaults={'name': name, 'country': country, 'source': source,
+                          'interest': interest, 'metadata': metadata},
+            )
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'  + waitlist: {interest}'))
