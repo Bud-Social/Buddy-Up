@@ -10,12 +10,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 
-import django
+import django  # noqa: E402  (must run after settings are configured above)
 
 django.setup()
 
-from django.test import Client
-from django.urls import resolve
+from django.test import Client  # noqa: E402
+from django.urls import resolve  # noqa: E402
 
 FIXTURE = ROOT / "contracts" / "api_contract.json"
 

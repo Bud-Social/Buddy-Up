@@ -485,25 +485,49 @@ FETCHERS = {"nlp_text": fetch_nlp_text, "vision": fetch_vision,
 
 # ---------------------------------------------------------------- commands
 
-def cmd_status(_):
+def cmd_status(a):
     import shutil
     total, used, free = shutil.disk_usage(str(DATA))
+    sources = [
+        {"name": p.name, "mb": round(_du(p) / 1e6, 1)}
+        for p in sorted(DATA.iterdir())
+        if p.name not in ("batches", "processed", "user")
+    ]
+    batches = []
+    if BATCHES.exists():
+        for task in sorted(p.name for p in BATCHES.iterdir() if p.is_dir()):
+            for b in sorted((BATCHES / task).iterdir()):
+                man_p = b / "manifest.json"
+                meta = json.loads(man_p.read_text()) if man_p.exists() else {}
+                try:
+                    mtime = man_p.stat().st_mtime if man_p.exists() else b.stat().st_mtime
+                except OSError:
+                    mtime = 0
+                batches.append({
+                    "task": task, "batch": b.name,
+                    "mb": round(_du(b) / 1e6, 1),
+                    "n": meta.get("n"), "source": str(meta.get("source", ""))[:120],
+                    "mtime": mtime,
+                })
+    payload = {
+        "disk": {"total_gb": round(total / 1e9, 1), "used_gb": round(used / 1e9, 1),
+                 "free_gb": round(free / 1e9, 1)},
+        "sources": sources, "batches": batches, "tasks": list(TASKS),
+    }
+    if getattr(a, "json", False):
+        print(json.dumps(payload))
+        return
     print(f"disk: {used/1e9:.1f}G used / {free/1e9:.1f}G free")
     print("\nlocal sources:")
-    for p in sorted(DATA.iterdir()):
-        if p.name in ("batches", "processed", "user"):
-            continue
-        print(f"  {_mb(_du(p)):>10}  {p.name}")
+    for s in sources:
+        print(f"  {s['mb']:>10}MB  {s['name']}")
     print("\nbatches (delete after training to free space):")
-    if not BATCHES.exists():
+    if not batches:
         print("  (none)")
         return
-    for task in sorted(p.name for p in BATCHES.iterdir() if p.is_dir()):
-        for b in sorted((BATCHES / task).iterdir()):
-            man_p = b / "manifest.json"
-            meta = json.loads(man_p.read_text()) if man_p.exists() else {}
-            print(f"  {task}/{b.name} {_mb(_du(b)):>8} n={meta.get('n', '?')} "
-                  f"src={str(meta.get('source', '?'))[:60]}")
+    for b in batches:
+        print(f"  {b['task']}/{b['batch']} {b['mb']:>8}MB n={b['n']} "
+              f"src={str(b['source'])[:60]}")
 
 
 def cmd_find(a):
@@ -629,7 +653,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("status", help="disk + local sources + batches")
+    st = sub.add_parser("status", help="disk + local sources + batches")
+    st.add_argument("--json", action="store_true",
+                    help="emit machine-readable JSON (used by the admin dashboard)")
     f = sub.add_parser("find", help="where real data lives for a task")
     f.add_argument("--task", choices=list(TASKS))
     f.add_argument("--live", action="store_true", help="also query the HF Hub API")

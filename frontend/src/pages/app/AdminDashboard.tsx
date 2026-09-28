@@ -9,9 +9,14 @@ import {
 } from 'recharts';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { DataTab } from '@/components/admin/DataTab';
+import { PerformanceTab } from '@/components/admin/PerformanceTab';
+import { TestingTab } from '@/components/admin/TestingTab';
 import { adminApi, type DashboardData, type TrainingRun } from '@/api/admin';
 
 const POLL_MS = 30_000;
+const TABS = ['overview', 'registry', 'data', 'performance', 'testing'] as const;
+type DashboardTab = (typeof TABS)[number];
 
 function formatBytes(bytes: number) {
   const gb = bytes / (1024 ** 3);
@@ -150,6 +155,8 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState<'all' | TrainingRun['status']>('all');
   const [query, setQuery] = useState('');
   const [live, setLive] = useState(true);
+  const [tab, setTab] = useState<DashboardTab>('overview');
+  const [promoting, setPromoting] = useState<string | null>(null);
   const timerRef = useRef<number | null>(null);
 
   const load = useCallback((silent = false) => {
@@ -269,6 +276,22 @@ export default function AdminDashboard() {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 overflow-x-auto">
+        {TABS.map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg capitalize whitespace-nowrap transition-colors ${
+              tab === t ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:bg-buddy-surface-raised'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'overview' && <>
       {/* Health cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard icon={Box} label="Models" value={health.models.total} sub={`${health.models.active} active`} />
@@ -345,7 +368,9 @@ export default function AdminDashboard() {
           </div>
         </Card>
       </div>
+      </>}
 
+      {tab === 'registry' && <>
       {/* Models registry */}
       <section>
         <div className="flex items-center gap-2 mb-3">
@@ -384,13 +409,50 @@ export default function AdminDashboard() {
                       ))}
                     </div>
                   )}
+                  <div className="flex gap-2 mt-3">
+                    {m.is_active ? (
+                      <Button
+                        variant="outline" size="sm"
+                        disabled={promoting === `${m.name}:${m.version}`}
+                        onClick={async () => {
+                          setPromoting(`${m.name}:${m.version}`);
+                          try {
+                            await adminApi.registerModel({ name: m.name, version: m.version, deactivate: true });
+                            load(true);
+                          } finally {
+                            setPromoting(null);
+                          }
+                        }}
+                      >
+                        Roll back
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline" size="sm"
+                        disabled={promoting === `${m.name}:${m.version}`}
+                        onClick={async () => {
+                          setPromoting(`${m.name}:${m.version}`);
+                          try {
+                            await adminApi.registerModel({ name: m.name, version: m.version, activate: true, deactivate_others: true });
+                            load(true);
+                          } finally {
+                            setPromoting(null);
+                          }
+                        }}
+                      >
+                        Promote to live
+                      </Button>
+                    )}
+                  </div>
                 </Card>
               );
             })}
           </div>
         )}
       </section>
+      </>}
 
+      {tab === 'overview' && <>
       {/* Training runs / log viewer */}
       <section>
         <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -446,6 +508,13 @@ export default function AdminDashboard() {
           </div>
         )}
       </section>
+      </>}
+
+      {tab === 'data' && <DataTab />}
+
+      {tab === 'performance' && <PerformanceTab data={data} />}
+
+      {tab === 'testing' && <TestingTab onTested={() => load(true)} />}
 
       {loading && <div className="flex justify-center py-4"><Loader size={20} className="animate-spin text-buddy-text-secondary" /></div>}
     </div>

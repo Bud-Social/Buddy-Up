@@ -228,3 +228,134 @@ class RegisterBandedModelsTests(TestCase):
         row = ModelMetadata.objects.get(name='banded_nlp_best')
         self.assertTrue(row.is_active)
         self.assertEqual(row.metrics['bagged_acc'], 0.963)
+
+
+class DashboardOpsTests(TestCase):
+    """Scraper/loader aggregation, model register/promote, test proxy."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from rest_framework.test import APIClient
+
+        User = get_user_model()
+        self.staff = User.objects.create_user(
+            email='ml-staff@example.com', password='TestPass123!', is_staff=True)
+        self.plain = User.objects.create_user(
+            email='ml-plain@example.com', password='TestPass123!')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.staff)
+
+    def test_non_staff_forbidden(self):
+        from rest_framework.test import APIClient
+
+        anon = APIClient()
+        anon.force_authenticate(user=self.plain)
+        for method, url in (
+            ('get', '/api/v1/admin/dashboard/scrapers/'),
+            ('get', '/api/v1/admin/dashboard/loaders/'),
+            ('post', '/api/v1/admin/dashboard/models/register/'),
+            ('post', '/api/v1/admin/dashboard/models/test/'),
+        ):
+            r = getattr(anon, method)(url, {})
+            self.assertIn(r.status_code, (401, 403), url)
+
+    def test_register_upsert_and_promote(self):
+        from apps.ai.models import ModelMetadata
+
+        r = self.client.post('/api/v1/admin/dashboard/models/register/', {
+            'name': 'toxicity_classifier', 'version': '2.0.0',
+            'artifact_path': 'models/toxicity_classifier-2.0.0_int8.onnx',
+            'framework': 'pytorch', 'metrics': {'accuracy': 0.97},
+        }, format='json')
+        self.assertEqual(r.status_code, 201)
+        row = ModelMetadata.objects.get(name='toxicity_classifier', version='2.0.0')
+        # Model default is active; deactivate then promote back.
+        r = self.client.post('/api/v1/admin/dashboard/models/register/', {
+            'name': 'toxicity_classifier', 'version': '2.0.0', 'deactivate': True,
+        }, format='json')
+        self.assertEqual(r.status_code, 201)
+        row.refresh_from_db()
+        self.assertFalse(row.is_active)
+
+        r = self.client.post('/api/v1/admin/dashboard/models/register/', {
+            'name': 'toxicity_classifier', 'version': '2.0.0', 'activate': True,
+        }, format='json')
+        self.assertEqual(r.status_code, 201)
+        row.refresh_from_db()
+        self.assertTrue(row.is_active)
+
+        r = self.client.post('/api/v1/admin/dashboard/models/register/', {
+            'name': 'toxicity_classifier', 'version': '2.0.0', 'deactivate': True,
+        }, format='json')
+        row.refresh_from_db()
+        self.assertFalse(row.is_active)
+
+    def test_register_rejects_bad_payload(self):
+        r = self.client.post('/api/v1/admin/dashboard/models/register/', {
+            'name': '', 'version': '',
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+        r = self.client.post('/api/v1/admin/dashboard/models/register/', {
+            'name': 'x', 'version': '1', 'metrics': [1, 2],
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_register_never_deactivates_silently(self):
+        from django.core.management import call_command
+
+        call_command('register_model', name='nsfw_classifier', model_version='1.0.0',
+                     metrics='{"accuracy": 0.9}', activate=True)
+        # A metrics-only re-register must not touch is_active.
+        call_command('register_model', name='nsfw_classifier', model_version='1.0.0',
+                     metrics='{"accuracy": 0.99}')
+        from apps.ai.models import ModelMetadata
+
+        self.assertTrue(
+            ModelMetadata.objects.get(name='nsfw_classifier', version='1.0.0').is_active)
+
+    def test_test_model_rejects_unknown_route(self):
+        r = self.client.post('/api/v1/admin/dashboard/models/test/', {
+            'route': '/api/v1/admin/dashboard/',
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_test_model_requires_input(self):
+        r = self.client.post('/api/v1/admin/dashboard/models/test/', {
+            'route': '/api/v1/moderation/text', 'text': '',
+        }, format='json')
+        self.assertEqual(r.status_code, 400)
+
+    def test_test_model_proxies_and_reports(self):
+        from unittest.mock import patch
+
+        from apps.ai.models import ModelMetadata
+
+        ModelMetadata.objects.create(
+            name='toxicity_classifier', version='2.0.0', is_active=True,
+            artifact_path='models/toxicity_classifier-2.0.0_int8.onnx')
+
+        class FakeResp:
+            ok = True
+            status_code = 200
+
+            def json(self):
+                return {'label': 'toxic', 'score': 0.91}
+
+        with patch('apps.ai.views_admin.ai_post', return_value=FakeResp()):
+            r = self.client.post('/api/v1/admin/dashboard/models/test/', {
+                'route': '/api/v1/moderation/text', 'text': 'you are terrible',
+            }, format='json')
+        self.assertEqual(r.status_code, 200)
+        data = r.json()['data']
+        self.assertEqual(data['model'], 'toxicity_classifier')
+        self.assertEqual(data['active_version'], '2.0.0')
+        self.assertEqual(data['result'], {'label': 'toxic', 'score': 0.91})
+        self.assertIn('elapsed_ms', data)
+
+    def test_scrapers_and_loaders_shape(self):
+        r = self.client.get('/api/v1/admin/dashboard/scrapers/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIsInstance(r.json()['data'], list)
+        r = self.client.get('/api/v1/admin/dashboard/loaders/')
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('disk', r.json()['data'])
