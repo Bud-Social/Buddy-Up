@@ -146,6 +146,17 @@ class RecommendationTests(TestCase):
         self.assertEqual(response.data['data'][0]['explanation']['code'], 'same_city')
 
     @patch('requests.post', side_effect=RuntimeError('AI unavailable'))
+    def test_limit_param_caps_results(self, _post):
+        for i in range(6):
+            u = User.objects.create_user(email=f'extra{i}@example.com', password='TestPass123!')
+            Profile.objects.create(user=u, username=f'extra{i}', display_name=f'Extra {i}')
+        response = self.client.get('/api/v1/profiles/recommendations/', {'limit': 4})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertLessEqual(len(response.data['data']), 4)
+        response = self.client.get('/api/v1/profiles/recommendations/', {'limit': 'abc'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch('requests.post', side_effect=RuntimeError('AI unavailable'))
     def test_feedback_excludes_target_and_is_updatable(self, _post):
         url = '/api/v1/profiles/recommendations/feedback/'
         response = self.client.post(url, {

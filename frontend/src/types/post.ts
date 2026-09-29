@@ -1,4 +1,4 @@
-export type PostType = 'text' | 'photo' | 'short_video' | 'long_video' | 'workout_log' | 'meal' | 'progress' | 'moment' | 'poll';
+export type PostType = 'text' | 'photo' | 'short_video' | 'long_video' | 'workout_log' | 'moment' | 'poll';
 export type Visibility = 'public' | 'buddies' | 'gym_members' | 'private';
 export type ReactionType = 'pump' | 'fire' | 'respect' | 'grind' | 'lets_go' | 'haha' | 'too_hard';
 

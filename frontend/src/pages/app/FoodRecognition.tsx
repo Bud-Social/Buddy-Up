@@ -1,5 +1,4 @@
 import { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Camera, Upload, RotateCcw, Sparkles, BarChart3, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -8,7 +7,6 @@ import { marketplaceApi } from '@/api/marketplace';
 import type { FoodRecognitionResult, FoodItem } from '@/api/marketplace';
 
 export default function FoodRecognition() {
-  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -163,29 +161,6 @@ export default function FoodRecognition() {
               </div>
             </Card>
           )}
-
-          <Button
-            variant="secondary"
-            className="w-full"
-            onClick={() => {
-              if (preview && preview.length < 4_000_000) {
-                try { sessionStorage.setItem('buddyup-meal-photo', preview); } catch {}
-              }
-              navigate('/feed', {
-                state: {
-                  mealData: {
-                    food_name: result.items[0]?.item ?? '',
-                    calories: result.total_calories,
-                    protein_g: result.total_protein,
-                    carbs_g: result.total_carbs,
-                    fat_g: result.total_fat,
-                  },
-                },
-              });
-            }}
-          >
-            Share as Meal Post
-          </Button>
         </div>
       )}
     </div>

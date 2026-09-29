@@ -18,7 +18,7 @@ from rest_framework.response import Response
 
 from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
-from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, PostShare, Sound, HiddenPost, MutedAuthor
+from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, PostShare, Sound, HiddenPost, MutedAuthor, PostView
 from .media_types import ALLOWED_EXTS, guess_media_type, url_extension
 from .serializers import (
     PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer,
@@ -543,9 +543,10 @@ def _can_view_post(post, user_profile) -> bool:
 
 
 # Bud Press engagement counters.
-# Views are throttled to one counted view per viewer per post per 24h so
-# refresh loops and re-opens don't inflate creator insights. Shares are
-# counted on every POST — each share is a deliberate outbound action.
+# Views are unique-per-viewer: the first-ever view by a viewer increments
+# Post.view_count exactly once; repeats only refresh last_seen. The 24h cache
+# key survives purely as a write-throttle so refresh loops don't hammer the
+# DB. Shares are counted on every POST — each share is deliberate.
 POST_VIEW_THROTTLE_SECONDS = 24 * 60 * 60
 
 
@@ -554,13 +555,16 @@ def _post_view_cache_key(post_id, user_id) -> str:
 
 
 def _record_post_view(post, viewer_profile):
-    """Count a view for `post`, throttled per viewer (24h window).
+    """Count a unique view for `post`.
 
     Shared by PostDetailView (implicit view on read) and PostViewRecordView
     (explicit view ping) so both surfaces stay consistent. Returns
-    (view_count, counted).
+    (view_count, counted). Author self-views and anonymous reads are never
+    counted.
     """
     if viewer_profile is None:
+        return post.view_count, False
+    if viewer_profile.user_id == post.author_id:
         return post.view_count, False
     key = _post_view_cache_key(post.id, viewer_profile.user_id)
     try:
@@ -568,6 +572,13 @@ def _record_post_view(post, viewer_profile):
     except Exception:  # noqa: BLE001 — cache outage must not break reads
         first_in_window = True
     if not first_in_window:
+        return post.view_count, False
+    _, created = PostView.objects.get_or_create(
+        post=post, viewer=viewer_profile,
+        defaults={'views': 1},
+    )
+    if not created:
+        PostView.objects.filter(post=post, viewer=viewer_profile).update(views=F('views') + 1)
         return post.view_count, False
     Post.objects.filter(id=post.id).update(view_count=F('view_count') + 1)
     post.refresh_from_db(fields=['view_count'])

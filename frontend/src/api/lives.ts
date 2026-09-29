@@ -62,6 +62,9 @@ export const livesApi = {
   endLive: (liveId: string, saveReplay = false) =>
     apiClient.post<ApiResponse<null>>(`/lives/${liveId}/end/`, { save_replay: saveReplay }).then((r) => r.data),
 
+  recordReplayView: (liveId: string) =>
+    apiClient.post<ApiResponse<{ unique_viewers: number }>>(`/lives/${liveId}/replay/view/`, {}).then((r) => r.data),
+
   joinLive: (liveId: string) =>
     apiClient.post<ApiResponse<JoinLiveResponse>>(`/lives/${liveId}/join/`).then((r) => r.data),
 

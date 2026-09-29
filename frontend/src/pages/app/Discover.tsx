@@ -10,6 +10,7 @@ import { InterestChips } from '@/components/profile/InterestChips';
 import { profilesApi } from '@/api';
 import { gymsApi } from '@/api';
 import { livesApi } from '@/api';
+import { PostCard } from '@/components/features/feed/PostCard';
 import type { DiscoverTrending } from '@/api/profiles';
 import type { Profile } from '@/types';
 import type { Gym } from '@/types';
@@ -25,6 +26,7 @@ export default function Discover() {
   const [isSearching, setIsSearching] = useState(false);
   const [trending, setTrending] = useState<DiscoverTrending | null>(null);
   const [buddyRequested, setBuddyRequested] = useState<Set<string>>(new Set());
+  const [showAllPeople, setShowAllPeople] = useState(false);
 
   const handleBuddyUp = async (username: string) => {
     try {
@@ -185,20 +187,9 @@ export default function Discover() {
               <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
                 <TrendingUp className="w-4 h-4 text-buddy-green" /> Trending Posts
               </p>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {trending.posts.slice(0, 3).map((post) => (
-                  <Card key={post.id} className="p-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name || ''} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{post.author_data?.display_name}</p>
-                        {post.body && <p className="text-sm text-buddy-text-secondary line-clamp-2 mt-0.5">{post.body}</p>}
-                        <p className="text-xs text-buddy-text-secondary/60 mt-1">
-                          {Object.values(post.reaction_counts || {}).reduce((s, n) => s + (n as number), 0)} reactions
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
+                  <PostCard key={post.id} post={post} />
                 ))}
               </div>
             </div>
@@ -209,17 +200,9 @@ export default function Discover() {
               <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
                 <MessageCircle className="w-4 h-4 text-buddy-green" /> Hot Discussions
               </p>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {trending.discussions!.slice(0, 3).map((post) => (
-                  <Card key={post.id} className="p-4 cursor-pointer hover:border-buddy-green/30 transition-colors"
-                    onClick={() => navigate(`/feed/${post.id}`)}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Avatar src={post.author_data?.avatar_url} alt="" size="xs" />
-                      <span className="text-xs font-medium">@{post.author_data?.username}</span>
-                      <span className="text-xs text-buddy-text-secondary ml-auto">{post.comment_count || 0} comments</span>
-                    </div>
-                    <p className="text-sm line-clamp-2">{post.body}</p>
-                  </Card>
+                  <PostCard key={post.id} post={post} />
                 ))}
               </div>
             </div>
@@ -361,7 +344,7 @@ export default function Discover() {
 
       {!isSearching && activeTab === 'people' && people.length > 0 && (
         <div className="space-y-3">
-          {people.map((p) => {
+          {people.slice(0, showAllPeople ? people.length : 4).map((p) => {
             const requested = buddyRequested.has(p.username);
             const isBuddy = p.is_buddy || p.buddy_status === 'accepted';
             return (
@@ -408,6 +391,15 @@ export default function Discover() {
               </Card>
             );
           })}
+          {people.length > 4 && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowAllPeople((v) => !v)}
+            >
+              {showAllPeople ? 'Show less' : `See more (${people.length - 4} more)`}
+            </Button>
+          )}
         </div>
       )}
 

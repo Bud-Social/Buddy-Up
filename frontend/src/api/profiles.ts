@@ -91,8 +91,8 @@ export const profilesApi = {
   searchProfiles: (params: { q: string; limit?: number }) =>
     apiClient.get<ApiResponse<Profile[]>>('/profiles/search/', { params }).then((r) => r.data),
 
-  getRecommendations: () =>
-    apiClient.get<ApiResponse<ProfileRecommendation[]>>('/profiles/recommendations/')
+  getRecommendations: (limit = 20) =>
+    apiClient.get<ApiResponse<ProfileRecommendation[]>>('/profiles/recommendations/', { params: { limit } })
       .then((r) => r.data),
 
   sendRecommendationFeedback: (targetUserId: string, feedback: RecommendationFeedback) =>

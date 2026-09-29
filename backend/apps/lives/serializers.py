@@ -20,6 +20,8 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
     is_joined = serializers.SerializerMethodField()
     has_rsvped = serializers.SerializerMethodField()
     rsvp_count = serializers.SerializerMethodField()
+    unique_viewers = serializers.SerializerMethodField()
+    replay_views = serializers.SerializerMethodField()
 
     class Meta:
         model = BuddyLive
@@ -27,6 +29,7 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
             'id', 'title', 'live_type', 'category', 'content_rating', 'access',
             'artifact_fee',
             'gym_id', 'status', 'started_at', 'ended_at', 'viewer_peak',
+            'unique_viewers', 'replay_views',
             'replay_url', 'replay_saved', 'co_hosts', 'scheduled_for',
             'is_recurring', 'recurrence_rule', 'equipment_list',
             'recording_consent',
@@ -65,6 +68,18 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
 
     def get_rsvp_count(self, obj):
         return obj.rsvps.count()
+
+    def get_unique_viewers(self, obj):
+        cached = getattr(obj, 'unique_viewers_count', None)
+        if cached is not None:
+            return cached
+        return obj.attendees.values('user').distinct().count()
+
+    def get_replay_views(self, obj):
+        cached = getattr(obj, 'replay_views_count', None)
+        if cached is not None:
+            return cached
+        return obj.replay_views.values('viewer').distinct().count()
 
 
 class CreateLiveSerializer(serializers.ModelSerializer):

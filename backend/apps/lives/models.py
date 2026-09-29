@@ -106,3 +106,28 @@ class LiveAttendee(TimestampedModel):
             models.Index(fields=['live', '-joined_at']),
             models.Index(fields=['user', '-joined_at']),
         ]
+
+
+class LiveReplayView(TimestampedModel):
+    """Durable unique-viewer record for saved live replays.
+
+    One row per (live, viewer), ever — repeats bump ``views`` without
+    creating new unique viewers. The host's own replays are never counted.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    live = models.ForeignKey(BuddyLive, on_delete=models.CASCADE, related_name='replay_views')
+    viewer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='live_replay_views')
+    last_seen = models.DateTimeField(auto_now=True)
+    views = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        db_table = 'lives_replay_view'
+        unique_together = ('live', 'viewer')
+        indexes = [
+            models.Index(fields=['live', '-created_at']),
+            models.Index(fields=['viewer', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.viewer_id} replayed {self.live_id} x{self.views}'

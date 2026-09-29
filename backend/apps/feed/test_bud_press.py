@@ -765,6 +765,31 @@ class ViewEndpointTests(TestCase):
         res = _client_for(self.stranger).post(self.url)
         self.assertEqual(res.data['data'], {'view_count': 2})
 
+    def test_repeat_after_throttle_window_still_counts_once(self):
+        """Unique-per-viewer: a repeat view after the 24h window refreshes
+        last_seen but never increments view_count again."""
+        from django.core.cache import cache
+
+        from apps.feed.models import PostView
+
+        _client_for(self.viewer).post(self.url)
+        cache.delete(f'feed:post_view:{self.post.id}:{self.viewer.profile.user_id}')
+        res = _client_for(self.viewer).post(self.url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['data'], {'view_count': 1})
+        self.assertEqual(res.data['message'], 'View already counted.')
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.view_count, 1)
+        row = PostView.objects.get(post=self.post, viewer=self.viewer.profile)
+        self.assertEqual(row.views, 2)
+
+    def test_author_self_view_not_counted(self):
+        res = _client_for(self.author).post(self.url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['data'], {'view_count': 0})
+        self.post.refresh_from_db()
+        self.assertEqual(self.post.view_count, 0)
+
     def test_forbidden_post_returns_404(self):
         buddies_post = Post.objects.create(
             author=self.author.profile, post_type='text',

@@ -361,3 +361,29 @@ class MutedAuthor(TimestampedModel):
 
     def __str__(self):
         return f'{self.muter_id} mutes {self.muted_id}'
+
+
+class PostView(TimestampedModel):
+    """Durable unique-viewer record: one row per (post, viewer), ever.
+
+    ``Post.view_count`` counts unique viewers only — the first-ever view by
+    a viewer increments it; repeats update ``last_seen`` without incrementing.
+    Author self-views are never recorded. Historical view_count values
+    predating this table are 24h-throttled hit counts, not uniques.
+    """
+
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='unique_views')
+    viewer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='post_views')
+    last_seen = models.DateTimeField(auto_now=True)
+    views = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        db_table = 'feed_post_view'
+        unique_together = ('post', 'viewer')
+        indexes = [
+            models.Index(fields=['post', '-created_at']),
+            models.Index(fields=['viewer', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.viewer_id} viewed {self.post_id} x{self.views}'

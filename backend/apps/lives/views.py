@@ -9,7 +9,7 @@ from rest_framework.response import Response
 
 from common.pagination import CursorPagination
 from common.age_gating import gate_mature_queryset, can_view_content
-from .models import BuddyLive, LiveAttendee
+from .models import BuddyLive, LiveAttendee, LiveReplayView
 from .serializers import (
     BuddyLiveSerializer, CreateLiveSerializer, RandomDropRequestSerializer,
     LiveAttendeeSerializer, EndLiveInputSerializer, CoHostInputSerializer,
@@ -1051,4 +1051,34 @@ class LiveAttendeesView(views.APIView):
             'message': 'OK',
             'errors': None,
             'pagination': None,
+        })
+
+
+class ReplayViewRecordView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if live.status != 'ended' or not live.replay_saved:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No saved replay for this live session.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+        viewer = request.user.profile
+        if viewer.user_id == live.host_id:
+            return Response({
+                'success': True,
+                'data': {'unique_viewers': live.replay_views.values('viewer').distinct().count()},
+                'message': 'Host views are not counted.',
+                'errors': None, 'pagination': None,
+            })
+        _, created = LiveReplayView.objects.get_or_create(live=live, viewer=viewer)
+        if not created:
+            LiveReplayView.objects.filter(live=live, viewer=viewer).update(views=db_models.F('views') + 1)
+        return Response({
+            'success': True,
+            'data': {'unique_viewers': live.replay_views.values('viewer').distinct().count()},
+            'message': 'Replay view recorded.' if created else 'Replay view already counted.',
+            'errors': None, 'pagination': None,
         })

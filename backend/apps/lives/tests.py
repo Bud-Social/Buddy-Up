@@ -158,3 +158,64 @@ class RefundGiftScopeTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         purchase.refresh_from_db()
         self.assertEqual(purchase.status, 'completed')
+
+
+class ReplayViewTests(TestCase):
+    """POST /lives/<id>/replay/view/ — unique-per-viewer replay counts."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.viewer_user = User.objects.create_user(email='rv_viewer@example.com', password='TestPass123!')
+        self.viewer = Profile.objects.create(user=self.viewer_user, username='rv_viewer', display_name='RV')
+        refresh = RefreshToken.for_user(self.viewer_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+
+        self.host_user = User.objects.create_user(email='rv_host@example.com', password='TestPass123!')
+        self.host = Profile.objects.create(user=self.host_user, username='rv_host', display_name='RH')
+        self.replay = BuddyLive.objects.create(
+            host=self.host, title='RV Replay', live_type='open_sweat', category='strength',
+            status='ended', replay_saved=True,
+            replay_url='https://cdn.example.com/replays/rv.mp4',
+            ended_at=timezone.now() - timedelta(days=1),
+        )
+        self.live_now = BuddyLive.objects.create(
+            host=self.host, title='RV Live', live_type='open_sweat', category='strength',
+            status='live',
+        )
+
+    def _host_client(self):
+        from rest_framework_simplejwt.tokens import RefreshToken
+
+        c = APIClient()
+        c.credentials(HTTP_AUTHORIZATION=f'Bearer {RefreshToken.for_user(self.host_user).access_token}')
+        return c
+
+    def test_first_replay_view_counts_once(self):
+        res = self.client.post(f'/api/v1/lives/{self.replay.id}/replay/view/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.json()['data'], {'unique_viewers': 1})
+        self.assertEqual(res.json()['message'], 'Replay view recorded.')
+
+    def test_repeat_replay_view_not_recounted(self):
+        self.client.post(f'/api/v1/lives/{self.replay.id}/replay/view/')
+        res = self.client.post(f'/api/v1/lives/{self.replay.id}/replay/view/')
+        self.assertEqual(res.json()['data'], {'unique_viewers': 1})
+        self.assertEqual(res.json()['message'], 'Replay view already counted.')
+
+    def test_host_replay_view_not_counted(self):
+        res = self._host_client().post(f'/api/v1/lives/{self.replay.id}/replay/view/')
+        self.assertEqual(res.json()['data'], {'unique_viewers': 0})
+
+    def test_live_without_replay_404s(self):
+        res = self.client.post(f'/api/v1/lives/{self.live_now.id}/replay/view/')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_detail_exposes_unique_and_replay_counts(self):
+        from .models import LiveAttendee
+
+        LiveAttendee.objects.create(live=self.replay, user=self.viewer, role='attendee')
+        self.client.post(f'/api/v1/lives/{self.replay.id}/replay/view/')
+        res = self.client.get(f'/api/v1/lives/{self.replay.id}/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.json()['data']['unique_viewers'], 1)
+        self.assertEqual(res.json()['data']['replay_views'], 1)

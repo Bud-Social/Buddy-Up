@@ -23,6 +23,7 @@ urlpatterns = [
     path('<uuid:live_id>/recording/upload/', views.UploadReplayChunkView.as_view(), name='recording_upload'),
     path('<uuid:live_id>/recording/complete/', views.CompleteClientReplayView.as_view(), name='recording_complete'),
     path('<uuid:live_id>/attendees/', views.LiveAttendeesView.as_view(), name='attendees'),
+    path('<uuid:live_id>/replay/view/', views.ReplayViewRecordView.as_view(), name='replay_view'),
     path('gym/<uuid:gym_id>/schedule/', views.GymScheduleView.as_view(), name='gym_schedule'),
     path('profile/<str:username>/', views.UserLivesView.as_view(), name='user_lives'),
 ]

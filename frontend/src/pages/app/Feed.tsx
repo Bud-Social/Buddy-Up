@@ -20,8 +20,6 @@ const TAB_ROUTES: Record<string, FeedTab> = {
   '/feed/following': 'following',
   '/feed/communities': 'communities',
   '/feed/bud-press': 'videos',
-  '/feed/meals': 'meals',
-  '/feed/progress': 'progress',
 };
 
 const NEW_POSTS_POLL_MS = 45_000;
@@ -142,26 +140,12 @@ export default function Feed() {
     }
   }, [location]);
 
-  // Meal prefill coming from the Food Scanner ("Share as Meal Post")
-  const locationState = location.state as { mealData?: { food_name?: string; calories?: number; protein_g?: number; carbs_g?: number; fat_g?: number; meal_type?: string } } | null;
-  const mealPrefill = locationState?.mealData ?? null;
-  const [initialMeal] = useState(mealPrefill);
-  const [initialMealPhoto] = useState(() => {
-    try { return sessionStorage.getItem('buddyup-meal-photo'); } catch { return null; }
-  });
-
   const tabs: { key: FeedTab; label: string; to: string }[] = [
     { key: 'for_you', label: 'For You', to: '/feed' },
     { key: 'following', label: 'Following', to: '/feed/following' },
     ...(myCommunities.length > 0 ? [{ key: 'communities' as FeedTab, label: 'Communities', to: '/feed/communities' }] : []),
     { key: 'videos', label: 'Bud Press', to: '/feed/bud-press' },
-    { key: 'meals', label: 'Meals', to: '/feed/meals' },
-    { key: 'progress', label: 'Progress', to: '/feed/progress' },
   ];
-
-  const fetchOpts = useCallback((tab: FeedTab) => (
-    tab === 'for_you' ? { excludePostTypes: ['meal'] } : undefined
-  ), []);
 
   const fetchPosts = useCallback(async (tab: FeedTab, reset = false) => {
     if (loadingPageRef.current && !reset) return;
@@ -175,7 +159,7 @@ export default function Feed() {
 
     const c = reset ? undefined : cursorRef.current;
     try {
-      const res = await feedApi.getFeed(tab, c, fetchOpts(tab));
+      const res = await feedApi.getFeed(tab, c);
       const newPosts = res.data || [];
       if (reset) {
         setPosts(newPosts);
@@ -207,7 +191,7 @@ export default function Feed() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [fetchOpts]);
+  }, []);
 
   useEffect(() => {
     setActiveTab(TAB_ROUTES[location.pathname] || 'for_you');
@@ -252,7 +236,7 @@ export default function Feed() {
     if (isVideoTab || activeTab === 'communities') return;
     const interval = setInterval(async () => {
       try {
-        const res = await feedApi.getFeed(activeTab, undefined, fetchOpts(activeTab));
+        const res = await feedApi.getFeed(activeTab, undefined);
         const incoming = (res.data || []).filter(p => !knownIdsRef.current.has(p.id));
         if (incoming.length > 0) {
           setPendingNewPosts(prev => {
@@ -264,7 +248,7 @@ export default function Feed() {
       } catch {}
     }, NEW_POSTS_POLL_MS);
     return () => clearInterval(interval);
-  }, [activeTab, isVideoTab, fetchOpts]);
+  }, [activeTab, isVideoTab]);
 
   const showNewPosts = () => {
     const incoming = pendingNewPosts;
@@ -461,10 +445,8 @@ export default function Feed() {
                   <ChevronUp size={16} />
                 </button>
                 <PostComposer
-                  placeholder="Share your workout, meal, or progress..."
+                  placeholder="Share your workout..."
                   onPost={handleNewPost}
-                  initialMeal={initialMeal}
-                  initialMealPhotoDataUrl={initialMealPhoto}
                   onClose={() => setComposerExpanded(false)}
                 />
               </div>
@@ -519,7 +501,7 @@ export default function Feed() {
             {posts.length === 0 && !isLoading && !fetchError && (
               <div className="text-center py-20">
                 <p className="text-buddy-text-secondary text-lg">
-                  {activeTab === 'meals' ? 'No meal posts yet' : activeTab === 'progress' ? 'No progress posts yet' : 'No posts yet'}
+                  No posts yet
                 </p>
                 <p className="text-buddy-text-secondary/50 text-sm mt-1">
                   Buddy up with some people to see their posts here.

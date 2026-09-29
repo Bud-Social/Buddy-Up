@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Square, Trash2, Navigation, Footprints, Activity as ActivityIcon } from 'lucide-react';
+import { Play, Square, Trash2, Navigation, Footprints, Activity as ActivityIcon, RotateCcw } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { RouteMap } from '@/components/analytics/RouteMap';
+import { RouteReplayMap } from '@/components/analytics/RouteReplayMap';
 import { formatDuration, formatKm, formatPace, titleCase, formatDateTime } from '@/components/analytics/format';
 import { analyticsApi } from '@/api/analytics';
 import type { ActivityRecordInput, ActivitySummary } from '@/types/analytics';
@@ -28,6 +29,8 @@ export function ActivityTab() {
   const [points, setPoints] = useState<TrackPoint[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<ActivityRecordInput | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [replayingId, setReplayingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [gpsFix, setGpsFix] = useState(false);
@@ -168,35 +171,73 @@ export function ActivityTab() {
     setDistanceM(Math.round(total));
   }, [points]);
 
-  const handleStop = () => {
+  const handleStop = async () => {
     stopTracking();
+    // Auto-save: a finished track with real content persists immediately.
+    // Zero-length sessions are discarded; failures keep the data on screen.
+    if (elapsed <= 0 || points.length === 0) {
+      setPoints([]);
+      setDistanceM(0);
+      setElapsed(0);
+      return;
+    }
+    await persistActivity();
   };
 
-  const handleSave = async () => {
-    if (elapsed <= 0) return;
+  const buildPayload = (): ActivityRecordInput => ({
+    activity_type: type,
+    duration_seconds: elapsed,
+    distance_meters: distanceM,
+    avg_pace: elapsed > 0 && distanceM > 0 ? (elapsed / (distanceM / 1000)) : null,
+    calories_burned: Math.round(type === 'cycle' ? Math.max(15, distanceM * 0.03) : Math.max(8, distanceM * 0.06)),
+    steps: type === 'walk' ? estimateSteps() : null,
+    route: points.map((p) => [p.lat, p.lng, p.ts]),
+  });
+
+  const persistActivity = async (): Promise<boolean> => {
+    if (elapsed <= 0) return false;
     setSaving(true);
     setError(null);
-    const payload: ActivityRecordInput = {
-      activity_type: type,
-      duration_seconds: elapsed,
-      distance_meters: distanceM,
-      avg_pace: elapsed > 0 && distanceM > 0 ? (elapsed / (distanceM / 1000)) : null,
-      calories_burned: Math.round(type === 'cycle' ? Math.max(15, distanceM * 0.03) : Math.max(8, distanceM * 0.06)),
-      steps: type === 'walk' ? estimateSteps() : null,
-      route: points.map((p) => [p.lat, p.lng, p.ts]),
-    };
     try {
-      await analyticsApi.createActivity(payload);
+      const payload = buildPayload();
+      const res = await analyticsApi.createActivity(payload);
       setSaved(payload);
+      setSavedId((res.data as { id?: string } | undefined)?.id ?? null);
       setPoints([]);
       setDistanceM(0);
       setElapsed(0);
       load();
+      return true;
     } catch {
       setError('Failed to save activity.');
+      return false;
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleUndoSave = async () => {
+    if (!savedId) {
+      setSaved(null);
+      return;
+    }
+    try {
+      await analyticsApi.deleteActivity(savedId);
+      setSaved(null);
+      setSavedId(null);
+      load();
+    } catch {
+      setError('Could not undo the save.');
+    }
+  };
+
+  const handleDiscard = () => {
+    setPoints([]);
+    setDistanceM(0);
+    setElapsed(0);
+    setSaved(null);
+    setSavedId(null);
+    setError(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -299,28 +340,41 @@ export function ActivityTab() {
 
         {error && <p className="text-sm text-buddy-red mb-2">{error}</p>}
 
-        {/* Controls */}
+        {/* Controls — Stop auto-saves; nothing is ever lost silently */}
         {!tracking ? (
-          <div className="flex gap-2">
-            <Button onClick={startTracking} className="flex-1 gap-2">
-              <Play size={16} /> Start
-            </Button>
-          </div>
+          (elapsed > 0 || points.length > 0) && !saved ? (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => void persistActivity()} isLoading={saving} className="flex-1 gap-2" disabled={elapsed <= 0}>
+                <RotateCcw size={16} /> Retry save
+              </Button>
+              <Button variant="ghost" onClick={handleDiscard} className="flex-1 gap-2">
+                <Trash2 size={16} /> Discard
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button onClick={startTracking} className="flex-1 gap-2">
+                <Play size={16} /> Start
+              </Button>
+            </div>
+          )
         ) : (
           <div className="flex gap-2">
-            <Button variant="destructive" onClick={handleStop} className="flex-1 gap-2">
-              <Square size={16} /> Stop
-            </Button>
-            <Button variant="outline" onClick={handleSave} isLoading={saving} className="flex-1 gap-2" disabled={elapsed <= 0}>
-              Save Activity
+            <Button variant="destructive" onClick={() => void handleStop()} isLoading={saving} className="flex-1 gap-2">
+              <Square size={16} /> Stop & Save
             </Button>
           </div>
         )}
 
         {saved && (
-          <p className="mt-3 text-sm text-buddy-green">
-            Saved {titleCase(saved.activity_type)} — {formatKm(saved.distance_meters / 1000)} km in {formatDuration(saved.duration_seconds)}.
-          </p>
+          <div className="mt-3 flex items-center justify-between gap-2 text-sm">
+            <p className="text-buddy-green">
+              Saved {titleCase(saved.activity_type)} — {formatKm(saved.distance_meters / 1000)} km in {formatDuration(saved.duration_seconds)}.
+            </p>
+            <button onClick={() => void handleUndoSave()} className="text-xs text-buddy-text-secondary hover:text-buddy-text-primary underline flex-shrink-0">
+              Undo
+            </button>
+          </div>
         )}
       </Card>
 
@@ -364,6 +418,22 @@ export function ActivityTab() {
                   </div>
                 </div>
                 <RouteMap route={a.route} height={140} />
+                {(a.route?.length ?? 0) >= 2 && (
+                  <div className="mt-2">
+                    {replayingId === a.id ? (
+                      <div className="space-y-2">
+                        <RouteReplayMap route={a.route} durationSeconds={a.duration_seconds} height={220} />
+                        <Button variant="ghost" size="sm" className="w-full" onClick={() => setReplayingId(null)}>
+                          Hide replay
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setReplayingId(a.id)}>
+                        <Play size={14} /> Replay route
+                      </Button>
+                    )}
+                  </div>
+                )}
               </Card>
             ))}
           </div>

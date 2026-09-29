@@ -2,7 +2,7 @@ import type { AxiosProgressEvent } from 'axios';
 import { apiClient } from './client';
 import type { ApiResponse, Post, Comment, CreatorInsightItem, CreatorInsightSummary } from '@/types';
 
-export type FeedTab = 'for_you' | 'following' | 'videos' | 'videos_following' | 'meals' | 'progress' | 'communities';
+export type FeedTab = 'for_you' | 'following' | 'videos' | 'videos_following' | 'communities';
 
 /** A sound available in the create studio's sound picker. */
 export interface Sound {

@@ -181,8 +181,6 @@ export const router = createBrowserRouter([
           { path: '/feed', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/following', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/bud-press', element: <SWrapper><Feed /></SWrapper> },
-          { path: '/feed/meals', element: <SWrapper><Feed /></SWrapper> },
-          { path: '/feed/progress', element: <SWrapper><Feed /></SWrapper> },
           { path: '/feed/communities', element: <SWrapper><Feed /></SWrapper> },
           { path: '/create', element: <SWrapper><CreateStudio /></SWrapper> },
           { path: '/videos', element: <SWrapper><FullScreenVideoFeed /></SWrapper> },

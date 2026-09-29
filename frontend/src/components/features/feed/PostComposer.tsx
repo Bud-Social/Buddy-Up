@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Image, FileText, Music, MapPin, BarChart2,
   Smile, X, Send, Globe, Users, Lock, Dumbbell, AtSign, ChevronDown,
-  Utensils, Scale, Camera, Video, File as FileIcon, Loader2, Paperclip, Minus, Plus,
+  Video, File as FileIcon, Loader2, Paperclip, Minus, Plus,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
-import { feedApi, marketplaceApi } from '@/api';
+import { feedApi } from '@/api';
 import { profilesApi } from '@/api';
 import { useAuthStore } from '@/store/authStore';
 import type { Post } from '@/types';
@@ -15,8 +15,6 @@ import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
 const LocationPicker = lazy(() =>
   import('./LocationPicker').then((m) => ({ default: m.LocationPicker })),
 );
-
-type ComposerKind = 'text' | 'meal' | 'progress';
 
 function getCaretOffset(el: HTMLElement): number {
   const sel = window.getSelection();
@@ -78,15 +76,6 @@ interface PostComposerProps {
   fullScreen?: boolean;
   hideVisibility?: boolean;
   onClose?: () => void;
-  initialMeal?: {
-    food_name?: string;
-    calories?: number;
-    protein_g?: number;
-    carbs_g?: number;
-    fat_g?: number;
-    meal_type?: string;
-  } | null;
-  initialMealPhotoDataUrl?: string | null;
 }
 
 const DRAFT_KEY = 'buddyup-post-draft';
@@ -115,20 +104,16 @@ function clearDraft() {
   try { localStorage.removeItem(DRAFT_KEY); } catch {}
 }
 
-export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, hideVisibility, onClose, initialMeal, initialMealPhotoDataUrl }: PostComposerProps) {
+export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, hideVisibility, onClose }: PostComposerProps) {
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
   const editorRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const mealPhotoInputRef = useRef<HTMLInputElement>(null);
-  const progressBeforeInputRef = useRef<HTMLInputElement>(null);
-  const progressAfterInputRef = useRef<HTMLInputElement>(null);
   const mentionDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const draftDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiToggleRef = useRef<HTMLButtonElement>(null);
 
-  const [kind, setKind] = useState<ComposerKind>('text');
   const [content, setContent] = useState('');
   const [mediaFiles, setMediaFiles] = useState<MediaItem[]>([]);
   const [mediaKind, setMediaKind] = useState<'image' | 'video' | 'file' | 'document'>('image');
@@ -142,24 +127,6 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submitIdempotencyKeyRef = useRef<string | null>(null);
   const [showDraftRestore, setShowDraftRestore] = useState(false);
-
-  // Meal-log state
-  const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack' | 'drink' | 'other'>('breakfast');
-  const [foodName, setFoodName] = useState('');
-  const [mealDesc, setMealDesc] = useState('');
-  const [calories, setCalories] = useState('');
-  const [proteinG, setProteinG] = useState('');
-  const [carbsG, setCarbsG] = useState('');
-  const [fatG, setFatG] = useState('');
-  const [mealPhotos, setMealPhotos] = useState<MediaItem[]>([]);
-  const [analyzingMeal, setAnalyzingMeal] = useState(false);
-
-  // Progress / body-snap state
-  const [progressWeight, setProgressWeight] = useState('');
-  const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>('kg');
-  const [progressMode, setProgressMode] = useState<'transformation' | 'milestone'>('transformation');
-  const [beforePhotos, setBeforePhotos] = useState<MediaItem[]>([]);
-  const [afterPhotos, setAfterPhotos] = useState<MediaItem[]>([]);
 
   // Poll state
   const [showPoll, setShowPoll] = useState(false);
@@ -215,29 +182,6 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
     return () => { cancelled = true; };
   }, []);
 
-  // Prefill meal form from the food scanner ("Share as Meal Post")
-  useEffect(() => {
-    if (!initialMeal) return;
-    setKind('meal');
-    if (initialMeal.food_name) setFoodName(initialMeal.food_name);
-    if (initialMeal.meal_type) setMealType(initialMeal.meal_type as typeof mealType);
-    if (initialMeal.calories) setCalories(String(Math.round(initialMeal.calories)));
-    if (initialMeal.protein_g) setProteinG(String(Math.round(initialMeal.protein_g)));
-    if (initialMeal.carbs_g) setCarbsG(String(Math.round(initialMeal.carbs_g)));
-    if (initialMeal.fat_g) setFatG(String(Math.round(initialMeal.fat_g)));
-    if (initialMealPhotoDataUrl) {
-      try { sessionStorage.removeItem('buddyup-meal-photo'); } catch {}
-      fetch(initialMealPhotoDataUrl)
-        .then((r) => r.blob())
-        .then((blob) => {
-          const file = new File([blob], 'meal.jpg', { type: blob.type || 'image/jpeg' });
-          setMealPhotos((prev) => [...prev, { file, preview: initialMealPhotoDataUrl, type: 'image', name: file.name }]);
-        })
-        .catch(() => {});
-    }
-   
-  }, [initialMeal, initialMealPhotoDataUrl]);
-
   // Auto-save draft with debounce — mirrored to localStorage (instant,
   // offline) and the server Draft API (per-account, any device).
   const debouncedSave = useCallback(() => {
@@ -259,13 +203,12 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
         pollMinSelections,
         pollMaxSelections,
         mediaUrls: uploadedUrls,
-        kind,
         savedAt,
       });
       // Fire-and-forget server sync.
       feedApi.saveDraft({
         id: serverDraftIdRef.current ?? undefined,
-        post_type: showPoll ? 'poll' : kind === 'meal' ? 'meal' : kind === 'progress' ? 'progress' : (mediaFiles.some(m => m.type === 'video') ? 'short_video' : mediaFiles.length > 0 ? 'photo' : 'text'),
+        post_type: showPoll ? 'poll' : (mediaFiles.some(m => m.type === 'video') ? 'short_video' : mediaFiles.length > 0 ? 'photo' : 'text'),
         body: content,
         visibility,
         location_label: locationLabel,
@@ -282,7 +225,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
         if (data?.id) serverDraftIdRef.current = data.id;
       }).catch(() => {});
     }, 2000);
-  }, [content, visibility, locationLabel, locationLat, locationLng, pollQuestion, pollOptions, pollAllowMultiple, pollMinSelections, pollMaxSelections, showPoll, mediaFiles, kind]);
+  }, [content, visibility, locationLabel, locationLat, locationLng, pollQuestion, pollOptions, pollAllowMultiple, pollMinSelections, pollMaxSelections, showPoll, mediaFiles]);
 
   useEffect(() => { debouncedSave(); return () => { if (draftDebounce.current) clearTimeout(draftDebounce.current); }; }, [debouncedSave]);
 
@@ -359,9 +302,6 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   // Cleanup blob URLs
   useEffect(() => () => {
     mediaFiles.forEach(m => { if (m.preview?.startsWith('blob:')) URL.revokeObjectURL(m.preview); });
-    mealPhotos.forEach(m => { if (m.preview?.startsWith('blob:')) URL.revokeObjectURL(m.preview); });
-    beforePhotos.forEach(m => { if (m.preview?.startsWith('blob:')) URL.revokeObjectURL(m.preview); });
-    afterPhotos.forEach(m => { if (m.preview?.startsWith('blob:')) URL.revokeObjectURL(m.preview); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -499,46 +439,6 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
 
   const removeFile = (i: number) => setMediaFiles(prev => prev.filter((_, idx) => idx !== i));
 
-  const addMealPhotos = (files: FileList | null) => {
-    if (!files) return;
-    const photos = Array.from(files).filter(f => f.type.startsWith('image/'));
-    setMealPhotos(prev => [...prev, ...photos.map(f => ({ file: f, preview: URL.createObjectURL(f), type: 'image' as const, name: f.name }))]);
-    if (photos[0] && (!foodName.trim() || !calories.trim())) analyzeMealPhoto(photos[0]);
-  };
-
-  const analyzeMealPhoto = async (photo: File) => {
-    setAnalyzingMeal(true);
-    try {
-      const res = await marketplaceApi.recognizeFood(photo);
-      const result = res.data;
-      if (result?.items?.length) {
-        const top = result.items[0];
-        setFoodName(prev => prev || top.item);
-        setCalories(prev => prev || String(Math.round(result.total_calories || top.nutrition?.calories || 0)));
-        setProteinG(prev => prev || String(Math.round(result.total_protein || top.nutrition?.protein || 0)));
-        setCarbsG(prev => prev || String(Math.round(result.total_carbs || top.nutrition?.carbs || 0)));
-        setFatG(prev => prev || String(Math.round(result.total_fat || top.nutrition?.fat || 0)));
-      }
-    } catch {} finally {
-      setAnalyzingMeal(false);
-    }
-  };
-
-  const removeMealPhoto = (i: number) => setMealPhotos(prev => prev.filter((_, idx) => idx !== i));
-
-  const addProgressPhotos = (files: FileList | null, bucket: 'before' | 'after') => {
-    if (!files) return;
-    const photos = Array.from(files).filter(f => f.type.startsWith('image/'));
-    const items: MediaItem[] = photos.map(f => ({ file: f, preview: URL.createObjectURL(f), type: 'image' as const, name: f.name }));
-    if (bucket === 'before') setBeforePhotos(prev => [...prev, ...items]);
-    else setAfterPhotos(prev => [...prev, ...items]);
-  };
-
-  const removeProgressPhoto = (bucket: 'before' | 'after', i: number) => {
-    if (bucket === 'before') setBeforePhotos(prev => prev.filter((_, idx) => idx !== i));
-    else setAfterPhotos(prev => prev.filter((_, idx) => idx !== i));
-  };
-
   const addPollOption = () => {
     if (pollOptions.length < 6) setPollOptions(prev => [...prev, { text: '' }]);
   };
@@ -561,11 +461,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   };
 
   const handleSubmit = async () => {
-    if (kind === 'meal') {
-      if (!foodName.trim() && !calories.trim() && mealPhotos.length === 0) return;
-    } else if (kind === 'progress') {
-      if (!progressWeight.trim() && beforePhotos.length === 0 && afterPhotos.length === 0) return;
-    } else if (!content.trim() && mediaFiles.length === 0 && !showPoll) {
+    if (!content.trim() && mediaFiles.length === 0 && !showPoll) {
       return;
     }
     setIsSubmitting(true);
@@ -580,31 +476,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
         formData.append('location_lng', String(locationLng));
       }
 
-      if (kind === 'meal') {
-        formData.append('post_type', 'meal');
-        const mealData: Record<string, unknown> = {
-          meal_type: mealType,
-          food_name: foodName.trim(),
-          description: mealDesc.trim(),
-        };
-        if (calories) mealData.calories = Number(calories);
-        if (proteinG) mealData.protein_g = Number(proteinG);
-        if (carbsG) mealData.carbs_g = Number(carbsG);
-        if (fatG) mealData.fat_g = Number(fatG);
-        formData.append('meal_data', JSON.stringify(mealData));
-        mealPhotos.forEach(mp => formData.append('media', mp.file));
-      } else if (kind === 'progress') {
-        formData.append('post_type', 'progress');
-        const progressData: Record<string, unknown> = {
-          weight: progressWeight ? Number(progressWeight) : null,
-          weight_unit: weightUnit,
-          mode: progressMode,
-          before_count: beforePhotos.length,
-        };
-        formData.append('progress_data', JSON.stringify(progressData));
-        beforePhotos.forEach(p => formData.append('media', p.file));
-        afterPhotos.forEach(p => formData.append('media', p.file));
-      } else {
+      {
         const hasVideo = mediaFiles.some(m => m.type === 'video');
         const postType = showPoll
           ? 'poll'
@@ -659,9 +531,6 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
       setShowPoll(false);
       setPollQuestion('');
       setPollOptions([{ text: '' }, { text: '' }]);
-      setKind('text');
-      setFoodName(''); setMealDesc(''); setCalories(''); setProteinG(''); setCarbsG(''); setFatG('');
-      setMealPhotos([]); setProgressWeight(''); setBeforePhotos([]); setAfterPhotos([]);
       onClose?.();
       if (postedVideo) navigate('/videos');
     } catch (err) {
@@ -681,11 +550,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
   const VisIcon = visOpt.icon;
 
   const canPost =
-    (kind === 'meal'
-      ? Boolean(foodName.trim() || calories.trim() || mealPhotos.length > 0)
-      : kind === 'progress'
-        ? Boolean(progressWeight.trim() || beforePhotos.length > 0 || afterPhotos.length > 0)
-        : Boolean(content.trim() || mediaFiles.length > 0 || (showPoll && pollQuestion.trim() && pollOptions.filter(o => o.text.trim()).length >= 2 && (!pollAllowMultiple || pollMinSelections <= pollMaxSelections)))) &&
+    Boolean(content.trim() || mediaFiles.length > 0 || (showPoll && pollQuestion.trim() && pollOptions.filter(o => o.text.trim()).length >= 2 && (!pollAllowMultiple || pollMinSelections <= pollMaxSelections))) &&
     !isSubmitting;
 
   const composerContent = (
@@ -727,211 +592,8 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
             </div>
           )}
 
-          {/* Composer kind switcher */}
-          <div className="flex items-center gap-1 bg-buddy-surface rounded-xl p-1 mb-3 w-max">
-            <button
-              onClick={() => { setKind('text'); setShowEmoji(false); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${kind === 'text' ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
-            >
-              <Image size={14} /> Post
-            </button>
-            <button
-              onClick={() => { setKind('meal'); setShowEmoji(false); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${kind === 'meal' ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
-            >
-              <Utensils size={14} /> Meal
-            </button>
-            <button
-              onClick={() => { setKind('progress'); setShowEmoji(false); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${kind === 'progress' ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
-            >
-              <Scale size={14} /> Progress
-            </button>
-          </div>
-
-          {/* Meal-log form */}
-          {kind === 'meal' && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-1.5">
-                {(['breakfast', 'lunch', 'dinner', 'snack', 'drink', 'other'] as const).map((mt) => (
-                  <button
-                    key={mt}
-                    onClick={() => setMealType(mt)}
-                    className={`px-3 py-1 rounded-full text-xs capitalize transition-colors ${
-                      mealType === mt
-                        ? 'bg-buddy-green text-buddy-black font-medium'
-                        : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
-                    }`}
-                  >
-                    {mt}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  value={foodName}
-                  onChange={(e) => setFoodName(e.target.value)}
-                  placeholder="What did you eat? (e.g. Oatmeal & banana)"
-                  className="flex-1 bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
-                />
-                <input
-                  type="number"
-                  value={calories}
-                  onChange={(e) => setCalories(e.target.value)}
-                  placeholder="kcal"
-                  className="w-20 bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <input value={proteinG} onChange={(e) => setProteinG(e.target.value)} type="number" placeholder="Protein (g)" className="w-full bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2 text-xs text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
-                <input value={carbsG} onChange={(e) => setCarbsG(e.target.value)} type="number" placeholder="Carbs (g)" className="w-full bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2 text-xs text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
-                <input value={fatG} onChange={(e) => setFatG(e.target.value)} type="number" placeholder="Fat (g)" className="w-full bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2 text-xs text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30" />
-              </div>
-              {mealPhotos.length > 0 && (
-                <div className="grid grid-cols-3 gap-2">
-                  {mealPhotos.map((mp, i) => (
-                    <div key={i} className="relative rounded-xl overflow-hidden aspect-square">
-                      <img src={mp.preview!} alt="Meal" className="w-full h-full object-cover" />
-                      <button onClick={() => removeMealPhoto(i)} className="absolute top-1 right-1 p-1 bg-black/60 rounded-full text-white hover:bg-black/80"><X size={12} /></button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <input ref={mealPhotoInputRef} type="file" accept="image/*" multiple className="hidden"
-                onChange={(e) => { addMealPhotos(e.target.files); e.target.value = ''; }} />
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => mealPhotoInputRef.current?.click()}
-                  className="flex items-center gap-1.5 text-xs text-buddy-text-secondary hover:text-buddy-green transition-colors"
-                >
-                  <Camera size={14} /> {mealPhotos.length > 0 ? 'Add more photos' : 'Add meal photo'}
-                </button>
-                {analyzingMeal && (
-                  <span className="flex items-center gap-1.5 text-xs text-buddy-green">
-                    <Loader2 size={13} className="animate-spin" /> Analyzing meal…
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-buddy-text-secondary">
-                Food name &amp; calories are auto-filled by the food analyser from your photo — feel free to adjust.
-              </p>
-            </div>
-          )}
-
-          {/* Progress / body-snap form */}
-          {kind === 'progress' && (
-            <div className="space-y-3">
-              {/* Mode toggle */}
-              <div className="flex gap-1.5 bg-buddy-surface-raised rounded-xl p-1">
-                {([
-                  { value: 'transformation' as const, label: 'Before → After' },
-                  { value: 'milestone' as const, label: 'Current / Milestone' },
-                ]).map((m) => (
-                  <button key={m.value} onClick={() => setProgressMode(m.value)}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${progressMode === m.value ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}>
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Weight (optional) */}
-              <div className="flex items-center gap-2">
-                <Scale size={16} className="text-buddy-green flex-shrink-0" />
-                <input
-                  type="number"
-                  step="0.1"
-                  value={progressWeight}
-                  onChange={(e) => setProgressWeight(e.target.value)}
-                  placeholder="Weight (optional)"
-                  className="flex-1 bg-buddy-surface border border-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm text-buddy-text-primary placeholder:text-buddy-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-buddy-green/30"
-                />
-                <div className="flex gap-1 bg-buddy-surface-raised rounded-xl p-0.5">
-                  {(['kg', 'lbs'] as const).map((u) => (
-                    <button key={u} onClick={() => setWeightUnit(u)}
-                      className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${weightUnit === u ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary'}`}>
-                      {u}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Photo buckets */}
-              {progressMode === 'transformation' ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] font-medium text-buddy-text-secondary">BEFORE</p>
-                    {beforePhotos.length > 0 && (
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {beforePhotos.map((p, i) => (
-                          <div key={i} className="relative rounded-lg overflow-hidden aspect-square">
-                            <img src={p.preview!} alt="Before" className="w-full h-full object-cover" />
-                            <button onClick={() => removeProgressPhoto('before', i)} className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white"><X size={10} /></button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <input ref={progressBeforeInputRef} type="file" accept="image/*" multiple className="hidden"
-                      onChange={(e) => { addProgressPhotos(e.target.files, 'before'); e.target.value = ''; }} />
-                    <button
-                      onClick={() => progressBeforeInputRef.current?.click()}
-                      className="w-full h-20 rounded-xl border-2 border-dashed border-buddy-text-secondary/20 hover:border-buddy-green/50 flex flex-col items-center justify-center gap-1 text-buddy-text-secondary hover:text-buddy-green transition-colors text-[11px]"
-                    >
-                      <Camera size={16} /> {beforePhotos.length ? 'Add more' : 'Add before'}
-                    </button>
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className="text-[11px] font-medium text-buddy-green">AFTER</p>
-                    {afterPhotos.length > 0 && (
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {afterPhotos.map((p, i) => (
-                          <div key={i} className="relative rounded-lg overflow-hidden aspect-square">
-                            <img src={p.preview!} alt="After" className="w-full h-full object-cover" />
-                            <button onClick={() => removeProgressPhoto('after', i)} className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white"><X size={10} /></button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    <input ref={progressAfterInputRef} type="file" accept="image/*" multiple className="hidden"
-                      onChange={(e) => { addProgressPhotos(e.target.files, 'after'); e.target.value = ''; }} />
-                    <button
-                      onClick={() => progressAfterInputRef.current?.click()}
-                      className="w-full h-20 rounded-xl border-2 border-dashed border-buddy-green/40 hover:border-buddy-green flex flex-col items-center justify-center gap-1 text-buddy-text-secondary hover:text-buddy-green transition-colors text-[11px]"
-                    >
-                      <Camera size={16} /> {afterPhotos.length ? 'Add more' : 'Add after'}
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-1.5">
-                  {afterPhotos.length > 0 && (
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {afterPhotos.map((p, i) => (
-                        <div key={i} className="relative rounded-lg overflow-hidden aspect-square">
-                          <img src={p.preview!} alt="Progress" className="w-full h-full object-cover" />
-                          <button onClick={() => removeProgressPhoto('after', i)} className="absolute top-1 right-1 p-0.5 bg-black/60 rounded-full text-white"><X size={10} /></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <input ref={progressAfterInputRef} type="file" accept="image/*" multiple className="hidden"
-                    onChange={(e) => { addProgressPhotos(e.target.files, 'after'); e.target.value = ''; }} />
-                  <button
-                    onClick={() => progressAfterInputRef.current?.click()}
-                    className="w-full h-24 rounded-xl border-2 border-dashed border-buddy-text-secondary/20 hover:border-buddy-green/50 flex flex-col items-center justify-center gap-1.5 text-buddy-text-secondary hover:text-buddy-green transition-colors"
-                  >
-                    <Camera size={20} />
-                    <span className="text-sm">{afterPhotos.length ? 'Add more body snaps' : 'Add body snap'}</span>
-                  </button>
-                </div>
-              )}
-              <p className="text-[11px] text-buddy-text-secondary">
-                Your snaps will be posted as a <span className="text-buddy-green font-medium">progress update</span> and counted in your analytics. Weight is optional.
-              </p>
-            </div>
-          )}
 
           {/* Editor (text/poll posts) */}
-          {kind === 'text' && (
           <div className="relative">
             <div
               ref={editorRef}
@@ -968,10 +630,9 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
               </div>
             )}
           </div>
-          )}
 
           {/* Tagged users chips */}
-          {kind === 'text' && taggedUsers.length > 0 && (
+          {taggedUsers.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mt-2">
               {taggedUsers.map(u => (
                 <span key={u.user_id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-buddy-green/15 text-buddy-green rounded-full text-xs font-medium">
@@ -983,7 +644,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
           )}
 
           {/* Media previews */}
-          {kind === 'text' && mediaFiles.length > 0 && (
+          {mediaFiles.length > 0 && (
             <div className={`grid gap-2 mt-3 ${mediaFiles.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
               {mediaFiles.map((m, i) => (
                 <div key={i} className="relative rounded-xl overflow-hidden bg-buddy-surface-raised">
@@ -1010,7 +671,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
           )}
 
           {/* Location */}
-          {kind === 'text' && showLocation && (
+          {showLocation && (
             <div className="mt-3">
               {locationLat != null && locationLng != null ? (
                 <div className="flex items-center gap-2 bg-buddy-surface-raised rounded-xl px-3 py-2">
@@ -1048,7 +709,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
           )}
 
           {/* Poll builder */}
-          {kind === 'text' && showPoll && (
+          {showPoll && (
             <div className="mt-3 space-y-2 bg-buddy-surface-raised rounded-xl p-3">
               <input
                 value={pollQuestion}
@@ -1123,7 +784,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
           )}
 
           {/* Emoji picker — stays open for consecutive emoji input */}
-          {kind === 'text' && showEmoji && (
+          {showEmoji && (
             <div
               ref={emojiPickerRef}
               className="mt-3 relative z-20"
@@ -1161,8 +822,6 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
       {/* Toolbar */}
       <div className="border-t border-buddy-surface px-4 py-2 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1">
-          {kind === 'text' && (
-            <>
           {/* Media */}
           <input
             ref={fileInputRef}
@@ -1244,8 +903,6 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
             title="Add emoji">
             <Smile size={18} />
           </button>
-            </>
-          )}
 
           {/* Visibility */}
           {!hideVisibility && (
@@ -1288,7 +945,7 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
               className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-buddy-green text-buddy-black text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-buddy-green/90 transition-colors"
             >
               <Send size={14} />
-              {isSubmitting ? 'Posting...' : kind === 'meal' ? 'Log Meal' : kind === 'progress' ? 'Share' : 'Post'}
+              {isSubmitting ? 'Posting...' : 'Post'}
             </button>
           </div>
         )}

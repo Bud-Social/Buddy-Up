@@ -1,6 +1,7 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { X, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { livesApi } from '@/api/lives';
 
 const MuxPlayer = lazy(() => import('@mux/mux-player-react'));
 
@@ -9,11 +10,21 @@ interface ReplayPlayerProps {
   hostName: string;
   replayUrl: string;
   muxPlaybackId?: string;
+  liveId?: string;
   onClose: () => void;
 }
 
-export default function ReplayPlayer({ title, hostName, replayUrl, muxPlaybackId, onClose }: ReplayPlayerProps) {
+export default function ReplayPlayer({ title, hostName, replayUrl, muxPlaybackId, liveId, onClose }: ReplayPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
+  const pinged = useRef(false);
+
+  // Unique-per-viewer replay view: fire once per mount; the server dedupes.
+  useEffect(() => {
+    if (liveId && !pinged.current) {
+      pinged.current = true;
+      livesApi.recordReplayView(liveId).catch(() => {});
+    }
+  }, [liveId]);
 
   return (
     <div className="fixed inset-0 z-50 bg-buddy-black flex flex-col">

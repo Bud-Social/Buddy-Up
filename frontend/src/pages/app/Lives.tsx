@@ -242,6 +242,7 @@ export default function Lives() {
           hostName={replayLive.host?.display_name || 'Unknown'}
           replayUrl={replayLive.replay_url}
           muxPlaybackId={replayLive.mux_playback_id}
+          liveId={replayLive.id}
           onClose={() => setReplayLive(null)}
         />
       )}

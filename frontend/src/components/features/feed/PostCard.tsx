@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
-  MoreHorizontal, Dumbbell, Utensils, TrendingUp, MapPin, BarChart2,
+  MoreHorizontal, Dumbbell, MapPin, BarChart2,
   Maximize2, FileText, CheckSquare, CircleDot, ChevronLeft, ChevronRight,
   Volume2, VolumeX, Share2, Eye, EyeOff, Flag, Ban, Undo2,
 } from 'lucide-react';
@@ -57,98 +57,6 @@ function WorkoutLogCard({ data }: { data: Record<string, unknown> }) {
           </div>
         ))}
       </div>
-    </div>
-  );
-}
-
-function MealCard({ data }: { data: Record<string, unknown> }) {
-  const d = data as Record<string, number | string | undefined>;
-  const macro = (primary: string, alt: string) => Number(d[primary] ?? d[alt] ?? 0);
-  const macros = [
-    { label: 'protein', val: macro('protein_g', 'protein'), max: 50, color: 'bg-buddy-electric' },
-    { label: 'carbs', val: macro('carbs_g', 'carbs'), max: 80, color: 'bg-buddy-orange' },
-    { label: 'fats', val: macro('fat_g', 'fats'), max: 30, color: 'bg-buddy-gold' },
-  ];
-  const kcal = Number(d.calories ?? 0);
-  return (
-    <div className="bg-buddy-surface-raised rounded-xl p-4 mt-3 border border-buddy-surface">
-      <div className="flex items-center gap-2 mb-3">
-        <Utensils size={15} className="text-buddy-orange" />
-        <span className="font-heading font-semibold text-sm capitalize">{(d.meal_type as string) || 'Meal'}</span>
-        {kcal > 0 && <span className="ml-auto text-sm font-bold text-buddy-orange">{Math.round(kcal)} kcal</span>}
-      </div>
-      {(d.food_name as string) && (
-        <p className="text-sm font-medium mb-3">{d.food_name as string}</p>
-      )}
-      <div className="space-y-2">
-        {macros.map(m => {
-          const pct = Math.min((m.val / m.max) * 100, 100);
-          return (
-            <div key={m.label} className="flex items-center gap-2">
-              <span className="text-xs text-buddy-text-secondary w-14 capitalize">{m.label}</span>
-              <div className="flex-1 h-1.5 bg-buddy-surface rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all ${m.color}`} style={{ width: `${pct}%` }} />
-              </div>
-              <span className="text-xs font-mono w-8 text-right text-buddy-text-primary">{m.val}g</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ProgressCard({ data, mediaUrls = [] }: { data: Record<string, unknown>; mediaUrls?: string[] }) {
-  const d = data as Record<string, number | string | undefined>;
-  const weight = Number(d.weight ?? d.weight_kg ?? d.weight_lbs ?? 0);
-  const unit = (d.weight_unit as string) || (d.weight !== undefined ? 'kg' : '');
-  const mode = (d.mode as string) || 'transformation';
-  const beforeCount = Number(d.before_count ?? 0);
-
-  // Prefer explicit URLs, else derive from the post's media list.
-  const beforeUrls = (d.before_urls as string[] | undefined) ?? mediaUrls.slice(0, beforeCount || Math.floor(mediaUrls.length / 2));
-  const afterUrls = (d.after_urls as string[] | undefined) ?? mediaUrls.slice(beforeCount || Math.floor(mediaUrls.length / 2));
-
-  const showBeforeAfter = mode === 'transformation' && (beforeUrls.length > 0 || afterUrls.length > 0);
-  const snaps = afterUrls.length > 0 ? afterUrls : mediaUrls;
-
-  return (
-    <div className="bg-buddy-surface-raised rounded-xl p-4 mt-3 border border-buddy-surface">
-      <div className="flex items-center gap-2 mb-3">
-        <TrendingUp size={15} className="text-buddy-electric" />
-        <span className="font-heading font-semibold text-sm">{(d as { label?: string }).label || 'Transformation'}</span>
-        {weight > 0 && (
-          <span className="ml-auto text-sm font-bold text-buddy-electric">{weight} {unit}</span>
-        )}
-      </div>
-      {showBeforeAfter ? (
-        <div className="grid grid-cols-2 gap-2">
-          {beforeUrls.length > 0 && (
-            <div className="aspect-square bg-buddy-surface rounded-xl overflow-hidden relative">
-              <img src={beforeUrls[0]} alt="Before" className="w-full h-full object-cover" loading="lazy" />
-              <span className="absolute top-2 left-2 bg-black/70 text-[10px] px-2 py-0.5 rounded-full">Before</span>
-            </div>
-          )}
-          {afterUrls.length > 0 && (
-            <div className="aspect-square bg-buddy-surface rounded-xl overflow-hidden relative">
-              <img src={afterUrls[0]} alt="After" className="w-full h-full object-cover" loading="lazy" />
-              <span className="absolute top-2 right-2 bg-buddy-green/80 text-[10px] px-2 py-0.5 rounded-full">After</span>
-            </div>
-          )}
-        </div>
-      ) : snaps.length > 0 ? (
-        <div className="grid grid-cols-2 gap-2">
-          {snaps.slice(0, 4).map((url, i) => (
-            <div key={i} className="aspect-square bg-buddy-surface rounded-xl overflow-hidden relative">
-              <img src={url} alt={`Progress ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-            </div>
-          ))}
-        </div>
-      ) : weight > 0 ? (
-        <div className="col-span-2 aspect-[2/1] bg-buddy-surface rounded-xl flex items-center justify-center">
-          <span className="text-2xl font-display font-bold text-buddy-electric">{weight} {unit}</span>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -1220,8 +1128,6 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
 
           {/* Rich content */}
           {displayPost.post_type === 'workout_log' && displayPost.workout_log_data && <WorkoutLogCard data={displayPost.workout_log_data as Record<string, unknown>} />}
-          {displayPost.post_type === 'meal' && displayPost.meal_data && <MealCard data={displayPost.meal_data} />}
-          {displayPost.post_type === 'progress' && displayPost.progress_data && <ProgressCard data={displayPost.progress_data} mediaUrls={displayPost.media_urls || []} />}
           {displayPost.post_type === 'poll' && (displayPost as any).poll && <PollCard poll={(displayPost as any).poll} postId={displayPost.id} />}
 
           {/* Media */}

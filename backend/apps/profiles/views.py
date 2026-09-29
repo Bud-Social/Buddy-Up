@@ -780,6 +780,10 @@ class ProfileRecommendationsView(views.APIView):
 
     def get(self, request):
         profile = request.user.profile
+        try:
+            limit = max(1, min(int(request.query_params.get('limit', 20)), 20))
+        except (TypeError, ValueError):
+            limit = 20
         ai_url = f'{settings.AI_SERVICE_URL}/api/v1/embeddings/match'
         matches = []
         try:
@@ -818,7 +822,7 @@ class ProfileRecommendationsView(views.APIView):
                     post_total=Count('posts', distinct=True),
                 ).order_by('-follower_total', '-post_total')[:60]
             )
-            popular = _interleave(popular)[:20]
+            popular = _interleave(popular)[:limit]
             self._record_exposures(request, popular, source='fallback')
             return Response({
                 'success': True,
@@ -842,7 +846,7 @@ class ProfileRecommendationsView(views.APIView):
             for m in matches
             if m['profile_id'] in profile_map
         ]
-        ordered_profiles = _interleave(ordered_profiles)
+        ordered_profiles = _interleave(ordered_profiles)[:limit]
 
         self._record_exposures(request, ordered_profiles, source='ai')
 
