@@ -13,12 +13,17 @@ Usage::
     root = require('nsfw_images')    # -> Path(data/nsfw)
 """
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DATA = Path(__file__).resolve().parent.parent / 'data'
+# Overridable data root: on Kaggle, upload the needed CSVs as a dataset and
+# set BUDDY_DATA_DIR=/kaggle/input/<dataset-slug> (+ add buddy_data.py's dir
+# to sys.path or paste it into the notebook).
+DATA = Path(os.environ.get('BUDDY_DATA_DIR', '') or
+            (Path(__file__).resolve().parent.parent / 'data'))
 
 
 @dataclass(frozen=True)
