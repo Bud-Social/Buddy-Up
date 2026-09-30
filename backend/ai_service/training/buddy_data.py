@@ -15,6 +15,7 @@ Usage::
 import logging
 import os
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -24,6 +25,36 @@ logger = logging.getLogger(__name__)
 # to sys.path or paste it into the notebook).
 DATA = Path(os.environ.get('BUDDY_DATA_DIR', '') or
             (Path(__file__).resolve().parent.parent / 'data'))
+
+
+def resolve_data_file(name: str) -> Path:
+    """Locate a data file, tolerating scattered layouts (e.g. Kaggle).
+
+    Checks ``DATA/<name>`` first, then searches Kaggle roots
+    (``/kaggle/working``, ``/kaggle/input`` — including extra nesting like
+    ``/kaggle/input/datasets/<user>/<slug>/``). Results are cached: repeated
+    loader calls never re-scan. Returns the direct path when nothing is
+    found so callers still raise the natural ``FileNotFoundError``.
+    """
+    return _resolve_data_file_cached(name)
+
+
+@lru_cache(maxsize=64)
+def _resolve_data_file_cached(name: str) -> Path:
+    direct = DATA / name
+    if direct.is_file():
+        return direct
+    for root in (Path('/kaggle/working'), Path('/kaggle/input')):
+        if not root.is_dir():
+            continue
+        try:
+            hits = [p for p in root.rglob(name) if p.is_file()]
+        except OSError:
+            continue
+        if hits:
+            logger.info('Resolved %s -> %s', name, hits[0])
+            return hits[0]
+    return direct
 
 
 @dataclass(frozen=True)
@@ -286,19 +317,19 @@ def nsfw_images():
 def reddit_nsfw():
     import pandas as pd
 
-    return pd.read_csv(DATA / 'kaggle_reddit-nsfw-classification-data.csv')
+    return pd.read_csv(resolve_data_file('kaggle_reddit-nsfw-classification-data.csv'))
 
 
 def profanity():
     import pandas as pd
 
-    return pd.read_csv(DATA / 'profanity_en.csv')
+    return pd.read_csv(resolve_data_file('profanity_en.csv'))
 
 
 def genz_slang():
     import pandas as pd
 
-    return pd.read_csv(DATA / 'genz_slang_usage_2020_2025.csv')
+    return pd.read_csv(resolve_data_file('genz_slang_usage_2020_2025.csv'))
 
 
 # --- Workout videos / form keypoints ------------------------------------
