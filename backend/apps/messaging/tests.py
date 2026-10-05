@@ -5,8 +5,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.lives.models import BuddyLive
-from apps.messaging.models import Conversation, CallSession, CallParticipant, Message
-from apps.profiles.models import Profile
+from apps.messaging.models import (
+    Conversation, ConversationPromotion, CallSession, CallParticipant, Message,
+)
+from apps.profiles.models import (
+    BlockRelationship, BuddyRelationship, BuddySearchProfile, Profile,
+)
 from apps.wallet.models import ArtifactTransaction
 
 import asyncio
@@ -344,3 +348,326 @@ class LiveGiftSettlementTests(TransactionTestCase):
         self.assertFalse(
             ArtifactTransaction.objects.filter(user=self.sender, transaction_type='tip_sent').exists(),
         )
+
+
+class ConversationPromotionTests(TestCase):
+    """Discovery DM -> buddy relationship promotion (mutual consent)."""
+
+    def setUp(self):
+        self.alice_user = User.objects.create_user(email='promo-alice@example.com', password='TestPass123!')
+        self.bob_user = User.objects.create_user(email='promo-bob@example.com', password='TestPass123!')
+        self.carol_user = User.objects.create_user(email='promo-carol@example.com', password='TestPass123!')
+        self.alice = Profile.objects.create(user=self.alice_user, username='promo-alice', display_name='Alice')
+        self.bob = Profile.objects.create(user=self.bob_user, username='promo-bob', display_name='Bob')
+        self.carol = Profile.objects.create(user=self.carol_user, username='promo-carol', display_name='Carol')
+
+        self.conv = Conversation.objects.create(is_group=False, origin='discovery')
+        self.conv.participants.add(self.alice, self.bob)
+
+        def client_for(profile):
+            c = APIClient()
+            refresh = RefreshToken.for_user(profile.user)
+            c.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+            return c
+
+        self.client_alice = client_for(self.alice)
+        self.client_bob = client_for(self.bob)
+        self.client_carol = client_for(self.carol)
+
+    def _promote_url(self):
+        return f'/api/v1/messaging/conversations/{self.conv.id}/promote/'
+
+    def _respond_url(self, promotion):
+        return f'/api/v1/messaging/conversations/promotions/{promotion.id}/respond/'
+
+    def test_promote_requires_authentication(self):
+        anon = APIClient()
+        resp = anon.post(self._promote_url(), {}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_promote_then_accept_creates_confirmed_buddies_and_stamps_origin(self):
+        r = self.client_alice.post(self._promote_url(), {}, format='json')
+        self.assertEqual(r.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(r.data['data']['status'], 'pending')
+
+        promotion = ConversationPromotion.objects.get(conversation=self.conv)
+        self.assertEqual(promotion.requested_by, self.alice)
+
+        resp = self.client_bob.post(
+            self._respond_url(promotion), {'accept': True}, format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        promotion.refresh_from_db()
+        self.assertEqual(promotion.status, 'accepted')
+        self.assertIsNotNone(promotion.responded_at)
+
+        self.conv.refresh_from_db()
+        self.assertEqual(self.conv.origin, 'buddy')
+        self.assertIsNotNone(self.conv.promoted_at)
+
+        rel = BuddyRelationship.objects.get(from_user=self.alice, to_user=self.bob)
+        self.assertEqual(rel.status, 'confirmed')
+
+        # Serialized view reflects the promoted state.
+        detail = self.client_alice.get(f'/api/v1/messaging/conversations/{self.conv.id}/')
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(detail.data['data']['origin'], 'buddy')
+        self.assertEqual(detail.data['data']['promotion_status'], 'accepted')
+        self.assertFalse(detail.data['data']['promotable'])
+
+    def test_promote_is_idempotent_for_pending_request(self):
+        self.client_alice.post(self._promote_url(), {}, format='json')
+        second = self.client_alice.post(self._promote_url(), {}, format='json')
+        self.assertEqual(second.status_code, status.HTTP_200_OK)
+        self.assertEqual(ConversationPromotion.objects.filter(conversation=self.conv).count(), 1)
+
+    def test_only_other_participant_can_respond(self):
+        self.client_alice.post(self._promote_url(), {}, format='json')
+        promotion = ConversationPromotion.objects.get(conversation=self.conv)
+
+        resp = self.client_alice.post(
+            self._respond_url(promotion), {'accept': True}, format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(resp.data['success'])
+
+        outsider = self.client_carol.post(
+            self._respond_url(promotion), {'accept': True}, format='json',
+        )
+        self.assertEqual(outsider.status_code, status.HTTP_403_FORBIDDEN)
+
+        promotion.refresh_from_db()
+        self.assertEqual(promotion.status, 'pending')
+        self.assertFalse(BuddyRelationship.objects.exists())
+
+    def test_confirmed_buddies_get_409_on_promote(self):
+        BuddyRelationship.objects.create(
+            from_user=self.alice, to_user=self.bob, status='confirmed',
+        )
+        resp = self.client_alice.post(self._promote_url(), {}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+        self.assertFalse(ConversationPromotion.objects.exists())
+
+    def test_promote_rejects_group_conversation(self):
+        group = Conversation.objects.create(is_group=True, group_name='Crew')
+        group.participants.add(self.alice, self.bob, self.carol)
+        resp = self.client_alice.post(
+            f'/api/v1/messaging/conversations/{group.id}/promote/', {}, format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_decline_leaves_conversation_unpromoted(self):
+        self.client_alice.post(self._promote_url(), {}, format='json')
+        promotion = ConversationPromotion.objects.get(conversation=self.conv)
+
+        resp = self.client_bob.post(
+            self._respond_url(promotion), {'accept': False}, format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+
+        promotion.refresh_from_db()
+        self.assertEqual(promotion.status, 'declined')
+        self.assertIsNotNone(promotion.responded_at)
+
+        self.conv.refresh_from_db()
+        self.assertEqual(self.conv.origin, 'discovery')
+        self.assertIsNone(self.conv.promoted_at)
+        self.assertFalse(BuddyRelationship.objects.exists())
+
+        detail = self.client_alice.get(f'/api/v1/messaging/conversations/{self.conv.id}/')
+        self.assertEqual(detail.data['data']['promotion_status'], 'declined')
+        self.assertTrue(detail.data['data']['promotable'])
+
+
+class MessagingBlockEnforcementTests(TestCase):
+    """Blocks are enforced on read/write paths, not only at conversation creation."""
+
+    def setUp(self):
+        self.alice_user = User.objects.create_user(email='block-alice@example.com', password='TestPass123!')
+        self.bob_user = User.objects.create_user(email='block-bob@example.com', password='TestPass123!')
+        self.alice = Profile.objects.create(user=self.alice_user, username='block-alice', display_name='Alice')
+        self.bob = Profile.objects.create(user=self.bob_user, username='block-bob', display_name='Bob')
+
+        self.conv = Conversation.objects.create(is_group=False, origin='discovery')
+        self.conv.participants.add(self.alice, self.bob)
+        Message.objects.create(conversation=self.conv, sender=self.bob, body='hello')
+
+        def client_for(profile):
+            c = APIClient()
+            refresh = RefreshToken.for_user(profile.user)
+            c.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+            return c
+
+        self.client_alice = client_for(self.alice)
+        self.client_bob = client_for(self.bob)
+
+    def _messages_url(self):
+        return f'/api/v1/messaging/conversations/{self.conv.id}/messages/'
+
+    def test_blocker_cannot_see_or_send_in_conversation(self):
+        BlockRelationship.objects.create(blocker=self.bob, blocked=self.alice)
+
+        listing = self.client_bob.get('/api/v1/messaging/conversations/')
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        self.assertEqual(listing.data['data'], [])
+
+        read = self.client_bob.get(self._messages_url())
+        self.assertEqual(read.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(read.data['success'])
+
+        send = self.client_bob.post(self._messages_url(), {'body': 'hi'}, format='json')
+        self.assertEqual(send.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(send.data['success'])
+        self.assertEqual(self.conv.messages.count(), 1)
+
+    def test_blocked_user_cannot_see_or_send_in_conversation(self):
+        BlockRelationship.objects.create(blocker=self.alice, blocked=self.bob)
+
+        listing = self.client_bob.get('/api/v1/messaging/conversations/')
+        self.assertEqual(listing.status_code, status.HTTP_200_OK)
+        self.assertEqual(listing.data['data'], [])
+
+        self.assertEqual(self.client_bob.get(self._messages_url()).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            self.client_bob.post(self._messages_url(), {'body': 'hi'}, format='json').status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
+    def test_unblocked_conversation_is_visible_and_readable(self):
+        listing = self.client_alice.get('/api/v1/messaging/conversations/')
+        self.assertEqual([c['id'] for c in listing.data['data']], [str(self.conv.id)])
+        self.assertTrue(listing.data['data'][0]['promotable'])
+
+        self.assertEqual(self.client_alice.get(self._messages_url()).status_code, status.HTTP_200_OK)
+        resp = self.client_alice.post(self._messages_url(), {'body': 'hey'}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+
+    def test_chat_consumer_membership_check_rejects_blocked_pair(self):
+        from .consumers import ChatConsumer
+
+        consumer = ChatConsumer()
+        consumer.conversation_id = str(self.conv.id)
+        consumer.profile = self.bob
+
+        # Call the sync body directly: the database_sync_to_async wrapper hops to a
+        # thread executor, which sqlite (in-transaction) will not allow here.
+        is_member = ChatConsumer._is_member.__wrapped__.__get__(consumer, ChatConsumer)
+
+        self.assertTrue(is_member())
+
+        BlockRelationship.objects.create(blocker=self.bob, blocked=self.alice)
+        self.assertFalse(is_member())
+
+    def test_blocked_pair_cannot_promote(self):
+        BlockRelationship.objects.create(blocker=self.bob, blocked=self.alice)
+        resp = self.client_alice.post(
+            f'/api/v1/messaging/conversations/{self.conv.id}/promote/', {}, format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class DiscoveryThreadOriginTests(TestCase):
+    """Threads opened from the buddy-finder surface must be tagged
+    'discovery', otherwise the buddy-messages list can never find them."""
+
+    def setUp(self):
+        self.alice_user = User.objects.create_user(email='origin-alice@example.com', password='TestPass123!')
+        self.bob_user = User.objects.create_user(email='origin-bob@example.com', password='TestPass123!')
+        self.alice = Profile.objects.create(user=self.alice_user, username='origin-alice', display_name='Alice')
+        self.bob = Profile.objects.create(user=self.bob_user, username='origin-bob', display_name='Bob')
+        # Both need a search profile for _allowed_to_message to permit the DM.
+        BuddySearchProfile.objects.create(profile=self.alice, visibility='public')
+        BuddySearchProfile.objects.create(profile=self.bob, visibility='public')
+
+        def client_for(profile):
+            c = APIClient()
+            refresh = RefreshToken.for_user(profile.user)
+            c.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+            return c
+
+        self.client_alice = client_for(self.alice)
+
+    def test_start_with_origin_discovery_is_tagged(self):
+        resp = self.client_alice.post(
+            '/api/v1/messaging/conversations/start/',
+            {'participants': ['origin-bob'], 'origin': 'discovery'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data['data']['origin'], 'discovery')
+
+    def test_start_without_origin_defaults_to_direct(self):
+        resp = self.client_alice.post(
+            '/api/v1/messaging/conversations/start/',
+            {'participants': ['origin-bob']},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.data)
+        self.assertEqual(resp.data['data']['origin'], 'direct')
+
+    def test_unknown_origin_is_rejected(self):
+        resp = self.client_alice.post(
+            '/api/v1/messaging/conversations/start/',
+            {'participants': ['origin-bob'], 'origin': 'bogus'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class PromotionExposureTests(TestCase):
+    """The invited participant needs the promotion id to accept it, so the
+    conversation payload must expose it while a request is pending."""
+
+    def setUp(self):
+        self.alice_user = User.objects.create_user(email='exp-alice@example.com', password='TestPass123!')
+        self.bob_user = User.objects.create_user(email='exp-bob@example.com', password='TestPass123!')
+        self.alice = Profile.objects.create(user=self.alice_user, username='exp-alice', display_name='Alice')
+        self.bob = Profile.objects.create(user=self.bob_user, username='exp-bob', display_name='Bob')
+        self.conv = Conversation.objects.create(is_group=False, origin='discovery')
+        self.conv.participants.add(self.alice, self.bob)
+
+        def client_for(profile):
+            c = APIClient()
+            refresh = RefreshToken.for_user(profile.user)
+            c.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+            return c
+
+        self.client_alice = client_for(self.alice)
+        self.client_bob = client_for(self.bob)
+
+    def test_conversation_payload_exposes_pending_promotion_id(self):
+        self.client_alice.post(
+            f'/api/v1/messaging/conversations/{self.conv.id}/promote/', {}, format='json',
+        )
+        resp = self.client_bob.get(f'/api/v1/messaging/conversations/{self.conv.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.data['data']
+        self.assertEqual(data['promotion_status'], 'pending')
+        self.assertIsNotNone(data['promotion_id'])
+        self.assertTrue(data['promotable'])
+
+    def test_promotion_id_absent_before_any_request(self):
+        resp = self.client_bob.get(f'/api/v1/messaging/conversations/{self.conv.id}/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIsNone(resp.data['data']['promotion_id'])
+        self.assertIsNone(resp.data['data']['promotion_status'])
+
+    def test_conversation_payload_identifies_the_requester(self):
+        self.client_alice.post(
+            f'/api/v1/messaging/conversations/{self.conv.id}/promote/', {}, format='json',
+        )
+        resp = self.client_bob.get(f'/api/v1/messaging/conversations/{self.conv.id}/')
+        data = resp.data['data']
+        self.assertEqual(str(data['promotion_requested_by']), str(self.alice.user_id))
+        # The responder can tell they are NOT the requester, so only they see
+        # the Accept/Decline controls.
+        self.assertNotEqual(str(data['promotion_requested_by']), str(self.bob.user_id))
+
+    def test_requester_is_identifiable_in_their_own_session(self):
+        self.client_alice.post(
+            f'/api/v1/messaging/conversations/{self.conv.id}/promote/', {}, format='json',
+        )
+        resp = self.client_alice.get('/api/v1/messaging/conversations/')
+        convo = next(c for c in resp.data['data'] if c['id'] == str(self.conv.id))
+        self.assertEqual(str(convo['promotion_requested_by']), str(self.alice.user_id))

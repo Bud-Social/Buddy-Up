@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/repositories/messaging_repository.dart';
 import '../../../data/models/messaging.dart';
@@ -25,22 +26,46 @@ class ConversationsState {
   final bool isLoading;
   final String? error;
 
+  /// When set, [conversations] is narrowed to buddy-discovery threads only.
+  /// The full list screen leaves it null and shows everything.
+  final ConversationFilter? filter;
+
   const ConversationsState({
     this.conversations = const [],
     this.isLoading = false,
     this.error,
+    this.filter,
   });
 
   ConversationsState copyWith({
     List<Conversation>? conversations,
     bool? isLoading,
     String? error,
+    ConversationFilter? filter,
+    bool clearFilter = false,
   }) {
     return ConversationsState(
       conversations: conversations ?? this.conversations,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
+      filter: clearFilter ? null : (filter ?? this.filter),
     );
+  }
+}
+
+/// Narrows a conversation list without asking the server for a second copy —
+/// the filter runs over the same `/messaging/conversations/` payload the main
+/// Messages tab already owns, so the two screens can never disagree.
+enum ConversationFilter {
+  /// Threads that came out of Find a Buddy: `origin == 'discovery'`, or any
+  /// DM already promoted into a buddy relationship. Once accepted the backend
+  /// rewrites origin to 'buddy', so a promoted thread stays in the list rather
+  /// than vanishing the moment it succeeds.
+  discovery;
+
+  bool matches(Conversation convo) {
+    if (convo.isGroup || convo.isCommunity) return false;
+    return convo.origin == 'discovery' || convo.origin == 'buddy';
   }
 }
 
@@ -50,20 +75,91 @@ class ConversationsNotifier extends Notifier<ConversationsState> {
 
   MessagingRepository get _repository => ref.read(messagingRepositoryProvider);
 
-  Future<void> load() async {
-    state = state.copyWith(isLoading: true, error: null);
+  /// [filter] narrows the list; omitting it keeps whatever filter is already
+  /// active (a promotion re-reads through the same filter). Pass
+  /// [clearFilter] from the unfiltered Messages tab.
+  Future<void> load({ConversationFilter? filter, bool clearFilter = false}) async {
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      filter: filter,
+      clearFilter: clearFilter,
+    );
     try {
       final raw = await _repository.getConversations();
-      state = state.copyWith(conversations: _parseConvList(raw['data']), isLoading: false);
+      final all = _parseConvList(raw['data']);
+      state = state.copyWith(
+        conversations: _apply(state.filter, all),
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
+  static List<Conversation> _apply(
+    ConversationFilter? filter,
+    List<Conversation> all,
+  ) {
+    if (filter == null) return all;
+    return all.where(filter.matches).toList();
+  }
+
+  /// Insert or replace [updated] by id.
+  ///
+  /// Upsert, not replace: callers use this for a conversation they have just
+  /// created or fetched on its own, which is not in the list yet. A promotion
+  /// also rewrites `origin`, so the row can enter or leave a filtered list —
+  /// [filter] decides, not the update.
   void updateConversation(Conversation updated) {
-    state = state.copyWith(
-      conversations: state.conversations.map((c) => c.id == updated.id ? updated : c).toList(),
-    );
+    final existing = state.conversations.where((c) => c.id == updated.id).toList();
+    final next = [
+      for (final c in state.conversations)
+        if (c.id != updated.id) c,
+      updated,
+    ];
+    if (existing.isEmpty && (state.filter?.matches(updated) == false)) {
+      // Never let a filtered list grow a row the filter rejects.
+      return;
+    }
+    state = state.copyWith(conversations: _apply(state.filter, next));
+  }
+
+  /// Ask the other side to make this thread a buddy relationship. Returns a
+  /// message to show on failure, or null on success — the server's own
+  /// wording wins ("You are already buddies.") over ours.
+  Future<String?> promoteConversation(String conversationId) async {
+    try {
+      await _repository.promoteConversation(conversationId);
+      await load();
+      return null;
+    } catch (e) {
+      return _promotionError(e, 'Could not send the buddy request.');
+    }
+  }
+
+  /// Accept or decline a pending promotion. Only the invited participant may
+  /// respond; on accept both become confirmed buddies.
+  Future<String?> respondToPromotion(String promotionId, {required bool accept}) async {
+    try {
+      await _repository.respondToPromotion(promotionId, {'accept': accept});
+      await load();
+      return null;
+    } catch (e) {
+      return _promotionError(e, accept ? 'Could not accept.' : 'Could not decline.');
+    }
+  }
+
+  static String _promotionError(Object e, String fallback) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map) {
+        final direct = data['message'] ?? data['detail'];
+        if (direct is String && direct.isNotEmpty) return direct;
+      }
+      if (e.response?.statusCode == 409) return 'You are already buddies.';
+    }
+    return fallback;
   }
 
   void decrementUnread(String convId) {

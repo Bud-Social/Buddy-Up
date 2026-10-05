@@ -15,6 +15,8 @@ import 'features/auth/onboarding_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/profile/buddy_list_screen.dart';
 import 'features/buddies/buddy_nearby_screen.dart';
+import 'features/buddies/buddy_find_profile_screen.dart';
+import 'features/buddies/buddy_messages_screen.dart';
 import 'features/profile/user_profile_screen.dart';
 import 'features/discover/discover_people_screen.dart';
 import 'features/feed/screens/feed_screen.dart';
@@ -605,6 +607,32 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           GoRoute(
             path: '/buddies/nearby',
             builder: (_, _) => const BuddyNearbyScreen(),
+          ),
+          // Buddy search card on its own page, then the discovery threads it
+          // can start. Declared before `/:username` so `find` is never read
+          // as a username.
+          GoRoute(
+            path: '/buddies/find/:username',
+            builder: (_, state) {
+              final username = state.pathParameters['username'] ?? '';
+              return BuddyFindProfileScreen(username: username);
+            },
+          ),
+          GoRoute(
+            path: '/buddies/messages',
+            builder: (_, _) => const BuddyMessagesScreen(),
+          ),
+          GoRoute(
+            path: '/buddies/messages/:conversationId',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (_, state) {
+              final conversationId =
+                  state.pathParameters['conversationId'] ?? '';
+              return ChatScreen(
+                conversationId: conversationId,
+                fromBuddyMessages: true,
+              );
+            },
           ),
           GoRoute(
             path: '/:username',

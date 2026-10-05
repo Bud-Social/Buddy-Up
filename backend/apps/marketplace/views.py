@@ -43,6 +43,7 @@ from .serializers import (
     DiscountCodeSerializer, DiscountCodeWriteSerializer,
     OrderSerializer, OrderFulfillmentSerializer,
     OrderCaseSerializer, CreatorPayoutSetupSerializer,
+    resolve_item_price,
 )
 from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator_artifacts, platform_cut
 from apps.wallet.models import ArtifactTransaction
@@ -1996,21 +1997,13 @@ class CheckoutCartView(views.APIView):
         pickup_details = request.data.get('pickup_details') or {}
 
         def _item_price(item):
+            price = resolve_item_price(item)
             if item.item_type == 'meal_plan' and item.meal_plan:
-                return item.meal_plan.price_artifacts, item.meal_plan.title, item.meal_plan.creator
+                return price, item.meal_plan.title, item.meal_plan.creator
             if item.item_type == 'programme' and item.programme:
-                return item.programme.price_artifacts, item.programme.title, item.programme.creator
+                return price, item.programme.title, item.programme.creator
             if item.item_type == 'event_ticket' and item.event:
-                tier_name = (item.meta or {}).get('tier') if hasattr(item, 'meta') else None
-                if tier_name:
-                    match = next(
-                        (t for t in (item.event.ticket_tiers or [])
-                         if str(t.get('name', '')).lower() == str(tier_name).lower()),
-                        None,
-                    )
-                    if match and match.get('price_artifacts'):
-                        return match['price_artifacts'], item.event.title, item.event.creator
-                return item.event.ticket_price_artifacts, item.event.title, item.event.creator
+                return price, item.event.title, item.event.creator
             if item.item_type == 'product' and item.product:
                 return None, item.product.name, None
             return None, None, None
@@ -2566,13 +2559,7 @@ class DiscountCodeView(views.APIView):
     def _cart_total_artifacts(self, cart):
         total = {}
         for item in cart.items.all():
-            price = None
-            if item.item_type == 'meal_plan' and item.meal_plan:
-                price = item.meal_plan.price_artifacts
-            elif item.item_type == 'programme' and item.programme:
-                price = item.programme.price_artifacts
-            elif item.item_type == 'event_ticket' and item.event:
-                price = item.event.ticket_price_artifacts
+            price = resolve_item_price(item)
             if price:
                 for k, v in price.items():
                     total[k] = total.get(k, 0) + (v * item.quantity)

@@ -25,7 +25,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(conversationsProvider.notifier).load();
+      ref.read(conversationsProvider.notifier).load(clearFilter: true);
     });
   }
 
@@ -96,7 +96,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                             Text(state.error!, style: const TextStyle(color: BuddyColors.textSecondary)),
                             const SizedBox(height: 16),
                             TextButton(
-                              onPressed: () => ref.read(conversationsProvider.notifier).load(),
+                              onPressed: () => ref.read(conversationsProvider.notifier).load(clearFilter: true),
                               child: const Text('Retry'),
                             ),
                           ],
@@ -124,7 +124,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                             ),
                           )
                         : RefreshIndicator(
-                            onRefresh: () => ref.read(conversationsProvider.notifier).load(),
+                            onRefresh: () => ref.read(conversationsProvider.notifier).load(clearFilter: true),
                             child: ListView.builder(
                               itemCount: filtered.length,
                               itemBuilder: (_, i) {
@@ -179,7 +179,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                 Navigator.pop(context);
                 try {
                   final repo = ref.read(messagingRepositoryProvider);
-                  final result = await repo.startConversation({'participant_usernames': [value.trim()]});
+                  final result = await repo.startConversation({'participants': [value.trim()]});
                   final data = result['data'] as Map<String, dynamic>;
                   final convo = Conversation.fromJson(data);
                   ref.read(conversationsProvider.notifier).updateConversation(convo);

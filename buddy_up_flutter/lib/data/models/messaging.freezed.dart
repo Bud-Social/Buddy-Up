@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ParticipantData {
 
- String get userId; String get username; String get displayName; String get avatarUrl; String get verificationStatus; String get role;
+@JsonKey(name: 'user_id') String get userId; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'verification_status') String get verificationStatus; String get role;
 /// Create a copy of ParticipantData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $ParticipantDataCopyWith<$Res>  {
   factory $ParticipantDataCopyWith(ParticipantData value, $Res Function(ParticipantData) _then) = _$ParticipantDataCopyWithImpl;
 @useResult
 $Res call({
- String userId, String username, String displayName, String avatarUrl, String verificationStatus, String role
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus, String role
 });
 
 
@@ -158,7 +158,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus,  String role)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus,  String role)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ParticipantData() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.role);case _:
@@ -179,7 +179,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus,  String role)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus,  String role)  $default,) {final _that = this;
 switch (_that) {
 case _ParticipantData():
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.role);case _:
@@ -199,7 +199,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus,  String role)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus,  String role)?  $default,) {final _that = this;
 switch (_that) {
 case _ParticipantData() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.role);case _:
@@ -214,14 +214,14 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 @JsonSerializable()
 
 class _ParticipantData implements ParticipantData {
-  const _ParticipantData({required this.userId, required this.username, required this.displayName, required this.avatarUrl, this.verificationStatus = 'none', this.role = ''});
+  const _ParticipantData({@JsonKey(name: 'user_id') this.userId = '', required this.username, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'avatar_url') this.avatarUrl = '', @JsonKey(name: 'verification_status') this.verificationStatus = 'none', this.role = ''});
   factory _ParticipantData.fromJson(Map<String, dynamic> json) => _$ParticipantDataFromJson(json);
 
-@override final  String userId;
+@override@JsonKey(name: 'user_id') final  String userId;
 @override final  String username;
-@override final  String displayName;
-@override final  String avatarUrl;
-@override@JsonKey() final  String verificationStatus;
+@override@JsonKey(name: 'display_name') final  String displayName;
+@override@JsonKey(name: 'avatar_url') final  String avatarUrl;
+@override@JsonKey(name: 'verification_status') final  String verificationStatus;
 @override@JsonKey() final  String role;
 
 /// Create a copy of ParticipantData
@@ -257,7 +257,7 @@ abstract mixin class _$ParticipantDataCopyWith<$Res> implements $ParticipantData
   factory _$ParticipantDataCopyWith(_ParticipantData value, $Res Function(_ParticipantData) _then) = __$ParticipantDataCopyWithImpl;
 @override @useResult
 $Res call({
- String userId, String username, String displayName, String avatarUrl, String verificationStatus, String role
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus, String role
 });
 
 
@@ -293,7 +293,7 @@ as String,
 /// @nodoc
 mixin _$LastMessageData {
 
- String get body; String get messageType; String get mediaUrl; String get senderName;
+ String get body;@JsonKey(name: 'message_type') String get messageType;@JsonKey(name: 'media_url') String get mediaUrl;@JsonKey(name: 'sender_name') String get senderName;
 /// Create a copy of LastMessageData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -326,7 +326,7 @@ abstract mixin class $LastMessageDataCopyWith<$Res>  {
   factory $LastMessageDataCopyWith(LastMessageData value, $Res Function(LastMessageData) _then) = _$LastMessageDataCopyWithImpl;
 @useResult
 $Res call({
- String body, String messageType, String mediaUrl, String senderName
+ String body,@JsonKey(name: 'message_type') String messageType,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'sender_name') String senderName
 });
 
 
@@ -434,7 +434,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String body,  String messageType,  String mediaUrl,  String senderName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String body, @JsonKey(name: 'message_type')  String messageType, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'sender_name')  String senderName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LastMessageData() when $default != null:
 return $default(_that.body,_that.messageType,_that.mediaUrl,_that.senderName);case _:
@@ -455,7 +455,7 @@ return $default(_that.body,_that.messageType,_that.mediaUrl,_that.senderName);ca
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String body,  String messageType,  String mediaUrl,  String senderName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String body, @JsonKey(name: 'message_type')  String messageType, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'sender_name')  String senderName)  $default,) {final _that = this;
 switch (_that) {
 case _LastMessageData():
 return $default(_that.body,_that.messageType,_that.mediaUrl,_that.senderName);case _:
@@ -475,7 +475,7 @@ return $default(_that.body,_that.messageType,_that.mediaUrl,_that.senderName);ca
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String body,  String messageType,  String mediaUrl,  String senderName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String body, @JsonKey(name: 'message_type')  String messageType, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'sender_name')  String senderName)?  $default,) {final _that = this;
 switch (_that) {
 case _LastMessageData() when $default != null:
 return $default(_that.body,_that.messageType,_that.mediaUrl,_that.senderName);case _:
@@ -490,13 +490,13 @@ return $default(_that.body,_that.messageType,_that.mediaUrl,_that.senderName);ca
 @JsonSerializable()
 
 class _LastMessageData implements LastMessageData {
-  const _LastMessageData({this.body = '', this.messageType = 'text', this.mediaUrl = '', this.senderName = ''});
+  const _LastMessageData({this.body = '', @JsonKey(name: 'message_type') this.messageType = 'text', @JsonKey(name: 'media_url') this.mediaUrl = '', @JsonKey(name: 'sender_name') this.senderName = ''});
   factory _LastMessageData.fromJson(Map<String, dynamic> json) => _$LastMessageDataFromJson(json);
 
 @override@JsonKey() final  String body;
-@override@JsonKey() final  String messageType;
-@override@JsonKey() final  String mediaUrl;
-@override@JsonKey() final  String senderName;
+@override@JsonKey(name: 'message_type') final  String messageType;
+@override@JsonKey(name: 'media_url') final  String mediaUrl;
+@override@JsonKey(name: 'sender_name') final  String senderName;
 
 /// Create a copy of LastMessageData
 /// with the given fields replaced by the non-null parameter values.
@@ -531,7 +531,7 @@ abstract mixin class _$LastMessageDataCopyWith<$Res> implements $LastMessageData
   factory _$LastMessageDataCopyWith(_LastMessageData value, $Res Function(_LastMessageData) _then) = __$LastMessageDataCopyWithImpl;
 @override @useResult
 $Res call({
- String body, String messageType, String mediaUrl, String senderName
+ String body,@JsonKey(name: 'message_type') String messageType,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'sender_name') String senderName
 });
 
 
@@ -565,7 +565,12 @@ as String,
 /// @nodoc
 mixin _$Conversation {
 
- String get id; bool get isGroup; bool get isCommunity; String get groupName; String get groupAvatarUrl; String? get groupGymId; String get subChannel; bool get callInProgress; String get description; String get coverUrl; String get inviteCode; bool get isPublic; List<ParticipantData> get participantsData; int get unreadCount; String? get membershipRole; LastMessageData? get lastMessage; String? get lastMessageAt; String get createdAt;
+ String get id;@JsonKey(name: 'is_group') bool get isGroup;@JsonKey(name: 'is_community') bool get isCommunity;@JsonKey(name: 'group_name') String get groupName;@JsonKey(name: 'group_avatar_url') String get groupAvatarUrl;@JsonKey(name: 'group_gym_id') String? get groupGymId;@JsonKey(name: 'sub_channel') String get subChannel;@JsonKey(name: 'call_in_progress') bool get callInProgress; String get description;@JsonKey(name: 'cover_url') String get coverUrl;@JsonKey(name: 'invite_code') String get inviteCode;@JsonKey(name: 'is_public') bool get isPublic;@JsonKey(name: 'participants_data') List<ParticipantData> get participantsData;@JsonKey(name: 'unread_count') int get unreadCount;@JsonKey(name: 'membership_role') String? get membershipRole;@JsonKey(name: 'last_message') LastMessageData? get lastMessage;@JsonKey(name: 'last_message_at') String? get lastMessageAt;/// Where the thread came from: 'direct' | 'discovery' | 'buddy' |
+/// 'group' | 'community'.
+ String get origin;/// Set once the thread has been promoted to a buddy relationship.
+@JsonKey(name: 'promoted_at') String? get promotedAt;/// Whether the viewer may still turn this DM into a buddy relationship.
+ bool get promotable;/// Pending | accepted | declined — null when no promotion was ever asked for.
+@JsonKey(name: 'promotion_status') String? get promotionStatus;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of Conversation
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -578,16 +583,16 @@ $ConversationCopyWith<Conversation> get copyWith => _$ConversationCopyWithImpl<C
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Conversation&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.isCommunity, isCommunity) || other.isCommunity == isCommunity)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&const DeepCollectionEquality().equals(other.participantsData, participantsData)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Conversation&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.isCommunity, isCommunity) || other.isCommunity == isCommunity)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&const DeepCollectionEquality().equals(other.participantsData, participantsData)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.origin, origin) || other.origin == origin)&&(identical(other.promotedAt, promotedAt) || other.promotedAt == promotedAt)&&(identical(other.promotable, promotable) || other.promotable == promotable)&&(identical(other.promotionStatus, promotionStatus) || other.promotionStatus == promotionStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,isGroup,isCommunity,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,description,coverUrl,inviteCode,isPublic,const DeepCollectionEquality().hash(participantsData),unreadCount,membershipRole,lastMessage,lastMessageAt,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,isGroup,isCommunity,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,description,coverUrl,inviteCode,isPublic,const DeepCollectionEquality().hash(participantsData),unreadCount,membershipRole,lastMessage,lastMessageAt,origin,promotedAt,promotable,promotionStatus,createdAt]);
 
 @override
 String toString() {
-  return 'Conversation(id: $id, isGroup: $isGroup, isCommunity: $isCommunity, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, description: $description, coverUrl: $coverUrl, inviteCode: $inviteCode, isPublic: $isPublic, participantsData: $participantsData, unreadCount: $unreadCount, membershipRole: $membershipRole, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt)';
+  return 'Conversation(id: $id, isGroup: $isGroup, isCommunity: $isCommunity, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, description: $description, coverUrl: $coverUrl, inviteCode: $inviteCode, isPublic: $isPublic, participantsData: $participantsData, unreadCount: $unreadCount, membershipRole: $membershipRole, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, origin: $origin, promotedAt: $promotedAt, promotable: $promotable, promotionStatus: $promotionStatus, createdAt: $createdAt)';
 }
 
 
@@ -598,7 +603,7 @@ abstract mixin class $ConversationCopyWith<$Res>  {
   factory $ConversationCopyWith(Conversation value, $Res Function(Conversation) _then) = _$ConversationCopyWithImpl;
 @useResult
 $Res call({
- String id, bool isGroup, bool isCommunity, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, String description, String coverUrl, String inviteCode, bool isPublic, List<ParticipantData> participantsData, int unreadCount, String? membershipRole, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
+ String id,@JsonKey(name: 'is_group') bool isGroup,@JsonKey(name: 'is_community') bool isCommunity,@JsonKey(name: 'group_name') String groupName,@JsonKey(name: 'group_avatar_url') String groupAvatarUrl,@JsonKey(name: 'group_gym_id') String? groupGymId,@JsonKey(name: 'sub_channel') String subChannel,@JsonKey(name: 'call_in_progress') bool callInProgress, String description,@JsonKey(name: 'cover_url') String coverUrl,@JsonKey(name: 'invite_code') String inviteCode,@JsonKey(name: 'is_public') bool isPublic,@JsonKey(name: 'participants_data') List<ParticipantData> participantsData,@JsonKey(name: 'unread_count') int unreadCount,@JsonKey(name: 'membership_role') String? membershipRole,@JsonKey(name: 'last_message') LastMessageData? lastMessage,@JsonKey(name: 'last_message_at') String? lastMessageAt, String origin,@JsonKey(name: 'promoted_at') String? promotedAt, bool promotable,@JsonKey(name: 'promotion_status') String? promotionStatus,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -615,7 +620,7 @@ class _$ConversationCopyWithImpl<$Res>
 
 /// Create a copy of Conversation
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? isGroup = null,Object? isCommunity = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? description = null,Object? coverUrl = null,Object? inviteCode = null,Object? isPublic = null,Object? participantsData = null,Object? unreadCount = null,Object? membershipRole = freezed,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? isGroup = null,Object? isCommunity = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? description = null,Object? coverUrl = null,Object? inviteCode = null,Object? isPublic = null,Object? participantsData = null,Object? unreadCount = null,Object? membershipRole = freezed,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? origin = null,Object? promotedAt = freezed,Object? promotable = null,Object? promotionStatus = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,isGroup: null == isGroup ? _self.isGroup : isGroup // ignore: cast_nullable_to_non_nullable
@@ -634,6 +639,10 @@ as List<ParticipantData>,unreadCount: null == unreadCount ? _self.unreadCount : 
 as int,membershipRole: freezed == membershipRole ? _self.membershipRole : membershipRole // ignore: cast_nullable_to_non_nullable
 as String?,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
 as LastMessageData?,lastMessageAt: freezed == lastMessageAt ? _self.lastMessageAt : lastMessageAt // ignore: cast_nullable_to_non_nullable
+as String?,origin: null == origin ? _self.origin : origin // ignore: cast_nullable_to_non_nullable
+as String,promotedAt: freezed == promotedAt ? _self.promotedAt : promotedAt // ignore: cast_nullable_to_non_nullable
+as String?,promotable: null == promotable ? _self.promotable : promotable // ignore: cast_nullable_to_non_nullable
+as bool,promotionStatus: freezed == promotionStatus ? _self.promotionStatus : promotionStatus // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -732,10 +741,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  List<ParticipantData> participantsData,  int unreadCount,  String? membershipRole,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'is_group')  bool isGroup, @JsonKey(name: 'is_community')  bool isCommunity, @JsonKey(name: 'group_name')  String groupName, @JsonKey(name: 'group_avatar_url')  String groupAvatarUrl, @JsonKey(name: 'group_gym_id')  String? groupGymId, @JsonKey(name: 'sub_channel')  String subChannel, @JsonKey(name: 'call_in_progress')  bool callInProgress,  String description, @JsonKey(name: 'cover_url')  String coverUrl, @JsonKey(name: 'invite_code')  String inviteCode, @JsonKey(name: 'is_public')  bool isPublic, @JsonKey(name: 'participants_data')  List<ParticipantData> participantsData, @JsonKey(name: 'unread_count')  int unreadCount, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'last_message')  LastMessageData? lastMessage, @JsonKey(name: 'last_message_at')  String? lastMessageAt,  String origin, @JsonKey(name: 'promoted_at')  String? promotedAt,  bool promotable, @JsonKey(name: 'promotion_status')  String? promotionStatus, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Conversation() when $default != null:
-return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.participantsData,_that.unreadCount,_that.membershipRole,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
+return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.participantsData,_that.unreadCount,_that.membershipRole,_that.lastMessage,_that.lastMessageAt,_that.origin,_that.promotedAt,_that.promotable,_that.promotionStatus,_that.createdAt);case _:
   return orElse();
 
 }
@@ -753,10 +762,10 @@ return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.g
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  List<ParticipantData> participantsData,  int unreadCount,  String? membershipRole,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'is_group')  bool isGroup, @JsonKey(name: 'is_community')  bool isCommunity, @JsonKey(name: 'group_name')  String groupName, @JsonKey(name: 'group_avatar_url')  String groupAvatarUrl, @JsonKey(name: 'group_gym_id')  String? groupGymId, @JsonKey(name: 'sub_channel')  String subChannel, @JsonKey(name: 'call_in_progress')  bool callInProgress,  String description, @JsonKey(name: 'cover_url')  String coverUrl, @JsonKey(name: 'invite_code')  String inviteCode, @JsonKey(name: 'is_public')  bool isPublic, @JsonKey(name: 'participants_data')  List<ParticipantData> participantsData, @JsonKey(name: 'unread_count')  int unreadCount, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'last_message')  LastMessageData? lastMessage, @JsonKey(name: 'last_message_at')  String? lastMessageAt,  String origin, @JsonKey(name: 'promoted_at')  String? promotedAt,  bool promotable, @JsonKey(name: 'promotion_status')  String? promotionStatus, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Conversation():
-return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.participantsData,_that.unreadCount,_that.membershipRole,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
+return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.participantsData,_that.unreadCount,_that.membershipRole,_that.lastMessage,_that.lastMessageAt,_that.origin,_that.promotedAt,_that.promotable,_that.promotionStatus,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -773,10 +782,10 @@ return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.g
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  List<ParticipantData> participantsData,  int unreadCount,  String? membershipRole,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'is_group')  bool isGroup, @JsonKey(name: 'is_community')  bool isCommunity, @JsonKey(name: 'group_name')  String groupName, @JsonKey(name: 'group_avatar_url')  String groupAvatarUrl, @JsonKey(name: 'group_gym_id')  String? groupGymId, @JsonKey(name: 'sub_channel')  String subChannel, @JsonKey(name: 'call_in_progress')  bool callInProgress,  String description, @JsonKey(name: 'cover_url')  String coverUrl, @JsonKey(name: 'invite_code')  String inviteCode, @JsonKey(name: 'is_public')  bool isPublic, @JsonKey(name: 'participants_data')  List<ParticipantData> participantsData, @JsonKey(name: 'unread_count')  int unreadCount, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'last_message')  LastMessageData? lastMessage, @JsonKey(name: 'last_message_at')  String? lastMessageAt,  String origin, @JsonKey(name: 'promoted_at')  String? promotedAt,  bool promotable, @JsonKey(name: 'promotion_status')  String? promotionStatus, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Conversation() when $default != null:
-return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.participantsData,_that.unreadCount,_that.membershipRole,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
+return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.participantsData,_that.unreadCount,_that.membershipRole,_that.lastMessage,_that.lastMessageAt,_that.origin,_that.promotedAt,_that.promotable,_that.promotionStatus,_that.createdAt);case _:
   return null;
 
 }
@@ -788,33 +797,42 @@ return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.g
 @JsonSerializable()
 
 class _Conversation implements Conversation {
-  const _Conversation({required this.id, this.isGroup = false, this.isCommunity = false, this.groupName = '', this.groupAvatarUrl = '', this.groupGymId, this.subChannel = '', this.callInProgress = false, this.description = '', this.coverUrl = '', this.inviteCode = '', this.isPublic = false, final  List<ParticipantData> participantsData = const <ParticipantData>[], this.unreadCount = 0, this.membershipRole, this.lastMessage, this.lastMessageAt, required this.createdAt}): _participantsData = participantsData;
+  const _Conversation({required this.id, @JsonKey(name: 'is_group') this.isGroup = false, @JsonKey(name: 'is_community') this.isCommunity = false, @JsonKey(name: 'group_name') this.groupName = '', @JsonKey(name: 'group_avatar_url') this.groupAvatarUrl = '', @JsonKey(name: 'group_gym_id') this.groupGymId, @JsonKey(name: 'sub_channel') this.subChannel = '', @JsonKey(name: 'call_in_progress') this.callInProgress = false, this.description = '', @JsonKey(name: 'cover_url') this.coverUrl = '', @JsonKey(name: 'invite_code') this.inviteCode = '', @JsonKey(name: 'is_public') this.isPublic = false, @JsonKey(name: 'participants_data') final  List<ParticipantData> participantsData = const <ParticipantData>[], @JsonKey(name: 'unread_count') this.unreadCount = 0, @JsonKey(name: 'membership_role') this.membershipRole, @JsonKey(name: 'last_message') this.lastMessage, @JsonKey(name: 'last_message_at') this.lastMessageAt, this.origin = 'direct', @JsonKey(name: 'promoted_at') this.promotedAt, this.promotable = false, @JsonKey(name: 'promotion_status') this.promotionStatus, @JsonKey(name: 'created_at') this.createdAt = ''}): _participantsData = participantsData;
   factory _Conversation.fromJson(Map<String, dynamic> json) => _$ConversationFromJson(json);
 
 @override final  String id;
-@override@JsonKey() final  bool isGroup;
-@override@JsonKey() final  bool isCommunity;
-@override@JsonKey() final  String groupName;
-@override@JsonKey() final  String groupAvatarUrl;
-@override final  String? groupGymId;
-@override@JsonKey() final  String subChannel;
-@override@JsonKey() final  bool callInProgress;
+@override@JsonKey(name: 'is_group') final  bool isGroup;
+@override@JsonKey(name: 'is_community') final  bool isCommunity;
+@override@JsonKey(name: 'group_name') final  String groupName;
+@override@JsonKey(name: 'group_avatar_url') final  String groupAvatarUrl;
+@override@JsonKey(name: 'group_gym_id') final  String? groupGymId;
+@override@JsonKey(name: 'sub_channel') final  String subChannel;
+@override@JsonKey(name: 'call_in_progress') final  bool callInProgress;
 @override@JsonKey() final  String description;
-@override@JsonKey() final  String coverUrl;
-@override@JsonKey() final  String inviteCode;
-@override@JsonKey() final  bool isPublic;
+@override@JsonKey(name: 'cover_url') final  String coverUrl;
+@override@JsonKey(name: 'invite_code') final  String inviteCode;
+@override@JsonKey(name: 'is_public') final  bool isPublic;
  final  List<ParticipantData> _participantsData;
-@override@JsonKey() List<ParticipantData> get participantsData {
+@override@JsonKey(name: 'participants_data') List<ParticipantData> get participantsData {
   if (_participantsData is EqualUnmodifiableListView) return _participantsData;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_participantsData);
 }
 
-@override@JsonKey() final  int unreadCount;
-@override final  String? membershipRole;
-@override final  LastMessageData? lastMessage;
-@override final  String? lastMessageAt;
-@override final  String createdAt;
+@override@JsonKey(name: 'unread_count') final  int unreadCount;
+@override@JsonKey(name: 'membership_role') final  String? membershipRole;
+@override@JsonKey(name: 'last_message') final  LastMessageData? lastMessage;
+@override@JsonKey(name: 'last_message_at') final  String? lastMessageAt;
+/// Where the thread came from: 'direct' | 'discovery' | 'buddy' |
+/// 'group' | 'community'.
+@override@JsonKey() final  String origin;
+/// Set once the thread has been promoted to a buddy relationship.
+@override@JsonKey(name: 'promoted_at') final  String? promotedAt;
+/// Whether the viewer may still turn this DM into a buddy relationship.
+@override@JsonKey() final  bool promotable;
+/// Pending | accepted | declined — null when no promotion was ever asked for.
+@override@JsonKey(name: 'promotion_status') final  String? promotionStatus;
+@override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of Conversation
 /// with the given fields replaced by the non-null parameter values.
@@ -829,16 +847,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Conversation&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.isCommunity, isCommunity) || other.isCommunity == isCommunity)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&const DeepCollectionEquality().equals(other._participantsData, _participantsData)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Conversation&&(identical(other.id, id) || other.id == id)&&(identical(other.isGroup, isGroup) || other.isGroup == isGroup)&&(identical(other.isCommunity, isCommunity) || other.isCommunity == isCommunity)&&(identical(other.groupName, groupName) || other.groupName == groupName)&&(identical(other.groupAvatarUrl, groupAvatarUrl) || other.groupAvatarUrl == groupAvatarUrl)&&(identical(other.groupGymId, groupGymId) || other.groupGymId == groupGymId)&&(identical(other.subChannel, subChannel) || other.subChannel == subChannel)&&(identical(other.callInProgress, callInProgress) || other.callInProgress == callInProgress)&&(identical(other.description, description) || other.description == description)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.inviteCode, inviteCode) || other.inviteCode == inviteCode)&&(identical(other.isPublic, isPublic) || other.isPublic == isPublic)&&const DeepCollectionEquality().equals(other._participantsData, _participantsData)&&(identical(other.unreadCount, unreadCount) || other.unreadCount == unreadCount)&&(identical(other.membershipRole, membershipRole) || other.membershipRole == membershipRole)&&(identical(other.lastMessage, lastMessage) || other.lastMessage == lastMessage)&&(identical(other.lastMessageAt, lastMessageAt) || other.lastMessageAt == lastMessageAt)&&(identical(other.origin, origin) || other.origin == origin)&&(identical(other.promotedAt, promotedAt) || other.promotedAt == promotedAt)&&(identical(other.promotable, promotable) || other.promotable == promotable)&&(identical(other.promotionStatus, promotionStatus) || other.promotionStatus == promotionStatus)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,isGroup,isCommunity,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,description,coverUrl,inviteCode,isPublic,const DeepCollectionEquality().hash(_participantsData),unreadCount,membershipRole,lastMessage,lastMessageAt,createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,isGroup,isCommunity,groupName,groupAvatarUrl,groupGymId,subChannel,callInProgress,description,coverUrl,inviteCode,isPublic,const DeepCollectionEquality().hash(_participantsData),unreadCount,membershipRole,lastMessage,lastMessageAt,origin,promotedAt,promotable,promotionStatus,createdAt]);
 
 @override
 String toString() {
-  return 'Conversation(id: $id, isGroup: $isGroup, isCommunity: $isCommunity, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, description: $description, coverUrl: $coverUrl, inviteCode: $inviteCode, isPublic: $isPublic, participantsData: $participantsData, unreadCount: $unreadCount, membershipRole: $membershipRole, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, createdAt: $createdAt)';
+  return 'Conversation(id: $id, isGroup: $isGroup, isCommunity: $isCommunity, groupName: $groupName, groupAvatarUrl: $groupAvatarUrl, groupGymId: $groupGymId, subChannel: $subChannel, callInProgress: $callInProgress, description: $description, coverUrl: $coverUrl, inviteCode: $inviteCode, isPublic: $isPublic, participantsData: $participantsData, unreadCount: $unreadCount, membershipRole: $membershipRole, lastMessage: $lastMessage, lastMessageAt: $lastMessageAt, origin: $origin, promotedAt: $promotedAt, promotable: $promotable, promotionStatus: $promotionStatus, createdAt: $createdAt)';
 }
 
 
@@ -849,7 +867,7 @@ abstract mixin class _$ConversationCopyWith<$Res> implements $ConversationCopyWi
   factory _$ConversationCopyWith(_Conversation value, $Res Function(_Conversation) _then) = __$ConversationCopyWithImpl;
 @override @useResult
 $Res call({
- String id, bool isGroup, bool isCommunity, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, String description, String coverUrl, String inviteCode, bool isPublic, List<ParticipantData> participantsData, int unreadCount, String? membershipRole, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
+ String id,@JsonKey(name: 'is_group') bool isGroup,@JsonKey(name: 'is_community') bool isCommunity,@JsonKey(name: 'group_name') String groupName,@JsonKey(name: 'group_avatar_url') String groupAvatarUrl,@JsonKey(name: 'group_gym_id') String? groupGymId,@JsonKey(name: 'sub_channel') String subChannel,@JsonKey(name: 'call_in_progress') bool callInProgress, String description,@JsonKey(name: 'cover_url') String coverUrl,@JsonKey(name: 'invite_code') String inviteCode,@JsonKey(name: 'is_public') bool isPublic,@JsonKey(name: 'participants_data') List<ParticipantData> participantsData,@JsonKey(name: 'unread_count') int unreadCount,@JsonKey(name: 'membership_role') String? membershipRole,@JsonKey(name: 'last_message') LastMessageData? lastMessage,@JsonKey(name: 'last_message_at') String? lastMessageAt, String origin,@JsonKey(name: 'promoted_at') String? promotedAt, bool promotable,@JsonKey(name: 'promotion_status') String? promotionStatus,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -866,7 +884,7 @@ class __$ConversationCopyWithImpl<$Res>
 
 /// Create a copy of Conversation
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? isGroup = null,Object? isCommunity = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? description = null,Object? coverUrl = null,Object? inviteCode = null,Object? isPublic = null,Object? participantsData = null,Object? unreadCount = null,Object? membershipRole = freezed,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? isGroup = null,Object? isCommunity = null,Object? groupName = null,Object? groupAvatarUrl = null,Object? groupGymId = freezed,Object? subChannel = null,Object? callInProgress = null,Object? description = null,Object? coverUrl = null,Object? inviteCode = null,Object? isPublic = null,Object? participantsData = null,Object? unreadCount = null,Object? membershipRole = freezed,Object? lastMessage = freezed,Object? lastMessageAt = freezed,Object? origin = null,Object? promotedAt = freezed,Object? promotable = null,Object? promotionStatus = freezed,Object? createdAt = null,}) {
   return _then(_Conversation(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,isGroup: null == isGroup ? _self.isGroup : isGroup // ignore: cast_nullable_to_non_nullable
@@ -885,6 +903,10 @@ as List<ParticipantData>,unreadCount: null == unreadCount ? _self.unreadCount : 
 as int,membershipRole: freezed == membershipRole ? _self.membershipRole : membershipRole // ignore: cast_nullable_to_non_nullable
 as String?,lastMessage: freezed == lastMessage ? _self.lastMessage : lastMessage // ignore: cast_nullable_to_non_nullable
 as LastMessageData?,lastMessageAt: freezed == lastMessageAt ? _self.lastMessageAt : lastMessageAt // ignore: cast_nullable_to_non_nullable
+as String?,origin: null == origin ? _self.origin : origin // ignore: cast_nullable_to_non_nullable
+as String,promotedAt: freezed == promotedAt ? _self.promotedAt : promotedAt // ignore: cast_nullable_to_non_nullable
+as String?,promotable: null == promotable ? _self.promotable : promotable // ignore: cast_nullable_to_non_nullable
+as bool,promotionStatus: freezed == promotionStatus ? _self.promotionStatus : promotionStatus // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -909,7 +931,7 @@ $LastMessageDataCopyWith<$Res>? get lastMessage {
 /// @nodoc
 mixin _$CommunityMember {
 
- String get userId; String get username; String get displayName; String get avatarUrl; String get verificationStatus; String get role; String get createdAt;
+@JsonKey(name: 'user_id') String get userId; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'verification_status') String get verificationStatus; String get role;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of CommunityMember
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -942,7 +964,7 @@ abstract mixin class $CommunityMemberCopyWith<$Res>  {
   factory $CommunityMemberCopyWith(CommunityMember value, $Res Function(CommunityMember) _then) = _$CommunityMemberCopyWithImpl;
 @useResult
 $Res call({
- String userId, String username, String displayName, String avatarUrl, String verificationStatus, String role, String createdAt
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus, String role,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -1053,7 +1075,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus,  String role,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus,  String role, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CommunityMember() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.role,_that.createdAt);case _:
@@ -1074,7 +1096,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus,  String role,  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus,  String role, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _CommunityMember():
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.role,_that.createdAt);case _:
@@ -1094,7 +1116,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String username,  String displayName,  String avatarUrl,  String verificationStatus,  String role,  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus,  String role, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _CommunityMember() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus,_that.role,_that.createdAt);case _:
@@ -1109,16 +1131,16 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 @JsonSerializable()
 
 class _CommunityMember implements CommunityMember {
-  const _CommunityMember({required this.userId, required this.username, required this.displayName, this.avatarUrl = '', this.verificationStatus = 'none', this.role = 'member', required this.createdAt});
+  const _CommunityMember({@JsonKey(name: 'user_id') this.userId = '', this.username = '', @JsonKey(name: 'display_name') this.displayName = '', @JsonKey(name: 'avatar_url') this.avatarUrl = '', @JsonKey(name: 'verification_status') this.verificationStatus = 'none', this.role = 'member', @JsonKey(name: 'created_at') this.createdAt = ''});
   factory _CommunityMember.fromJson(Map<String, dynamic> json) => _$CommunityMemberFromJson(json);
 
-@override final  String userId;
-@override final  String username;
-@override final  String displayName;
-@override@JsonKey() final  String avatarUrl;
-@override@JsonKey() final  String verificationStatus;
+@override@JsonKey(name: 'user_id') final  String userId;
+@override@JsonKey() final  String username;
+@override@JsonKey(name: 'display_name') final  String displayName;
+@override@JsonKey(name: 'avatar_url') final  String avatarUrl;
+@override@JsonKey(name: 'verification_status') final  String verificationStatus;
 @override@JsonKey() final  String role;
-@override final  String createdAt;
+@override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of CommunityMember
 /// with the given fields replaced by the non-null parameter values.
@@ -1153,7 +1175,7 @@ abstract mixin class _$CommunityMemberCopyWith<$Res> implements $CommunityMember
   factory _$CommunityMemberCopyWith(_CommunityMember value, $Res Function(_CommunityMember) _then) = __$CommunityMemberCopyWithImpl;
 @override @useResult
 $Res call({
- String userId, String username, String displayName, String avatarUrl, String verificationStatus, String role, String createdAt
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus, String role,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -1190,7 +1212,7 @@ as String,
 /// @nodoc
 mixin _$CommunityPostComment {
 
- String get id; String get postId; String get body; String? get replyToId; int get replyCount; ProfileBrief get authorData; String get createdAt;
+ String get id;@JsonKey(name: 'post_id') String get postId; String get body;@JsonKey(name: 'reply_to_id') String? get replyToId;@JsonKey(name: 'reply_count') int get replyCount;@JsonKey(name: 'author_data') ProfileBrief get authorData;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of CommunityPostComment
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1223,7 +1245,7 @@ abstract mixin class $CommunityPostCommentCopyWith<$Res>  {
   factory $CommunityPostCommentCopyWith(CommunityPostComment value, $Res Function(CommunityPostComment) _then) = _$CommunityPostCommentCopyWithImpl;
 @useResult
 $Res call({
- String id, String postId, String body, String? replyToId, int replyCount, ProfileBrief authorData, String createdAt
+ String id,@JsonKey(name: 'post_id') String postId, String body,@JsonKey(name: 'reply_to_id') String? replyToId,@JsonKey(name: 'reply_count') int replyCount,@JsonKey(name: 'author_data') ProfileBrief authorData,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -1343,7 +1365,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String postId,  String body,  String? replyToId,  int replyCount,  ProfileBrief authorData,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'post_id')  String postId,  String body, @JsonKey(name: 'reply_to_id')  String? replyToId, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CommunityPostComment() when $default != null:
 return $default(_that.id,_that.postId,_that.body,_that.replyToId,_that.replyCount,_that.authorData,_that.createdAt);case _:
@@ -1364,7 +1386,7 @@ return $default(_that.id,_that.postId,_that.body,_that.replyToId,_that.replyCoun
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String postId,  String body,  String? replyToId,  int replyCount,  ProfileBrief authorData,  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'post_id')  String postId,  String body, @JsonKey(name: 'reply_to_id')  String? replyToId, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _CommunityPostComment():
 return $default(_that.id,_that.postId,_that.body,_that.replyToId,_that.replyCount,_that.authorData,_that.createdAt);case _:
@@ -1384,7 +1406,7 @@ return $default(_that.id,_that.postId,_that.body,_that.replyToId,_that.replyCoun
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String postId,  String body,  String? replyToId,  int replyCount,  ProfileBrief authorData,  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'post_id')  String postId,  String body, @JsonKey(name: 'reply_to_id')  String? replyToId, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _CommunityPostComment() when $default != null:
 return $default(_that.id,_that.postId,_that.body,_that.replyToId,_that.replyCount,_that.authorData,_that.createdAt);case _:
@@ -1399,16 +1421,16 @@ return $default(_that.id,_that.postId,_that.body,_that.replyToId,_that.replyCoun
 @JsonSerializable()
 
 class _CommunityPostComment implements CommunityPostComment {
-  const _CommunityPostComment({required this.id, required this.postId, required this.body, this.replyToId, this.replyCount = 0, required this.authorData, required this.createdAt});
+  const _CommunityPostComment({required this.id, @JsonKey(name: 'post_id') this.postId = '', this.body = '', @JsonKey(name: 'reply_to_id') this.replyToId, @JsonKey(name: 'reply_count') this.replyCount = 0, @JsonKey(name: 'author_data') this.authorData = const ProfileBrief(), @JsonKey(name: 'created_at') this.createdAt = ''});
   factory _CommunityPostComment.fromJson(Map<String, dynamic> json) => _$CommunityPostCommentFromJson(json);
 
 @override final  String id;
-@override final  String postId;
-@override final  String body;
-@override final  String? replyToId;
-@override@JsonKey() final  int replyCount;
-@override final  ProfileBrief authorData;
-@override final  String createdAt;
+@override@JsonKey(name: 'post_id') final  String postId;
+@override@JsonKey() final  String body;
+@override@JsonKey(name: 'reply_to_id') final  String? replyToId;
+@override@JsonKey(name: 'reply_count') final  int replyCount;
+@override@JsonKey(name: 'author_data') final  ProfileBrief authorData;
+@override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of CommunityPostComment
 /// with the given fields replaced by the non-null parameter values.
@@ -1443,7 +1465,7 @@ abstract mixin class _$CommunityPostCommentCopyWith<$Res> implements $CommunityP
   factory _$CommunityPostCommentCopyWith(_CommunityPostComment value, $Res Function(_CommunityPostComment) _then) = __$CommunityPostCommentCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String postId, String body, String? replyToId, int replyCount, ProfileBrief authorData, String createdAt
+ String id,@JsonKey(name: 'post_id') String postId, String body,@JsonKey(name: 'reply_to_id') String? replyToId,@JsonKey(name: 'reply_count') int replyCount,@JsonKey(name: 'author_data') ProfileBrief authorData,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -1489,7 +1511,7 @@ $ProfileBriefCopyWith<$Res> get authorData {
 /// @nodoc
 mixin _$ProfileBrief {
 
- String get userId; String get username; String get displayName; String get avatarUrl; String get role;
+@JsonKey(name: 'user_id') String get userId; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl; String get role;
 /// Create a copy of ProfileBrief
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1522,7 +1544,7 @@ abstract mixin class $ProfileBriefCopyWith<$Res>  {
   factory $ProfileBriefCopyWith(ProfileBrief value, $Res Function(ProfileBrief) _then) = _$ProfileBriefCopyWithImpl;
 @useResult
 $Res call({
- String userId, String username, String displayName, String avatarUrl, String role
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl, String role
 });
 
 
@@ -1631,7 +1653,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String role)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl,  String role)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ProfileBrief() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.role);case _:
@@ -1652,7 +1674,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String username,  String displayName,  String avatarUrl,  String role)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl,  String role)  $default,) {final _that = this;
 switch (_that) {
 case _ProfileBrief():
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.role);case _:
@@ -1672,7 +1694,7 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String username,  String displayName,  String avatarUrl,  String role)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl,  String role)?  $default,) {final _that = this;
 switch (_that) {
 case _ProfileBrief() when $default != null:
 return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.role);case _:
@@ -1687,13 +1709,13 @@ return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_t
 @JsonSerializable()
 
 class _ProfileBrief implements ProfileBrief {
-  const _ProfileBrief({required this.userId, required this.username, required this.displayName, this.avatarUrl = '', this.role = ''});
+  const _ProfileBrief({@JsonKey(name: 'user_id') this.userId = '', this.username = '', @JsonKey(name: 'display_name') this.displayName = '', @JsonKey(name: 'avatar_url') this.avatarUrl = '', this.role = ''});
   factory _ProfileBrief.fromJson(Map<String, dynamic> json) => _$ProfileBriefFromJson(json);
 
-@override final  String userId;
-@override final  String username;
-@override final  String displayName;
-@override@JsonKey() final  String avatarUrl;
+@override@JsonKey(name: 'user_id') final  String userId;
+@override@JsonKey() final  String username;
+@override@JsonKey(name: 'display_name') final  String displayName;
+@override@JsonKey(name: 'avatar_url') final  String avatarUrl;
 @override@JsonKey() final  String role;
 
 /// Create a copy of ProfileBrief
@@ -1729,7 +1751,7 @@ abstract mixin class _$ProfileBriefCopyWith<$Res> implements $ProfileBriefCopyWi
   factory _$ProfileBriefCopyWith(_ProfileBrief value, $Res Function(_ProfileBrief) _then) = __$ProfileBriefCopyWithImpl;
 @override @useResult
 $Res call({
- String userId, String username, String displayName, String avatarUrl, String role
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl, String role
 });
 
 
@@ -1764,7 +1786,9 @@ as String,
 /// @nodoc
 mixin _$CommunityPost {
 
- String get id; String get conversationId; String get authorId; String get body; String get mediaUrl; String get mediaMime; bool get isPinned; int get likeCount; int get commentCount; ProfileBrief get authorData; bool get isLiked; List<CommunityPostComment> get comments; String get createdAt;
+ String get id;@JsonKey(name: 'conversation_id') String get conversationId;@JsonKey(name: 'author_id') String get authorId; String get body;@JsonKey(name: 'media_url') String get mediaUrl;@JsonKey(name: 'media_mime') String get mediaMime;@JsonKey(name: 'is_pinned') bool get isPinned;@JsonKey(name: 'like_count') int get likeCount;@JsonKey(name: 'comment_count') int get commentCount;@JsonKey(name: 'author_data') ProfileBrief get authorData;@JsonKey(name: 'is_liked') bool get isLiked;/// `null` unless the request passed `include_comments`, so the default has
+/// to swallow an explicit null rather than throw.
+ List<CommunityPostComment> get comments;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of CommunityPost
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1797,7 +1821,7 @@ abstract mixin class $CommunityPostCopyWith<$Res>  {
   factory $CommunityPostCopyWith(CommunityPost value, $Res Function(CommunityPost) _then) = _$CommunityPostCopyWithImpl;
 @useResult
 $Res call({
- String id, String conversationId, String authorId, String body, String mediaUrl, String mediaMime, bool isPinned, int likeCount, int commentCount, ProfileBrief authorData, bool isLiked, List<CommunityPostComment> comments, String createdAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'author_id') String authorId, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'is_pinned') bool isPinned,@JsonKey(name: 'like_count') int likeCount,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'author_data') ProfileBrief authorData,@JsonKey(name: 'is_liked') bool isLiked, List<CommunityPostComment> comments,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -1923,7 +1947,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String conversationId,  String authorId,  String body,  String mediaUrl,  String mediaMime,  bool isPinned,  int likeCount,  int commentCount,  ProfileBrief authorData,  bool isLiked,  List<CommunityPostComment> comments,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'author_id')  String authorId,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'is_pinned')  bool isPinned, @JsonKey(name: 'like_count')  int likeCount, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'is_liked')  bool isLiked,  List<CommunityPostComment> comments, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CommunityPost() when $default != null:
 return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt);case _:
@@ -1944,7 +1968,7 @@ return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.me
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String conversationId,  String authorId,  String body,  String mediaUrl,  String mediaMime,  bool isPinned,  int likeCount,  int commentCount,  ProfileBrief authorData,  bool isLiked,  List<CommunityPostComment> comments,  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'author_id')  String authorId,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'is_pinned')  bool isPinned, @JsonKey(name: 'like_count')  int likeCount, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'is_liked')  bool isLiked,  List<CommunityPostComment> comments, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _CommunityPost():
 return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt);case _:
@@ -1964,7 +1988,7 @@ return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.me
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String conversationId,  String authorId,  String body,  String mediaUrl,  String mediaMime,  bool isPinned,  int likeCount,  int commentCount,  ProfileBrief authorData,  bool isLiked,  List<CommunityPostComment> comments,  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'author_id')  String authorId,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'is_pinned')  bool isPinned, @JsonKey(name: 'like_count')  int likeCount, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'is_liked')  bool isLiked,  List<CommunityPostComment> comments, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _CommunityPost() when $default != null:
 return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt);case _:
@@ -1979,28 +2003,32 @@ return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.me
 @JsonSerializable()
 
 class _CommunityPost implements CommunityPost {
-  const _CommunityPost({required this.id, required this.conversationId, required this.authorId, this.body = '', this.mediaUrl = '', this.mediaMime = '', this.isPinned = false, this.likeCount = 0, this.commentCount = 0, required this.authorData, this.isLiked = false, final  List<CommunityPostComment> comments = const <CommunityPostComment>[], required this.createdAt}): _comments = comments;
+  const _CommunityPost({required this.id, @JsonKey(name: 'conversation_id') this.conversationId = '', @JsonKey(name: 'author_id') this.authorId = '', this.body = '', @JsonKey(name: 'media_url') this.mediaUrl = '', @JsonKey(name: 'media_mime') this.mediaMime = '', @JsonKey(name: 'is_pinned') this.isPinned = false, @JsonKey(name: 'like_count') this.likeCount = 0, @JsonKey(name: 'comment_count') this.commentCount = 0, @JsonKey(name: 'author_data') this.authorData = const ProfileBrief(), @JsonKey(name: 'is_liked') this.isLiked = false, final  List<CommunityPostComment> comments = const <CommunityPostComment>[], @JsonKey(name: 'created_at') this.createdAt = ''}): _comments = comments;
   factory _CommunityPost.fromJson(Map<String, dynamic> json) => _$CommunityPostFromJson(json);
 
 @override final  String id;
-@override final  String conversationId;
-@override final  String authorId;
+@override@JsonKey(name: 'conversation_id') final  String conversationId;
+@override@JsonKey(name: 'author_id') final  String authorId;
 @override@JsonKey() final  String body;
-@override@JsonKey() final  String mediaUrl;
-@override@JsonKey() final  String mediaMime;
-@override@JsonKey() final  bool isPinned;
-@override@JsonKey() final  int likeCount;
-@override@JsonKey() final  int commentCount;
-@override final  ProfileBrief authorData;
-@override@JsonKey() final  bool isLiked;
+@override@JsonKey(name: 'media_url') final  String mediaUrl;
+@override@JsonKey(name: 'media_mime') final  String mediaMime;
+@override@JsonKey(name: 'is_pinned') final  bool isPinned;
+@override@JsonKey(name: 'like_count') final  int likeCount;
+@override@JsonKey(name: 'comment_count') final  int commentCount;
+@override@JsonKey(name: 'author_data') final  ProfileBrief authorData;
+@override@JsonKey(name: 'is_liked') final  bool isLiked;
+/// `null` unless the request passed `include_comments`, so the default has
+/// to swallow an explicit null rather than throw.
  final  List<CommunityPostComment> _comments;
+/// `null` unless the request passed `include_comments`, so the default has
+/// to swallow an explicit null rather than throw.
 @override@JsonKey() List<CommunityPostComment> get comments {
   if (_comments is EqualUnmodifiableListView) return _comments;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_comments);
 }
 
-@override final  String createdAt;
+@override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of CommunityPost
 /// with the given fields replaced by the non-null parameter values.
@@ -2035,7 +2063,7 @@ abstract mixin class _$CommunityPostCopyWith<$Res> implements $CommunityPostCopy
   factory _$CommunityPostCopyWith(_CommunityPost value, $Res Function(_CommunityPost) _then) = __$CommunityPostCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String conversationId, String authorId, String body, String mediaUrl, String mediaMime, bool isPinned, int likeCount, int commentCount, ProfileBrief authorData, bool isLiked, List<CommunityPostComment> comments, String createdAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'author_id') String authorId, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'is_pinned') bool isPinned,@JsonKey(name: 'like_count') int likeCount,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'author_data') ProfileBrief authorData,@JsonKey(name: 'is_liked') bool isLiked, List<CommunityPostComment> comments,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -2365,7 +2393,7 @@ as List<Conversation>,
 /// @nodoc
 mixin _$CommunityDetail {
 
- String get id; bool get isGroup; bool get isCommunity; String get groupName; String get groupAvatarUrl; String? get groupGymId; String get subChannel; bool get callInProgress; String get description; String get coverUrl; String get inviteCode; bool get isPublic; String? get membershipRole; String? get myRole; int get memberCount; List<ParticipantData> get participantsData; List<CommunityMember> get members; int get unreadCount; LastMessageData? get lastMessage; String? get lastMessageAt; String get createdAt;
+ String get id;@JsonKey(name: 'is_group') bool get isGroup;@JsonKey(name: 'is_community') bool get isCommunity;@JsonKey(name: 'group_name') String get groupName;@JsonKey(name: 'group_avatar_url') String get groupAvatarUrl;@JsonKey(name: 'group_gym_id') String? get groupGymId;@JsonKey(name: 'sub_channel') String get subChannel;@JsonKey(name: 'call_in_progress') bool get callInProgress; String get description;@JsonKey(name: 'cover_url') String get coverUrl;@JsonKey(name: 'invite_code') String get inviteCode;@JsonKey(name: 'is_public') bool get isPublic;@JsonKey(name: 'membership_role') String? get membershipRole;@JsonKey(name: 'my_role') String? get myRole;@JsonKey(name: 'member_count') int get memberCount;@JsonKey(name: 'participants_data') List<ParticipantData> get participantsData; List<CommunityMember> get members;@JsonKey(name: 'unread_count') int get unreadCount;@JsonKey(name: 'last_message') LastMessageData? get lastMessage;@JsonKey(name: 'last_message_at') String? get lastMessageAt;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of CommunityDetail
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2398,7 +2426,7 @@ abstract mixin class $CommunityDetailCopyWith<$Res>  {
   factory $CommunityDetailCopyWith(CommunityDetail value, $Res Function(CommunityDetail) _then) = _$CommunityDetailCopyWithImpl;
 @useResult
 $Res call({
- String id, bool isGroup, bool isCommunity, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, String description, String coverUrl, String inviteCode, bool isPublic, String? membershipRole, String? myRole, int memberCount, List<ParticipantData> participantsData, List<CommunityMember> members, int unreadCount, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
+ String id,@JsonKey(name: 'is_group') bool isGroup,@JsonKey(name: 'is_community') bool isCommunity,@JsonKey(name: 'group_name') String groupName,@JsonKey(name: 'group_avatar_url') String groupAvatarUrl,@JsonKey(name: 'group_gym_id') String? groupGymId,@JsonKey(name: 'sub_channel') String subChannel,@JsonKey(name: 'call_in_progress') bool callInProgress, String description,@JsonKey(name: 'cover_url') String coverUrl,@JsonKey(name: 'invite_code') String inviteCode,@JsonKey(name: 'is_public') bool isPublic,@JsonKey(name: 'membership_role') String? membershipRole,@JsonKey(name: 'my_role') String? myRole,@JsonKey(name: 'member_count') int memberCount,@JsonKey(name: 'participants_data') List<ParticipantData> participantsData, List<CommunityMember> members,@JsonKey(name: 'unread_count') int unreadCount,@JsonKey(name: 'last_message') LastMessageData? lastMessage,@JsonKey(name: 'last_message_at') String? lastMessageAt,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -2535,7 +2563,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  String? membershipRole,  String? myRole,  int memberCount,  List<ParticipantData> participantsData,  List<CommunityMember> members,  int unreadCount,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'is_group')  bool isGroup, @JsonKey(name: 'is_community')  bool isCommunity, @JsonKey(name: 'group_name')  String groupName, @JsonKey(name: 'group_avatar_url')  String groupAvatarUrl, @JsonKey(name: 'group_gym_id')  String? groupGymId, @JsonKey(name: 'sub_channel')  String subChannel, @JsonKey(name: 'call_in_progress')  bool callInProgress,  String description, @JsonKey(name: 'cover_url')  String coverUrl, @JsonKey(name: 'invite_code')  String inviteCode, @JsonKey(name: 'is_public')  bool isPublic, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'my_role')  String? myRole, @JsonKey(name: 'member_count')  int memberCount, @JsonKey(name: 'participants_data')  List<ParticipantData> participantsData,  List<CommunityMember> members, @JsonKey(name: 'unread_count')  int unreadCount, @JsonKey(name: 'last_message')  LastMessageData? lastMessage, @JsonKey(name: 'last_message_at')  String? lastMessageAt, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CommunityDetail() when $default != null:
 return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.membershipRole,_that.myRole,_that.memberCount,_that.participantsData,_that.members,_that.unreadCount,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
@@ -2556,7 +2584,7 @@ return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.g
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  String? membershipRole,  String? myRole,  int memberCount,  List<ParticipantData> participantsData,  List<CommunityMember> members,  int unreadCount,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'is_group')  bool isGroup, @JsonKey(name: 'is_community')  bool isCommunity, @JsonKey(name: 'group_name')  String groupName, @JsonKey(name: 'group_avatar_url')  String groupAvatarUrl, @JsonKey(name: 'group_gym_id')  String? groupGymId, @JsonKey(name: 'sub_channel')  String subChannel, @JsonKey(name: 'call_in_progress')  bool callInProgress,  String description, @JsonKey(name: 'cover_url')  String coverUrl, @JsonKey(name: 'invite_code')  String inviteCode, @JsonKey(name: 'is_public')  bool isPublic, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'my_role')  String? myRole, @JsonKey(name: 'member_count')  int memberCount, @JsonKey(name: 'participants_data')  List<ParticipantData> participantsData,  List<CommunityMember> members, @JsonKey(name: 'unread_count')  int unreadCount, @JsonKey(name: 'last_message')  LastMessageData? lastMessage, @JsonKey(name: 'last_message_at')  String? lastMessageAt, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _CommunityDetail():
 return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.membershipRole,_that.myRole,_that.memberCount,_that.participantsData,_that.members,_that.unreadCount,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
@@ -2576,7 +2604,7 @@ return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.g
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  bool isGroup,  bool isCommunity,  String groupName,  String groupAvatarUrl,  String? groupGymId,  String subChannel,  bool callInProgress,  String description,  String coverUrl,  String inviteCode,  bool isPublic,  String? membershipRole,  String? myRole,  int memberCount,  List<ParticipantData> participantsData,  List<CommunityMember> members,  int unreadCount,  LastMessageData? lastMessage,  String? lastMessageAt,  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'is_group')  bool isGroup, @JsonKey(name: 'is_community')  bool isCommunity, @JsonKey(name: 'group_name')  String groupName, @JsonKey(name: 'group_avatar_url')  String groupAvatarUrl, @JsonKey(name: 'group_gym_id')  String? groupGymId, @JsonKey(name: 'sub_channel')  String subChannel, @JsonKey(name: 'call_in_progress')  bool callInProgress,  String description, @JsonKey(name: 'cover_url')  String coverUrl, @JsonKey(name: 'invite_code')  String inviteCode, @JsonKey(name: 'is_public')  bool isPublic, @JsonKey(name: 'membership_role')  String? membershipRole, @JsonKey(name: 'my_role')  String? myRole, @JsonKey(name: 'member_count')  int memberCount, @JsonKey(name: 'participants_data')  List<ParticipantData> participantsData,  List<CommunityMember> members, @JsonKey(name: 'unread_count')  int unreadCount, @JsonKey(name: 'last_message')  LastMessageData? lastMessage, @JsonKey(name: 'last_message_at')  String? lastMessageAt, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _CommunityDetail() when $default != null:
 return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.groupAvatarUrl,_that.groupGymId,_that.subChannel,_that.callInProgress,_that.description,_that.coverUrl,_that.inviteCode,_that.isPublic,_that.membershipRole,_that.myRole,_that.memberCount,_that.participantsData,_that.members,_that.unreadCount,_that.lastMessage,_that.lastMessageAt,_that.createdAt);case _:
@@ -2591,26 +2619,26 @@ return $default(_that.id,_that.isGroup,_that.isCommunity,_that.groupName,_that.g
 @JsonSerializable()
 
 class _CommunityDetail implements CommunityDetail {
-  const _CommunityDetail({required this.id, this.isGroup = false, this.isCommunity = true, this.groupName = '', this.groupAvatarUrl = '', this.groupGymId, this.subChannel = '', this.callInProgress = false, this.description = '', this.coverUrl = '', this.inviteCode = '', this.isPublic = false, this.membershipRole, this.myRole, this.memberCount = 0, final  List<ParticipantData> participantsData = const <ParticipantData>[], final  List<CommunityMember> members = const <CommunityMember>[], this.unreadCount = 0, this.lastMessage, this.lastMessageAt, required this.createdAt}): _participantsData = participantsData,_members = members;
+  const _CommunityDetail({required this.id, @JsonKey(name: 'is_group') this.isGroup = false, @JsonKey(name: 'is_community') this.isCommunity = true, @JsonKey(name: 'group_name') this.groupName = '', @JsonKey(name: 'group_avatar_url') this.groupAvatarUrl = '', @JsonKey(name: 'group_gym_id') this.groupGymId, @JsonKey(name: 'sub_channel') this.subChannel = '', @JsonKey(name: 'call_in_progress') this.callInProgress = false, this.description = '', @JsonKey(name: 'cover_url') this.coverUrl = '', @JsonKey(name: 'invite_code') this.inviteCode = '', @JsonKey(name: 'is_public') this.isPublic = false, @JsonKey(name: 'membership_role') this.membershipRole, @JsonKey(name: 'my_role') this.myRole, @JsonKey(name: 'member_count') this.memberCount = 0, @JsonKey(name: 'participants_data') final  List<ParticipantData> participantsData = const <ParticipantData>[], final  List<CommunityMember> members = const <CommunityMember>[], @JsonKey(name: 'unread_count') this.unreadCount = 0, @JsonKey(name: 'last_message') this.lastMessage, @JsonKey(name: 'last_message_at') this.lastMessageAt, @JsonKey(name: 'created_at') this.createdAt = ''}): _participantsData = participantsData,_members = members;
   factory _CommunityDetail.fromJson(Map<String, dynamic> json) => _$CommunityDetailFromJson(json);
 
 @override final  String id;
-@override@JsonKey() final  bool isGroup;
-@override@JsonKey() final  bool isCommunity;
-@override@JsonKey() final  String groupName;
-@override@JsonKey() final  String groupAvatarUrl;
-@override final  String? groupGymId;
-@override@JsonKey() final  String subChannel;
-@override@JsonKey() final  bool callInProgress;
+@override@JsonKey(name: 'is_group') final  bool isGroup;
+@override@JsonKey(name: 'is_community') final  bool isCommunity;
+@override@JsonKey(name: 'group_name') final  String groupName;
+@override@JsonKey(name: 'group_avatar_url') final  String groupAvatarUrl;
+@override@JsonKey(name: 'group_gym_id') final  String? groupGymId;
+@override@JsonKey(name: 'sub_channel') final  String subChannel;
+@override@JsonKey(name: 'call_in_progress') final  bool callInProgress;
 @override@JsonKey() final  String description;
-@override@JsonKey() final  String coverUrl;
-@override@JsonKey() final  String inviteCode;
-@override@JsonKey() final  bool isPublic;
-@override final  String? membershipRole;
-@override final  String? myRole;
-@override@JsonKey() final  int memberCount;
+@override@JsonKey(name: 'cover_url') final  String coverUrl;
+@override@JsonKey(name: 'invite_code') final  String inviteCode;
+@override@JsonKey(name: 'is_public') final  bool isPublic;
+@override@JsonKey(name: 'membership_role') final  String? membershipRole;
+@override@JsonKey(name: 'my_role') final  String? myRole;
+@override@JsonKey(name: 'member_count') final  int memberCount;
  final  List<ParticipantData> _participantsData;
-@override@JsonKey() List<ParticipantData> get participantsData {
+@override@JsonKey(name: 'participants_data') List<ParticipantData> get participantsData {
   if (_participantsData is EqualUnmodifiableListView) return _participantsData;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_participantsData);
@@ -2623,10 +2651,10 @@ class _CommunityDetail implements CommunityDetail {
   return EqualUnmodifiableListView(_members);
 }
 
-@override@JsonKey() final  int unreadCount;
-@override final  LastMessageData? lastMessage;
-@override final  String? lastMessageAt;
-@override final  String createdAt;
+@override@JsonKey(name: 'unread_count') final  int unreadCount;
+@override@JsonKey(name: 'last_message') final  LastMessageData? lastMessage;
+@override@JsonKey(name: 'last_message_at') final  String? lastMessageAt;
+@override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of CommunityDetail
 /// with the given fields replaced by the non-null parameter values.
@@ -2661,7 +2689,7 @@ abstract mixin class _$CommunityDetailCopyWith<$Res> implements $CommunityDetail
   factory _$CommunityDetailCopyWith(_CommunityDetail value, $Res Function(_CommunityDetail) _then) = __$CommunityDetailCopyWithImpl;
 @override @useResult
 $Res call({
- String id, bool isGroup, bool isCommunity, String groupName, String groupAvatarUrl, String? groupGymId, String subChannel, bool callInProgress, String description, String coverUrl, String inviteCode, bool isPublic, String? membershipRole, String? myRole, int memberCount, List<ParticipantData> participantsData, List<CommunityMember> members, int unreadCount, LastMessageData? lastMessage, String? lastMessageAt, String createdAt
+ String id,@JsonKey(name: 'is_group') bool isGroup,@JsonKey(name: 'is_community') bool isCommunity,@JsonKey(name: 'group_name') String groupName,@JsonKey(name: 'group_avatar_url') String groupAvatarUrl,@JsonKey(name: 'group_gym_id') String? groupGymId,@JsonKey(name: 'sub_channel') String subChannel,@JsonKey(name: 'call_in_progress') bool callInProgress, String description,@JsonKey(name: 'cover_url') String coverUrl,@JsonKey(name: 'invite_code') String inviteCode,@JsonKey(name: 'is_public') bool isPublic,@JsonKey(name: 'membership_role') String? membershipRole,@JsonKey(name: 'my_role') String? myRole,@JsonKey(name: 'member_count') int memberCount,@JsonKey(name: 'participants_data') List<ParticipantData> participantsData, List<CommunityMember> members,@JsonKey(name: 'unread_count') int unreadCount,@JsonKey(name: 'last_message') LastMessageData? lastMessage,@JsonKey(name: 'last_message_at') String? lastMessageAt,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -2724,7 +2752,7 @@ $LastMessageDataCopyWith<$Res>? get lastMessage {
 /// @nodoc
 mixin _$ReplyData {
 
- String get id; String get body; String get senderName; String get messageType; String get mediaUrl;
+ String get id; String get body;@JsonKey(name: 'sender_name') String get senderName;@JsonKey(name: 'message_type') String get messageType;@JsonKey(name: 'media_url') String get mediaUrl;
 /// Create a copy of ReplyData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2757,7 +2785,7 @@ abstract mixin class $ReplyDataCopyWith<$Res>  {
   factory $ReplyDataCopyWith(ReplyData value, $Res Function(ReplyData) _then) = _$ReplyDataCopyWithImpl;
 @useResult
 $Res call({
- String id, String body, String senderName, String messageType, String mediaUrl
+ String id, String body,@JsonKey(name: 'sender_name') String senderName,@JsonKey(name: 'message_type') String messageType,@JsonKey(name: 'media_url') String mediaUrl
 });
 
 
@@ -2866,7 +2894,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String body,  String senderName,  String messageType,  String mediaUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String body, @JsonKey(name: 'sender_name')  String senderName, @JsonKey(name: 'message_type')  String messageType, @JsonKey(name: 'media_url')  String mediaUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReplyData() when $default != null:
 return $default(_that.id,_that.body,_that.senderName,_that.messageType,_that.mediaUrl);case _:
@@ -2887,7 +2915,7 @@ return $default(_that.id,_that.body,_that.senderName,_that.messageType,_that.med
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String body,  String senderName,  String messageType,  String mediaUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String body, @JsonKey(name: 'sender_name')  String senderName, @JsonKey(name: 'message_type')  String messageType, @JsonKey(name: 'media_url')  String mediaUrl)  $default,) {final _that = this;
 switch (_that) {
 case _ReplyData():
 return $default(_that.id,_that.body,_that.senderName,_that.messageType,_that.mediaUrl);case _:
@@ -2907,7 +2935,7 @@ return $default(_that.id,_that.body,_that.senderName,_that.messageType,_that.med
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String body,  String senderName,  String messageType,  String mediaUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String body, @JsonKey(name: 'sender_name')  String senderName, @JsonKey(name: 'message_type')  String messageType, @JsonKey(name: 'media_url')  String mediaUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _ReplyData() when $default != null:
 return $default(_that.id,_that.body,_that.senderName,_that.messageType,_that.mediaUrl);case _:
@@ -2922,14 +2950,14 @@ return $default(_that.id,_that.body,_that.senderName,_that.messageType,_that.med
 @JsonSerializable()
 
 class _ReplyData implements ReplyData {
-  const _ReplyData({required this.id, this.body = '', this.senderName = '', this.messageType = 'text', this.mediaUrl = ''});
+  const _ReplyData({required this.id, this.body = '', @JsonKey(name: 'sender_name') this.senderName = '', @JsonKey(name: 'message_type') this.messageType = 'text', @JsonKey(name: 'media_url') this.mediaUrl = ''});
   factory _ReplyData.fromJson(Map<String, dynamic> json) => _$ReplyDataFromJson(json);
 
 @override final  String id;
 @override@JsonKey() final  String body;
-@override@JsonKey() final  String senderName;
-@override@JsonKey() final  String messageType;
-@override@JsonKey() final  String mediaUrl;
+@override@JsonKey(name: 'sender_name') final  String senderName;
+@override@JsonKey(name: 'message_type') final  String messageType;
+@override@JsonKey(name: 'media_url') final  String mediaUrl;
 
 /// Create a copy of ReplyData
 /// with the given fields replaced by the non-null parameter values.
@@ -2964,7 +2992,7 @@ abstract mixin class _$ReplyDataCopyWith<$Res> implements $ReplyDataCopyWith<$Re
   factory _$ReplyDataCopyWith(_ReplyData value, $Res Function(_ReplyData) _then) = __$ReplyDataCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String body, String senderName, String messageType, String mediaUrl
+ String id, String body,@JsonKey(name: 'sender_name') String senderName,@JsonKey(name: 'message_type') String messageType,@JsonKey(name: 'media_url') String mediaUrl
 });
 
 
@@ -2999,7 +3027,7 @@ as String,
 /// @nodoc
 mixin _$Message {
 
- String get id; String get conversationId; String get senderId; String get messageType; String get body; String get mediaUrl; String get mediaMime; String get fileName; String? get replyToId; Map<String, dynamic> get metadata; bool get isRead; List<String> get deletedFor; ParticipantData get senderData; ReplyData? get replyData; Map<String, int> get reactions; String get createdAt;
+ String get id;@JsonKey(name: 'conversation_id') String get conversationId;@JsonKey(name: 'sender_id') String get senderId;@JsonKey(name: 'message_type') String get messageType; String get body;@JsonKey(name: 'media_url') String get mediaUrl;@JsonKey(name: 'media_mime') String get mediaMime;@JsonKey(name: 'file_name') String get fileName;@JsonKey(name: 'reply_to_id') String? get replyToId; Map<String, dynamic> get metadata;@JsonKey(name: 'is_read') bool get isRead;@JsonKey(name: 'deleted_for') List<String> get deletedFor;@JsonKey(name: 'sender_data') ParticipantData get senderData;@JsonKey(name: 'reply_data') ReplyData? get replyData; Map<String, int> get reactions;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3032,7 +3060,7 @@ abstract mixin class $MessageCopyWith<$Res>  {
   factory $MessageCopyWith(Message value, $Res Function(Message) _then) = _$MessageCopyWithImpl;
 @useResult
 $Res call({
- String id, String conversationId, String senderId, String messageType, String body, String mediaUrl, String mediaMime, String fileName, String? replyToId, Map<String, dynamic> metadata, bool isRead, List<String> deletedFor, ParticipantData senderData, ReplyData? replyData, Map<String, int> reactions, String createdAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'sender_id') String senderId,@JsonKey(name: 'message_type') String messageType, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'file_name') String fileName,@JsonKey(name: 'reply_to_id') String? replyToId, Map<String, dynamic> metadata,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'deleted_for') List<String> deletedFor,@JsonKey(name: 'sender_data') ParticipantData senderData,@JsonKey(name: 'reply_data') ReplyData? replyData, Map<String, int> reactions,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -3173,7 +3201,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String conversationId,  String senderId,  String messageType,  String body,  String mediaUrl,  String mediaMime,  String fileName,  String? replyToId,  Map<String, dynamic> metadata,  bool isRead,  List<String> deletedFor,  ParticipantData senderData,  ReplyData? replyData,  Map<String, int> reactions,  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'sender_id')  String senderId, @JsonKey(name: 'message_type')  String messageType,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'file_name')  String fileName, @JsonKey(name: 'reply_to_id')  String? replyToId,  Map<String, dynamic> metadata, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'deleted_for')  List<String> deletedFor, @JsonKey(name: 'sender_data')  ParticipantData senderData, @JsonKey(name: 'reply_data')  ReplyData? replyData,  Map<String, int> reactions, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
 return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata,_that.isRead,_that.deletedFor,_that.senderData,_that.replyData,_that.reactions,_that.createdAt);case _:
@@ -3194,7 +3222,7 @@ return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String conversationId,  String senderId,  String messageType,  String body,  String mediaUrl,  String mediaMime,  String fileName,  String? replyToId,  Map<String, dynamic> metadata,  bool isRead,  List<String> deletedFor,  ParticipantData senderData,  ReplyData? replyData,  Map<String, int> reactions,  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'sender_id')  String senderId, @JsonKey(name: 'message_type')  String messageType,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'file_name')  String fileName, @JsonKey(name: 'reply_to_id')  String? replyToId,  Map<String, dynamic> metadata, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'deleted_for')  List<String> deletedFor, @JsonKey(name: 'sender_data')  ParticipantData senderData, @JsonKey(name: 'reply_data')  ReplyData? replyData,  Map<String, int> reactions, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Message():
 return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata,_that.isRead,_that.deletedFor,_that.senderData,_that.replyData,_that.reactions,_that.createdAt);case _:
@@ -3214,7 +3242,7 @@ return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String conversationId,  String senderId,  String messageType,  String body,  String mediaUrl,  String mediaMime,  String fileName,  String? replyToId,  Map<String, dynamic> metadata,  bool isRead,  List<String> deletedFor,  ParticipantData senderData,  ReplyData? replyData,  Map<String, int> reactions,  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'sender_id')  String senderId, @JsonKey(name: 'message_type')  String messageType,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'file_name')  String fileName, @JsonKey(name: 'reply_to_id')  String? replyToId,  Map<String, dynamic> metadata, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'deleted_for')  List<String> deletedFor, @JsonKey(name: 'sender_data')  ParticipantData senderData, @JsonKey(name: 'reply_data')  ReplyData? replyData,  Map<String, int> reactions, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
 return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata,_that.isRead,_that.deletedFor,_that.senderData,_that.replyData,_that.reactions,_that.createdAt);case _:
@@ -3229,18 +3257,18 @@ return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_
 @JsonSerializable()
 
 class _Message implements Message {
-  const _Message({required this.id, required this.conversationId, required this.senderId, this.messageType = 'text', this.body = '', this.mediaUrl = '', this.mediaMime = '', this.fileName = '', this.replyToId, final  Map<String, dynamic> metadata = const <String, dynamic>{}, this.isRead = false, final  List<String> deletedFor = const <String>[], required this.senderData, this.replyData, final  Map<String, int> reactions = const <String, int>{}, required this.createdAt}): _metadata = metadata,_deletedFor = deletedFor,_reactions = reactions;
+  const _Message({required this.id, @JsonKey(name: 'conversation_id') required this.conversationId, @JsonKey(name: 'sender_id') required this.senderId, @JsonKey(name: 'message_type') this.messageType = 'text', this.body = '', @JsonKey(name: 'media_url') this.mediaUrl = '', @JsonKey(name: 'media_mime') this.mediaMime = '', @JsonKey(name: 'file_name') this.fileName = '', @JsonKey(name: 'reply_to_id') this.replyToId, final  Map<String, dynamic> metadata = const <String, dynamic>{}, @JsonKey(name: 'is_read') this.isRead = false, @JsonKey(name: 'deleted_for') final  List<String> deletedFor = const <String>[], @JsonKey(name: 'sender_data') required this.senderData, @JsonKey(name: 'reply_data') this.replyData, final  Map<String, int> reactions = const <String, int>{}, @JsonKey(name: 'created_at') this.createdAt = ''}): _metadata = metadata,_deletedFor = deletedFor,_reactions = reactions;
   factory _Message.fromJson(Map<String, dynamic> json) => _$MessageFromJson(json);
 
 @override final  String id;
-@override final  String conversationId;
-@override final  String senderId;
-@override@JsonKey() final  String messageType;
+@override@JsonKey(name: 'conversation_id') final  String conversationId;
+@override@JsonKey(name: 'sender_id') final  String senderId;
+@override@JsonKey(name: 'message_type') final  String messageType;
 @override@JsonKey() final  String body;
-@override@JsonKey() final  String mediaUrl;
-@override@JsonKey() final  String mediaMime;
-@override@JsonKey() final  String fileName;
-@override final  String? replyToId;
+@override@JsonKey(name: 'media_url') final  String mediaUrl;
+@override@JsonKey(name: 'media_mime') final  String mediaMime;
+@override@JsonKey(name: 'file_name') final  String fileName;
+@override@JsonKey(name: 'reply_to_id') final  String? replyToId;
  final  Map<String, dynamic> _metadata;
 @override@JsonKey() Map<String, dynamic> get metadata {
   if (_metadata is EqualUnmodifiableMapView) return _metadata;
@@ -3248,16 +3276,16 @@ class _Message implements Message {
   return EqualUnmodifiableMapView(_metadata);
 }
 
-@override@JsonKey() final  bool isRead;
+@override@JsonKey(name: 'is_read') final  bool isRead;
  final  List<String> _deletedFor;
-@override@JsonKey() List<String> get deletedFor {
+@override@JsonKey(name: 'deleted_for') List<String> get deletedFor {
   if (_deletedFor is EqualUnmodifiableListView) return _deletedFor;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_deletedFor);
 }
 
-@override final  ParticipantData senderData;
-@override final  ReplyData? replyData;
+@override@JsonKey(name: 'sender_data') final  ParticipantData senderData;
+@override@JsonKey(name: 'reply_data') final  ReplyData? replyData;
  final  Map<String, int> _reactions;
 @override@JsonKey() Map<String, int> get reactions {
   if (_reactions is EqualUnmodifiableMapView) return _reactions;
@@ -3265,7 +3293,7 @@ class _Message implements Message {
   return EqualUnmodifiableMapView(_reactions);
 }
 
-@override final  String createdAt;
+@override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
@@ -3300,7 +3328,7 @@ abstract mixin class _$MessageCopyWith<$Res> implements $MessageCopyWith<$Res> {
   factory _$MessageCopyWith(_Message value, $Res Function(_Message) _then) = __$MessageCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String conversationId, String senderId, String messageType, String body, String mediaUrl, String mediaMime, String fileName, String? replyToId, Map<String, dynamic> metadata, bool isRead, List<String> deletedFor, ParticipantData senderData, ReplyData? replyData, Map<String, int> reactions, String createdAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'sender_id') String senderId,@JsonKey(name: 'message_type') String messageType, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'file_name') String fileName,@JsonKey(name: 'reply_to_id') String? replyToId, Map<String, dynamic> metadata,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'deleted_for') List<String> deletedFor,@JsonKey(name: 'sender_data') ParticipantData senderData,@JsonKey(name: 'reply_data') ReplyData? replyData, Map<String, int> reactions,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -3367,7 +3395,9 @@ $ReplyDataCopyWith<$Res>? get replyData {
 /// @nodoc
 mixin _$CallLog {
 
- String get id; String get conversationId; String get callType; String get status; int get durationSeconds; Map<String, dynamic> get callerData; Map<String, dynamic> get calleeData; String get createdAt; String? get endedAt;
+ String get id;@JsonKey(name: 'conversation_id') String get conversationId;@JsonKey(name: 'call_type') String get callType; String get status;@JsonKey(name: 'duration_seconds') int get durationSeconds;/// `{username, display_name, avatar_url}` — a computed dict, not a
+/// nested serializer, so it stays a raw map.
+@JsonKey(name: 'caller_data') Map<String, dynamic> get callerData;@JsonKey(name: 'callee_data') Map<String, dynamic> get calleeData;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'ended_at') String? get endedAt;
 /// Create a copy of CallLog
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3400,7 +3430,7 @@ abstract mixin class $CallLogCopyWith<$Res>  {
   factory $CallLogCopyWith(CallLog value, $Res Function(CallLog) _then) = _$CallLogCopyWithImpl;
 @useResult
 $Res call({
- String id, String conversationId, String callType, String status, int durationSeconds, Map<String, dynamic> callerData, Map<String, dynamic> calleeData, String createdAt, String? endedAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'call_type') String callType, String status,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'caller_data') Map<String, dynamic> callerData,@JsonKey(name: 'callee_data') Map<String, dynamic> calleeData,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'ended_at') String? endedAt
 });
 
 
@@ -3513,7 +3543,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String conversationId,  String callType,  String status,  int durationSeconds,  Map<String, dynamic> callerData,  Map<String, dynamic> calleeData,  String createdAt,  String? endedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'call_type')  String callType,  String status, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'caller_data')  Map<String, dynamic> callerData, @JsonKey(name: 'callee_data')  Map<String, dynamic> calleeData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'ended_at')  String? endedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CallLog() when $default != null:
 return $default(_that.id,_that.conversationId,_that.callType,_that.status,_that.durationSeconds,_that.callerData,_that.calleeData,_that.createdAt,_that.endedAt);case _:
@@ -3534,7 +3564,7 @@ return $default(_that.id,_that.conversationId,_that.callType,_that.status,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String conversationId,  String callType,  String status,  int durationSeconds,  Map<String, dynamic> callerData,  Map<String, dynamic> calleeData,  String createdAt,  String? endedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'call_type')  String callType,  String status, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'caller_data')  Map<String, dynamic> callerData, @JsonKey(name: 'callee_data')  Map<String, dynamic> calleeData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'ended_at')  String? endedAt)  $default,) {final _that = this;
 switch (_that) {
 case _CallLog():
 return $default(_that.id,_that.conversationId,_that.callType,_that.status,_that.durationSeconds,_that.callerData,_that.calleeData,_that.createdAt,_that.endedAt);case _:
@@ -3554,7 +3584,7 @@ return $default(_that.id,_that.conversationId,_that.callType,_that.status,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String conversationId,  String callType,  String status,  int durationSeconds,  Map<String, dynamic> callerData,  Map<String, dynamic> calleeData,  String createdAt,  String? endedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'call_type')  String callType,  String status, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'caller_data')  Map<String, dynamic> callerData, @JsonKey(name: 'callee_data')  Map<String, dynamic> calleeData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'ended_at')  String? endedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _CallLog() when $default != null:
 return $default(_that.id,_that.conversationId,_that.callType,_that.status,_that.durationSeconds,_that.callerData,_that.calleeData,_that.createdAt,_that.endedAt);case _:
@@ -3569,30 +3599,34 @@ return $default(_that.id,_that.conversationId,_that.callType,_that.status,_that.
 @JsonSerializable()
 
 class _CallLog implements CallLog {
-  const _CallLog({required this.id, required this.conversationId, this.callType = 'audio', this.status = '', this.durationSeconds = 0, required final  Map<String, dynamic> callerData, required final  Map<String, dynamic> calleeData, required this.createdAt, this.endedAt}): _callerData = callerData,_calleeData = calleeData;
+  const _CallLog({required this.id, @JsonKey(name: 'conversation_id') this.conversationId = '', @JsonKey(name: 'call_type') this.callType = 'audio', this.status = '', @JsonKey(name: 'duration_seconds') this.durationSeconds = 0, @JsonKey(name: 'caller_data') final  Map<String, dynamic> callerData = const <String, dynamic>{}, @JsonKey(name: 'callee_data') final  Map<String, dynamic> calleeData = const <String, dynamic>{}, @JsonKey(name: 'created_at') this.createdAt = '', @JsonKey(name: 'ended_at') this.endedAt}): _callerData = callerData,_calleeData = calleeData;
   factory _CallLog.fromJson(Map<String, dynamic> json) => _$CallLogFromJson(json);
 
 @override final  String id;
-@override final  String conversationId;
-@override@JsonKey() final  String callType;
+@override@JsonKey(name: 'conversation_id') final  String conversationId;
+@override@JsonKey(name: 'call_type') final  String callType;
 @override@JsonKey() final  String status;
-@override@JsonKey() final  int durationSeconds;
+@override@JsonKey(name: 'duration_seconds') final  int durationSeconds;
+/// `{username, display_name, avatar_url}` — a computed dict, not a
+/// nested serializer, so it stays a raw map.
  final  Map<String, dynamic> _callerData;
-@override Map<String, dynamic> get callerData {
+/// `{username, display_name, avatar_url}` — a computed dict, not a
+/// nested serializer, so it stays a raw map.
+@override@JsonKey(name: 'caller_data') Map<String, dynamic> get callerData {
   if (_callerData is EqualUnmodifiableMapView) return _callerData;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableMapView(_callerData);
 }
 
  final  Map<String, dynamic> _calleeData;
-@override Map<String, dynamic> get calleeData {
+@override@JsonKey(name: 'callee_data') Map<String, dynamic> get calleeData {
   if (_calleeData is EqualUnmodifiableMapView) return _calleeData;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableMapView(_calleeData);
 }
 
-@override final  String createdAt;
-@override final  String? endedAt;
+@override@JsonKey(name: 'created_at') final  String createdAt;
+@override@JsonKey(name: 'ended_at') final  String? endedAt;
 
 /// Create a copy of CallLog
 /// with the given fields replaced by the non-null parameter values.
@@ -3627,7 +3661,7 @@ abstract mixin class _$CallLogCopyWith<$Res> implements $CallLogCopyWith<$Res> {
   factory _$CallLogCopyWith(_CallLog value, $Res Function(_CallLog) _then) = __$CallLogCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String conversationId, String callType, String status, int durationSeconds, Map<String, dynamic> callerData, Map<String, dynamic> calleeData, String createdAt, String? endedAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'call_type') String callType, String status,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'caller_data') Map<String, dynamic> callerData,@JsonKey(name: 'callee_data') Map<String, dynamic> calleeData,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'ended_at') String? endedAt
 });
 
 
@@ -3941,7 +3975,7 @@ as String,
 /// @nodoc
 mixin _$PendingCall {
 
- String get conversationId; String get fromUserId; String get fromUsername; String get fromDisplayName; String get fromAvatarUrl; String get callType; Map<String, dynamic> get data;
+@JsonKey(name: 'conversation_id') String get conversationId;@JsonKey(name: 'from_user_id') String get fromUserId;@JsonKey(name: 'from_username') String get fromUsername;@JsonKey(name: 'from_display_name') String get fromDisplayName;@JsonKey(name: 'from_avatar_url') String get fromAvatarUrl;@JsonKey(name: 'call_type') String get callType; Map<String, dynamic> get data;
 /// Create a copy of PendingCall
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3974,7 +4008,7 @@ abstract mixin class $PendingCallCopyWith<$Res>  {
   factory $PendingCallCopyWith(PendingCall value, $Res Function(PendingCall) _then) = _$PendingCallCopyWithImpl;
 @useResult
 $Res call({
- String conversationId, String fromUserId, String fromUsername, String fromDisplayName, String fromAvatarUrl, String callType, Map<String, dynamic> data
+@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'from_user_id') String fromUserId,@JsonKey(name: 'from_username') String fromUsername,@JsonKey(name: 'from_display_name') String fromDisplayName,@JsonKey(name: 'from_avatar_url') String fromAvatarUrl,@JsonKey(name: 'call_type') String callType, Map<String, dynamic> data
 });
 
 
@@ -4085,7 +4119,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String conversationId,  String fromUserId,  String fromUsername,  String fromDisplayName,  String fromAvatarUrl,  String callType,  Map<String, dynamic> data)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'from_user_id')  String fromUserId, @JsonKey(name: 'from_username')  String fromUsername, @JsonKey(name: 'from_display_name')  String fromDisplayName, @JsonKey(name: 'from_avatar_url')  String fromAvatarUrl, @JsonKey(name: 'call_type')  String callType,  Map<String, dynamic> data)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PendingCall() when $default != null:
 return $default(_that.conversationId,_that.fromUserId,_that.fromUsername,_that.fromDisplayName,_that.fromAvatarUrl,_that.callType,_that.data);case _:
@@ -4106,7 +4140,7 @@ return $default(_that.conversationId,_that.fromUserId,_that.fromUsername,_that.f
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String conversationId,  String fromUserId,  String fromUsername,  String fromDisplayName,  String fromAvatarUrl,  String callType,  Map<String, dynamic> data)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'from_user_id')  String fromUserId, @JsonKey(name: 'from_username')  String fromUsername, @JsonKey(name: 'from_display_name')  String fromDisplayName, @JsonKey(name: 'from_avatar_url')  String fromAvatarUrl, @JsonKey(name: 'call_type')  String callType,  Map<String, dynamic> data)  $default,) {final _that = this;
 switch (_that) {
 case _PendingCall():
 return $default(_that.conversationId,_that.fromUserId,_that.fromUsername,_that.fromDisplayName,_that.fromAvatarUrl,_that.callType,_that.data);case _:
@@ -4126,7 +4160,7 @@ return $default(_that.conversationId,_that.fromUserId,_that.fromUsername,_that.f
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String conversationId,  String fromUserId,  String fromUsername,  String fromDisplayName,  String fromAvatarUrl,  String callType,  Map<String, dynamic> data)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'from_user_id')  String fromUserId, @JsonKey(name: 'from_username')  String fromUsername, @JsonKey(name: 'from_display_name')  String fromDisplayName, @JsonKey(name: 'from_avatar_url')  String fromAvatarUrl, @JsonKey(name: 'call_type')  String callType,  Map<String, dynamic> data)?  $default,) {final _that = this;
 switch (_that) {
 case _PendingCall() when $default != null:
 return $default(_that.conversationId,_that.fromUserId,_that.fromUsername,_that.fromDisplayName,_that.fromAvatarUrl,_that.callType,_that.data);case _:
@@ -4141,15 +4175,15 @@ return $default(_that.conversationId,_that.fromUserId,_that.fromUsername,_that.f
 @JsonSerializable()
 
 class _PendingCall implements PendingCall {
-  const _PendingCall({required this.conversationId, required this.fromUserId, required this.fromUsername, required this.fromDisplayName, required this.fromAvatarUrl, this.callType = 'audio', final  Map<String, dynamic> data = const <String, dynamic>{}}): _data = data;
+  const _PendingCall({@JsonKey(name: 'conversation_id') this.conversationId = '', @JsonKey(name: 'from_user_id') this.fromUserId = '', @JsonKey(name: 'from_username') this.fromUsername = '', @JsonKey(name: 'from_display_name') this.fromDisplayName = '', @JsonKey(name: 'from_avatar_url') this.fromAvatarUrl = '', @JsonKey(name: 'call_type') this.callType = 'audio', final  Map<String, dynamic> data = const <String, dynamic>{}}): _data = data;
   factory _PendingCall.fromJson(Map<String, dynamic> json) => _$PendingCallFromJson(json);
 
-@override final  String conversationId;
-@override final  String fromUserId;
-@override final  String fromUsername;
-@override final  String fromDisplayName;
-@override final  String fromAvatarUrl;
-@override@JsonKey() final  String callType;
+@override@JsonKey(name: 'conversation_id') final  String conversationId;
+@override@JsonKey(name: 'from_user_id') final  String fromUserId;
+@override@JsonKey(name: 'from_username') final  String fromUsername;
+@override@JsonKey(name: 'from_display_name') final  String fromDisplayName;
+@override@JsonKey(name: 'from_avatar_url') final  String fromAvatarUrl;
+@override@JsonKey(name: 'call_type') final  String callType;
  final  Map<String, dynamic> _data;
 @override@JsonKey() Map<String, dynamic> get data {
   if (_data is EqualUnmodifiableMapView) return _data;
@@ -4191,7 +4225,7 @@ abstract mixin class _$PendingCallCopyWith<$Res> implements $PendingCallCopyWith
   factory _$PendingCallCopyWith(_PendingCall value, $Res Function(_PendingCall) _then) = __$PendingCallCopyWithImpl;
 @override @useResult
 $Res call({
- String conversationId, String fromUserId, String fromUsername, String fromDisplayName, String fromAvatarUrl, String callType, Map<String, dynamic> data
+@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'from_user_id') String fromUserId,@JsonKey(name: 'from_username') String fromUsername,@JsonKey(name: 'from_display_name') String fromDisplayName,@JsonKey(name: 'from_avatar_url') String fromAvatarUrl,@JsonKey(name: 'call_type') String callType, Map<String, dynamic> data
 });
 
 

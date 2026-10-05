@@ -89,15 +89,38 @@ class _BalanceHeader extends ConsumerWidget {
       child: balanceAsync.when(
         data: (balance) {
           if (balance == null) return const SizedBox.shrink();
+          // Headline is the *spendable* figure only. `total_label` is the
+          // combined regular + creator number, and creator tokens are locked
+          // until they are transferred — showing it up here would promise
+          // checkout money the user cannot spend.
+          final headlineLabel = balance.regularTotalLabel.isNotEmpty
+              ? balance.regularTotalLabel
+              : balance.totalLabel;
+          final earningsLabel = balance.creatorTotalLabel;
           return Column(
             children: [
-              Text('\$${balance.totalFiat.toStringAsFixed(2)}', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-              Text(balance.totalLabel, style: const TextStyle(color: BuddyColors.textSecondary)),
+              Text(
+                '\$${balance.regularTotalFiat.toStringAsFixed(2)}',
+                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '$headlineLabel · spendable',
+                style: const TextStyle(color: BuddyColors.textSecondary),
+              ),
+              if (earningsLabel.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '$earningsLabel earnings',
+                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                ),
+              ],
               const SizedBox(height: 12),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: balance.balance.map((item) => Padding(
+                  // Spendable artifacts only — creator tokens are not in this
+                  // wallet until they are transferred into it.
+                  children: balance.regularBalance.map((item) => Padding(
                     padding: const EdgeInsets.only(right: 12),
                     child: Chip(
                       backgroundColor: BuddyColors.surfaceRaised,
@@ -190,7 +213,9 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                   )),
                   if (balance.regularBalance.where((i) => i.quantity > 0).isEmpty)
                     const Text('No tokens in wallet.', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
-                  Text('\$${balance.regularTotalFiat.toStringAsFixed(2)}',
+                  Text('\$${balance.regularTotalFiat.toStringAsFixed(2)}'
+                      '${balance.regularTotalLabel.isEmpty ? '' : ' · ${balance.regularTotalLabel}'}'
+                      ' — spendable',
                     style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
                   const SizedBox(height: 16),
                   if (hasCreatorBalance || balance.creatorDisplayName.isNotEmpty) ...[
@@ -235,7 +260,9 @@ class _OverviewTabState extends ConsumerState<_OverviewTab> {
                     )),
                     if (balance.creatorBalance.where((i) => i.quantity > 0).isEmpty)
                       const Text('No marketplace earnings yet.', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
-                    Text('\$${balance.creatorTotalFiat.toStringAsFixed(2)}',
+                    Text('\$${balance.creatorTotalFiat.toStringAsFixed(2)}'
+                        '${balance.creatorTotalLabel.isEmpty ? '' : ' · ${balance.creatorTotalLabel}'}'
+                        ' — earnings',
                       style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
                     const SizedBox(height: 8),
                     Text('Tap an item to transfer to your wallet.',

@@ -21,7 +21,7 @@ from rest_framework.throttling import ScopedRateThrottle
 
 from common.utils import validate_file_signature
 from .models import (
-    Conversation, Message, MessageReaction, CallLog,
+    Conversation, ConversationPromotion, Message, MessageReaction, CallLog,
     ConversationMembership, CommunityPost, CommunityPostLike, CommunityPostComment,
     CallSession, CallParticipant,
 )
@@ -32,7 +32,8 @@ from .serializers import (
     CommunityMemberSerializer, CommunityPostSerializer, CommunityPostCommentSerializer,
 )
 from apps.guardians.services import guardian_blocks_new_dms
-from apps.profiles.models import BuddyRelationship, Profile, BuddySearchProfile, BlockRelationship
+from apps.profiles.models import BuddyRelationship, Profile, BuddySearchProfile
+from .blocking import is_blocked_pair, is_conversation_blocked, other_participant
 
 logger = logging.getLogger(__name__)
 
@@ -75,13 +76,26 @@ def _allowed_to_message(requester: Profile, other: Profile) -> bool:
         return False
     if not BuddySearchProfile.objects.filter(profile=requester).exists():
         return False
-    blocked = BlockRelationship.objects.filter(
-        db_models.Q(blocker=requester, blocked=other) |
-        db_models.Q(blocker=other, blocked=requester),
-    ).exists()
-    if blocked:
+    if is_blocked_pair(requester, other):
         return False
     return True
+
+
+def _is_confirmed_buddy(a: Profile, b: Profile) -> bool:
+    """Symmetric confirmed-buddy check (unique_together is directional)."""
+    return BuddyRelationship.objects.filter(
+        (db_models.Q(from_user=a, to_user=b) | db_models.Q(from_user=b, to_user=a)),
+        status='confirmed',
+    ).exists()
+
+
+def _blocked_conversation_response(conversation, profile):
+    """Standard 403 envelope when the DM partner has blocked either party."""
+    return Response({
+        'success': False, 'data': None,
+        'message': 'Messaging is unavailable between you and this person.',
+        'errors': None, 'pagination': None,
+    }, status=status.HTTP_403_FORBIDDEN)
 
 
 def _is_public_preview_url(value: str) -> bool:
@@ -129,7 +143,13 @@ class ConversationListView(views.APIView):
         ).prefetch_related('participants').order_by(
             db_models.F('last_message_at').desc(nulls_last=True)
         )
-        serializer = ConversationSerializer(conversations, many=True, context={'request': request})
+        # Hide DMs where either party has blocked the other.
+        profile = request.user.profile
+        visible = [
+            conv for conv in conversations
+            if not is_conversation_blocked(conv, profile)
+        ]
+        serializer = ConversationSerializer(visible, many=True, context={'request': request})
         return Response({
             'success': True, 'data': serializer.data, 'message': 'OK',
             'errors': None, 'pagination': None,
@@ -208,10 +228,18 @@ class StartConversationView(views.APIView):
                     'errors': None, 'pagination': None,
                 })
 
+        requested_origin = input_serializer.validated_data.get('origin') or 'direct'
+        # Only a 1:1 thread can be a discovery thread, and it may only be
+        # labelled 'discovery' when the buddy-finder rules actually allow it.
+        origin = 'direct'
+        if requested_origin == 'discovery' and len(all_participants) == 2:
+            origin = 'discovery'
+
         conv = Conversation.objects.create(
             is_group=len(all_participants) > 2,
             group_name=input_serializer.validated_data.get('group_name', ''),
             created_by=request.user.profile,
+            origin=origin,
         )
         conv.participants.set(all_participants)
 
@@ -241,6 +269,8 @@ class MessageListView(views.APIView):
 
     def get(self, request, conversation_id):
         conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
+        if is_conversation_blocked(conv, request.user.profile):
+            return _blocked_conversation_response(conv, request.user.profile)
         before = request.query_params.get('before')
         attachment_type = request.query_params.get('attachment_type', '')
         messages = conv.messages.filter(is_deleted=False).select_related(
@@ -279,6 +309,8 @@ class MessageListView(views.APIView):
 
     def post(self, request, conversation_id):
         conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
+        if is_conversation_blocked(conv, request.user.profile):
+            return _blocked_conversation_response(conv, request.user.profile)
         input_serializer = SendMessageInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
         data = input_serializer.validated_data
@@ -330,6 +362,148 @@ class MessageListView(views.APIView):
             'message': 'Message sent.',
             'errors': None, 'pagination': None,
         }, status=status.HTTP_201_CREATED)
+
+
+def _ensure_confirmed_buddy(a: Profile, b: Profile) -> bool:
+    """Create a confirmed BuddyRelationship between a and b if none exists.
+
+    The unique_together is directional, so check both (a,b) and (b,a).
+    """
+    existing = BuddyRelationship.objects.filter(
+        db_models.Q(from_user=a, to_user=b) | db_models.Q(from_user=b, to_user=a),
+    ).first()
+    if existing is None:
+        existing = BuddyRelationship.objects.create(from_user=a, to_user=b, status='confirmed')
+    elif existing.status != 'confirmed':
+        existing.status = 'confirmed'
+        existing.save(update_fields=['status'])
+    return True
+
+
+class ConversationPromoteView(views.APIView):
+    """Request that a DM becomes a buddy relationship. Requires the other party to accept."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, conversation_id):
+        conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
+        profile = request.user.profile
+
+        other = other_participant(conv, profile)
+        if other is None:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only one-to-one conversations can become buddies.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if is_blocked_pair(profile, other):
+            return _blocked_conversation_response(conv, profile)
+
+        if _is_confirmed_buddy(profile, other):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You are already buddies.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+
+        promotion, created = ConversationPromotion.objects.get_or_create(
+            conversation=conv,
+            defaults={'requested_by': profile, 'status': 'pending'},
+        )
+        if not created and promotion.status != 'pending':
+            promotion.status = 'pending'
+            promotion.requested_by = profile
+            promotion.responded_at = None
+            promotion.save(update_fields=['status', 'requested_by', 'responded_at'])
+
+        data = {
+            'id': str(promotion.id),
+            'conversation_id': str(conv.id),
+            'status': promotion.status,
+            'requested_by': str(profile.user_id),
+            'created_at': promotion.created_at,
+        }
+        return Response({
+            'success': True, 'data': data,
+            'message': 'Buddy request sent.' if created else 'Buddy request already pending.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class ConversationPromotionRespondView(views.APIView):
+    """Accept or decline a pending promotion. Only the other participant may respond."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        promotion = get_object_or_404(ConversationPromotion, pk=pk)
+        conv = promotion.conversation
+        profile = request.user.profile
+
+        if not conv.participants.filter(pk=profile.pk).exists():
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You are not a participant in this conversation.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        requester = promotion.requested_by
+        other = next(
+            (p for p in conv.participants.all() if p.pk != profile.pk), None,
+        )
+        if other is None or requester is None or requester.pk != other.pk:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Only the other participant can respond to this request.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        if promotion.status != 'pending':
+            return Response({
+                'success': False, 'data': None,
+                'message': f'This request was already {promotion.status}.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+
+        accept = bool(request.data.get('accept', False))
+        now = timezone.now()
+
+        if not accept:
+            promotion.status = 'declined'
+            promotion.responded_at = now
+            promotion.save(update_fields=['status', 'responded_at'])
+            return Response({
+                'success': True,
+                'data': {
+                    'id': str(promotion.id), 'conversation_id': str(conv.id),
+                    'status': promotion.status, 'origin': conv.origin,
+                    'promoted_at': conv.promoted_at,
+                },
+                'message': 'Request declined.', 'errors': None, 'pagination': None,
+            })
+
+        with transaction.atomic():
+            _ensure_confirmed_buddy(requester, profile)
+            promotion.status = 'accepted'
+            promotion.responded_at = now
+            promotion.save(update_fields=['status', 'responded_at'])
+            conv.origin = 'buddy'
+            conv.promoted_at = now
+            conv.save(update_fields=['origin', 'promoted_at'])
+
+        from apps.profiles.buddy_notifications import notify_buddy_accepted
+        notify_buddy_accepted(requester.user_id, profile.user_id)
+
+        return Response({
+            'success': True,
+            'data': {
+                'id': str(promotion.id), 'conversation_id': str(conv.id),
+                'status': promotion.status, 'origin': conv.origin,
+                'promoted_at': conv.promoted_at,
+            },
+            'message': 'You are now buddies.', 'errors': None, 'pagination': None,
+        })
 
 
 class DeleteMessageView(views.APIView):

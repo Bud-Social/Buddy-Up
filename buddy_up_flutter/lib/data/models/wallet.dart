@@ -25,8 +25,12 @@ abstract class BalanceResponse with _$BalanceResponse {
     @JsonKey(name: 'fiat_currency') required String fiatCurrency,
     @JsonKey(name: 'regular_balance') @Default(<BalanceItem>[]) List<BalanceItem> regularBalance,
     @JsonKey(name: 'regular_total_fiat') @Default(0.0) double regularTotalFiat,
+    /// Spendable figure — checkout only ever draws on `regular_balance`.
+    @JsonKey(name: 'regular_total_label') @Default('') String regularTotalLabel,
     @JsonKey(name: 'creator_balance') @Default(<BalanceItem>[]) List<BalanceItem> creatorBalance,
     @JsonKey(name: 'creator_total_fiat') @Default(0.0) double creatorTotalFiat,
+    /// Marketplace earnings — locked until transferred into the regular wallet.
+    @JsonKey(name: 'creator_total_label') @Default('') String creatorTotalLabel,
     @JsonKey(name: 'creator_display_name') @Default('') String creatorDisplayName,
   }) = _BalanceResponse;
 

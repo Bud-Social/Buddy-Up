@@ -368,10 +368,17 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _is_member(self):
         from .models import Conversation
-        return Conversation.objects.filter(
-            id=self.conversation_id,
-            participants=self.profile,
-        ).exists()
+        from .blocking import any_blocked_with_others
+        user_id = self.profile.user_id
+        # One query for membership + peer ids, one for the block check.
+        participant_ids = list(
+            Conversation.objects.filter(id=self.conversation_id)
+            .values_list('participants__user_id', flat=True)
+        )
+        if user_id not in participant_ids:
+            return False
+        others = [pid for pid in participant_ids if pid != user_id]
+        return not any_blocked_with_others(user_id, others)
 
     @database_sync_to_async
     def _save_message(self, body, message_type, media_url, media_mime, file_name, reply_to_id, metadata):

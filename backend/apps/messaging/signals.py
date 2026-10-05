@@ -35,5 +35,5 @@ def create_buddy_conversation(sender, instance, created, **kwargs):
     if existing:
         return  # already exists
 
-    conv = Conversation.objects.create(is_group=False)
+    conv = Conversation.objects.create(is_group=False, origin='buddy')
     conv.participants.set([user_a, user_b])

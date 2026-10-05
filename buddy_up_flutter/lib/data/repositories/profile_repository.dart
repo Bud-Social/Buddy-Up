@@ -101,8 +101,35 @@ abstract class ProfileRepository {
   @GET('/profiles/me/search-profile/')
   Future<dynamic> getSearchProfile();
 
+  /// Buddy-search card for someone else. [lat]/[lng] are the *viewer's*
+  /// coordinates — the server never discloses another user's location, it
+  /// only bands a `distance_km` when both are passed.
   @GET('/profiles/{username}/search-profile/')
-  Future<dynamic> getUserSearchProfile(@Path('username') String username);
+  Future<dynamic> getUserSearchProfile(
+    @Path('username') String username, {
+    @Query('lat') double? lat,
+    @Query('lng') double? lng,
+  });
+
+  /// One-way buddy interest ("like"). POST creates, DELETE removes; both
+  /// answer `{liked, username, liked_me}` — `liked_me` is the back-signal
+  /// (has the target already liked me?). 400 on self-like, a block either
+  /// way, or a target with no open search profile.
+  @POST('/profiles/{username}/interest/')
+  Future<dynamic> likeInterest(@Path('username') String username);
+
+  @DELETE('/profiles/{username}/interest/')
+  Future<dynamic> unlikeInterest(@Path('username') String username);
+
+  /// Everyone who liked me (`received`) and everyone I liked (`sent`).
+  @GET('/profiles/interests/')
+  Future<dynamic> getInterests();
+
+  /// Moderation report. [reason] must be one of the backend
+  /// ModerationReport.REPORT_REASONS values (spam, harassment, hate_speech,
+  /// nudity, adult_ungated, violence, misinformation, impersonation, other).
+  @POST('/moderation/reports/')
+  Future<dynamic> submitModerationReport(@Body() Map<String, dynamic> body);
 
   @PUT('/profiles/me/search-profile/')
   Future<dynamic> updateSearchProfile(@Body() Map<String, dynamic> body);

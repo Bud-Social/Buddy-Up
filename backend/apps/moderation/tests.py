@@ -199,3 +199,58 @@ class ModerationAppealTests(TestCase):
         self.assertTrue(ModerationAction.objects.filter(
             action='action_reversed', target_user=self.user,
         ).exists())
+
+
+class ModerationReportVisibilityTests(TestCase):
+    """A report is private to its reporter; only staff see the full queue."""
+
+    def setUp(self):
+        from apps.moderation.models import ModerationReport
+
+        self.client = APIClient()
+        self.reporter = User.objects.create_user(email='reporter@example.com', password='TestPass123!')
+        Profile.objects.create(user=self.reporter, username='reporter', display_name='Reporter')
+        self.other = User.objects.create_user(email='other@example.com', password='TestPass123!')
+        Profile.objects.create(user=self.other, username='other', display_name='Other')
+        self.target = User.objects.create_user(email='target@example.com', password='TestPass123!')
+        Profile.objects.create(user=self.target, username='target', display_name='Target')
+        self.staff = User.objects.create_user(
+            email='modstaff@example.com', password='TestPass123!', is_staff=True,
+        )
+
+        self.report = ModerationReport.objects.create(
+            reporter=self.reporter,
+            target_user=self.target,
+            reason='harassment',
+            description='Private detail that must not leak.',
+            resolution_note='Internal moderator note.',
+        )
+
+    def _list(self, user):
+        client = APIClient()
+        client.force_authenticate(user)
+        response = client.get('/api/v1/moderation/reports/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        return response.data
+
+    def test_non_staff_cannot_see_another_users_report(self):
+        data = self._list(self.other)
+        self.assertEqual(data.get('count', len(data.get('results', []))), 0)
+
+    def test_reporter_sees_only_their_own_reports(self):
+        data = self._list(self.reporter)
+        results = data.get('results', data)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(str(results[0]['id']), str(self.report.id))
+
+    def test_non_staff_cannot_retrieve_another_users_report(self):
+        client = APIClient()
+        client.force_authenticate(self.other)
+        response = client.get(f'/api/v1/moderation/reports/{self.report.id}/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_staff_sees_every_report(self):
+        data = self._list(self.staff)
+        results = data.get('results', data)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(str(results[0]['id']), str(self.report.id))

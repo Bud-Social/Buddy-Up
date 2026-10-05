@@ -62,7 +62,37 @@ export interface NearbyBuddy {
   age_band: string;
   photos: string[];
   available_now: boolean;
+  liked_by_me: boolean;
+  liked_me: boolean;
   explanation: string;
+}
+
+/** Result of one interest ("like") toggle. */
+export interface BuddyInterestResult {
+  liked: boolean;
+  username: string;
+  liked_me: boolean;
+}
+
+export interface BuddyInterests {
+  received: Profile[];
+  sent: Profile[];
+}
+
+/**
+ * Another user's buddy-search card. Deliberately has no latitude/longitude —
+ * the server never discloses another user's coordinates. `distance_km` is
+ * only present when the caller supplied both lat and lng.
+ */
+export interface UserBuddySearchProfile extends Omit<BuddySearchProfile, 'latitude' | 'longitude' | 'display_name'> {
+  username: string;
+  display_name: string;
+  avatar_url: string;
+  liked_by_me: boolean;
+  liked_me: boolean;
+  is_buddy: boolean;
+  can_message: boolean;
+  distance_km?: number | null;
 }
 
 export interface ProfileRecommendation {
@@ -156,8 +186,23 @@ export const profilesApi = {
   getSearchProfile: () =>
     apiClient.get<ApiResponse<BuddySearchProfile>>('/profiles/me/search-profile/').then((r) => r.data),
 
-  getUserSearchProfile: (username: string) =>
-    apiClient.get<ApiResponse<BuddySearchProfile>>(`/profiles/${username}/search-profile/`).then((r) => r.data),
+  getUserSearchProfile: (username: string, coords?: { lat?: number; lng?: number }) =>
+    apiClient
+      .get<ApiResponse<UserBuddySearchProfile>>(`/profiles/${username}/search-profile/`, {
+        params: coords?.lat != null && coords.lng != null ? { lat: coords.lat, lng: coords.lng } : {},
+      })
+      .then((r) => r.data),
+
+  /** One-way "like" on someone's buddy-search profile. POST sets, DELETE clears. */
+  likeBuddy: (username: string) =>
+    apiClient.post<ApiResponse<BuddyInterestResult>>(`/profiles/${username}/interest/`).then((r) => r.data),
+
+  unlikeBuddy: (username: string) =>
+    apiClient.delete<ApiResponse<BuddyInterestResult>>(`/profiles/${username}/interest/`).then((r) => r.data),
+
+  /** Who liked you, and who you liked. */
+  getBuddyInterests: () =>
+    apiClient.get<ApiResponse<BuddyInterests>>('/profiles/interests/').then((r) => r.data),
 
   updateSearchProfile: (payload: Partial<BuddySearchProfile>) =>
     apiClient.put<ApiResponse<BuddySearchProfile>>('/profiles/me/search-profile/', payload).then((r) => r.data),

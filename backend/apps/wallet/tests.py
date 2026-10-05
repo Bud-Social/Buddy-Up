@@ -32,6 +32,44 @@ class WalletTests(TestCase):
         self.assertIn('balance', response.data['data'])
         self.assertIn('total_label', response.data['data'])
 
+    def test_balance_separates_spendable_from_creator_earnings(self):
+        """Checkout only ever spends profile.artifact_balance.
+
+        `balance`/`total_label` are regular + creator combined, so a creator
+        who has sold something headlines earnings they cannot spend. The
+        spendable figure needs its own label.
+        """
+        self.profile.artifact_balance = {'dumbbell': 10}
+        self.profile.creator_balance = {'sprint': 5}
+        self.profile.save()
+
+        data = self.client.get('/api/v1/wallet/balance/').data['data']
+
+        # Legacy combined keys still present and still combined.
+        self.assertEqual(data['total_label'], 'USD 26.00')
+        self.assertEqual(
+            sorted(row['artifact_type'] for row in data['balance']),
+            ['dumbbell', 'sprint'],
+        )
+
+        # Spendable figure, labelled on its own.
+        self.assertEqual([r['artifact_type'] for r in data['regular_balance']], ['dumbbell'])
+        self.assertEqual(data['regular_total_fiat'], 1.0)
+        self.assertEqual(data['regular_total_label'], 'USD 1.00')
+
+        # Earnings, labelled separately.
+        self.assertEqual([r['artifact_type'] for r in data['creator_balance']], ['sprint'])
+        self.assertEqual(data['creator_total_fiat'], 25.0)
+        self.assertEqual(data['creator_total_label'], 'USD 25.00')
+
+    def test_balance_labels_are_zero_when_wallet_is_empty(self):
+        data = self.client.get('/api/v1/wallet/balance/').data['data']
+        self.assertEqual(data['regular_balance'], [])
+        self.assertEqual(data['creator_balance'], [])
+        self.assertEqual(data['regular_total_label'], 'USD 0.00')
+        self.assertEqual(data['creator_total_label'], 'USD 0.00')
+        self.assertEqual(data['balance'], [])
+
     def test_purchase_artifacts(self):
         data = {'artifact_type': 'dumbbell', 'quantity': 10, 'payment_method': 'card'}
         response = self.client.post('/api/v1/wallet/purchase/initialize/', data, format='json')

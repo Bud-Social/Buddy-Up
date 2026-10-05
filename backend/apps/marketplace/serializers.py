@@ -749,6 +749,37 @@ class DiscountUsageSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'discount', 'user', 'cart', 'created_at', 'updated_at']
 
 
+def resolve_item_price(item):
+    """Resolve the artifact price for a CartItem.
+
+    This is the single source of truth for "what does this cart item cost".
+    Resolves CartItem.meta['tier'] against the event's ticket_tiers so every
+    caller (cart quote, line-item quote, checkout charge, discount minimums)
+    agrees on the same amount. Tier names are matched case-insensitively; a
+    tier with a missing/empty price_artifacts falls back to the event's base
+    ticket_price_artifacts. Free events resolve to {} (nothing to charge),
+    and products are free too (Product has no price_artifacts field).
+    """
+    if item.item_type == 'meal_plan' and item.meal_plan:
+        return item.meal_plan.price_artifacts or {}
+    if item.item_type == 'programme' and item.programme:
+        return item.programme.price_artifacts or {}
+    if item.item_type == 'event_ticket' and item.event:
+        if item.event.is_free:
+            return {}
+        tier_name = (getattr(item, 'meta', None) or {}).get('tier')
+        if tier_name:
+            match = next(
+                (t for t in (item.event.ticket_tiers or [])
+                 if str(t.get('name', '')).lower() == str(tier_name).lower()),
+                None,
+            )
+            if match and match.get('price_artifacts'):
+                return match['price_artifacts']
+        return item.event.ticket_price_artifacts or {}
+    return {}
+
+
 class CartItemSerializer(serializers.ModelSerializer):
     meal_plan_detail = MealPlanSerializer(source='meal_plan', read_only=True)
     programme_detail = TrainingProgrammeSerializer(source='programme', read_only=True)
@@ -779,24 +810,7 @@ class CartItemSerializer(serializers.ModelSerializer):
         return round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in total.items()), 2)
 
     def _get_price(self, obj):
-        if obj.item_type == 'meal_plan' and obj.meal_plan:
-            return obj.meal_plan.price_artifacts
-        if obj.item_type == 'programme' and obj.programme:
-            return obj.programme.price_artifacts
-        if obj.item_type == 'event_ticket' and obj.event:
-            tier_name = (getattr(obj, 'meta', None) or {}).get('tier')
-            if tier_name:
-                match = next(
-                    (t for t in (obj.event.ticket_tiers or [])
-                     if str(t.get('name', '')).lower() == str(tier_name).lower()),
-                    None,
-                )
-                if match and match.get('price_artifacts'):
-                    return match['price_artifacts']
-            return obj.event.ticket_price_artifacts
-        if obj.item_type == 'product' and obj.product:
-            return {}
-        return {}
+        return resolve_item_price(obj)
 
 
 class CartSerializer(serializers.ModelSerializer):
@@ -861,15 +875,7 @@ class CartSerializer(serializers.ModelSerializer):
         return self.context.get('rates', {}).get('conversion_rate', 129.5)
 
     def _get_item_price(self, item):
-        if item.item_type == 'meal_plan' and item.meal_plan:
-            return item.meal_plan.price_artifacts
-        if item.item_type == 'programme' and item.programme:
-            return item.programme.price_artifacts
-        if item.item_type == 'event_ticket' and item.event:
-            return item.event.ticket_price_artifacts
-        if item.item_type == 'product' and item.product:
-            return {}
-        return {}
+        return resolve_item_price(item)
 
 
 # ---------------------------------------------------------------------------

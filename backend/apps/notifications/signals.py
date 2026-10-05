@@ -88,7 +88,7 @@ def handle_event_ticket_created(sender, instance, created, **kwargs):
 
     from apps.notifications.tasks import create_notification
     event = instance.event
-    buyer = instance.user
+    buyer = instance.holder
 
     create_notification.delay(
         recipient_id=str(buyer.user_id),
@@ -97,11 +97,11 @@ def handle_event_ticket_created(sender, instance, created, **kwargs):
         body=f'Your ticket (code: {instance.ticket_code}) is confirmed. See you there!',
         metadata={
             'ticket_id': str(instance.id),
-            'ticket_code': instance.ticket_code,
+            'ticket_code': str(instance.ticket_code),
             'event_id': str(event.id),
             'event_title': event.title,
             'event_category': event.category,
-            'start_time': event.start_time.isoformat() if event.start_time else None,
+            'start_time': event.start_datetime.isoformat() if event.start_datetime else None,
         },
     )
 

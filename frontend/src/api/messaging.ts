@@ -29,6 +29,25 @@ export interface Conversation {
   } | null;
   last_message_at: string;
   created_at: string;
+  /** How this conversation came about. A 'discovery' DM can be promoted to a buddy relationship. */
+  origin?: 'direct' | 'discovery' | 'buddy' | 'group' | 'community';
+  promoted_at?: string | null;
+  /** True while the viewer may still turn this DM into a buddy relationship. */
+  promotable?: boolean;
+  promotion_status?: 'pending' | 'accepted' | 'declined' | null;
+  /**
+   * The ConversationPromotion id — non-null whenever a promotion row exists. This is
+   * the id the responder posts to `/promotions/<id>/respond/`.
+   */
+  promotion_id: string | null;
+  /**
+   * The user_id of whoever asked for the promotion, or null when there is no
+   * promotion. On a pending request this is the only thing that separates the
+   * requester from the responder: the requester sees their own id here and keeps
+   * just the pending chip, the responder gets Accept/Decline. The respond endpoint
+   * stays the authority and 403s the requester if they try anyway.
+   */
+  promotion_requested_by: string | null;
 }
 
 export interface Message {
@@ -54,6 +73,16 @@ export interface Message {
   } | null;
   reactions: Record<string, number>;
   created_at: string;
+}
+
+export interface ConversationPromotion {
+  id: string;
+  conversation_id: string;
+  status: 'pending' | 'accepted' | 'declined';
+  /** Only the promote endpoint echoes this, and only ever the caller's own id. */
+  requested_by?: string | null;
+  origin?: string;
+  promoted_at?: string | null;
 }
 
 export interface CallLog {
@@ -169,11 +198,31 @@ export const messagingApi = {
   getConversations: () =>
     apiClient.get<ApiResponse<Conversation[]>>('/messaging/conversations/').then((r) => r.data),
 
-  startConversation: (participants: string[], groupName?: string) =>
-    apiClient.post<ApiResponse<Conversation>>('/messaging/conversations/start/', { participants, group_name: groupName }).then((r) => r.data),
+  /**
+   * Start (or reuse) a conversation. Pass `origin: 'discovery'` for threads opened
+   * from the Find-a-Buddy surfaces so they are tagged as promotable buddy chats.
+   */
+  startConversation: (participants: string[], groupName?: string, origin?: 'direct' | 'discovery') =>
+    apiClient
+      .post<ApiResponse<Conversation>>('/messaging/conversations/start/', {
+        participants,
+        group_name: groupName,
+        ...(origin ? { origin } : {}),
+      })
+      .then((r) => r.data),
 
   getConversation: (id: string) =>
     apiClient.get<ApiResponse<Conversation>>(`/messaging/conversations/${id}/`).then((r) => r.data),
+
+  /** Ask the other participant to make this DM a buddy relationship (pending until they accept). */
+  promoteConversation: (id: string) =>
+    apiClient.post<ApiResponse<ConversationPromotion>>(`/messaging/conversations/${id}/promote/`).then((r) => r.data),
+
+  /** Only the participant who did NOT request the promotion may respond. */
+  respondToPromotion: (promotionId: string, accept: boolean) =>
+    apiClient
+      .post<ApiResponse<ConversationPromotion>>(`/messaging/conversations/promotions/${promotionId}/respond/`, { accept })
+      .then((r) => r.data),
 
   getMessages: (conversationId: string, before?: string, attachmentType?: string) =>
     apiClient

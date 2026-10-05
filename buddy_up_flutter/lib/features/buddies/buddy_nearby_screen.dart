@@ -12,12 +12,16 @@ import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/toast.dart';
 import '../../shared/navigation/app_nav.dart';
 import 'buddy_nearby_provider.dart';
+import 'widgets/buddy_discovery_card.dart';
 import '../messaging/providers/messaging_provider.dart';
 
 const _intents = ['walk', 'run', 'gym', 'hike', 'live_cohost', 'trainer', 'coach', 'book_club', 'friend', 'other'];
 const _modes = ['virtual', 'hybrid', 'in_person', 'neighbourhood'];
 const _goalOptions = ['weight_loss', 'muscle_gain', 'endurance', 'get_faster', 'stay_consistent', 'learn_sport', 'rehabilitation', 'have_fun'];
 const _visibilities = ['public', 'buddies', 'hidden'];
+
+/// Grid width at which a 3rd column of discovery cards still reads.
+const _tabletColumnsAt = 600.0;
 
 class BuddyNearbyScreen extends ConsumerStatefulWidget {
   const BuddyNearbyScreen({super.key});
@@ -235,34 +239,50 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
     }
   }
 
-  void _sendRequest(String username) async {
-    try {
-      await ref.read(profileRepositoryProvider).sendBuddyRequest(username);
-      if (mounted) showToast(context, 'Buddy request sent!', type: ToastType.success);
-    } catch (_) {
-      if (mounted) showToast(context, 'Failed.', type: ToastType.error);
-    }
+/// Like a buddy from the grid. Optimistic in the notifier (the heart flips
+  /// before the request lands) so this only reports a refusal.
+  Future<void> _toggleLike(String username) async {
+    final err = await ref.read(buddyNearbyProvider.notifier).toggleLike(username);
+    if (err != null && mounted) showToast(context, err, type: ToastType.error);
   }
 
   Future<void> _openMessage(String username) async {
     if (username.isEmpty) return;
     // Start (or fetch existing) 1-to-1 conversation, then open the chat
-    // screen with the real conversation id — it loads messages by id.
+    // screen with the real conversation id — it loads messages by id. From
+    // discovery the thread belongs in Buddy messages, not the main tab, so
+    // the ask is tagged `origin: discovery` for the Buddy-messages filter.
     try {
       final raw = await ref.read(messagingRepositoryProvider).startConversation({
-        'participant_usernames': [username],
+        'participants': [username],
+        'origin': 'discovery',
       });
       final data = raw['data'];
       final convoId = data is Map ? data['id'] as String? : null;
       if (!mounted) return;
       if (convoId != null && convoId.isNotEmpty) {
-        context.push('/messages/$convoId');
+        context.push('/buddies/messages/$convoId');
       } else if (mounted) {
         showToast(context, 'Could not open chat.', type: ToastType.error);
       }
-    } catch (_) {
-      if (mounted) showToast(context, 'Buddy up first to chat.', type: ToastType.error);
+    } catch (e) {
+      if (mounted) {
+        showToast(context, _errorText(e, 'Like them first to start a chat.'), type: ToastType.error);
+      }
     }
+  }
+
+  /// The backend states its own refusals ("This profile is not open to buddy
+  /// interests.") inside the response envelope — prefer those.
+  static String _errorText(Object e, String fallback) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map) {
+        final direct = data['message'] ?? data['detail'];
+        if (direct is String && direct.isNotEmpty) return direct;
+      }
+    }
+    return fallback;
   }
 
   @override
@@ -280,9 +300,9 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
         title: const Text('Find a buddy'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Buddy search settings',
-            onPressed: _openEditor,
+            icon: const Icon(Icons.chat_bubble_outline),
+            tooltip: 'Buddy messages',
+            onPressed: () => context.push('/buddies/messages'),
           ),
           TextButton(
             onPressed: () => _save(looking: !(_mine?.availableNow == true)),
@@ -486,17 +506,24 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                               ),
                             ),
                           )
-                        : GridView.builder(
-                            controller: _scroll,
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 260,
-                              mainAxisSpacing: 10,
-                              crossAxisSpacing: 10,
-                              childAspectRatio: 1.0,
-                            ),
-                            itemCount: state.buddies.length,
-                            itemBuilder: (_, i) => _buddyTile(state.buddies[i]),
+                        : LayoutBuilder(
+                            builder: (context, constraints) {
+                              // 3:4 cards: two across on a phone, three once
+                              // there is room for them to stay readable.
+                              final columns = constraints.maxWidth >= _tabletColumnsAt ? 3 : 2;
+                              return GridView.builder(
+                                controller: _scroll,
+                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: columns,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                  childAspectRatio: 3 / 4,
+                                ),
+                                itemCount: state.buddies.length,
+                                itemBuilder: (_, i) => _buddyCard(state, state.buddies[i]),
+                              );
+                            },
                           ),
           ),
         ],
@@ -762,210 +789,17 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
     );
   }
 
-  /// Square tile: photo or initials, name, age band, distance badge and the
-  /// compact intent/pace chips. Tap opens the profile.
-  Widget _buddyTile(NearbyBuddy b) {
-    final p = b.profile;
-    final profileName = (p['display_name'] ?? p['username'] ?? '') as String;
-    final name = b.displayName.isNotEmpty ? b.displayName : profileName;
-    final username = (p['username'] ?? '') as String;
-    final avatar = (b.photos.isNotEmpty ? b.photos.first : p['avatar_url']) as String?;
-    final prefs = p['preferences'];
-    final workouts = prefs is Map
-        ? ((prefs['preferred_workouts'] as List?) ?? []).map((e) => e.toString()).toList()
-        : <String>[];
-    final intents = b.customIntent.isNotEmpty
-        ? [b.customIntent]
-        : b.intents.map((e) => e.replaceAll('_', ' ')).toList();
-    // Two chips at most — the tile is square, so nothing wraps past one line.
-    final chips = [
-      ...intents,
-      ...b.modes.map((e) => e.replaceAll('_', ' ')),
-    ].where((e) => e.isNotEmpty).toList();
-    return Card(
-      margin: EdgeInsets.zero,
-      color: BuddyColors.surface,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push('/$username'),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _squarePhoto(avatar, name),
-                  if (b.availableNow)
-                    const Positioned(
-                      top: 6,
-                      left: 6,
-                      child: _TileBadge(
-                        label: 'now',
-                        icon: Icons.bolt,
-                      ),
-                    ),
-                  if (b.distanceKm != null)
-                    Positioned(
-                      top: 6,
-                      right: 6,
-                      child: _TileBadge(
-                        label: b.distanceKm! < 10
-                            ? '${b.distanceKm!.toStringAsFixed(1)} km'
-                            : '${b.distanceKm!.round()} km',
-                        icon: Icons.near_me,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    name.isEmpty ? 'Buddy' : name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: BuddyColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          b.ageBand.isNotEmpty ? b.ageBand : '@$username',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: BuddyColors.textSecondary,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                      _tileAction(
-                        icon: Icons.message_outlined,
-                        tooltip: 'Message',
-                        onTap: () => _openMessage(username),
-                      ),
-                      _tileAction(
-                        icon: Icons.person_add,
-                        tooltip: 'Send buddy request',
-                        onTap: () => _sendRequest(username),
-                      ),
-                    ],
-                  ),
-                  if (chips.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      chips.take(2).join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: BuddyColors.textSecondary,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ] else if (workouts.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      workouts.map((e) => e.replaceAll('_', ' ')).join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: BuddyColors.textSecondary,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Square photo, falling back to initials when the buddy has no picture.
-  Widget _squarePhoto(String? src, String name) {
-    return src != null && src.isNotEmpty
-        ? Image.network(
-            src,
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => _initials(name),
-          )
-        : _initials(name);
-  }
-
-  Widget _initials(String name) {
-    return Container(
-      color: BuddyColors.surfaceRaised,
-      child: Center(
-        child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: const TextStyle(
-            color: BuddyColors.textSecondary,
-            fontSize: 30,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _tileAction({
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onTap,
-  }) {
-    return IconButton(
-      icon: Icon(icon, size: 16, color: BuddyColors.green),
-      tooltip: tooltip,
-      visualDensity: VisualDensity.compact,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
-      onPressed: onTap,
-    );
-  }
-}
-
-/// Distance / availability badge overlaid on a tile photo.
-class _TileBadge extends StatelessWidget {
-  final String label;
-  final IconData icon;
-
-  const _TileBadge({required this.label, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: BuddyColors.black.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: BuddyColors.green),
-          const SizedBox(width: 3),
-          Text(
-            label,
-            style: const TextStyle(
-              color: BuddyColors.green,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
+  /// One discovery card. The body opens the full Find-a-Buddy profile; the
+  /// card's own actions are message and like.
+  Widget _buddyCard(BuddyNearbyState state, NearbyBuddy b) {
+    final username = b.username;
+    if (username.isEmpty) return const SizedBox.shrink();
+    return BuddyDiscoveryCard(
+      buddy: b,
+      liking: state.liking.contains(username),
+      onOpenProfile: () => context.push('/buddies/find/$username'),
+      onMessage: () => _openMessage(username),
+      onLike: () => _toggleLike(username),
     );
   }
 }

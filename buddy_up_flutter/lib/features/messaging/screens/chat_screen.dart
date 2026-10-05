@@ -17,10 +17,86 @@ import 'package:dio/dio.dart';
 import '../../../data/models/messaging.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/auth/auth_provider.dart';
+import '../../../shared/widgets/toast.dart';
+
+/// Flat strip above the thread explaining where this chat stands as a buddy
+/// relationship. Solid tint only — no gradient, no glow.
+class _BuddyBanner extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final Widget? action;
+
+  const _BuddyBanner({
+    required this.icon,
+    required this.color,
+    required this.label,
+    this.action,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: color.withValues(alpha: 0.1),
+      padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: BuddyColors.textPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ?action,
+        ],
+      ),
+    );
+  }
+}
+
+class _PromoteAction extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _PromoteAction({super.key, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed,
+      style: TextButton.styleFrom(
+        foregroundColor: BuddyColors.green,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        minimumSize: const Size(0, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: const Text(
+        'Ask',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
-  const ChatScreen({super.key, required this.conversationId});
+
+  /// Set when opened from Buddy messages. The header then reads the thread as
+  /// a discovery chat and can offer "Promote to main chat" — the same action
+  /// a thread started from Find a Buddy needs, without duplicating the screen.
+  final bool fromBuddyMessages;
+
+  const ChatScreen({
+    super.key,
+    required this.conversationId,
+    this.fromBuddyMessages = false,
+  });
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -32,6 +108,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _focusNode = FocusNode();
   final _imagePicker = ImagePicker();
   Message? _replyToMessage;
+  bool _promoting = false;
+
+  /// Conversation the header reads when the list provider does not carry this
+  /// thread — a Buddy-messages deep link, or a conversation the discovery
+  /// filter has not picked up. The provider copy always wins when present, so
+  /// this is a fallback, never a cache that shadows fresher data.
+  Conversation? _convo;
 
   StreamSubscription<ChatEvent>? _socketSub;
 
@@ -69,6 +152,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _loadTheme();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(messagesProvider(widget.conversationId).notifier).loadMessages();
+      _ensureConversation();
       _connectSocket();
     });
     _scrollController.addListener(_onScroll);
@@ -101,6 +185,32 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         },
       );
     });
+  }
+
+  /// The header needs the conversation itself — its title, participants and
+  /// promotion state all live on it. A deep link (or a Buddy-messages thread
+  /// the filtered list does not carry yet) arrives with nothing in the
+  /// provider, so pull the single record rather than showing a bare "Chat".
+  Future<void> _ensureConversation({bool force = false}) async {
+    final known = ref
+        .read(conversationsProvider)
+        .conversations
+        .any((c) => c.id == widget.conversationId);
+    if (known && !force) return;
+    try {
+      final raw = await ref.read(messagingRepositoryProvider).getConversation(widget.conversationId);
+      final data = raw['data'];
+      if (data is! Map<String, dynamic>) return;
+      final convo = Conversation.fromJson(data);
+      // Publishing to the list keeps a promoted thread in place; keeping a
+      // local copy means the header still works when the active filter would
+      // have dropped it.
+      ref.read(conversationsProvider.notifier).updateConversation(convo);
+      if (mounted) setState(() => _convo = convo);
+    } catch (_) {
+      // A thread we cannot read still shows its messages; only the header
+      // falls back to generic text.
+    }
   }
 
   Future<void> _startCall(String callType) async {
@@ -242,11 +352,79 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  // ── Buddy promotion ───────────────────────────────────────────────────────
+  //
+  // A Find-a-Buddy chat is a DM with no commitment behind it. Promotion asks
+  // the other person to confirm, and only then does the backend flip them to
+  // confirmed buddies. Three states, and the user should never have to guess
+  // which one they are in:
+  //   * no promotion yet      → offer the ask
+  //   * pending               → "waiting on them", with a way to call it off
+  //   * accepted              → "Now buddies", and the action disappears
+  // A thread where they asked *me* is the same pending state from this side;
+  // the accept/decline decision lives in their copy of the app.
+
+  Future<void> _promote() async {
+    if (_promoting) return;
+    setState(() => _promoting = true);
+    final err = await ref
+        .read(conversationsProvider.notifier)
+        .promoteConversation(widget.conversationId);
+    // Re-read the thread so the banner flips to its new state whether or not
+    // the active filter kept the row.
+    await _ensureConversation(force: true);
+    if (!mounted) return;
+    setState(() => _promoting = false);
+    showToast(
+      context,
+      err ?? 'Sent — waiting on them to say yes.',
+      type: err == null ? ToastType.success : ToastType.error,
+    );
+  }
+
+  Widget _promotionBanner(Conversation? convo) {
+    final status = convo?.promotionStatus;
+    final promoted = convo?.origin == 'buddy' || convo?.promotedAt != null;
+    if (promoted || status == 'accepted') {
+      return const _BuddyBanner(
+        icon: Icons.check_circle_outline,
+        color: BuddyColors.green,
+        label: 'Now buddies',
+      );
+    }
+    if (status == 'pending') {
+      return const _BuddyBanner(
+        icon: Icons.hourglass_top,
+        color: BuddyColors.gold,
+        label: 'Buddy request pending — waiting on them',
+      );
+    }
+    if (status == 'declined') {
+      return const _BuddyBanner(
+        icon: Icons.remove_circle_outline,
+        color: BuddyColors.textSecondary,
+        label: 'Buddy request declined',
+      );
+    }
+    if (convo == null || !convo.promotable) return const SizedBox.shrink();
+    return _BuddyBanner(
+      icon: Icons.handshake_outlined,
+      color: BuddyColors.green,
+      label: _promoting ? 'Sending…' : 'Promote to main chat',
+      action: _promoting
+          ? null
+          : _PromoteAction(
+              key: const ValueKey('chat-promote-action'),
+              onPressed: _promote,
+            ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final messagesState = ref.watch(messagesProvider(widget.conversationId));
     final conversationsState = ref.watch(conversationsProvider);
-    final convo = conversationsState.conversations.where((c) => c.id == widget.conversationId).firstOrNull;
+    final convo = conversationsState.conversations.where((c) => c.id == widget.conversationId).firstOrNull ?? _convo;
 
     final other = convo?.participantsData.where((p) => p.userId != _myUserId).firstOrNull;
     final identity = ConversationIdentity.of(convo, _myUserId);
@@ -311,6 +489,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       body: Column(
         children: [
+          if (widget.fromBuddyMessages) _promotionBanner(convo),
           Expanded(
             child: Container(
               color: _bgColor,

@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from .models import (
     Profile, BuddyRelationship, FollowRelationship, BlockRelationship,
-    AccountabilityPing, BuddySearchProfile,
+    AccountabilityPing, BuddySearchProfile, BuddyInterest,
 )
 from .buddy_notifications import notify_buddy_request, notify_buddy_accepted, notify_follow
 from .serializers import (
@@ -20,6 +20,7 @@ from .serializers import (
 from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, request_can_access_mature, can_view_content
 from apps.ai.client import ai_post
+from apps.messaging.blocking import is_blocked_pair
 
 
 class MyProfileView(generics.RetrieveUpdateAPIView):
@@ -318,11 +319,7 @@ class SendBuddyRequestView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        blocked = BlockRelationship.objects.filter(
-            (Q(blocker=request.user.profile, blocked=target) |
-             Q(blocker=target, blocked=request.user.profile))
-        ).exists()
-        if blocked:
+        if is_blocked_pair(request.user.profile, target):
             return Response({
                 'success': False, 'data': None,
                 'message': 'Unable to send buddy request.',
@@ -488,6 +485,10 @@ class BlockUserView(views.APIView):
             (Q(follower=request.user.profile, followee=target) |
              Q(follower=target, followee=request.user.profile))
         ).delete()
+        BuddyInterest.objects.filter(
+            (Q(from_user=request.user.profile, to_user=target) |
+             Q(from_user=target, to_user=request.user.profile))
+        ).delete()
 
         return Response({
             'success': True, 'data': None,
@@ -505,6 +506,123 @@ class BlockUserView(views.APIView):
             'success': True, 'data': None,
             'message': f'@ {target.username} unblocked.',
             'errors': None, 'pagination': None,
+        })
+
+
+class BuddyInterestView(views.APIView):
+    """One-way interest ("like") on someone's buddy-search profile.
+
+    POST   /profiles/<username>/interest/  -> toggle on  (idempotent)
+    DELETE /profiles/<username>/interest/  -> toggle off (idempotent)
+
+    One-way on purpose: A liking B creates one row; B liking A creates a
+    separate row. `liked_me` in the response is the back-signal (has the
+    target already liked the requester?).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _resolve(self, request, username):
+        """Return (target, error_response). Exactly one is not None."""
+        target = get_object_or_404(Profile, username=username)
+        me = request.user.profile
+
+        if target == me:
+            return None, Response({
+                'success': False, 'data': None,
+                'message': 'You cannot like yourself.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if is_blocked_pair(me, target):
+            return None, Response({
+                'success': False, 'data': None,
+                'message': 'Unable to like this profile.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            sp = target.search_profile
+        except BuddySearchProfile.DoesNotExist:
+            return None, Response({
+                'success': False, 'data': None,
+                'message': 'This profile is not open to buddy interests.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if (sp.visibility or 'public') == 'hidden':
+            return None, Response({
+                'success': False, 'data': None,
+                'message': 'This profile is not open to buddy interests.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return target, None
+
+    def post(self, request, username):
+        target, error = self._resolve(request, username)
+        if error:
+            return error
+
+        BuddyInterest.objects.get_or_create(
+            from_user=request.user.profile, to_user=target,
+        )
+        liked_me = BuddyInterest.objects.filter(
+            from_user=target, to_user=request.user.profile,
+        ).exists()
+
+        return Response({
+            'success': True,
+            'data': {
+                'liked': True,
+                'username': target.username,
+                'liked_me': liked_me,
+            },
+            'message': f'You are interested in @{target.username}.',
+            'errors': None, 'pagination': None,
+        })
+
+    def delete(self, request, username):
+        target, error = self._resolve(request, username)
+        if error:
+            return error
+
+        BuddyInterest.objects.filter(
+            from_user=request.user.profile, to_user=target,
+        ).delete()
+
+        return Response({
+            'success': True,
+            'data': {'liked': False, 'username': target.username},
+            'message': f'Interest in @{target.username} removed.',
+            'errors': None, 'pagination': None,
+        })
+
+
+class InterestsListView(views.APIView):
+    """Interests for the requester: who liked you, and who you liked."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        me = request.user.profile
+        received_ids = BuddyInterest.objects.filter(
+            to_user=me,
+        ).values_list('from_user_id', flat=True)
+        sent_ids = BuddyInterest.objects.filter(
+            from_user=me,
+        ).values_list('to_user_id', flat=True)
+
+        received = ProfileSerializer(
+            Profile.objects.filter(user_id__in=received_ids).order_by('username'),
+            many=True, context={'request': request},
+        ).data
+        sent = ProfileSerializer(
+            Profile.objects.filter(user_id__in=sent_ids).order_by('username'),
+            many=True, context={'request': request},
+        ).data
+
+        return Response({
+            'success': True,
+            'data': {'received': received, 'sent': sent},
+            'message': 'OK', 'errors': None, 'pagination': None,
         })
 
 
@@ -696,26 +814,80 @@ class UserSearchProfileView(views.APIView):
                 'success': True, 'data': None,
                 'message': 'No search profile.', 'errors': None, 'pagination': None,
             })
+        is_buddy = BuddyRelationship.objects.filter(
+            (db_models.Q(from_user=me, to_user=target) | db_models.Q(from_user=target, to_user=me)),
+            status='confirmed',
+        ).exists()
         if (sp.visibility or 'public') == 'buddies' and target != me:
-            is_buddy = BuddyRelationship.objects.filter(
-                (db_models.Q(from_user=me, to_user=target) | db_models.Q(from_user=target, to_user=me)),
-                status='confirmed',
-            ).exists()
             if not is_buddy:
                 return Response({
                     'success': True, 'data': None,
                     'message': 'No search profile.', 'errors': None, 'pagination': None,
                 })
+
+        payload = BuddySearchProfileSerializer(sp).data
+        # Another user's raw coordinates are never disclosed. Callers get a
+        # banded distance_km computed only against coordinates they supply.
+        if target != me:
+            payload.pop('latitude', None)
+            payload.pop('longitude', None)
+
+        data = {
+            **payload,
+            'username': target.username,
+            'display_name': target.display_name,
+            'avatar_url': target.avatar_url,
+            'liked_by_me': BuddyInterest.objects.filter(
+                from_user=me, to_user=target,
+            ).exists(),
+            'liked_me': BuddyInterest.objects.filter(
+                from_user=target, to_user=me,
+            ).exists(),
+            'is_buddy': is_buddy,
+            'can_message': self._can_message(me, target),
+        }
+
+        # Distance is only ever computed against coordinates the caller
+        # supplies; without them we never reveal (or infer) anyone's location.
+        caller_lat = self._float_param(request, 'lat')
+        caller_lng = self._float_param(request, 'lng')
+        if caller_lat is not None and caller_lng is not None:
+            from common.geo import haversine_km
+            if sp.latitude is not None and sp.longitude is not None:
+                try:
+                    data['distance_km'] = round(haversine_km(
+                        caller_lat, caller_lng, float(sp.latitude), float(sp.longitude),
+                    ), 1)
+                except (TypeError, ValueError):
+                    data['distance_km'] = None
+            else:
+                data['distance_km'] = None
+
         return Response({
             'success': True,
-            'data': {
-                **BuddySearchProfileSerializer(sp).data,
-                'username': target.username,
-                'display_name': target.display_name,
-                'avatar_url': target.avatar_url,
-            },
+            'data': data,
             'message': 'OK', 'errors': None, 'pagination': None,
         })
+
+    def _float_param(self, request, name):
+        raw = request.query_params.get(name)
+        if raw in (None, ''):
+            return None
+        try:
+            return float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    def _can_message(self, me, target):
+        """Delegate to the messaging rule so both paths stay in sync.
+
+        Imported lazily inside the method: apps.messaging.views imports
+        profiles models, so keeping it off the module import path avoids a
+        circular import. A broken import raises rather than silently
+        reporting can_message=False.
+        """
+        from apps.messaging.views import _allowed_to_message
+        return _allowed_to_message(me, target)
 
 
 class MySearchProfileView(views.APIView):
@@ -861,6 +1033,9 @@ class NearbyBuddiesView(views.APIView):
         ))
         blocked_ids = set(BlockRelationship.objects.filter(blocker=me).values_list('blocked_id', flat=True))
         blocked_by_ids = set(BlockRelationship.objects.filter(blocked=me).values_list('blocker_id', flat=True))
+        # Two bulk lookups, never per-row: who I liked, and who liked me.
+        liked_by_me_ids = set(BuddyInterest.objects.filter(from_user=me).values_list('to_user_id', flat=True))
+        liked_me_ids = set(BuddyInterest.objects.filter(to_user=me).values_list('from_user_id', flat=True))
 
         qs = BuddySearchProfile.objects.select_related('profile').exclude(profile=me)
         if now_only:
@@ -938,6 +1113,8 @@ class NearbyBuddiesView(views.APIView):
                 'age_band': sp.age_band,
                 'photos': sp.photos,
                 'available_now': sp.available_now,
+                'liked_by_me': sp.profile_id in liked_by_me_ids,
+                'liked_me': sp.profile_id in liked_me_ids,
                 'explanation': ' · '.join(explanations) if explanations else 'shared interests',
             })
 

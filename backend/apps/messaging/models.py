@@ -5,9 +5,22 @@ from common.models import TimestampedModel, SoftDeleteModel
 
 
 class Conversation(TimestampedModel):
+    ORIGIN_CHOICES = [
+        ('direct', 'Direct'),
+        ('discovery', 'Discovery'),
+        ('buddy', 'Buddy'),
+        ('group', 'Group'),
+        ('community', 'Community'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     participants = models.ManyToManyField('profiles.Profile', related_name='conversations')
     is_group = models.BooleanField(default=False)
+    # How this conversation came about: opened directly, via discovery/buddy
+    # search, auto-created on buddy confirmation, group, or community.
+    origin = models.CharField(max_length=20, choices=ORIGIN_CHOICES, default='direct', db_index=True)
+    # Set when a discovery DM is promoted to a buddy relationship.
+    promoted_at = models.DateTimeField(null=True, blank=True)
     group_name = models.CharField(max_length=100, blank=True)
     group_avatar_url = models.URLField(blank=True)
     group_gym = models.ForeignKey(
@@ -34,6 +47,38 @@ class Conversation(TimestampedModel):
             models.Index(fields=['is_group', 'last_message_at']),
             models.Index(fields=['group_gym']),
         ]
+
+
+class ConversationPromotion(TimestampedModel):
+    """A mutual-consent request to promote a DM into a buddy relationship.
+
+    Both participants must agree: the requester opens it, the other participant
+    responds. Accepting creates the confirmed BuddyRelationship and stamps the
+    conversation as promoted.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    conversation = models.OneToOneField(
+        Conversation, on_delete=models.CASCADE, related_name='promotion'
+    )
+    requested_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='conversation_promotions',
+    )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'messaging_conversation_promotion'
+
+    def __str__(self):
+        return f'Promotion for {self.conversation_id} ({self.status})'
 
 
 def _generate_invite_code() -> str:

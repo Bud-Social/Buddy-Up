@@ -349,6 +349,12 @@ export default function CartPage() {
             )}
           </div>
 
+          {shortfall && (
+            <div role="alert" className="rounded-xl bg-buddy-red/10 border border-buddy-red/30 px-4 py-2.5 text-xs text-buddy-red">
+              Not enough {shortfall[0]} — this cart needs {shortfall[1]}, you have {balanceFor(shortfall[0])}. Top up in Wallet to check out.
+            </div>
+          )}
+
           <Button className="w-full" size="lg" onClick={() => setShowConfirm(true)} disabled={items.length === 0}>
             Review & Checkout {itemCount > 0 && `(${itemCount} item${itemCount > 1 ? 's' : ''})`}
           </Button>
@@ -461,17 +467,17 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-buddy-gold/10 border border-buddy-gold/20 p-3 text-xs text-buddy-text-secondary space-y-1">
+              <div className={`rounded-xl p-3 text-xs text-buddy-text-secondary space-y-1 ${shortfall ? 'bg-buddy-red/10 border border-buddy-red/30' : 'bg-buddy-gold/10 border border-buddy-gold/20'}`}>
                 <p>Artifacts will be deducted instantly from your wallet. Your purchase unlocks instant access.</p>
-                {Object.entries(cartTotals).filter(([, v]) => v > 0).map(([k, v]) => (
+                {Object.keys(cartTotals).filter((k) => cartTotals[k] > 0).map((k) => (
                   <p key={k} className="flex justify-between">
                     <span>Balance: {balanceFor(k)} {k}</span>
                     <span>After purchase: {afterPurchase(k)} {k}</span>
                   </p>
                 ))}
                 {shortfall && (
-                  <p className="text-buddy-red font-medium">
-                    Insufficient {shortfall[0]} — you need {shortfall[1]}, have {balanceFor(shortfall[0])}. Top up in Wallet.
+                  <p role="alert" className="text-buddy-red font-medium">
+                    Not enough {shortfall[0]} — this cart needs {shortfall[1]}, you have {balanceFor(shortfall[0])}. Top up in Wallet to continue.
                   </p>
                 )}
                 {suggested && (
@@ -524,7 +530,7 @@ export default function CartPage() {
 
               <div className="flex gap-3">
                 <Button variant="ghost" className="flex-1" onClick={() => setShowConfirm(false)} disabled={checkingOut}>Cancel</Button>
-                <Button className="flex-1" onClick={handleCheckout} isLoading={checkingOut} disabled={checkingOut}>
+                <Button className="flex-1" onClick={handleCheckout} isLoading={checkingOut} disabled={checkingOut || !!shortfall}>
                   Confirm Payment
                 </Button>
               </div>

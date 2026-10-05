@@ -8,8 +8,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.accounts.models import User
 from apps.profiles.models import Profile
 from apps.marketplace.models import (
-    CreatorPayoutSetup, InventoryReservation, MealPlan, Order, OrderCase, OrderItem, Product, Shop,
-    ShopMembership, TrainingProgramme,
+    CreatorPayoutSetup, DiscountCode, EventTicket, InventoryReservation, MealPlan, Order,
+    OrderCase, OrderItem, Product, Shop, ShopMembership, TrainingProgramme,
 )
 
 
@@ -333,3 +333,347 @@ class ProgrammeSchedulePersistenceTests(TestCase):
         self.assertEqual(block['photo_url'], 'https://cdn.example.com/oats.jpg')
         self.assertEqual(block['alternatives'], 'Swap eggs for tofu scramble')
         self.assertEqual(block['side_effects'], 'High fibre - hydrate well')
+
+
+def _auth_client(user):
+    client = APIClient()
+    refresh = RefreshToken.for_user(user)
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+    return client
+
+
+class CartPriceQuoteChargeInvariantTests(TestCase):
+    """What the cart quotes must be exactly what checkout charges.
+
+    Four divergent copies of "what does this cart item cost" used to exist.
+    The cart quote ignored CartItem.meta['tier'] while checkout charged the
+    tier price, and tier prices name a different artifact token than the
+    event's base price. The client therefore validated `4 dumbbells` while the
+    server demanded `20 sprints`, and checkout 400'd on a funded wallet.
+
+    resolve_item_price() is now the single source of truth; these tests pin
+    the quote == charge invariant that let the copies drift unnoticed.
+    """
+
+    def setUp(self):
+        self.creator_user = User.objects.create_user(
+            email='tier-creator@example.com', password='TestPass123!',
+        )
+        self.creator = Profile.objects.create(
+            user=self.creator_user, username='tiercreator', display_name='Tier Creator',
+        )
+        self.shop = Shop.objects.create(
+            name='Tier Shop', handle='tiershop', verification_status='verified',
+        )
+        ShopMembership.objects.create(shop=self.shop, profile=self.creator, role='owner')
+        CreatorPayoutSetup.objects.create(
+            profile=self.creator, setup_status='ready',
+            terms_accepted_at=timezone.now(), account_reference='acct-tier-creator',
+        )
+
+        # Base price is deliberately a DIFFERENT token from the tier price.
+        self.base_price = {'sprint': 20}
+        self.tier_price = {'dumbbell': 4}
+        self.event = None
+
+    def _make_event(self, tiers=None, base_price=None, is_free=False):
+        from datetime import timedelta
+
+        from apps.marketplace.models import MarketplaceEvent
+
+        start = timezone.now() + timedelta(days=7)
+        return MarketplaceEvent.objects.create(
+            creator=self.creator,
+            shop=self.shop,
+            title='Sunrise Sprint Club',
+            description='Tiered ticket event',
+            event_type='in_person',
+            location='Karura Forest, Nairobi',
+            start_datetime=start,
+            end_datetime=start + timedelta(hours=2),
+            category='fitness',
+            capacity=0,
+            ticket_tiers=tiers if tiers is not None else [],
+            ticket_price_artifacts=self.base_price if base_price is None else base_price,
+            is_free=is_free,
+        )
+
+    def _buyer(self, handle, balance):
+        user = User.objects.create_user(email=f'{handle}@example.com', password='TestPass123!')
+        profile = Profile.objects.create(
+            user=user, username=handle, display_name=handle.title(), artifact_balance=dict(balance),
+        )
+        return profile, _auth_client(user)
+
+    def _add_tiered_ticket(self, client, tier_name='Pro'):
+        return client.post('/api/v1/marketplace/cart/', {
+            'item_type': 'event_ticket', 'event_id': str(self.event.id),
+            'tier': tier_name, 'quantity': 1,
+        }, format='json')
+
+    def test_quote_matches_charge_for_plain_programme(self):
+        programme = TrainingProgramme.objects.create(
+            creator=self.creator, shop=self.shop, title='Push Strength',
+            category='strength', price_artifacts={'dumbbell': 4},
+        )
+        buyer, client = self._buyer('plainbuyer', {'dumbbell': 10})
+
+        res = client.post('/api/v1/marketplace/cart/', {
+            'item_type': 'programme', 'programme_id': str(programme.id), 'quantity': 2,
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+
+        quoted = client.get('/api/v1/marketplace/cart/').json()['data']['total_artifacts']
+        self.assertEqual(quoted, {'dumbbell': 8})
+
+        checkout = client.post('/api/v1/marketplace/cart/checkout/', {}, format='json')
+        self.assertEqual(checkout.status_code, status.HTTP_200_OK, checkout.content)
+        charged = checkout.json()['data']['total_artifacts']
+        self.assertEqual(quoted, charged)
+        self.assertEqual(charged, {'dumbbell': 8})
+
+        buyer.refresh_from_db()
+        self.assertEqual(buyer.artifact_balance, {'dumbbell': 2})
+
+    def test_quote_matches_charge_for_tiered_event_ticket(self):
+        self.event = self._make_event(
+            tiers=[{'name': 'Pro', 'price_artifacts': self.tier_price, 'description': 'Front row'}],
+        )
+        # Funded for the TIER price only. The old tier-blind quote asked for sprints.
+        buyer, client = self._buyer('tierbuyer', {'dumbbell': 10})
+
+        res = self._add_tiered_ticket(client)
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+
+        quoted = client.get('/api/v1/marketplace/cart/').json()['data']['total_artifacts']
+        self.assertEqual(quoted, self.tier_price)
+
+        checkout = client.post('/api/v1/marketplace/cart/checkout/', {}, format='json')
+        self.assertEqual(checkout.status_code, status.HTTP_200_OK, checkout.content)
+        charged = checkout.json()['data']['total_artifacts']
+        self.assertEqual(quoted, charged)
+        self.assertEqual(charged, self.tier_price)
+
+        buyer.refresh_from_db()
+        self.assertEqual(buyer.artifact_balance, {'dumbbell': 6})
+
+    def test_tiered_ticket_checkout_succeeds_when_buyer_holds_tier_tokens(self):
+        """The reported regression: funded wallet, 400 'Insufficient X tokens.'"""
+        self.event = self._make_event(
+            tiers=[{'name': 'Pro', 'price_artifacts': self.tier_price}],
+        )
+        buyer, client = self._buyer('fundedbuyer', {'dumbbell': 100, 'sprint': 100})
+
+        self._add_tiered_ticket(client)
+        checkout = client.post('/api/v1/marketplace/cart/checkout/', {}, format='json')
+
+        self.assertEqual(checkout.status_code, status.HTTP_200_OK, checkout.content)
+        self.assertNotIn('Insufficient', checkout.json()['message'])
+
+        ticket = EventTicket.objects.get(event=self.event, holder=buyer)
+        self.assertEqual(ticket.tier, 'Pro')
+        self.assertEqual(ticket.price_paid_artifacts, self.tier_price)
+
+    def test_tier_name_is_matched_case_insensitively(self):
+        self.event = self._make_event(
+            tiers=[{'name': 'Pro', 'price_artifacts': self.tier_price}],
+        )
+        _buyer, client = self._buyer('casebuyer', {'dumbbell': 10})
+
+        res = self._add_tiered_ticket(client, tier_name='pRo')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+        quoted = client.get('/api/v1/marketplace/cart/').json()['data']['total_artifacts']
+        self.assertEqual(quoted, self.tier_price)
+
+    def test_insufficient_balance_returns_400_and_deducts_nothing(self):
+        """A rejected checkout must not partially debit the buyer."""
+        self.event = self._make_event(
+            tiers=[{'name': 'Pro', 'price_artifacts': self.tier_price}],
+        )
+        # Holds the tier token but not enough of it.
+        buyer, client = self._buyer('brokebuyer', {'dumbbell': 1})
+
+        self._add_tiered_ticket(client)
+        checkout = client.post('/api/v1/marketplace/cart/checkout/', {}, format='json')
+
+        self.assertEqual(checkout.status_code, status.HTTP_400_BAD_REQUEST, checkout.content)
+        self.assertIn('Insufficient', checkout.json()['message'])
+
+        buyer.refresh_from_db()
+        self.assertEqual(buyer.artifact_balance, {'dumbbell': 1})
+        self.assertFalse(EventTicket.objects.filter(event=self.event, holder=buyer).exists())
+
+    def test_insufficient_balance_with_two_items_leaves_every_token_untouched(self):
+        programme = TrainingProgramme.objects.create(
+            creator=self.creator, shop=self.shop, title='Legs Builder',
+            category='strength', price_artifacts={'barbell': 3},
+        )
+        buyer, client = self._buyer('partialbuyer', {'barbell': 1, 'dumbbell': 1})
+
+        client.post('/api/v1/marketplace/cart/', {
+            'item_type': 'programme', 'programme_id': str(programme.id), 'quantity': 1,
+        }, format='json')
+        client.post('/api/v1/marketplace/cart/', {
+            'item_type': 'product', 'product_id': str(self._product().id), 'quantity': 1,
+        }, format='json')
+
+        checkout = client.post('/api/v1/marketplace/cart/checkout/', {}, format='json')
+        self.assertEqual(checkout.status_code, status.HTTP_400_BAD_REQUEST, checkout.content)
+
+        buyer.refresh_from_db()
+        self.assertEqual(buyer.artifact_balance, {'barbell': 1, 'dumbbell': 1})
+
+    def _product(self):
+        return Product.objects.create(
+            name='Grips', brand='Test', category='equipment',
+            affiliate_url='https://example.test', shop=self.shop,
+            recommended_by=self.creator,
+        )
+
+    def test_tier_without_price_falls_back_to_base_price(self):
+        self.event = self._make_event(
+            tiers=[
+                {'name': 'Early Bird', 'price_artifacts': {}},
+                {'name': 'Unpriced', 'price_artifacts': None},
+            ],
+        )
+        buyer, client = self._buyer('fallbackbuyer', {'sprint': 20})
+
+        for tier in ('Early Bird', 'Unpriced'):
+            res = self._add_tiered_ticket(client, tier_name=tier)
+            self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+            quoted = client.get('/api/v1/marketplace/cart/').json()['data']['total_artifacts']
+            self.assertEqual(quoted, self.base_price, f'tier {tier} should fall back to base')
+            self._clear_cart(client)
+
+        # Single tier purchase so the buyer only needs the base price once.
+        self._add_tiered_ticket(client, tier_name='Early Bird')
+        checkout = client.post('/api/v1/marketplace/cart/checkout/', {}, format='json')
+        self.assertEqual(checkout.status_code, status.HTTP_200_OK, checkout.content)
+        self.assertEqual(checkout.json()['data']['total_artifacts'], self.base_price)
+
+        buyer.refresh_from_db()
+        self.assertEqual(buyer.artifact_balance, {'sprint': 0})
+
+    def test_unknown_tier_name_is_rejected_by_the_cart(self):
+        self.event = self._make_event(
+            tiers=[{'name': 'Pro', 'price_artifacts': self.tier_price}],
+        )
+        _buyer, client = self._buyer('unknowntier', {'dumbbell': 10})
+
+        res = self._add_tiered_ticket(client, tier_name='Nonexistent')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Unknown ticket tier', res.json()['message'])
+
+    def test_free_event_checkout_charges_nothing(self):
+        self.event = self._make_event(is_free=True, base_price={'sprint': 20})
+        buyer, client = self._buyer('freebuyer', {})
+
+        res = self._add_tiered_ticket(client, tier_name=None)
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+
+        quoted = client.get('/api/v1/marketplace/cart/').json()['data']['total_artifacts']
+        self.assertEqual(quoted, {})
+
+        checkout = client.post('/api/v1/marketplace/cart/checkout/', {}, format='json')
+        self.assertEqual(checkout.status_code, status.HTTP_200_OK, checkout.content)
+        self.assertEqual(checkout.json()['data']['total_artifacts'], {})
+
+        buyer.refresh_from_db()
+        self.assertEqual(buyer.artifact_balance, {})
+        self.assertTrue(EventTicket.objects.filter(event=self.event, holder=buyer).exists())
+
+    def test_cart_line_item_subtotal_agrees_with_cart_total(self):
+        """CartSerializer and CartItemSerializer must not disagree either."""
+        self.event = self._make_event(
+            tiers=[{'name': 'Pro', 'price_artifacts': self.tier_price}],
+        )
+        _buyer, client = self._buyer('subtotalbuyer', {'dumbbell': 10})
+
+        self._add_tiered_ticket(client)
+        data = client.get('/api/v1/marketplace/cart/').json()['data']
+        line_totals = {}
+        for sub in data['subtotals']:
+            for k, v in sub['item_total_artifacts'].items():
+                line_totals[k] = line_totals.get(k, 0) + v
+        self.assertEqual(line_totals, data['total_artifacts'])
+        self.assertEqual(data['subtotals'][0]['item_total_artifacts'], self.tier_price)
+
+    def _clear_cart(self, client):
+        client.delete('/api/v1/marketplace/cart/', {}, format='json')
+
+    def test_discount_minimum_purchase_uses_the_tier_price(self):
+        """DiscountCodeView._cart_total_artifacts was tier-blind too."""
+        self.event = self._make_event(
+            tiers=[{'name': 'Pro', 'price_artifacts': self.tier_price}],
+        )
+        _buyer, client = self._buyer('discountbuyer', {'dumbbell': 10})
+
+        code = DiscountCode.objects.create(
+            code='TIERMIN', discount_type='percentage', discount_pct=10,
+            creator=self.creator, min_purchase_artifacts=self.tier_price,
+        )
+        self._add_tiered_ticket(client)
+
+        res = client.post('/api/v1/marketplace/cart/discount/', {'code': code.code}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+
+
+class EventTicketNotificationSignalTests(TestCase):
+    """handle_event_ticket_created 500'd on every successful ticket purchase.
+
+    It read EventTicket.user (the field is `holder`) and MarketplaceEvent.start_time
+    (the field is `start_datetime`), so the post_save receiver raised
+    AttributeError *after* the buyer had been debited.
+    """
+
+    def setUp(self):
+        from datetime import timedelta
+
+        from apps.marketplace.models import MarketplaceEvent
+
+        self.user = User.objects.create_user(email='signal@example.com', password='TestPass123!')
+        self.buyer = Profile.objects.create(
+            user=self.user, username='signalbuyer', display_name='Signal Buyer',
+        )
+        self.creator_user = User.objects.create_user(
+            email='signal-creator@example.com', password='TestPass123!',
+        )
+        self.creator = Profile.objects.create(
+            user=self.creator_user, username='signalcreator', display_name='Signal Creator',
+        )
+        start = timezone.now() + timedelta(days=2)
+        self.event = MarketplaceEvent.objects.create(
+            creator=self.creator, title='Signal Test Run', description='signal regression',
+            event_type='in_person', location='Nairobi',
+            start_datetime=start, end_datetime=start + timedelta(hours=1),
+            category='fitness', is_free=True,
+        )
+
+    def test_creating_event_ticket_does_not_raise(self):
+        ticket = EventTicket.objects.create(
+            event=self.event, holder=self.buyer, tier='Standard',
+            price_paid_artifacts={}, status='active',
+        )
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.holder, self.buyer)
+        self.assertEqual(ticket.tier, 'Standard')
+
+    def test_signal_uses_real_field_names_and_emits_a_notification(self):
+        from apps.notifications.models import Notification
+
+        Notification.objects.all().delete()
+        EventTicket.objects.create(
+            event=self.event, holder=self.buyer, tier='Standard',
+            price_paid_artifacts={}, status='active',
+        )
+        note = Notification.objects.filter(
+            recipient=self.buyer, notification_type='event_ticket_purchased',
+        ).first()
+        self.assertIsNotNone(note, 'expected an event_ticket_purchased notification')
+        self.assertEqual(note.metadata['event_title'], self.event.title)
+        self.assertIsNotNone(note.metadata['start_time'])
+        self.assertEqual(
+            note.metadata['start_time'],
+            self.event.start_datetime.isoformat(),
+        )

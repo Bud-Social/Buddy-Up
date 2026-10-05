@@ -1,4 +1,4 @@
-.PHONY: dev prod build logs shell-backend shell-frontend migrate seed test lint
+.PHONY: dev prod build logs shell-backend shell-frontend migrate seed seed-dry-run test lint
 
 # ── Development ───────────────────────────────────────────────────────
 dev:
@@ -46,7 +46,12 @@ migrations:
 	docker compose exec backend python manage.py makemigrations
 
 seed:
-	docker compose exec backend python manage.py seed_dev_data
+	docker compose exec backend python manage.py seed_products
+	docker compose exec backend python manage.py seed_communities
+
+seed-dry-run:
+	docker compose exec backend python manage.py seed_products --dry-run
+	docker compose exec backend python manage.py seed_communities --dry-run
 
 superuser:
 	docker compose exec backend python manage.py createsuperuser

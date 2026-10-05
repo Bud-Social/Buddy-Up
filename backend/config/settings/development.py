@@ -13,12 +13,23 @@ CSRF_TRUSTED_ORIGINS = list(set(CSRF_TRUSTED_ORIGINS + ['http://localhost:3002']
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-prod')
 
-INSTALLED_APPS += [
-    'django_extensions',
-    'debug_toolbar',
-]
+# django-debug-toolbar renders its own panel when a view raises, and its
+# rendering path raises `KeyError` on the URL namespace. Under the test
+# runner that masks the real traceback and turns a readable failure into an
+# opaque one, so keep the toolbar out of test runs entirely.
+import sys as _sys
 
-MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+_TOOLBAR_DISABLED = (
+    os.environ.get('DISABLE_DEBUG_TOOLBAR') == '1'
+    or 'test' in _sys.argv
+    or 'pytest' in _sys.argv
+)
+if not _TOOLBAR_DISABLED:
+    INSTALLED_APPS += [
+        'django_extensions',
+        'debug_toolbar',
+    ]
+    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
 
 INTERNAL_IPS = ['127.0.0.1', 'localhost']
 

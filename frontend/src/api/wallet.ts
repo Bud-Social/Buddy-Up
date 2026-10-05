@@ -9,14 +9,19 @@ export interface BalanceItem {
 }
 
 export interface BalanceResponse {
+  /** Legacy combined view (regular + creator). */
   balance: BalanceItem[];
   total_label: string;
   total_fiat: number;
   fiat_currency: string;
+  /** Spendable at checkout. */
   regular_balance: BalanceItem[];
   regular_total_fiat: number;
+  regular_total_label: string;
+  /** Earnings — not spendable until transferred. */
   creator_balance: BalanceItem[];
   creator_total_fiat: number;
+  creator_total_label: string;
   creator_display_name: string;
 }
 

@@ -91,20 +91,26 @@ function OverviewTab({ balance, onBuyClick, onSendClick, refetchBalance }: { bal
 
   return (
     <div className="space-y-4">
-      <Card className="p-6 bg-gradient-to-br from-buddy-green/20 to-buddy-surface">
-        <p className="text-sm text-buddy-text-secondary">Total Balance</p>
-        <p className="font-display text-3xl font-extrabold mt-1">{balance?.total_label || '$0.00'}</p>
+      <Card className="p-6 border-l-2 border-buddy-green">
+        <p className="text-sm text-buddy-text-secondary">Spendable balance</p>
+        <p className="font-display text-3xl font-extrabold mt-1">{balance?.regular_total_label || '$0.00'}</p>
+        <p className="text-xs text-buddy-text-secondary mt-1">
+          What you can spend at checkout. Earnings stay separate until you transfer them.
+        </p>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
-        {(balance?.balance || []).map((item) => (
-          <Card key={item.artifact_type}
-            className={`p-3 text-center flex-1 min-w-[80px] ${item.quantity > 0 ? 'bg-buddy-surface-raised' : 'opacity-50'}`}>
-            <ArtifactIcon artifact={item.artifact_type} size={24} quantity={item.quantity} />
-            <p className="font-mono text-xs mt-1 font-bold">{item.quantity}</p>
-            <p className="text-[10px] text-buddy-text-secondary">${item.usd_value.toFixed(2)}</p>
-          </Card>
-        ))}
+      <div>
+        <p className="text-[11px] text-buddy-text-secondary mb-1.5">All tokens · spendable + earnings</p>
+        <div className="flex flex-wrap gap-2">
+          {(balance?.balance || []).map((item) => (
+            <Card key={item.artifact_type}
+              className={`p-3 text-center flex-1 min-w-[80px] ${item.quantity > 0 ? 'bg-buddy-surface-raised' : 'opacity-50'}`}>
+              <ArtifactIcon artifact={item.artifact_type} size={24} quantity={item.quantity} />
+              <p className="font-mono text-xs mt-1 font-bold">{item.quantity}</p>
+              <p className="text-[10px] text-buddy-text-secondary">${item.usd_value.toFixed(2)}</p>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {/* Regular Wallet Section */}
@@ -121,7 +127,7 @@ function OverviewTab({ balance, onBuyClick, onSendClick, refetchBalance }: { bal
             <p className="text-xs text-buddy-text-secondary">No tokens in regular wallet.</p>
           )}
         </div>
-        <p className="text-right text-xs text-buddy-text-secondary mt-2">USD ${balance?.regular_total_fiat.toFixed(2) || '0.00'}</p>
+        <p className="text-right text-xs text-buddy-text-secondary mt-2">Spendable · {balance?.regular_total_label || 'USD $0.00'}</p>
       </Card>
 
       {(hasCreatorBalance || (balance?.creator_display_name)) && (
@@ -154,7 +160,7 @@ function OverviewTab({ balance, onBuyClick, onSendClick, refetchBalance }: { bal
               <p className="text-xs text-buddy-text-secondary">No marketplace earnings yet.</p>
             )}
           </div>
-          <p className="text-right text-xs text-buddy-text-secondary mt-2">USD ${balance?.creator_total_fiat.toFixed(2) || '0.00'}</p>
+          <p className="text-right text-xs text-buddy-text-secondary mt-2">Earnings · {balance?.creator_total_label || 'USD $0.00'}</p>
         </Card>
       )}
 

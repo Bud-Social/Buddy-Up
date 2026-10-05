@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/repositories/profile_repository.dart';
 import '../../../core/api/api_client.dart';
@@ -18,10 +19,19 @@ class NearbyBuddy {
   final List<String> modes;
   final String bio;
   final List<String> goals;
+  final String pace;
   final String ageBand;
+  final String neighbourhood;
   final List<String> photos;
   final bool availableNow;
   final String explanation;
+
+  /// I have liked this buddy. Optimistically flipped by [BuddyNearbyNotifier.
+  /// toggleLike] so the heart responds before the round-trip.
+  final bool likedByMe;
+
+  /// They have liked me — the back-signal that makes a mutual like possible.
+  final bool likedMe;
 
   NearbyBuddy({
     required this.profile,
@@ -36,7 +46,32 @@ class NearbyBuddy {
     required this.photos,
     required this.availableNow,
     required this.explanation,
+    this.pace = '',
+    this.neighbourhood = '',
+    this.likedByMe = false,
+    this.likedMe = false,
   });
+
+  String get username => (profile['username'] ?? '') as String;
+
+  NearbyBuddy copyWith({bool? likedByMe, bool? likedMe}) => NearbyBuddy(
+        profile: profile,
+        displayName: displayName,
+        distanceKm: distanceKm,
+        intents: intents,
+        customIntent: customIntent,
+        modes: modes,
+        bio: bio,
+        goals: goals,
+        pace: pace,
+        ageBand: ageBand,
+        neighbourhood: neighbourhood,
+        photos: photos,
+        availableNow: availableNow,
+        explanation: explanation,
+        likedByMe: likedByMe ?? this.likedByMe,
+        likedMe: likedMe ?? this.likedMe,
+      );
 
   factory NearbyBuddy.fromJson(Map<String, dynamic> json) {
     final profile = (json['profile'] as Map<String, dynamic>?) ?? const {};
@@ -52,10 +87,14 @@ class NearbyBuddy {
         modes: ((json['modes'] as List?) ?? []).map((e) => e.toString()).toList(),
         bio: json['bio'] as String? ?? '',
         goals: ((json['goals'] as List?) ?? []).map((e) => e.toString()).toList(),
+        pace: json['pace'] as String? ?? '',
         ageBand: json['age_band'] as String? ?? '',
+        neighbourhood: json['neighbourhood'] as String? ?? '',
         photos: ((json['photos'] as List?) ?? []).map((e) => e.toString()).toList(),
         availableNow: json['available_now'] as bool? ?? false,
         explanation: json['explanation'] as String? ?? '',
+        likedByMe: json['liked_by_me'] as bool? ?? false,
+        likedMe: json['liked_me'] as bool? ?? false,
       );
   }
 }
@@ -127,6 +166,10 @@ class BuddyNearbyState {
   final GeoNotice? geo;
   final int matchCount;
 
+  /// Usernames with a like request in flight — the heart disables itself so a
+  /// double tap can't race two toggles against each other.
+  final Set<String> liking;
+
   const BuddyNearbyState({
     this.buddies = const [],
     this.isLoading = false,
@@ -139,6 +182,7 @@ class BuddyNearbyState {
     this.radiusKm,
     this.geo,
     this.matchCount = 0,
+    this.liking = const {},
   });
 
   BuddyNearbyState copyWith({
@@ -158,6 +202,7 @@ class BuddyNearbyState {
     bool clearGeo = false,
     bool clearCoords = false,
     int? matchCount,
+    Set<String>? liking,
   }) {
     return BuddyNearbyState(
       buddies: buddies ?? this.buddies,
@@ -171,6 +216,7 @@ class BuddyNearbyState {
       radiusKm: radiusKm ?? this.radiusKm,
       geo: clearGeo ? null : (geo ?? this.geo),
       matchCount: matchCount ?? this.matchCount,
+      liking: liking ?? this.liking,
     );
   }
 }
@@ -213,6 +259,67 @@ class BuddyNearbyNotifier extends Notifier<BuddyNearbyState> {
     }
   }
 
+  /// Toggle the one-way like on [username].
+  ///
+  /// Flips the heart immediately, then reconciles against the server. The
+  /// back-signal (`liked_me`) is only ever advanced by the server — when a
+  /// like completes a mutual match the row re-reads it from the response. On
+  /// failure the row rolls back to exactly what it was and [likeError]
+  /// carries a message worth showing.
+  Future<String?> toggleLike(String username) async {
+    final idx = state.buddies.indexWhere((b) => b.username == username);
+    if (idx == -1) return 'Buddy not in this list.';
+    if (state.liking.contains(username)) return null;
+
+    final snapshot = state.buddies;
+    final buddy = snapshot[idx];
+    final wasLiked = buddy.likedByMe;
+    _writeLike(snapshot, idx, likedByMe: !wasLiked);
+    state = state.copyWith(liking: {...state.liking, username});
+
+    try {
+      final raw = wasLiked
+          ? await _repo.unlikeInterest(username)
+          : await _repo.likeInterest(username);
+      final data = raw['data'];
+      final likedMe = data is Map ? data['liked_me'] as bool? : null;
+      final still = state.buddies.indexWhere((b) => b.username == username);
+      if (still != -1) {
+        _writeLike(
+          state.buddies,
+          still,
+          likedByMe: !wasLiked,
+          likedMe: likedMe,
+        );
+      }
+      return null;
+    } catch (e) {
+      final back = state.buddies.indexWhere((b) => b.username == username);
+      if (back != -1) _writeLike(state.buddies, back, likedByMe: wasLiked);
+      return _serverMessage(e, 'Could not save that like.');
+    } finally {
+      state = state.copyWith(liking: {...state.liking}..remove(username));
+    }
+  }
+
+  /// Fold a like confirmed elsewhere (the detail page) back into the grid so
+  /// the heart matches when you navigate back.
+  void applyLike(String username, {required bool likedByMe, required bool likedMe}) {
+    final idx = state.buddies.indexWhere((b) => b.username == username);
+    if (idx == -1) return;
+    _writeLike(state.buddies, idx, likedByMe: likedByMe, likedMe: likedMe);
+  }
+
+  /// Write the like flags into [list] at [index] and publish it.
+  ///
+  /// list must be the array currently in state (identity matters — copyWith
+  /// treats null as "unchanged", so a fresh list has to be built).
+  void _writeLike(List<NearbyBuddy> list, int index, {bool? likedByMe, bool? likedMe}) {
+    final next = [...list];
+    next[index] = next[index].copyWith(likedByMe: likedByMe, likedMe: likedMe);
+    state = state.copyWith(buddies: next);
+  }
+
   /// Persist the opt-in search profile (intents + GPS) so nearby keeps
   /// working and other users can find me. Fire-and-forget safe.
   Future<void> persistSearchProfile() async {
@@ -237,6 +344,26 @@ class BuddyNearbyNotifier extends Notifier<BuddyNearbyState> {
   void setRadius(double? radiusKm) => state = state.copyWith(radiusKm: radiusKm);
   void setNowOnly(bool v) => state = state.copyWith(nowOnly: v);
   void setMatchCount(int v) => state = state.copyWith(matchCount: v);
+
+  /// The backend states its own refusal ("You cannot like yourself.",
+  /// "This profile is not open to buddy interests.") inside the response
+  /// envelope — surface that rather than a generic failure.
+  static String _serverMessage(Object e, String fallback) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map) {
+        final direct = data['message'] ?? data['detail'];
+        if (direct is String && direct.isNotEmpty) return direct;
+        if (data['errors'] is Map) {
+          final first = (data['errors'] as Map).values.firstOrNull;
+          if (first is List && first.isNotEmpty && first.first is String) {
+            return first.first as String;
+          }
+        }
+      }
+    }
+    return fallback;
+  }
 }
 
 final buddyNearbyProvider = NotifierProvider<BuddyNearbyNotifier, BuddyNearbyState>(BuddyNearbyNotifier.new);

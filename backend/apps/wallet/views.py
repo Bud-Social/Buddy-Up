@@ -61,14 +61,20 @@ class WalletBalanceView(views.APIView):
         total_fiat = calculate_fiat(total_balance)
 
         result = {
+            # Legacy keys: `balance`/`total_label` remain regular + creator
+            # combined for existing clients.
             'balance': total_list,
             'total_label': total_fiat['display'],
             'total_fiat': total_fiat['amount'],
             'fiat_currency': total_fiat['currency'],
+            # Checkout only ever spends `profile.artifact_balance`, so the
+            # spendable figure must be labelled separately from earnings.
             'regular_balance': regular_list,
             'regular_total_fiat': regular_fiat['amount'],
+            'regular_total_label': regular_fiat['display'],
             'creator_balance': creator_list,
             'creator_total_fiat': creator_fiat['amount'],
+            'creator_total_label': creator_fiat['display'],
             'creator_display_name': profile.creator_display_name or '',
         }
         return Response({

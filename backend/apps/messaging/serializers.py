@@ -8,6 +8,10 @@ from .models import (
 class StartConversationInputSerializer(serializers.Serializer):
     participants = serializers.ListField(child=serializers.CharField(), allow_empty=False)
     group_name = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    origin = serializers.ChoiceField(
+        choices=['direct', 'discovery'], required=False, default='direct',
+        help_text="Use 'discovery' for threads opened from the buddy-finder surface.",
+    )
 
 
 class SendMessageInputSerializer(serializers.Serializer):
@@ -74,6 +78,12 @@ class ConversationSerializer(serializers.ModelSerializer):
     last_message = serializers.SerializerMethodField()
     membership_role = serializers.SerializerMethodField()
     invite_code = serializers.SerializerMethodField()
+    origin = serializers.CharField(read_only=True)
+    promoted_at = serializers.DateTimeField(read_only=True)
+    promotable = serializers.SerializerMethodField()
+    promotion_status = serializers.SerializerMethodField()
+    promotion_id = serializers.SerializerMethodField()
+    promotion_requested_by = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
@@ -81,6 +91,7 @@ class ConversationSerializer(serializers.ModelSerializer):
             'id', 'is_group', 'is_community', 'group_name', 'group_avatar_url',
             'group_gym_id', 'description', 'cover_url', 'invite_code', 'is_public',
             'sub_channel', 'call_in_progress',
+            'origin', 'promoted_at', 'promotable', 'promotion_status', 'promotion_id', 'promotion_requested_by',
             'participants_data', 'unread_count', 'membership_role',
             'last_message', 'last_message_at', 'created_at',
         ]
@@ -124,6 +135,52 @@ class ConversationSerializer(serializers.ModelSerializer):
             )
             if str(request.user.profile.user_id) not in (message.deleted_for or [])
         )
+
+    def _viewer(self):
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return None
+        return getattr(request.user, 'profile', None)
+
+    def _promotion(self, obj):
+        try:
+            return obj.promotion
+        except Exception:
+            return None
+
+    def get_promotable(self, obj):
+        """True when the viewer may turn this DM into a buddy relationship."""
+        profile = self._viewer()
+        if profile is None:
+            return False
+        from .blocking import other_participant
+        other = other_participant(obj, profile)
+        if other is None:
+            return False
+        from django.db.models import Q
+        from apps.profiles.models import BuddyRelationship
+        return not BuddyRelationship.objects.filter(
+            Q(from_user=profile, to_user=other) | Q(from_user=other, to_user=profile),
+            status='confirmed',
+        ).exists()
+
+    def get_promotion_status(self, obj):
+        promotion = self._promotion(obj)
+        return promotion.status if promotion is not None else None
+
+    def get_promotion_id(self, obj):
+        """Expose the pending promotion so the *invited* participant can
+        accept or decline it. Only meaningful while a request is pending."""
+        promotion = self._promotion(obj)
+        return promotion.id if promotion is not None else None
+
+    def get_promotion_requested_by(self, obj):
+        """Who asked for the promotion, so a client can show Accept/Decline
+        only to the party who was asked."""
+        promotion = self._promotion(obj)
+        if promotion is None or promotion.requested_by_id is None:
+            return None
+        return str(promotion.requested_by_id)
 
     def get_last_message(self, obj):
         request = self.context.get('request')

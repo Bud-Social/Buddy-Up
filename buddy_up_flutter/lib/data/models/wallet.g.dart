@@ -35,12 +35,14 @@ _BalanceResponse _$BalanceResponseFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const <BalanceItem>[],
       regularTotalFiat: (json['regular_total_fiat'] as num?)?.toDouble() ?? 0.0,
+      regularTotalLabel: json['regular_total_label'] as String? ?? '',
       creatorBalance:
           (json['creator_balance'] as List<dynamic>?)
               ?.map((e) => BalanceItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const <BalanceItem>[],
       creatorTotalFiat: (json['creator_total_fiat'] as num?)?.toDouble() ?? 0.0,
+      creatorTotalLabel: json['creator_total_label'] as String? ?? '',
       creatorDisplayName: json['creator_display_name'] as String? ?? '',
     );
 
@@ -52,8 +54,10 @@ Map<String, dynamic> _$BalanceResponseToJson(_BalanceResponse instance) =>
       'fiat_currency': instance.fiatCurrency,
       'regular_balance': instance.regularBalance,
       'regular_total_fiat': instance.regularTotalFiat,
+      'regular_total_label': instance.regularTotalLabel,
       'creator_balance': instance.creatorBalance,
       'creator_total_fiat': instance.creatorTotalFiat,
+      'creator_total_label': instance.creatorTotalLabel,
       'creator_display_name': instance.creatorDisplayName,
     };
 

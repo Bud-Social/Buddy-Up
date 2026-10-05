@@ -16,10 +16,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Send, Phone, Video, MoreVertical, Check, CheckCheck,
   X, FileText, Plus, MapPin, BarChart2, Smile, Mic, Search, Calendar, Clock, Download, Forward,
-  ChevronLeft, ChevronRight, Palette, Menu,
+  ChevronLeft, ChevronRight, Palette, Menu, UserCheck,
 } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/Avatar';
+import { useToast } from '@/components/ui/Toast';
 import { apiClient } from '@/api/client';
 import { messagingApi } from '@/api/messaging';
 import type { Conversation, Message as MsgType, LinkPreviewData } from '@/api/messaging';
@@ -265,13 +266,24 @@ function MessageEmojiPicker({ onPick, onClose, anchorRef }: {
   );
 }
 
-export default function Messages() {
+export interface MessagesProps {
+  /** 'discovery' narrows the list to buddy-search chats and enables promotion. */
+  scope?: 'all' | 'discovery';
+}
+
+export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const { conversationId: routeConvoId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
   const profile = useAuthStore((s) => s.profile);
   const chatPrefs = useChatPreferences();
   const openMobile = useSidebarStore((s) => s.openMobile);
   const isTablet = useMediaQuery('(min-width: 768px)');
+  const { toast } = useToast();
+  const isDiscovery = scope === 'discovery';
+  const basePath = isDiscovery ? '/buddies/messages' : '/messages';
+  const [promoteBusy, setPromoteBusy] = useState(false);
+  const [respondBusy, setRespondBusy] = useState(false);
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -355,6 +367,26 @@ export default function Messages() {
     if (!activeConvo || activeConvo.is_group) return null;
     return activeConvo.participants_data.find((p) => p.user_id !== profile?.user_id) ?? activeConvo.participants_data[0] ?? null;
   }, [activeConvo, profile?.user_id]);
+
+  /**
+   * Accept/Decline belong to the RESPONDER — the participant who did *not* ask.
+   *
+   * `promotion_requested_by` is the asker's user_id, so the requester recognises
+   * themselves by it matching their own id and is left with just the pending chip.
+   * The viewer's id comes from the auth store (already used above for message
+   * ownership and the "other participant" lookup) — no extra fetch.
+   *
+   * A pending promotion whose `promotion_requested_by` is null/unknown is treated as
+   * answerable: the controls show, and the respond endpoint remains the authority —
+   * it 403s the requester and the server's message is surfaced verbatim via toast.
+   */
+  const canRespondToPromotion = useMemo(() => {
+    if (!isDiscovery) return false;
+    if (!activeConvo) return false;
+    if (activeConvo.promotion_status !== 'pending') return false;
+    if (!activeConvo.promotion_id) return false;
+    return activeConvo.promotion_requested_by !== profile?.user_id;
+  }, [isDiscovery, activeConvo, profile?.user_id]);
 
   // ── Derived: display identity (group/community uses its own name + avatar) ──
   const activeIdentity = useMemo(
@@ -496,19 +528,19 @@ export default function Messages() {
     setReplyTo(null);
     setMediaFile(null);
     setMediaPreviewUrl(null);
-    if (pushUrl) navigate(`/messages/${convo.id}`, { replace: false });
+    if (pushUrl) navigate(`${basePath}/${convo.id}`, { replace: false });
     try {
       const res = await messagingApi.getMessages(convo.id);
       setMessages(res.data ?? []);
       messagingApi.markRead(convo.id).catch(() => {});
     } catch { /* silent */ }
     finally { setMessagesLoading(false); }
-  }, [navigate]);
+  }, [navigate, basePath]);
 
   const closeConversation = useCallback(() => {
     setActiveConvo(null);
-    navigate('/messages', { replace: false });
-  }, [navigate]);
+    navigate(basePath, { replace: false });
+  }, [navigate, basePath]);
 
   // Auto-open from URL param (:conversationId)
   useEffect(() => {
@@ -517,6 +549,23 @@ export default function Messages() {
     const found = conversations.find((c) => c.id === routeConvoId);
     if (found) openConversation(found, false);
   }, [conversations, routeConvoId, activeConvo?.id, openConversation]);
+
+  // While a promotion is pending it is answered somewhere else (the requester waits
+  // on the other side of the thread), so poll the active conversation until it
+  // resolves into a confirmation (or a decline).
+  useEffect(() => {
+    if (!isDiscovery || activeConvo?.promotion_status !== 'pending') return;
+    const id = activeConvo.id;
+    const timer = setInterval(async () => {
+      try {
+        const res = await messagingApi.getConversation(id);
+        if (!res.data) return;
+        setActiveConvo(res.data);
+        setConversations((prev) => prev.map((c) => (c.id === id ? res.data as Conversation : c)));
+      } catch { /* silent */ }
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [isDiscovery, activeConvo?.id, activeConvo?.promotion_status]);
 
   // Scroll to bottom
   useEffect(() => {
@@ -714,10 +763,89 @@ export default function Messages() {
 
   // ── Filtered conversations ─────────────────────────────────────────────────
   const filteredConvos = useMemo(() => {
-    if (!searchQuery.trim()) return conversations;
+    // Buddy chats are the 1-on-1 conversations that can still become — or already
+    // are — a buddy relationship. Promoting a discovery DM flips its origin to
+    // 'buddy' and the accepted record stays behind, so both are kept. Groups and
+    // communities are out of scope.
+    const scoped = isDiscovery
+      ? conversations.filter(
+        (c) => !c.is_group && !c.is_community
+          && (c.origin === 'discovery' || c.origin === 'buddy' || c.promotion_status != null),
+      )
+      : conversations;
+    if (!searchQuery.trim()) return scoped;
     const q = searchQuery.toLowerCase();
-    return conversations.filter((c) => conversationSearchText(c).includes(q));
-  }, [conversations, searchQuery, profile?.user_id]);
+    return scoped.filter((c) => conversationSearchText(c).includes(q));
+  }, [conversations, searchQuery, profile?.user_id, isDiscovery]);
+
+  /** Ask the other participant to make this discovery chat a buddy relationship. */
+  const promoteConversation = async () => {
+    if (!activeConvo || promoteBusy) return;
+    setPromoteBusy(true);
+    try {
+      const res = await messagingApi.promoteConversation(activeConvo.id);
+      const pending: Conversation = {
+        ...activeConvo,
+        promotion_status: res.data?.status ?? 'pending',
+        promotion_id: res.data?.id ?? activeConvo.promotion_id ?? null,
+        // We are the requester, so mark it now: the Accept/Decline pair must not
+        // appear on our own thread. /promote/ echoes the caller's own id.
+        promotion_requested_by: res.data?.requested_by ?? profile?.user_id ?? null,
+      };
+      setActiveConvo(pending);
+      setConversations((prev) => prev.map((c) => (c.id === pending.id ? pending : c)));
+      toast('success', `Buddy request sent — waiting on @${other?.username ?? 'them'}.`);
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } } | null;
+      toast('error', e?.response?.data?.message || 'Could not send the buddy request.');
+    } finally {
+      setPromoteBusy(false);
+    }
+  };
+
+  /**
+   * Answer a pending buddy request. Only the responder ever reaches this — the
+   * header renders the pair behind `canRespondToPromotion`, which compares
+   * `promotion_requested_by` against the viewer's own id. The endpoint stays the
+   * authority: it 403s the requester (e.g. if the payload and the row disagree) and
+   * the server's message is surfaced verbatim.
+   */
+  const respondToPromotion = async (accept: boolean) => {
+    const promotionId = activeConvo?.promotion_id;
+    if (!activeConvo || !promotionId || respondBusy) return;
+    setRespondBusy(true);
+    setShowAcceptConfirm(false);
+    try {
+      const res = await messagingApi.respondToPromotion(promotionId, accept);
+      const settled: Conversation = {
+        ...activeConvo,
+        promotion_status: res.data?.status ?? (accept ? 'accepted' : 'declined'),
+      };
+      setActiveConvo(settled);
+      setConversations((prev) => prev.map((c) => (c.id === settled.id ? settled : c)));
+      toast(
+        'success',
+        accept
+          ? `You and @${other?.username ?? 'them'} are now buddies.`
+          : 'Buddy request declined.',
+      );
+      // Re-read so `origin` flips to 'buddy' (and `promoted_at` lands) on accept.
+      try {
+        const fresh = await messagingApi.getConversation(activeConvo.id);
+        if (fresh.data) {
+          setActiveConvo(fresh.data);
+          setConversations((prev) => prev.map((c) => (c.id === fresh.data.id ? fresh.data as Conversation : c)));
+        }
+      } catch { /* the optimistic state above still stands */ }
+    } catch (err) {
+      const e = err as { response?: { data?: { message?: string } } } | null;
+      toast('error', e?.response?.data?.message || (
+        accept ? 'Could not accept the buddy request.' : 'Could not decline the buddy request.'
+      ));
+    } finally {
+      setRespondBusy(false);
+    }
+  };
 
   // Determine if I'm the callee (received the call)
 
@@ -758,11 +886,17 @@ export default function Messages() {
               >
                 <Menu size={24} />
               </button>
-              <h1 className="text-xl font-bold font-display">Messages</h1>
+              <h1 className="text-xl font-bold font-display">{isDiscovery ? 'Buddy chats' : 'Messages'}</h1>
             </div>
-            <button onClick={() => setShowNewGroupModal(true)} className="p-2 bg-buddy-surface hover:bg-buddy-surface-raised rounded-full text-buddy-green transition-colors" title="New Group">
-              <Plus size={18} />
-            </button>
+            {isDiscovery ? (
+              <button onClick={() => navigate('/buddies/find')} className="p-2 bg-buddy-surface hover:bg-buddy-surface-raised rounded-full text-buddy-green transition-colors" title="Find a buddy">
+                <Plus size={18} />
+              </button>
+            ) : (
+              <button onClick={() => setShowNewGroupModal(true)} className="p-2 bg-buddy-surface hover:bg-buddy-surface-raised rounded-full text-buddy-green transition-colors" title="New Group">
+                <Plus size={18} />
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2 bg-buddy-surface rounded-2xl px-3 py-2">
             <Search size={15} className="text-buddy-text-secondary shrink-0" />
@@ -784,7 +918,11 @@ export default function Messages() {
               <Mic size={24} className="text-buddy-text-secondary" />
             </div>
             <p className="text-buddy-text-secondary text-sm">
-              {searchQuery ? 'No conversations found' : 'No conversations yet. Follow someone and say hi!'}
+              {searchQuery
+                ? 'No conversations found'
+                : isDiscovery
+                  ? 'No buddy chats yet. Message someone from Find a buddy to start one.'
+                  : 'No conversations yet. Follow someone and say hi!'}
             </p>
           </div>
         ) : (
@@ -904,6 +1042,44 @@ export default function Messages() {
               </p>
             </div>
             <div className="flex gap-1 shrink-0">
+              {isDiscovery && activeConvo.promotion_status === 'accepted' && (
+                <span className="self-center inline-flex items-center gap-1 rounded-full bg-buddy-green/15 px-2.5 py-1 text-[11px] font-semibold text-buddy-green">
+                  <UserCheck size={12} /> Now buddies
+                </span>
+              )}
+              {isDiscovery && activeConvo.promotion_status !== 'accepted' && activeConvo.promotable && (
+                activeConvo.promotion_status === 'pending' ? (
+                  <span className="self-center rounded-full bg-buddy-surface px-2.5 py-1 text-[11px] font-medium text-buddy-text-secondary">
+                    Buddy request pending
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => void promoteConversation()}
+                    disabled={promoteBusy}
+                    className="self-center inline-flex items-center gap-1.5 rounded-full bg-buddy-green px-3 py-1.5 text-[11px] font-bold text-buddy-black transition-colors hover:bg-buddy-green-deep disabled:opacity-50"
+                  >
+                    {promoteBusy ? 'Sending…' : 'Promote to main chat'}
+                  </button>
+                )
+              )}
+              {canRespondToPromotion && (
+                <>
+                  <button
+                    onClick={() => void respondToPromotion(false)}
+                    disabled={respondBusy}
+                    className="self-center rounded-full bg-buddy-surface px-3 py-1.5 text-[11px] font-bold text-buddy-text-primary transition-colors hover:bg-buddy-surface-raised disabled:opacity-50"
+                  >
+                    Decline
+                  </button>
+                  <button
+                    onClick={() => setShowAcceptConfirm(true)}
+                    disabled={respondBusy}
+                    className="self-center rounded-full bg-buddy-green px-3 py-1.5 text-[11px] font-bold text-buddy-black transition-colors hover:bg-buddy-green-deep disabled:opacity-50"
+                  >
+                    {respondBusy ? 'Working…' : 'Accept'}
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => setShowThemePicker(true)}
                 className="p-2 rounded-xl hover:bg-buddy-surface text-buddy-text-secondary hover:text-buddy-green transition-colors"
@@ -1601,6 +1777,37 @@ export default function Messages() {
                 }}
               >
                 Create Group
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Buddy request acceptance — accepting is mutual consent, so it asks first. */}
+      {showAcceptConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-buddy-black/80 backdrop-blur-sm">
+          <div className="bg-buddy-surface-raised w-full max-w-md rounded-2xl p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold font-display">Accept buddy request?</h2>
+              <button onClick={() => setShowAcceptConfirm(false)} aria-label="Close" className="text-buddy-text-secondary hover:text-buddy-text-primary"><X size={20} /></button>
+            </div>
+            <p className="text-sm text-buddy-text-secondary mb-6">
+              You and @{other?.username ?? 'them'} become buddies — each of you can now
+              message the other and see full profiles.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowAcceptConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl bg-buddy-surface text-buddy-text-primary font-semibold text-sm transition-colors hover:bg-buddy-surface-raised"
+              >
+                Not yet
+              </button>
+              <button
+                onClick={() => void respondToPromotion(true)}
+                disabled={respondBusy}
+                className="flex-1 py-2.5 rounded-xl bg-buddy-green text-buddy-black font-bold text-sm transition-colors hover:bg-buddy-green-deep disabled:opacity-50"
+              >
+                Accept request
               </button>
             </div>
           </div>

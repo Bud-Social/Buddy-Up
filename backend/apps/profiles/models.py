@@ -91,6 +91,34 @@ class BuddyRelationship(TimestampedModel):
         ]
 
 
+class BuddyInterest(TimestampedModel):
+    """One-way interest signal on a buddy-search profile (a 'like').
+
+    Deliberately NOT a mutual relationship: A liking B is independent of B
+    liking A. The "liked you" back-signal is derived from the reverse row
+    (`to_user=self`), so there is no reciprocal state to keep in sync.
+    """
+    from_user = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='interests_sent')
+    to_user = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='interests_received')
+
+    class Meta:
+        db_table = 'profiles_buddy_interest'
+        unique_together = ('from_user', 'to_user')
+        constraints = [
+            models.CheckConstraint(
+                condition=~models.Q(from_user=models.F('to_user')),
+                name='buddy_interest_not_self',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['to_user']),
+            models.Index(fields=['from_user']),
+        ]
+
+    def __str__(self):
+        return f'@{self.from_user.username} -> @{self.to_user.username}'
+
+
 class FollowRelationship(TimestampedModel):
     follower = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='following')
     followee = models.ForeignKey(Profile, on_delete=models.CASCADE, related_name='followers')

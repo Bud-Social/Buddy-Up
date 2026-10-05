@@ -28,6 +28,20 @@ class ModerationReportViewSet(
     filterset_fields = ['status', 'reason']
     search_fields = ['description', 'resolution_note']
 
+    def get_queryset(self):
+        """Reports are private to their reporter; only staff see the queue.
+
+        Without this, `queryset = ...all()` leaks every report (reporter
+        identity, target user, resolution notes) to any authenticated user.
+        """
+        queryset = ModerationReport.objects.select_related(
+            'reporter', 'target_user', 'assigned_to',
+        ).all()
+        user = self.request.user
+        if user.is_staff or user.is_superuser:
+            return queryset
+        return queryset.filter(reporter=user)
+
     def perform_create(self, serializer):
         from datetime import timedelta
         report = serializer.save(reporter=self.request.user)

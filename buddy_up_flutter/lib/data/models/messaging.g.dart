@@ -8,193 +8,206 @@ part of 'messaging.dart';
 
 _ParticipantData _$ParticipantDataFromJson(Map<String, dynamic> json) =>
     _ParticipantData(
-      userId: json['userId'] as String,
+      userId: json['user_id'] as String? ?? '',
       username: json['username'] as String,
-      displayName: json['displayName'] as String,
-      avatarUrl: json['avatarUrl'] as String,
-      verificationStatus: json['verificationStatus'] as String? ?? 'none',
+      displayName: json['display_name'] as String,
+      avatarUrl: json['avatar_url'] as String? ?? '',
+      verificationStatus: json['verification_status'] as String? ?? 'none',
       role: json['role'] as String? ?? '',
     );
 
 Map<String, dynamic> _$ParticipantDataToJson(_ParticipantData instance) =>
     <String, dynamic>{
-      'userId': instance.userId,
+      'user_id': instance.userId,
       'username': instance.username,
-      'displayName': instance.displayName,
-      'avatarUrl': instance.avatarUrl,
-      'verificationStatus': instance.verificationStatus,
+      'display_name': instance.displayName,
+      'avatar_url': instance.avatarUrl,
+      'verification_status': instance.verificationStatus,
       'role': instance.role,
     };
 
 _LastMessageData _$LastMessageDataFromJson(Map<String, dynamic> json) =>
     _LastMessageData(
       body: json['body'] as String? ?? '',
-      messageType: json['messageType'] as String? ?? 'text',
-      mediaUrl: json['mediaUrl'] as String? ?? '',
-      senderName: json['senderName'] as String? ?? '',
+      messageType: json['message_type'] as String? ?? 'text',
+      mediaUrl: json['media_url'] as String? ?? '',
+      senderName: json['sender_name'] as String? ?? '',
     );
 
 Map<String, dynamic> _$LastMessageDataToJson(_LastMessageData instance) =>
     <String, dynamic>{
       'body': instance.body,
-      'messageType': instance.messageType,
-      'mediaUrl': instance.mediaUrl,
-      'senderName': instance.senderName,
+      'message_type': instance.messageType,
+      'media_url': instance.mediaUrl,
+      'sender_name': instance.senderName,
     };
 
 _Conversation _$ConversationFromJson(Map<String, dynamic> json) =>
     _Conversation(
       id: json['id'] as String,
-      isGroup: json['isGroup'] as bool? ?? false,
-      isCommunity: json['isCommunity'] as bool? ?? false,
-      groupName: json['groupName'] as String? ?? '',
-      groupAvatarUrl: json['groupAvatarUrl'] as String? ?? '',
-      groupGymId: json['groupGymId'] as String?,
-      subChannel: json['subChannel'] as String? ?? '',
-      callInProgress: json['callInProgress'] as bool? ?? false,
+      isGroup: json['is_group'] as bool? ?? false,
+      isCommunity: json['is_community'] as bool? ?? false,
+      groupName: json['group_name'] as String? ?? '',
+      groupAvatarUrl: json['group_avatar_url'] as String? ?? '',
+      groupGymId: json['group_gym_id'] as String?,
+      subChannel: json['sub_channel'] as String? ?? '',
+      callInProgress: json['call_in_progress'] as bool? ?? false,
       description: json['description'] as String? ?? '',
-      coverUrl: json['coverUrl'] as String? ?? '',
-      inviteCode: json['inviteCode'] as String? ?? '',
-      isPublic: json['isPublic'] as bool? ?? false,
+      coverUrl: json['cover_url'] as String? ?? '',
+      inviteCode: json['invite_code'] as String? ?? '',
+      isPublic: json['is_public'] as bool? ?? false,
       participantsData:
-          (json['participantsData'] as List<dynamic>?)
+          (json['participants_data'] as List<dynamic>?)
               ?.map((e) => ParticipantData.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const <ParticipantData>[],
-      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
-      membershipRole: json['membershipRole'] as String?,
-      lastMessage: json['lastMessage'] == null
+      unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
+      membershipRole: json['membership_role'] as String?,
+      lastMessage: json['last_message'] == null
           ? null
           : LastMessageData.fromJson(
-              json['lastMessage'] as Map<String, dynamic>,
+              json['last_message'] as Map<String, dynamic>,
             ),
-      lastMessageAt: json['lastMessageAt'] as String?,
-      createdAt: json['createdAt'] as String,
+      lastMessageAt: json['last_message_at'] as String?,
+      origin: json['origin'] as String? ?? 'direct',
+      promotedAt: json['promoted_at'] as String?,
+      promotable: json['promotable'] as bool? ?? false,
+      promotionStatus: json['promotion_status'] as String?,
+      createdAt: json['created_at'] as String? ?? '',
     );
 
 Map<String, dynamic> _$ConversationToJson(_Conversation instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'isGroup': instance.isGroup,
-      'isCommunity': instance.isCommunity,
-      'groupName': instance.groupName,
-      'groupAvatarUrl': instance.groupAvatarUrl,
-      'groupGymId': instance.groupGymId,
-      'subChannel': instance.subChannel,
-      'callInProgress': instance.callInProgress,
+      'is_group': instance.isGroup,
+      'is_community': instance.isCommunity,
+      'group_name': instance.groupName,
+      'group_avatar_url': instance.groupAvatarUrl,
+      'group_gym_id': instance.groupGymId,
+      'sub_channel': instance.subChannel,
+      'call_in_progress': instance.callInProgress,
       'description': instance.description,
-      'coverUrl': instance.coverUrl,
-      'inviteCode': instance.inviteCode,
-      'isPublic': instance.isPublic,
-      'participantsData': instance.participantsData,
-      'unreadCount': instance.unreadCount,
-      'membershipRole': instance.membershipRole,
-      'lastMessage': instance.lastMessage,
-      'lastMessageAt': instance.lastMessageAt,
-      'createdAt': instance.createdAt,
+      'cover_url': instance.coverUrl,
+      'invite_code': instance.inviteCode,
+      'is_public': instance.isPublic,
+      'participants_data': instance.participantsData,
+      'unread_count': instance.unreadCount,
+      'membership_role': instance.membershipRole,
+      'last_message': instance.lastMessage,
+      'last_message_at': instance.lastMessageAt,
+      'origin': instance.origin,
+      'promoted_at': instance.promotedAt,
+      'promotable': instance.promotable,
+      'promotion_status': instance.promotionStatus,
+      'created_at': instance.createdAt,
     };
 
 _CommunityMember _$CommunityMemberFromJson(Map<String, dynamic> json) =>
     _CommunityMember(
-      userId: json['userId'] as String,
-      username: json['username'] as String,
-      displayName: json['displayName'] as String,
-      avatarUrl: json['avatarUrl'] as String? ?? '',
-      verificationStatus: json['verificationStatus'] as String? ?? 'none',
+      userId: json['user_id'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      displayName: json['display_name'] as String? ?? '',
+      avatarUrl: json['avatar_url'] as String? ?? '',
+      verificationStatus: json['verification_status'] as String? ?? 'none',
       role: json['role'] as String? ?? 'member',
-      createdAt: json['createdAt'] as String,
+      createdAt: json['created_at'] as String? ?? '',
     );
 
 Map<String, dynamic> _$CommunityMemberToJson(_CommunityMember instance) =>
     <String, dynamic>{
-      'userId': instance.userId,
+      'user_id': instance.userId,
       'username': instance.username,
-      'displayName': instance.displayName,
-      'avatarUrl': instance.avatarUrl,
-      'verificationStatus': instance.verificationStatus,
+      'display_name': instance.displayName,
+      'avatar_url': instance.avatarUrl,
+      'verification_status': instance.verificationStatus,
       'role': instance.role,
-      'createdAt': instance.createdAt,
+      'created_at': instance.createdAt,
     };
 
 _CommunityPostComment _$CommunityPostCommentFromJson(
   Map<String, dynamic> json,
 ) => _CommunityPostComment(
   id: json['id'] as String,
-  postId: json['postId'] as String,
-  body: json['body'] as String,
-  replyToId: json['replyToId'] as String?,
-  replyCount: (json['replyCount'] as num?)?.toInt() ?? 0,
-  authorData: ProfileBrief.fromJson(json['authorData'] as Map<String, dynamic>),
-  createdAt: json['createdAt'] as String,
+  postId: json['post_id'] as String? ?? '',
+  body: json['body'] as String? ?? '',
+  replyToId: json['reply_to_id'] as String?,
+  replyCount: (json['reply_count'] as num?)?.toInt() ?? 0,
+  authorData: json['author_data'] == null
+      ? const ProfileBrief()
+      : ProfileBrief.fromJson(json['author_data'] as Map<String, dynamic>),
+  createdAt: json['created_at'] as String? ?? '',
 );
 
 Map<String, dynamic> _$CommunityPostCommentToJson(
   _CommunityPostComment instance,
 ) => <String, dynamic>{
   'id': instance.id,
-  'postId': instance.postId,
+  'post_id': instance.postId,
   'body': instance.body,
-  'replyToId': instance.replyToId,
-  'replyCount': instance.replyCount,
-  'authorData': instance.authorData,
-  'createdAt': instance.createdAt,
+  'reply_to_id': instance.replyToId,
+  'reply_count': instance.replyCount,
+  'author_data': instance.authorData,
+  'created_at': instance.createdAt,
 };
 
 _ProfileBrief _$ProfileBriefFromJson(Map<String, dynamic> json) =>
     _ProfileBrief(
-      userId: json['userId'] as String,
-      username: json['username'] as String,
-      displayName: json['displayName'] as String,
-      avatarUrl: json['avatarUrl'] as String? ?? '',
+      userId: json['user_id'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      displayName: json['display_name'] as String? ?? '',
+      avatarUrl: json['avatar_url'] as String? ?? '',
       role: json['role'] as String? ?? '',
     );
 
 Map<String, dynamic> _$ProfileBriefToJson(_ProfileBrief instance) =>
     <String, dynamic>{
-      'userId': instance.userId,
+      'user_id': instance.userId,
       'username': instance.username,
-      'displayName': instance.displayName,
-      'avatarUrl': instance.avatarUrl,
+      'display_name': instance.displayName,
+      'avatar_url': instance.avatarUrl,
       'role': instance.role,
     };
 
-_CommunityPost _$CommunityPostFromJson(
-  Map<String, dynamic> json,
-) => _CommunityPost(
-  id: json['id'] as String,
-  conversationId: json['conversationId'] as String,
-  authorId: json['authorId'] as String,
-  body: json['body'] as String? ?? '',
-  mediaUrl: json['mediaUrl'] as String? ?? '',
-  mediaMime: json['mediaMime'] as String? ?? '',
-  isPinned: json['isPinned'] as bool? ?? false,
-  likeCount: (json['likeCount'] as num?)?.toInt() ?? 0,
-  commentCount: (json['commentCount'] as num?)?.toInt() ?? 0,
-  authorData: ProfileBrief.fromJson(json['authorData'] as Map<String, dynamic>),
-  isLiked: json['isLiked'] as bool? ?? false,
-  comments:
-      (json['comments'] as List<dynamic>?)
-          ?.map((e) => CommunityPostComment.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      const <CommunityPostComment>[],
-  createdAt: json['createdAt'] as String,
-);
+_CommunityPost _$CommunityPostFromJson(Map<String, dynamic> json) =>
+    _CommunityPost(
+      id: json['id'] as String,
+      conversationId: json['conversation_id'] as String? ?? '',
+      authorId: json['author_id'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      mediaUrl: json['media_url'] as String? ?? '',
+      mediaMime: json['media_mime'] as String? ?? '',
+      isPinned: json['is_pinned'] as bool? ?? false,
+      likeCount: (json['like_count'] as num?)?.toInt() ?? 0,
+      commentCount: (json['comment_count'] as num?)?.toInt() ?? 0,
+      authorData: json['author_data'] == null
+          ? const ProfileBrief()
+          : ProfileBrief.fromJson(json['author_data'] as Map<String, dynamic>),
+      isLiked: json['is_liked'] as bool? ?? false,
+      comments:
+          (json['comments'] as List<dynamic>?)
+              ?.map(
+                (e) => CommunityPostComment.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const <CommunityPostComment>[],
+      createdAt: json['created_at'] as String? ?? '',
+    );
 
 Map<String, dynamic> _$CommunityPostToJson(_CommunityPost instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'conversationId': instance.conversationId,
-      'authorId': instance.authorId,
+      'conversation_id': instance.conversationId,
+      'author_id': instance.authorId,
       'body': instance.body,
-      'mediaUrl': instance.mediaUrl,
-      'mediaMime': instance.mediaMime,
-      'isPinned': instance.isPinned,
-      'likeCount': instance.likeCount,
-      'commentCount': instance.commentCount,
-      'authorData': instance.authorData,
-      'isLiked': instance.isLiked,
+      'media_url': instance.mediaUrl,
+      'media_mime': instance.mediaMime,
+      'is_pinned': instance.isPinned,
+      'like_count': instance.likeCount,
+      'comment_count': instance.commentCount,
+      'author_data': instance.authorData,
+      'is_liked': instance.isLiked,
       'comments': instance.comments,
-      'createdAt': instance.createdAt,
+      'created_at': instance.createdAt,
     };
 
 _CommunityListData _$CommunityListDataFromJson(Map<String, dynamic> json) =>
@@ -217,22 +230,22 @@ Map<String, dynamic> _$CommunityListDataToJson(_CommunityListData instance) =>
 _CommunityDetail _$CommunityDetailFromJson(Map<String, dynamic> json) =>
     _CommunityDetail(
       id: json['id'] as String,
-      isGroup: json['isGroup'] as bool? ?? false,
-      isCommunity: json['isCommunity'] as bool? ?? true,
-      groupName: json['groupName'] as String? ?? '',
-      groupAvatarUrl: json['groupAvatarUrl'] as String? ?? '',
-      groupGymId: json['groupGymId'] as String?,
-      subChannel: json['subChannel'] as String? ?? '',
-      callInProgress: json['callInProgress'] as bool? ?? false,
+      isGroup: json['is_group'] as bool? ?? false,
+      isCommunity: json['is_community'] as bool? ?? true,
+      groupName: json['group_name'] as String? ?? '',
+      groupAvatarUrl: json['group_avatar_url'] as String? ?? '',
+      groupGymId: json['group_gym_id'] as String?,
+      subChannel: json['sub_channel'] as String? ?? '',
+      callInProgress: json['call_in_progress'] as bool? ?? false,
       description: json['description'] as String? ?? '',
-      coverUrl: json['coverUrl'] as String? ?? '',
-      inviteCode: json['inviteCode'] as String? ?? '',
-      isPublic: json['isPublic'] as bool? ?? false,
-      membershipRole: json['membershipRole'] as String?,
-      myRole: json['myRole'] as String?,
-      memberCount: (json['memberCount'] as num?)?.toInt() ?? 0,
+      coverUrl: json['cover_url'] as String? ?? '',
+      inviteCode: json['invite_code'] as String? ?? '',
+      isPublic: json['is_public'] as bool? ?? false,
+      membershipRole: json['membership_role'] as String?,
+      myRole: json['my_role'] as String?,
+      memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
       participantsData:
-          (json['participantsData'] as List<dynamic>?)
+          (json['participants_data'] as List<dynamic>?)
               ?.map((e) => ParticipantData.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const <ParticipantData>[],
@@ -241,131 +254,133 @@ _CommunityDetail _$CommunityDetailFromJson(Map<String, dynamic> json) =>
               ?.map((e) => CommunityMember.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const <CommunityMember>[],
-      unreadCount: (json['unreadCount'] as num?)?.toInt() ?? 0,
-      lastMessage: json['lastMessage'] == null
+      unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
+      lastMessage: json['last_message'] == null
           ? null
           : LastMessageData.fromJson(
-              json['lastMessage'] as Map<String, dynamic>,
+              json['last_message'] as Map<String, dynamic>,
             ),
-      lastMessageAt: json['lastMessageAt'] as String?,
-      createdAt: json['createdAt'] as String,
+      lastMessageAt: json['last_message_at'] as String?,
+      createdAt: json['created_at'] as String? ?? '',
     );
 
 Map<String, dynamic> _$CommunityDetailToJson(_CommunityDetail instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'isGroup': instance.isGroup,
-      'isCommunity': instance.isCommunity,
-      'groupName': instance.groupName,
-      'groupAvatarUrl': instance.groupAvatarUrl,
-      'groupGymId': instance.groupGymId,
-      'subChannel': instance.subChannel,
-      'callInProgress': instance.callInProgress,
+      'is_group': instance.isGroup,
+      'is_community': instance.isCommunity,
+      'group_name': instance.groupName,
+      'group_avatar_url': instance.groupAvatarUrl,
+      'group_gym_id': instance.groupGymId,
+      'sub_channel': instance.subChannel,
+      'call_in_progress': instance.callInProgress,
       'description': instance.description,
-      'coverUrl': instance.coverUrl,
-      'inviteCode': instance.inviteCode,
-      'isPublic': instance.isPublic,
-      'membershipRole': instance.membershipRole,
-      'myRole': instance.myRole,
-      'memberCount': instance.memberCount,
-      'participantsData': instance.participantsData,
+      'cover_url': instance.coverUrl,
+      'invite_code': instance.inviteCode,
+      'is_public': instance.isPublic,
+      'membership_role': instance.membershipRole,
+      'my_role': instance.myRole,
+      'member_count': instance.memberCount,
+      'participants_data': instance.participantsData,
       'members': instance.members,
-      'unreadCount': instance.unreadCount,
-      'lastMessage': instance.lastMessage,
-      'lastMessageAt': instance.lastMessageAt,
-      'createdAt': instance.createdAt,
+      'unread_count': instance.unreadCount,
+      'last_message': instance.lastMessage,
+      'last_message_at': instance.lastMessageAt,
+      'created_at': instance.createdAt,
     };
 
 _ReplyData _$ReplyDataFromJson(Map<String, dynamic> json) => _ReplyData(
   id: json['id'] as String,
   body: json['body'] as String? ?? '',
-  senderName: json['senderName'] as String? ?? '',
-  messageType: json['messageType'] as String? ?? 'text',
-  mediaUrl: json['mediaUrl'] as String? ?? '',
+  senderName: json['sender_name'] as String? ?? '',
+  messageType: json['message_type'] as String? ?? 'text',
+  mediaUrl: json['media_url'] as String? ?? '',
 );
 
 Map<String, dynamic> _$ReplyDataToJson(_ReplyData instance) =>
     <String, dynamic>{
       'id': instance.id,
       'body': instance.body,
-      'senderName': instance.senderName,
-      'messageType': instance.messageType,
-      'mediaUrl': instance.mediaUrl,
+      'sender_name': instance.senderName,
+      'message_type': instance.messageType,
+      'media_url': instance.mediaUrl,
     };
 
 _Message _$MessageFromJson(Map<String, dynamic> json) => _Message(
   id: json['id'] as String,
-  conversationId: json['conversationId'] as String,
-  senderId: json['senderId'] as String,
-  messageType: json['messageType'] as String? ?? 'text',
+  conversationId: json['conversation_id'] as String,
+  senderId: json['sender_id'] as String,
+  messageType: json['message_type'] as String? ?? 'text',
   body: json['body'] as String? ?? '',
-  mediaUrl: json['mediaUrl'] as String? ?? '',
-  mediaMime: json['mediaMime'] as String? ?? '',
-  fileName: json['fileName'] as String? ?? '',
-  replyToId: json['replyToId'] as String?,
+  mediaUrl: json['media_url'] as String? ?? '',
+  mediaMime: json['media_mime'] as String? ?? '',
+  fileName: json['file_name'] as String? ?? '',
+  replyToId: json['reply_to_id'] as String?,
   metadata:
       json['metadata'] as Map<String, dynamic>? ?? const <String, dynamic>{},
-  isRead: json['isRead'] as bool? ?? false,
+  isRead: json['is_read'] as bool? ?? false,
   deletedFor:
-      (json['deletedFor'] as List<dynamic>?)
+      (json['deleted_for'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
   senderData: ParticipantData.fromJson(
-    json['senderData'] as Map<String, dynamic>,
+    json['sender_data'] as Map<String, dynamic>,
   ),
-  replyData: json['replyData'] == null
+  replyData: json['reply_data'] == null
       ? null
-      : ReplyData.fromJson(json['replyData'] as Map<String, dynamic>),
+      : ReplyData.fromJson(json['reply_data'] as Map<String, dynamic>),
   reactions:
       (json['reactions'] as Map<String, dynamic>?)?.map(
         (k, e) => MapEntry(k, (e as num).toInt()),
       ) ??
       const <String, int>{},
-  createdAt: json['createdAt'] as String,
+  createdAt: json['created_at'] as String? ?? '',
 );
 
 Map<String, dynamic> _$MessageToJson(_Message instance) => <String, dynamic>{
   'id': instance.id,
-  'conversationId': instance.conversationId,
-  'senderId': instance.senderId,
-  'messageType': instance.messageType,
+  'conversation_id': instance.conversationId,
+  'sender_id': instance.senderId,
+  'message_type': instance.messageType,
   'body': instance.body,
-  'mediaUrl': instance.mediaUrl,
-  'mediaMime': instance.mediaMime,
-  'fileName': instance.fileName,
-  'replyToId': instance.replyToId,
+  'media_url': instance.mediaUrl,
+  'media_mime': instance.mediaMime,
+  'file_name': instance.fileName,
+  'reply_to_id': instance.replyToId,
   'metadata': instance.metadata,
-  'isRead': instance.isRead,
-  'deletedFor': instance.deletedFor,
-  'senderData': instance.senderData,
-  'replyData': instance.replyData,
+  'is_read': instance.isRead,
+  'deleted_for': instance.deletedFor,
+  'sender_data': instance.senderData,
+  'reply_data': instance.replyData,
   'reactions': instance.reactions,
-  'createdAt': instance.createdAt,
+  'created_at': instance.createdAt,
 };
 
 _CallLog _$CallLogFromJson(Map<String, dynamic> json) => _CallLog(
   id: json['id'] as String,
-  conversationId: json['conversationId'] as String,
-  callType: json['callType'] as String? ?? 'audio',
+  conversationId: json['conversation_id'] as String? ?? '',
+  callType: json['call_type'] as String? ?? 'audio',
   status: json['status'] as String? ?? '',
-  durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
-  callerData: json['callerData'] as Map<String, dynamic>,
-  calleeData: json['calleeData'] as Map<String, dynamic>,
-  createdAt: json['createdAt'] as String,
-  endedAt: json['endedAt'] as String?,
+  durationSeconds: (json['duration_seconds'] as num?)?.toInt() ?? 0,
+  callerData:
+      json['caller_data'] as Map<String, dynamic>? ?? const <String, dynamic>{},
+  calleeData:
+      json['callee_data'] as Map<String, dynamic>? ?? const <String, dynamic>{},
+  createdAt: json['created_at'] as String? ?? '',
+  endedAt: json['ended_at'] as String?,
 );
 
 Map<String, dynamic> _$CallLogToJson(_CallLog instance) => <String, dynamic>{
   'id': instance.id,
-  'conversationId': instance.conversationId,
-  'callType': instance.callType,
+  'conversation_id': instance.conversationId,
+  'call_type': instance.callType,
   'status': instance.status,
-  'durationSeconds': instance.durationSeconds,
-  'callerData': instance.callerData,
-  'calleeData': instance.calleeData,
-  'createdAt': instance.createdAt,
-  'endedAt': instance.endedAt,
+  'duration_seconds': instance.durationSeconds,
+  'caller_data': instance.callerData,
+  'callee_data': instance.calleeData,
+  'created_at': instance.createdAt,
+  'ended_at': instance.endedAt,
 };
 
 _LinkPreviewData _$LinkPreviewDataFromJson(Map<String, dynamic> json) =>
@@ -387,23 +402,23 @@ Map<String, dynamic> _$LinkPreviewDataToJson(_LinkPreviewData instance) =>
     };
 
 _PendingCall _$PendingCallFromJson(Map<String, dynamic> json) => _PendingCall(
-  conversationId: json['conversationId'] as String,
-  fromUserId: json['fromUserId'] as String,
-  fromUsername: json['fromUsername'] as String,
-  fromDisplayName: json['fromDisplayName'] as String,
-  fromAvatarUrl: json['fromAvatarUrl'] as String,
-  callType: json['callType'] as String? ?? 'audio',
+  conversationId: json['conversation_id'] as String? ?? '',
+  fromUserId: json['from_user_id'] as String? ?? '',
+  fromUsername: json['from_username'] as String? ?? '',
+  fromDisplayName: json['from_display_name'] as String? ?? '',
+  fromAvatarUrl: json['from_avatar_url'] as String? ?? '',
+  callType: json['call_type'] as String? ?? 'audio',
   data: json['data'] as Map<String, dynamic>? ?? const <String, dynamic>{},
 );
 
 Map<String, dynamic> _$PendingCallToJson(_PendingCall instance) =>
     <String, dynamic>{
-      'conversationId': instance.conversationId,
-      'fromUserId': instance.fromUserId,
-      'fromUsername': instance.fromUsername,
-      'fromDisplayName': instance.fromDisplayName,
-      'fromAvatarUrl': instance.fromAvatarUrl,
-      'callType': instance.callType,
+      'conversation_id': instance.conversationId,
+      'from_user_id': instance.fromUserId,
+      'from_username': instance.fromUsername,
+      'from_display_name': instance.fromDisplayName,
+      'from_avatar_url': instance.fromAvatarUrl,
+      'call_type': instance.callType,
       'data': instance.data,
     };
 

@@ -102,6 +102,7 @@ const SettingsSection = lazy(() => import('@/pages/settings/SettingsSection'));
 const FamilyAccept = lazy(() => import('@/pages/settings/FamilyAccept'));
 const BuddiesPage = lazy(() => import('@/pages/app/BuddiesPage'));
 const FindBuddy = lazy(() => import('@/pages/app/FindBuddy'));
+const FindBuddyProfile = lazy(() => import('@/pages/app/FindBuddyProfile'));
 const CreateGymPage = lazy(() => import('@/pages/app/CreateGymPage'));
 const LiveRoom = lazy(() => import('@/pages/app/LiveRoom'));
 const HealthInsights = lazy(() => import('@/pages/app/HealthInsights'));
@@ -224,6 +225,9 @@ export const router = createBrowserRouter([
           { path: '/profile/edit', element: <SWrapper><EditProfile /></SWrapper> },
           { path: '/buddies', element: <SWrapper><BuddiesPage /></SWrapper> },
           { path: '/buddies/find', element: <SWrapper><FindBuddy /></SWrapper> },
+          { path: '/buddies/find/:username', element: <SWrapper><FindBuddyProfile /></SWrapper> },
+          { path: '/buddies/messages', element: <SWrapper><Messages scope="discovery" /></SWrapper> },
+          { path: '/buddies/messages/:conversationId', element: <SWrapper><Messages scope="discovery" /></SWrapper> },
           { path: '/settings', element: <SWrapper><Settings /></SWrapper> },
           { path: '/settings/:section', element: <SWrapper><SettingsSection /></SWrapper> },
           { path: '/settings/family/accept', element: <SWrapper><FamilyAccept /></SWrapper> },

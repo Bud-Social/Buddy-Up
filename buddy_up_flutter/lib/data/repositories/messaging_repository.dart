@@ -79,6 +79,20 @@ abstract class MessagingRepository {
   @POST('/messaging/link-preview/')
   Future<dynamic> getLinkPreview(@Body() Map<String, dynamic> body);
 
+  // ── Buddy promotion ───────────────────────────────────────────────────────
+  // A discovery DM becomes a buddy relationship by asking the other side to
+  // accept. 409 when they are already confirmed buddies.
+  @POST('/messaging/conversations/{id}/promote/')
+  Future<dynamic> promoteConversation(@Path('id') String conversationId);
+
+  /// [id] is the promotion's own uuid (not the conversation id). Only the
+  /// other participant may respond; [body] is `{accept: bool}`.
+  @POST('/messaging/conversations/promotions/{id}/respond/')
+  Future<dynamic> respondToPromotion(
+    @Path('id') String promotionId,
+    @Body() Map<String, dynamic> body,
+  );
+
   // ── Communities ──────────────────────────────────────────────────────────
   @GET('/messaging/communities/')
   Future<dynamic> getCommunities();

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, LocateFixed, Loader2, Footprints, Camera, X, MessageCircle, Settings } from 'lucide-react';
+import { Users, LocateFixed, Loader2, Footprints, Camera, X, MessageCircle, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
@@ -24,10 +24,17 @@ function formatUntil(iso: string | null | undefined): string | null {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-/** "1.3 km" / "640 m" — null when the search API could not band the distance. */
+/** Prefer the server's message — the interest endpoint explains every refusal. */
+function serverMessage(err: unknown, fallback: string): string {
+  const e = err as { response?: { data?: { message?: string } } } | null;
+  const m = e?.response?.data?.message;
+  return typeof m === 'string' && m.length > 0 ? m : fallback;
+}
+
+/** "1.3 km" / "<1 km" — null when the search API could not band the distance. */
 export function formatDistanceBadge(km: number | null | undefined): string | null {
   if (km == null || !Number.isFinite(km) || km < 0) return null;
-  if (km < 1) return `${Math.round(km * 1000)} m`;
+  if (km < 1) return '<1 km';
   if (km < 10) return `${km.toFixed(1)} km`;
   return `${Math.round(km)} km`;
 }
@@ -58,7 +65,6 @@ export default function FindBuddy() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locStatus, setLocStatus] = useState<'idle' | 'locating' | 'denied'>('idle');
   const [radius, setRadius] = useState<'auto' | 5 | 10>('auto');
-  const [requested, setRequested] = useState<Set<string>>(new Set());
   // Setup editor state
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -77,6 +83,7 @@ export default function FindBuddy() {
   const [matchCount, setMatchCount] = useState<number | null>(null);
   const [availableUntil, setAvailableUntil] = useState<string | null>(null);
   const [msgSending, setMsgSending] = useState<Set<string>>(new Set());
+  const [likeBusy, setLikeBusy] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -236,13 +243,29 @@ export default function FindBuddy() {
     await saveProfile(next);
   };
 
-  const sendRequest = async (username: string) => {
+  /** Optimistic interest toggle — rolls back and surfaces the server's message on failure. */
+  const toggleLike = async (buddy: NearbyBuddy) => {
+    const username = buddy.profile.username;
+    if (likeBusy.has(username)) return;
+    const wasLiked = !!buddy.liked_by_me;
+    const patch = (b: NearbyBuddy) => ({ ...b, liked_by_me: !wasLiked });
+    setLikeBusy((prev) => new Set(prev).add(username));
+    setBuddies((prev) => prev.map((b) => (b.profile.username === username ? patch(b) : b)));
     try {
-      await profilesApi.sendBuddyRequest(username);
-      setRequested((prev) => new Set(prev).add(username));
-      toast('success', `Buddy request sent to @${username}`);
-    } catch {
-      toast('error', 'Could not send buddy request.');
+      const res = wasLiked ? await profilesApi.unlikeBuddy(username) : await profilesApi.likeBuddy(username);
+      const likedMe = res.data?.liked_me;
+      if (typeof likedMe === 'boolean') {
+        setBuddies((prev) => prev.map((b) => (b.profile.username === username ? { ...patch(b), liked_me: likedMe } : b)));
+      }
+    } catch (err) {
+      setBuddies((prev) => prev.map((b) => (b.profile.username === username ? { ...b, liked_by_me: wasLiked } : b)));
+      toast('error', serverMessage(err, wasLiked ? 'Could not undo interest.' : 'Could not show interest.'));
+    } finally {
+      setLikeBusy((prev) => {
+        const next = new Set(prev);
+        next.delete(username);
+        return next;
+      });
     }
   };
 
@@ -250,7 +273,7 @@ export default function FindBuddy() {
     if (msgSending.has(username)) return;
     setMsgSending((prev) => new Set(prev).add(username));
     try {
-      const res = await messagingApi.startConversation([username]);
+      const res = await messagingApi.startConversation([username], undefined, 'discovery');
       const convoId = res.data?.id;
       navigate(convoId ? `/messages/${convoId}` : `/messages?user=${username}`);
     } catch (err) {
@@ -278,11 +301,11 @@ export default function FindBuddy() {
           </Button>
           <button
             type="button"
-            aria-label="Buddy search settings"
-            onClick={openEditor}
+            aria-label="Buddy messages"
+            onClick={() => navigate('/buddies/messages')}
             className="p-2 rounded-full border border-buddy-surface text-buddy-text-secondary hover:text-buddy-green hover:border-buddy-green/40 transition-colors"
           >
-            <Settings size={16} />
+            <MessageCircle size={16} />
           </button>
         </div>
       </div>
@@ -475,7 +498,7 @@ export default function FindBuddy() {
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" aria-label="Finding buddies">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="aspect-square rounded-2xl bg-buddy-surface border border-buddy-surface-raised animate-pulse" />
+            <div key={i} className="aspect-[3/4] rounded-2xl bg-buddy-surface border border-buddy-surface-raised animate-pulse" />
           ))}
         </div>
       ) : buddies.length === 0 ? (
@@ -492,83 +515,101 @@ export default function FindBuddy() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {sortByDistance(buddies).map((b) => {
-            const name = b.display_name || b.profile.display_name || b.profile.username;
+            const username = b.profile.username;
+            const name = b.display_name || b.profile.display_name || username;
             const photo = b.photos?.[0] || b.profile.avatar_url;
             const distance = formatDistanceBadge(b.distance_km);
             const intents = b.custom_intent
               ? [b.custom_intent]
               : (b.intents || []).slice(0, 2).map((x) => x.replace(/_/g, ' '));
-            const meta = [b.age_band, (b.goals || []).slice(0, 2).join(' · ')]
-              .filter(Boolean)
-              .join(' · ');
+            const goals = (b.goals || []).slice(0, 2).map((g) => g.replace(/_/g, ' '));
+            const mode = (b.modes || [])[0]?.replace(/_/g, ' ');
+            const liked = !!b.liked_by_me;
+            const likedMe = !!b.liked_me;
+            const busy = likeBusy.has(username);
             return (
               <div
                 key={b.profile.user_id}
-                className="relative aspect-square rounded-2xl overflow-hidden bg-buddy-surface border border-buddy-surface-raised"
+                className="relative flex flex-col aspect-[3/4] rounded-2xl overflow-hidden bg-buddy-surface border border-buddy-surface-raised"
               >
-                {/* Square photo, initials fallback */}
-                {photo ? (
-                  <img src={photo} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <span className="absolute inset-0 flex items-center justify-center bg-buddy-surface-raised font-display text-4xl font-bold text-buddy-green/70">
-                    {name.charAt(0).toUpperCase()}
-                  </span>
-                )}
+                <div className="relative flex-1 min-h-0">
+                  {photo ? (
+                    <img src={photo} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <span className="absolute inset-0 flex items-center justify-center bg-buddy-surface-raised font-display text-4xl font-bold text-buddy-green/70">
+                      {name.charAt(0).toUpperCase()}
+                    </span>
+                  )}
 
-                {/* Distance — the headline number on the tile */}
-                <span
-                  data-testid={`distance-${b.profile.username}`}
-                  className="pointer-events-none absolute top-2 right-2 inline-flex items-center gap-1 rounded-md bg-buddy-black/75 px-1.5 py-0.5 font-mono text-[11px] font-bold text-buddy-green tabular-nums"
-                >
-                  <LocateFixed size={10} aria-hidden="true" />
-                  {distance ?? 'Nearby'}
-                </span>
-                {b.available_now && (
-                  <span className="pointer-events-none absolute top-2 left-2 rounded-md bg-buddy-green px-1.5 py-0.5 text-[10px] font-bold text-buddy-black">
-                    Now
+                  <span
+                    data-testid={`distance-${username}`}
+                    className="pointer-events-none absolute top-2 right-2 inline-flex items-center gap-1 rounded-md bg-buddy-black/75 px-1.5 py-0.5 font-mono text-[11px] font-bold text-buddy-green tabular-nums"
+                  >
+                    <LocateFixed size={10} aria-hidden="true" />
+                    {distance ?? 'Nearby'}
                   </span>
-                )}
-                {intents.length > 0 && (
-                  <span className="pointer-events-none absolute left-2 top-8 max-w-[70%] truncate rounded-md bg-buddy-black/75 px-1.5 py-0.5 text-[10px] text-buddy-green">
-                    {intents.join(' · ')}
-                  </span>
-                )}
+                  {b.available_now && (
+                    <span className="pointer-events-none absolute top-2 left-2 rounded-md bg-buddy-green px-1.5 py-0.5 text-[10px] font-bold text-buddy-black">
+                      Available now
+                    </span>
+                  )}
+                </div>
 
-                {/* Solid caption bar (no gradient) — pointer-events pass through
-                    to the profile button underneath. */}
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 space-y-0.5 bg-buddy-black/70 px-2.5 py-2">
-                  <p className="truncate text-[13px] font-semibold leading-tight text-white">{name}</p>
-                  <p className="truncate text-[10px] leading-tight text-white/70">
-                    {meta || `@${b.profile.username}`}
-                  </p>
-                  <div className="pointer-events-auto mt-1.5 flex items-center justify-end gap-1">
+                <div className="pointer-events-none flex flex-col gap-1 bg-buddy-surface px-2.5 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-semibold leading-tight text-buddy-text-primary">{name}</p>
+                    <p className="truncate text-[10px] leading-tight text-buddy-text-secondary">
+                      {[b.age_band, mode].filter(Boolean).join(' · ') || `@${username}`}
+                    </p>
+                  </div>
+                  {intents.length > 0 && (
+                    <p className="truncate text-[11px] leading-tight text-buddy-green">{intents.join(' · ')}</p>
+                  )}
+                  {goals.length > 0 && (
+                    <p className="truncate text-[10px] leading-tight text-buddy-text-secondary">{goals.join(' · ')}</p>
+                  )}
+                  {/* relative z-10 so these sit above the card-body overlay and
+                      stay clickable; the rest of the caption passes clicks through. */}
+                  <div className="pointer-events-auto relative z-10 mt-auto flex items-center justify-end gap-1 pt-1">
                     <button
-                      aria-label={`Message @${b.profile.username}`}
-                      disabled={msgSending.has(b.profile.username)}
-                      onClick={() => handleMessage(b.profile.username)}
-                      className="p-2 rounded-full bg-buddy-black/60 text-buddy-text-secondary hover:text-buddy-green disabled:opacity-50"
+                      aria-label={`Message @${username}`}
+                      disabled={msgSending.has(username)}
+                      onClick={() => handleMessage(username)}
+                      className="p-2 rounded-full bg-buddy-surface-raised text-buddy-text-secondary hover:text-buddy-green transition-colors disabled:opacity-50"
                     >
-                      {msgSending.has(b.profile.username)
+                      {msgSending.has(username)
                         ? <Loader2 size={14} className="animate-spin" />
                         : <MessageCircle size={14} />}
                     </button>
-                    <Button
-                      size="sm"
-                      variant={requested.has(b.profile.username) ? 'ghost' : 'outline'}
-                      disabled={requested.has(b.profile.username)}
-                      onClick={() => sendRequest(b.profile.username)}
-                    >
-                      {requested.has(b.profile.username) ? 'Requested' : 'Buddy Up'}
-                    </Button>
+                    <span className="relative">
+                      <button
+                        aria-label={liked ? `Remove interest in @${username}` : `Show interest in @${username}`}
+                        aria-pressed={liked}
+                        disabled={busy}
+                        onClick={() => toggleLike(b)}
+                        className={`p-2 rounded-full transition-colors disabled:opacity-50 ${
+                          liked
+                            ? 'bg-buddy-red/15 text-buddy-red'
+                            : 'bg-buddy-surface-raised text-buddy-text-secondary hover:text-buddy-red'
+                        }`}
+                      >
+                        <Heart size={14} fill={liked ? 'currentColor' : 'none'} />
+                      </button>
+                      {likedMe && !liked && (
+                        <span className="absolute -top-1.5 -right-1.5 rounded-full bg-buddy-gold px-1.5 py-0.5 text-[9px] font-bold leading-none text-buddy-black">
+                          Liked you
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </div>
 
-                {/* Tappable tile → profile. Last in the tab order so the row
-                    actions stay reachable. */}
+                {/* Card body → the full find-a-buddy profile. Last in the tab
+                    order so the row actions stay reachable. */}
                 <button
                   type="button"
-                  onClick={() => navigate(`/${b.profile.username}`)}
-                  aria-label={`Open ${name}'s profile, @${b.profile.username}`}
+                  onClick={() => navigate(`/buddies/find/${username}`)}
+                  aria-label={`Open ${name}'s buddy profile, @${username}`}
                   className="absolute inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-buddy-green"
                 />
               </div>
