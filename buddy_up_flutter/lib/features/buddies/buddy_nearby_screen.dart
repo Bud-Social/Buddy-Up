@@ -239,6 +239,11 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
         ),
         title: const Text('Find a buddy'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: 'Buddy search settings',
+            onPressed: () => context.push('/settings'),
+          ),
           TextButton(
             onPressed: () => _save(looking: !(_mine?.availableNow == true)),
             child: Text(
@@ -361,13 +366,14 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                       ),
                   ],
                 ),
-                TextButton(
-                  onPressed: () => setState(() => _editing = !_editing),
-                  child: Text(_editing ? 'Hide my search profile setup' : 'Set up my search profile${_mine != null && _mine!.ageBand.isNotEmpty ? ' · ${_mine!.ageBand}' : ''}'),
-                ),
-                if (_editing)
-                  _setupEditor()
-                else if (_mine != null)
+                if (_editing || _mine == null) ...[
+                  if (_mine != null)
+                    TextButton(
+                      onPressed: () => setState(() => _editing = false),
+                      child: const Text('Hide my search profile setup'),
+                    ),
+                  _setupEditor(),
+                ] else
                   _profileSummary(state),
               ],
             ),
@@ -530,6 +536,23 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                   Text('${state.matchCount} ${state.matchCount == 1 ? 'buddy' : 'buddies'} nearby',
                       style: const TextStyle(color: BuddyColors.green, fontSize: 11, fontWeight: FontWeight.w600)),
               ],
+            ),
+            InkWell(
+              onTap: () => context.push('/settings'),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.lock_outline, size: 12, color: BuddyColors.textSecondary),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${mine.visibility == 'buddies' ? 'Buddies only' : mine.visibility.isNotEmpty ? mine.visibility[0].toUpperCase() + mine.visibility.substring(1) : 'Public'}${mine.incognito ? ' · Incognito' : ''}',
+                      style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

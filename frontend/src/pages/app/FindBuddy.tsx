@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, LocateFixed, Loader2, Footprints, Camera, X, MessageCircle } from 'lucide-react';
+import { Users, LocateFixed, Loader2, Footprints, Camera, X, MessageCircle, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
@@ -215,9 +215,19 @@ export default function FindBuddy() {
         <h1 className="font-display text-2xl font-extrabold flex items-center gap-2">
           <Footprints className="text-buddy-green" /> Find a buddy
         </h1>
-        <Button size="sm" variant={lookingNow ? 'ghost' : 'outline'} onClick={toggleLooking} disabled={saving}>
-          {lookingNow ? 'Looking ✓ (tap to stop)' : 'I’m looking now'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant={lookingNow ? 'ghost' : 'outline'} onClick={toggleLooking} disabled={saving}>
+            {lookingNow ? 'Looking ✓ (tap to stop)' : 'I’m looking now'}
+          </Button>
+          <button
+            type="button"
+            aria-label="Buddy search settings"
+            onClick={() => navigate('/settings')}
+            className="p-2 rounded-full border border-buddy-surface text-buddy-text-secondary hover:text-buddy-green hover:border-buddy-green/40 transition-colors"
+          >
+            <Settings size={16} />
+          </button>
+        </div>
       </div>
 
       {!editing && hasSavedProfile && (
@@ -251,6 +261,15 @@ export default function FindBuddy() {
               {typeof matchCount === 'number' && matchCount > 0 && (
                 <p className="text-xs text-buddy-green font-medium mt-2">{matchCount} {matchCount === 1 ? 'buddy nearby' : 'buddies nearby'}</p>
               )}
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-buddy-text-secondary">
+                  Privacy: {visibility === 'buddies' ? 'Buddies only' : visibility[0].toUpperCase() + visibility.slice(1)}{incognito ? ' · Incognito on' : ''}
+                </p>
+                <button onClick={() => navigate('/settings')}
+                  className="text-xs text-buddy-green font-medium hover:underline">
+                  Manage
+                </button>
+              </div>
             </div>
           </div>
         </Card>
@@ -309,6 +328,7 @@ export default function FindBuddy() {
         </div>
       </div>
 
+      {(editing || !hasSavedProfile) && (
       <Card className="p-4">
         <button onClick={() => setEditing((v) => !v)} className="w-full flex items-center justify-between">
           <span className="text-sm font-semibold">My buddy search profile {ageBand && <span className="text-buddy-text-secondary font-normal">· {ageBand}</span>}</span>
@@ -388,6 +408,7 @@ export default function FindBuddy() {
           </div>
         )}
       </Card>
+      )}
 
       <NearbyNotice geo={coords ? geo : null} kind="buddies" />
 
