@@ -198,11 +198,31 @@ class GymListView(views.APIView):
                 lng = float(request.query_params.get('lng'))
         except (TypeError, ValueError):
             lat = lng = None
+        radius_explicit = str(radius_km).strip() != ''
         try:
             radius_km = float(radius_km or 25)
         except (TypeError, ValueError):
             radius_km = 25
+            radius_explicit = False
         radius_km = min(max(radius_km, 1), 200)
+
+        # Adaptive default: 5 km in dense areas, 10 km in sparse ones when
+        # the user didn't pick a radius. Explicit radius always wins.
+        geo_auto = False
+        geo_density = None
+        geo_count_in_near = None
+        if lat is not None and lng is not None and not radius_explicit:
+            from common.geo import (
+                NEAR_RADIUS_KM,
+                count_within_latlng,
+                pick_adaptive_radius,
+            )
+
+            geo_count_in_near = count_within_latlng(
+                VenueLocation.objects.filter(is_active=True), lat, lng, NEAR_RADIUS_KM
+            )
+            radius_km, geo_density = pick_adaptive_radius(geo_count_in_near)
+            geo_auto = True
 
         if my_gyms:
             gym_ids = GymMembership.objects.filter(
@@ -288,12 +308,60 @@ class GymListView(views.APIView):
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(queryset, request)
         serializer = GymSerializer(page, many=True, context={'request': request})
+        data = list(serializer.data)
+
+        # Distance annotation (no PostGIS): min haversine over active venues.
+        if lat is not None and lng is not None and data:
+            from common.geo import adaptive_message, haversine_km
+
+            gym_ids = [g.get('id') for g in data]
+            venue_rows = (
+                VenueLocation.objects.filter(gym_id__in=gym_ids, is_active=True)
+                .exclude(latitude__isnull=True)
+                .exclude(longitude__isnull=True)
+                .values('gym_id', 'latitude', 'longitude')
+            )
+            nearest: dict = {}
+            for row in venue_rows:
+                try:
+                    d = haversine_km(lat, lng, float(row['latitude']), float(row['longitude']))
+                except (TypeError, ValueError):
+                    continue
+                gid = row['gym_id']
+                if gid not in nearest or d < nearest[gid]:
+                    nearest[gid] = d
+            for g in data:
+                d = nearest.get(g.get('id'))
+                g['distance_km'] = round(d, 1) if d is not None else None
+            if ordering == 'nearest':
+                data.sort(key=lambda g: (g['distance_km'] is None, g['distance_km'] or 0))
+        elif ordering == 'nearest':
+            # Requested nearest without GPS: fall back to members ordering.
+            ordering = 'members'
+
+        geo = None
+        if lat is not None and lng is not None:
+            from common.geo import adaptive_message
+
+            message = None
+            if geo_auto:
+                message = adaptive_message(radius_km, geo_density or 'sparse', geo_count_in_near or 0)
+            geo = {
+                'lat': lat,
+                'lng': lng,
+                'radius_km': radius_km,
+                'auto': geo_auto,
+                'density': geo_density,
+                'count_in_near': geo_count_in_near,
+                'message': message,
+            }
 
         return Response({
             'success': True,
-            'data': serializer.data,
+            'data': data,
             'message': 'OK',
             'errors': None,
+            'geo': geo,
             'pagination': {
                 'count': paginator.page.paginator.count,
                 'next': paginator.get_next_link(),

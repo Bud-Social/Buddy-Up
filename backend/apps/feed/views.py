@@ -2114,14 +2114,14 @@ class WorkoutFormAnalysisView(views.APIView):
 
     def post(self, request):
         import requests as http_requests
-        file = request.FILES.get('image')
+        file = request.FILES.get('image') or request.FILES.get('video')
         exercise = request.data.get('exercise', 'auto')
 
         if not file:
             return Response({
                 'success': False, 'data': None,
-                'message': 'No image provided.',
-                'errors': 'image field is required.', 'pagination': None,
+                'message': 'No image or video provided.',
+                'errors': 'image or video field is required.', 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
         ai_url = f'{settings.AI_SERVICE_URL}/api/v1/form-analyzer/analyze'
@@ -2130,7 +2130,7 @@ class WorkoutFormAnalysisView(views.APIView):
                 ai_url,
                 files={'file': (file.name, file.read(), file.content_type)},
                 data={'exercise': exercise},
-                timeout=30,
+                timeout=120,
             )
             resp.raise_for_status()
             audit_ai_call('form_analyzer', input_data={'exercise': exercise}, output_data=resp.json())

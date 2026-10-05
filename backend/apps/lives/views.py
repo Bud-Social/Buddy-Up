@@ -271,6 +271,21 @@ class JoinLiveView(views.APIView):
             attendee.left_at = None
             attendee.save(update_fields=['role', 'left_at'])
 
+        # Analytics: lives-joined pickup (best-effort, never fatal).
+        try:
+            from apps.analytics.event_ingest import build_event_rows
+            from apps.analytics.models import AnalyticsEvent
+            rows, _ = build_event_rows([{
+                'event_name': 'live.joined',
+                'object_type': 'live',
+                'object_id': str(live.id),
+                'properties': {'role': role, 'live_type': live.live_type},
+                'consent': {'analytics': True},
+            }], actor_profile=user)
+            AnalyticsEvent.objects.bulk_create(rows)
+        except Exception:  # noqa: BLE001
+            pass
+
         return Response({
             'success': True,
             'data': {

@@ -338,7 +338,14 @@ class ProductSerializer(serializers.ModelSerializer):
                    'recommended_by', 'recommender_data', 'shop_data', 'click_count',
                    'stock_quantity', 'stock_tracking_enabled', 'supplement_registration_number',
                    'supplement_registration_expiry', 'supplement_claims_reviewed',
-                   'supplement_label_url', 'created_at']
+                   'supplement_label_url', 'delivery_modes', 'fulfillment_details',
+                   'created_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data.get('delivery_modes'):
+            data['delivery_modes'] = ['digital']
+        return data
 
     def get_recommender_data(self, obj):
         if obj.recommended_by:
@@ -429,6 +436,11 @@ class CreateProductSerializer(serializers.Serializer):
     supplement_registration_expiry = serializers.DateField(required=False, allow_null=True)
     supplement_claims_reviewed = serializers.BooleanField(required=False, default=False)
     supplement_label_url = serializers.URLField(required=False, allow_blank=True)
+    delivery_modes = serializers.ListField(
+        child=serializers.ChoiceField(choices=['digital', 'pickup', 'delivery']),
+        required=False, default=list,
+    )
+    fulfillment_details = serializers.DictField(required=False, default=dict)
 
 
 class UpdateProductSerializer(serializers.Serializer):
@@ -448,6 +460,11 @@ class UpdateProductSerializer(serializers.Serializer):
     supplement_registration_expiry = serializers.DateField(required=False, allow_null=True)
     supplement_claims_reviewed = serializers.BooleanField(required=False)
     supplement_label_url = serializers.URLField(required=False, allow_blank=True)
+    delivery_modes = serializers.ListField(
+        child=serializers.ChoiceField(choices=['digital', 'pickup', 'delivery']),
+        required=False,
+    )
+    fulfillment_details = serializers.DictField(required=False)
 
 
 class TrainingProgrammeReviewSerializer(serializers.ModelSerializer):

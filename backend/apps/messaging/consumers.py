@@ -117,8 +117,10 @@ class UserConsumer(AsyncJsonWebsocketConsumer):
 
     def _update_last_seen(self):
         try:
-            from apps.profiles.models import Profile
+            from apps.profiles.models import BuddySearchProfile, Profile
             from django.utils import timezone
+            if BuddySearchProfile.objects.filter(profile_id=self.user_id, incognito=True).exists():
+                return
             Profile.objects.filter(user_id=self.user_id).update(last_seen=timezone.now())
         except Exception:  # noqa: BLE001
             pass

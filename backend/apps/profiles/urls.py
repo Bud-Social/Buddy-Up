@@ -14,6 +14,9 @@ urlpatterns = [
     path('blocked/', views.BlockedUsersView.as_view(), name='blocked_users'),
     path('pending-requests/', views.PendingBuddyRequestsView.as_view(), name='pending_requests'),
     path('buddies/search/', views.BuddySearchView.as_view(), name='buddy_search'),
+    path('buddies/nearby/', views.NearbyBuddiesView.as_view(), name='buddies_nearby'),
+    path('me/search-profile/', views.MySearchProfileView.as_view(), name='my_search_profile'),
+    path('<str:username>/search-profile/', views.UserSearchProfileView.as_view(), name='user_search_profile'),
 
     path('presence/', views.PresenceStatusView.as_view(), name='presence'),
     path('recommendations/', views.ProfileRecommendationsView.as_view(), name='recommendations'),

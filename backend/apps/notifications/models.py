@@ -29,6 +29,7 @@ class Notification(TimestampedModel):
         ('streak_reminder', 'Streak Reminder'),
         ('verification_update', 'Verification Update'),
         ('accountability_ping', 'Accountability Ping'),
+        ('buddy_nearby_available', 'Buddies Nearby Available'),
         ('new_device_login', 'New Device Login'),
         # Marketplace / Shop
         ('shop_created', 'Shop Created'),
@@ -107,6 +108,7 @@ class NotificationPreference(TimestampedModel):
     session_reminder_push = models.BooleanField(default=True)
     streak_milestone_push = models.BooleanField(default=True)
     accountability_ping_push = models.BooleanField(default=True)
+    buddy_nearby_push = models.BooleanField(default=True)
     # Marketplace push preferences
     programme_reminder_push = models.BooleanField(default=True)
     meal_reminder_push = models.BooleanField(default=True)

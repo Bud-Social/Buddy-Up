@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from django.db.models import Q
-from .models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship
+from .models import (
+    Profile, BuddyRelationship, FollowRelationship, BlockRelationship,
+    BuddySearchProfile,
+)
 from apps.gyms.models import GymMembership
 
 
@@ -140,8 +143,10 @@ _GOAL_ALIASES = {
 }
 _LEVEL_ALIASES = {'extremely_active': 'athlete', 'extreme': 'athlete'}
 _WORKOUT_ALIASES = {
-    'weightlifting': 'weights', 'boxing': 'martial_arts', 'dance': 'other',
-    'calisthenics': 'other', 'gym': 'weights',
+    'weightlifting': 'weights', 'weight_training': 'weights',
+    'boxing': 'martial_arts', 'dance': 'other',
+    'calisthenics': 'other', 'hike': 'hiking', 'stroll': 'walk',
+    'dog_walk': 'walk',
 }
 _DIET_ALIASES = {'mediterranean': 'other', 'no_preference': 'none'}
 _TIME_ALIASES = {'late_night': 'night', 'anytime': 'flexible'}
@@ -165,7 +170,8 @@ class OnboardingSerializer(serializers.Serializer):
     ])
     preferred_workouts = serializers.MultipleChoiceField(choices=[
         'weights', 'cardio', 'hiit', 'yoga', 'pilates', 'crossfit',
-        'martial_arts', 'swimming', 'running', 'cycling', 'other',
+        'martial_arts', 'swimming', 'running', 'cycling', 'walk',
+        'hiking', 'gym', 'other',
     ])
     dietary_preference = serializers.ChoiceField(choices=[
         'none', 'vegan', 'vegetarian', 'keto', 'paleo', 'halal', 'kosher',
@@ -246,3 +252,60 @@ class ProfileSearchSerializer(serializers.Serializer):
     q = serializers.CharField(max_length=200, required=False, allow_blank=True)
     role = serializers.ChoiceField(choices=Profile.ROLE_CHOICES, required=False)
     location = serializers.CharField(max_length=100, required=False, allow_blank=True)
+
+
+class BuddySearchProfileSerializer(serializers.ModelSerializer):
+    # Opt-in DOB (YYYY-MM-DD): hashed + banded, never stored or returned.
+    dob = serializers.DateField(write_only=True, required=False)
+
+    class Meta:
+        model = BuddySearchProfile
+        fields = [
+            'intents', 'custom_intent', 'modes', 'bio', 'goals',
+            'age_band', 'photos', 'neighbourhood',
+            'latitude', 'longitude', 'location_updated_at',
+            'search_radius_km', 'available_now', 'available_until', 'pace',
+            'visibility', 'incognito', 'dob',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['age_band', 'location_updated_at', 'created_at', 'updated_at']
+
+    def validate_intents(self, value):
+        allowed = set(BuddySearchProfile.INTENT_CHOICES)
+        bad = [v for v in (value or []) if v not in allowed]
+        if bad:
+            raise serializers.ValidationError(f'Unknown intents: {bad}')
+        return value
+
+    def validate_modes(self, value):
+        allowed = set(BuddySearchProfile.MODE_CHOICES)
+        bad = [v for v in (value or []) if v not in allowed]
+        if bad:
+            raise serializers.ValidationError(f'Unknown modes: {bad}')
+        return value
+
+    def validate_visibility(self, value):
+        allowed = [c[0] for c in BuddySearchProfile.VISIBILITY_CHOICES]
+        if value not in allowed:
+            raise serializers.ValidationError(f'Choose from {allowed}.')
+        return value
+
+    def validate_photos(self, value):
+        photos = value or []
+        if len(photos) > 4:
+            raise serializers.ValidationError('Up to 4 search profile photos.')
+        return photos
+
+    def validate(self, attrs):
+        if 'other' in (attrs.get('intents') or []) and not (attrs.get('custom_intent') or getattr(self.instance, 'custom_intent', '')):
+            raise serializers.ValidationError({'custom_intent': 'Describe what you are looking for.'})
+        dob = attrs.pop('dob', None)
+        if dob is not None:
+            from datetime import date as _date
+            from common.utils import age_band_label, calculate_age, hash_dob
+            age = calculate_age(dob)
+            if age < 16:
+                raise serializers.ValidationError({'dob': 'Must be 16 or older.'})
+            attrs['dob_hash'] = hash_dob(dob)
+            attrs['age_band'] = age_band_label(age)
+        return attrs

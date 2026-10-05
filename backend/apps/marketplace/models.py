@@ -441,6 +441,10 @@ class Product(TimestampedModel):
     click_count = models.IntegerField(default=0)
     stock_quantity = models.PositiveIntegerField(default=0)
     stock_tracking_enabled = models.BooleanField(default=False)
+    # Fulfillment: allowed modes subset of digital|pickup|delivery (+ details).
+    # Delivery availability depends on store coverage (see fulfillment_details).
+    delivery_modes = models.JSONField(default=list, blank=True)
+    fulfillment_details = models.JSONField(default=dict, blank=True)
     supplement_registration_number = models.CharField(max_length=100, blank=True)
     supplement_registration_expiry = models.DateField(null=True, blank=True)
     supplement_claims_reviewed = models.BooleanField(default=False)

@@ -23,6 +23,19 @@ def calculate_age(dob: date) -> int:
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
 
+def age_band_label(age: int) -> str:
+    """3-5 year display band for buddy profiles (no exact age exposed)."""
+    bands = [
+        (16, 17, '16–17'), (18, 20, '18–20'), (21, 24, '21–24'),
+        (25, 29, '25–29'), (30, 34, '30–34'), (35, 39, '35–39'),
+        (40, 44, '40–44'), (45, 49, '45–49'),
+    ]
+    for lo, hi, label in bands:
+        if lo <= age <= hi:
+            return label
+    return '50+' if age >= 50 else ''
+
+
 MAGIC_BYTES: dict[str, bytes] = {
     '.jpg': b'\xff\xd8\xff',
     '.jpeg': b'\xff\xd8\xff',

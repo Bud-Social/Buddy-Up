@@ -8,11 +8,14 @@ from django.contrib.postgres.search import SearchVector, SearchQuery
 from rest_framework import views, permissions, status, generics
 from rest_framework.response import Response
 
-from .models import Profile, BuddyRelationship, FollowRelationship, BlockRelationship, AccountabilityPing
+from .models import (
+    Profile, BuddyRelationship, FollowRelationship, BlockRelationship,
+    AccountabilityPing, BuddySearchProfile,
+)
 from .buddy_notifications import notify_buddy_request, notify_buddy_accepted, notify_follow
 from .serializers import (
     ProfileSerializer, ProfileUpdateSerializer, OnboardingSerializer,
-    PingMessageSerializer,
+    PingMessageSerializer, BuddySearchProfileSerializer,
 )
 from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, request_can_access_mature, can_view_content
@@ -673,6 +676,290 @@ class BuddySearchView(views.APIView):
         })
 
 
+class UserSearchProfileView(views.APIView):
+    """Public buddy-search card for a profile page (visibility-aware)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, username):
+        from django.shortcuts import get_object_or_404
+        target = get_object_or_404(Profile, username=username)
+        try:
+            sp = target.search_profile
+        except BuddySearchProfile.DoesNotExist:
+            return Response({
+                'success': True, 'data': None,
+                'message': 'No search profile.', 'errors': None, 'pagination': None,
+            })
+        me = request.user.profile
+        if (sp.visibility or 'public') == 'hidden' and target != me:
+            return Response({
+                'success': True, 'data': None,
+                'message': 'No search profile.', 'errors': None, 'pagination': None,
+            })
+        if (sp.visibility or 'public') == 'buddies' and target != me:
+            is_buddy = BuddyRelationship.objects.filter(
+                (db_models.Q(from_user=me, to_user=target) | db_models.Q(from_user=target, to_user=me)),
+                status='confirmed',
+            ).exists()
+            if not is_buddy:
+                return Response({
+                    'success': True, 'data': None,
+                    'message': 'No search profile.', 'errors': None, 'pagination': None,
+                })
+        return Response({
+            'success': True,
+            'data': {
+                **BuddySearchProfileSerializer(sp).data,
+                'username': target.username,
+                'display_name': target.display_name,
+                'avatar_url': target.avatar_url,
+            },
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+
+class MySearchProfileView(views.APIView):
+    """Upsert + fetch my opt-in buddy-search profile."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        sp, _ = BuddySearchProfile.objects.get_or_create(profile=request.user.profile)
+        return Response({
+            'success': True,
+            'data': BuddySearchProfileSerializer(sp).data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    def put(self, request):
+        from datetime import timedelta
+
+        sp, _ = BuddySearchProfile.objects.get_or_create(profile=request.user.profile)
+        was_looking = bool(sp.available_now)
+        serializer = BuddySearchProfileSerializer(sp, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        obj = serializer.save()
+        updates = {}
+        if 'latitude' in serializer.validated_data or 'longitude' in serializer.validated_data:
+            updates['location_updated_at'] = timezone.now()
+        if serializer.validated_data.get('available_now') and not serializer.validated_data.get('available_until'):
+            updates['available_until'] = timezone.now() + timedelta(hours=2)
+        if updates:
+            for k, v in updates.items():
+                setattr(obj, k, v)
+            obj.save(update_fields=list(updates))
+        match_count = self._match_count(request.user.profile, obj)
+        # Feature discovery: first time turning "looking now" on with matches
+        # nearby, tell the user (not spamming everyone else).
+        if obj.available_now and not was_looking and match_count:
+            try:
+                from apps.notifications.tasks import create_notification
+                create_notification.delay(
+                    str(request.user.id),
+                    'buddy_nearby_available',
+                    f'{match_count} buddie(s) nearby looking too 👀',
+                    'Open Find a Buddy to say hi.',
+                    {'match_count': match_count},
+                )
+            except Exception:  # noqa: BLE001
+                pass
+        data = BuddySearchProfileSerializer(obj).data
+        data['match_count'] = match_count
+        return Response({
+            'success': True,
+            'data': data,
+            'message': 'Search profile saved', 'errors': None, 'pagination': None,
+        })
+
+    def _match_count(self, me, obj) -> int:
+        """Nearby opted-in profiles sharing an intent (lightweight count)."""
+        try:
+            from common.geo import NEAR_RADIUS_KM, bbox_deltas
+            qs = BuddySearchProfile.objects.exclude(profile=me)
+            if obj.latitude is not None and obj.longitude is not None:
+                try:
+                    lat, lng = float(obj.latitude), float(obj.longitude)
+                    radius = obj.search_radius_km or NEAR_RADIUS_KM
+                    lat_delta, lng_delta = bbox_deltas(lat, radius)
+                    qs = qs.filter(
+                        latitude__gte=lat - lat_delta, latitude__lte=lat + lat_delta,
+                        longitude__gte=lng - lng_delta, longitude__lte=lng + lng_delta,
+                    )
+                except (TypeError, ValueError):
+                    pass
+            my_intents = set(obj.intents or [])
+            if not my_intents:
+                return 0
+            count = 0
+            for sp in qs.values_list('intents', flat=True):
+                if my_intents & set(sp or []):
+                    count += 1
+                    if count >= 50:
+                        break
+            return count
+        except Exception:  # noqa: BLE001
+            return 0
+
+
+class NearbyBuddiesView(views.APIView):
+    """Find people near you looking for the same thing (radius-only GPS).
+
+    GET /profiles/buddies/nearby/?intent=walk&mode=hybrid&lat=&lng=
+        &radius_km=&now=1
+    Never exposes other users' coordinates — only banded distance_km.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = PageNumberPagination
+
+    def get(self, request):
+        from common.geo import (
+            NEAR_RADIUS_KM, adaptive_message, bbox_deltas,
+            count_within_latlng, haversine_km, pick_adaptive_radius,
+        )
+
+        intent = (request.query_params.get('intent') or '').strip()
+        mode = (request.query_params.get('mode') or '').strip()
+        now_only = request.query_params.get('now') in ('1', 'true')
+        if intent and intent not in BuddySearchProfile.INTENT_CHOICES:
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Unknown intent. Choose from {BuddySearchProfile.INTENT_CHOICES}.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        if mode and mode not in BuddySearchProfile.MODE_CHOICES:
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Unknown mode. Choose from {BuddySearchProfile.MODE_CHOICES}.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        lat = lng = None
+        try:
+            if request.query_params.get('lat') not in (None, ''):
+                lat = float(request.query_params.get('lat'))
+            if request.query_params.get('lng') not in (None, ''):
+                lng = float(request.query_params.get('lng'))
+        except (TypeError, ValueError):
+            lat = lng = None
+        radius_param = request.query_params.get('radius_km', '')
+        radius_explicit = str(radius_param).strip() != ''
+        try:
+            radius_km = float(radius_param or 10)
+        except (TypeError, ValueError):
+            radius_km = 10
+            radius_explicit = False
+        radius_km = min(max(radius_km, 1), 200)
+
+        me = request.user.profile
+        buddy_ids = set(BuddyRelationship.objects.filter(
+            (db_models.Q(from_user=me) | db_models.Q(to_user=me)),
+            status='confirmed',
+        ).values_list(
+            db_models.Case(db_models.When(from_user=me, then='to_user_id'), default='from_user_id'),
+            flat=True,
+        ))
+        blocked_ids = set(BlockRelationship.objects.filter(blocker=me).values_list('blocked_id', flat=True))
+        blocked_by_ids = set(BlockRelationship.objects.filter(blocked=me).values_list('blocker_id', flat=True))
+
+        qs = BuddySearchProfile.objects.select_related('profile').exclude(profile=me)
+        if now_only:
+            qs = qs.filter(available_now=True).filter(
+                db_models.Q(available_until__isnull=True) | db_models.Q(available_until__gt=timezone.now())
+            )
+
+        geo_auto = False
+        geo_density = None
+        geo_count_in_near = None
+        if lat is not None and lng is not None and not radius_explicit:
+            geo_count_in_near = count_within_latlng(qs, lat, lng, NEAR_RADIUS_KM)
+            radius_km, geo_density = pick_adaptive_radius(geo_count_in_near)
+            geo_auto = True
+
+        candidates = list(qs)
+        results = []
+        lat_delta = lng_delta = None
+        if lat is not None and lng is not None:
+            lat_delta, lng_delta = bbox_deltas(lat, radius_km)
+        for sp in candidates:
+            if sp.profile_id in buddy_ids or sp.profile_id in blocked_ids or sp.profile_id in blocked_by_ids:
+                continue
+            if getattr(sp.profile, 'privacy_level', 'public') != 'public':
+                continue
+            # Search-profile visibility: hidden never listed; buddies-only
+            # only for confirmed buddies of the viewer.
+            if (sp.visibility or 'public') == 'hidden':
+                continue
+            if (sp.visibility or 'public') == 'buddies' and sp.profile_id not in buddy_ids:
+                continue
+            if intent and intent not in (sp.intents or []):
+                continue
+            if mode and mode not in (sp.modes or []):
+                continue
+            distance = None
+            if lat is not None and lng is not None:
+                if sp.latitude is None or sp.longitude is None:
+                    continue
+                try:
+                    slat, slng = float(sp.latitude), float(sp.longitude)
+                except (TypeError, ValueError):
+                    continue
+                if lat_delta is not None and (
+                    slat < lat - lat_delta or slat > lat + lat_delta
+                    or slng < lng - lng_delta or slng > lng + lng_delta
+                ):
+                    continue
+                distance = haversine_km(lat, lng, slat, slng)
+                if distance > radius_km:
+                    continue
+            explanations = []
+            if intent:
+                explanations.append(f'looking for {intent}')
+            if distance is not None:
+                explanations.append(f'{distance:.1f} km away')
+            if sp.available_now:
+                explanations.append('available now')
+            results.append((distance if distance is not None else float('inf'), sp, distance, explanations))
+
+        results.sort(key=lambda r: r[0])
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(results, request)
+        items = []
+        for _, sp, distance, explanations in (page or []):
+            items.append({
+                'profile': ProfileSerializer(sp.profile, context={'request': request}).data,
+                'distance_km': round(distance, 1) if distance is not None else None,
+                'intents': sp.intents,
+                'custom_intent': sp.custom_intent,
+                'modes': sp.modes,
+                'bio': sp.bio,
+                'goals': sp.goals,
+                'age_band': sp.age_band,
+                'photos': sp.photos,
+                'available_now': sp.available_now,
+                'explanation': ' · '.join(explanations) if explanations else 'shared interests',
+            })
+
+        geo = None
+        if lat is not None and lng is not None:
+            message = None
+            if geo_auto:
+                message = adaptive_message(radius_km, geo_density or 'sparse', geo_count_in_near or 0)
+            geo = {
+                'lat': lat, 'lng': lng, 'radius_km': radius_km, 'auto': geo_auto,
+                'density': geo_density, 'count_in_near': geo_count_in_near,
+                'message': message,
+            }
+
+        return Response({
+            'success': True, 'data': items, 'message': 'OK', 'errors': None,
+            'geo': geo,
+            'pagination': {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            } if paginator.page is not None else {'count': len(items), 'next': None, 'previous': None},
+        })
+
+
 class SendPingView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1143,14 +1430,20 @@ class PresenceStatusView(views.APIView):
                              'errors': None, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
 
         profiles = Profile.objects.filter(user_id__in=user_ids).values('user_id', 'last_seen', 'show_active_status')
+        incognito_ids = {
+            str(i) for i in BuddySearchProfile.objects.filter(
+                profile_id__in=user_ids, incognito=True,
+            ).values_list('profile_id', flat=True)
+        }
         result = {}
         for p in profiles:
             uid = str(p['user_id'])
-            is_online = bool(cache.get(f'user_online_{uid}')) if p['show_active_status'] else False
+            visible = p['show_active_status'] and uid not in incognito_ids
+            is_online = bool(cache.get(f'user_online_{uid}')) if visible else False
             last_seen = p['last_seen'].isoformat() if p['last_seen'] else None
             result[uid] = {
                 'online': is_online,
-                'last_seen': last_seen if p['show_active_status'] else None,
+                'last_seen': last_seen if visible else None,
             }
 
         return Response({'success': True, 'data': result, 'message': 'OK', 'errors': None, 'pagination': None})

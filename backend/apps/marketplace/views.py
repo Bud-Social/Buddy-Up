@@ -1809,11 +1809,43 @@ class CartView(views.APIView):
             'local_currency': 'KES',
             'conversion_rate': 129.5,
         }
+        data = CartSerializer(cart, context={'request': request, 'rates': rates}).data
+        data['suggested_fulfillment'] = self._suggested_fulfillment(cart)
         return Response({
             'success': True,
-            'data': CartSerializer(cart, context={'request': request, 'rates': rates}).data,
+            'data': data,
             'message': 'Cart fetched.',
         })
+
+    @staticmethod
+    def _suggested_fulfillment(cart) -> dict:
+        """Auto-detect fulfillment from cart composition.
+
+        Tickets/plans/programmes are always digital. Products contribute
+        their allowed delivery_modes (+ details); prefer delivery, then
+        pickup, else digital. In-house vs user-premises is resolved at
+        checkout from the product's fulfillment_details.
+        """
+        modes: list[str] = []
+        details: dict = {}
+        has_product = False
+        for item in cart.items.select_related('product').all():
+            if item.item_type != 'product' or not item.product:
+                continue
+            has_product = True
+            for m in (item.product.delivery_modes or ['digital']):
+                if m not in modes:
+                    modes.append(m)
+            for k, v in (item.product.fulfillment_details or {}).items():
+                details.setdefault(k, v)
+        if not has_product:
+            return {'type': 'digital', 'available': ['digital'], 'detail': {}}
+        preferred = 'digital'
+        for candidate in ('delivery', 'pickup', 'digital'):
+            if candidate in modes:
+                preferred = candidate
+                break
+        return {'type': preferred, 'available': modes or ['digital'], 'detail': details}
 
     def post(self, request):
         cart, _ = Cart.objects.get_or_create(buyer=request.user.profile)
@@ -2214,6 +2246,11 @@ class CheckoutCartView(views.APIView):
             for created_ticket in purchase_rows_created_tickets:
                 send_ticket_confirmation.delay(str(created_ticket.id))
 
+        from apps.profiles.models import Profile as _BuyerProfile
+        new_balance = _BuyerProfile.objects.filter(pk=request.user.profile.pk).values_list(
+            'artifact_balance', flat=True,
+        ).first() or {}
+
         return Response({
             'success': True,
             'message': 'Cart checkout successful. Items have been purchased!',
@@ -2229,6 +2266,7 @@ class CheckoutCartView(views.APIView):
                 'savings_usd': savings_usd,
                 'discount_code': discount.code if discount else None,
                 'spent_usd': spent_usd,
+                'new_balance': new_balance,
             },
         })
 

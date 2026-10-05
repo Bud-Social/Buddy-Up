@@ -169,3 +169,57 @@ class SharedGoal(TimestampedModel):
 
     class Meta:
         db_table = 'profiles_shared_goal'
+
+
+class BuddySearchProfile(TimestampedModel):
+    """Opt-in 'looking for a buddy' profile (walk/run/gym/hike/...).
+
+    Location is radius-only: lat/lng are stored for distance computation but
+    never exposed for other users — APIs return banded distance_km only.
+    Dating/romance intents are intentionally excluded (deferred).
+    """
+
+    INTENT_CHOICES = [
+        'walk', 'run', 'gym', 'hike', 'live_cohost', 'trainer',
+        'coach', 'book_club', 'friend', 'other',
+    ]
+    MODE_CHOICES = ['virtual', 'hybrid', 'in_person', 'neighbourhood']
+    VISIBILITY_CHOICES = [
+        ('public', 'Public'),
+        ('buddies', 'Buddies only'),
+        ('hidden', 'Hidden'),
+    ]
+
+    profile = models.OneToOneField(
+        Profile, on_delete=models.CASCADE, primary_key=True, related_name='search_profile'
+    )
+    intents = models.JSONField(default=list, blank=True)
+    custom_intent = models.CharField(max_length=100, blank=True)
+    modes = models.JSONField(default=list, blank=True)
+    bio = models.CharField(max_length=140, blank=True)
+    goals = models.JSONField(default=list, blank=True)
+    # Opt-in age only: hashed DOB + derived 3-5y band label (no raw date stored).
+    dob_hash = models.CharField(max_length=64, blank=True)
+    age_band = models.CharField(max_length=10, blank=True)
+    photos = models.JSONField(default=list, blank=True)
+    neighbourhood = models.CharField(max_length=100, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    location_updated_at = models.DateTimeField(null=True, blank=True)
+    # Null = auto (5 km dense / 10 km sparse, see common.geo).
+    search_radius_km = models.FloatField(null=True, blank=True)
+    available_now = models.BooleanField(default=False)
+    available_until = models.DateTimeField(null=True, blank=True)
+    pace = models.CharField(max_length=20, blank=True)
+    visibility = models.CharField(max_length=10, choices=VISIBILITY_CHOICES, default='public')
+    incognito = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'profiles_buddy_search_profile'
+        indexes = [
+            models.Index(fields=['available_now']),
+            models.Index(fields=['latitude', 'longitude']),
+        ]
+
+    def __str__(self):
+        return f'search:{self.profile.username}'
