@@ -9,14 +9,21 @@ Never touches staff/superuser accounts and never changes privacy_level.
 Example:
     manage.py seed_buddy_search --center "-1.2921,36.8219" --radius-km 8 \\
         --count 12 --intent walk --intent run --available-now --dry-run
+
+Target specific accounts (missing users get a minimal account + Profile):
+    manage.py seed_buddy_search --emails a@x.com,b@x.com --intent walk --available-now
 """
 import math
 import random
+import re
+import secrets
 from datetime import timedelta
 from decimal import Decimal
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 from django.utils import timezone
 
 from apps.profiles.models import BuddySearchProfile, Profile
@@ -82,6 +89,71 @@ def flatten_intents(raw_values):
             seen.add(intent)
             out.append(intent)
     return out or ["walk"]
+
+
+def flatten_emails(raw_values):
+    """Accept repeatable --emails and comma-separated lists."""
+    emails = []
+    for raw in raw_values or []:
+        for part in str(raw).split(","):
+            part = part.strip()
+            if part:
+                emails.append(part)
+    # De-dupe case-insensitively, preserving order.
+    seen = set()
+    out = []
+    for email in emails:
+        key = email.lower()
+        if key not in seen:
+            seen.add(key)
+            out.append(email)
+    return out
+
+
+def sanitize_username_base(prefix):
+    """Sanitize an email prefix to [a-z0-9_] for username derivation."""
+    return re.sub(r"[^a-z0-9_]", "", prefix.lower())[:24] or "buddy"
+
+
+def unique_username(base):
+    """Dedupe a username base with a numeric suffix (mirrors registration)."""
+    if not Profile.objects.filter(username=base).exists():
+        return base
+    for i in range(2, 100):
+        candidate = f"{base}{i}"[:30]
+        if not Profile.objects.filter(username=candidate).exists():
+            return candidate
+    return f"{base[:24]}_{secrets.token_hex(2)}"
+
+
+def display_name_for_prefix(prefix):
+    """Title-case an email prefix for a placeholder display name."""
+    cleaned = re.sub(r"[._\-]+", " ", prefix).strip()
+    return cleaned.title() or prefix.title()
+
+
+def build_search_defaults(idx, intents, lat, lng, now, available_now, available_until):
+    """Shared BuddySearchProfile defaults for generic + email-targeted rows."""
+    assigned_intents = [intents[idx % len(intents)]]
+    return {
+        "intents": assigned_intents,
+        "custom_intent": "Open to sunrise walks + coffee." if "other" in assigned_intents else "",
+        "modes": list(MODES_POOL[idx % len(MODES_POOL)]),
+        "bio": BIO_POOL[idx % len(BIO_POOL)],
+        "goals": list(GOALS_POOL[idx % len(GOALS_POOL)]),
+        "age_band": AGE_BAND_POOL[idx % len(AGE_BAND_POOL)],
+        "display_name": "",
+        "photos": [],
+        "neighbourhood": "Nairobi",
+        "latitude": Decimal(str(lat)),
+        "longitude": Decimal(str(lng)),
+        "location_updated_at": now,
+        "available_now": available_now,
+        "available_until": available_until,
+        "pace": "",
+        "visibility": "public",
+        "incognito": False,
+    }
 
 
 def haversine_km(lat1, lng1, lat2, lng2):
@@ -154,6 +226,15 @@ class Command(BaseCommand):
             action="store_true",
             help="Print what would happen without writing to the DB.",
         )
+        parser.add_argument(
+            "--emails",
+            action="append",
+            default=None,
+            dest="emails",
+            help="Target account email(s), repeatable or comma-separated. "
+            "Missing users get a minimal account + Profile. "
+            "When given, only these emails are seeded (--count is ignored).",
+        )
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
@@ -178,6 +259,21 @@ class Command(BaseCommand):
         available_now = options["available_now"]
         rng = random.Random(options["seed"])
 
+        emails = flatten_emails(options.get("emails"))
+        if emails:
+            self._handle_email_targets(
+                emails,
+                intents=intents,
+                center_lat=center_lat,
+                center_lng=center_lng,
+                radius_km=radius_km,
+                overwrite=overwrite,
+                available_now=available_now,
+                rng=rng,
+                dry_run=dry_run,
+            )
+            return
+
         candidates = (
             Profile.objects.filter(
                 privacy_level="public",
@@ -200,32 +296,12 @@ class Command(BaseCommand):
         created = updated = 0
         for idx, profile in enumerate(candidates):
             lat, lng, _ = spread_point(center_lat, center_lng, radius_km, rng)
-            assigned_intents = [intents[idx % len(intents)]]
-            modes = list(MODES_POOL[idx % len(MODES_POOL)])
-            bio = BIO_POOL[idx % len(BIO_POOL)]
-            age_band = AGE_BAND_POOL[idx % len(AGE_BAND_POOL)]
-            goals = list(GOALS_POOL[idx % len(GOALS_POOL)])
+            defaults = build_search_defaults(
+                idx, intents, lat, lng, now, available_now, available_until
+            )
+            assigned_intents = defaults["intents"]
+            modes = defaults["modes"]
             distance = haversine_km(center_lat, center_lng, lat, lng)
-            custom_intent = "Open to sunrise walks + coffee." if "other" in assigned_intents else ""
-
-            defaults = {
-                "intents": assigned_intents,
-                "custom_intent": custom_intent,
-                "modes": modes,
-                "bio": bio,
-                "goals": goals,
-                "age_band": age_band,
-                "photos": [],
-                "neighbourhood": "Nairobi",
-                "latitude": Decimal(str(lat)),
-                "longitude": Decimal(str(lng)),
-                "location_updated_at": now,
-                "available_now": available_now,
-                "available_until": available_until,
-                "pace": "",
-                "visibility": "public",
-                "incognito": False,
-            }
 
             exists = hasattr(profile, "search_profile")
             if not dry_run and exists:
@@ -265,5 +341,137 @@ class Command(BaseCommand):
                 self.style.SUCCESS(
                     f"Done. created={created} updated={updated} "
                     f"considered={len(candidates)} (overwrite={overwrite})."
+                )
+            )
+
+    def _handle_email_targets(
+        self, emails, *, intents, center_lat, center_lng,
+        radius_km, overwrite, available_now, rng, dry_run,
+    ):
+        """Seed BuddySearchProfile rows for explicit email addresses.
+
+        Emails with no User (e.g. Google social emails) get a minimal account
+        (unusable password) + Profile; existing accounts/Profiles are never
+        modified (privacy_level untouched). Staff/superuser accounts are
+        skipped. Without --overwrite, emails that already have a search
+        profile are reported as existing and left alone.
+        """
+        from django.core.exceptions import ValidationError
+        from django.core.validators import validate_email
+
+        User = get_user_model()
+        now = timezone.now()
+        available_until = now + timedelta(hours=2) if available_now else None
+
+        created = updated = skipped = 0
+        for idx, email in enumerate(emails):
+            try:
+                validate_email(email)
+            except ValidationError:
+                self.stdout.write(f"skipped (invalid email): {email}")
+                skipped += 1
+                continue
+
+            user = User.objects.filter(email__iexact=email).first()
+            if user is not None and (user.is_staff or user.is_superuser):
+                self.stdout.write(f"skipped (staff): {email}")
+                skipped += 1
+                continue
+
+            lat, lng, _ = spread_point(center_lat, center_lng, radius_km, rng)
+            defaults = build_search_defaults(
+                idx, intents, lat, lng, now, available_now, available_until
+            )
+            where = f"({lat:.6f},{lng:.6f} ~{haversine_km(center_lat, center_lng, lat, lng):.1f}km from center)"
+
+            if user is None:
+                if dry_run:
+                    self.stdout.write(
+                        f"would create user+profile+search: {email} "
+                        f"intents={defaults['intents']} {where}"
+                    )
+                    continue
+                with transaction.atomic():
+                    user = User(email=User.objects.normalize_email(email))
+                    user.set_unusable_password()
+                    user.save()
+                    prefix = email.split("@")[0]
+                    profile = Profile.objects.create(
+                        user=user,
+                        username=unique_username(sanitize_username_base(prefix)),
+                        display_name=display_name_for_prefix(prefix),
+                    )
+                    BuddySearchProfile.objects.create(profile=profile, **defaults)
+                created += 1
+                self.stdout.write(
+                    f"created: {email} [new account @{profile.username}] "
+                    f"intents={defaults['intents']} {where}"
+                )
+                continue
+
+            try:
+                profile = user.profile
+            except Profile.DoesNotExist:
+                profile = None
+            if profile is None:
+                if dry_run:
+                    self.stdout.write(f"would create profile+search: {email} {where}")
+                    continue
+                with transaction.atomic():
+                    prefix = email.split("@")[0]
+                    profile = Profile.objects.create(
+                        user=user,
+                        username=unique_username(sanitize_username_base(prefix)),
+                        display_name=display_name_for_prefix(prefix),
+                    )
+                    BuddySearchProfile.objects.create(profile=profile, **defaults)
+                created += 1
+                self.stdout.write(
+                    f"created: {email} [existing account, new profile @{profile.username}] "
+                    f"intents={defaults['intents']} {where}"
+                )
+                continue
+
+            search_exists = BuddySearchProfile.objects.filter(profile=profile).exists()
+            if dry_run:
+                if search_exists:
+                    action = "would update (overwrite)" if overwrite else "would skip (exists)"
+                else:
+                    action = "would create"
+                self.stdout.write(
+                    f"{action}: {email} [existing account @{profile.username}] "
+                    f"intents={defaults['intents']} {where}"
+                )
+                continue
+
+            if search_exists and overwrite:
+                BuddySearchProfile.objects.filter(profile=profile).update(**defaults)
+                updated += 1
+                self.stdout.write(f"updated: {email} [existing account @{profile.username}] {where}")
+            elif search_exists:
+                skipped += 1
+                self.stdout.write(
+                    f"skipped (exists): {email} [existing account @{profile.username}] "
+                    "rerun with --overwrite to replace"
+                )
+            else:
+                BuddySearchProfile.objects.create(profile=profile, **defaults)
+                created += 1
+                self.stdout.write(
+                    f"created: {email} [existing account @{profile.username}] "
+                    f"intents={defaults['intents']} {where}"
+                )
+
+        if dry_run:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"DRY-RUN: {len(emails)} email(s) planned. No DB writes."
+                )
+            )
+        else:
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Done. created={created} updated={updated} skipped={skipped} "
+                    f"considered={len(emails)} (overwrite={overwrite})."
                 )
             )

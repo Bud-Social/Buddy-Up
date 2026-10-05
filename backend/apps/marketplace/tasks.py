@@ -153,6 +153,154 @@ def personalise_meal_plan(self, purchase_id: str, profile_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Unified reminder helpers: per-block `timing` enum
+# (morning/midday/afternoon/evening/anytime) + global frequency (15m/30m/1h).
+# Programme blocks carry `timing`; meal blocks carry `timing` (or legacy
+# `time_of_day` label / HH:MM string). Global configs carry `frequency`
+# alongside legacy keys for backwards compatibility.
+# ---------------------------------------------------------------------------
+
+TIMING_HOUR_RANGES = {
+    'morning': (5, 11),
+    'midday': (11, 14),
+    'afternoon': (14, 18),
+    'evening': (18, 23),
+    'anytime': (5, 23),
+}
+
+FREQUENCY_MINUTES = {'15m': 15, '30m': 30, '1h': 60}
+
+
+def _normalize_timing(value, default='anytime'):
+    """Normalize a per-block timing value to the shared enum."""
+    if not isinstance(value, str):
+        return default
+    v = value.strip().lower()
+    if v in TIMING_HOUR_RANGES:
+        return v
+    # Legacy web label "mid-day" etc.
+    if v in ('mid-day', 'mid_day'):
+        return 'midday'
+    return default
+
+
+def _timing_matches_hour(timing, hour):
+    """Check whether a timing enum covers the given wall-clock hour."""
+    start, end = TIMING_HOUR_RANGES.get(_normalize_timing(timing), (5, 23))
+    return start <= hour < end
+
+
+def _frequency_to_minutes(config, fallback=30):
+    """Read global frequency ('15m'/'30m'/'1h' or int minutes) from a config dict."""
+    if not isinstance(config, dict):
+        return fallback
+    freq = config.get('frequency', config.get('reminder_frequency'))
+    if isinstance(freq, str):
+        freq = freq.strip().lower()
+        if freq in FREQUENCY_MINUTES:
+            return FREQUENCY_MINUTES[freq]
+        try:
+            return int(freq)
+        except (TypeError, ValueError):
+            pass
+    if isinstance(freq, (int, float)):
+        return int(freq)
+    return fallback
+
+
+def _iter_programme_blocks(schedule):
+    """Yield normalized activity blocks from list- or dict-shaped schedules.
+
+    New web shape: {week_N: {day_M: [{title, duration_mins, timing, ...}]}}.
+    Legacy shape: [{week, day, time_of_day/timing, activity: {name}}].
+    """
+    if isinstance(schedule, dict):
+        for week_key, days in schedule.items():
+            try:
+                week = int(str(week_key).replace('week_', ''))
+            except (TypeError, ValueError):
+                week = 1
+            if not isinstance(days, dict):
+                continue
+            for day_key, activities in days.items():
+                try:
+                    day = int(str(day_key).replace('day_', ''))
+                except (TypeError, ValueError):
+                    day = 1
+                for idx, a in enumerate(activities or []):
+                    if not isinstance(a, dict):
+                        continue
+                    yield {
+                        'week': week,
+                        'day': day,
+                        'index': idx,
+                        'timing': _normalize_timing(a.get('timing', a.get('time_of_day', 'anytime'))),
+                        'title': a.get('title') or (a.get('activity') or {}).get('name', ''),
+                        'activity_key': a.get('activity_key') or f'w{week}_d{day}_{_normalize_timing(a.get("timing", "anytime"))}_{idx}',
+                        'raw': a,
+                    }
+    elif isinstance(schedule, list):
+        for idx, entry in enumerate(schedule):
+            if not isinstance(entry, dict):
+                continue
+            activity = entry.get('activity') if isinstance(entry.get('activity'), dict) else {}
+            yield {
+                'week': entry.get('week', 1),
+                'day': entry.get('day', 1),
+                'index': idx,
+                'timing': _normalize_timing(entry.get('timing', entry.get('time_of_day', 'anytime'))),
+                'title': entry.get('title') or activity.get('name', ''),
+                'activity_key': entry.get('activity_key') or (
+                    f"w{entry.get('week')}_d{entry.get('day')}_{entry.get('time_of_day', 'any')}"
+                ),
+                'raw': entry,
+            }
+
+
+def _iter_meal_blocks(full_plan):
+    """Yield normalized meal blocks from the full_plan dict.
+
+    New web shape: {week_N: {day_M: [{slot, title, timing, ...}]}}.
+    """
+    if not isinstance(full_plan, dict):
+        return
+    for week_key, days in full_plan.items():
+        try:
+            week = int(str(week_key).replace('week_', ''))
+        except (TypeError, ValueError):
+            week = 1
+        if not isinstance(days, dict):
+            continue
+        for day_key, meals in days.items():
+            try:
+                day = int(str(day_key).replace('day_', ''))
+            except (TypeError, ValueError):
+                day = 1
+            for idx, m in enumerate(meals or []):
+                if not isinstance(m, dict):
+                    continue
+                yield {
+                    'week': week,
+                    'day': day,
+                    'index': idx,
+                    'timing': _normalize_timing(m.get('timing', m.get('time_of_day', 'anytime'))),
+                    'title': m.get('title', ''),
+                    'raw': m,
+                }
+
+
+def _parse_global_meal_hour(time_of_day, default_hour=8):
+    """Accept HH:MM ('08:00') or a timing-enum label; return an hour int."""
+    if isinstance(time_of_day, str) and ':' in time_of_day:
+        try:
+            return int(time_of_day.split(':')[0]) % 24
+        except (TypeError, ValueError):
+            return default_hour
+    start, _ = TIMING_HOUR_RANGES.get(_normalize_timing(time_of_day, 'morning'), (6, 9))
+    return start
+
+
+# ---------------------------------------------------------------------------
 # NEW: Programme activity reminders (30-min and 15-min)
 # ---------------------------------------------------------------------------
 
@@ -175,30 +323,46 @@ def send_programme_activity_reminder(purchase_id: str, activity_key: str, minute
     programme = purchase.programme
     buyer = purchase.buyer
 
-    # Find the activity in the schedule by key
+    # Find the activity in the schedule by key (supports list + dict shapes)
     activity_info = None
-    for entry in (programme.schedule or []):
-        key = f"w{entry.get('week')}_d{entry.get('day')}_{entry.get('time_of_day', 'any')}"
-        if key == activity_key or entry.get('activity_key') == activity_key:
-            activity_info = entry
+    for block in _iter_programme_blocks(programme.schedule or []):
+        if block['activity_key'] == activity_key:
+            activity_info = block
             break
 
     activity_name = 'your next activity'
-    if activity_info and isinstance(activity_info.get('activity'), dict):
-        activity_name = activity_info['activity'].get('name', activity_name)
+    activity_timing = 'anytime'
+    if activity_info:
+        activity_name = activity_info.get('title') or activity_name
+        activity_timing = activity_info.get('timing', 'anytime')
 
-    title = f'⏰ Starting in {minutes_before} min: {activity_name}'
-    body = f'Your "{programme.title}" activity is about to start. Get ready!'
-
-    # Check subscriber notification config
+    # Check subscriber notification config (unified: enabled + frequency,
+    # with legacy remind_30min/remind_15min fallback)
     subscriber_config = purchase.notification_config or {}
     programme_config = programme.notification_config or {}
+    merged_config = {**programme_config, **subscriber_config}
 
-    remind_key = 'remind_30min' if minutes_before == 30 else 'remind_15min'
-    should_remind = subscriber_config.get(remind_key, programme_config.get(remind_key, True))
-
-    if not should_remind:
+    if not merged_config.get('enabled', True):
         return
+
+    configured_minutes = _frequency_to_minutes(merged_config, fallback=minutes_before)
+    effective_minutes = minutes_before or configured_minutes
+    # Legacy per-window opt-outs still respected when present.
+    remind_key = 'remind_30min' if effective_minutes == 30 else 'remind_15min'
+    if remind_key in merged_config and not merged_config.get(remind_key, True):
+        return
+
+    custom_message = merged_config.get('custom_message') or merged_config.get('custom_msg', '')
+    title = f'⏰ Starting in {effective_minutes} min: {activity_name}'
+    body = custom_message or f'Your "{programme.title}" activity is about to start. Get ready!'
+    metadata = {
+        'programme_id': str(programme.id),
+        'purchase_id': str(purchase.id),
+        'activity_key': activity_key,
+        'minutes_before': effective_minutes,
+        'timing': activity_timing,
+        'frequency': merged_config.get('frequency', f'{effective_minutes}m'),
+    }
 
     # In-app notification
     notification = Notification.objects.create(
@@ -206,18 +370,14 @@ def send_programme_activity_reminder(purchase_id: str, activity_key: str, minute
         notification_type='programme_reminder',
         title=title,
         body=body,
-        metadata={
-            'programme_id': str(programme.id),
-            'purchase_id': str(purchase.id),
-            'activity_key': activity_key,
-            'minutes_before': minutes_before,
-        },
+        metadata=metadata,
     )
 
     # Push to all buyer's devices
     _push_notification_to_profile(
         buyer, title, body,
-        {'type': 'programme_reminder', 'programme_id': str(programme.id), 'activity_key': activity_key},
+        {'type': 'programme_reminder', 'programme_id': str(programme.id), 'activity_key': activity_key,
+         'timing': activity_timing},
     )
 
     # WebSocket real-time notification
@@ -258,13 +418,19 @@ def schedule_programme_reminders_for_purchase(purchase_id: str):
     except TrainingProgrammePurchase.DoesNotExist:
         return
 
-    # Merge default notification config from programme into purchase
+    # Merge default notification config from programme into purchase.
+    # Unified shape: {enabled, frequency ('15m'/'30m'/'1h'), timing default,
+    # custom_message} with legacy remind_30min/remind_15min/custom_msg kept.
     programme_config = purchase.programme.notification_config or {}
     if not purchase.notification_config:
         purchase.notification_config = {
+            'enabled': programme_config.get('enabled', True),
+            'frequency': programme_config.get('frequency', '30m'),
+            'timing': _normalize_timing(programme_config.get('timing', 'anytime')),
+            'custom_message': programme_config.get('custom_message', programme_config.get('custom_msg', '')),
             'remind_30min': programme_config.get('remind_30min', True),
             'remind_15min': programme_config.get('remind_15min', True),
-            'custom_msg': programme_config.get('custom_msg', ''),
+            'custom_msg': programme_config.get('custom_msg', programme_config.get('custom_message', '')),
         }
         purchase.save(update_fields=['notification_config'])
 
@@ -285,18 +451,12 @@ def send_meal_plan_daily_reminders():
     now = timezone.localtime()
     current_hour = now.hour
 
-    # Map time_of_day labels to rough hour ranges
-    TIME_RANGES = {
-        'morning': (6, 9),
-        'midday': (11, 13),
-        'afternoon': (14, 17),
-        'evening': (18, 21),
-    }
-
     for purchase in MealPlanPurchase.objects.select_related('meal_plan', 'buyer').filter(
         meal_plan__is_published=True
     ):
-        # Get subscriber settings, fall back to plan defaults
+        # Get subscriber settings, fall back to plan defaults.
+        # Unified shape: {enabled, frequency, time_of_day (HH:MM legacy or
+        # timing-enum label), timing default, message_template}.
         sub_config = purchase.reminder_settings or {}
         plan_config = purchase.meal_plan.reminder_settings or {}
         merged = {**plan_config, **sub_config}
@@ -304,15 +464,23 @@ def send_meal_plan_daily_reminders():
         if not merged.get('enabled', False):
             continue
 
-        time_of_day = merged.get('time_of_day', 'morning')
-        hour_range = TIME_RANGES.get(time_of_day, (6, 9))
-
-        if not (hour_range[0] <= current_hour < hour_range[1]):
-            continue
+        # Per-block timing wins when the plan has structured blocks;
+        # otherwise fall back to the global time_of_day (HH:MM or enum).
+        blocks = list(_iter_meal_blocks(purchase.meal_plan.full_plan or {}))
+        if blocks:
+            if not any(_timing_matches_hour(b['timing'], current_hour) for b in blocks):
+                continue
+            matched_timings = sorted({b['timing'] for b in blocks if _timing_matches_hour(b['timing'], current_hour)})
+        else:
+            global_hour = _parse_global_meal_hour(merged.get('time_of_day', 'morning'))
+            if current_hour != global_hour:
+                continue
+            matched_timings = [_normalize_timing(merged.get('timing', merged.get('time_of_day', 'morning')))]
 
         plan = purchase.meal_plan
         buyer = purchase.buyer
         custom_msg = merged.get('message_template', f'Time for your meal plan: "{plan.title}"! 🥗')
+        frequency = merged.get('frequency', '1h')
 
         title = f'🥗 Meal Reminder: {plan.title}'
         body = custom_msg
@@ -323,13 +491,15 @@ def send_meal_plan_daily_reminders():
             notification_type='meal_reminder',
             title=title,
             body=body,
-            metadata={'meal_plan_id': str(plan.id), 'purchase_id': str(purchase.id)},
+            metadata={'meal_plan_id': str(plan.id), 'purchase_id': str(purchase.id),
+                      'timings': matched_timings, 'frequency': frequency},
         )
 
         # Push
         _push_notification_to_profile(
             buyer, title, body,
-            {'type': 'meal_reminder', 'meal_plan_id': str(plan.id)},
+            {'type': 'meal_reminder', 'meal_plan_id': str(plan.id),
+             'timings': matched_timings, 'frequency': frequency},
         )
 
 

@@ -41,6 +41,32 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
   List<String> _photos = [];
   String _visibility = 'public';
   bool _incognito = false;
+  final _scroll = ScrollController();
+  final _editorKey = GlobalKey();
+
+  void _openEditor() {
+    setState(() => _editing = true);
+    // Editor may have just mounted — defer scroll until after render.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _editorKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 300));
+      } else if (_scroll.hasClients) {
+        _scroll.jumpTo(0);
+      }
+    });
+  }
+
+  /// Format an ISO `available_until` as local "HH:MM" for the countdown text.
+  String? _untilText(String? iso) {
+    if (iso == null || iso.isEmpty) return null;
+    try {
+      final d = DateTime.parse(iso).toLocal();
+      return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   void initState() {
@@ -55,11 +81,22 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
       final data = raw['data'];
       if (data is Map<String, dynamic> && mounted) {
         final sp = SearchProfile.fromJson(data);
+        // Default display name = linked account's.
+        var name = sp.displayName;
+        if (name.trim().isEmpty) {
+          try {
+            final me = await ref.read(profileRepositoryProvider).getMyProfile();
+            name = me.displayName.isNotEmpty ? me.displayName : me.username;
+          } catch (_) {}
+        }
+        if (sp.searchRadiusKm != null) {
+          ref.read(buddyNearbyProvider.notifier).setRadius(sp.searchRadiusKm);
+        }
         setState(() {
           _mine = sp;
           // Start collapsed when a saved profile already has intents.
           _editing = sp.intents.isEmpty;
-          _displayName.text = sp.displayName;
+          _displayName.text = name;
           _bio.text = sp.bio;
           _customIntent.text = sp.customIntent;
           _goals = [...sp.goals];
@@ -81,6 +118,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
     _dob.dispose();
     _pace.dispose();
     _neighbourhood.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -156,6 +194,8 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
         'neighbourhood': _neighbourhood.text.trim(),
         'visibility': _visibility,
         'incognito': _incognito,
+        // null = auto radius, otherwise 5 / 10.
+        'search_radius_km': current.radiusKm,
       };
       if (current.intent == 'other') body['custom_intent'] = _customIntent.text.trim();
       final mode = current.mode;
@@ -242,7 +282,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: 'Buddy search settings',
-            onPressed: () => context.push('/settings'),
+            onPressed: _openEditor,
           ),
           TextButton(
             onPressed: () => _save(looking: !(_mine?.availableNow == true)),
@@ -372,7 +412,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                       onPressed: () => setState(() => _editing = false),
                       child: const Text('Hide my search profile setup'),
                     ),
-                  _setupEditor(),
+                  Container(key: _editorKey, child: _setupEditor()),
                 ] else
                   _profileSummary(state),
               ],
@@ -447,6 +487,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                             ),
                           )
                         : ListView.builder(
+                            controller: _scroll,
                             itemCount: state.buddies.length,
                             itemBuilder: (_, i) => _buddyTile(state.buddies[i]),
                           ),
@@ -458,7 +499,7 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
 
   Widget _profileSummary(BuddyNearbyState state) {
     final mine = _mine!;
-    final avatarSrc = mine.photos.isNotEmpty ? mine.photos.first : null;
+    final until = _untilText(mine.availableUntil);    final avatarSrc = mine.photos.isNotEmpty ? mine.photos.first : null;
     final intents = [...mine.intents, if (mine.customIntent.isNotEmpty) mine.customIntent];
     return Card(
       margin: const EdgeInsets.only(top: 10),
@@ -532,13 +573,16 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                   mine.availableNow ? 'Looking now ✓' : 'Not looking',
                   style: const TextStyle(color: BuddyColors.green, fontSize: 11, fontWeight: FontWeight.w600),
                 ),
+                if (mine.availableNow && until != null)
+                  Text('Looking until $until',
+                      style: const TextStyle(color: BuddyColors.green, fontSize: 11, fontWeight: FontWeight.w600)),
                 if (state.matchCount > 0)
                   Text('${state.matchCount} ${state.matchCount == 1 ? 'buddy' : 'buddies'} nearby',
                       style: const TextStyle(color: BuddyColors.green, fontSize: 11, fontWeight: FontWeight.w600)),
               ],
             ),
             InkWell(
-              onTap: () => context.push('/settings'),
+              onTap: _openEditor,
               child: Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Row(

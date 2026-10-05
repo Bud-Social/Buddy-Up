@@ -45,7 +45,7 @@ class WorkoutLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkoutLog
         fields = [
-            'id', 'workout_type', 'source_event_id', 'provenance', 'exercise', 'sets', 'reps', 'weight_kg',
+            'id', 'workout_type', 'category', 'source_event_id', 'provenance', 'exercise', 'sets', 'reps', 'weight_kg',
             'duration_minutes', 'calories_burned', 'distance_meters',
             'performed_at', 'notes', 'created_at', 'updated_at',
         ]

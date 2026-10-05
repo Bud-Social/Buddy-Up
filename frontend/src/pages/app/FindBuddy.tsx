@@ -18,6 +18,13 @@ import { track } from '@/lib/analytics';
  * Find a buddy — declare what you're looking for (walk/run/gym/hike/...)
  * and see people near you looking for the same. Radius-only GPS.
  */
+function formatUntil(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 export default function FindBuddy() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -49,8 +56,18 @@ export default function FindBuddy() {
   const [incognito, setIncognito] = useState(false);
   const [hasSavedProfile, setHasSavedProfile] = useState(false);
   const [matchCount, setMatchCount] = useState<number | null>(null);
+  const [availableUntil, setAvailableUntil] = useState<string | null>(null);
   const [msgSending, setMsgSending] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  const openEditor = () => {
+    setEditing(true);
+    // Editor may have just mounted — defer scroll until after render.
+    setTimeout(() => {
+      editorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
 
   const fetchBuddies = useCallback(async () => {
     setIsLoading(true);
@@ -75,26 +92,45 @@ export default function FindBuddy() {
   useEffect(() => { fetchBuddies(); }, [fetchBuddies]);
 
   useEffect(() => {
-    profilesApi.getSearchProfile().then((res) => {
-      const sp = res.data as BuddySearchProfile;
-      if (!sp) return;
-      setDisplayName(sp.display_name || '');
-      setBio(sp.bio || '');
-      setGoals(sp.goals || []);
-      setAgeBand(sp.age_band || '');
-      setPhotos(sp.photos || []);
-      setPace(sp.pace || '');
-      setNeighbourhood(sp.neighbourhood || '');
-      setVisibility(sp.visibility || 'public');
-      setIncognito(!!sp.incognito);
-      setLookingNow(!!sp.available_now);
-      if (sp.intents?.length) setIntent(sp.intents[0]);
-      if (sp.custom_intent) setCustomIntent(sp.custom_intent);
-      if (sp.modes?.length) setMode(sp.modes[0]);
-      if (sp.latitude && sp.longitude) setCoords({ lat: Number(sp.latitude), lng: Number(sp.longitude) });
-      if (sp.intents?.length) setHasSavedProfile(true);
-      if (typeof sp.match_count === 'number') setMatchCount(sp.match_count);
-    }).catch(() => {});
+    (async () => {
+      try {
+        const res = await profilesApi.getSearchProfile();
+        const sp = res.data as BuddySearchProfile;
+        if (!sp) return;
+        let name = sp.display_name || '';
+        if (!name.trim()) {
+          // Default display name = linked account's.
+          try {
+            const me = await profilesApi.getMyProfile();
+            name = me.data?.display_name || me.data?.username || '';
+          } catch {
+            name = '';
+          }
+        }
+        setDisplayName(name);
+        setBio(sp.bio || '');
+        setGoals(sp.goals || []);
+        setAgeBand(sp.age_band || '');
+        setPhotos(sp.photos || []);
+        setPace(sp.pace || '');
+        setNeighbourhood(sp.neighbourhood || '');
+        setVisibility(sp.visibility || 'public');
+        setIncognito(!!sp.incognito);
+        setLookingNow(!!sp.available_now);
+        setAvailableUntil(sp.available_until ?? null);
+        if (sp.search_radius_km === 5 || sp.search_radius_km === 10) {
+          setRadius(sp.search_radius_km);
+        }
+        if (sp.intents?.length) setIntent(sp.intents[0]);
+        if (sp.custom_intent) setCustomIntent(sp.custom_intent);
+        if (sp.modes?.length) setMode(sp.modes[0]);
+        if (sp.latitude && sp.longitude) setCoords({ lat: Number(sp.latitude), lng: Number(sp.longitude) });
+        if (sp.intents?.length) setHasSavedProfile(true);
+        if (typeof sp.match_count === 'number') setMatchCount(sp.match_count);
+      } catch {
+        // No saved profile yet — editor stays open for setup.
+      }
+    })();
   }, []);
 
   const locate = async () => {
@@ -150,12 +186,14 @@ export default function FindBuddy() {
         visibility,
         incognito,
         available_now: looking ?? lookingNow,
+        search_radius_km: radius === 'auto' ? null : radius,
         ...(dob ? { dob } : {}),
         ...(coords ? { latitude: coords.lat, longitude: coords.lng } : {}),
       } as Partial<BuddySearchProfile> & { dob?: string });
       const sp = res.data as BuddySearchProfile;
       if (sp.age_band) setAgeBand(sp.age_band);
       if (typeof sp.available_now === 'boolean') setLookingNow(sp.available_now);
+      setAvailableUntil(sp.available_until ?? null);
       if (typeof sp.match_count === 'number') setMatchCount(sp.match_count);
       setHasSavedProfile(true);
       setEditing(false);
@@ -222,7 +260,7 @@ export default function FindBuddy() {
           <button
             type="button"
             aria-label="Buddy search settings"
-            onClick={() => navigate('/settings')}
+            onClick={openEditor}
             className="p-2 rounded-full border border-buddy-surface text-buddy-text-secondary hover:text-buddy-green hover:border-buddy-green/40 transition-colors"
           >
             <Settings size={16} />
@@ -237,7 +275,7 @@ export default function FindBuddy() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold">{displayName || 'Your buddy profile'}</p>
-                <button onClick={() => setEditing(true)}
+                <button onClick={openEditor}
                   className="text-xs text-buddy-green font-medium hover:underline">
                   Edit
                 </button>
@@ -258,6 +296,9 @@ export default function FindBuddy() {
                 {incognito && <Badge variant="gold" label="Incognito" size="sm" />}
                 {lookingNow && <Badge variant="green" label="Looking now" size="sm" />}
               </div>
+              {lookingNow && formatUntil(availableUntil) && (
+                <p className="text-xs text-buddy-green font-medium mt-1.5">Looking until {formatUntil(availableUntil)}</p>
+              )}
               {typeof matchCount === 'number' && matchCount > 0 && (
                 <p className="text-xs text-buddy-green font-medium mt-2">{matchCount} {matchCount === 1 ? 'buddy nearby' : 'buddies nearby'}</p>
               )}
@@ -265,7 +306,7 @@ export default function FindBuddy() {
                 <p className="text-xs text-buddy-text-secondary">
                   Privacy: {visibility === 'buddies' ? 'Buddies only' : visibility[0].toUpperCase() + visibility.slice(1)}{incognito ? ' · Incognito on' : ''}
                 </p>
-                <button onClick={() => navigate('/settings')}
+                <button onClick={openEditor}
                   className="text-xs text-buddy-green font-medium hover:underline">
                   Manage
                 </button>
@@ -329,7 +370,7 @@ export default function FindBuddy() {
       </div>
 
       {(editing || !hasSavedProfile) && (
-      <Card className="p-4">
+      <Card ref={editorRef} className="p-4 scroll-mt-4">
         <button onClick={() => setEditing((v) => !v)} className="w-full flex items-center justify-between">
           <span className="text-sm font-semibold">My buddy search profile {ageBand && <span className="text-buddy-text-secondary font-normal">· {ageBand}</span>}</span>
           <span className="text-xs text-buddy-green font-medium">{editing ? 'Hide' : 'Set up'}</span>

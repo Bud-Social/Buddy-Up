@@ -74,6 +74,8 @@ class SearchProfile {
   final String visibility;
   final bool incognito;
   final bool availableNow;
+  final double? searchRadiusKm;
+  final String? availableUntil;
 
   const SearchProfile({
     this.intents = const [],
@@ -89,6 +91,8 @@ class SearchProfile {
     this.visibility = 'public',
     this.incognito = false,
     this.availableNow = false,
+    this.searchRadiusKm,
+    this.availableUntil,
   });
 
   factory SearchProfile.fromJson(Map<String, dynamic> json) => SearchProfile(
@@ -105,6 +109,8 @@ class SearchProfile {
         visibility: json['visibility'] as String? ?? 'public',
         incognito: json['incognito'] as bool? ?? false,
         availableNow: json['available_now'] as bool? ?? false,
+        searchRadiusKm: (json['search_radius_km'] as num?)?.toDouble(),
+        availableUntil: json['available_until'] as String?,
       );
 }
 

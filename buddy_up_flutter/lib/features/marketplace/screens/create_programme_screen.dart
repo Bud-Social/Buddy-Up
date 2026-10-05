@@ -6,7 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/wizard_widgets.dart';
+import '../../messaging/providers/messaging_provider.dart';
 import '../providers/marketplace_provider.dart';
+
+const _disclaimerText = "This programme isn't medical advice — consult a professional.";
 
 class CreateProgrammeScreen extends ConsumerStatefulWidget {
   final String? shopHandle;
@@ -35,6 +38,46 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
   final Map<int, Map<String, List<Map<String, dynamic>>>> _activities = {};
 
   final Map<String, int> _priceArtifacts = {'burpee': 5};
+
+  bool _reminderEnabled = true;
+  String _reminderFrequency = '30m';
+  String _reminderTiming = 'anytime';
+  final _reminderMessageController = TextEditingController(
+      text: "It's time to put in the work! Ready for today's session?");
+  bool _disclaimerAccepted = false;
+
+  int get _totalMins {
+    var total = 0;
+    for (final weekEntry in _activities.entries) {
+      for (final dayEntry in weekEntry.value.entries) {
+        for (final act in dayEntry.value) {
+          total += ((act['duration_minutes'] ?? act['duration_mins'] ?? 30) as num).toInt();
+        }
+      }
+    }
+    return total;
+  }
+
+  int get _activityCount {
+    var count = 0;
+    for (final weekEntry in _activities.entries) {
+      for (final dayEntry in weekEntry.value.entries) {
+        count += dayEntry.value.length;
+      }
+    }
+    return count;
+  }
+
+  int get _weeksCovered {
+    final weeks = <int>{};
+    for (final weekEntry in _schedule.entries) {
+      weeks.add(weekEntry.key);
+    }
+    for (final weekEntry in _activities.entries) {
+      weeks.add(weekEntry.key);
+    }
+    return weeks.length;
+  }
 
   final List<String> _categories = [
     'strength', 'cardio', 'yoga', 'pilates', 'hiit', 'crossfit', 'martial_arts', 'rehabilitation'
@@ -68,6 +111,14 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
             ..clear()
             ..addEntries(prices.entries.map((e) => MapEntry(e.key.toString(), (e.value as num?)?.toInt() ?? 0)));
         }
+        final notif = data['notification_config'];
+        if (notif is Map) {
+          _reminderEnabled = (notif['enabled'] as bool?) ?? true;
+          _reminderFrequency = (notif['frequency'] as String?) ?? '30m';
+          _reminderTiming = (notif['timing'] as String?) ?? 'anytime';
+          _reminderMessageController.text = (notif['custom_message'] as String?) ?? _reminderMessageController.text;
+        }
+        _disclaimerAccepted = true;
       });
     } catch (_) {}
   }
@@ -77,6 +128,7 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
     _pageController.dispose();
     _titleController.dispose();
     _descriptionController.dispose();
+    _reminderMessageController.dispose();
     super.dispose();
   }
 
@@ -102,7 +154,57 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
     if (file != null) setState(() => _coverFile = file);
   }
 
+  String? _uploadingVideoKey;
+
+  /// Picks an activity video and uploads it to /messaging/upload/
+  /// (same endpoint the chat composer uses), storing the returned URL.
+  Future<void> _pickActivityVideo(int week, String day, int index) async {
+    final picker = ImagePicker();
+    final file = await picker.pickVideo(source: ImageSource.gallery);
+    if (file == null) return;
+    final key = '$week|$day|$index';
+    setState(() => _uploadingVideoKey = key);
+    try {
+      final repo = ref.read(messagingRepositoryProvider);
+      final response = await repo.uploadAttachment({
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: file.path.split('/').last,
+        ),
+        'attachment_type': 'video',
+      });
+      final data = response['data'] as Map<String, dynamic>?;
+      final url = data?['url'] as String?;
+      if (url != null && url.isNotEmpty && mounted) {
+        setState(() {
+          _activities[week] ??= {};
+          _activities[week]![day] ??= [];
+          if (_activities[week]![day]!.length > index) {
+            _activities[week]![day]![index] = {
+              ..._activities[week]![day]![index],
+              'video_url': url,
+            };
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Video upload failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingVideoKey = null);
+    }
+  }
+
   Future<void> _submit() async {
+    if (!_disclaimerAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(_disclaimerText), backgroundColor: Colors.red),
+      );
+      return;
+    }
     setState(() => _loading = true);
     try {
       final repo = ref.read(marketplaceRepositoryProvider);
@@ -135,9 +237,15 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
         'duration_weeks': _durationWeeks,
         'price_artifacts': _priceArtifacts,
         'schedule': mergedSchedule,
-        'cover_image_url': ?coverUrl,
-        if (widget.shopHandle != null) 'shop_handle': widget.shopHandle,
+        'notification_config': {
+          'enabled': _reminderEnabled,
+          'frequency': _reminderFrequency,
+          'timing': _reminderTiming,
+          'custom_message': _reminderMessageController.text.trim(),
+        },
       };
+      if (coverUrl != null) data['cover_image_url'] = coverUrl;
+      if (widget.shopHandle != null) data['shop_handle'] = widget.shopHandle;
 
       final isEdit = widget.editId != null;
       if (isEdit) {
@@ -368,7 +476,12 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
         const SizedBox(height: 8),
         const Text('Add exercises for each training day.',
             style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
-        const SizedBox(height: 20),
+        const SizedBox(height: 8),
+        Text(
+          'Total training time: $_totalMins min (${(_totalMins / 60).toStringAsFixed(1)} hrs) · $_activityCount activities',
+          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
         if (trainingDays.isEmpty)
           Container(
             padding: const EdgeInsets.all(16),
@@ -405,6 +518,8 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
                         };
                       });
                     },
+                    onUploadVideo: () => _pickActivityVideo(dk.week, dk.day, idx),
+                    isUploadingVideo: _uploadingVideoKey == '${dk.week}|${dk.day}|$idx',
                   );
                 }),
                 Padding(
@@ -425,6 +540,7 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
                           'tips': '',
                           'cautions': '',
                           'video_url': '',
+                          'timing': 'anytime',
                         });
                       });
                     },
@@ -511,13 +627,48 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
               _reviewRow('Title', _titleController.text),
               _reviewRow('Category', _category.replaceAll('_', ' ')),
               _reviewRow('Duration', '$_durationWeeks weeks'),
+              _reviewRow('Total training time',
+                  '$_totalMins min (${(_totalMins / 60).toStringAsFixed(1)} hrs)'),
+              _reviewRow('Activities', '$_activityCount'),
               _reviewRow(
                 'Pricing',
                 _priceArtifacts.entries.map((e) => '${e.value} ${e.key}').join(', '),
               ),
+              _reviewRow(
+                'Reminders',
+                _reminderEnabled
+                    ? '$_reminderFrequency before · ${_reminderTiming[0].toUpperCase()}${_reminderTiming.substring(1)}'
+                    : 'Off',
+              ),
             ]),
           ),
         ),
+        if (_weeksCovered < _durationWeeks)
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+                color: BuddyColors.surfaceRaised, borderRadius: BorderRadius.circular(12)),
+            child: Text(
+              'Schedule covers $_weeksCovered of $_durationWeeks weeks — add blocks for the remaining weeks or shorten the duration.',
+              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+            ),
+          ),
+        const SizedBox(height: 16),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Checkbox(
+            value: _disclaimerAccepted,
+            onChanged: (v) => setState(() => _disclaimerAccepted = v ?? false),
+            activeColor: BuddyColors.green,
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _disclaimerAccepted = !_disclaimerAccepted),
+              child: const Text(_disclaimerText,
+                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+            ),
+          ),
+        ]),
       ]),
     );
   }
@@ -587,8 +738,15 @@ class _DayKey {
 class _ActivityEditor extends StatelessWidget {
   final Map<String, dynamic> activity;
   final void Function(Map<String, dynamic>) onUpdate;
+  final VoidCallback onUploadVideo;
+  final bool isUploadingVideo;
 
-  const _ActivityEditor({required this.activity, required this.onUpdate});
+  const _ActivityEditor({
+    required this.activity,
+    required this.onUpdate,
+    required this.onUploadVideo,
+    required this.isUploadingVideo,
+  });
 
   InputDecoration _dec(String hint) => InputDecoration(
         hintText: hint,
@@ -664,12 +822,28 @@ class _ActivityEditor extends StatelessWidget {
           onChanged: (v) => onUpdate({'cautions': v}),
         ),
         const SizedBox(height: 8),
-        TextFormField(
-          initialValue: activity['video_url'] as String? ?? '',
-          decoration: _dec('Video URL (optional)'),
-          style: const TextStyle(fontSize: 12),
-          onChanged: (v) => onUpdate({'video_url': v}),
-        ),
+        Row(children: [
+          Expanded(
+            child: TextFormField(
+              initialValue: activity['video_url'] as String? ?? '',
+              decoration: _dec('Video URL (optional)'),
+              style: const TextStyle(fontSize: 12),
+              onChanged: (v) => onUpdate({'video_url': v}),
+            ),
+          ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            icon: isUploadingVideo
+                ? const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.videocam, size: 16),
+            label: Text(isUploadingVideo ? 'Uploading' : 'Video',
+                style: const TextStyle(fontSize: 12)),
+            onPressed: isUploadingVideo ? null : onUploadVideo,
+          ),
+        ]),
       ]),
     );
   }

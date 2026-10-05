@@ -8,7 +8,10 @@ import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { ImageUploadField } from '@/components/ui/ImageUploadField';
 import { marketplaceApi } from '@/api/marketplace';
+import { feedApi } from '@/api/feed';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
+
+const MEDICAL_DISCLAIMER = "This programme isn't medical advice — consult a professional.";
 
 const CATEGORIES = ['strength', 'hypertrophy', 'endurance', 'hiit', 'bodyweight', 'flexibility', 'sport', 'other'];
 const PRICE_ARTIFACTS = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'] as const;
@@ -71,6 +74,27 @@ export default function CreateProgramme() {
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+  const [uploadingVideoId, setUploadingVideoId] = useState<number | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+
+  const totalMins = scheduleBlocks.reduce((sum, b) => sum + (b.duration_mins || 0), 0);
+  const weeksCovered = new Set(scheduleBlocks.map((b) => b.week)).size;
+
+  const handleVideoUpload = async (blockId: number, file: File) => {
+    setUploadingVideoId(blockId);
+    setVideoError(null);
+    try {
+      const res = await feedApi.uploadPostMedia(file);
+      const url = (res.data as any)?.url as string | undefined;
+      if (url) updateScheduleBlock(blockId, 'video_url', url);
+      else setVideoError('Upload finished but no URL was returned.');
+    } catch {
+      setVideoError('Video upload failed — you can still paste a URL instead.');
+    } finally {
+      setUploadingVideoId(null);
+    }
+  };
 
   useEffect(() => {
     marketplaceApi.getMyShops().then(res => {
@@ -117,6 +141,7 @@ export default function CreateProgramme() {
           });
         });
         if (blocks.length > 0) setScheduleBlocks(blocks);
+        setDisclaimerAccepted(true);
         setIsLoading(false);
       })
       .catch(() => { setIsLoading(false); navigate('/marketplace/creator'); });
@@ -147,6 +172,7 @@ export default function CreateProgramme() {
   };
 
   const handleSubmit = async () => {
+    if (!disclaimerAccepted) return;
     setSubmitting(true);
     try {
       const price_artifacts = Object.fromEntries(
@@ -207,7 +233,7 @@ export default function CreateProgramme() {
       <div className="flex gap-2 mb-8 px-2">
         {['Basics', 'Schedule & Details', 'Reminders', 'Pricing'].map((label, idx) => (
           <div key={idx} className="flex-1 flex flex-col gap-1.5">
-            <div className={`h-1.5 rounded-full transition-colors ${idx + 1 <= step ? 'bg-buddy-electric shadow-[0_0_8px_rgba(23,154,248,0.4)]' : 'bg-buddy-surface-raised'}`} />
+            <div className={`h-1.5 rounded-full transition-colors ${idx + 1 <= step ? 'bg-buddy-electric' : 'bg-buddy-surface-raised'}`} />
             <span className={`text-[10px] font-semibold text-center uppercase tracking-wider ${idx + 1 <= step ? 'text-buddy-electric' : 'text-buddy-text-secondary'}`}>{label}</span>
           </div>
         ))}
@@ -216,7 +242,7 @@ export default function CreateProgramme() {
       <div className="space-y-6">
         {step === 1 && (
           <div className="space-y-6 animate-in slide-in-from-right-4 fade-in duration-300">
-            <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
+            <Card className="p-6 space-y-5 border-none shadow-sm bg-buddy-surface">
               <div className="space-y-1">
                 <h2 className="text-xl font-bold">The Basics</h2>
                 <p className="text-sm text-buddy-text-secondary">Start from a template or blank — then make it yours.</p>
@@ -295,7 +321,7 @@ export default function CreateProgramme() {
                 </div>
               </div>
 
-              <Button className="w-full h-12 text-base font-bold shadow-lg bg-buddy-electric text-buddy-black hover:bg-buddy-electric/90" onClick={() => setStep(2)} disabled={!canProceedToStep2}>
+              <Button className="w-full h-12 text-base font-bold bg-buddy-electric text-buddy-black hover:bg-buddy-electric/90" onClick={() => setStep(2)} disabled={!canProceedToStep2}>
                 Next: Build Schedule
               </Button>
             </Card>
@@ -304,7 +330,7 @@ export default function CreateProgramme() {
 
         {step === 2 && (
           <div className="space-y-6 animate-in slide-in-from-right-4 fade-in duration-300">
-            <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
+            <Card className="p-6 space-y-5 border-none shadow-sm bg-buddy-surface">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Activity className="text-buddy-electric" size={24} />
@@ -363,8 +389,30 @@ export default function CreateProgramme() {
                     </div>
 
                     <div>
-                      <label className="text-xs font-semibold mb-1 flex items-center gap-1"><Video size={12} /> Video URL (Optional)</label>
-                      <Input value={block.video_url} onChange={(e) => updateScheduleBlock(block.id, 'video_url', e.target.value)} placeholder="https://youtube.com/..." className="bg-buddy-surface" />
+                      <label className="text-xs font-semibold mb-1 flex items-center gap-1"><Video size={12} /> Demo Video (upload or paste URL)</label>
+                      {block.video_url ? (
+                        <video src={block.video_url} controls className="w-full h-28 object-cover rounded-xl mb-2 bg-buddy-surface" />
+                      ) : null}
+                      <div className="flex gap-2">
+                        <Input value={block.video_url} onChange={(e) => updateScheduleBlock(block.id, 'video_url', e.target.value)} placeholder="Paste a video URL or upload a file" className="bg-buddy-surface flex-1" />
+                        <label className="shrink-0 px-3 py-2 rounded-xl bg-buddy-surface-raised text-xs font-semibold cursor-pointer hover:bg-buddy-surface transition-colors">
+                          {uploadingVideoId === block.id ? 'Uploading…' : 'Upload'}
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            disabled={uploadingVideoId === block.id}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) void handleVideoUpload(block.id, file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      </div>
+                      {videoError && uploadingVideoId === null && (
+                        <p className="text-[11px] text-buddy-red mt-1">{videoError}</p>
+                      )}
                     </div>
 
                     <div>
@@ -408,9 +456,16 @@ export default function CreateProgramme() {
                 <Plus size={16} className="mr-1" /> Add Another Schedule Block
               </Button>
 
+              <p className="text-xs text-buddy-text-secondary">
+                Total training time: {totalMins} min ({(totalMins / 60).toFixed(1)} hrs) across {scheduleBlocks.length} activities.
+                {weeksCovered < form.duration_weeks && (
+                  <span className="text-buddy-orange font-semibold"> Schedule covers {weeksCovered} of {form.duration_weeks} weeks.</span>
+                )}
+              </p>
+
               <div className="flex gap-3 pt-2">
                 <Button variant="ghost" className="flex-1 h-12" onClick={() => setStep(1)}>Back</Button>
-                <Button className="flex-1 h-12 shadow-lg bg-buddy-electric text-buddy-black hover:bg-buddy-electric/90" onClick={() => setStep(3)}>Next: Reminders</Button>
+                <Button className="flex-1 h-12 bg-buddy-electric text-buddy-black hover:bg-buddy-electric/90" onClick={() => setStep(3)}>Next: Reminders</Button>
               </div>
             </Card>
           </div>
@@ -418,7 +473,7 @@ export default function CreateProgramme() {
 
         {step === 3 && (
           <div className="space-y-6 animate-in slide-in-from-right-4 fade-in duration-300">
-            <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
+            <Card className="p-6 space-y-5 border-none shadow-sm bg-buddy-surface">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Bell className="text-buddy-orange" size={24} />
@@ -466,7 +521,7 @@ export default function CreateProgramme() {
 
               <div className="flex gap-3 pt-2">
                 <Button variant="ghost" className="flex-1 h-12" onClick={() => setStep(2)}>Back</Button>
-                <Button className="flex-1 h-12 shadow-lg bg-buddy-electric text-buddy-black hover:bg-buddy-electric/90" onClick={() => setStep(4)}>Next: Pricing</Button>
+                <Button className="flex-1 h-12 bg-buddy-electric text-buddy-black hover:bg-buddy-electric/90" onClick={() => setStep(4)}>Next: Pricing</Button>
               </div>
             </Card>
           </div>
@@ -474,7 +529,7 @@ export default function CreateProgramme() {
 
         {step === 4 && (
           <div className="space-y-6 animate-in slide-in-from-right-4 fade-in duration-300">
-            <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
+            <Card className="p-6 space-y-5 border-none shadow-sm bg-buddy-surface">
               <div className="space-y-1">
                 <h2 className="text-xl font-bold">Pricing & Review</h2>
                 <p className="text-sm text-buddy-text-secondary">Set your price in artifacts and review the programme.</p>
@@ -504,7 +559,7 @@ export default function CreateProgramme() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-buddy-surface p-1 shadow-lg bg-buddy-black">
+              <div className="rounded-2xl border border-buddy-surface p-1 shadow-sm bg-buddy-black">
                 {form.cover_image_url && (
                   <img src={form.cover_image_url} alt="Cover preview" className="w-full h-32 object-cover rounded-xl mb-3" />
                 )}
@@ -519,12 +574,31 @@ export default function CreateProgramme() {
                       <p className="text-xs text-buddy-text-secondary">{scheduleBlocks.length} Activities</p>
                     </div>
                   </div>
+                  <div className="mt-3 pt-3 border-t border-buddy-surface-raised text-xs text-buddy-text-secondary space-y-1">
+                    <p>Total training time: {totalMins} min ({(totalMins / 60).toFixed(1)} hrs)</p>
+                    <p>Reminders: {form.notification_config.enabled ? `${form.notification_config.frequency} before` : 'off'}</p>
+                    {weeksCovered < form.duration_weeks && (
+                      <p className="text-buddy-orange font-semibold">
+                        Schedule covers {weeksCovered} of {form.duration_weeks} weeks — add blocks for the remaining weeks or shorten the duration.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
+              <label className="flex items-start gap-3 p-4 bg-buddy-black rounded-xl border border-buddy-surface-raised cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={disclaimerAccepted}
+                  onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4"
+                />
+                <span className="text-xs text-buddy-text-secondary">{MEDICAL_DISCLAIMER}</span>
+              </label>
+
               <div className="flex gap-3 pt-4 border-t border-buddy-surface-raised">
                 <Button variant="ghost" className="flex-1 h-12" onClick={() => setStep(3)}>Back</Button>
-                <Button className="flex-1 h-12 shadow-lg bg-gradient-to-r from-buddy-electric to-blue-400 text-buddy-black font-bold" onClick={handleSubmit} isLoading={submitting}>
+                <Button className="flex-1 h-12 bg-buddy-electric text-buddy-black font-bold hover:bg-buddy-electric/90" onClick={handleSubmit} isLoading={submitting} disabled={!disclaimerAccepted}>
                   {isEditing ? 'Save Changes' : 'Publish Programme'}
                 </Button>
               </div>

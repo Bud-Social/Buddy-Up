@@ -12,6 +12,24 @@ import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 
 const DIET_TYPES = ['balanced', 'high_protein', 'weight_loss', 'muscle_gain', 'vegan', 'keto', 'gluten_free', 'other'];
 
+const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'];
+const MEAL_TIMINGS = ['morning', 'midday', 'afternoon', 'evening', 'anytime'];
+const REMINDER_FREQUENCIES = ['15m', '30m', '1h'];
+const MEDICAL_DISCLAIMER = "This meal plan isn't medical advice — consult a professional.";
+
+interface MealBlock {
+  id: number;
+  week: number;
+  day: number;
+  slot: string;
+  title: string;
+  duration_mins: number;
+  timing: string;
+  photo_url: string;
+  alternatives: string;
+  side_effects: string;
+}
+
 const MEAL_PLAN_TEMPLATES = [
   {
     name: 'Lean & High-Protein',
@@ -47,10 +65,19 @@ export default function CreateMealPlan() {
     macro_targets: { protein_pct: 30, carbs_pct: 40, fat_pct: 30 },
     cover_image_url: '',
     price_artifacts: PRICE_ARTIFACTS.reduce((acc, artifact) => ({ ...acc, [artifact]: 0 }), {} as Record<string, number>),
-    reminder_settings: { enabled: true, time_of_day: '08:00', message_template: "Hey Buddy! Here is your meal plan for today. Let's hit those macros!" },
+    reminder_settings: { enabled: true, time_of_day: '08:00', timing: 'morning' as string, frequency: '1h', message_template: "Hey Buddy! Here is your meal plan for today. Let's hit those macros!" },
     is_published: true,
   });
+  const [mealBlocks, setMealBlocks] = useState<MealBlock[]>([
+    { id: 1, week: 1, day: 1, slot: 'breakfast', title: '', duration_mins: 15, timing: 'morning', photo_url: '', alternatives: '', side_effects: '' },
+  ]);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const macroSum = form.macro_targets.protein_pct + form.macro_targets.carbs_pct + form.macro_targets.fat_pct;
+  const macroValid = macroSum === 100;
+  const mealTotalMins = mealBlocks.reduce((sum, b) => sum + (b.duration_mins || 0), 0);
+  const mealWeeksCovered = new Set(mealBlocks.map((b) => b.week)).size;
 
   useEffect(() => {
     marketplaceApi.getMyShops().then(res => {
@@ -76,23 +103,81 @@ export default function CreateMealPlan() {
           macro_targets: p.macro_targets || { protein_pct: 30, carbs_pct: 40, fat_pct: 30 },
           cover_image_url: p.cover_image_url || '',
           price_artifacts: { ...PRICE_ARTIFACTS.reduce((acc, artifact) => ({ ...acc, [artifact]: 0 }), {} as Record<string, number>), ...(p.price_artifacts || {}) },
-          reminder_settings: p.reminder_settings || { enabled: true, time_of_day: '08:00', message_template: '' },
+          reminder_settings: {
+            enabled: true, time_of_day: '08:00', timing: 'morning', frequency: '1h', message_template: '',
+            ...(p.reminder_settings || {}),
+          },
           is_published: p.is_published,
         });
+        const blocks: MealBlock[] = [];
+        let nextId = 1;
+        Object.entries(p.full_plan || {}).forEach(([weekKey, days]: [string, any]) => {
+          Object.entries(days || {}).forEach(([dayKey, meals]: [string, any]) => {
+            (Array.isArray(meals) ? meals : []).forEach((m: any) => {
+              if (m && typeof m === 'object') {
+                blocks.push({
+                  id: nextId++,
+                  week: parseInt(String(weekKey).replace('week_', ''), 10) || 1,
+                  day: parseInt(String(dayKey).replace('day_', ''), 10) || 1,
+                  slot: m.slot || 'breakfast',
+                  title: m.title || '',
+                  duration_mins: m.duration_mins || 15,
+                  timing: m.timing || m.time_of_day || 'morning',
+                  photo_url: m.photo_url || '',
+                  alternatives: m.alternatives || '',
+                  side_effects: m.side_effects || '',
+                });
+              }
+            });
+          });
+        });
+        if (blocks.length > 0) setMealBlocks(blocks);
+        setDisclaimerAccepted(true);
         setIsLoading(false);
       })
       .catch(() => { setIsLoading(false); navigate('/marketplace/creator'); });
   }, [editId]);
 
   const canProceedToStep2 = form.title.trim().length > 0 && form.description.trim().length > 0 && form.cover_image_url;
-  const canProceedToStep3 = form.diet_type.trim().length > 0;
+  const canProceedToStep3 = form.diet_type.trim().length > 0 && macroValid && mealBlocks.length > 0;
+
+  const addMealBlock = () => {
+    setMealBlocks([...mealBlocks, {
+      id: Date.now(), week: 1, day: 1, slot: 'breakfast', title: '', duration_mins: 15,
+      timing: 'morning', photo_url: '', alternatives: '', side_effects: '',
+    }]);
+  };
+
+  const removeMealBlock = (id: number) => {
+    setMealBlocks(mealBlocks.filter((b) => b.id !== id));
+  };
+
+  const updateMealBlock = (id: number, field: keyof MealBlock, value: string | number) => {
+    setMealBlocks(mealBlocks.map((b) => (b.id === id ? { ...b, [field]: value } : b)));
+  };
 
   const handleSubmit = async () => {
+    if (!disclaimerAccepted) return;
     setSubmitting(true);
     try {
       const price_artifacts = Object.fromEntries(
         Object.entries(form.price_artifacts).filter(([, value]) => value > 0)
       ) as Record<string, number>;
+
+      const full_plan: Record<string, any> = {};
+      mealBlocks.forEach((block) => {
+        if (!full_plan[`week_${block.week}`]) full_plan[`week_${block.week}`] = {};
+        if (!full_plan[`week_${block.week}`][`day_${block.day}`]) full_plan[`week_${block.week}`][`day_${block.day}`] = [];
+        full_plan[`week_${block.week}`][`day_${block.day}`].push({
+          slot: block.slot,
+          title: block.title,
+          duration_mins: block.duration_mins,
+          timing: block.timing,
+          photo_url: block.photo_url,
+          alternatives: block.alternatives,
+          side_effects: block.side_effects,
+        });
+      });
 
       const payload = {
         shop_id: form.shop_id || undefined,
@@ -104,6 +189,7 @@ export default function CreateMealPlan() {
         calorie_range: form.calorie_range || undefined,
         macro_targets: form.macro_targets,
         preview_day: form.cover_image_url ? { cover_image_url: form.cover_image_url } : {},
+        full_plan,
         price_artifacts: Object.keys(price_artifacts).length > 0 ? price_artifacts : {},
         reminder_settings: form.reminder_settings,
         is_published: form.is_published,
@@ -135,7 +221,7 @@ export default function CreateMealPlan() {
       <div className="flex gap-2 mb-8 px-2">
         {['Basics', 'Nutrition & Schedule', 'Notifications', 'Pricing'].map((label, idx) => (
           <div key={idx} className="flex-1 flex flex-col gap-1.5">
-            <div className={`h-1.5 rounded-full transition-colors ${idx + 1 <= step ? 'bg-buddy-green shadow-[0_0_8px_rgba(23,248,154,0.4)]' : 'bg-buddy-surface-raised'}`} />
+            <div className={`h-1.5 rounded-full transition-colors ${idx + 1 <= step ? 'bg-buddy-green' : 'bg-buddy-surface-raised'}`} />
             <span className={`text-[10px] font-semibold text-center uppercase tracking-wider ${idx + 1 <= step ? 'text-buddy-green' : 'text-buddy-text-secondary'}`}>{label}</span>
           </div>
         ))}
@@ -144,7 +230,7 @@ export default function CreateMealPlan() {
       <div className="space-y-6">
         {step === 1 && (
           <div className="space-y-6 animate-in slide-in-from-right-4 fade-in duration-300">
-            <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
+            <Card className="p-6 space-y-5 border-none shadow-sm bg-buddy-surface">
               <div className="space-y-1">
                 <h2 className="text-xl font-bold">The Basics</h2>
                 <p className="text-sm text-buddy-text-secondary">Start from a template or blank — then make it yours.</p>
@@ -204,7 +290,7 @@ export default function CreateMealPlan() {
                 </div>
               </div>
 
-              <Button className="w-full h-12 text-base font-bold shadow-lg" onClick={() => setStep(2)} disabled={!canProceedToStep2}>
+              <Button className="w-full h-12 text-base font-bold" onClick={() => setStep(2)} disabled={!canProceedToStep2}>
                 Next: Nutrition Details
               </Button>
             </Card>
@@ -213,7 +299,7 @@ export default function CreateMealPlan() {
 
         {step === 2 && (
           <div className="space-y-6 animate-in slide-in-from-right-4 fade-in duration-300">
-            <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
+            <Card className="p-6 space-y-5 border-none shadow-sm bg-buddy-surface">
               <div className="space-y-1">
                 <h2 className="text-xl font-bold">Nutrition & Schedule</h2>
                 <p className="text-sm text-buddy-text-secondary">Define the nutritional goals and daily routine.</p>
@@ -250,7 +336,7 @@ export default function CreateMealPlan() {
               </div>
 
               <div className="pt-2 border-t border-buddy-surface-raised">
-                <label className="text-sm font-semibold mb-3 flex items-center gap-2"><Clock size={16} className="text-buddy-green" /> Macro Targets (%)</label>
+                <label className="text-sm font-semibold mb-3 flex items-center gap-2"><Clock size={16} className="text-buddy-green" /> Macro Targets (%) — must total 100%</label>
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <label className="text-xs text-buddy-text-secondary mb-1 block">Protein</label>
@@ -265,11 +351,105 @@ export default function CreateMealPlan() {
                     <Input type="number" min="0" max="100" value={form.macro_targets.fat_pct} onChange={(e) => setForm({ ...form, macro_targets: { ...form.macro_targets, fat_pct: parseInt(e.target.value, 10) || 0 } })} className="bg-buddy-black" />
                   </div>
                 </div>
+                <p className={`text-xs mt-2 font-semibold ${macroValid ? 'text-buddy-green' : 'text-buddy-red'}`}>
+                  Macros total {macroSum}%{macroValid ? ' — looks good.' : ' — must add up to 100%.'}
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-buddy-surface-raised space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold">Meal Schedule Blocks</label>
+                  <span className="text-xs text-buddy-text-secondary">
+                    {mealBlocks.length} meals · {mealTotalMins} min total prep
+                  </span>
+                </div>
+                <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
+                  {mealBlocks.map((block, index) => (
+                    <div key={block.id} className="p-4 bg-buddy-black rounded-xl border border-buddy-surface-raised space-y-3 relative">
+                      {mealBlocks.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeMealBlock(block.id)}
+                          className="absolute top-3 right-3 text-buddy-text-secondary hover:text-buddy-red transition-colors"
+                          aria-label={`Remove meal ${index + 1}`}
+                        >
+                          ✕
+                        </button>
+                      )}
+                      <p className="text-xs font-bold text-buddy-green">Meal {index + 1}</p>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-xs text-buddy-text-secondary mb-1 block">Week</label>
+                          <Input type="number" min="1" max={form.duration_weeks} value={block.week} onChange={(e) => updateMealBlock(block.id, 'week', parseInt(e.target.value, 10) || 1)} className="bg-buddy-surface h-9" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-buddy-text-secondary mb-1 block">Day</label>
+                          <Input type="number" min="1" max="7" value={block.day} onChange={(e) => updateMealBlock(block.id, 'day', parseInt(e.target.value, 10) || 1)} className="bg-buddy-surface h-9" />
+                        </div>
+                        <div>
+                          <label className="text-xs text-buddy-text-secondary mb-1 block">Prep (min)</label>
+                          <Input type="number" min="0" value={block.duration_mins} onChange={(e) => updateMealBlock(block.id, 'duration_mins', parseInt(e.target.value, 10) || 0)} className="bg-buddy-surface h-9" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold mb-1 block">Slot</label>
+                          <select
+                            className="w-full rounded-xl bg-buddy-surface border border-buddy-surface-raised px-3 py-2 text-sm focus:outline-none focus:border-buddy-green transition-colors"
+                            value={block.slot}
+                            onChange={(e) => updateMealBlock(block.id, 'slot', e.target.value)}
+                          >
+                            {MEAL_SLOTS.map((s) => (
+                              <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold mb-1 block">Timing</label>
+                          <select
+                            className="w-full rounded-xl bg-buddy-surface border border-buddy-surface-raised px-3 py-2 text-sm focus:outline-none focus:border-buddy-green transition-colors"
+                            value={block.timing}
+                            onChange={(e) => updateMealBlock(block.id, 'timing', e.target.value)}
+                          >
+                            {MEAL_TIMINGS.map((t) => (
+                              <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 block">Meal Title</label>
+                        <Input value={block.title} onChange={(e) => updateMealBlock(block.id, 'title', e.target.value)} placeholder="e.g. Grilled chicken + quinoa" className="bg-buddy-surface" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 block">Photo URL (optional)</label>
+                        <Input value={block.photo_url} onChange={(e) => updateMealBlock(block.id, 'photo_url', e.target.value)} placeholder="https://..." className="bg-buddy-surface" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 block">Alternatives</label>
+                        <Input value={block.alternatives} onChange={(e) => updateMealBlock(block.id, 'alternatives', e.target.value)} placeholder="e.g. Swap chicken for tofu" className="bg-buddy-surface" />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold mb-1 block">Side Effects / Notes</label>
+                        <Input value={block.side_effects} onChange={(e) => updateMealBlock(block.id, 'side_effects', e.target.value)} placeholder="e.g. High fibre — hydrate well" className="bg-buddy-surface" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Button variant="outline" className="w-full border-dashed" onClick={addMealBlock}>
+                  + Add Meal Block
+                </Button>
+                <p className="text-xs text-buddy-text-secondary">
+                  Total prep time: {mealTotalMins} min ({(mealTotalMins / 60).toFixed(1)} hrs) across {mealWeeksCovered} week{mealWeeksCovered === 1 ? '' : 's'}.
+                  {mealWeeksCovered < form.duration_weeks && (
+                    <span className="text-buddy-orange font-semibold"> Schedule covers fewer weeks than the {form.duration_weeks}-week duration.</span>
+                  )}
+                </p>
               </div>
 
               <div className="flex gap-3 pt-2">
                 <Button variant="ghost" className="flex-1 h-12" onClick={() => setStep(1)}>Back</Button>
-                <Button className="flex-1 h-12 shadow-lg" onClick={() => setStep(3)} disabled={!canProceedToStep3}>Next: Notifications</Button>
+                <Button className="flex-1 h-12" onClick={() => setStep(3)} disabled={!canProceedToStep3}>Next: Notifications</Button>
               </div>
             </Card>
           </div>
@@ -277,7 +457,7 @@ export default function CreateMealPlan() {
 
         {step === 3 && (
           <div className="space-y-6 animate-in slide-in-from-right-4 fade-in duration-300">
-            <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
+            <Card className="p-6 space-y-5 border-none shadow-sm bg-buddy-surface">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <Bell className="text-buddy-orange" size={24} />
@@ -298,10 +478,37 @@ export default function CreateMealPlan() {
 
               {form.reminder_settings.enabled && (
                 <div className="space-y-4 p-4 border border-buddy-orange/20 bg-buddy-orange/5 rounded-xl">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-semibold mb-1.5 block">Time of Day</label>
+                      <Input type="time" value={form.reminder_settings.time_of_day} onChange={(e) => setForm({ ...form, reminder_settings: { ...form.reminder_settings, time_of_day: e.target.value } })} className="bg-buddy-black border-buddy-orange/20 focus:border-buddy-orange" />
+                      <p className="text-xs text-buddy-text-secondary mt-1 flex items-center gap-1"><Info size={12} /> Local time for the subscriber</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-semibold mb-1.5 block">Default Timing</label>
+                      <select
+                        className="w-full rounded-xl bg-buddy-black border border-buddy-orange/20 px-4 py-3 text-sm focus:outline-none focus:border-buddy-orange transition-colors"
+                        value={form.reminder_settings.timing}
+                        onChange={(e) => setForm({ ...form, reminder_settings: { ...form.reminder_settings, timing: e.target.value } })}
+                      >
+                        {MEAL_TIMINGS.map((t) => (
+                          <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
                   <div>
-                    <label className="text-sm font-semibold mb-1.5 block">Time of Day</label>
-                    <Input type="time" value={form.reminder_settings.time_of_day} onChange={(e) => setForm({ ...form, reminder_settings: { ...form.reminder_settings, time_of_day: e.target.value } })} className="bg-buddy-black border-buddy-orange/20 focus:border-buddy-orange" />
-                    <p className="text-xs text-buddy-text-secondary mt-1 flex items-center gap-1"><Info size={12} /> Local time for the subscriber</p>
+                    <label className="text-sm font-semibold mb-1.5 block">Reminder Frequency</label>
+                    <select
+                      className="w-full rounded-xl bg-buddy-black border border-buddy-orange/20 px-4 py-3 text-sm focus:outline-none focus:border-buddy-orange transition-colors"
+                      value={form.reminder_settings.frequency}
+                      onChange={(e) => setForm({ ...form, reminder_settings: { ...form.reminder_settings, frequency: e.target.value } })}
+                    >
+                      {REMINDER_FREQUENCIES.map((f) => (
+                        <option key={f} value={f}>{f === '15m' ? 'Every 15 minutes' : f === '30m' ? 'Every 30 minutes' : 'Hourly'}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-buddy-text-secondary mt-1">Each meal block also carries its own timing (morning / midday / afternoon / evening / anytime).</p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold mb-1.5 block">Message Template</label>
@@ -318,7 +525,7 @@ export default function CreateMealPlan() {
 
               <div className="flex gap-3 pt-2">
                 <Button variant="ghost" className="flex-1 h-12" onClick={() => setStep(2)}>Back</Button>
-                <Button className="flex-1 h-12 shadow-lg" onClick={() => setStep(4)}>Next: Pricing</Button>
+                <Button className="flex-1 h-12" onClick={() => setStep(4)}>Next: Pricing</Button>
               </div>
             </Card>
           </div>
@@ -326,7 +533,7 @@ export default function CreateMealPlan() {
 
         {step === 4 && (
           <div className="space-y-6 animate-in slide-in-from-right-4 fade-in duration-300">
-            <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
+            <Card className="p-6 space-y-5 border-none shadow-sm bg-buddy-surface">
               <div className="space-y-1">
                 <h2 className="text-xl font-bold">Pricing & Review</h2>
                 <p className="text-sm text-buddy-text-secondary">Set your price in artifacts and review the plan.</p>
@@ -356,7 +563,7 @@ export default function CreateMealPlan() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-buddy-surface p-1 shadow-lg bg-buddy-black">
+              <div className="rounded-2xl border border-buddy-surface p-1 shadow-sm bg-buddy-black">
                 {form.cover_image_url && (
                   <img src={form.cover_image_url} alt="Cover preview" className="w-full h-32 object-cover rounded-xl mb-3" />
                 )}
@@ -371,12 +578,27 @@ export default function CreateMealPlan() {
                       <p className="text-xs text-buddy-text-secondary">{form.meals_per_day} meals/day</p>
                     </div>
                   </div>
+                  <div className="mt-3 pt-3 border-t border-buddy-surface-raised text-xs text-buddy-text-secondary space-y-1">
+                    <p>{mealBlocks.length} meals scheduled · {mealTotalMins} min total prep ({(mealTotalMins / 60).toFixed(1)} hrs)</p>
+                    <p>Macros: {form.macro_targets.protein_pct}/{form.macro_targets.carbs_pct}/{form.macro_targets.fat_pct} (P/C/F) — total {macroSum}%</p>
+                    <p>Reminders: {form.reminder_settings.enabled ? `${form.reminder_settings.timing}, ${form.reminder_settings.frequency}` : 'off'}</p>
+                  </div>
                 </div>
               </div>
 
+              <label className="flex items-start gap-3 p-4 bg-buddy-black rounded-xl border border-buddy-surface-raised cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={disclaimerAccepted}
+                  onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4 accent-green-500"
+                />
+                <span className="text-xs text-buddy-text-secondary">{MEDICAL_DISCLAIMER}</span>
+              </label>
+
               <div className="flex gap-3 pt-4 border-t border-buddy-surface-raised">
                 <Button variant="ghost" className="flex-1 h-12" onClick={() => setStep(3)}>Back</Button>
-                <Button className="flex-1 h-12 shadow-lg bg-gradient-to-r from-buddy-green to-emerald-400 text-buddy-black font-bold" onClick={handleSubmit} isLoading={submitting}>
+                <Button className="flex-1 h-12 bg-buddy-green text-buddy-black font-bold" onClick={handleSubmit} isLoading={submitting} disabled={!disclaimerAccepted}>
                   {isEditing ? 'Save Changes' : 'Publish Plan'}
                 </Button>
               </div>

@@ -38,6 +38,9 @@ class BaseOwnedView(views.APIView):
         activity_type = request.query_params.get('activity_type')
         if activity_type and self.model is ActivityRecord:
             qs = qs.filter(activity_type=activity_type)
+        category = request.query_params.get('category')
+        if category and self.model is WorkoutLog:
+            qs = qs.filter(category=category)
         start = request.query_params.get('start')
         end = request.query_params.get('end')
         if start:

@@ -32,8 +32,8 @@ export const analyticsApi = {
   shareActivity: (kind: 'activity' | 'workout', id: string, body?: string) =>
     apiClient.post<ApiResponse<{ post_id: string }>>(`/analytics/${kind}/${id}/share/`, body ? { body } : {}).then((r) => r.data),
 
-  getWorkouts: () =>
-    apiClient.get<ApiResponse<unknown[]>>('/analytics/workouts/').then((r) => r.data),
+  getWorkouts: (params?: { category?: string; start?: string; end?: string }) =>
+    apiClient.get<ApiResponse<unknown[]>>('/analytics/workouts/', { params }).then((r) => r.data),
 
   createMeal: (payload: MealLogInput) =>
     apiClient.post<ApiResponse<unknown>>('/analytics/meals/', payload).then((r) => r.data),

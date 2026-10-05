@@ -1,4 +1,5 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from django.test import TestCase
 from rest_framework.test import APIClient
 from rest_framework import status
@@ -7,8 +8,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.accounts.models import User
 from apps.profiles.models import Profile
 from apps.marketplace.models import (
-    CreatorPayoutSetup, InventoryReservation, Order, OrderCase, OrderItem, Product, Shop,
-    ShopMembership,
+    CreatorPayoutSetup, InventoryReservation, MealPlan, Order, OrderCase, OrderItem, Product, Shop,
+    ShopMembership, TrainingProgramme,
 )
 
 
@@ -229,3 +230,106 @@ class EventDiscoveryFilterTests(TestCase):
         event = res.json()['data'][0]
         self.assertAlmostEqual(event['location_lat'], -1.2421)
         self.assertIn('verification_status', event['creator_data'])
+
+
+class ProgrammeSchedulePersistenceTests(TestCase):
+    """The programme/meal editors send rich schedule + reminder payloads.
+
+    The create/update serializers used to omit these fields entirely, so the
+    blocks were silently dropped on save. These tests pin the contract."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='creator@example.com', password='TestPass123!')
+        self.creator = Profile.objects.create(user=self.user, username='creator', display_name='Creator')
+        self.shop = Shop.objects.create(name='Creator Shop', handle='creatorshop', verification_status='verified')
+        ShopMembership.objects.create(shop=self.shop, profile=self.creator, role='owner')
+        CreatorPayoutSetup.objects.create(
+            profile=self.creator, setup_status='ready',
+            terms_accepted_at=timezone.now(), account_reference='acct-creator',
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_create_persists_schedule_and_notification_config(self):
+        schedule = {
+            'week_1': {
+                'day_1': [{
+                    'title': 'Upper body push',
+                    'duration_mins': 45,
+                    'timing': 'morning',
+                    'video_url': 'https://cdn.example.com/session.mp4',
+                    'description': 'Bench, incline press, shoulder press.',
+                    'tips': 'Leave a rep in reserve.',
+                    'warnings': 'Stop if shoulder pain.',
+                }],
+            },
+        }
+        res = self.client.post('/api/v1/marketplace/programmes/', {
+            'title': 'Push Strength',
+            'description': 'Eight week push block.',
+            'category': 'strength',
+            'duration_weeks': 8,
+            'schedule': schedule,
+            'notification_config': {'enabled': True, 'frequency': '30m', 'timing': 'morning'},
+            'price_artifacts': {'barbell': 2},
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.content)
+        programme = TrainingProgramme.objects.get(id=res.json()['data']['id'])
+        self.assertEqual(programme.schedule['week_1']['day_1'][0]['title'], 'Upper body push')
+        self.assertEqual(programme.schedule['week_1']['day_1'][0]['timing'], 'morning')
+        self.assertEqual(programme.notification_config['frequency'], '30m')
+
+    def test_create_rejects_unknown_block_timing(self):
+        res = self.client.post('/api/v1/marketplace/programmes/', {
+            'title': 'Bad Timing',
+            'category': 'strength',
+            'notification_config': {'frequency': '30m', 'timing': 'sometime'},
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_update_persists_schedule(self):
+        res = self.client.post('/api/v1/marketplace/programmes/', {
+            'title': 'Legs Builder',
+            'category': 'strength',
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.content)
+        programme_id = res.json()['data']['id']
+
+        schedule = {'week_1': {'day_2': [{'title': 'Squats', 'duration_mins': 40, 'timing': 'evening'}]}}
+        res = self.client.put(
+            f'/api/v1/marketplace/programmes/{programme_id}/', {'schedule': schedule}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+        self.assertEqual(
+            TrainingProgramme.objects.get(id=programme_id).schedule['week_1']['day_2'][0]['title'],
+            'Squats',
+        )
+
+    def test_meal_plan_blocks_persist(self):
+        full_plan = {
+            'week_1': {
+                'day_1': [{
+                    'slot': 'breakfast',
+                    'title': 'Oats + eggs',
+                    'duration_mins': 15,
+                    'timing': 'morning',
+                    'photo_url': 'https://cdn.example.com/oats.jpg',
+                    'alternatives': 'Swap eggs for tofu scramble',
+                    'side_effects': 'High fibre - hydrate well',
+                }],
+            },
+        }
+        res = self.client.post('/api/v1/marketplace/meal-plans/', {
+            'title': 'High Protein Week',
+            'diet_type': 'high_protein',
+            'duration_weeks': 1,
+            'full_plan': full_plan,
+            'reminder_settings': {'enabled': True, 'frequency': '1h', 'timing': 'morning'},
+            'price_artifacts': {'dumbbell': 2},
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.content)
+        plan = MealPlan.objects.get(id=res.json()['data']['id'])
+        block = plan.full_plan['week_1']['day_1'][0]
+        self.assertEqual(block['photo_url'], 'https://cdn.example.com/oats.jpg')
+        self.assertEqual(block['alternatives'], 'Swap eggs for tofu scramble')
+        self.assertEqual(block['side_effects'], 'High fibre - hydrate well')

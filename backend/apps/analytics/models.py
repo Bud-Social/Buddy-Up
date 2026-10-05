@@ -64,12 +64,23 @@ class WorkoutLog(TimestampedModel):
         ('sport', 'Sport'),
         ('other', 'Other'),
     ]
+    CATEGORY_CHOICES = [
+        ('upper', 'Upper'),
+        ('lower', 'Lower'),
+        ('legs', 'Legs'),
+        ('push', 'Push'),
+        ('pull', 'Pull'),
+        ('core', 'Core'),
+        ('arms', 'Arms'),
+        ('full', 'Full'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     user = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='workout_logs')
     source_event_id = models.CharField(max_length=120, null=True, blank=True)
     provenance = models.JSONField(default=dict, blank=True)
     workout_type = models.CharField(max_length=20, choices=WORKOUT_TYPES, default='strength')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='', blank=True)
     exercise = models.CharField(max_length=120, blank=True)
     sets = models.IntegerField(null=True, blank=True)
     reps = models.IntegerField(null=True, blank=True)

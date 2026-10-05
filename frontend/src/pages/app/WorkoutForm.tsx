@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { feedApi } from '@/api/feed';
+import { analyticsApi } from '@/api/analytics';
+import { playAlarmSound, stopAllAlarms } from '@/lib/alarmPlayer';
+import { WORKOUT_CATEGORIES, WORKOUT_DURATION_PRESETS } from '@/types/analytics';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Camera, Upload, RefreshCw, Video, Square, Timer } from 'lucide-react';
@@ -14,9 +17,22 @@ const exerciseLabels: Record<string, string> = {
   overhead_press: 'Overhead Press',
 };
 
+// Category → detector exercise hint (sets the exercise picker above).
+const CATEGORY_EXERCISE_HINT: Record<string, string> = {
+  upper: 'overhead_press',
+  lower: 'squat',
+  legs: 'lunge',
+  push: 'bench_press',
+  pull: 'deadlift',
+  core: 'push_up',
+  arms: 'bicep_curl',
+  full: 'auto',
+};
+
 export default function WorkoutForm() {
   const [exercise, setExercise] = useState<string>('auto');
-  const [mode, setMode] = useState<'photo' | 'video'>('photo');
+  const [category, setCategory] = useState<string>('');
+  const [mode, setMode] = useState<'photo' | 'video' | 'timer'>('photo');
   const [image, setImage] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<any>(null);
@@ -31,7 +47,16 @@ export default function WorkoutForm() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
+  const countdownRef = useRef<number | null>(null);
   const playbackRef = useRef<HTMLVideoElement>(null);
+  // Timer-only mode (no getUserMedia): countdown from a duration preset.
+  const [timerPresetMin, setTimerPresetMin] = useState<number>(30);
+  const [timerSecsLeft, setTimerSecsLeft] = useState<number | null>(null);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerFinished, setTimerFinished] = useState(false);
+  const [timerLogged, setTimerLogged] = useState(false);
+  const [loggingTimer, setLoggingTimer] = useState(false);
+  const alarmStopRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (playbackRef.current) playbackRef.current.playbackRate = speed;
@@ -39,6 +64,9 @@ export default function WorkoutForm() {
 
   useEffect(() => () => {
     if (timerRef.current) window.clearInterval(timerRef.current);
+    if (countdownRef.current) window.clearInterval(countdownRef.current);
+    alarmStopRef.current?.();
+    stopAllAlarms();
     stopCamera();
   }, []);
 
@@ -125,6 +153,71 @@ export default function WorkoutForm() {
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+  const selectCategory = (c: string) => {
+    const next = category === c ? '' : c;
+    setCategory(next);
+    const hint = next ? CATEGORY_EXERCISE_HINT[next] : undefined;
+    if (hint && (exercises as readonly string[]).includes(hint)) setExercise(hint);
+  };
+
+  const startTimerCountdown = () => {
+    if (countdownRef.current) window.clearInterval(countdownRef.current);
+    alarmStopRef.current?.();
+    setTimerFinished(false);
+    setTimerLogged(false);
+    setError(null);
+    const total = timerPresetMin * 60;
+    setTimerSecsLeft(total);
+    setTimerRunning(true);
+    countdownRef.current = window.setInterval(() => {
+      setTimerSecsLeft((prev) => {
+        if (prev == null) return prev;
+        if (prev <= 1) {
+          if (countdownRef.current) window.clearInterval(countdownRef.current);
+          countdownRef.current = null;
+          setTimerRunning(false);
+          setTimerFinished(true);
+          try {
+            alarmStopRef.current = playAlarmSound('', { loops: 3 });
+          } catch {
+            // audible fallback already handled inside alarmPlayer
+          }
+          try {
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([300, 150, 300]);
+          } catch {
+            // vibrate unsupported — ignore
+          }
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const stopTimerCountdown = () => {
+    if (countdownRef.current) window.clearInterval(countdownRef.current);
+    countdownRef.current = null;
+    setTimerRunning(false);
+  };
+
+  const logTimerWorkout = async () => {
+    setLoggingTimer(true);
+    setError(null);
+    try {
+      await analyticsApi.createWorkout({
+        workout_type: 'strength',
+        category: (category || '') as 'upper' | 'lower' | 'legs' | 'push' | 'pull' | 'core' | 'arms' | 'full' | '',
+        exercise: exercise === 'auto' ? (category || 'workout') : exercise,
+        duration_minutes: timerPresetMin,
+      });
+      setTimerLogged(true);
+    } catch {
+      setError('Failed to log timer workout.');
+    } finally {
+      setLoggingTimer(false);
+    }
+  };
+
   const analyze = async () => {
     if (!file) return;
     setLoading(true);
@@ -155,14 +248,37 @@ export default function WorkoutForm() {
       <p className="text-buddy-text-secondary text-sm">Capture a frame or record a set — the detector names the workout, counts reps and maps the muscles worked.</p>
 
       <div className="flex rounded-xl bg-buddy-surface p-1">
-        {(['photo', 'video'] as const).map((m) => (
-          <button key={m} onClick={() => { setMode(m); setFile(null); setImage(null); setResult(null); }}
+        {(['photo', 'video', 'timer'] as const).map((m) => (
+          <button key={m} onClick={() => { stopTimerCountdown(); setMode(m); setFile(null); setImage(null); setResult(null); setTimerFinished(false); setTimerLogged(false); setTimerSecsLeft(null); }}
             className={`flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-colors ${mode === m ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
-          >{m === 'photo' ? 'Photo frame' : 'Record set'}</button>
+          >{m === 'photo' ? 'Photo frame' : m === 'video' ? 'Record set' : 'Timer-only'}</button>
         ))}
       </div>
 
       <Card className="p-4 space-y-4">
+        <div>
+          <p className="text-sm font-medium mb-2">Category</p>
+          <div className="flex flex-wrap gap-2">
+            {WORKOUT_CATEGORIES.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => selectCategory(c.key)}
+                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  category === c.key
+                    ? 'bg-buddy-green text-buddy-black font-medium'
+                    : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+          {category && CATEGORY_EXERCISE_HINT[category] && (
+            <p className="text-xs text-buddy-text-secondary mt-1.5">
+              Detector hint: {exerciseLabels[CATEGORY_EXERCISE_HINT[category]] ?? CATEGORY_EXERCISE_HINT[category]}
+            </p>
+          )}
+        </div>
         <div>
           <p className="text-sm font-medium mb-2">Exercise</p>
           <div className="flex flex-wrap gap-2">
@@ -182,6 +298,57 @@ export default function WorkoutForm() {
           </div>
         </div>
 
+        {mode === 'timer' ? (
+          <div className="space-y-3 rounded-xl bg-buddy-surface-raised p-4">
+            <p className="text-sm font-medium">Timer-only — no camera needed</p>
+            <div className="flex flex-wrap gap-1.5">
+              {WORKOUT_DURATION_PRESETS.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => { if (!timerRunning) { setTimerPresetMin(m); setTimerSecsLeft(null); setTimerFinished(false); setTimerLogged(false); } }}
+                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                    timerPresetMin === m
+                      ? 'bg-buddy-green text-buddy-black font-medium'
+                      : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
+                  }`}
+                >
+                  {m} min
+                </button>
+              ))}
+            </div>
+            {(timerSecsLeft != null || timerRunning || timerFinished) && (
+              <p className="font-mono text-3xl font-bold text-center tabular-nums">
+                {timerSecsLeft != null ? `${Math.floor(timerSecsLeft / 60)}:${String(timerSecsLeft % 60).padStart(2, '0')}` : `${timerPresetMin}:00`}
+              </p>
+            )}
+            <div className="flex gap-2">
+              {!timerRunning ? (
+                <Button onClick={startTimerCountdown} className="flex-1 gap-2">
+                  <Timer size={18} /> Start {timerPresetMin} min timer
+                </Button>
+              ) : (
+                <Button variant="destructive" onClick={stopTimerCountdown} className="flex-1 gap-2">
+                  <Square size={18} /> Cancel ({timerSecsLeft != null ? fmtTime(timerSecsLeft) : ''})
+                </Button>
+              )}
+            </div>
+            {timerFinished && (
+              <div className="space-y-2 rounded-lg bg-buddy-green/10 p-3">
+                <p className="text-sm font-medium text-buddy-green">Time! Nice work.</p>
+                <p className="text-xs text-buddy-text-secondary">
+                  Photo frame capture needs a camera — switch to Photo to Analyze form, or log this {timerPresetMin} min{timerPresetMin === 1 ? '' : 's'} directly to analytics.
+                </p>
+                {!timerLogged ? (
+                  <Button onClick={logTimerWorkout} isLoading={loggingTimer} className="w-full">
+                    {loggingTimer ? 'Logging…' : `Log ${timerPresetMin} min workout`}
+                  </Button>
+                ) : (
+                  <p className="text-sm text-buddy-green">Logged to analytics.</p>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="flex gap-2">
           {mode === 'photo' ? (
             <>
@@ -214,6 +381,7 @@ export default function WorkoutForm() {
             onChange={handleFileChange}
           />
         </div>
+        )}
 
         {recording && (
           <p className="flex items-center gap-2 text-sm text-buddy-red font-medium">
@@ -221,6 +389,8 @@ export default function WorkoutForm() {
           </p>
         )}
 
+        {mode !== 'timer' && (
+        <>
         <video ref={videoRef} className="w-full rounded-xl bg-black" playsInline muted />
         <canvas ref={canvasRef} className="hidden" />
 
@@ -240,6 +410,17 @@ export default function WorkoutForm() {
           <Button onClick={analyze} isLoading={loading} className="w-full">
             {loading ? 'Analyzing...' : 'Analyze Form'}
           </Button>
+        )}
+        </>
+        )}
+        {mode === 'timer' && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         )}
       </Card>
 

@@ -387,6 +387,9 @@ class UpdateMealPlanSerializer(serializers.Serializer):
     cover_image_url = serializers.URLField(required=False, allow_blank=True)
     diet_type = serializers.ChoiceField(choices=[c[0] for c in MealPlan.DIET_TYPES], required=False)
     duration_weeks = serializers.IntegerField(validators=[MinValueValidator(1)], required=False)
+    meals_per_day = serializers.IntegerField(required=False)
+    macro_targets = serializers.JSONField(required=False)
+    reminder_settings = serializers.JSONField(required=False)
     calorie_range = serializers.CharField(required=False, allow_blank=True, max_length=50)
     price_artifacts = serializers.JSONField(required=False, validators=[validate_price_artifacts])
     preview_day = serializers.JSONField(required=False)
@@ -399,15 +402,36 @@ class UpdateMealPlanSerializer(serializers.Serializer):
     )
 
 
+# Unified reminder vocabulary shared by programmes (per-block `timing` +
+# global `frequency`) and meal plans (`time_of_day` HH:MM legacy or enum).
+TIMING_CHOICES = ['morning', 'midday', 'afternoon', 'evening', 'anytime']
+FREQUENCY_CHOICES = ['15m', '30m', '1h']
+
+
+def validate_timing(value):
+    if isinstance(value, dict):
+        timing = value.get('timing', value.get('time_of_day', 'anytime'))
+        if timing not in TIMING_CHOICES:
+            raise serializers.ValidationError(f'Unknown timing: {timing}')
+        frequency = value.get('frequency')
+        if frequency is not None and frequency not in FREQUENCY_CHOICES:
+            raise serializers.ValidationError(f'Unknown frequency: {frequency}')
+    return value
+
+
 class CreateTrainingProgrammeSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
     description = serializers.CharField(required=False, allow_blank=True)
     cover_image_url = serializers.URLField(required=False, allow_blank=True)
     category = serializers.CharField(max_length=50)
     duration_weeks = serializers.IntegerField(default=8, validators=[MinValueValidator(1)])
+    sessions_per_week = serializers.IntegerField(required=False)
+    schedule = serializers.JSONField(default=dict, required=False)
+    notification_config = serializers.JSONField(default=dict, required=False, validators=[validate_timing])
     price_artifacts = serializers.JSONField(default=dict, validators=[validate_price_artifacts])
     content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     is_published = serializers.BooleanField(default=True)
+    shop_id = serializers.UUIDField(required=False, allow_null=True)
 
 
 class UpdateTrainingProgrammeSerializer(serializers.Serializer):
@@ -416,6 +440,9 @@ class UpdateTrainingProgrammeSerializer(serializers.Serializer):
     cover_image_url = serializers.URLField(required=False, allow_blank=True)
     category = serializers.CharField(max_length=50, required=False)
     duration_weeks = serializers.IntegerField(validators=[MinValueValidator(1)], required=False)
+    sessions_per_week = serializers.IntegerField(required=False)
+    schedule = serializers.JSONField(required=False)
+    notification_config = serializers.JSONField(required=False, validators=[validate_timing])
     price_artifacts = serializers.JSONField(required=False, validators=[validate_price_artifacts])
     content_rating = serializers.ChoiceField(choices=CONTENT_RATING_CHOICES, required=False)
     is_published = serializers.BooleanField(required=False)

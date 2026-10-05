@@ -43,6 +43,7 @@ export interface BuddySearchProfile {
   longitude: number | null;
   search_radius_km: number | null;
   available_now: boolean;
+  available_until: string | null;
   pace: string;
   visibility: string;
   incognito: boolean;

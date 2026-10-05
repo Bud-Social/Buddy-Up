@@ -9,6 +9,7 @@ import { formatNumber, titleCase, formatDateTime } from '@/components/analytics/
 import { analyticsApi } from '@/api/analytics';
 import { useToast } from '@/components/ui/Toast';
 import type { AnalyticsPeriod, AnalyticsSummaryData, WorkoutLogInput } from '@/types/analytics';
+import { WORKOUT_CATEGORIES, WORKOUT_DURATION_PRESETS } from '@/types/analytics';
 
 interface Props { period: AnalyticsPeriod; }
 
@@ -25,6 +26,7 @@ const TYPES: { key: WorkoutLogInput['workout_type']; label: string }[] = [
 interface WorkoutRow {
   id: string;
   workout_type: string;
+  category?: string;
   exercise: string;
   sets?: number | null;
   reps?: number | null;
@@ -36,6 +38,7 @@ interface WorkoutRow {
 
 const EMPTY: WorkoutLogInput = {
   workout_type: 'strength',
+  category: '',
   exercise: '',
   sets: null,
   reps: null,
@@ -131,6 +134,24 @@ export function WorkoutsTab({ period }: Props) {
               value={form.exercise ?? ''}
               onChange={(e) => setForm((f) => ({ ...f, exercise: e.target.value }))}
             />
+            <div>
+              <p className="text-sm font-medium text-buddy-text-secondary mb-1.5">Category</p>
+              <div className="flex flex-wrap gap-1.5">
+                {WORKOUT_CATEGORIES.map((c) => (
+                  <button
+                    key={c.key}
+                    onClick={() => setForm((f) => ({ ...f, category: f.category === c.key ? '' : c.key }))}
+                    className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                      form.category === c.key
+                        ? 'bg-buddy-green text-buddy-black font-medium'
+                        : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-3 gap-2">
               <Input label="Sets" type="number" min={0} placeholder="0" value={form.sets ?? ''} onChange={(e) => setForm((f) => ({ ...f, sets: e.target.value === '' ? null : Number(e.target.value) }))} />
               <Input label="Reps" type="number" min={0} placeholder="0" value={form.reps ?? ''} onChange={(e) => setForm((f) => ({ ...f, reps: e.target.value === '' ? null : Number(e.target.value) }))} />
@@ -139,6 +160,24 @@ export function WorkoutsTab({ period }: Props) {
             <div className="grid grid-cols-2 gap-2">
               <Input label="Duration (min)" type="number" min={0} value={form.duration_minutes ?? ''} onChange={(e) => setForm((f) => ({ ...f, duration_minutes: e.target.value === '' ? undefined : Number(e.target.value) }))} />
               <Input label="Calories" type="number" min={0} placeholder="0" value={form.calories_burned ?? ''} onChange={(e) => setForm((f) => ({ ...f, calories_burned: e.target.value === '' ? null : Number(e.target.value) }))} />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-buddy-text-secondary mb-1.5">Duration preset</p>
+              <div className="flex flex-wrap gap-1.5">
+                {WORKOUT_DURATION_PRESETS.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setForm((f) => ({ ...f, duration_minutes: m }))}
+                    className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                      form.duration_minutes === m
+                        ? 'bg-buddy-green text-buddy-black font-medium'
+                        : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
+                    }`}
+                  >
+                    {m} min
+                  </button>
+                ))}
+              </div>
             </div>
             {error && <p className="text-sm text-buddy-red">{error}</p>}
             <Button onClick={submit} isLoading={saving} className="w-full">
@@ -161,7 +200,7 @@ export function WorkoutsTab({ period }: Props) {
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{titleCase(r.exercise || r.workout_type)}</p>
                     <p className="text-xs text-buddy-text-secondary">
-                      {titleCase(r.workout_type)} · {formatDateTime(r.performed_at)}
+                      {titleCase(r.workout_type)}{r.category ? ` · ${titleCase(r.category)}` : ''} · {formatDateTime(r.performed_at)}
                     </p>
                     <p className="text-xs text-buddy-text-secondary mt-0.5">
                       {[r.sets, r.reps].filter((v) => v != null).join('×') || `${r.duration_minutes ?? '—'} min`}

@@ -17,6 +17,19 @@ const List<({String key, String label})> _workoutTypes = [
   (key: 'other', label: 'Other'),
 ];
 
+const List<({String key, String label})> _workoutCategories = [
+  (key: 'upper', label: 'Upper'),
+  (key: 'lower', label: 'Lower'),
+  (key: 'legs', label: 'Legs'),
+  (key: 'push', label: 'Push'),
+  (key: 'pull', label: 'Pull'),
+  (key: 'core', label: 'Core'),
+  (key: 'arms', label: 'Arms'),
+  (key: 'full', label: 'Full'),
+];
+
+const List<int> _durationPresets = [15, 30, 45, 60];
+
 class WorkoutsTab extends ConsumerStatefulWidget {
   final WorkoutSummary? summary;
 
@@ -35,6 +48,7 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
   final _durationController = TextEditingController();
   final _caloriesController = TextEditingController();
   String _workoutType = 'strength';
+  String _category = '';
   bool _isSubmitting = false;
 
   @override
@@ -55,6 +69,7 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
       'workout_type': _workoutType,
       'exercise': _exerciseController.text.trim(),
     };
+    if (_category.isNotEmpty) data['category'] = _category;
     final sets = int.tryParse(_setsController.text);
     final reps = int.tryParse(_repsController.text);
     final weight = double.tryParse(_weightController.text);
@@ -80,6 +95,7 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
       _durationController.clear();
       _caloriesController.clear();
       setState(() => _workoutType = 'strength');
+      setState(() => _category = '');
       await ref.read(analyticsSummaryProvider.notifier).refresh();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -242,6 +258,39 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
               decoration: const InputDecoration(labelText: 'Exercise'),
             ),
             const SizedBox(height: 12),
+            Text(
+              'Category',
+              style: TextStyle(
+                color: cs.onSurface.withValues(alpha: 0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final c in _workoutCategories)
+                  ChoiceChip(
+                    label: Text(c.label),
+                    selected: _category == c.key,
+                    onSelected: (_) => setState(
+                      () => _category = _category == c.key ? '' : c.key,
+                    ),
+                    selectedColor: BuddyColors.green.withValues(alpha: 0.25),
+                    labelStyle: TextStyle(
+                      color: _category == c.key
+                          ? BuddyColors.green
+                          : cs.onSurface,
+                      fontSize: 12,
+                    ),
+                    backgroundColor: cs.surfaceContainerHighest,
+                    side: BorderSide(color: cs.outlineVariant),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -272,6 +321,39 @@ class _WorkoutsTabState extends ConsumerState<WorkoutsTab> {
                     decoration: const InputDecoration(labelText: 'Kg'),
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Duration preset',
+              style: TextStyle(
+                color: cs.onSurface.withValues(alpha: 0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final m in _durationPresets)
+                  ChoiceChip(
+                    label: Text('$m min'),
+                    selected: _durationController.text == '$m',
+                    onSelected: (_) => setState(
+                      () => _durationController.text = '$m',
+                    ),
+                    selectedColor: BuddyColors.green.withValues(alpha: 0.25),
+                    labelStyle: TextStyle(
+                      color: _durationController.text == '$m'
+                          ? BuddyColors.green
+                          : cs.onSurface,
+                      fontSize: 12,
+                    ),
+                    backgroundColor: cs.surfaceContainerHighest,
+                    side: BorderSide(color: cs.outlineVariant),
+                  ),
               ],
             ),
             const SizedBox(height: 12),

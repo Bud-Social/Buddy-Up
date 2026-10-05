@@ -97,3 +97,46 @@ class EventIngestionTests(TestCase):
         }, format='json')
         self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(AnalyticsEvent.objects.filter(anonymous_id='anon-123').count(), 1)
+
+
+class WorkoutCategoryTests(TestCase):
+    """Guided workouts record which muscle group was trained, and the
+    history can be filtered by it."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='athlete@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='athlete', display_name='Athlete')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def _log(self, **kwargs):
+        payload = {
+            'workout_type': 'strength',
+            'duration_minutes': 45,
+            **kwargs,
+        }
+        return self.client.post('/api/v1/analytics/workouts/', payload, format='json')
+
+    def test_create_accepts_category(self):
+        resp = self._log(category='upper', exercise='Bench press')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+        self.assertEqual(resp.data['data']['category'], 'upper')
+
+    def test_create_defaults_to_blank_category(self):
+        resp = self._log(exercise='Squats')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+        self.assertEqual(resp.data['data']['category'], '')
+
+    def test_create_rejects_unknown_category(self):
+        resp = self._log(category='elbows')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_filter_by_category(self):
+        self._log(category='upper', exercise='Bench press')
+        self._log(category='lower', exercise='Squat')
+
+        resp = self.client.get('/api/v1/analytics/workouts/', {'category': 'upper'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        results = resp.data['data']
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['category'], 'upper')

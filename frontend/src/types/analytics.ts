@@ -175,8 +175,24 @@ export interface ActivityRecordInput {
   notes?: string;
 }
 
+export type WorkoutCategory = 'upper' | 'lower' | 'legs' | 'push' | 'pull' | 'core' | 'arms' | 'full' | '';
+
+export const WORKOUT_CATEGORIES: { key: Exclude<WorkoutCategory, ''>; label: string }[] = [
+  { key: 'upper', label: 'Upper' },
+  { key: 'lower', label: 'Lower' },
+  { key: 'legs', label: 'Legs' },
+  { key: 'push', label: 'Push' },
+  { key: 'pull', label: 'Pull' },
+  { key: 'core', label: 'Core' },
+  { key: 'arms', label: 'Arms' },
+  { key: 'full', label: 'Full' },
+];
+
+export const WORKOUT_DURATION_PRESETS = [15, 30, 45, 60] as const;
+
 export interface WorkoutLogInput {
   workout_type: 'strength' | 'cardio' | 'hiit' | 'yoga' | 'mobility' | 'sport' | 'other';
+  category?: WorkoutCategory;
   exercise?: string;
   sets?: number | null;
   reps?: number | null;

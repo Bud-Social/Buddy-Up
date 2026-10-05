@@ -6,7 +6,13 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/wizard_widgets.dart';
+import '../../messaging/providers/messaging_provider.dart';
 import '../providers/marketplace_provider.dart';
+
+const _disclaimerText = "This meal plan isn't medical advice — consult a professional.";
+const _reminderFrequencies = ['15m', '30m', '1h'];
+const _timings = ['morning', 'midday', 'afternoon', 'evening', 'anytime'];
+const _mealSlots = ['breakfast', 'lunch', 'dinner', 'snack'];
 
 class CreateMealPlanScreen extends ConsumerStatefulWidget {
   final String? shopHandle;
@@ -29,14 +35,22 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
   String _calorieRange = '1800-2200';
   XFile? _coverFile;
 
-  final Map<int, Map<String, String>> _weekSchedule = {};
+  // Meal blocks: one entry per meal, serialised into full_plan[week_N][day_M].
+  final List<Map<String, dynamic>> _mealBlocks = [
+    {'week': 1, 'day': 1, 'slot': 'breakfast', 'title': '', 'duration_mins': 15, 'timing': 'morning', 'photo_url': '', 'alternatives': '', 'side_effects': ''},
+  ];
+  String? _uploadingPhotoKey; // block index whose photo is uploading
+
   final _shoppingListController = TextEditingController();
   final _nutritionGoalsController = TextEditingController();
   final Map<String, int> _priceArtifacts = {'dumbbell': 10};
 
-  bool _dailyReminders = true;
-  bool _weeklyReminders = true;
-  final List<String> _reminderTimes = ['08:00'];
+  bool _reminderEnabled = true;
+  String _reminderTiming = 'morning';
+  String _reminderFrequency = '1h';
+  final _reminderMessageController = TextEditingController(
+      text: "Hey Buddy! Here is your meal plan for today. Let's hit those macros!");
+  bool _disclaimerAccepted = false;
 
   final List<String> _dietTypes = [
     'balanced', 'keto', 'vegan', 'vegetarian', 'paleo', 'mediterranean', 'high-protein'
@@ -44,7 +58,9 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
   final List<String> _calorieRanges = [
     '1200-1500', '1500-1800', '1800-2200', '2200-2600', '2600+'
   ];
-  static const _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  static const _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']; // ignore: unused_field
+
+  int get _mealTotalMins => _mealBlocks.fold(0, (sum, b) => sum + ((b['duration_mins'] ?? 15) as num).toInt());
 
   @override
   void initState() {
@@ -74,6 +90,43 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
         }
         final shopping = data['shopping_list'];
         if (shopping is List) _shoppingListController.text = shopping.join('\n');
+        // Hydrate meal blocks from full_plan[week_N][day_M].
+        final plan = data['full_plan'];
+        if (plan is Map && plan.isNotEmpty) {
+          final blocks = <Map<String, dynamic>>[];
+          plan.forEach((weekKey, days) {
+            if (days is! Map) return;
+            days.forEach((dayKey, meals) {
+              if (meals is! List) return;
+              for (final m in meals) {
+                if (m is! Map) continue;
+                blocks.add({
+                  'week': int.tryParse('$weekKey'.replaceAll('week_', '')) ?? 1,
+                  'day': int.tryParse('$dayKey'.replaceAll('day_', '')) ?? 1,
+                  'slot': (m['slot'] ?? 'breakfast') as String,
+                  'title': (m['title'] ?? '') as String,
+                  'duration_mins': (m['duration_mins'] as num?)?.toInt() ?? 15,
+                  'timing': (m['timing'] ?? m['time_of_day'] ?? 'morning') as String,
+                  'photo_url': (m['photo_url'] ?? '') as String,
+                  'alternatives': (m['alternatives'] ?? '') as String,
+                  'side_effects': (m['side_effects'] ?? '') as String,
+                });
+              }
+            });
+          });
+          if (blocks.isNotEmpty) _mealBlocks..clear()..addAll(blocks);
+        }
+        final reminders = data['reminder_settings'];
+        if (reminders is Map) {
+          _reminderEnabled = (reminders['enabled'] as bool?) ?? _reminderEnabled;
+          _reminderTiming = (reminders['timing'] as String?) ?? _reminderTiming;
+          _reminderFrequency = (reminders['frequency'] as String?) ?? _reminderFrequency;
+          final template = reminders['message_template'] as String?;
+          if (template != null && template.isNotEmpty) {
+            _reminderMessageController.text = template;
+          }
+        }
+        _disclaimerAccepted = true;
       });
     } catch (_) {}
   }
@@ -85,6 +138,7 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
     _descriptionController.dispose();
     _shoppingListController.dispose();
     _nutritionGoalsController.dispose();
+    _reminderMessageController.dispose();
     super.dispose();
   }
 
@@ -108,7 +162,60 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
     if (file != null) setState(() => _coverFile = file);
   }
 
+  void _addMealBlock() {
+    setState(() => _mealBlocks.add({
+      'week': 1, 'day': 1, 'slot': 'breakfast', 'title': '', 'duration_mins': 15,
+      'timing': 'morning', 'photo_url': '', 'alternatives': '', 'side_effects': '',
+    }));
+  }
+
+  void _removeMealBlock(int index) {
+    setState(() => _mealBlocks.removeAt(index));
+  }
+
+  void _updateMealBlock(int index, String key, dynamic value) {
+    setState(() => _mealBlocks[index][key] = value);
+  }
+
+  /// Picks a photo for a meal block and uploads it to /messaging/upload/
+  /// (same endpoint the chat composer uses), storing the returned URL.
+  Future<void> _pickBlockPhoto(int index) async {
+    final picker = ImagePicker();
+    final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (file == null) return;
+    setState(() => _uploadingPhotoKey = '$index');
+    try {
+      final repo = ref.read(messagingRepositoryProvider);
+      final response = await repo.uploadAttachment({
+        'file': await MultipartFile.fromFile(
+          file.path,
+          filename: file.path.split('/').last,
+        ),
+        'attachment_type': 'photo',
+      });
+      final data = response['data'] as Map<String, dynamic>?;
+      final url = data?['url'] as String?;
+      if (url != null && url.isNotEmpty && mounted) {
+        setState(() => _mealBlocks[index]['photo_url'] = url);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Photo upload failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingPhotoKey = null);
+    }
+  }
+
   Future<void> _submit() async {
+    if (!_disclaimerAccepted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(_disclaimerText), backgroundColor: Colors.red),
+      );
+      return;
+    }
     setState(() => _loading = true);
     try {
       final repo = ref.read(marketplaceRepositoryProvider);
@@ -121,6 +228,26 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
         coverUrl = result['data']['url'] as String?;
       }
 
+      // Serialise blocks into full_plan[week_N][day_M] (web-compatible shape).
+      final fullPlan = <String, dynamic>{};
+      for (final block in _mealBlocks) {
+        final weekMap =
+            fullPlan.putIfAbsent('week_${block['week'] ?? 1}', () => <String, dynamic>{})
+                as Map<String, dynamic>;
+        final dayList =
+            (weekMap['day_${block['day'] ?? 1}'] as List?) ?? <Map<String, dynamic>>[];
+        dayList.add({
+          'slot': block['slot'] ?? 'breakfast',
+          'title': block['title'] ?? '',
+          'duration_mins': block['duration_mins'] ?? 15,
+          'timing': block['timing'] ?? 'morning',
+          'photo_url': block['photo_url'] ?? '',
+          'alternatives': block['alternatives'] ?? '',
+          'side_effects': block['side_effects'] ?? '',
+        });
+        weekMap['day_${block['day'] ?? 1}'] = dayList;
+      }
+
       final data = <String, dynamic>{
         'title': _titleController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -128,16 +255,17 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
         'duration_weeks': _durationWeeks,
         'calorie_range': _calorieRange,
         'price_artifacts': _priceArtifacts,
-        'full_plan': _weekSchedule,
+        'full_plan': fullPlan,
         'shopping_list': _shoppingListController.text
             .split('\n')
             .map((s) => s.trim())
             .where((s) => s.isNotEmpty)
             .toList(),
-        'notification_config': {
-          'daily_reminder': _dailyReminders,
-          'weekly_reminder': _weeklyReminders,
-          'reminder_times': _reminderTimes,
+        'reminder_settings': {
+          'enabled': _reminderEnabled,
+          'timing': _reminderTiming,
+          'frequency': _reminderFrequency,
+          'message_template': _reminderMessageController.text.trim(),
         },
         'cover_image_url': ?coverUrl,
         if (widget.shopHandle != null) 'shop_handle': widget.shopHandle,
@@ -292,67 +420,34 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Weekly Schedule', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        const Text('Meal Blocks', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         const Text(
-            'Outline meals for each day. Expand each week to fill in the details.',
+            'Add each meal with a week, day, slot and timing. Every block becomes part of the weekly plan.',
             style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
-        const SizedBox(height: 20),
-        ...List.generate(_durationWeeks.clamp(1, 4), (weekIdx) {
-          return Card(
-            color: BuddyColors.surface,
-            margin: const EdgeInsets.only(bottom: 10),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            child: ExpansionTile(
-              title: Text('Week ${weekIdx + 1}',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              children: _days.map((day) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Row(children: [
-                    SizedBox(
-                        width: 90,
-                        child: Text(day,
-                            style: const TextStyle(
-                                fontSize: 12, color: BuddyColors.textSecondary))),
-                    Expanded(
-                      child: TextFormField(
-                        initialValue: _weekSchedule[weekIdx]?[day] ?? '',
-                        decoration: InputDecoration(
-                          hintText: 'e.g. Oatmeal, Chicken Salad, Salmon',
-                          hintStyle: const TextStyle(fontSize: 11),
-                          filled: true,
-                          fillColor: BuddyColors.surfaceRaised,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide.none),
-                          contentPadding:
-                              const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        style: const TextStyle(fontSize: 12),
-                        onChanged: (v) {
-                          _weekSchedule[weekIdx] ??= {};
-                          _weekSchedule[weekIdx]![day] = v;
-                        },
-                      ),
-                    ),
-                  ]),
-                );
-              }).toList(),
-            ),
+        const SizedBox(height: 12),
+        Text(
+          '${_mealBlocks.length} meals · $_mealTotalMins min total prep (${(_mealTotalMins / 60).toStringAsFixed(1)} hrs)',
+          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 12),
+        ..._mealBlocks.asMap().entries.map((entry) {
+          final idx = entry.key;
+          return _MealBlockEditor(
+            key: ValueKey('meal-block-$idx-${entry.value.hashCode}'),
+            block: entry.value,
+            maxWeeks: _durationWeeks,
+            isUploadingPhoto: _uploadingPhotoKey == '$idx',
+            onUpdate: (key, value) => _updateMealBlock(idx, key, value),
+            onPickPhoto: () => _pickBlockPhoto(idx),
+            onRemove: _mealBlocks.length > 1 ? () => _removeMealBlock(idx) : null,
           );
         }),
-        if (_durationWeeks > 4) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-                color: BuddyColors.surfaceRaised, borderRadius: BorderRadius.circular(12)),
-            child: const Text(
-                'Weeks 1–4 shown. Remaining weeks follow the same pattern.',
-                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
-          ),
-        ],
+        TextButton.icon(
+          icon: const Icon(Icons.add, color: BuddyColors.green),
+          label: const Text('Add Meal Block', style: TextStyle(color: BuddyColors.green)),
+          onPressed: _addMealBlock,
+        ),
       ]),
     );
   }
@@ -428,49 +523,79 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
             style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
         const SizedBox(height: 20),
         SwitchListTile(
-          value: _dailyReminders,
-          onChanged: (v) => setState(() => _dailyReminders = v),
+          value: _reminderEnabled,
+          onChanged: (v) => setState(() => _reminderEnabled = v),
           title: const Text('Daily Meal Reminders'),
           subtitle: const Text("Remind subscribers about today's meals"),
           activeThumbColor: BuddyColors.green,
           contentPadding: EdgeInsets.zero,
         ),
+        if (_reminderEnabled) ...[
+          const SizedBox(height: 12),
+          const Text('Default Timing', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _reminderTiming,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: BuddyColors.surface,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            items: _timings
+                .map((t) => DropdownMenuItem(
+                    value: t, child: Text(t[0].toUpperCase() + t.substring(1))))
+                .toList(),
+            onChanged: (v) => setState(() => _reminderTiming = v ?? 'morning'),
+          ),
+          const SizedBox(height: 14),
+          const Text('Reminder Frequency', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _reminderFrequency,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: BuddyColors.surface,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            items: _reminderFrequencies
+                .map((f) => DropdownMenuItem(
+                    value: f,
+                    child: Text(f == '15m'
+                        ? 'Every 15 minutes'
+                        : f == '30m'
+                            ? 'Every 30 minutes'
+                            : 'Hourly')))
+                .toList(),
+            onChanged: (v) => setState(() => _reminderFrequency = v ?? '1h'),
+          ),
+          const SizedBox(height: 6),
+          const Text('Each meal block also carries its own timing.',
+              style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+          const SizedBox(height: 14),
+          WizardTextField('Message Template', _reminderMessageController,
+              hint: 'Motivational reminder message...', maxLines: 3),
+        ],
+        const SizedBox(height: 24),
         const Divider(),
-        SwitchListTile(
-          value: _weeklyReminders,
-          onChanged: (v) => setState(() => _weeklyReminders = v),
-          title: const Text('Weekly Summary'),
-          subtitle: const Text('Send a recap at the start of each week'),
-          activeThumbColor: BuddyColors.green,
-          contentPadding: EdgeInsets.zero,
-        ),
         const SizedBox(height: 16),
-        const Text('Reminder Times', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: _reminderTimes
-              .map((t) => Chip(
-                    label: Text(t),
-                    deleteIcon: const Icon(Icons.close, size: 14),
-                    onDeleted: () => setState(() => _reminderTimes.remove(t)),
-                  ))
-              .toList(),
-        ),
-        const SizedBox(height: 8),
-        TextButton.icon(
-          icon: const Icon(Icons.add_alarm, color: BuddyColors.green),
-          label: const Text('Add Time', style: TextStyle(color: BuddyColors.green)),
-          onPressed: () async {
-            final t = await showTimePicker(
-                context: context, initialTime: const TimeOfDay(hour: 8, minute: 0));
-            if (t != null) {
-              final formatted =
-                  '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
-              setState(() => _reminderTimes.add(formatted));
-            }
-          },
-        ),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Checkbox(
+            value: _disclaimerAccepted,
+            onChanged: (v) => setState(() => _disclaimerAccepted = v ?? false),
+            activeColor: BuddyColors.green,
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _disclaimerAccepted = !_disclaimerAccepted),
+              child: const Text(_disclaimerText,
+                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13)),
+            ),
+          ),
+        ]),
       ]),
     );
   }
@@ -506,6 +631,172 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
             child: const Text('Add'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _MealBlockEditor extends StatelessWidget {
+  final Map<String, dynamic> block;
+  final int maxWeeks;
+  final bool isUploadingPhoto;
+  final void Function(String key, dynamic value) onUpdate;
+  final VoidCallback onPickPhoto;
+  final VoidCallback? onRemove;
+
+  const _MealBlockEditor({
+    super.key,
+    required this.block,
+    required this.maxWeeks,
+    required this.isUploadingPhoto,
+    required this.onUpdate,
+    required this.onPickPhoto,
+    this.onRemove,
+  });
+
+  InputDecoration _dec(String hint) => InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 12),
+        filled: true,
+        fillColor: BuddyColors.surfaceRaised,
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final photoUrl = (block['photo_url'] ?? '') as String;
+    return Card(
+      color: BuddyColors.surface,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.restaurant, size: 16, color: BuddyColors.green),
+            const SizedBox(width: 6),
+            const Text('Meal Block',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            const Spacer(),
+            if (onRemove != null)
+              IconButton(
+                icon: const Icon(Icons.close, size: 18, color: BuddyColors.textSecondary),
+                onPressed: onRemove,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+          ]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: '${block['week'] ?? 1}',
+                keyboardType: TextInputType.number,
+                decoration: _dec('Week'),
+                onChanged: (v) => onUpdate('week', int.tryParse(v) ?? 1),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextFormField(
+                initialValue: '${block['day'] ?? 1}',
+                keyboardType: TextInputType.number,
+                decoration: _dec('Day'),
+                onChanged: (v) => onUpdate('day', int.tryParse(v) ?? 1),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextFormField(
+                initialValue: '${block['duration_mins'] ?? 15}',
+                keyboardType: TextInputType.number,
+                decoration: _dec('Prep (min)'),
+                onChanged: (v) => onUpdate('duration_mins', int.tryParse(v) ?? 0),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: (block['slot'] ?? 'breakfast') as String,
+                decoration: _dec('Slot'),
+                items: _mealSlots
+                    .map((s) => DropdownMenuItem(
+                        value: s, child: Text(s[0].toUpperCase() + s.substring(1))))
+                    .toList(),
+                onChanged: (v) => onUpdate('slot', v ?? 'breakfast'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: (block['timing'] ?? 'morning') as String,
+                decoration: _dec('Timing'),
+                items: _timings
+                    .map((t) => DropdownMenuItem(
+                        value: t, child: Text(t[0].toUpperCase() + t.substring(1))))
+                    .toList(),
+                onChanged: (v) => onUpdate('timing', v ?? 'morning'),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          TextFormField(
+            initialValue: (block['title'] ?? '') as String,
+            decoration: _dec('Meal title (e.g. Grilled chicken + quinoa)'),
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+            onChanged: (v) => onUpdate('title', v),
+          ),
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: photoUrl,
+                decoration: _dec('Photo URL (optional)'),
+                style: const TextStyle(fontSize: 12),
+                onChanged: (v) => onUpdate('photo_url', v),
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              icon: isUploadingPhoto
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.add_photo_alternate, size: 16),
+              label: Text(isUploadingPhoto ? 'Uploading' : 'Photo',
+                  style: const TextStyle(fontSize: 12)),
+              onPressed: isUploadingPhoto ? null : onPickPhoto,
+            ),
+          ]),
+          if (photoUrl.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(photoUrl,
+                  height: 90, width: double.infinity, fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => const SizedBox.shrink()),
+            ),
+          ],
+          const SizedBox(height: 10),
+          TextFormField(
+            initialValue: (block['alternatives'] ?? '') as String,
+            decoration: _dec('Alternatives (e.g. Swap chicken for tofu)'),
+            style: const TextStyle(fontSize: 12),
+            onChanged: (v) => onUpdate('alternatives', v),
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            initialValue: (block['side_effects'] ?? '') as String,
+            decoration: _dec('Side effects / notes (e.g. High fibre — hydrate well)'),
+            style: const TextStyle(fontSize: 12),
+            onChanged: (v) => onUpdate('side_effects', v),
+          ),
+        ]),
       ),
     );
   }
