@@ -261,7 +261,7 @@ class BuddySearchProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = BuddySearchProfile
         fields = [
-            'intents', 'custom_intent', 'modes', 'bio', 'goals',
+            'intents', 'display_name', 'custom_intent', 'modes', 'bio', 'goals',
             'age_band', 'photos', 'neighbourhood',
             'latitude', 'longitude', 'location_updated_at',
             'search_radius_km', 'available_now', 'available_until', 'pace',
@@ -269,6 +269,12 @@ class BuddySearchProfileSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at',
         ]
         read_only_fields = ['age_band', 'location_updated_at', 'created_at', 'updated_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data.get('display_name'):
+            data['display_name'] = instance.profile.display_name
+        return data
 
     def validate_intents(self, value):
         allowed = set(BuddySearchProfile.INTENT_CHOICES)

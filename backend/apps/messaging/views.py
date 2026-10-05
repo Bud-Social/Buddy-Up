@@ -32,7 +32,7 @@ from .serializers import (
     CommunityMemberSerializer, CommunityPostSerializer, CommunityPostCommentSerializer,
 )
 from apps.guardians.services import guardian_blocks_new_dms
-from apps.profiles.models import BuddyRelationship, Profile
+from apps.profiles.models import BuddyRelationship, Profile, BuddySearchProfile, BlockRelationship
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +56,32 @@ def _allowed_to_message(requester: Profile, other: Profile) -> bool:
     """Return True if requester can message other."""
     if other.role in ('trainer', 'practitioner') or requester.role in ('trainer', 'practitioner'):
         return True
-    return BuddyRelationship.objects.filter(
+    is_buddy = BuddyRelationship.objects.filter(
         (db_models.Q(from_user=requester, to_user=other) |
          db_models.Q(from_user=other, to_user=requester)),
         status='confirmed',
     ).exists()
+    if is_buddy:
+        return True
+    # Buddy-search exception: people who meet via Find-a-Buddy can text.
+    # Requires BOTH to have opted in, recipient visible to the requester,
+    # and no block in either direction.
+    recipient_sp = BuddySearchProfile.objects.filter(profile=other).first()
+    if recipient_sp is None:
+        return False
+    if (recipient_sp.visibility or 'public') == 'hidden':
+        return False
+    if (recipient_sp.visibility or 'public') == 'buddies' and not is_buddy:
+        return False
+    if not BuddySearchProfile.objects.filter(profile=requester).exists():
+        return False
+    blocked = BlockRelationship.objects.filter(
+        db_models.Q(blocker=requester, blocked=other) |
+        db_models.Q(blocker=other, blocked=requester),
+    ).exists()
+    if blocked:
+        return False
+    return True
 
 
 def _is_public_preview_url(value: str) -> bool:

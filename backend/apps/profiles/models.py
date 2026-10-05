@@ -194,6 +194,7 @@ class BuddySearchProfile(TimestampedModel):
         Profile, on_delete=models.CASCADE, primary_key=True, related_name='search_profile'
     )
     intents = models.JSONField(default=list, blank=True)
+    display_name = models.CharField(max_length=50, blank=True)
     custom_intent = models.CharField(max_length=100, blank=True)
     modes = models.JSONField(default=list, blank=True)
     bio = models.CharField(max_length=140, blank=True)

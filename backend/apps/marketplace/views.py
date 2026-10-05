@@ -1325,15 +1325,28 @@ class EventListView(views.APIView):
                 lng = float(request.query_params.get('lng'))
         except (TypeError, ValueError):
             lat = lng = None
+        radius_param = request.query_params.get('radius_km', '')
+        radius_explicit = str(radius_param).strip() != ''
         try:
-            radius_km = float(request.query_params.get('radius_km') or 25)
+            radius_km = float(radius_param or 25)
         except (TypeError, ValueError):
             radius_km = 25
+            radius_explicit = False
         radius_km = min(max(radius_km, 1), 200)
+        geo_auto = False
+        geo_density = None
+        geo_count_in_near = None
+        if lat is not None and lng is not None and not radius_explicit:
+            from common.geo import NEAR_RADIUS_KM, count_within_latlng, pick_adaptive_radius
+            geo_count_in_near = count_within_latlng(
+                MarketplaceEvent.objects.all(), lat, lng, NEAR_RADIUS_KM,
+                lat_field='location_lat', lng_field='location_lng',
+            )
+            radius_km, geo_density = pick_adaptive_radius(geo_count_in_near)
+            geo_auto = True
         if lat is not None and lng is not None:
-            import math
-            lat_delta = radius_km / 111.0
-            lng_delta = radius_km / max(111.0 * abs(math.cos(math.radians(lat))), 1e-6)
+            from common.geo import bbox_deltas
+            lat_delta, lng_delta = bbox_deltas(lat, radius_km)
             qs = qs.filter(
                 location_lat__isnull=False, location_lng__isnull=False,
                 location_lat__gte=lat - lat_delta, location_lat__lte=lat + lat_delta,
@@ -1351,9 +1364,34 @@ class EventListView(views.APIView):
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
         serializer = MarketplaceEventSerializer(page, many=True, context={'request': request})
+        data = list(serializer.data)
+
+        if lat is not None and lng is not None and data:
+            from common.geo import adaptive_message, haversine_km
+            for ev in data:
+                try:
+                    elat, elng = float(ev['location_lat']), float(ev['location_lng'])
+                    ev['distance_km'] = round(haversine_km(lat, lng, elat, elng), 1)
+                except (TypeError, ValueError, KeyError):
+                    ev['distance_km'] = None
+            data.sort(key=lambda e: (e['distance_km'] is None, e['distance_km'] or 0))
+
+        geo = None
+        if lat is not None and lng is not None:
+            from common.geo import adaptive_message
+            message = None
+            if geo_auto:
+                message = adaptive_message(radius_km, geo_density or 'sparse', geo_count_in_near or 0)
+            geo = {
+                'lat': lat, 'lng': lng, 'radius_km': radius_km, 'auto': geo_auto,
+                'density': geo_density, 'count_in_near': geo_count_in_near,
+                'message': message,
+            }
+
         return Response({
             'success': True,
-            'data': serializer.data,
+            'data': data,
+            'geo': geo,
             'pagination': {
                 'count': paginator.page.paginator.count,
                 'next': paginator.get_next_link(),
@@ -1460,7 +1498,17 @@ class PurchaseEventTicketView(views.APIView):
         if event.capacity > 0 and event.attendee_count >= event.capacity:
             return Response({'success': False, 'message': 'This event is sold out.'}, status=400)
 
-        price_artifacts = event.ticket_price_artifacts
+        tier_name = (request.data.get('tier') or '').strip()
+        tier_entry = None
+        if tier_name:
+            for t in (event.ticket_tiers or []):
+                if str(t.get('name', '')).lower() == tier_name.lower():
+                    tier_entry = t
+                    break
+            if tier_entry is None:
+                return Response({'success': False, 'message': f'Unknown ticket tier: {tier_name}.'}, status=400)
+
+        price_artifacts = (tier_entry.get('price_artifacts') if tier_entry else None) or event.ticket_price_artifacts
         if price_artifacts and not event.is_free:
             from apps.wallet.utils import credit_artifacts
             platform_cut_rate = PLATFORM_CUTS.get('marketplace', 0.15)
@@ -1498,6 +1546,7 @@ class PurchaseEventTicketView(views.APIView):
         ticket, created = EventTicket.objects.get_or_create(
             event=event, holder=profile, defaults={
                 'status': 'active', 'price_paid_artifacts': price_artifacts if not event.is_free else {},
+                'tier': (tier_entry.get('name') if tier_entry else None) or 'Standard',
             }
         )
         if not created and ticket.status != 'active':
@@ -1508,7 +1557,7 @@ class PurchaseEventTicketView(views.APIView):
 
         order = _create_order_for_purchase(
             profile, 'event_ticket', event, event.title, event.creator,
-            {} if event.is_free else event.ticket_price_artifacts,
+            {} if event.is_free else price_artifacts,
         )
 
         from .tasks import send_ticket_confirmation
@@ -1875,8 +1924,21 @@ class CartView(views.APIView):
         except model_class.DoesNotExist:
             return Response({'success': False, 'message': 'Item not found.'}, status=404)
             
-        # Add to cart
+        # Add to cart (event tickets may carry a tier variant).
         kwargs = {'cart': cart, 'item_type': item_type, key_name.replace('_id', ''): target_obj}
+        if item_type == 'event_ticket':
+            tier_name = (request.data.get('tier') or '').strip()
+            if tier_name:
+                match = next(
+                    (t for t in (target_obj.ticket_tiers or [])
+                     if str(t.get('name', '')).lower() == tier_name.lower()),
+                    None,
+                )
+                if match is None:
+                    return Response({'success': False, 'message': f'Unknown ticket tier: {tier_name}.'}, status=400)
+                kwargs['meta'] = {'tier': match.get('name')}
+            else:
+                kwargs['meta'] = {}
         item, created = CartItem.objects.get_or_create(**kwargs)
         if not created:
             item.quantity += quantity
@@ -1939,6 +2001,15 @@ class CheckoutCartView(views.APIView):
             if item.item_type == 'programme' and item.programme:
                 return item.programme.price_artifacts, item.programme.title, item.programme.creator
             if item.item_type == 'event_ticket' and item.event:
+                tier_name = (item.meta or {}).get('tier') if hasattr(item, 'meta') else None
+                if tier_name:
+                    match = next(
+                        (t for t in (item.event.ticket_tiers or [])
+                         if str(t.get('name', '')).lower() == str(tier_name).lower()),
+                        None,
+                    )
+                    if match and match.get('price_artifacts'):
+                        return match['price_artifacts'], item.event.title, item.event.creator
                 return item.event.ticket_price_artifacts, item.event.title, item.event.creator
             if item.item_type == 'product' and item.product:
                 return None, item.product.name, None
@@ -2142,10 +2213,12 @@ class CheckoutCartView(views.APIView):
                 item.programme.purchase_count += item.quantity
                 item.programme.save(update_fields=['purchase_count'])
             elif item.item_type == 'event_ticket' and item.event:
+                tier_name = ((item.meta or {}).get('tier') if hasattr(item, 'meta') else None) or 'Standard'
                 for _ in range(item.quantity):
                     created_ticket = EventTicket.objects.create(
                         event=item.event,
                         holder=request.user.profile,
+                        tier=tier_name,
                         price_paid_artifacts={
                             k: v // item.quantity for k, v in discounted_item.items() if v >= item.quantity
                         } if discounted_item else {},

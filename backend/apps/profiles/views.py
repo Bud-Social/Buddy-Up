@@ -724,9 +724,11 @@ class MySearchProfileView(views.APIView):
 
     def get(self, request):
         sp, _ = BuddySearchProfile.objects.get_or_create(profile=request.user.profile)
+        data = BuddySearchProfileSerializer(sp).data
+        data['match_count'] = self._match_count(request.user.profile, sp)
         return Response({
             'success': True,
-            'data': BuddySearchProfileSerializer(sp).data,
+            'data': data,
             'message': 'OK', 'errors': None, 'pagination': None,
         })
 
@@ -927,6 +929,7 @@ class NearbyBuddiesView(views.APIView):
             items.append({
                 'profile': ProfileSerializer(sp.profile, context={'request': request}).data,
                 'distance_km': round(distance, 1) if distance is not None else None,
+                'display_name': sp.display_name or sp.profile.display_name,
                 'intents': sp.intents,
                 'custom_intent': sp.custom_intent,
                 'modes': sp.modes,

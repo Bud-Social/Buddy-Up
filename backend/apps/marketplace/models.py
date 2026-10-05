@@ -690,10 +690,12 @@ class CartItem(TimestampedModel):
     event = models.ForeignKey(MarketplaceEvent, null=True, blank=True, on_delete=models.CASCADE)
 
     quantity = models.IntegerField(default=1)
+    # Variant info, e.g. {'tier': 'VIP'} for event tickets.
+    meta = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'marketplace_cart_item'
-        unique_together = ('cart', 'item_type', 'meal_plan', 'programme', 'product', 'event')
+        unique_together = ('cart', 'item_type', 'meal_plan', 'programme', 'product', 'event', 'meta')
 
 
 # ---------------------------------------------------------------------------

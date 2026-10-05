@@ -302,6 +302,76 @@ class AnalyticsReportDownloadView(views.APIView):
         })
 
 
+class ActivityShareView(views.APIView):
+    """Share one walk/run/hike/cycle or workout log as a feed post."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, kind, obj_id):
+        from apps.feed.models import Post
+
+        profile = request.user.profile
+        if kind == 'activity':
+            from .models import ActivityRecord
+            obj = ActivityRecord.objects.filter(id=obj_id, user=profile).first()
+            if obj is None:
+                return Response({'success': False, 'data': None,
+                                 'message': 'Activity not found.', 'errors': None, 'pagination': None},
+                                status=status.HTTP_404_NOT_FOUND)
+            km = round((obj.distance_meters or 0) / 1000, 2)
+            mins = round((obj.duration_seconds or 0) / 60)
+            body = request.data.get('body', '').strip() or (
+                f'🏃 Just finished a {obj.get_activity_type_display().lower()} — '
+                f'{km} km in {mins} min.'
+            )
+            post = Post.objects.create(
+                author=profile, post_type='workout_log',
+                body=body,
+                workout_log_data={
+                    'activity_type': obj.activity_type,
+                    'distance_km': km,
+                    'duration_minutes': mins,
+                    'calories': obj.calories_burned,
+                    'steps': obj.steps,
+                    'source': 'activity_share',
+                },
+            )
+        elif kind == 'workout':
+            from .models import WorkoutLog
+            obj = WorkoutLog.objects.filter(id=obj_id, user=profile).first()
+            if obj is None:
+                return Response({'success': False, 'data': None,
+                                 'message': 'Workout not found.', 'errors': None, 'pagination': None},
+                                status=status.HTTP_404_NOT_FOUND)
+            body = request.data.get('body', '').strip() or (
+                f'💪 Logged {obj.exercise} — {obj.sets or 0}×{obj.reps or 0}'
+                + (f' @ {obj.weight_kg}kg' if obj.weight_kg else '')
+            )
+            post = Post.objects.create(
+                author=profile, post_type='workout_log',
+                body=body,
+                workout_log_data={
+                    'exercise': obj.exercise,
+                    'sets': obj.sets,
+                    'reps': obj.reps,
+                    'weight_kg': obj.weight_kg,
+                    'calories': getattr(obj, 'calories_burned', None),
+                    'source': 'workout_share',
+                },
+            )
+        else:
+            return Response({'success': False, 'data': None,
+                             'message': 'kind must be activity or workout.',
+                             'errors': None, 'pagination': None},
+                            status=status.HTTP_400_BAD_REQUEST)
+        visibility = request.data.get('visibility', 'public')
+        if visibility in ('public', 'buddies', 'gym_members', 'private'):
+            post.visibility = visibility
+            post.save(update_fields=['visibility'])
+        return Response({'success': True, 'data': {'post_id': str(post.id)},
+                         'message': 'Shared to feed.', 'errors': None, 'pagination': None},
+                        status=status.HTTP_201_CREATED)
+
+
 class AnalyticsReportShareView(views.APIView):
     """Share the comprehensive report as a `progress` feed post."""
 

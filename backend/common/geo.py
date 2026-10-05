@@ -50,14 +50,17 @@ def adaptive_message(radius_km: float, density: str, count_in_near: int) -> str:
     )
 
 
-def count_within_latlng(queryset, lat: float, lng: float, radius_km: float) -> int:
-    """Count rows with latitude/longitude fields inside the bbox."""
+def count_within_latlng(
+    queryset, lat: float, lng: float, radius_km: float,
+    lat_field: str = 'latitude', lng_field: str = 'longitude',
+) -> int:
+    """Count rows with lat/lng fields inside the bbox."""
     lat_delta, lng_delta = bbox_deltas(lat, radius_km)
-    return queryset.filter(
-        latitude__isnull=False,
-        longitude__isnull=False,
-        latitude__gte=lat - lat_delta,
-        latitude__lte=lat + lat_delta,
-        longitude__gte=lng - lng_delta,
-        longitude__lte=lng + lng_delta,
-    ).count()
+    return queryset.filter(**{
+        f'{lat_field}__isnull': False,
+        f'{lng_field}__isnull': False,
+        f'{lat_field}__gte': lat - lat_delta,
+        f'{lat_field}__lte': lat + lat_delta,
+        f'{lng_field}__gte': lng - lng_delta,
+        f'{lng_field}__lte': lng + lng_delta,
+    }).count()

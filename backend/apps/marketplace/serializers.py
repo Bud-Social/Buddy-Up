@@ -732,7 +732,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CartItem
-        fields = ['id', 'item_type', 'quantity',
+        fields = ['id', 'item_type', 'quantity', 'meta',
                   'meal_plan', 'meal_plan_detail',
                   'programme', 'programme_detail',
                   'product', 'product_detail',
@@ -757,6 +757,15 @@ class CartItemSerializer(serializers.ModelSerializer):
         if obj.item_type == 'programme' and obj.programme:
             return obj.programme.price_artifacts
         if obj.item_type == 'event_ticket' and obj.event:
+            tier_name = (getattr(obj, 'meta', None) or {}).get('tier')
+            if tier_name:
+                match = next(
+                    (t for t in (obj.event.ticket_tiers or [])
+                     if str(t.get('name', '')).lower() == str(tier_name).lower()),
+                    None,
+                )
+                if match and match.get('price_artifacts'):
+                    return match['price_artifacts']
             return obj.event.ticket_price_artifacts
         if obj.item_type == 'product' and obj.product:
             return {}

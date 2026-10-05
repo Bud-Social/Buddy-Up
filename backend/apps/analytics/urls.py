@@ -15,5 +15,6 @@ urlpatterns = [
     path('report/', views.AnalyticsReportView.as_view(), name='report'),
     path('report/download/', views.AnalyticsReportDownloadView.as_view(), name='report_download'),
     path('report/share/', views.AnalyticsReportShareView.as_view(), name='report_share'),
+    path('<str:kind>/<uuid:obj_id>/share/', views.ActivityShareView.as_view(), name='activity_share'),
     path('events/', views.IngestEventsView.as_view(), name='events'),
 ]
