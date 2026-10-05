@@ -20,12 +20,30 @@ class _GymRepository implements GymRepository {
   final ParseErrorLogger? errorLogger;
 
   @override
-  Future<dynamic> getGyms({String? query, String? category, bool? my}) async {
+  Future<dynamic> getGyms({
+    String? query,
+    String? category,
+    bool? my,
+    String? city,
+    bool? verified,
+    String? delivery,
+    double? lat,
+    double? lng,
+    double? radiusKm,
+    String? ordering,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'q': query,
       r'category': category,
       r'my': my,
+      r'city': city,
+      r'verified': verified,
+      r'delivery': delivery,
+      r'lat': lat,
+      r'lng': lng,
+      r'radius_km': radiusKm,
+      r'ordering': ordering,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

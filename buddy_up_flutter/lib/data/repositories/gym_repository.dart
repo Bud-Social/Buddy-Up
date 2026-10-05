@@ -13,6 +13,13 @@ abstract class GymRepository {
     @Query('q') String? query,
     @Query('category') String? category,
     @Query('my') bool? my,
+    @Query('city') String? city,
+    @Query('verified') bool? verified,
+    @Query('delivery') String? delivery,
+    @Query('lat') double? lat,
+    @Query('lng') double? lng,
+    @Query('radius_km') double? radiusKm,
+    @Query('ordering') String? ordering,
   });
 
   @GET('/gyms/{slug}/')

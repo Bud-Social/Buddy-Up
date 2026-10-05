@@ -14,6 +14,7 @@ import 'features/auth/totp_challenge_screen.dart';
 import 'features/auth/onboarding_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/profile/buddy_list_screen.dart';
+import 'features/buddies/buddy_nearby_screen.dart';
 import 'features/profile/user_profile_screen.dart';
 import 'features/discover/discover_people_screen.dart';
 import 'features/feed/screens/feed_screen.dart';
@@ -594,6 +595,10 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
             builder: (_, _) => const BuddyListScreen(username: 'me'),
           ),
           GoRoute(
+            path: '/buddies/nearby',
+            builder: (_, _) => const BuddyNearbyScreen(),
+          ),
+          GoRoute(
             path: '/:username',
             builder: (_, state) {
               final username = state.pathParameters['username'] ?? '';
@@ -638,6 +643,12 @@ class _AppShellState extends State<_AppShell> {
       Icons.explore_outlined,
       Icons.explore,
       'Discover',
+    ),
+    _NavDestination(
+      '/buddies/nearby',
+      Icons.person_search_outlined,
+      Icons.person_search,
+      'Find a Buddy',
     ),
     _NavDestination('/lives', Icons.videocam_outlined, Icons.videocam, 'Lives'),
     _NavDestination(

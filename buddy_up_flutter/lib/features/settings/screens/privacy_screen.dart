@@ -21,6 +21,8 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
   bool _isSavingPrivacy = false;
   bool _privacySaved = false;
   bool _loadedFromProfile = false;
+  String _buddyVisibility = 'public';
+  bool _incognito = false;
 
   @override
   void initState() {
@@ -31,6 +33,21 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
       _privacyLevel = profile.privacyLevel;
       _showActiveStatus = profile.showActiveStatus;
     }
+    Future.microtask(_loadSearchVisibility);
+  }
+
+  Future<void> _loadSearchVisibility() async {
+    try {
+      final repo = ref.read(settingsProfileRepoProvider);
+      final raw = await repo.getSearchProfile();
+      final data = raw['data'];
+      if (data is Map<String, dynamic> && mounted) {
+        setState(() {
+          _buddyVisibility = (data['visibility'] as String?) ?? 'public';
+          _incognito = data['incognito'] as bool? ?? false;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _savePrivacy() async {
@@ -47,6 +64,10 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
         // server value with a default.
         isAnonymousPosting: _anonymousPosting,
       ));
+      await repo.updateSearchProfile({
+        'visibility': _buddyVisibility,
+        'incognito': _incognito,
+      });
       await ref.read(authProvider.notifier).updateProfile(updated);
       if (mounted) setState(() => _privacySaved = true);
     } catch (e) {
@@ -109,6 +130,30 @@ class _PrivacyScreenState extends ConsumerState<PrivacyScreen> {
                     ),
                     value: _anonymousPosting ?? false,
                     onChanged: _loadedFromProfile ? (v) => setState(() => _anonymousPosting = v) : null,
+                  ),
+                  const Divider(height: 24),
+                  const Text('Buddy Search',
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'public', label: Text('Public')),
+                      ButtonSegment(value: 'buddies', label: Text('Buddies')),
+                      ButtonSegment(value: 'hidden', label: Text('Hidden')),
+                    ],
+                    selected: {_buddyVisibility},
+                    onSelectionChanged: (sel) =>
+                        setState(() => _buddyVisibility = sel.first),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Incognito Browsing', style: TextStyle(fontSize: 14)),
+                    subtitle: const Text(
+                      'Browse unseen — hides your online status and last seen',
+                      style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                    ),
+                    value: _incognito,
+                    onChanged: (v) => setState(() => _incognito = v),
                   ),
                   const SizedBox(height: 4),
                   BuddyButton(

@@ -24,6 +24,12 @@ const List<AppNavDestination> appNavDestinations = [
     'Discover',
   ),
   AppNavDestination(
+    '/buddies/nearby',
+    Icons.person_search_outlined,
+    Icons.person_search,
+    'Find a Buddy',
+  ),
+  AppNavDestination(
     '/lives',
     Icons.videocam_outlined,
     Icons.videocam,

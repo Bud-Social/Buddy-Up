@@ -180,6 +180,8 @@ abstract class MarketplaceProduct with _$MarketplaceProduct {
     @JsonKey(name: 'click_count') @Default(0) int clickCount,
     @JsonKey(name: 'is_active') @Default(true) bool isActive,
     @JsonKey(name: 'shop_data') Shop? shopData,
+    @JsonKey(name: 'delivery_modes') @Default(<String>[]) List<String> deliveryModes,
+    @JsonKey(name: 'fulfillment_details') @Default(<String, dynamic>{}) Map<String, dynamic> fulfillmentDetails,
     @JsonKey(name: 'created_at') required String createdAt,
   }) = _MarketplaceProduct;
 
@@ -301,6 +303,18 @@ abstract class CartItem with _$CartItem {
 }
 
 @freezed
+abstract class SuggestedFulfillment with _$SuggestedFulfillment {
+  const factory SuggestedFulfillment({
+    @Default('digital') String type,
+    @Default(<String>[]) List<String> available,
+    @Default(<String, dynamic>{}) Map<String, dynamic> detail,
+  }) = _SuggestedFulfillment;
+
+  factory SuggestedFulfillment.fromJson(Map<String, dynamic> json) =>
+      _$SuggestedFulfillmentFromJson(json);
+}
+
+@freezed
 abstract class Cart with _$Cart {
   const factory Cart({
     required String id,
@@ -312,6 +326,7 @@ abstract class Cart with _$Cart {
     @JsonKey(name: 'base_currency') @Default('USD') String baseCurrency,
     @JsonKey(name: 'local_currency') @Default('KES') String localCurrency,
     @JsonKey(name: 'conversion_rate') @Default(129.5) double conversionRate,
+    @JsonKey(name: 'suggested_fulfillment') SuggestedFulfillment? suggestedFulfillment,
     @JsonKey(name: 'created_at') required String createdAt,
   }) = _Cart;
 

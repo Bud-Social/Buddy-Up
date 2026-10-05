@@ -17,6 +17,7 @@ import '../../shared/widgets/error_view.dart';
 import '../../shared/widgets/page_loader.dart';
 import '../../shared/widgets/toast.dart';
 import '../feed/widgets/post_card.dart';
+import 'widgets/buddy_search_card.dart';
 
 // ---------------------------------------------------------------------------
 // Animated Action Button with Spring & Morph Animation
@@ -452,6 +453,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           SliverToBoxAdapter(child: _buildActions(p)),
           if (p.bio.isNotEmpty) SliverToBoxAdapter(child: _buildBio(p)),
           SliverToBoxAdapter(child: _buildDetails(p)),
+          SliverToBoxAdapter(child: BuddySearchCard(username: p.username)),
           SliverPersistentHeader(
             pinned: true,
             delegate: _StickyTabBar(

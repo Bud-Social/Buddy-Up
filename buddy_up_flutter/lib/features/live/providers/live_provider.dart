@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/repositories/live_repository.dart';
 import '../../../data/models/live.dart';
 import '../../../core/api/api_client.dart';
+import '../../../core/analytics/analytics_service.dart';
 
 final liveRepositoryProvider = Provider<LiveRepository>((ref) {
   final dio = ref.watch(apiClientProvider3).dio;
@@ -148,6 +149,7 @@ final randomDropStatusProvider = FutureProvider<RandomDropStatus?>((ref) async {
 final liveRoomProvider = FutureProvider.family<LiveRoomData, String>((ref, liveId) async {
   final repo = ref.watch(liveRepositoryProvider);
   final raw = await repo.joinLive(liveId);
+  AnalyticsService.instance.track('live.joined', surface: 'live_room', objectType: 'live', objectId: liveId);
   return LiveRoomData.fromJson(raw['data'] as Map<String, dynamic>);
 });
 

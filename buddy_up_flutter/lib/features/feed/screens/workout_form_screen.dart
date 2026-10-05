@@ -24,16 +24,25 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
   Future<void> _pickImage() async {
     final picked = await _picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
-      setState(() { _image = picked; _result = null; _error = null; });
+      setState(() { _image = picked; _isVideo = false; _result = null; _error = null; });
     }
   }
+
+  Future<void> _pickVideo() async {
+    final picked = await _picker.pickVideo(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() { _image = picked; _isVideo = true; _result = null; _error = null; });
+    }
+  }
+
+  bool _isVideo = false;
 
   Future<void> _analyze() async {
     if (_image == null) return;
     setState(() { _isAnalyzing = true; _error = null; });
     try {
       final repo = ref.read(feedRepositoryProvider);
-      final data = <String, dynamic>{'image': _image!.path};
+      final data = <String, dynamic>{_isVideo ? 'video' : 'image': _image!.path};
       if (_exercise != null) data['exercise'] = _exercise;
       final raw = await repo.analyzeWorkoutForm(data);
       setState(() { _result = raw['data'] as Map<String, dynamic>?; _isAnalyzing = false; });
@@ -54,22 +63,42 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     if (_image != null)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          _image! as dynamic,
-                          height: 250,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Container(
-                            height: 250,
+                      if (_isVideo)
+                        Container(
+                          height: 120,
+                          decoration: BoxDecoration(
                             color: BuddyColors.surface,
-                            child: const Center(
-                              child: Icon(Icons.broken_image, color: BuddyColors.textSecondary, size: 48),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.videocam, color: BuddyColors.green, size: 40),
+                                SizedBox(height: 8),
+                                Text('Workout clip ready — analyze to count reps',
+                                    style: TextStyle(color: BuddyColors.textSecondary)),
+                              ],
                             ),
                           ),
-                        ),
-                      )
+                        )
+                      else
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(
+                            _image! as dynamic,
+                            height: 250,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => Container(
+                              height: 250,
+                              color: BuddyColors.surface,
+                              child: const Center(
+                                child: Icon(Icons.broken_image, color: BuddyColors.textSecondary, size: 48),
+                              ),
+                            ),
+                          ),
+                        )
                     else
                       GestureDetector(
                         onTap: _pickImage,
@@ -86,11 +115,19 @@ class _WorkoutFormScreenState extends ConsumerState<WorkoutFormScreen> {
                               children: [
                                 Icon(Icons.add_photo_alternate, color: BuddyColors.textSecondary, size: 48),
                                 SizedBox(height: 8),
-                                Text('Tap to select image', style: TextStyle(color: BuddyColors.textSecondary)),
+                                Text('Tap for image, or pick a workout clip below',
+                                    style: TextStyle(color: BuddyColors.textSecondary)),
                               ],
                             ),
                           ),
                         ),
+                      ),
+                    const SizedBox(height: 8),
+                    if (_image == null)
+                      OutlinedButton.icon(
+                        onPressed: _pickVideo,
+                        icon: const Icon(Icons.videocam, size: 16),
+                        label: const Text('Pick workout video (counts reps)'),
                       ),
                     const SizedBox(height: 16),
                     TextField(

@@ -288,33 +288,47 @@ class _EventsTabState extends ConsumerState<_EventsTab> {
 
     return Column(
       children: [
-        // Scope selector
+        // Scope selector + My Tickets / Host at the far right
         SizedBox(
           height: 40,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            children: scopes.map((entry) {
-              final key = entry.$1;
-              final label = entry.$2;
-              final selected = scope == key;
-              return Padding(
-                padding: const EdgeInsets.only(right: 8, top: 8),
-                child: ChoiceChip(
-                  label: Text(label),
-                  selected: selected,
-                  showCheckmark: false,
-                  labelStyle: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: selected ? BuddyColors.black : cs.onSurface,
-                  ),
-                  backgroundColor: cs.surfaceContainerHighest,
-                  selectedColor: BuddyColors.green,
-                  onSelected: (_) => ref.read(eventsProvider.notifier).setScope(key),
+          child: Row(
+            children: [
+              Expanded(
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  children: scopes.map((entry) {
+                    final key = entry.$1;
+                    final label = entry.$2;
+                    final selected = scope == key;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8, top: 8),
+                      child: ChoiceChip(
+                        label: Text(label),
+                        selected: selected,
+                        showCheckmark: false,
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: selected ? BuddyColors.black : cs.onSurface,
+                        ),
+                        backgroundColor: cs.surfaceContainerHighest,
+                        selectedColor: BuddyColors.green,
+                        onSelected: (_) => ref.read(eventsProvider.notifier).setScope(key),
+                      ),
+                    );
+                  }).toList(),
                 ),
-              );
-            }).toList(),
+              ),
+              TextButton(
+                onPressed: () => context.push('/marketplace/tickets'),
+                child: const Text('My Tickets', style: TextStyle(fontSize: 12)),
+              ),
+              TextButton(
+                onPressed: () => context.push('/marketplace/events/create'),
+                child: const Text('Host', style: TextStyle(fontSize: 12)),
+              ),
+            ],
           ),
         ),
 

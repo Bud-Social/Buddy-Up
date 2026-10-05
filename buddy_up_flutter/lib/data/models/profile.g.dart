@@ -37,6 +37,7 @@ _Profile _$ProfileFromJson(Map<String, dynamic> json) => _Profile(
   buddyStatus: json['buddy_status'] as String?,
   isFollowing: json['is_following'] as bool? ?? false,
   showActiveStatus: json['show_active_status'] as bool? ?? true,
+  preferences: json['preferences'] as Map<String, dynamic>?,
   createdAt: json['created_at'] as String?,
   updatedAt: json['updated_at'] as String?,
 );
@@ -68,6 +69,7 @@ Map<String, dynamic> _$ProfileToJson(_Profile instance) => <String, dynamic>{
   'buddy_status': instance.buddyStatus,
   'is_following': instance.isFollowing,
   'show_active_status': instance.showActiveStatus,
+  'preferences': instance.preferences,
   'created_at': instance.createdAt,
   'updated_at': instance.updatedAt,
 };

@@ -11,6 +11,7 @@ import '../../data/models/post.dart';
 import '../../data/models/profile.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../shared/navigation/app_nav.dart';
+import 'widgets/buddy_search_card.dart';
 import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/button.dart';
 import '../../shared/widgets/error_view.dart';
@@ -122,6 +123,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           SliverToBoxAdapter(child: _buildStats(p)),
           if (p.bio.isNotEmpty) SliverToBoxAdapter(child: _buildBio(p)),
           SliverToBoxAdapter(child: _buildDetails(p)),
+          const SliverToBoxAdapter(child: BuddySearchCard()),
           SliverPersistentHeader(
             pinned: true,
             delegate: _ProfileStickyTabBar(

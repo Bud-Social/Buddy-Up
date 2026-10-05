@@ -281,6 +281,14 @@ _MarketplaceProduct _$MarketplaceProductFromJson(Map<String, dynamic> json) =>
       shopData: json['shop_data'] == null
           ? null
           : Shop.fromJson(json['shop_data'] as Map<String, dynamic>),
+      deliveryModes:
+          (json['delivery_modes'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      fulfillmentDetails:
+          json['fulfillment_details'] as Map<String, dynamic>? ??
+          const <String, dynamic>{},
       createdAt: json['created_at'] as String,
     );
 
@@ -300,6 +308,8 @@ Map<String, dynamic> _$MarketplaceProductToJson(_MarketplaceProduct instance) =>
       'click_count': instance.clickCount,
       'is_active': instance.isActive,
       'shop_data': instance.shopData,
+      'delivery_modes': instance.deliveryModes,
+      'fulfillment_details': instance.fulfillmentDetails,
       'created_at': instance.createdAt,
     };
 
@@ -511,6 +521,24 @@ Map<String, dynamic> _$CartItemToJson(_CartItem instance) => <String, dynamic>{
   'item_total_usd': instance.itemTotalUsd,
 };
 
+_SuggestedFulfillment _$SuggestedFulfillmentFromJson(
+  Map<String, dynamic> json,
+) => _SuggestedFulfillment(
+  type: json['type'] as String? ?? 'digital',
+  available:
+      (json['available'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const <String>[],
+  detail: json['detail'] as Map<String, dynamic>? ?? const <String, dynamic>{},
+);
+
+Map<String, dynamic> _$SuggestedFulfillmentToJson(
+  _SuggestedFulfillment instance,
+) => <String, dynamic>{
+  'type': instance.type,
+  'available': instance.available,
+  'detail': instance.detail,
+};
+
 _Cart _$CartFromJson(Map<String, dynamic> json) => _Cart(
   id: json['id'] as String,
   items: (json['items'] as List<dynamic>)
@@ -529,6 +557,11 @@ _Cart _$CartFromJson(Map<String, dynamic> json) => _Cart(
   baseCurrency: json['base_currency'] as String? ?? 'USD',
   localCurrency: json['local_currency'] as String? ?? 'KES',
   conversionRate: (json['conversion_rate'] as num?)?.toDouble() ?? 129.5,
+  suggestedFulfillment: json['suggested_fulfillment'] == null
+      ? null
+      : SuggestedFulfillment.fromJson(
+          json['suggested_fulfillment'] as Map<String, dynamic>,
+        ),
   createdAt: json['created_at'] as String,
 );
 
@@ -542,6 +575,7 @@ Map<String, dynamic> _$CartToJson(_Cart instance) => <String, dynamic>{
   'base_currency': instance.baseCurrency,
   'local_currency': instance.localCurrency,
   'conversion_rate': instance.conversionRate,
+  'suggested_fulfillment': instance.suggestedFulfillment,
   'created_at': instance.createdAt,
 };
 

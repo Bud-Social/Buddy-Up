@@ -33,7 +33,7 @@ abstract class ProfileRepository {
   Future<OnboardingData> getOnboarding();
 
   @POST('/profiles/onboarding/')
-  Future<Map<String, dynamic>> saveOnboarding(@Body() OnboardingPayload payload);
+  Future<dynamic> saveOnboarding(@Body() OnboardingPayload payload);
 
   @GET('/profiles/{username}/')
   Future<Profile> getProfile(@Path('username') String username);
@@ -97,4 +97,23 @@ abstract class ProfileRepository {
 
   @GET('/profiles/discover/trending/')
   Future<dynamic> getDiscoverTrending();
+
+  @GET('/profiles/me/search-profile/')
+  Future<dynamic> getSearchProfile();
+
+  @GET('/profiles/{username}/search-profile/')
+  Future<dynamic> getUserSearchProfile(@Path('username') String username);
+
+  @PUT('/profiles/me/search-profile/')
+  Future<dynamic> updateSearchProfile(@Body() Map<String, dynamic> body);
+
+  @GET('/profiles/buddies/nearby/')
+  Future<dynamic> getNearbyBuddies({
+    @Query('intent') String? intent,
+    @Query('mode') String? mode,
+    @Query('lat') double? lat,
+    @Query('lng') double? lng,
+    @Query('radius_km') double? radiusKm,
+    @Query('now') bool? now,
+  });
 }

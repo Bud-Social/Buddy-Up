@@ -215,8 +215,9 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
     final hashtags = (t?['hashtags'] as List? ?? []).cast<Map<String, dynamic>>();
     final posts = (t?['posts'] as List? ?? []).cast<Map<String, dynamic>>();
     final offers = (t?['offers'] as List? ?? []).cast<Map<String, dynamic>>();
+    final communities = (t?['communities'] as List? ?? []).cast<Map<String, dynamic>>();
 
-    if (hashtags.isEmpty && posts.isEmpty && offers.isEmpty && _recommendations.isEmpty) {
+    if (hashtags.isEmpty && posts.isEmpty && offers.isEmpty && communities.isEmpty && _recommendations.isEmpty) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -274,6 +275,30 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
           const _SectionHeader(icon: Icons.trending_up, title: 'Trending Posts'),
           const SizedBox(height: 4),
           ...posts.take(3).map((p) => _trendingPostTile(p)),
+          const SizedBox(height: 20),
+        ],
+        if (communities.isNotEmpty) ...[
+          const _SectionHeader(icon: Icons.groups, title: 'Active Communities'),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: communities.take(8).map((c) {
+              final name = c['group_name'] as String? ?? '';
+              return GestureDetector(
+                onTap: () => context.push('/communities/${c['id']}'),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: BuddyColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(name,
+                      style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13)),
+                ),
+              );
+            }).toList(),
+          ),
           const SizedBox(height: 20),
         ],
         if (offers.isNotEmpty) ...[

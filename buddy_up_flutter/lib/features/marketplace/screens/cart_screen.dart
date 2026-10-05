@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
+import '../../../features/wallet/providers/wallet_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../shared/widgets/button.dart';
@@ -22,11 +23,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   final _deliveryCountryController = TextEditingController();
   String _fulfillmentType = 'digital';
   bool _isCheckingOut = false;
+  bool _fulfillmentTouched = false;
 
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(cartProvider.notifier).loadCart());
+    Future.microtask(() {
+      ref.read(cartProvider.notifier).loadCart();
+      ref.read(balanceProvider.notifier).loadBalance();
+    });
   }
 
   @override
@@ -209,6 +214,17 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Future<void> _showConfirmSheet(BuildContext context, Cart cart) async {
+    // Auto-detect fulfillment from cart composition (Seller options included).
+    final sug = cart.suggestedFulfillment;
+    if (!_fulfillmentTouched && sug != null && sug.type.isNotEmpty) {
+      setState(() {
+        _fulfillmentType = sug.type;
+        final pickup = sug.detail['pickup_location'] as String?;
+        if (_fulfillmentType == 'pickup' && pickup != null && pickup.isNotEmpty && _pickupController.text.isEmpty) {
+          _pickupController.text = pickup;
+        }
+      });
+    }
     final confirmed = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: BuddyColors.surface,
@@ -322,6 +338,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
             ],
             const SizedBox(height: 16),
+            _balanceSection(cart),
+            const SizedBox(height: 12),
             _fulfillmentSection(sheetCtx),
             const SizedBox(height: 12),
             Row(
@@ -376,6 +394,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       final data = res['data'] as Map<String, dynamic>? ?? {};
       Navigator.pop(context, true);
       ref.read(cartProvider.notifier).loadCart();
+      ref.read(balanceProvider.notifier).loadBalance();
       _showReceipt(data);
     } catch (e) {
       if (mounted) {
@@ -387,6 +406,53 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     } finally {
       if (mounted) setState(() => _isCheckingOut = false);
     }
+  }
+
+  Widget _balanceSection(Cart cart) {
+    final bal = ref.watch(balanceProvider).maybeWhen(data: (b) => b, orElse: () => null);
+    final regular = <String, int>{for (final b in (bal?.regularBalance ?? [])) b.artifactType: b.quantity};
+    final totals = cart.totalArtifacts;
+    final payable = totals.entries.where((e) => e.value > 0).toList();
+    if (payable.isEmpty) return const SizedBox.shrink();
+    String? shortfall;
+    for (final e in payable) {
+      if ((regular[e.key] ?? 0) < e.value) {
+        shortfall = e.key;
+        break;
+      }
+    }
+    final sug = cart.suggestedFulfillment;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: BuddyColors.surface,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final e in payable)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Balance: ${regular[e.key] ?? 0} ${e.key}',
+                      style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                  Text('After purchase: ${((regular[e.key] ?? 0) - e.value).clamp(0, 1 << 30)} ${e.key}',
+                      style: const TextStyle(fontSize: 12, color: BuddyColors.textSecondary)),
+                ],
+              ),
+            ),
+          if (shortfall != null)
+            Text('Insufficient $shortfall — top up in Wallet.',
+                style: const TextStyle(fontSize: 12, color: BuddyColors.red, fontWeight: FontWeight.w600)),
+          if (sug != null)
+            Text('Auto-detected: ${sug.type} delivery.',
+                style: const TextStyle(fontSize: 12, color: BuddyColors.green)),
+        ],
+      ),
+    );
   }
 
   Widget _fulfillmentSection(BuildContext sheetCtx) {
@@ -407,7 +473,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 3),
                 child: InkWell(
-                  onTap: () => setState(() => _fulfillmentType = t.$1),
+                  onTap: () => setState(() {
+                    _fulfillmentType = t.$1;
+                    _fulfillmentTouched = true;
+                  }),
                   borderRadius: BorderRadius.circular(10),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -619,6 +688,22 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                           color: BuddyColors.green)),
                 ],
               ),
+              if ((receipt['new_balance'] as Map?)?.isNotEmpty == true) ...[
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Remaining balance',
+                        style: TextStyle(
+                            fontSize: 12, color: BuddyColors.textSecondary)),
+                    Text(
+                      artifacts((receipt['new_balance'] as Map).map(
+                          (k, v) => MapEntry(k.toString(), v))),
+                      style: const TextStyle(
+                          fontSize: 12, color: BuddyColors.textSecondary)),
+                  ],
+                ),
+              ],
               if (spentUsd > 0) ...[
                 const SizedBox(height: 4),
                 Row(

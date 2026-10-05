@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/repositories/gym_repository.dart';
 import '../../../data/models/gym.dart';
 import '../../../core/api/api_client.dart';
+import '../../../shared/models/geo_notice.dart';
 
 final gymRepositoryProvider = Provider<GymRepository>((ref) {
   final dio = ref.watch(apiClientProvider2).dio;
@@ -31,6 +32,11 @@ class GymListState {
   final String? error;
   final String? query;
   final String? categoryFilter;
+  final String formatFilter;
+  final double? lat;
+  final double? lng;
+  final double? radiusKm;
+  final GeoNotice? geo;
 
   const GymListState({
     this.gyms = const [],
@@ -38,21 +44,41 @@ class GymListState {
     this.error,
     this.query,
     this.categoryFilter,
+    this.formatFilter = 'all',
+    this.lat,
+    this.lng,
+    this.radiusKm,
+    this.geo,
   });
 
   GymListState copyWith({
     List<Gym>? gyms,
     bool? isLoading,
     String? error,
+    bool clearError = false,
     String? query,
+    bool clearQuery = false,
     String? categoryFilter,
+    bool clearCategory = false,
+    String? formatFilter,
+    double? lat,
+    double? lng,
+    double? radiusKm,
+    GeoNotice? geo,
+    bool clearGeo = false,
+    bool clearCoords = false,
   }) {
     return GymListState(
       gyms: gyms ?? this.gyms,
       isLoading: isLoading ?? this.isLoading,
-      error: error ?? this.error,
-      query: query ?? this.query,
-      categoryFilter: categoryFilter ?? this.categoryFilter,
+      error: clearError ? null : (error ?? this.error),
+      query: clearQuery ? null : (query ?? this.query),
+      categoryFilter: clearCategory ? null : (categoryFilter ?? this.categoryFilter),
+      formatFilter: formatFilter ?? this.formatFilter,
+      lat: clearCoords ? null : (lat ?? this.lat),
+      lng: clearCoords ? null : (lng ?? this.lng),
+      radiusKm: radiusKm ?? this.radiusKm,
+      geo: clearGeo ? null : (geo ?? this.geo),
     );
   }
 }
@@ -63,14 +89,68 @@ class GymListNotifier extends Notifier<GymListState> {
 
   GymRepository get _repository => ref.read(gymRepositoryProvider);
 
-  Future<void> loadGyms({String? query, String? category}) async {
-    state = state.copyWith(isLoading: true, error: null, query: query, categoryFilter: category);
+  Future<void> loadGyms({
+    String? query,
+    bool clearQuery = false,
+    String? category,
+    bool clearCategory = false,
+    String? format,
+    double? lat,
+    double? lng,
+    double? radiusKm,
+    String? ordering,
+  }) async {
+    final fmt = format ?? state.formatFilter;
+    final useLat = lat ?? state.lat;
+    final useLng = lng ?? state.lng;
+    final useGeo = useLat != null && useLng != null && fmt != 'virtual';
+    final useRadius = radiusKm ?? state.radiusKm;
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      query: query,
+      clearQuery: clearQuery,
+      categoryFilter: category,
+      clearCategory: clearCategory,
+      formatFilter: fmt,
+      lat: useLat,
+      lng: useLng,
+      radiusKm: useRadius,
+      clearGeo: !useGeo,
+    );
     try {
-      final raw = await _repository.getGyms(query: query, category: category);
-      state = state.copyWith(gyms: _parseGymList(raw['data']), isLoading: false);
+      final raw = await _repository.getGyms(
+        query: clearQuery ? null : (query ?? state.query),
+        category: clearCategory ? null : (category ?? state.categoryFilter),
+        delivery: fmt == 'all' ? null : fmt,
+        lat: useGeo ? useLat : null,
+        lng: useGeo ? useLng : null,
+        radiusKm: useGeo ? useRadius : null,
+        ordering: ordering ?? (useGeo ? 'nearest' : null),
+      );
+      final gyms = _parseGymList(raw['data']);
+      if (useGeo) {
+        gyms.sort((a, b) => (a.distanceKm ?? double.infinity).compareTo(b.distanceKm ?? double.infinity));
+      }
+      GeoNotice? geo;
+      final geoJson = raw['geo'];
+      if (geoJson is Map<String, dynamic>) geo = GeoNotice.fromJson(geoJson);
+      state = state.copyWith(gyms: gyms, isLoading: false, clearError: true, geo: geo, clearGeo: geo == null);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
+  }
+
+  void setCoords(double? lat, double? lng) {
+    if (lat == null || lng == null) {
+      state = state.copyWith(clearCoords: true);
+    } else {
+      state = state.copyWith(lat: lat, lng: lng);
+    }
+  }
+
+  void setRadius(double? radiusKm) {
+    state = state.copyWith(radiusKm: radiusKm);
   }
 }
 

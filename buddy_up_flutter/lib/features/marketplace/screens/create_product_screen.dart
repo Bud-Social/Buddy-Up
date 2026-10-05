@@ -31,6 +31,10 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
   bool _loading = false;
   bool _saving = false;
   Map<String, dynamic>? _existing;
+  List<String> _deliveryModes = ['digital'];
+  final _pickupController = TextEditingController();
+  final _coverageController = TextEditingController();
+  final _digitalInfoController = TextEditingController();
 
   bool get _isEdit => widget.editProductId != null && widget.editProductId!.isNotEmpty;
 
@@ -48,6 +52,9 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
     _imageUrlController.dispose();
     _affiliateUrlController.dispose();
     _priceController.dispose();
+    _pickupController.dispose();
+    _coverageController.dispose();
+    _digitalInfoController.dispose();
     super.dispose();
   }
 
@@ -67,6 +74,14 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
           _affiliateUrlController.text = (data['affiliate_url'] ?? '') as String;
           _priceController.text = (data['price_display'] ?? '') as String;
           _category = (data['category'] ?? 'equipment') as String;
+          final modes = (data['delivery_modes'] as List?)?.map((e) => e.toString()).toList();
+          if (modes != null && modes.isNotEmpty) _deliveryModes = modes;
+          final det = data['fulfillment_details'];
+          if (det is Map) {
+            _pickupController.text = (det['pickup_location'] ?? '') as String;
+            _coverageController.text = (det['delivery_coverage'] ?? '') as String;
+            _digitalInfoController.text = (det['digital_info'] ?? '') as String;
+          }
         });
       }
     } catch (_) {
@@ -93,6 +108,15 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
         'image_url': _imageUrlController.text.trim(),
       if (_priceController.text.trim().isNotEmpty)
         'price_display': _priceController.text.trim(),
+      'delivery_modes': _deliveryModes.isNotEmpty ? _deliveryModes : ['digital'],
+      'fulfillment_details': {
+        if (_pickupController.text.trim().isNotEmpty)
+          'pickup_location': _pickupController.text.trim(),
+        if (_coverageController.text.trim().isNotEmpty)
+          'delivery_coverage': _coverageController.text.trim(),
+        if (_digitalInfoController.text.trim().isNotEmpty)
+          'digital_info': _digitalInfoController.text.trim(),
+      },
     };
     try {
       final repo = ref.read(marketplaceRepositoryProvider);
@@ -219,6 +243,62 @@ class _CreateProductScreenState extends ConsumerState<CreateProductScreen> {
                         hintText: 'KSh 2,500',
                       ),
                     ),
+                    const SizedBox(height: 14),
+                    const Text('How is it delivered?',
+                        style: TextStyle(color: BuddyColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        for (final m in ['digital', 'pickup', 'delivery'])
+                          ChoiceChip(
+                            label: Text(m),
+                            selected: _deliveryModes.contains(m),
+                            onSelected: (_) {
+                              setState(() {
+                                if (_deliveryModes.contains(m)) {
+                                  _deliveryModes = _deliveryModes.where((x) => x != m).toList();
+                                } else {
+                                  _deliveryModes = [..._deliveryModes, m];
+                                }
+                              });
+                            },
+                          ),
+                      ],
+                    ),
+                    if (_deliveryModes.contains('pickup')) ...[
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _pickupController,
+                        style: const TextStyle(color: BuddyColors.textPrimary),
+                        decoration: const InputDecoration(
+                          labelText: 'Pickup location (in-house: gym or store)',
+                          hintText: 'Iron Works Gym front desk, Nairobi',
+                        ),
+                      ),
+                    ],
+                    if (_deliveryModes.contains('delivery')) ...[
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _coverageController,
+                        style: const TextStyle(color: BuddyColors.textPrimary),
+                        decoration: const InputDecoration(
+                          labelText: 'Delivery coverage',
+                          hintText: 'Nairobi + Kiambu; countrywide via courier',
+                        ),
+                      ),
+                    ],
+                    if (_deliveryModes.contains('digital')) ...[
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: _digitalInfoController,
+                        style: const TextStyle(color: BuddyColors.textPrimary),
+                        decoration: const InputDecoration(
+                          labelText: 'Digital delivery note (optional)',
+                          hintText: 'Download link sent after purchase',
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 24),
                     BuddyButton(
                       label: _isEdit ? 'Save changes' : 'Create product',

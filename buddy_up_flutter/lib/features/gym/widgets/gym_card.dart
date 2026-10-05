@@ -73,11 +73,47 @@ class GymCard extends StatelessWidget {
                       ],
                     ],
                   ),
-                  if (gym.locationCity.isNotEmpty) ...[
+                  if (gym.locationCity.isNotEmpty || gym.distanceKm != null) ...[
                     const SizedBox(height: 2),
-                    Text(
-                      gym.locationCity,
-                      style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.place, size: 12, color: BuddyColors.textSecondary),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            gym.distanceKm != null
+                                ? '${gym.distanceKm!.toStringAsFixed(gym.distanceKm! < 10 ? 1 : 0)} km away${gym.locationCity.isNotEmpty ? ' · ${gym.locationCity}' : ''}'
+                                : gym.locationCity,
+                            style: TextStyle(
+                              color: gym.distanceKm != null ? BuddyColors.green : BuddyColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: gym.distanceKm != null ? FontWeight.w600 : FontWeight.normal,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (gym.deliveryModes.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      children: [
+                        for (final mode in gym.deliveryModes)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: BuddyColors.green.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              mode.replaceAll('_', ' '),
+                              style: const TextStyle(color: BuddyColors.green, fontSize: 10),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ],

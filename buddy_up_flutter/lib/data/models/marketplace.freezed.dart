@@ -2786,7 +2786,7 @@ $BuyerDataCopyWith<$Res> get buyerData {
 /// @nodoc
 mixin _$MarketplaceProduct {
 
- String get id; String get name; String get brand; String get description; String get category;@JsonKey(name: 'image_url') String get imageUrl;@JsonKey(name: 'affiliate_url') String get affiliateUrl;@JsonKey(name: 'price_display') String get priceDisplay;@JsonKey(name: 'content_rating') String get contentRating;@JsonKey(name: 'recommended_by') String? get recommendedBy;@JsonKey(name: 'recommender_data') Map<String, dynamic>? get recommenderData;@JsonKey(name: 'click_count') int get clickCount;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'shop_data') Shop? get shopData;@JsonKey(name: 'created_at') String get createdAt;
+ String get id; String get name; String get brand; String get description; String get category;@JsonKey(name: 'image_url') String get imageUrl;@JsonKey(name: 'affiliate_url') String get affiliateUrl;@JsonKey(name: 'price_display') String get priceDisplay;@JsonKey(name: 'content_rating') String get contentRating;@JsonKey(name: 'recommended_by') String? get recommendedBy;@JsonKey(name: 'recommender_data') Map<String, dynamic>? get recommenderData;@JsonKey(name: 'click_count') int get clickCount;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'shop_data') Shop? get shopData;@JsonKey(name: 'delivery_modes') List<String> get deliveryModes;@JsonKey(name: 'fulfillment_details') Map<String, dynamic> get fulfillmentDetails;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of MarketplaceProduct
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2799,16 +2799,16 @@ $MarketplaceProductCopyWith<MarketplaceProduct> get copyWith => _$MarketplacePro
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other.recommenderData, recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other.recommenderData, recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&const DeepCollectionEquality().equals(other.deliveryModes, deliveryModes)&&const DeepCollectionEquality().equals(other.fulfillmentDetails, fulfillmentDetails)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,contentRating,recommendedBy,const DeepCollectionEquality().hash(recommenderData),clickCount,isActive,shopData,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,contentRating,recommendedBy,const DeepCollectionEquality().hash(recommenderData),clickCount,isActive,shopData,const DeepCollectionEquality().hash(deliveryModes),const DeepCollectionEquality().hash(fulfillmentDetails),createdAt);
 
 @override
 String toString() {
-  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, contentRating: $contentRating, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, isActive: $isActive, shopData: $shopData, createdAt: $createdAt)';
+  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, contentRating: $contentRating, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, isActive: $isActive, shopData: $shopData, deliveryModes: $deliveryModes, fulfillmentDetails: $fulfillmentDetails, createdAt: $createdAt)';
 }
 
 
@@ -2819,7 +2819,7 @@ abstract mixin class $MarketplaceProductCopyWith<$Res>  {
   factory $MarketplaceProductCopyWith(MarketplaceProduct value, $Res Function(MarketplaceProduct) _then) = _$MarketplaceProductCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'created_at') String createdAt
+ String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'fulfillment_details') Map<String, dynamic> fulfillmentDetails,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -2836,7 +2836,7 @@ class _$MarketplaceProductCopyWithImpl<$Res>
 
 /// Create a copy of MarketplaceProduct
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? contentRating = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? isActive = null,Object? shopData = freezed,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? contentRating = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? isActive = null,Object? shopData = freezed,Object? deliveryModes = null,Object? fulfillmentDetails = null,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -2852,7 +2852,9 @@ as String?,recommenderData: freezed == recommenderData ? _self.recommenderData :
 as Map<String, dynamic>?,clickCount: null == clickCount ? _self.clickCount : clickCount // ignore: cast_nullable_to_non_nullable
 as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
-as Shop?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as Shop?,deliveryModes: null == deliveryModes ? _self.deliveryModes : deliveryModes // ignore: cast_nullable_to_non_nullable
+as List<String>,fulfillmentDetails: null == fulfillmentDetails ? _self.fulfillmentDetails : fulfillmentDetails // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -2950,10 +2952,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'fulfillment_details')  Map<String, dynamic> fulfillmentDetails, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MarketplaceProduct() when $default != null:
-return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.deliveryModes,_that.fulfillmentDetails,_that.createdAt);case _:
   return orElse();
 
 }
@@ -2971,10 +2973,10 @@ return $default(_that.id,_that.name,_that.brand,_that.description,_that.category
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'fulfillment_details')  Map<String, dynamic> fulfillmentDetails, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _MarketplaceProduct():
-return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.deliveryModes,_that.fulfillmentDetails,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2991,10 +2993,10 @@ return $default(_that.id,_that.name,_that.brand,_that.description,_that.category
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'fulfillment_details')  Map<String, dynamic> fulfillmentDetails, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _MarketplaceProduct() when $default != null:
-return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.deliveryModes,_that.fulfillmentDetails,_that.createdAt);case _:
   return null;
 
 }
@@ -3006,7 +3008,7 @@ return $default(_that.id,_that.name,_that.brand,_that.description,_that.category
 @JsonSerializable()
 
 class _MarketplaceProduct implements MarketplaceProduct {
-  const _MarketplaceProduct({required this.id, required this.name, required this.brand, required this.description, required this.category, @JsonKey(name: 'image_url') required this.imageUrl, @JsonKey(name: 'affiliate_url') required this.affiliateUrl, @JsonKey(name: 'price_display') required this.priceDisplay, @JsonKey(name: 'content_rating') this.contentRating = 'general', @JsonKey(name: 'recommended_by') this.recommendedBy, @JsonKey(name: 'recommender_data') final  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count') this.clickCount = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'shop_data') this.shopData, @JsonKey(name: 'created_at') required this.createdAt}): _recommenderData = recommenderData;
+  const _MarketplaceProduct({required this.id, required this.name, required this.brand, required this.description, required this.category, @JsonKey(name: 'image_url') required this.imageUrl, @JsonKey(name: 'affiliate_url') required this.affiliateUrl, @JsonKey(name: 'price_display') required this.priceDisplay, @JsonKey(name: 'content_rating') this.contentRating = 'general', @JsonKey(name: 'recommended_by') this.recommendedBy, @JsonKey(name: 'recommender_data') final  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count') this.clickCount = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'shop_data') this.shopData, @JsonKey(name: 'delivery_modes') final  List<String> deliveryModes = const <String>[], @JsonKey(name: 'fulfillment_details') final  Map<String, dynamic> fulfillmentDetails = const <String, dynamic>{}, @JsonKey(name: 'created_at') required this.createdAt}): _recommenderData = recommenderData,_deliveryModes = deliveryModes,_fulfillmentDetails = fulfillmentDetails;
   factory _MarketplaceProduct.fromJson(Map<String, dynamic> json) => _$MarketplaceProductFromJson(json);
 
 @override final  String id;
@@ -3031,6 +3033,20 @@ class _MarketplaceProduct implements MarketplaceProduct {
 @override@JsonKey(name: 'click_count') final  int clickCount;
 @override@JsonKey(name: 'is_active') final  bool isActive;
 @override@JsonKey(name: 'shop_data') final  Shop? shopData;
+ final  List<String> _deliveryModes;
+@override@JsonKey(name: 'delivery_modes') List<String> get deliveryModes {
+  if (_deliveryModes is EqualUnmodifiableListView) return _deliveryModes;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_deliveryModes);
+}
+
+ final  Map<String, dynamic> _fulfillmentDetails;
+@override@JsonKey(name: 'fulfillment_details') Map<String, dynamic> get fulfillmentDetails {
+  if (_fulfillmentDetails is EqualUnmodifiableMapView) return _fulfillmentDetails;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_fulfillmentDetails);
+}
+
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of MarketplaceProduct
@@ -3046,16 +3062,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other._recommenderData, _recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other._recommenderData, _recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&const DeepCollectionEquality().equals(other._deliveryModes, _deliveryModes)&&const DeepCollectionEquality().equals(other._fulfillmentDetails, _fulfillmentDetails)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,contentRating,recommendedBy,const DeepCollectionEquality().hash(_recommenderData),clickCount,isActive,shopData,createdAt);
+int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,contentRating,recommendedBy,const DeepCollectionEquality().hash(_recommenderData),clickCount,isActive,shopData,const DeepCollectionEquality().hash(_deliveryModes),const DeepCollectionEquality().hash(_fulfillmentDetails),createdAt);
 
 @override
 String toString() {
-  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, contentRating: $contentRating, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, isActive: $isActive, shopData: $shopData, createdAt: $createdAt)';
+  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, contentRating: $contentRating, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, isActive: $isActive, shopData: $shopData, deliveryModes: $deliveryModes, fulfillmentDetails: $fulfillmentDetails, createdAt: $createdAt)';
 }
 
 
@@ -3066,7 +3082,7 @@ abstract mixin class _$MarketplaceProductCopyWith<$Res> implements $MarketplaceP
   factory _$MarketplaceProductCopyWith(_MarketplaceProduct value, $Res Function(_MarketplaceProduct) _then) = __$MarketplaceProductCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'created_at') String createdAt
+ String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'fulfillment_details') Map<String, dynamic> fulfillmentDetails,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -3083,7 +3099,7 @@ class __$MarketplaceProductCopyWithImpl<$Res>
 
 /// Create a copy of MarketplaceProduct
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? contentRating = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? isActive = null,Object? shopData = freezed,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? contentRating = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? isActive = null,Object? shopData = freezed,Object? deliveryModes = null,Object? fulfillmentDetails = null,Object? createdAt = null,}) {
   return _then(_MarketplaceProduct(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -3099,7 +3115,9 @@ as String?,recommenderData: freezed == recommenderData ? _self._recommenderData 
 as Map<String, dynamic>?,clickCount: null == clickCount ? _self.clickCount : clickCount // ignore: cast_nullable_to_non_nullable
 as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
-as Shop?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as Shop?,deliveryModes: null == deliveryModes ? _self._deliveryModes : deliveryModes // ignore: cast_nullable_to_non_nullable
+as List<String>,fulfillmentDetails: null == fulfillmentDetails ? _self._fulfillmentDetails : fulfillmentDetails // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -4850,9 +4868,290 @@ $MarketplaceEventCopyWith<$Res>? get event {
 
 
 /// @nodoc
+mixin _$SuggestedFulfillment {
+
+ String get type; List<String> get available; Map<String, dynamic> get detail;
+/// Create a copy of SuggestedFulfillment
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$SuggestedFulfillmentCopyWith<SuggestedFulfillment> get copyWith => _$SuggestedFulfillmentCopyWithImpl<SuggestedFulfillment>(this as SuggestedFulfillment, _$identity);
+
+  /// Serializes this SuggestedFulfillment to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SuggestedFulfillment&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other.available, available)&&const DeepCollectionEquality().equals(other.detail, detail));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,type,const DeepCollectionEquality().hash(available),const DeepCollectionEquality().hash(detail));
+
+@override
+String toString() {
+  return 'SuggestedFulfillment(type: $type, available: $available, detail: $detail)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $SuggestedFulfillmentCopyWith<$Res>  {
+  factory $SuggestedFulfillmentCopyWith(SuggestedFulfillment value, $Res Function(SuggestedFulfillment) _then) = _$SuggestedFulfillmentCopyWithImpl;
+@useResult
+$Res call({
+ String type, List<String> available, Map<String, dynamic> detail
+});
+
+
+
+
+}
+/// @nodoc
+class _$SuggestedFulfillmentCopyWithImpl<$Res>
+    implements $SuggestedFulfillmentCopyWith<$Res> {
+  _$SuggestedFulfillmentCopyWithImpl(this._self, this._then);
+
+  final SuggestedFulfillment _self;
+  final $Res Function(SuggestedFulfillment) _then;
+
+/// Create a copy of SuggestedFulfillment
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? type = null,Object? available = null,Object? detail = null,}) {
+  return _then(_self.copyWith(
+type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,available: null == available ? _self.available : available // ignore: cast_nullable_to_non_nullable
+as List<String>,detail: null == detail ? _self.detail : detail // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [SuggestedFulfillment].
+extension SuggestedFulfillmentPatterns on SuggestedFulfillment {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _SuggestedFulfillment value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _SuggestedFulfillment() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _SuggestedFulfillment value)  $default,){
+final _that = this;
+switch (_that) {
+case _SuggestedFulfillment():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _SuggestedFulfillment value)?  $default,){
+final _that = this;
+switch (_that) {
+case _SuggestedFulfillment() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String type,  List<String> available,  Map<String, dynamic> detail)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _SuggestedFulfillment() when $default != null:
+return $default(_that.type,_that.available,_that.detail);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String type,  List<String> available,  Map<String, dynamic> detail)  $default,) {final _that = this;
+switch (_that) {
+case _SuggestedFulfillment():
+return $default(_that.type,_that.available,_that.detail);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String type,  List<String> available,  Map<String, dynamic> detail)?  $default,) {final _that = this;
+switch (_that) {
+case _SuggestedFulfillment() when $default != null:
+return $default(_that.type,_that.available,_that.detail);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _SuggestedFulfillment implements SuggestedFulfillment {
+  const _SuggestedFulfillment({this.type = 'digital', final  List<String> available = const <String>[], final  Map<String, dynamic> detail = const <String, dynamic>{}}): _available = available,_detail = detail;
+  factory _SuggestedFulfillment.fromJson(Map<String, dynamic> json) => _$SuggestedFulfillmentFromJson(json);
+
+@override@JsonKey() final  String type;
+ final  List<String> _available;
+@override@JsonKey() List<String> get available {
+  if (_available is EqualUnmodifiableListView) return _available;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_available);
+}
+
+ final  Map<String, dynamic> _detail;
+@override@JsonKey() Map<String, dynamic> get detail {
+  if (_detail is EqualUnmodifiableMapView) return _detail;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_detail);
+}
+
+
+/// Create a copy of SuggestedFulfillment
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$SuggestedFulfillmentCopyWith<_SuggestedFulfillment> get copyWith => __$SuggestedFulfillmentCopyWithImpl<_SuggestedFulfillment>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$SuggestedFulfillmentToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SuggestedFulfillment&&(identical(other.type, type) || other.type == type)&&const DeepCollectionEquality().equals(other._available, _available)&&const DeepCollectionEquality().equals(other._detail, _detail));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,type,const DeepCollectionEquality().hash(_available),const DeepCollectionEquality().hash(_detail));
+
+@override
+String toString() {
+  return 'SuggestedFulfillment(type: $type, available: $available, detail: $detail)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$SuggestedFulfillmentCopyWith<$Res> implements $SuggestedFulfillmentCopyWith<$Res> {
+  factory _$SuggestedFulfillmentCopyWith(_SuggestedFulfillment value, $Res Function(_SuggestedFulfillment) _then) = __$SuggestedFulfillmentCopyWithImpl;
+@override @useResult
+$Res call({
+ String type, List<String> available, Map<String, dynamic> detail
+});
+
+
+
+
+}
+/// @nodoc
+class __$SuggestedFulfillmentCopyWithImpl<$Res>
+    implements _$SuggestedFulfillmentCopyWith<$Res> {
+  __$SuggestedFulfillmentCopyWithImpl(this._self, this._then);
+
+  final _SuggestedFulfillment _self;
+  final $Res Function(_SuggestedFulfillment) _then;
+
+/// Create a copy of SuggestedFulfillment
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? type = null,Object? available = null,Object? detail = null,}) {
+  return _then(_SuggestedFulfillment(
+type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,available: null == available ? _self._available : available // ignore: cast_nullable_to_non_nullable
+as List<String>,detail: null == detail ? _self._detail : detail // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$Cart {
 
- String get id; List<CartItem> get items;@JsonKey(name: 'discount_code') DiscountCode? get discountCode;@JsonKey(name: 'total_artifacts') Map<String, int> get totalArtifacts;@JsonKey(name: 'total_usd') double get totalUsd;@JsonKey(name: 'total_local_currency') double get totalLocalCurrency;@JsonKey(name: 'base_currency') String get baseCurrency;@JsonKey(name: 'local_currency') String get localCurrency;@JsonKey(name: 'conversion_rate') double get conversionRate;@JsonKey(name: 'created_at') String get createdAt;
+ String get id; List<CartItem> get items;@JsonKey(name: 'discount_code') DiscountCode? get discountCode;@JsonKey(name: 'total_artifacts') Map<String, int> get totalArtifacts;@JsonKey(name: 'total_usd') double get totalUsd;@JsonKey(name: 'total_local_currency') double get totalLocalCurrency;@JsonKey(name: 'base_currency') String get baseCurrency;@JsonKey(name: 'local_currency') String get localCurrency;@JsonKey(name: 'conversion_rate') double get conversionRate;@JsonKey(name: 'suggested_fulfillment') SuggestedFulfillment? get suggestedFulfillment;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of Cart
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4865,16 +5164,16 @@ $CartCopyWith<Cart> get copyWith => _$CartCopyWithImpl<Cart>(this as Cart, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Cart&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&const DeepCollectionEquality().equals(other.totalArtifacts, totalArtifacts)&&(identical(other.totalUsd, totalUsd) || other.totalUsd == totalUsd)&&(identical(other.totalLocalCurrency, totalLocalCurrency) || other.totalLocalCurrency == totalLocalCurrency)&&(identical(other.baseCurrency, baseCurrency) || other.baseCurrency == baseCurrency)&&(identical(other.localCurrency, localCurrency) || other.localCurrency == localCurrency)&&(identical(other.conversionRate, conversionRate) || other.conversionRate == conversionRate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Cart&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other.items, items)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&const DeepCollectionEquality().equals(other.totalArtifacts, totalArtifacts)&&(identical(other.totalUsd, totalUsd) || other.totalUsd == totalUsd)&&(identical(other.totalLocalCurrency, totalLocalCurrency) || other.totalLocalCurrency == totalLocalCurrency)&&(identical(other.baseCurrency, baseCurrency) || other.baseCurrency == baseCurrency)&&(identical(other.localCurrency, localCurrency) || other.localCurrency == localCurrency)&&(identical(other.conversionRate, conversionRate) || other.conversionRate == conversionRate)&&(identical(other.suggestedFulfillment, suggestedFulfillment) || other.suggestedFulfillment == suggestedFulfillment)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(items),discountCode,const DeepCollectionEquality().hash(totalArtifacts),totalUsd,totalLocalCurrency,baseCurrency,localCurrency,conversionRate,createdAt);
+int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(items),discountCode,const DeepCollectionEquality().hash(totalArtifacts),totalUsd,totalLocalCurrency,baseCurrency,localCurrency,conversionRate,suggestedFulfillment,createdAt);
 
 @override
 String toString() {
-  return 'Cart(id: $id, items: $items, discountCode: $discountCode, totalArtifacts: $totalArtifacts, totalUsd: $totalUsd, totalLocalCurrency: $totalLocalCurrency, baseCurrency: $baseCurrency, localCurrency: $localCurrency, conversionRate: $conversionRate, createdAt: $createdAt)';
+  return 'Cart(id: $id, items: $items, discountCode: $discountCode, totalArtifacts: $totalArtifacts, totalUsd: $totalUsd, totalLocalCurrency: $totalLocalCurrency, baseCurrency: $baseCurrency, localCurrency: $localCurrency, conversionRate: $conversionRate, suggestedFulfillment: $suggestedFulfillment, createdAt: $createdAt)';
 }
 
 
@@ -4885,11 +5184,11 @@ abstract mixin class $CartCopyWith<$Res>  {
   factory $CartCopyWith(Cart value, $Res Function(Cart) _then) = _$CartCopyWithImpl;
 @useResult
 $Res call({
- String id, List<CartItem> items,@JsonKey(name: 'discount_code') DiscountCode? discountCode,@JsonKey(name: 'total_artifacts') Map<String, int> totalArtifacts,@JsonKey(name: 'total_usd') double totalUsd,@JsonKey(name: 'total_local_currency') double totalLocalCurrency,@JsonKey(name: 'base_currency') String baseCurrency,@JsonKey(name: 'local_currency') String localCurrency,@JsonKey(name: 'conversion_rate') double conversionRate,@JsonKey(name: 'created_at') String createdAt
+ String id, List<CartItem> items,@JsonKey(name: 'discount_code') DiscountCode? discountCode,@JsonKey(name: 'total_artifacts') Map<String, int> totalArtifacts,@JsonKey(name: 'total_usd') double totalUsd,@JsonKey(name: 'total_local_currency') double totalLocalCurrency,@JsonKey(name: 'base_currency') String baseCurrency,@JsonKey(name: 'local_currency') String localCurrency,@JsonKey(name: 'conversion_rate') double conversionRate,@JsonKey(name: 'suggested_fulfillment') SuggestedFulfillment? suggestedFulfillment,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-$DiscountCodeCopyWith<$Res>? get discountCode;
+$DiscountCodeCopyWith<$Res>? get discountCode;$SuggestedFulfillmentCopyWith<$Res>? get suggestedFulfillment;
 
 }
 /// @nodoc
@@ -4902,7 +5201,7 @@ class _$CartCopyWithImpl<$Res>
 
 /// Create a copy of Cart
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? items = null,Object? discountCode = freezed,Object? totalArtifacts = null,Object? totalUsd = null,Object? totalLocalCurrency = null,Object? baseCurrency = null,Object? localCurrency = null,Object? conversionRate = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? items = null,Object? discountCode = freezed,Object? totalArtifacts = null,Object? totalUsd = null,Object? totalLocalCurrency = null,Object? baseCurrency = null,Object? localCurrency = null,Object? conversionRate = null,Object? suggestedFulfillment = freezed,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,items: null == items ? _self.items : items // ignore: cast_nullable_to_non_nullable
@@ -4913,7 +5212,8 @@ as double,totalLocalCurrency: null == totalLocalCurrency ? _self.totalLocalCurre
 as double,baseCurrency: null == baseCurrency ? _self.baseCurrency : baseCurrency // ignore: cast_nullable_to_non_nullable
 as String,localCurrency: null == localCurrency ? _self.localCurrency : localCurrency // ignore: cast_nullable_to_non_nullable
 as String,conversionRate: null == conversionRate ? _self.conversionRate : conversionRate // ignore: cast_nullable_to_non_nullable
-as double,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as double,suggestedFulfillment: freezed == suggestedFulfillment ? _self.suggestedFulfillment : suggestedFulfillment // ignore: cast_nullable_to_non_nullable
+as SuggestedFulfillment?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -4928,6 +5228,18 @@ $DiscountCodeCopyWith<$Res>? get discountCode {
 
   return $DiscountCodeCopyWith<$Res>(_self.discountCode!, (value) {
     return _then(_self.copyWith(discountCode: value));
+  });
+}/// Create a copy of Cart
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$SuggestedFulfillmentCopyWith<$Res>? get suggestedFulfillment {
+    if (_self.suggestedFulfillment == null) {
+    return null;
+  }
+
+  return $SuggestedFulfillmentCopyWith<$Res>(_self.suggestedFulfillment!, (value) {
+    return _then(_self.copyWith(suggestedFulfillment: value));
   });
 }
 }
@@ -5011,10 +5323,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'total_usd')  double totalUsd, @JsonKey(name: 'total_local_currency')  double totalLocalCurrency, @JsonKey(name: 'base_currency')  String baseCurrency, @JsonKey(name: 'local_currency')  String localCurrency, @JsonKey(name: 'conversion_rate')  double conversionRate, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'total_usd')  double totalUsd, @JsonKey(name: 'total_local_currency')  double totalLocalCurrency, @JsonKey(name: 'base_currency')  String baseCurrency, @JsonKey(name: 'local_currency')  String localCurrency, @JsonKey(name: 'conversion_rate')  double conversionRate, @JsonKey(name: 'suggested_fulfillment')  SuggestedFulfillment? suggestedFulfillment, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Cart() when $default != null:
-return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_that.totalUsd,_that.totalLocalCurrency,_that.baseCurrency,_that.localCurrency,_that.conversionRate,_that.createdAt);case _:
+return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_that.totalUsd,_that.totalLocalCurrency,_that.baseCurrency,_that.localCurrency,_that.conversionRate,_that.suggestedFulfillment,_that.createdAt);case _:
   return orElse();
 
 }
@@ -5032,10 +5344,10 @@ return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'total_usd')  double totalUsd, @JsonKey(name: 'total_local_currency')  double totalLocalCurrency, @JsonKey(name: 'base_currency')  String baseCurrency, @JsonKey(name: 'local_currency')  String localCurrency, @JsonKey(name: 'conversion_rate')  double conversionRate, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'total_usd')  double totalUsd, @JsonKey(name: 'total_local_currency')  double totalLocalCurrency, @JsonKey(name: 'base_currency')  String baseCurrency, @JsonKey(name: 'local_currency')  String localCurrency, @JsonKey(name: 'conversion_rate')  double conversionRate, @JsonKey(name: 'suggested_fulfillment')  SuggestedFulfillment? suggestedFulfillment, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Cart():
-return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_that.totalUsd,_that.totalLocalCurrency,_that.baseCurrency,_that.localCurrency,_that.conversionRate,_that.createdAt);case _:
+return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_that.totalUsd,_that.totalLocalCurrency,_that.baseCurrency,_that.localCurrency,_that.conversionRate,_that.suggestedFulfillment,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -5052,10 +5364,10 @@ return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'total_usd')  double totalUsd, @JsonKey(name: 'total_local_currency')  double totalLocalCurrency, @JsonKey(name: 'base_currency')  String baseCurrency, @JsonKey(name: 'local_currency')  String localCurrency, @JsonKey(name: 'conversion_rate')  double conversionRate, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  List<CartItem> items, @JsonKey(name: 'discount_code')  DiscountCode? discountCode, @JsonKey(name: 'total_artifacts')  Map<String, int> totalArtifacts, @JsonKey(name: 'total_usd')  double totalUsd, @JsonKey(name: 'total_local_currency')  double totalLocalCurrency, @JsonKey(name: 'base_currency')  String baseCurrency, @JsonKey(name: 'local_currency')  String localCurrency, @JsonKey(name: 'conversion_rate')  double conversionRate, @JsonKey(name: 'suggested_fulfillment')  SuggestedFulfillment? suggestedFulfillment, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Cart() when $default != null:
-return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_that.totalUsd,_that.totalLocalCurrency,_that.baseCurrency,_that.localCurrency,_that.conversionRate,_that.createdAt);case _:
+return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_that.totalUsd,_that.totalLocalCurrency,_that.baseCurrency,_that.localCurrency,_that.conversionRate,_that.suggestedFulfillment,_that.createdAt);case _:
   return null;
 
 }
@@ -5067,7 +5379,7 @@ return $default(_that.id,_that.items,_that.discountCode,_that.totalArtifacts,_th
 @JsonSerializable()
 
 class _Cart implements Cart {
-  const _Cart({required this.id, required final  List<CartItem> items, @JsonKey(name: 'discount_code') this.discountCode, @JsonKey(name: 'total_artifacts') final  Map<String, int> totalArtifacts = const <String, int>{}, @JsonKey(name: 'total_usd') this.totalUsd = 0.0, @JsonKey(name: 'total_local_currency') this.totalLocalCurrency = 0.0, @JsonKey(name: 'base_currency') this.baseCurrency = 'USD', @JsonKey(name: 'local_currency') this.localCurrency = 'KES', @JsonKey(name: 'conversion_rate') this.conversionRate = 129.5, @JsonKey(name: 'created_at') required this.createdAt}): _items = items,_totalArtifacts = totalArtifacts;
+  const _Cart({required this.id, required final  List<CartItem> items, @JsonKey(name: 'discount_code') this.discountCode, @JsonKey(name: 'total_artifacts') final  Map<String, int> totalArtifacts = const <String, int>{}, @JsonKey(name: 'total_usd') this.totalUsd = 0.0, @JsonKey(name: 'total_local_currency') this.totalLocalCurrency = 0.0, @JsonKey(name: 'base_currency') this.baseCurrency = 'USD', @JsonKey(name: 'local_currency') this.localCurrency = 'KES', @JsonKey(name: 'conversion_rate') this.conversionRate = 129.5, @JsonKey(name: 'suggested_fulfillment') this.suggestedFulfillment, @JsonKey(name: 'created_at') required this.createdAt}): _items = items,_totalArtifacts = totalArtifacts;
   factory _Cart.fromJson(Map<String, dynamic> json) => _$CartFromJson(json);
 
 @override final  String id;
@@ -5091,6 +5403,7 @@ class _Cart implements Cart {
 @override@JsonKey(name: 'base_currency') final  String baseCurrency;
 @override@JsonKey(name: 'local_currency') final  String localCurrency;
 @override@JsonKey(name: 'conversion_rate') final  double conversionRate;
+@override@JsonKey(name: 'suggested_fulfillment') final  SuggestedFulfillment? suggestedFulfillment;
 @override@JsonKey(name: 'created_at') final  String createdAt;
 
 /// Create a copy of Cart
@@ -5106,16 +5419,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Cart&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&const DeepCollectionEquality().equals(other._totalArtifacts, _totalArtifacts)&&(identical(other.totalUsd, totalUsd) || other.totalUsd == totalUsd)&&(identical(other.totalLocalCurrency, totalLocalCurrency) || other.totalLocalCurrency == totalLocalCurrency)&&(identical(other.baseCurrency, baseCurrency) || other.baseCurrency == baseCurrency)&&(identical(other.localCurrency, localCurrency) || other.localCurrency == localCurrency)&&(identical(other.conversionRate, conversionRate) || other.conversionRate == conversionRate)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Cart&&(identical(other.id, id) || other.id == id)&&const DeepCollectionEquality().equals(other._items, _items)&&(identical(other.discountCode, discountCode) || other.discountCode == discountCode)&&const DeepCollectionEquality().equals(other._totalArtifacts, _totalArtifacts)&&(identical(other.totalUsd, totalUsd) || other.totalUsd == totalUsd)&&(identical(other.totalLocalCurrency, totalLocalCurrency) || other.totalLocalCurrency == totalLocalCurrency)&&(identical(other.baseCurrency, baseCurrency) || other.baseCurrency == baseCurrency)&&(identical(other.localCurrency, localCurrency) || other.localCurrency == localCurrency)&&(identical(other.conversionRate, conversionRate) || other.conversionRate == conversionRate)&&(identical(other.suggestedFulfillment, suggestedFulfillment) || other.suggestedFulfillment == suggestedFulfillment)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(_items),discountCode,const DeepCollectionEquality().hash(_totalArtifacts),totalUsd,totalLocalCurrency,baseCurrency,localCurrency,conversionRate,createdAt);
+int get hashCode => Object.hash(runtimeType,id,const DeepCollectionEquality().hash(_items),discountCode,const DeepCollectionEquality().hash(_totalArtifacts),totalUsd,totalLocalCurrency,baseCurrency,localCurrency,conversionRate,suggestedFulfillment,createdAt);
 
 @override
 String toString() {
-  return 'Cart(id: $id, items: $items, discountCode: $discountCode, totalArtifacts: $totalArtifacts, totalUsd: $totalUsd, totalLocalCurrency: $totalLocalCurrency, baseCurrency: $baseCurrency, localCurrency: $localCurrency, conversionRate: $conversionRate, createdAt: $createdAt)';
+  return 'Cart(id: $id, items: $items, discountCode: $discountCode, totalArtifacts: $totalArtifacts, totalUsd: $totalUsd, totalLocalCurrency: $totalLocalCurrency, baseCurrency: $baseCurrency, localCurrency: $localCurrency, conversionRate: $conversionRate, suggestedFulfillment: $suggestedFulfillment, createdAt: $createdAt)';
 }
 
 
@@ -5126,11 +5439,11 @@ abstract mixin class _$CartCopyWith<$Res> implements $CartCopyWith<$Res> {
   factory _$CartCopyWith(_Cart value, $Res Function(_Cart) _then) = __$CartCopyWithImpl;
 @override @useResult
 $Res call({
- String id, List<CartItem> items,@JsonKey(name: 'discount_code') DiscountCode? discountCode,@JsonKey(name: 'total_artifacts') Map<String, int> totalArtifacts,@JsonKey(name: 'total_usd') double totalUsd,@JsonKey(name: 'total_local_currency') double totalLocalCurrency,@JsonKey(name: 'base_currency') String baseCurrency,@JsonKey(name: 'local_currency') String localCurrency,@JsonKey(name: 'conversion_rate') double conversionRate,@JsonKey(name: 'created_at') String createdAt
+ String id, List<CartItem> items,@JsonKey(name: 'discount_code') DiscountCode? discountCode,@JsonKey(name: 'total_artifacts') Map<String, int> totalArtifacts,@JsonKey(name: 'total_usd') double totalUsd,@JsonKey(name: 'total_local_currency') double totalLocalCurrency,@JsonKey(name: 'base_currency') String baseCurrency,@JsonKey(name: 'local_currency') String localCurrency,@JsonKey(name: 'conversion_rate') double conversionRate,@JsonKey(name: 'suggested_fulfillment') SuggestedFulfillment? suggestedFulfillment,@JsonKey(name: 'created_at') String createdAt
 });
 
 
-@override $DiscountCodeCopyWith<$Res>? get discountCode;
+@override $DiscountCodeCopyWith<$Res>? get discountCode;@override $SuggestedFulfillmentCopyWith<$Res>? get suggestedFulfillment;
 
 }
 /// @nodoc
@@ -5143,7 +5456,7 @@ class __$CartCopyWithImpl<$Res>
 
 /// Create a copy of Cart
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? items = null,Object? discountCode = freezed,Object? totalArtifacts = null,Object? totalUsd = null,Object? totalLocalCurrency = null,Object? baseCurrency = null,Object? localCurrency = null,Object? conversionRate = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? items = null,Object? discountCode = freezed,Object? totalArtifacts = null,Object? totalUsd = null,Object? totalLocalCurrency = null,Object? baseCurrency = null,Object? localCurrency = null,Object? conversionRate = null,Object? suggestedFulfillment = freezed,Object? createdAt = null,}) {
   return _then(_Cart(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,items: null == items ? _self._items : items // ignore: cast_nullable_to_non_nullable
@@ -5154,7 +5467,8 @@ as double,totalLocalCurrency: null == totalLocalCurrency ? _self.totalLocalCurre
 as double,baseCurrency: null == baseCurrency ? _self.baseCurrency : baseCurrency // ignore: cast_nullable_to_non_nullable
 as String,localCurrency: null == localCurrency ? _self.localCurrency : localCurrency // ignore: cast_nullable_to_non_nullable
 as String,conversionRate: null == conversionRate ? _self.conversionRate : conversionRate // ignore: cast_nullable_to_non_nullable
-as double,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as double,suggestedFulfillment: freezed == suggestedFulfillment ? _self.suggestedFulfillment : suggestedFulfillment // ignore: cast_nullable_to_non_nullable
+as SuggestedFulfillment?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -5170,6 +5484,18 @@ $DiscountCodeCopyWith<$Res>? get discountCode {
 
   return $DiscountCodeCopyWith<$Res>(_self.discountCode!, (value) {
     return _then(_self.copyWith(discountCode: value));
+  });
+}/// Create a copy of Cart
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$SuggestedFulfillmentCopyWith<$Res>? get suggestedFulfillment {
+    if (_self.suggestedFulfillment == null) {
+    return null;
+  }
+
+  return $SuggestedFulfillmentCopyWith<$Res>(_self.suggestedFulfillment!, (value) {
+    return _then(_self.copyWith(suggestedFulfillment: value));
   });
 }
 }

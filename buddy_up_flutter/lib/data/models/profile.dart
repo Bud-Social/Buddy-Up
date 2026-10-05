@@ -32,6 +32,7 @@ abstract class Profile with _$Profile {
     @JsonKey(name: 'buddy_status') String? buddyStatus,
     @JsonKey(name: 'is_following') @Default(false) bool isFollowing,
     @JsonKey(name: 'show_active_status') @Default(true) bool showActiveStatus,
+    Map<String, dynamic>? preferences,
     @JsonKey(name: 'created_at') String? createdAt,
     @JsonKey(name: 'updated_at') String? updatedAt,
   }) = _Profile;
