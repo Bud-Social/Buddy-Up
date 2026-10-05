@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/auth/auth_provider.dart';
@@ -119,6 +120,7 @@ class _GridCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onAddToCart;
   final bool isPast;
+  final String? distanceLabel;
 
   const _GridCard({
     required this.imageUrl,
@@ -130,6 +132,7 @@ class _GridCard extends StatelessWidget {
     required this.onTap,
     this.onAddToCart,
     this.isPast = false,
+    this.distanceLabel,
   });
 
   @override
@@ -227,6 +230,20 @@ class _GridCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
                   ],
+                  if (distanceLabel != null) ...[
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.place, size: 11, color: BuddyColors.green),
+                        const SizedBox(width: 3),
+                        Text(distanceLabel!,
+                            style: const TextStyle(
+                                fontSize: 11,
+                                color: BuddyColors.green,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ],
                   if (usd > 0) ...[
                     const SizedBox(height: 2),
                     Text('~USD ${usd.toStringAsFixed(2)}',
@@ -279,10 +296,41 @@ class _EventsTabState extends ConsumerState<_EventsTab> {
         .showSnackBar(const SnackBar(content: Text('Added to cart'), duration: Duration(seconds: 1)));
   }
 
+  Future<void> _locate() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Turn on location services to find nearby events.')),
+          );
+        }
+        return;
+      }
+      var perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) return;
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(timeLimit: Duration(seconds: 10)),
+      );
+      ref.read(eventsFilterProvider.notifier).setCoords(pos.latitude, pos.longitude);
+      ref.read(eventsProvider.notifier).refresh();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not get your location. Try again.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scope = ref.watch(eventsScopeProvider);
     final eventsAsync = ref.watch(eventsProvider);
+    final filter = ref.watch(eventsFilterProvider);
+    final geo = ref.watch(eventsGeoProvider);
     final scopes = [('upcoming', 'Upcoming'), ('past', 'Past'), ('all', 'All')];
     final cs = Theme.of(context).colorScheme;
 
@@ -328,9 +376,59 @@ class _EventsTabState extends ConsumerState<_EventsTab> {
                 onPressed: () => context.push('/marketplace/events/create'),
                 child: const Text('Host', style: TextStyle(fontSize: 12)),
               ),
+              TextButton.icon(
+                onPressed: () {
+                  if (filter.lat != null) {
+                    ref.read(eventsFilterProvider.notifier).setCoords(null, null);
+                    ref.read(eventsProvider.notifier).refresh();
+                  } else {
+                    _locate();
+                  }
+                },
+                icon: Icon(
+                  Icons.near_me,
+                  size: 14,
+                  color: filter.lat != null ? BuddyColors.green : null,
+                ),
+                label: Text(
+                  filter.lat != null ? 'Near me ✓' : 'Near me',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
             ],
           ),
         ),
+        if (filter.lat != null && geo != null && geo.auto && geo.message != null)
+          Container(
+            margin: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: BuddyColors.green.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: BuddyColors.green.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.place, size: 15, color: BuddyColors.green),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nearby: ${geo.radiusKm.toStringAsFixed(0)} km · ${geo.density == 'dense' ? 'lots around you' : 'fewer around you'}',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(geo.message!,
+                          style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
 
         // Category filter chips
         SizedBox(
@@ -410,6 +508,9 @@ class _EventsTabState extends ConsumerState<_EventsTab> {
                           badgeLabel: _eventTypeLabel(e.eventType),
                           priceLabel: e.isFree ? 'FREE' : null,
                           artifacts: e.ticketPriceArtifacts,
+                          distanceLabel: e.distanceKm != null
+                              ? '${e.distanceKm!.toStringAsFixed(e.distanceKm! < 10 ? 1 : 0)} km away'
+                              : null,
                           isPast: isPast,
                           onTap: () => context.push('/marketplace/events/${e.id}'),
                           onAddToCart:

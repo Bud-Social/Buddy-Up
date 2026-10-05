@@ -10,7 +10,8 @@ import '../providers/marketplace_provider.dart';
 
 class CreateProgrammeScreen extends ConsumerStatefulWidget {
   final String? shopHandle;
-  const CreateProgrammeScreen({super.key, this.shopHandle});
+  final String? editId;
+  const CreateProgrammeScreen({super.key, this.shopHandle, this.editId});
 
   @override
   ConsumerState<CreateProgrammeScreen> createState() => _CreateProgrammeScreenState();
@@ -41,6 +42,35 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
 
   static const _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   static const _sessionTypes = ['Morning', 'Midday', 'Evening', 'Rest'];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.editId != null) {
+      Future.microtask(_loadExisting);
+    }
+  }
+
+  Future<void> _loadExisting() async {
+    try {
+      final repo = ref.read(marketplaceRepositoryProvider);
+      final raw = await repo.getProgramme(widget.editId!);
+      final data = raw['data'] as Map<String, dynamic>?;
+      if (data == null || !mounted) return;
+      setState(() {
+        _titleController.text = (data['title'] ?? '') as String;
+        _descriptionController.text = (data['description'] ?? '') as String;
+        _category = (data['category'] ?? 'strength') as String;
+        _durationWeeks = (data['duration_weeks'] as num?)?.toInt() ?? 6;
+        final prices = data['price_artifacts'];
+        if (prices is Map) {
+          _priceArtifacts
+            ..clear()
+            ..addEntries(prices.entries.map((e) => MapEntry(e.key.toString(), (e.value as num?)?.toInt() ?? 0)));
+        }
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -109,13 +139,19 @@ class _CreateProgrammeScreenState extends ConsumerState<CreateProgrammeScreen> {
         if (widget.shopHandle != null) 'shop_handle': widget.shopHandle,
       };
 
-      await repo.createProgramme(data);
+      final isEdit = widget.editId != null;
+      if (isEdit) {
+        await repo.updateProgramme(widget.editId!, data);
+      } else {
+        await repo.createProgramme(data);
+      }
       ref.invalidate(programmesProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('💪 Programme created!'), backgroundColor: BuddyColors.green),
+          SnackBar(
+              content: Text(isEdit ? 'Programme updated!' : '💪 Programme created!'),
+              backgroundColor: BuddyColors.green),
         );
         context.pop();
       }

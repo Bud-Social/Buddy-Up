@@ -11,6 +11,7 @@ final profileRepositoryProvider = Provider<ProfileRepository>((_) {
 
 class NearbyBuddy {
   final Map<String, dynamic> profile;
+  final String displayName;
   final double? distanceKm;
   final List<String> intents;
   final String customIntent;
@@ -24,6 +25,7 @@ class NearbyBuddy {
 
   NearbyBuddy({
     required this.profile,
+    required this.displayName,
     required this.distanceKm,
     required this.intents,
     required this.customIntent,
@@ -36,8 +38,14 @@ class NearbyBuddy {
     required this.explanation,
   });
 
-  factory NearbyBuddy.fromJson(Map<String, dynamic> json) => NearbyBuddy(
-        profile: (json['profile'] as Map<String, dynamic>?) ?? const {},
+  factory NearbyBuddy.fromJson(Map<String, dynamic> json) {
+    final profile = (json['profile'] as Map<String, dynamic>?) ?? const {};
+    final rawName = json['display_name'] as String?;
+    return NearbyBuddy(
+        profile: profile,
+        displayName: (rawName != null && rawName.isNotEmpty)
+            ? rawName
+            : (profile['display_name'] as String? ?? ''),
         distanceKm: (json['distance_km'] as num?)?.toDouble(),
         intents: ((json['intents'] as List?) ?? []).map((e) => e.toString()).toList(),
         customIntent: json['custom_intent'] as String? ?? '',
@@ -49,10 +57,12 @@ class NearbyBuddy {
         availableNow: json['available_now'] as bool? ?? false,
         explanation: json['explanation'] as String? ?? '',
       );
+  }
 }
 
 class SearchProfile {
   final List<String> intents;
+  final String displayName;
   final String customIntent;
   final List<String> modes;
   final String bio;
@@ -67,6 +77,7 @@ class SearchProfile {
 
   const SearchProfile({
     this.intents = const [],
+    this.displayName = '',
     this.customIntent = '',
     this.modes = const [],
     this.bio = '',
@@ -82,6 +93,7 @@ class SearchProfile {
 
   factory SearchProfile.fromJson(Map<String, dynamic> json) => SearchProfile(
         intents: ((json['intents'] as List?) ?? []).map((e) => e.toString()).toList(),
+        displayName: json['display_name'] as String? ?? '',
         customIntent: json['custom_intent'] as String? ?? '',
         modes: ((json['modes'] as List?) ?? []).map((e) => e.toString()).toList(),
         bio: json['bio'] as String? ?? '',
@@ -107,6 +119,7 @@ class BuddyNearbyState {
   final double? lng;
   final double? radiusKm;
   final GeoNotice? geo;
+  final int matchCount;
 
   const BuddyNearbyState({
     this.buddies = const [],
@@ -119,6 +132,7 @@ class BuddyNearbyState {
     this.lng,
     this.radiusKm,
     this.geo,
+    this.matchCount = 0,
   });
 
   BuddyNearbyState copyWith({
@@ -137,6 +151,7 @@ class BuddyNearbyState {
     GeoNotice? geo,
     bool clearGeo = false,
     bool clearCoords = false,
+    int? matchCount,
   }) {
     return BuddyNearbyState(
       buddies: buddies ?? this.buddies,
@@ -149,6 +164,7 @@ class BuddyNearbyState {
       lng: clearCoords ? null : (lng ?? this.lng),
       radiusKm: radiusKm ?? this.radiusKm,
       geo: clearGeo ? null : (geo ?? this.geo),
+      matchCount: matchCount ?? this.matchCount,
     );
   }
 }
@@ -214,6 +230,7 @@ class BuddyNearbyNotifier extends Notifier<BuddyNearbyState> {
 
   void setRadius(double? radiusKm) => state = state.copyWith(radiusKm: radiusKm);
   void setNowOnly(bool v) => state = state.copyWith(nowOnly: v);
+  void setMatchCount(int v) => state = state.copyWith(matchCount: v);
 }
 
 final buddyNearbyProvider = NotifierProvider<BuddyNearbyNotifier, BuddyNearbyState>(BuddyNearbyNotifier.new);

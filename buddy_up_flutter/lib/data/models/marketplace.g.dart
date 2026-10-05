@@ -350,6 +350,7 @@ Map<String, dynamic> _$EventMediaItemToJson(_EventMediaItem instance) =>
 _MarketplaceEvent _$MarketplaceEventFromJson(Map<String, dynamic> json) =>
     _MarketplaceEvent(
       id: json['id'] as String,
+      distanceKm: (json['distance_km'] as num?)?.toDouble(),
       creatorData: CreatorData.fromJson(
         json['creator_data'] as Map<String, dynamic>,
       ),
@@ -419,6 +420,7 @@ _MarketplaceEvent _$MarketplaceEventFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$MarketplaceEventToJson(_MarketplaceEvent instance) =>
     <String, dynamic>{
       'id': instance.id,
+      'distance_km': instance.distanceKm,
       'creator_data': instance.creatorData,
       'gym_data': instance.gymData,
       'title': instance.title,

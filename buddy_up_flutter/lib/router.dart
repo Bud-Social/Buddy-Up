@@ -337,7 +337,11 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, state) {
           final shopHandle = state.uri.queryParameters['shop'];
-          return CreateMealPlanScreen(shopHandle: shopHandle);
+          final editId = state.uri.queryParameters['edit'];
+          return CreateMealPlanScreen(
+            shopHandle: shopHandle,
+            editId: (editId != null && editId.isNotEmpty) ? editId : null,
+          );
         },
       ),
       GoRoute(
@@ -345,7 +349,11 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, state) {
           final shopHandle = state.uri.queryParameters['shop'];
-          return CreateProgrammeScreen(shopHandle: shopHandle);
+          final editId = state.uri.queryParameters['edit'];
+          return CreateProgrammeScreen(
+            shopHandle: shopHandle,
+            editId: (editId != null && editId.isNotEmpty) ? editId : null,
+          );
         },
       ),
       GoRoute(

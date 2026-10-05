@@ -65,4 +65,11 @@ abstract class AnalyticsRepository {
 
   @POST('/analytics/report/share/')
   Future<dynamic> shareReport(@Body() Map<String, dynamic> data);
+
+  @POST('/analytics/{kind}/{id}/share/')
+  Future<dynamic> shareActivity(
+    @Path('kind') String kind,
+    @Path('id') String id,
+    @Body() Map<String, dynamic> data,
+  );
 }

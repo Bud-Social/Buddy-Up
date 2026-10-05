@@ -92,7 +92,14 @@ abstract class MarketplaceRepository {
   Future<void> clickProduct(@Path('id') String productId);
 
   @GET('/marketplace/events/')
-  Future<dynamic> getEvents({@Query('upcoming') bool? upcoming, @Query('scope') String? scope});
+  Future<dynamic> getEvents({
+    @Query('upcoming') bool? upcoming,
+    @Query('scope') String? scope,
+    @Query('q') String? query,
+    @Query('lat') double? lat,
+    @Query('lng') double? lng,
+    @Query('radius_km') double? radiusKm,
+  });
 
   @POST('/marketplace/events/')
   Future<dynamic> createEvent(@Body() Map<String, dynamic> data);

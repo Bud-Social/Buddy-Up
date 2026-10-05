@@ -74,6 +74,7 @@ class _BuddySearchCardState extends ConsumerState<BuddySearchCard> {
       );
     }
     final custom = d['custom_intent'] as String? ?? '';
+    final searchName = d['display_name'] as String? ?? '';
     final modes = ((d['modes'] as List?) ?? []).map((e) => e.toString()).toList();
     final bio = d['bio'] as String? ?? '';
     final ageBand = d['age_band'] as String? ?? '';
@@ -91,8 +92,9 @@ class _BuddySearchCardState extends ConsumerState<BuddySearchCard> {
             children: [
               const Icon(Icons.person_search, size: 14, color: BuddyColors.green),
               const SizedBox(width: 6),
-              const Text('LOOKING FOR A BUDDY',
-                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
+              Text(
+                  searchName.isNotEmpty ? 'LOOKING FOR A BUDDY · ${searchName.toUpperCase()}' : 'LOOKING FOR A BUDDY',
+                  style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
               const Spacer(),
               if (widget.username == null)
                 GestureDetector(

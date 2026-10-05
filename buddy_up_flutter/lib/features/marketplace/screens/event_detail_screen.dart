@@ -18,6 +18,7 @@ class EventDetailScreen extends ConsumerStatefulWidget {
 class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
   int _quantity = 1;
   int _mediaIndex = 0;
+  String? _tier;
 
   List<_MediaItem> _buildMediaList(MarketplaceEvent event) {
     final list = <_MediaItem>[];
@@ -117,6 +118,52 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 ],
                 const SizedBox(height: 16),
                 _buildCapacityBar(event),
+                if (event.ticketTiers.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const Text('Ticket Tiers',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  ...event.ticketTiers.map((t) {
+                    final name = (t['name'] ?? '') as String;
+                    final price = t['price_artifacts'];
+                    final selected = _tier == name || (_tier == null && t == event.ticketTiers.first);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: InkWell(
+                        onTap: () => setState(() => _tier = name),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: BuddyColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: selected ? BuddyColors.green : BuddyColors.border,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(name,
+                                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                              if (price is Map && price.isNotEmpty)
+                                Text(
+                                  price.entries.map((e) => '${e.value} ${e.key}').join(', '),
+                                  style: const TextStyle(
+                                      color: BuddyColors.green, fontWeight: FontWeight.bold),
+                                )
+                              else
+                                const Text('Free',
+                                    style: TextStyle(
+                                        color: BuddyColors.green, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ],
                 const SizedBox(height: 16),
                 Text(event.description, style: const TextStyle(height: 1.5)),
                 if (event.agenda.isNotEmpty) ...[
@@ -222,16 +269,26 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: BuddyButton(
-                    label: event.isRegistered ? 'My Ticket' : 'Add to Cart',
-                    onPressed: event.isRegistered
-                        ? () => context.push('/marketplace/tickets')
-                        : () {
-                            ref.read(cartProvider.notifier).addToCart(
-                              'event_ticket',
-                              {'event_id': widget.eventId},
-                              quantity: _quantity,
-                            );
+                  child: Builder(
+                    builder: (ctx) {
+                      final soldOut = event.capacity > 0 && event.attendeeCount >= event.capacity;
+                      return BuddyButton(
+                        label: event.isRegistered
+                            ? 'My Ticket'
+                            : soldOut
+                                ? 'Sold Out'
+                                : 'Add to Cart',
+                        onPressed: event.isRegistered
+                            ? () => context.push('/marketplace/tickets')
+                            : soldOut
+                                ? null
+                                : () {
+                                    ref.read(cartProvider.notifier).addToCart(
+                                      'event_ticket',
+                                      {'event_id': widget.eventId},
+                                      quantity: _quantity,
+                                      tier: _tier,
+                                    );
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content: Text('Added to cart'),
@@ -239,6 +296,8 @@ class _EventDetailScreenState extends ConsumerState<EventDetailScreen> {
                             );
                             _quantity = 1;
                           },
+                      );
+                    },
                   ),
                 ),
               ],

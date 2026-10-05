@@ -521,11 +521,22 @@ class _MarketplaceRepository implements MarketplaceRepository {
   }
 
   @override
-  Future<dynamic> getEvents({bool? upcoming, String? scope}) async {
+  Future<dynamic> getEvents({
+    bool? upcoming,
+    String? scope,
+    String? query,
+    double? lat,
+    double? lng,
+    double? radiusKm,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'upcoming': upcoming,
       r'scope': scope,
+      r'q': query,
+      r'lat': lat,
+      r'lng': lng,
+      r'radius_km': radiusKm,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

@@ -140,7 +140,7 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen> {
     setState(() => _saving = true);
     try {
       final distanceKm = _distanceM / 1000.0;
-      await ref.read(analyticsRepositoryProvider).createActivity({
+      final created = await ref.read(analyticsRepositoryProvider).createActivity({
         'activity_type': _activityType,
         'source': 'gps',
         'duration_seconds': _elapsedS,
@@ -154,8 +154,22 @@ class _GpsTrackerScreenState extends ConsumerState<GpsTrackerScreen> {
       });
       ref.read(analyticsSummaryProvider.notifier).refresh();
       if (mounted) {
+        final data = created['data'];
+        final activityId = data is Map ? data['id'] as String? : null;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Activity saved')),
+          SnackBar(
+            content: const Text('Activity saved'),
+            action: activityId != null
+                ? SnackBarAction(
+                    label: 'Share',
+                    onPressed: () async {
+                      try {
+                        await ref.read(analyticsRepositoryProvider).shareActivity('activity', activityId, {});
+                      } catch (_) {}
+                    },
+                  )
+                : null,
+          ),
         );
         Navigator.of(context).pop(true);
       }

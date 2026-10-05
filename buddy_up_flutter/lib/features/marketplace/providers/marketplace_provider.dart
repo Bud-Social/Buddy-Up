@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/repositories/marketplace_repository.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../core/api/api_client.dart';
+import '../../../shared/models/geo_notice.dart';
 
 final marketplaceRepositoryProvider = Provider<MarketplaceRepository>((ref) {
   final dio = ref.watch(apiClientProvider5).dio;
@@ -80,14 +81,59 @@ class EventsScopeNotifier extends Notifier<String> {
 final eventsScopeProvider =
     NotifierProvider<EventsScopeNotifier, String>(EventsScopeNotifier.new);
 
+class EventsFilter {
+  final double? lat;
+  final double? lng;
+  final double? radiusKm;
+
+  const EventsFilter({this.lat, this.lng, this.radiusKm});
+}
+
+final eventsFilterProvider = NotifierProvider<EventsFilterNotifier, EventsFilter>(EventsFilterNotifier.new);
+
+class EventsFilterNotifier extends Notifier<EventsFilter> {
+  @override
+  EventsFilter build() => const EventsFilter();
+
+  void setCoords(double? lat, double? lng) {
+    state = EventsFilter(lat: lat, lng: lng, radiusKm: state.radiusKm);
+  }
+}
+
+final eventsGeoProvider = NotifierProvider<EventsGeoNotifier, GeoNotice?>(EventsGeoNotifier.new);
+
+class EventsGeoNotifier extends Notifier<GeoNotice?> {
+  @override
+  GeoNotice? build() => null;
+
+  void set(GeoNotice? geo) => state = geo;
+}
+
 class EventsNotifier extends AsyncNotifier<List<MarketplaceEvent>> {
   @override
-  Future<List<MarketplaceEvent>> build() => _load(ref.read(eventsScopeProvider));
+  Future<List<MarketplaceEvent>> build() {
+    ref.watch(eventsFilterProvider);
+    return _load(ref.read(eventsScopeProvider));
+  }
 
   Future<List<MarketplaceEvent>> _load(String scope) async {
     final repo = ref.read(marketplaceRepositoryProvider);
-    final raw = await repo.getEvents(scope: scope);
-    return _parseEventList(raw['data']);
+    final filter = ref.read(eventsFilterProvider);
+    final raw = await repo.getEvents(
+      scope: scope,
+      lat: filter.lat,
+      lng: filter.lng,
+      radiusKm: filter.radiusKm,
+    );
+    final list = _parseEventList(raw['data']);
+    if (filter.lat != null) {
+      list.sort((a, b) => (a.distanceKm ?? double.infinity).compareTo(b.distanceKm ?? double.infinity));
+    }
+    final geoJson = raw['geo'];
+    ref.read(eventsGeoProvider.notifier).set(
+      geoJson is Map<String, dynamic> ? GeoNotice.fromJson(geoJson) : null,
+    );
+    return list;
   }
 
   Future<void> setScope(String scope) async {
@@ -95,6 +141,11 @@ class EventsNotifier extends AsyncNotifier<List<MarketplaceEvent>> {
     ref.read(eventsScopeProvider.notifier).set(scope);
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _load(scope));
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _load(ref.read(eventsScopeProvider)));
   }
 }
 
@@ -132,9 +183,14 @@ class CartNotifier extends Notifier<AsyncValue<Cart?>> {
     }
   }
 
-  Future<void> addToCart(String itemType, Map<String, dynamic> idData, {int quantity = 1}) async {
+  Future<void> addToCart(String itemType, Map<String, dynamic> idData, {int quantity = 1, String? tier}) async {
     try {
-      await _repo.addToCart({...idData, 'item_type': itemType, 'quantity': quantity});
+      await _repo.addToCart({
+        ...idData,
+        'item_type': itemType,
+        'quantity': quantity,
+        if (tier != null && tier.isNotEmpty) 'tier': tier,
+      });
       await loadCart();
     } catch (e, st) {
       state = AsyncError(e, st);

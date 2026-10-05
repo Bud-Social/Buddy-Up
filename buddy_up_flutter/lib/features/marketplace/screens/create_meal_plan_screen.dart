@@ -10,7 +10,8 @@ import '../providers/marketplace_provider.dart';
 
 class CreateMealPlanScreen extends ConsumerStatefulWidget {
   final String? shopHandle;
-  const CreateMealPlanScreen({super.key, this.shopHandle});
+  final String? editId;
+  const CreateMealPlanScreen({super.key, this.shopHandle, this.editId});
 
   @override
   ConsumerState<CreateMealPlanScreen> createState() => _CreateMealPlanScreenState();
@@ -44,6 +45,38 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
     '1200-1500', '1500-1800', '1800-2200', '2200-2600', '2600+'
   ];
   static const _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.editId != null) {
+      Future.microtask(_loadExisting);
+    }
+  }
+
+  Future<void> _loadExisting() async {
+    try {
+      final repo = ref.read(marketplaceRepositoryProvider);
+      final raw = await repo.getMealPlan(widget.editId!);
+      final data = raw['data'] as Map<String, dynamic>?;
+      if (data == null || !mounted) return;
+      setState(() {
+        _titleController.text = (data['title'] ?? '') as String;
+        _descriptionController.text = (data['description'] ?? '') as String;
+        _dietType = (data['diet_type'] ?? 'balanced') as String;
+        _durationWeeks = (data['duration_weeks'] as num?)?.toInt() ?? 4;
+        _calorieRange = (data['calorie_range'] ?? '1800-2200') as String;
+        final prices = data['price_artifacts'];
+        if (prices is Map) {
+          _priceArtifacts
+            ..clear()
+            ..addEntries(prices.entries.map((e) => MapEntry(e.key.toString(), (e.value as num?)?.toInt() ?? 0)));
+        }
+        final shopping = data['shopping_list'];
+        if (shopping is List) _shoppingListController.text = shopping.join('\n');
+      });
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -110,12 +143,19 @@ class _CreateMealPlanScreenState extends ConsumerState<CreateMealPlanScreen> {
         if (widget.shopHandle != null) 'shop_handle': widget.shopHandle,
       };
 
-      await repo.createMealPlan(data);
+      final isEdit = widget.editId != null;
+      if (isEdit) {
+        await repo.updateMealPlan(widget.editId!, data);
+      } else {
+        await repo.createMealPlan(data);
+      }
       ref.invalidate(mealPlansProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🥗 Meal plan created!'), backgroundColor: BuddyColors.green),
+          SnackBar(
+              content: Text(isEdit ? 'Meal plan updated!' : '🥗 Meal plan created!'),
+              backgroundColor: BuddyColors.green),
         );
         context.pop();
       }

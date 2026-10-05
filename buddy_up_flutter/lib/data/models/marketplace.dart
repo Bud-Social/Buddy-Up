@@ -222,6 +222,7 @@ abstract class EventMediaItem with _$EventMediaItem {
 abstract class MarketplaceEvent with _$MarketplaceEvent {
   const factory MarketplaceEvent({
     required String id,
+    @JsonKey(name: 'distance_km') double? distanceKm,
     @JsonKey(name: 'creator_data') required CreatorData creatorData,
     @JsonKey(name: 'gym_data') GymData? gymData,
     required String title,

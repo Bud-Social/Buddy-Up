@@ -55,6 +55,8 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
     } catch (_) {}
   }
 
+  Set<String> _interestTokens = {};
+
   Future<void> _loadTrending() async {
     try {
       final raw = await _profileRepo.getDiscoverTrending();
@@ -63,6 +65,47 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
         if (mounted) setState(() => _trending = data);
       }
     } catch (_) {}
+    _loadInterestTokens();
+  }
+
+  /// Interest-affinity tokens so topics/communities rank for the viewer
+  /// (people already arrive ranked from the AI recommender).
+  Future<void> _loadInterestTokens() async {
+    try {
+      final profile = await _profileRepo.getMyProfile();
+      final prefs = profile.preferences;
+      if (prefs == null) return;
+      final tokens = <String>{};
+      void add(String s) {
+        for (final w in s.toLowerCase().split(RegExp(r'[^a-z0-9]+'))) {
+          if (w.length > 2) tokens.add(w);
+        }
+      }
+      for (final k in ['primary_goal', 'preferred_workouts']) {
+        final v = prefs[k];
+        if (v is List) {
+          for (final e in v) {
+            add(e.toString());
+          }
+        } else if (v is String) {
+          add(v);
+        }
+      }
+      final custom = prefs['custom_interests'];
+      if (custom is String) add(custom);
+      if (tokens.contains('gym')) tokens.add('weights');
+      if (tokens.contains('weights')) tokens.add('gym');
+      if (mounted) setState(() => _interestTokens = tokens);
+    } catch (_) {}
+  }
+
+  int _affinity(String text) {
+    if (_interestTokens.isEmpty) return 0;
+    var score = 0;
+    for (final w in text.toLowerCase().split(RegExp(r'[^a-z0-9]+'))) {
+      if (w.length > 2 && _interestTokens.contains(w)) score++;
+    }
+    return score;
   }
 
   @override
@@ -210,12 +253,28 @@ class _DiscoverPeopleScreenState extends State<DiscoverPeopleScreen> {
     );
   }
 
+  List<Map<String, dynamic>> _ranked(
+    List<Map<String, dynamic>> items, String Function(Map<String, dynamic>) textOf) {
+    final indexed = items.asMap().entries.toList();
+    indexed.sort((a, b) {
+      final cmp = _affinity(textOf(b.value)).compareTo(_affinity(textOf(a.value)));
+      return cmp != 0 ? cmp : a.key.compareTo(b.key);
+    });
+    return indexed.map((e) => e.value).toList();
+  }
+
   Widget _buildTrending() {
     final t = _trending;
-    final hashtags = (t?['hashtags'] as List? ?? []).cast<Map<String, dynamic>>();
+    final hashtags = _ranked(
+      (t?['hashtags'] as List? ?? []).cast<Map<String, dynamic>>(),
+      (h) => (h['tag'] as String? ?? ''),
+    );
     final posts = (t?['posts'] as List? ?? []).cast<Map<String, dynamic>>();
     final offers = (t?['offers'] as List? ?? []).cast<Map<String, dynamic>>();
-    final communities = (t?['communities'] as List? ?? []).cast<Map<String, dynamic>>();
+    final communities = _ranked(
+      (t?['communities'] as List? ?? []).cast<Map<String, dynamic>>(),
+      (c) => (c['group_name'] as String? ?? ''),
+    );
 
     if (hashtags.isEmpty && posts.isEmpty && offers.isEmpty && communities.isEmpty && _recommendations.isEmpty) {
       return Center(
