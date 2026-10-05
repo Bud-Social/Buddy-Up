@@ -1,5 +1,10 @@
 from rest_framework import serializers
-from .models import ActivityRecord, WorkoutLog, BodyMetric
+from .models import ActivityRecord, WorkoutLog, BodyMetric, WORKOUT_TYPE_SPECS
+
+# Type-specific extras that are not model columns. They are accepted as
+# top-level write keys and folded into the provenance JSONField so the
+# taxonomy can grow without a migration per new field.
+PROVENANCE_EXTRAS = ('rounds', 'style', 'focus', 'sport')
 
 
 class ActivityRecordSerializer(serializers.ModelSerializer):
@@ -42,19 +47,60 @@ class ActivityRecordSerializer(serializers.ModelSerializer):
 
 
 class WorkoutLogSerializer(serializers.ModelSerializer):
+    """Structured workout entry.
+
+    `category` must belong to the chosen `workout_type` per
+    WORKOUT_TYPE_SPECS (blank is always allowed). Type-specific extras
+    (rounds/style/focus/sport) are write-only and persist in `provenance`.
+    """
+
+    rounds = serializers.IntegerField(required=False, min_value=0, write_only=True)
+    style = serializers.CharField(required=False, max_length=60, write_only=True)
+    focus = serializers.CharField(required=False, max_length=60, write_only=True)
+    sport = serializers.CharField(required=False, max_length=60, write_only=True)
+
     class Meta:
         model = WorkoutLog
         fields = [
             'id', 'workout_type', 'category', 'source_event_id', 'provenance', 'exercise', 'sets', 'reps', 'weight_kg',
             'duration_minutes', 'calories_burned', 'distance_meters',
             'performed_at', 'notes', 'created_at', 'updated_at',
+            *PROVENANCE_EXTRAS,
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
     def validate(self, attrs):
+        # Extras are not model fields: strip them before the base serializer
+        # sees the payload, then fold them into provenance.
+        extras = {key: attrs.pop(key) for key in PROVENANCE_EXTRAS if key in attrs}
+
         for field in ('sets', 'reps', 'duration_minutes'):
             if attrs.get(field) is not None and attrs[field] < 0:
                 raise serializers.ValidationError({field: 'Value cannot be negative.'})
+
+        attrs = super().validate(attrs)
+
+        workout_type = attrs.get('workout_type')
+        if workout_type is None:
+            workout_type = getattr(self.instance, 'workout_type', None) or WorkoutLog._meta.get_field('workout_type').default
+        spec = WORKOUT_TYPE_SPECS.get(workout_type)
+        if spec is None:
+            raise serializers.ValidationError({'workout_type': f'Unknown workout_type "{workout_type}".'})
+
+        category = attrs.get('category')
+        if category is None:
+            category = getattr(self.instance, 'category', '') or ''
+        if category and category not in spec['categories']:
+            allowed = ', '.join(spec['categories']) or 'none'
+            raise serializers.ValidationError({
+                'category': f'"{category}" is not a valid category for {workout_type}. Allowed: {allowed}.',
+            })
+
+        if extras:
+            provenance = dict(attrs.get('provenance') or {})
+            provenance.update(extras)
+            attrs['provenance'] = provenance
+
         return attrs
 
 

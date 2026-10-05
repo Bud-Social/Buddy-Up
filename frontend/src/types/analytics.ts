@@ -175,29 +175,49 @@ export interface ActivityRecordInput {
   notes?: string;
 }
 
-export type WorkoutCategory = 'upper' | 'lower' | 'legs' | 'push' | 'pull' | 'core' | 'arms' | 'full' | '';
+export interface WorkoutCategoryOption { key: string; label: string }
 
-export const WORKOUT_CATEGORIES: { key: Exclude<WorkoutCategory, ''>; label: string }[] = [
+/** Strength category list — order mirrors the backend taxonomy. */
+export const WORKOUT_CATEGORIES: WorkoutCategoryOption[] = [
   { key: 'upper', label: 'Upper' },
   { key: 'lower', label: 'Lower' },
-  { key: 'legs', label: 'Legs' },
   { key: 'push', label: 'Push' },
   { key: 'pull', label: 'Pull' },
-  { key: 'core', label: 'Core' },
+  { key: 'legs', label: 'Legs' },
   { key: 'arms', label: 'Arms' },
+  { key: 'core', label: 'Core' },
   { key: 'full', label: 'Full' },
 ];
+
+/**
+ * Canonical workout types. Order is the order the type pickers render in and
+ * must match the backend catalogue (PART 1 of the analytics workout-types
+ * task). New server-side types appear automatically — this list only drives
+ * the offline fallback and the pre-fetch render.
+ */
+export const WORKOUT_TYPE_KEYS = [
+  'strength', 'hiit', 'cardio', 'running', 'walking', 'cycling', 'swimming', 'climbing',
+  'rowing', 'dance', 'yoga', 'pilates', 'mobility', 'sport', 'boxing', 'martial_arts', 'other',
+] as const;
+
+export type WorkoutTypeKey = typeof WORKOUT_TYPE_KEYS[number];
 
 export const WORKOUT_DURATION_PRESETS = [15, 30, 45, 60] as const;
 
 export interface WorkoutLogInput {
-  workout_type: 'strength' | 'cardio' | 'hiit' | 'yoga' | 'mobility' | 'sport' | 'other';
-  category?: WorkoutCategory;
+  workout_type: WorkoutTypeKey | (string & Record<never, never>);
+  /** Per-type; '' when the type has no categories (cardio, distance sports). */
+  category?: string;
   exercise?: string;
   sets?: number | null;
   reps?: number | null;
   weight_kg?: number | null;
-  duration_minutes?: number;
+  /** Type-specific extras — accepted top-level, persisted into provenance. */
+  rounds?: number | null;
+  style?: string;
+  focus?: string;
+  sport?: string;
+  duration_minutes?: number | null;
   calories_burned?: number | null;
   distance_meters?: number | null;
   performed_at?: string;

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Play, Square, Trash2, Navigation, Footprints, Activity as ActivityIcon, RotateCcw, Share2 } from 'lucide-react';
+import { Play, Square, Trash2, Navigation, Footprints, Activity as ActivityIcon, RotateCcw, Share2, Send, Check } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { RouteMap } from '@/components/analytics/RouteMap';
@@ -8,6 +8,7 @@ import { RouteReplayMap } from '@/components/analytics/RouteReplayMap';
 import { formatDuration, formatKm, formatPace, titleCase, formatDateTime } from '@/components/analytics/format';
 import { analyticsApi } from '@/api/analytics';
 import { useToast } from '@/components/ui/Toast';
+import { analyticsShareUrl, buildShareText, shareActivity } from '@/lib/shareWorkout';
 import type { ActivityRecordInput, ActivitySummary } from '@/types/analytics';
 
 const ACTIVITY_TYPES: { key: ActivityRecordInput['activity_type']; label: string; icon: typeof Footprints }[] = [
@@ -19,18 +20,42 @@ const ACTIVITY_TYPES: { key: ActivityRecordInput['activity_type']; label: string
 
 interface TrackPoint { lat: number; lng: number; ts: number; }
 
+type ActivityRow = ActivitySummary['recent'][number];
+
 export function ActivityTab() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activities, setActivities] = useState<ActivitySummary['recent']>([]);
+  const [activities, setActivities] = useState<ActivityRow[]>([]);
+  const [copied, setCopied] = useState<string | null>(null);
 
-  const shareActivity = async (id: string) => {
+  const shareToFeed = async (id: string) => {
     try {
       const res = await analyticsApi.shareActivity('activity', id);
       toast('success', 'Shared to feed!');
       if (res.data?.post_id) navigate(`/feed?post=${res.data.post_id}`);
     } catch {
       toast('error', 'Could not share activity.');
+    }
+  };
+
+  /** OS share sheet, falling back to copying the analytics deep link. */
+  const onShare = async (a: ActivityRow) => {
+    const outcome = await shareActivity({
+      title: `${titleCase(a.activity_type)} on BuddyUp`,
+      text: buildShareText({
+        label: titleCase(a.activity_type),
+        durationMinutes: Math.round((a.duration_seconds || 0) / 60),
+        distanceKm: a.distance_km ?? (a.distance_meters ? a.distance_meters / 1000 : null),
+        calories: a.calories_burned,
+      }),
+      url: analyticsShareUrl(),
+    });
+    if (outcome === 'copied') {
+      setCopied(a.id);
+      toast('success', 'Link copied');
+      window.setTimeout(() => setCopied((c) => (c === a.id ? null : c)), 2000);
+    } else if (outcome === 'failed') {
+      toast('error', 'Could not share this activity.');
     }
   };
   const [loading, setLoading] = useState(true);
@@ -414,10 +439,13 @@ export function ActivityTab() {
                     <span className="text-xs text-buddy-text-secondary">{formatDateTime(a.started_at)}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => shareActivity(a.id)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-green/10 transition-colors" title="Share to feed">
-                      <Share2 size={15} />
+                    <button onClick={() => shareToFeed(a.id)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-green/10 transition-colors" title="Post to feed" aria-label={`Post ${titleCase(a.activity_type)} to feed`}>
+                      <Send size={15} />
                     </button>
-                    <button onClick={() => handleDelete(a.id)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-red hover:bg-buddy-red/10 transition-colors" title="Delete">
+                    <button onClick={() => onShare(a)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-green/10 transition-colors" title="Share" aria-label={copied === a.id ? 'Link copied' : `Share ${titleCase(a.activity_type)} activity`}>
+                      {copied === a.id ? <Check size={15} className="text-buddy-green" /> : <Share2 size={15} />}
+                    </button>
+                    <button onClick={() => handleDelete(a.id)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-red hover:bg-buddy-red/10 transition-colors" title="Delete" aria-label={`Delete ${titleCase(a.activity_type)} activity`}>
                       <Trash2 size={15} />
                     </button>
                   </div>

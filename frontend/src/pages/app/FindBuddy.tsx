@@ -7,7 +7,6 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { NearbyNotice } from '@/components/ui/NearbyNotice';
 import { useToast } from '@/components/ui/Toast';
-import { InterestChips } from '@/components/profile/InterestChips';
 import { profilesApi, BUDDY_INTENTS, BUDDY_MODES, BUDDY_GOALS, BUDDY_VISIBILITY, type NearbyBuddy, type BuddySearchProfile } from '@/api/profiles';
 import { messagingApi } from '@/api';
 import { feedApi } from '@/api/feed';
@@ -23,6 +22,26 @@ function formatUntil(iso: string | null | undefined): string | null {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** "1.3 km" / "640 m" — null when the search API could not band the distance. */
+export function formatDistanceBadge(km: number | null | undefined): string | null {
+  if (km == null || !Number.isFinite(km) || km < 0) return null;
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  if (km < 10) return `${km.toFixed(1)} km`;
+  return `${Math.round(km)} km`;
+}
+
+/** Closest first — the tile leads with the distance badge. */
+export function sortByDistance(buddies: NearbyBuddy[]): NearbyBuddy[] {
+  return [...buddies].sort((a, b) => {
+    const x = a.distance_km;
+    const y = b.distance_km;
+    if (x == null && y == null) return 0;
+    if (x == null) return 1;
+    if (y == null) return -1;
+    return x - y;
+  });
 }
 
 export default function FindBuddy() {
@@ -454,9 +473,9 @@ export default function FindBuddy() {
       <NearbyNotice geo={coords ? geo : null} kind="buddies" />
 
       {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="p-4 animate-pulse"><div className="h-16 bg-buddy-surface-raised rounded-xl" /></Card>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" aria-label="Finding buddies">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="aspect-square rounded-2xl bg-buddy-surface border border-buddy-surface-raised animate-pulse" />
           ))}
         </div>
       ) : buddies.length === 0 ? (
@@ -471,48 +490,90 @@ export default function FindBuddy() {
           )}
         </div>
       ) : (
-        <div className="space-y-3">
-          {buddies.map((b) => (
-            <Card key={b.profile.user_id} className="p-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors"
-              onClick={() => navigate(`/${b.profile.username}`)}>
-              <div className="flex items-center gap-3">
-                <Avatar src={b.photos?.[0] || b.profile.avatar_url} alt={b.display_name || b.profile.display_name} size="lg" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-heading font-semibold text-sm truncate">{b.display_name || b.profile.display_name}</p>
-                    {b.available_now && <Badge variant="green" label="Now" size="sm" />}
-                    {b.age_band && <Badge variant="silver" label={b.age_band} size="sm" />}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {sortByDistance(buddies).map((b) => {
+            const name = b.display_name || b.profile.display_name || b.profile.username;
+            const photo = b.photos?.[0] || b.profile.avatar_url;
+            const distance = formatDistanceBadge(b.distance_km);
+            const intents = b.custom_intent
+              ? [b.custom_intent]
+              : (b.intents || []).slice(0, 2).map((x) => x.replace(/_/g, ' '));
+            const meta = [b.age_band, (b.goals || []).slice(0, 2).join(' · ')]
+              .filter(Boolean)
+              .join(' · ');
+            return (
+              <div
+                key={b.profile.user_id}
+                className="relative aspect-square rounded-2xl overflow-hidden bg-buddy-surface border border-buddy-surface-raised"
+              >
+                {/* Square photo, initials fallback */}
+                {photo ? (
+                  <img src={photo} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <span className="absolute inset-0 flex items-center justify-center bg-buddy-surface-raised font-display text-4xl font-bold text-buddy-green/70">
+                    {name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+
+                {/* Distance — the headline number on the tile */}
+                <span
+                  data-testid={`distance-${b.profile.username}`}
+                  className="pointer-events-none absolute top-2 right-2 inline-flex items-center gap-1 rounded-md bg-buddy-black/75 px-1.5 py-0.5 font-mono text-[11px] font-bold text-buddy-green tabular-nums"
+                >
+                  <LocateFixed size={10} aria-hidden="true" />
+                  {distance ?? 'Nearby'}
+                </span>
+                {b.available_now && (
+                  <span className="pointer-events-none absolute top-2 left-2 rounded-md bg-buddy-green px-1.5 py-0.5 text-[10px] font-bold text-buddy-black">
+                    Now
+                  </span>
+                )}
+                {intents.length > 0 && (
+                  <span className="pointer-events-none absolute left-2 top-8 max-w-[70%] truncate rounded-md bg-buddy-black/75 px-1.5 py-0.5 text-[10px] text-buddy-green">
+                    {intents.join(' · ')}
+                  </span>
+                )}
+
+                {/* Solid caption bar (no gradient) — pointer-events pass through
+                    to the profile button underneath. */}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 space-y-0.5 bg-buddy-black/70 px-2.5 py-2">
+                  <p className="truncate text-[13px] font-semibold leading-tight text-white">{name}</p>
+                  <p className="truncate text-[10px] leading-tight text-white/70">
+                    {meta || `@${b.profile.username}`}
+                  </p>
+                  <div className="pointer-events-auto mt-1.5 flex items-center justify-end gap-1">
+                    <button
+                      aria-label={`Message @${b.profile.username}`}
+                      disabled={msgSending.has(b.profile.username)}
+                      onClick={() => handleMessage(b.profile.username)}
+                      className="p-2 rounded-full bg-buddy-black/60 text-buddy-text-secondary hover:text-buddy-green disabled:opacity-50"
+                    >
+                      {msgSending.has(b.profile.username)
+                        ? <Loader2 size={14} className="animate-spin" />
+                        : <MessageCircle size={14} />}
+                    </button>
+                    <Button
+                      size="sm"
+                      variant={requested.has(b.profile.username) ? 'ghost' : 'outline'}
+                      disabled={requested.has(b.profile.username)}
+                      onClick={() => sendRequest(b.profile.username)}
+                    >
+                      {requested.has(b.profile.username) ? 'Requested' : 'Buddy Up'}
+                    </Button>
                   </div>
-                  <p className="text-xs text-buddy-text-secondary">@{b.profile.username}</p>
-                  {(b.custom_intent || (b.intents?.length > 0)) && (
-                    <p className="text-xs text-buddy-text-primary mt-0.5 truncate">
-                      Wants: {b.custom_intent || b.intents.map((x) => x.replace('_', ' ')).join(', ')}
-                    </p>
-                  )}
-                  {b.bio && <p className="text-xs text-buddy-text-secondary truncate mt-0.5">{b.bio}</p>}
-                  <p className="text-xs text-buddy-green mt-0.5">{b.explanation}</p>
-                  <div className="mt-1.5"><InterestChips preferences={b.profile.preferences} /></div>
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button
-                    aria-label={`Message @${b.profile.username}`}
-                    disabled={msgSending.has(b.profile.username)}
-                    onClick={(e) => { e.stopPropagation(); handleMessage(b.profile.username); }}
-                    className="p-2 rounded-full border border-buddy-surface text-buddy-text-secondary hover:text-buddy-green hover:border-buddy-green/40 transition-colors disabled:opacity-50"
-                  >
-                    {msgSending.has(b.profile.username)
-                      ? <Loader2 size={14} className="animate-spin" />
-                      : <MessageCircle size={14} />}
-                  </button>
-                  <Button size="sm" variant={requested.has(b.profile.username) ? 'ghost' : 'outline'}
-                    disabled={requested.has(b.profile.username)}
-                    onClick={(e) => { e.stopPropagation(); sendRequest(b.profile.username); }}>
-                    {requested.has(b.profile.username) ? 'Requested' : 'Buddy Up'}
-                  </Button>
-                </div>
+
+                {/* Tappable tile → profile. Last in the tab order so the row
+                    actions stay reachable. */}
+                <button
+                  type="button"
+                  onClick={() => navigate(`/${b.profile.username}`)}
+                  aria-label={`Open ${name}'s profile, @${b.profile.username}`}
+                  className="absolute inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-buddy-green"
+                />
               </div>
-            </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -231,6 +231,8 @@ export const router = createBrowserRouter([
           { path: '/workout-form', element: <SWrapper><WorkoutForm /></SWrapper> },
           { path: '/verification', element: <SWrapper><Verification /></SWrapper> },
           { path: '/analytics', element: <SWrapper><AnalyticsPage /></SWrapper> },
+          // Canonical share deep-link for workout/activity rows.
+          { path: '/app/analytics', element: <Navigate to="/analytics" replace /> },
         ],
       },
       { path: '/live/:liveId', element: <SWrapper><LiveRoom /></SWrapper> },

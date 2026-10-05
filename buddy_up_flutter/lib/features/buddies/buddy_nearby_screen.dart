@@ -486,8 +486,15 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
                               ),
                             ),
                           )
-                        : ListView.builder(
+                        : GridView.builder(
                             controller: _scroll,
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 260,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
+                              childAspectRatio: 1.0,
+                            ),
                             itemCount: state.buddies.length,
                             itemBuilder: (_, i) => _buddyTile(state.buddies[i]),
                           ),
@@ -755,6 +762,8 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
     );
   }
 
+  /// Square tile: photo or initials, name, age band, distance badge and the
+  /// compact intent/pace chips. Tap opens the profile.
   Widget _buddyTile(NearbyBuddy b) {
     final p = b.profile;
     final profileName = (p['display_name'] ?? p['username'] ?? '') as String;
@@ -765,67 +774,197 @@ class _BuddyNearbyScreenState extends ConsumerState<BuddyNearbyScreen> {
     final workouts = prefs is Map
         ? ((prefs['preferred_workouts'] as List?) ?? []).map((e) => e.toString()).toList()
         : <String>[];
-    final wants = b.customIntent.isNotEmpty
-        ? b.customIntent
-        : b.intents.map((e) => e.replaceAll('_', ' ')).join(', ');
+    final intents = b.customIntent.isNotEmpty
+        ? [b.customIntent]
+        : b.intents.map((e) => e.replaceAll('_', ' ')).toList();
+    // Two chips at most — the tile is square, so nothing wraps past one line.
+    final chips = [
+      ...intents,
+      ...b.modes.map((e) => e.replaceAll('_', ' ')),
+    ].where((e) => e.isNotEmpty).toList();
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      margin: EdgeInsets.zero,
       color: BuddyColors.surface,
-      child: ListTile(
-        leading: Avatar(src: avatar, alt: name, size: AvatarSize.md),
-        title: Row(
-          children: [
-            Flexible(
-              child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-            ),
-            if (b.availableNow) ...[
-              const SizedBox(width: 6),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: BuddyColors.green.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text('now',
-                    style: TextStyle(color: BuddyColors.green, fontSize: 10, fontWeight: FontWeight.w600)),
-              ),
-            ],
-            if (b.ageBand.isNotEmpty) ...[
-              const SizedBox(width: 6),
-              Text(b.ageBand, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
-            ],
-          ],
-        ),
-        subtitle: Column(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/$username'),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('@$username', style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
-            if (wants.isNotEmpty) Text('Wants: $wants', style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12)),
-            if (b.bio.isNotEmpty)
-              Text(b.bio, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
-            Text(b.explanation, style: const TextStyle(color: BuddyColors.green, fontSize: 12)),
-            if (workouts.isNotEmpty)
-              Text(workouts.map((e) => e.replaceAll('_', ' ')).join(' · '),
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _squarePhoto(avatar, name),
+                  if (b.availableNow)
+                    const Positioned(
+                      top: 6,
+                      left: 6,
+                      child: _TileBadge(
+                        label: 'now',
+                        icon: Icons.bolt,
+                      ),
+                    ),
+                  if (b.distanceKm != null)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: _TileBadge(
+                        label: b.distanceKm! < 10
+                            ? '${b.distanceKm!.toStringAsFixed(1)} km'
+                            : '${b.distanceKm!.round()} km',
+                        icon: Icons.near_me,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    name.isEmpty ? 'Buddy' : name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: BuddyColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          b.ageBand.isNotEmpty ? b.ageBand : '@$username',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: BuddyColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      _tileAction(
+                        icon: Icons.message_outlined,
+                        tooltip: 'Message',
+                        onTap: () => _openMessage(username),
+                      ),
+                      _tileAction(
+                        icon: Icons.person_add,
+                        tooltip: 'Send buddy request',
+                        onTap: () => _sendRequest(username),
+                      ),
+                    ],
+                  ),
+                  if (chips.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      chips.take(2).join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: BuddyColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ] else if (workouts.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      workouts.map((e) => e.replaceAll('_', ' ')).join(' · '),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: BuddyColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.message_outlined, color: BuddyColors.green),
-              tooltip: 'Message',
-              onPressed: username.isEmpty ? null : () => _openMessage(username),
-            ),
-            IconButton(
-              icon: const Icon(Icons.person_add, color: BuddyColors.green),
-              tooltip: 'Send buddy request',
-              onPressed: () => _sendRequest(username),
-            ),
-          ],
+      ),
+    );
+  }
+
+  /// Square photo, falling back to initials when the buddy has no picture.
+  Widget _squarePhoto(String? src, String name) {
+    return src != null && src.isNotEmpty
+        ? Image.network(
+            src,
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => _initials(name),
+          )
+        : _initials(name);
+  }
+
+  Widget _initials(String name) {
+    return Container(
+      color: BuddyColors.surfaceRaised,
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: const TextStyle(
+            color: BuddyColors.textSecondary,
+            fontSize: 30,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        onTap: () => context.push('/$username'),
+      ),
+    );
+  }
+
+  Widget _tileAction({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return IconButton(
+      icon: Icon(icon, size: 16, color: BuddyColors.green),
+      tooltip: tooltip,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+      onPressed: onTap,
+    );
+  }
+}
+
+/// Distance / availability badge overlaid on a tile photo.
+class _TileBadge extends StatelessWidget {
+  final String label;
+  final IconData icon;
+
+  const _TileBadge({required this.label, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: BuddyColors.black.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: BuddyColors.green),
+          const SizedBox(width: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              color: BuddyColors.green,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

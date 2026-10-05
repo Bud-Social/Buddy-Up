@@ -5,7 +5,7 @@ from rest_framework import status
 from apps.accounts.models import User
 from apps.profiles.models import Profile
 
-from .models import AnalyticsEvent
+from .models import AnalyticsEvent, WorkoutLog, WORKOUT_TYPE_SPECS, all_category_keys
 from .serializers import ActivityRecordSerializer
 
 
@@ -140,3 +140,175 @@ class WorkoutCategoryTests(TestCase):
         results = resp.data['data']
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]['category'], 'upper')
+
+
+class WorkoutTaxonomyTests(TestCase):
+    """WORKOUT_TYPE_SPECS is the source of truth: the model choices and the
+    /workout-types/ endpoint must both mirror it exactly."""
+
+    def test_model_choices_match_specs(self):
+        self.assertEqual(
+            [key for key, _ in WorkoutLog.WORKOUT_TYPES],
+            list(WORKOUT_TYPE_SPECS),
+        )
+        self.assertEqual(
+            [key for key, _ in WorkoutLog.CATEGORY_CHOICES],
+            all_category_keys(),
+        )
+
+    def test_every_type_category_is_a_valid_choice(self):
+        valid = {key for key, _ in WorkoutLog.CATEGORY_CHOICES}
+        for workout_type, spec in WORKOUT_TYPE_SPECS.items():
+            for category in spec['categories']:
+                with self.subTest(workout_type=workout_type, category=category):
+                    self.assertIn(category, valid)
+
+    def test_spec_shape(self):
+        for workout_type, spec in WORKOUT_TYPE_SPECS.items():
+            with self.subTest(workout_type=workout_type):
+                self.assertEqual(set(spec), {'label', 'categories', 'fields', 'measured'})
+                self.assertTrue(spec['label'])
+                self.assertIsInstance(spec['categories'], list)
+                self.assertIsInstance(spec['fields'], list)
+                self.assertIsInstance(spec['measured'], bool)
+
+
+class WorkoutTypeEndpointTests(TestCase):
+    """Clients read the taxonomy from the API instead of hardcoding it."""
+
+    def setUp(self):
+        self.anon = APIClient()
+
+    def test_endpoint_is_public(self):
+        resp = self.anon.get('/api/v1/analytics/workout-types/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(resp.data['success'])
+        self.assertIsNone(resp.data['errors'])
+
+    def test_endpoint_returns_full_spec_dict(self):
+        resp = self.anon.get('/api/v1/analytics/workout-types/')
+        data = resp.data['data']
+        self.assertEqual(data['workout_types'], WORKOUT_TYPE_SPECS)
+        self.assertEqual(data['categories'], all_category_keys())
+        for key in ('strength', 'hiit', 'cardio', 'running', 'walking', 'cycling',
+                    'swimming', 'climbing', 'rowing', 'dance', 'yoga', 'pilates',
+                    'mobility', 'sport', 'boxing', 'martial_arts', 'other'):
+            self.assertIn(key, data['workout_types'])
+        self.assertEqual(data['workout_types']['hiit']['fields'], ['rounds'])
+        self.assertIn('upper', data['workout_types']['strength']['categories'])
+        self.assertEqual(data['workout_types']['climbing']['measured'], False)
+
+
+class WorkoutCategoryPerTypeTests(TestCase):
+    """A category is only valid for the workout types that declare it."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='typed@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='typed', display_name='Typed')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def _log(self, **kwargs):
+        payload = {'workout_type': 'strength', 'duration_minutes': 30, **kwargs}
+        return self.client.post('/api/v1/analytics/workouts/', payload, format='json')
+
+    def test_category_accepted_for_its_type(self):
+        for category in WORKOUT_TYPE_SPECS['strength']['categories']:
+            with self.subTest(category=category):
+                resp = self._log(category=category)
+                self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+                self.assertEqual(resp.data['data']['category'], category)
+
+    def test_yoga_rejects_strength_category(self):
+        resp = self._log(workout_type='yoga', category='upper', exercise='Vinyasa flow')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('category', resp.data['errors'])
+
+    def test_yoga_accepts_its_own_categories(self):
+        for category in ('flexibility', 'balance', 'mindfulness'):
+            with self.subTest(category=category):
+                resp = self._log(workout_type='yoga', category=category)
+                self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+
+    def test_hiit_and_sport_accept_their_own_categories(self):
+        for workout_type, category in (('hiit', 'cardio'), ('hiit', 'core'),
+                                       ('sport', 'football'), ('sport', 'netball'),
+                                       ('mobility', 'hips'), ('pilates', 'posture')):
+            with self.subTest(workout_type=workout_type, category=category):
+                resp = self._log(workout_type=workout_type, category=category)
+                self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+
+    def test_type_without_categories_rejects_all(self):
+        for workout_type in ('cardio', 'running', 'climbing', 'boxing', 'other'):
+            with self.subTest(workout_type=workout_type):
+                resp = self._log(workout_type=workout_type, category='upper')
+                self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_blank_category_allowed_for_every_type(self):
+        for workout_type in WORKOUT_TYPE_SPECS:
+            with self.subTest(workout_type=workout_type):
+                resp = self._log(workout_type=workout_type)
+                self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+                self.assertEqual(resp.data['data']['category'], '')
+
+    def test_unknown_workout_type_rejected(self):
+        for bogus in ('kettlebell', 'STRENGTH', 'crossfit', ''):
+            with self.subTest(workout_type=bogus):
+                resp = self._log(workout_type=bogus)
+                self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unknown_category_rejected(self):
+        resp = self._log(category='elbows')
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class WorkoutProvenanceExtrasTests(TestCase):
+    """Type-specific extras (rounds/style/focus/sport) are not columns — they
+    persist in provenance and read back from it."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='extras@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='extras', display_name='Extras')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def _log(self, **kwargs):
+        payload = {'workout_type': 'strength', 'duration_minutes': 30, **kwargs}
+        return self.client.post('/api/v1/analytics/workouts/', payload, format='json')
+
+    def test_rounds_round_trips_into_provenance(self):
+        resp = self._log(workout_type='hiit', rounds=8, exercise='Tabata')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+        self.assertEqual(resp.data['data']['provenance']['rounds'], 8)
+        log = WorkoutLog.objects.get(id=resp.data['data']['id'])
+        self.assertEqual(log.provenance['rounds'], 8)
+        self.assertNotIn('rounds', {f.name for f in WorkoutLog._meta.fields})
+        self.assertNotIn('rounds', resp.data['data'])
+
+    def test_style_round_trips_into_provenance(self):
+        for workout_type, style in (('yoga', 'vinyasa'), ('pilates', 'reformer'),
+                                    ('boxing', 'shadow'), ('martial_arts', 'bjj')):
+            with self.subTest(workout_type=workout_type):
+                resp = self._log(workout_type=workout_type, style=style)
+                self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+                self.assertEqual(resp.data['data']['provenance']['style'], style)
+
+    def test_focus_and_sport_round_trip_into_provenance(self):
+        resp = self._log(workout_type='mobility', focus='hips')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+        self.assertEqual(resp.data['data']['provenance']['focus'], 'hips')
+
+        resp = self._log(workout_type='sport', sport='netball')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+        self.assertEqual(resp.data['data']['provenance']['sport'], 'netball')
+
+    def test_extras_merge_with_explicit_provenance(self):
+        resp = self._log(workout_type='hiit', rounds=12, provenance={'source': 'timer'})
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+        self.assertEqual(resp.data['data']['provenance'],
+                         {'source': 'timer', 'rounds': 12})
+
+    def test_workout_without_extras_has_empty_provenance(self):
+        resp = self._log(exercise='Deadlift')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
+        self.assertEqual(resp.data['data']['provenance'], {})

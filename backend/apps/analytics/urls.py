@@ -9,6 +9,7 @@ urlpatterns = [
     path('activities/<uuid:pk>/', views.ActivityRecordView.as_view(), name='activity_detail'),
     path('workouts/', views.WorkoutLogView.as_view(), name='workouts'),
     path('workouts/<uuid:pk>/', views.WorkoutLogView.as_view(), name='workout_detail'),
+    path('workout-types/', views.WorkoutTypeTaxonomyView.as_view(), name='workout_types'),
     path('body/read-weight/', views.BodyReadWeightView.as_view(), name='body_read_weight'),
     path('body/', views.BodyMetricView.as_view(), name='body'),
     path('body/<uuid:pk>/', views.BodyMetricView.as_view(), name='body_detail'),

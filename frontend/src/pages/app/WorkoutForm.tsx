@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { feedApi } from '@/api/feed';
 import { analyticsApi } from '@/api/analytics';
 import { playAlarmSound, stopAllAlarms } from '@/lib/alarmPlayer';
-import { WORKOUT_CATEGORIES, WORKOUT_DURATION_PRESETS } from '@/types/analytics';
+import { buildWorkoutPayload, normalizeCategory, specFor, typeOrder, useWorkoutTypes } from '@/lib/workoutTypes';
+import { WORKOUT_DURATION_PRESETS } from '@/types/analytics';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Camera, Upload, RefreshCw, Video, Square, Timer } from 'lucide-react';
+import { Camera, Upload, RefreshCw, Video, Square, Timer, Check } from 'lucide-react';
 
 const exercises = ['auto', 'squat', 'deadlift', 'bench_press', 'overhead_press', 'bicep_curl', 'push_up', 'lunge'] as const;
 const PLAYBACK_SPEEDS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5] as const;
@@ -18,6 +20,8 @@ const exerciseLabels: Record<string, string> = {
 };
 
 // Category → detector exercise hint (sets the exercise picker above).
+// Only body-part categories carry a hint; a yoga style or a sport name
+// leaves the picker on auto-detect.
 const CATEGORY_EXERCISE_HINT: Record<string, string> = {
   upper: 'overhead_press',
   lower: 'squat',
@@ -30,8 +34,9 @@ const CATEGORY_EXERCISE_HINT: Record<string, string> = {
 };
 
 export default function WorkoutForm() {
+  const [searchParams] = useSearchParams();
+  const { types } = useWorkoutTypes();
   const [exercise, setExercise] = useState<string>('auto');
-  const [category, setCategory] = useState<string>('');
   const [mode, setMode] = useState<'photo' | 'video' | 'timer'>('photo');
   const [image, setImage] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -58,6 +63,20 @@ export default function WorkoutForm() {
   const [loggingTimer, setLoggingTimer] = useState(false);
   const alarmStopRef = useRef<(() => void) | null>(null);
 
+  // ── Start workout (no typing) ─────────────────────────────────────────────
+  // Type + category + duration are the only choices; the recorder and the
+  // countdown run from here and the POST happens on finish.
+  const [session, setSession] = useState({ type: 'strength', category: '', durationMin: 30 });
+  const [logged, setLogged] = useState<{ minutes: number } | null>(null);
+  const [quick, setQuick] = useState(false);
+  const [pendingCamera, setPendingCamera] = useState(false);
+  const [pendingTimer, setPendingTimer] = useState<number | null>(null);
+  // Read inside MediaRecorder.onstop, which fires after the click that
+  // stopped it — state would already be re-rendered by then.
+  const recSecsRef = useRef(0);
+
+  const sessionSpec = specFor(types, session.type);
+
   useEffect(() => {
     if (playbackRef.current) playbackRef.current.playbackRate = speed;
   }, [speed, result]);
@@ -69,6 +88,20 @@ export default function WorkoutForm() {
     stopAllAlarms();
     stopCamera();
   }, []);
+
+  /** Switching mode mounts the video element — start the recorder after it lands. */
+  useEffect(() => {
+    if (!pendingCamera || !videoRef.current) return;
+    setPendingCamera(false);
+    void startRecording();
+  }, [pendingCamera, mode]);
+
+  /** Same for the countdown, which must start from the chosen preset. */
+  useEffect(() => {
+    if (pendingTimer == null) return;
+    setPendingTimer(null);
+    startTimerCountdown(pendingTimer);
+  }, [pendingTimer, mode]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -134,12 +167,19 @@ export default function WorkoutForm() {
         setImage(URL.createObjectURL(f));
         setResult(null);
         stopCamera();
+        // Captured at record time: this closure knows whether the clip came
+        // from Start workout or from the analyzer.
+        if (quick) void logRecordedWorkout(Math.max(1, Math.round(recSecsRef.current / 60)));
       };
       rec.start(500);
       recorderRef.current = rec;
       setRecording(true);
       setRecSecs(0);
-      timerRef.current = window.setInterval(() => setRecSecs((s) => s + 1), 1000);
+      recSecsRef.current = 0;
+      timerRef.current = window.setInterval(() => {
+        recSecsRef.current += 1;
+        setRecSecs(recSecsRef.current);
+      }, 1000);
     } catch {
       setError('Unable to access camera. Use upload instead.');
     }
@@ -153,20 +193,60 @@ export default function WorkoutForm() {
 
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
-  const selectCategory = (c: string) => {
-    const next = category === c ? '' : c;
-    setCategory(next);
-    const hint = next ? CATEGORY_EXERCISE_HINT[next] : undefined;
-    if (hint && (exercises as readonly string[]).includes(hint)) setExercise(hint);
+  /** One POST path for every finish — camera, timer, or manual. */
+  const postSession = async (minutes: number) => {
+    await analyticsApi.createWorkout(buildWorkoutPayload({
+      workout_type: session.type,
+      category: session.category,
+      duration_minutes: minutes,
+    }, types));
   };
 
-  const startTimerCountdown = () => {
+  /** A finished recording logs itself; the clip stays on screen for review. */
+  const logRecordedWorkout = async (minutes: number) => {
+    setLoggingTimer(true);
+    setError(null);
+    try {
+      await postSession(minutes);
+      setLogged({ minutes });
+    } catch {
+      setError('Failed to log workout.');
+    } finally {
+      setLoggingTimer(false);
+    }
+  };
+
+  const startQuick = async (source: 'camera' | 'timer') => {
+    setError(null);
+    setLogged(null);
+    setTimerLogged(false);
+    setTimerFinished(false);
+    setResult(null);
+    setFile(null);
+    setImage(null);
+    setQuick(true);
+    if (source === 'camera') {
+      setMode('video');
+      setPendingCamera(true);
+    } else {
+      setMode('timer');
+      setTimerPresetMin(session.durationMin);
+      setPendingTimer(session.durationMin);
+    }
+  };
+
+  const chooseType = (key: string) => {
+    setLogged(null);
+    setSession((s) => ({ ...s, type: key, category: normalizeCategory(specFor(types, key), s.category) }));
+  };
+
+  const startTimerCountdown = (minutes: number = timerPresetMin) => {
     if (countdownRef.current) window.clearInterval(countdownRef.current);
     alarmStopRef.current?.();
     setTimerFinished(false);
     setTimerLogged(false);
     setError(null);
-    const total = timerPresetMin * 60;
+    const total = minutes * 60;
     setTimerSecsLeft(total);
     setTimerRunning(true);
     countdownRef.current = window.setInterval(() => {
@@ -204,13 +284,9 @@ export default function WorkoutForm() {
     setLoggingTimer(true);
     setError(null);
     try {
-      await analyticsApi.createWorkout({
-        workout_type: 'strength',
-        category: (category || '') as 'upper' | 'lower' | 'legs' | 'push' | 'pull' | 'core' | 'arms' | 'full' | '',
-        exercise: exercise === 'auto' ? (category || 'workout') : exercise,
-        duration_minutes: timerPresetMin,
-      });
+      await postSession(timerPresetMin);
       setTimerLogged(true);
+      setLogged({ minutes: timerPresetMin });
     } catch {
       setError('Failed to log timer workout.');
     } finally {
@@ -242,43 +318,129 @@ export default function WorkoutForm() {
     return 'text-buddy-red';
   };
 
+  const formCategories = specFor(types, session.type).categories;
+
   return (
     <div className="p-4 max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto space-y-4">
-      <h1 className="font-display text-2xl font-bold">Form Analyzer</h1>
-      <p className="text-buddy-text-secondary text-sm">Capture a frame or record a set — the detector names the workout, counts reps and maps the muscles worked.</p>
+      {/* ── Start workout: type + category + duration, then just record ── */}
+      <Card className="p-4 space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="font-display text-xl font-bold">Start workout</h1>
+          {searchParams.get('start') === '1' && (
+            <Link to="/analytics" className="text-xs text-buddy-text-secondary hover:text-buddy-green underline">
+              View analytics
+            </Link>
+          )}
+        </div>
+        <p className="-mt-2 text-sm text-buddy-text-secondary">
+          No typing needed — pick what you did and start recording.
+        </p>
+
+        <div>
+          <p className="text-sm font-medium mb-2">What are you doing?</p>
+          <div className="flex flex-wrap gap-2">
+            {typeOrder(types).map((key) => (
+              <button
+                key={key}
+                onClick={() => chooseType(key)}
+                aria-pressed={session.type === key}
+                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  session.type === key
+                    ? 'bg-buddy-green text-buddy-black font-medium'
+                    : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
+                }`}
+              >
+                {specFor(types, key).label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {formCategories.length > 0 && (
+          <div>
+            <p className="text-sm font-medium mb-2">{sessionSpec.label} category</p>
+            <div className="flex flex-wrap gap-2">
+              {formCategories.map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => setSession((s) => ({ ...s, category: s.category === c.key ? '' : c.key }))}
+                  aria-pressed={session.category === c.key}
+                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                    session.category === c.key
+                      ? 'bg-buddy-green text-buddy-black font-medium'
+                      : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <p className="text-sm font-medium mb-2">How long?</p>
+          <div className="flex flex-wrap gap-2">
+            {WORKOUT_DURATION_PRESETS.map((m) => (
+              <button
+                key={m}
+                onClick={() => setSession((s) => ({ ...s, durationMin: m }))}
+                aria-pressed={session.durationMin === m}
+                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                  session.durationMin === m
+                    ? 'bg-buddy-green text-buddy-black font-medium'
+                    : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
+                }`}
+              >
+                {m} min
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button onClick={() => startQuick('camera')} className="flex-1 gap-2" aria-label="Start workout with camera">
+            <Camera size={18} /> Camera
+          </Button>
+          <Button variant="outline" onClick={() => startQuick('timer')} className="flex-1 gap-2">
+            <Timer size={18} /> Timer only
+          </Button>
+        </div>
+
+        {logged && (
+          <div className="flex items-start gap-2 rounded-lg bg-buddy-green/10 p-3">
+            <Check size={16} className="text-buddy-green mt-0.5 shrink-0" />
+            <p className="text-sm text-buddy-text-primary">
+              Logged {sessionSpec.label.toLowerCase()}
+              {session.category ? ` · ${session.category.replace(/_/g, ' ')}` : ''} — {logged.minutes} min.{' '}
+              <Link to="/analytics" className="text-buddy-green underline">See it in analytics</Link>
+            </p>
+          </div>
+        )}
+        {loggingTimer && !logged && (
+          <p className="text-sm text-buddy-text-secondary">Logging your workout…</p>
+        )}
+      </Card>
+
+      <h1 className="font-display text-xl font-bold">Form Analyzer</h1>
+      <p className="-mt-2 text-buddy-text-secondary text-sm">Capture a frame or record a set — the detector names the workout, counts reps and maps the muscles worked.</p>
 
       <div className="flex rounded-xl bg-buddy-surface p-1">
         {(['photo', 'video', 'timer'] as const).map((m) => (
-          <button key={m} onClick={() => { stopTimerCountdown(); setMode(m); setFile(null); setImage(null); setResult(null); setTimerFinished(false); setTimerLogged(false); setTimerSecsLeft(null); }}
+          <button key={m} onClick={() => { setQuick(false); stopTimerCountdown(); setMode(m); setFile(null); setImage(null); setResult(null); setTimerFinished(false); setTimerLogged(false); setTimerSecsLeft(null); }}
             className={`flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-colors ${mode === m ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
           >{m === 'photo' ? 'Photo frame' : m === 'video' ? 'Record set' : 'Timer-only'}</button>
         ))}
       </div>
 
       <Card className="p-4 space-y-4">
-        <div>
-          <p className="text-sm font-medium mb-2">Category</p>
-          <div className="flex flex-wrap gap-2">
-            {WORKOUT_CATEGORIES.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => selectCategory(c.key)}
-                className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                  category === c.key
-                    ? 'bg-buddy-green text-buddy-black font-medium'
-                    : 'border border-buddy-text-secondary/20 hover:border-buddy-green hover:text-buddy-green'
-                }`}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
-          {category && CATEGORY_EXERCISE_HINT[category] && (
-            <p className="text-xs text-buddy-text-secondary mt-1.5">
-              Detector hint: {exerciseLabels[CATEGORY_EXERCISE_HINT[category]] ?? CATEGORY_EXERCISE_HINT[category]}
-            </p>
-          )}
-        </div>
+        {/* Category is picked once, in Start workout — it drives both the log
+            payload and the detector hint below. */}
+        {session.category && CATEGORY_EXERCISE_HINT[session.category] && (
+          <p className="text-xs text-buddy-text-secondary">
+            Detector hint: {exerciseLabels[CATEGORY_EXERCISE_HINT[session.category]] ?? CATEGORY_EXERCISE_HINT[session.category]}
+          </p>
+        )}
         <div>
           <p className="text-sm font-medium mb-2">Exercise</p>
           <div className="flex flex-wrap gap-2">
@@ -305,7 +467,8 @@ export default function WorkoutForm() {
               {WORKOUT_DURATION_PRESETS.map((m) => (
                 <button
                   key={m}
-                  onClick={() => { if (!timerRunning) { setTimerPresetMin(m); setTimerSecsLeft(null); setTimerFinished(false); setTimerLogged(false); } }}
+                  onClick={() => { if (!timerRunning) { setTimerPresetMin(m); setSession((s) => ({ ...s, durationMin: m })); setTimerSecsLeft(null); setTimerFinished(false); setTimerLogged(false); } }}
+                  aria-pressed={timerPresetMin === m}
                   className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
                     timerPresetMin === m
                       ? 'bg-buddy-green text-buddy-black font-medium'
@@ -323,7 +486,7 @@ export default function WorkoutForm() {
             )}
             <div className="flex gap-2">
               {!timerRunning ? (
-                <Button onClick={startTimerCountdown} className="flex-1 gap-2">
+                <Button onClick={() => startTimerCountdown()} className="flex-1 gap-2">
                   <Timer size={18} /> Start {timerPresetMin} min timer
                 </Button>
               ) : (
@@ -392,7 +555,6 @@ export default function WorkoutForm() {
         {mode !== 'timer' && (
         <>
         <video ref={videoRef} className="w-full rounded-xl bg-black" playsInline muted />
-        <canvas ref={canvasRef} className="hidden" />
 
         {videoRef.current?.srcObject && (
           <Button onClick={captureImage} className="w-full">

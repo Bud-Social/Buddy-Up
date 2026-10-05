@@ -115,6 +115,23 @@ class AnalyticsLogNotifier extends Notifier<AnalyticsHistoryState> {
 
   AnalyticsRepository get _repository => ref.read(analyticsRepositoryProvider);
 
+  /// Full workout history — the summary's recent list omits the category and
+  /// distance a share needs, so the rows read from here when it resolves.
+  Future<void> loadWorkouts() async {
+    try {
+      final raw = await _repository.getWorkouts();
+      final list = (raw['data'] as List?) ?? [];
+      state = state.copyWith(
+        items: [
+          for (final entry in list)
+            if (entry is Map<String, dynamic>) entry,
+        ],
+      );
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
   Future<Map<String, dynamic>?> logWorkout(Map<String, dynamic> data) async {
     try {
       final raw = await _repository.createWorkout(data);

@@ -29,6 +29,12 @@ export const analyticsApi = {
   createWorkout: (payload: WorkoutLogInput) =>
     apiClient.post<ApiResponse<unknown>>('/analytics/workouts/', payload).then((r) => r.data),
 
+  /** Per-workout-type field/category taxonomy. Cached by lib/workoutTypes. */
+  getWorkoutTypes: () =>
+    apiClient
+      .get<ApiResponse<{ workout_types: Record<string, unknown>; categories: string[] }>>('/analytics/workout-types/')
+      .then((r) => r.data),
+
   shareActivity: (kind: 'activity' | 'workout', id: string, body?: string) =>
     apiClient.post<ApiResponse<{ post_id: string }>>(`/analytics/${kind}/${id}/share/`, body ? { body } : {}).then((r) => r.data),
 

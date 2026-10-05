@@ -10,7 +10,10 @@ from rest_framework import views, permissions, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
-from .models import ActivityRecord, WorkoutLog, BodyMetric, AnalyticsReport
+from .models import (
+    ActivityRecord, WorkoutLog, BodyMetric, AnalyticsReport,
+    WORKOUT_TYPE_SPECS, all_category_keys,
+)
 from .serializers import (
     ActivityRecordSerializer, WorkoutLogSerializer,
     BodyMetricSerializer,
@@ -106,6 +109,28 @@ class WorkoutLogView(BaseOwnedView):
             'success': True, 'data': WorkoutLogSerializer(obj).data,
             'message': 'Workout logged.', 'errors': None, 'pagination': None,
         }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+class WorkoutTypeTaxonomyView(views.APIView):
+    """Read-only workout taxonomy.
+
+    Public on purpose: the web and mobile onboarding/logging forms need the
+    type list before they have a session, so this is how they stop
+    hardcoding (and drifting from) the backend taxonomy.
+    """
+
+    permission_classes = [permissions.AllowAny]
+    throttle_scope = 'analytics'
+
+    def get(self, request):
+        return Response({
+            'success': True,
+            'data': {
+                'workout_types': WORKOUT_TYPE_SPECS,
+                'categories': all_category_keys(),
+            },
+            'message': 'Workout taxonomy.', 'errors': None, 'pagination': None,
+        })
 
 
 class BodyMetricView(BaseOwnedView):

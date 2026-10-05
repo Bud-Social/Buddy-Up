@@ -3,6 +3,134 @@ from uuid import uuid4
 from django.db import models
 from common.models import TimestampedModel
 
+# Single source of truth for the workout taxonomy. Clients read this from
+# GET /api/v1/analytics/workout-types/ instead of hardcoding type/category
+# lists in every app.
+#
+# categories -> which muscle-group / focus categories are valid for the type.
+# fields     -> measured fields the type exposes. Most are real model columns;
+#               the ones that are not (rounds/style/focus/sport) are folded
+#               into the provenance JSONField by the serializer.
+# measured   -> True when the type is tracked with objective metrics
+#               (reps/weight/distance/calories) rather than described.
+WORKOUT_TYPE_SPECS = {
+    'strength': {
+        'label': 'Strength',
+        'categories': ['upper', 'lower', 'push', 'pull', 'legs', 'arms', 'core', 'full'],
+        'fields': ['sets', 'reps', 'weight_kg'],
+        'measured': True,
+    },
+    'hiit': {
+        'label': 'HIIT',
+        'categories': ['full', 'upper', 'lower', 'core', 'cardio'],
+        'fields': ['rounds'],
+        'measured': True,
+    },
+    'cardio': {
+        'label': 'Cardio',
+        'categories': [],
+        'fields': ['distance_meters', 'calories_burned'],
+        'measured': True,
+    },
+    'running': {
+        'label': 'Running',
+        'categories': [],
+        'fields': ['distance_meters', 'calories_burned'],
+        'measured': True,
+    },
+    'walking': {
+        'label': 'Walking',
+        'categories': [],
+        'fields': ['distance_meters', 'calories_burned'],
+        'measured': True,
+    },
+    'cycling': {
+        'label': 'Cycling',
+        'categories': [],
+        'fields': ['distance_meters', 'calories_burned'],
+        'measured': True,
+    },
+    'swimming': {
+        'label': 'Swimming',
+        'categories': [],
+        'fields': ['distance_meters', 'calories_burned'],
+        'measured': True,
+    },
+    'climbing': {
+        'label': 'Climbing',
+        'categories': [],
+        'fields': [],
+        'measured': False,
+    },
+    'rowing': {
+        'label': 'Rowing',
+        'categories': [],
+        'fields': [],
+        'measured': False,
+    },
+    'dance': {
+        'label': 'Dance',
+        'categories': [],
+        'fields': [],
+        'measured': False,
+    },
+    'yoga': {
+        'label': 'Yoga',
+        'categories': ['flexibility', 'mobility', 'balance', 'strength', 'mindfulness'],
+        'fields': ['style'],
+        'measured': False,
+    },
+    'pilates': {
+        'label': 'Pilates',
+        'categories': ['core', 'posture', 'flexibility', 'mobility', 'full'],
+        'fields': ['style'],
+        'measured': False,
+    },
+    'mobility': {
+        'label': 'Mobility',
+        'categories': ['hips', 'shoulders', 'spine', 'ankles', 'full'],
+        'fields': ['focus'],
+        'measured': False,
+    },
+    'sport': {
+        'label': 'Sport',
+        'categories': [
+            'football', 'basketball', 'tennis', 'cricket', 'rugby',
+            'netball', 'volleyball', 'other',
+        ],
+        'fields': ['sport'],
+        'measured': False,
+    },
+    'boxing': {
+        'label': 'Boxing',
+        'categories': [],
+        'fields': ['style'],
+        'measured': False,
+    },
+    'martial_arts': {
+        'label': 'Martial Arts',
+        'categories': [],
+        'fields': ['style'],
+        'measured': False,
+    },
+    'other': {
+        'label': 'Other',
+        'categories': [],
+        'fields': [],
+        'measured': False,
+    },
+}
+
+
+def category_label(key):
+    """Human label for a category key ('flexibility' -> 'Flexibility')."""
+    return key.replace('_', ' ').title()
+
+
+def all_category_keys():
+    """Sorted union of every category declared across all workout types."""
+    return sorted({c for spec in WORKOUT_TYPE_SPECS.values() for c in spec['categories']})
+
 
 class ActivityRecord(TimestampedModel):
     """A walking/running/hiking session with GPS route tracking."""
@@ -56,23 +184,10 @@ class WorkoutLog(TimestampedModel):
     """A structured workout entry (strength/cardio/etc.)."""
 
     WORKOUT_TYPES = [
-        ('strength', 'Strength'),
-        ('cardio', 'Cardio'),
-        ('hiit', 'HIIT'),
-        ('yoga', 'Yoga'),
-        ('mobility', 'Mobility'),
-        ('sport', 'Sport'),
-        ('other', 'Other'),
+        (key, spec['label']) for key, spec in WORKOUT_TYPE_SPECS.items()
     ]
     CATEGORY_CHOICES = [
-        ('upper', 'Upper'),
-        ('lower', 'Lower'),
-        ('legs', 'Legs'),
-        ('push', 'Push'),
-        ('pull', 'Pull'),
-        ('core', 'Core'),
-        ('arms', 'Arms'),
-        ('full', 'Full'),
+        (key, category_label(key)) for key in all_category_keys()
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)

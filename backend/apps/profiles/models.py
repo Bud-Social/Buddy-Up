@@ -180,8 +180,8 @@ class BuddySearchProfile(TimestampedModel):
     """
 
     INTENT_CHOICES = [
-        'walk', 'run', 'gym', 'hike', 'live_cohost', 'trainer',
-        'coach', 'book_club', 'friend', 'other',
+        'walk', 'run', 'gym', 'hike', 'cycle', 'swim', 'football', 'other',
+        'live_cohost', 'trainer', 'coach', 'book_club', 'friend',
     ]
     MODE_CHOICES = ['virtual', 'hybrid', 'in_person', 'neighbourhood']
     VISIBILITY_CHOICES = [

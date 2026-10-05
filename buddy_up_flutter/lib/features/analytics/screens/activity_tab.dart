@@ -5,6 +5,7 @@ import '../../../../data/models/analytics.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../providers/analytics_provider.dart';
 import '../utils/analytics_format.dart';
+import '../utils/analytics_share.dart';
 import '../widgets/analytics_widgets.dart';
 import 'gps_tracker_screen.dart';
 
@@ -311,7 +312,7 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
       (t) => t.key == a.activityType,
       orElse: () => (
         key: a.activityType,
-        label: a.activityType,
+        label: titleCase(a.activityType),
         icon: Icons.directions_run,
       ),
     );
@@ -357,7 +358,36 @@ class _ActivityTabState extends ConsumerState<ActivityTab> {
               fontSize: 12,
             ),
           ),
+          Builder(
+            builder: (anchor) => IconButton(
+              icon: const Icon(Icons.share_outlined, size: 18),
+              tooltip: 'Share activity',
+              color: BuddyColors.green,
+              onPressed: () => _share(a, type.label, anchor),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  /// OS share sheet, falling back to copying the link — never throws.
+  Future<void> _share(
+    ActivityRecent a,
+    String label,
+    BuildContext anchor,
+  ) async {
+    await shareAnalyticsItem(
+      context: context,
+      sharePositionOrigin: shareOriginFor(anchor),
+      title: '$label on BuddyUp',
+      text: buildShareText(
+        ShareFacts(
+          label: label,
+          durationMinutes: (a.durationSeconds / 60).round(),
+          distanceKm: a.distanceKm,
+          calories: a.caloriesBurned,
+        ),
       ),
     );
   }
