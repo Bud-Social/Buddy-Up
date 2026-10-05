@@ -6,6 +6,7 @@ truth here via `/sync`; inactive models are unloaded so the next request loads
 the promoted artifact.
 """
 import json
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
@@ -14,6 +15,25 @@ from pydantic import BaseModel
 from ..config import settings
 from ..model_registry import ModelRegistry
 from ..ml.serving import artifact_path
+
+_VERSIONED_RE = re.compile(r'^(?P<name>.+)-(?P<ver>\d+(?:\.\d+){0,2})(?P<int8>_int8)?\.onnx$')
+
+
+def _canonical_name(path: Path) -> str:
+    """Map an artifact file to its registry key.
+
+    versioned  toxicity_classifier-2.0.0_int8.onnx -> toxicity_classifier
+    legacy    toxicity_classifier_int8.onnx         -> toxicity_classifier
+    """
+    m = _VERSIONED_RE.match(path.name)
+    if m:
+        return m.group('name')
+    name = path.name
+    if name.endswith('_int8.onnx'):
+        return name[:-len('_int8.onnx')]
+    if name.endswith('.onnx'):
+        return name[:-len('.onnx')]
+    return name
 
 router = APIRouter()
 
@@ -82,12 +102,14 @@ class SyncResponse(BaseModel):
 @router.get('', response_model=ModelsResponse)
 async def list_models():
     loaded = set(ModelRegistry.list_models())
-    # Union loaded names with any ONNX artifacts present in the cache dir.
+    # Union loaded names with any ONNX artifacts present in the cache dir
+    # (flat files + versioned <name>/<version>/model[_int8].onnx layout).
     cache = Path(settings.model_cache_dir or '')
-    artifact_names = {
-        p.name.replace('_int8.onnx', '').replace('.onnx', '')
-        for p in cache.glob('*.onnx')
-    } if cache.exists() else set()
+    artifact_names: set[str] = set()
+    if cache.exists():
+        artifact_names = {_canonical_name(p) for p in cache.glob('*.onnx')}
+        for model_file in cache.glob('*/model*.onnx'):
+            artifact_names.add(model_file.parent.name)
 
     names = sorted(loaded | artifact_names)
     return ModelsResponse(

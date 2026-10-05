@@ -36,6 +36,10 @@ class VideoFormAnalysisResult(BaseModel):
     feedback: list[str]
     issues: list[str]
     form_score: int
+    reps: int = 0
+    muscles: list[str] = []
+    body_area: str = ''
+    duration_seconds: float | None = None
 
 
 @router.post('/analyze', response_model=FormAnalysisResult | VideoFormAnalysisResult)

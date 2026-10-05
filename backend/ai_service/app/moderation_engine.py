@@ -167,6 +167,134 @@ async def _openai_moderate(text: str) -> dict | None:
         return None
 
 
+def _load_toxicity_tokenizer():
+    """BERT tokenizer matching the 2.0.0 ONNX artifact (30522 x 768).
+
+    Cached in ModelRegistry; prefers unitary/toxic-bert then bert-base-uncased.
+    Returns None when offline so callers fall back to the HF pipeline.
+    """
+    cached = ModelRegistry.get('toxicity_tokenizer')
+    if cached is not None:
+        return cached
+    try:
+        from pathlib import Path
+
+        from transformers import BertTokenizerFast
+
+        repo_hf = Path(__file__).resolve().parents[2] / 'models' / 'hf'
+        # Prefer a direct snapshot load (no hub cache writes, works offline
+        # and without a writable /models mount in dev).
+        for model_id in ('unitary/toxic-bert', 'bert-base-uncased'):
+            slug = 'models--' + model_id.replace('/', '--')
+            for base in (repo_hf / 'hub', Path(settings.model_cache_dir) / 'hf' / 'hub'):
+                snap_root = base / slug / 'snapshots'
+                if not snap_root.is_dir():
+                    continue
+                for snap in sorted(snap_root.iterdir()):
+                    if (snap / 'vocab.txt').exists() or (snap / 'tokenizer.json').exists():
+                        try:
+                            tok = BertTokenizerFast.from_pretrained(str(snap))
+                            ModelRegistry.register('toxicity_tokenizer', tok)
+                            logger.info('Toxicity tokenizer loaded (%s snapshot)', model_id)
+                            return tok
+                        except Exception as exc:  # noqa: BLE001
+                            logger.warning('Snapshot tokenizer failed (%s): %s', snap, exc)
+                            break
+
+        last_exc: Exception | None = None
+        for model_id in ('unitary/toxic-bert', 'bert-base-uncased'):
+            try:
+                tok = BertTokenizerFast.from_pretrained(model_id, local_files_only=True)
+                ModelRegistry.register('toxicity_tokenizer', tok)
+                logger.info('Toxicity tokenizer loaded (%s)', model_id)
+                return tok
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+        logger.warning('Toxicity tokenizer unavailable (%s)', last_exc)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('transformers tokenizer unavailable (%s)', exc)
+    return None
+
+
+def _load_toxicity_onnx():
+    """Load toxicity_classifier ONNX via serving (honours active version)."""
+    cached = ModelRegistry.get('toxicity_classifier_onnx')
+    if cached is not None:
+        return cached
+    try:
+        from .ml.serving import artifact_path
+        from .ml.serving import OnnxModel
+
+        path = artifact_path('toxicity_classifier')
+        if path is None:
+            return None
+        model = OnnxModel(str(path))
+        ModelRegistry.register('toxicity_classifier_onnx', model)
+        logger.info('Toxicity ONNX loaded (%s)', path)
+        return model
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Toxicity ONNX unavailable (%s)', exc)
+        return None
+
+
+def _onnx_toxicity(text: str) -> dict | None:
+    """Run the 2.0.0 BERT ONNX artifact; None when unavailable."""
+    model = _load_toxicity_onnx()
+    tok = _load_toxicity_tokenizer()
+    if model is None or tok is None:
+        return None
+    try:
+        import numpy as np
+
+        enc = tok(text[:2000], max_length=128, padding='max_length',
+                  truncation=True, return_tensors='np')
+        inputs = {
+            'input_ids': enc['input_ids'].astype(np.int64),
+            'attention_mask': enc['attention_mask'].astype(np.int64),
+        }
+        # Keep only inputs the session expects (fp32 vs int64 variants).
+        inputs = {k: v for k, v in inputs.items() if k in set(model.input_names)}
+        logits = np.asarray(model.predict_dict(inputs)[0])
+        flat = logits.reshape(-1)
+        if flat.size == 1:
+            score = float(1.0 / (1.0 + np.exp(-flat[0])))
+        else:
+            shifted = flat - flat.max()
+            probs = np.exp(shifted) / np.exp(shifted).sum()
+            # BERT 2-class head: index 1 = toxic (index 0 = clean).
+            score = float(probs[1]) if probs.size > 1 else float(probs[0])
+        is_toxic = score > TOXICITY_THRESHOLD
+        return {
+            'is_toxic': bool(is_toxic),
+            'toxicity_score': round(score, 4),
+            'categories': {'toxic': round(score, 4)},
+            'label': 'toxic' if is_toxic else 'not_toxic',
+            'action': 'flag' if is_toxic else 'approve',
+            'method': 'onnx_2.0.0',
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Toxicity ONNX inference failed: %s', exc)
+        return None
+
+
+def _keyword_toxicity(text: str) -> dict:
+    toxic_keywords = [
+        'kill yourself', 'harm yourself', 'hate', 'idiots', 'stupid',
+        'nsfw', 'explicit', 'violence', 'idiot',
+    ]
+    text_lower = text.lower()
+    matched = [kw for kw in toxic_keywords if kw in text_lower]
+    is_toxic = len(matched) > 0
+    return {
+        'is_toxic': is_toxic,
+        'toxicity_score': 0.5 if is_toxic else 0.0,
+        'categories': {kw: 0.5 for kw in matched} if is_toxic else {},
+        'label': 'toxic' if is_toxic else 'not_toxic',
+        'action': 'flag' if is_toxic else 'approve',
+        'method': 'keyword_fallback',
+    }
+
+
 async def analyze_text(text: str) -> dict:
     if not text or not text.strip():
         return {
@@ -181,6 +309,26 @@ async def analyze_text(text: str) -> dict:
     openai_result = await _openai_moderate(text)
     if openai_result is not None:
         return openai_result
+
+    onnx_result = _onnx_toxicity(text)
+    if onnx_result is not None and onnx_result['is_toxic']:
+        return onnx_result
+    # Weak-model safety: a clean ONNX vote must not suppress the keyword
+    # fallback (2.0.0 misses e.g. "you are an idiot" that keywords catch).
+    # Fall through so HF/keyword can still flag; keep the ONNX score for
+    # observability when everything is clean.
+    keyword_result = _keyword_toxicity(text)
+    if keyword_result['is_toxic']:
+        if onnx_result is not None:
+            keyword_result['categories'] = {
+                **keyword_result['categories'],
+                'onnx_2.0.0': onnx_result['toxicity_score'],
+            }
+        return keyword_result
+
+    if onnx_result is not None:
+        # ONNX + keyword agree: clean. Skip the heavy HF pipeline.
+        return onnx_result
 
     classifier = ModelRegistry.get('toxicity_classifier')
     if classifier is None:
@@ -215,19 +363,7 @@ async def analyze_text(text: str) -> dict:
         except Exception as exc:  # noqa: BLE001
             logger.warning('Toxicity inference failed: %s — using keyword fallback', exc)
 
-    toxic_keywords = [
-        'kill yourself', 'harm yourself', 'hate', 'idiots', 'stupid',
-        'nsfw', 'explicit', 'violence',
-    ]
-    text_lower = text.lower()
-    matched = [kw for kw in toxic_keywords if kw in text_lower]
-    is_toxic = len(matched) > 0
-
-    return {
-        'is_toxic': is_toxic,
-        'toxicity_score': 0.5 if is_toxic else 0.0,
-        'categories': {kw: 0.5 for kw in matched} if is_toxic else {},
-        'label': 'toxic' if is_toxic else 'not_toxic',
-        'action': 'flag' if is_toxic else 'approve',
-        'method': 'keyword_fallback',
-    }
+    if onnx_result is not None:
+        # ONNX ran and was clean, keyword was clean: report the ONNX score.
+        return onnx_result
+    return _keyword_toxicity(text)

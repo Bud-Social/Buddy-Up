@@ -339,6 +339,75 @@ def _analyze_lunge(landmarks: np.ndarray) -> dict:
     }
 
 
+EXERCISE_MUSCLES: dict[str, tuple[list[str], str]] = {
+    'squat': (['quadriceps', 'glutes'], 'legs'),
+    'lunge': (['quadriceps', 'glutes'], 'legs'),
+    'deadlift': (['hamstrings', 'back', 'glutes'], 'posterior chain'),
+    'bench_press': (['chest', 'triceps'], 'push'),
+    'overhead_press': (['shoulders', 'triceps'], 'push'),
+    'bicep_curl': (['biceps'], 'pull'),
+    'push_up': (['chest', 'triceps', 'core'], 'push'),
+    'plank': (['core'], 'core'),
+}
+
+
+def exercise_muscles(exercise: str) -> tuple[list[str], str]:
+    return EXERCISE_MUSCLES.get(exercise, (['full body'], 'full body'))
+
+
+def _rep_angle(landmarks: np.ndarray, exercise: str) -> float | None:
+    """Primary-mover joint angle for rep counting (degrees). None if unknown."""
+    P = mp_pose.PoseLandmark
+
+    def ang(a, b, c):
+        try:
+            return _calculate_joint_angle(landmarks, a, b, c)
+        except Exception:  # noqa: BLE001
+            return None
+
+    if exercise in ('squat', 'lunge'):
+        return ang(P.HIP, P.KNEE, P.ANKLE)
+    if exercise == 'deadlift':
+        return ang(P.SHOULDER, P.HIP, P.KNEE)
+    if exercise in ('bench_press', 'push_up'):
+        return ang(P.SHOULDER, P.ELBOW, P.WRIST)
+    if exercise == 'overhead_press':
+        return ang(P.HIP, P.SHOULDER, P.ELBOW)
+    if exercise == 'bicep_curl':
+        return ang(P.SHOULDER, P.ELBOW, P.WRIST)
+    if exercise == 'plank':
+        return None
+    return ang(P.HIP, P.KNEE, P.ANKLE)
+
+
+def _count_reps(angles: list[float], min_amplitude: float = 20.0) -> int:
+    """Hysteresis rep estimate from a joint-angle series (full cycles)."""
+    if len(angles) < 6:
+        return 0
+    raw = np.asarray(angles, dtype=float)
+    # Edge-padded smoothing: 'same' zero-padding fabricates excursions.
+    padded = np.pad(raw, 1, mode='edge')
+    s = np.convolve(padded, np.ones(3) / 3, mode='valid')
+    half = 0
+    lo = hi = float(s[0])
+    trend = 0
+    for v in s[1:]:
+        v = float(v)
+        if v > hi:
+            hi = v
+        if v < lo:
+            lo = v
+        if trend >= 0 and hi - v >= min_amplitude:
+            half += 1
+            trend = -1
+            lo = hi = v
+        elif trend <= 0 and v - lo >= min_amplitude:
+            half += 1
+            trend = 1
+            lo = hi = v
+    return half // 2
+
+
 def _analyze_frame(frame_bgr: np.ndarray, exercise: str) -> dict | None:
     """Run pose detection + form analysis on a single BGR frame. None if no pose."""
     if not MEDIAPIPE_AVAILABLE or not CV2_AVAILABLE:
@@ -368,13 +437,18 @@ def _analyze_frame(frame_bgr: np.ndarray, exercise: str) -> dict | None:
 
         analyzer = analyzers.get(exercise)
         if analyzer:
-            return analyzer(landmarks_np)
-        return {
-            'exercise': exercise,
-            'form_score': 50,
-            'feedback': [f'{exercise.replace("_", " ").title()} analysis coming soon.'],
-            'issues': [],
-        }
+            result = analyzer(landmarks_np)
+        else:
+            result = {
+                'exercise': exercise,
+                'form_score': 50,
+                'feedback': [f'{exercise.replace("_", " ").title()} analysis coming soon.'],
+                'issues': [],
+            }
+        signal = _rep_angle(landmarks_np, result.get('exercise', exercise))
+        if signal is not None:
+            result['signal_angle'] = round(float(signal), 1)
+        return result
     finally:
         mp_pose_instance.close()
 
@@ -417,7 +491,9 @@ def analyze_form_video(
             return {'error': 'Invalid video', 'form_score': 0, 'feedback': ['Could not decode video.']}
 
         frame_scores = []
+        signal_series = []
         detected_exercise = exercise
+        fps = cap.get(cv2.CAP_PROP_FPS) or 0
         idx = 0
         while True:
             ret, frame = cap.read()
@@ -428,8 +504,11 @@ def analyze_form_video(
                 if result is not None:
                     if exercise == 'auto':
                         detected_exercise = result.get('exercise', detected_exercise)
+                    if result.get('signal_angle') is not None:
+                        signal_series.append(float(result['signal_angle']))
                     frame_scores.append({'frame_index': idx, **result})
             idx += 1
+        total_frames = idx
         cap.release()
     except Exception as exc:  # noqa: BLE001
         logger.error('Video analysis error: %s', exc)
@@ -458,6 +537,10 @@ def analyze_form_video(
                 feedback_order.append(msg)
     feedback = feedback_order[:6]
 
+    muscles, body_area = exercise_muscles(detected_exercise)
+    reps = _count_reps(signal_series)
+    duration_seconds = round(total_frames / fps, 1) if fps and total_frames else None
+
     return {
         'exercise': detected_exercise,
         'video': True,
@@ -470,6 +553,10 @@ def analyze_form_video(
         'top_issues': top_issues,
         'feedback': feedback,
         'issues': list(issue_counts.keys()),
+        'reps': reps,
+        'muscles': muscles,
+        'body_area': body_area,
+        'duration_seconds': duration_seconds,
     }
 
 
