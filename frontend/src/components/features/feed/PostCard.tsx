@@ -25,6 +25,8 @@ import { filterCssAt, adjustCss } from '@/lib/createStudio';
 import { CreativeLayer } from '@/components/create/CreativeLayer';
 import { FeedTrackAudio } from '@/components/features/feed/FeedTrackAudio';
 import { isProfanityFilterEnabled, maskProfanity } from '@/lib/profanity';
+import { SensitiveGate } from '@/components/features/feed/SensitiveGate';
+import { isSensitive, sensitiveKind } from '@/lib/sensitive';
 
 function combinedFilterCss(page: MediaPage): string {
   const edits = page.edit_meta;
@@ -267,16 +269,16 @@ function CarouselVideoPage({
 }
 
 function MediaGallery({
-  post, blurred, postId, onViewRecorded, onInteract,
+  post, blurred, kind, postId, onViewRecorded, onInteract,
 }: {
   post: { media?: PostMedia[] | null; media_urls?: string[] | null; captions?: PostCaption[] | null };
   blurred?: boolean;
+  kind?: Parameters<typeof SensitiveGate>[0]['kind'];
   postId?: string;
   onViewRecorded?: (viewCount: number) => void;
   onInteract?: (action: 'cover') => void;
 }) {
   const [idx, setIdx] = useState(0);
-  const [revealed, setRevealed] = useState(false);
   const [muted, setMuted] = useState(true);
   const trackRef = useRef<HTMLDivElement>(null);
   const pages = useMemo(() => mediaPagesFromPost(post), [post]);
@@ -298,10 +300,10 @@ function MediaGallery({
   };
 
   if (!pages.length) return null;
-  const canAutoplay = !(blurred && !revealed);
 
-  return (
-    <div className="mt-3 relative rounded-xl overflow-hidden bg-buddy-surface group">
+  const gallery = (revealed: boolean) => {
+    const gated = !!blurred && !revealed;
+    return (
       <div
         ref={trackRef}
         onScroll={onTrackScroll}
@@ -313,8 +315,8 @@ function MediaGallery({
               <CarouselVideoPage
                 page={page}
                 muted={muted}
-                canAutoplay={canAutoplay}
-                blur={!!blurred && !revealed}
+                canAutoplay={!gated}
+                blur={gated}
                 captions={page.captions ?? captions}
                 postId={postId}
                 onToggleMute={() => setMuted((m) => !m)}
@@ -327,12 +329,12 @@ function MediaGallery({
                 }
               />
             ) : page.type === 'audio' ? (
-              <div className="p-4 bg-buddy-surface-raised w-full">
+              <div className={`p-4 bg-buddy-surface-raised w-full ${gated ? 'blur-xl select-none' : ''}`}>
                 <audio src={page.url} controls className="w-full" />
               </div>
             ) : page.type === 'document' ? (
               <a href={page.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-3 p-4 bg-buddy-surface-raised hover:bg-buddy-surface transition-colors">
+                className={`flex items-center gap-3 p-4 bg-buddy-surface-raised hover:bg-buddy-surface transition-colors ${gated ? 'blur-xl select-none pointer-events-none' : ''}`}>
                 <div className="w-11 h-11 rounded-xl bg-buddy-green/15 text-buddy-green flex items-center justify-center shrink-0">
                   <FileText size={22} />
                 </div>
@@ -346,21 +348,24 @@ function MediaGallery({
               <img
                 src={page.url}
                 alt={page.alt_text ?? ''}
-                className={`w-full max-h-96 object-cover ${blurred && !revealed ? 'blur-xl' : ''}`}
+                className={`w-full max-h-96 object-cover ${gated ? 'blur-xl' : ''}`}
                 loading="lazy"
               />
             )}
           </div>
         ))}
       </div>
+    );
+  };
 
-      {blurred && !revealed && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-          <button onClick={(e) => { e.stopPropagation(); setRevealed(true); }}
-            className="px-4 py-2 rounded-full bg-buddy-surface text-sm text-buddy-text-primary font-medium hover:bg-buddy-surface-raised transition-colors">
-            Sensitive content. Tap to reveal.
-          </button>
-        </div>
+  return (
+    <div className="mt-3 relative rounded-xl overflow-hidden bg-buddy-surface group">
+      {blurred && postId ? (
+        <SensitiveGate key={postId} postId={postId} blurred={!!blurred} kind={kind ?? null}>
+          {(revealed) => gallery(revealed)}
+        </SensitiveGate>
+      ) : (
+        gallery(true)
       )}
 
       {/* Desktop arrows */}
@@ -1130,8 +1135,17 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
           {displayPost.post_type === 'workout_log' && displayPost.workout_log_data && <WorkoutLogCard data={displayPost.workout_log_data as Record<string, unknown>} />}
           {displayPost.post_type === 'poll' && (displayPost as any).poll && <PollCard poll={(displayPost as any).poll} postId={displayPost.id} />}
 
-          {/* Media */}
-          <MediaGallery post={displayPost} blurred={post.moderation_status === 'flagged'} postId={post.id} onViewRecorded={handleViewRecorded} onInteract={(a) => interact(a)} />
+          {/* Media — X/IG-style gate. Moderation state lives on the wrapper
+              post (reposts are moderated on creation); media comes from the
+              original when this is a repost. */}
+          <MediaGallery
+            post={displayPost}
+            blurred={isSensitive(post)}
+            kind={sensitiveKind(post)}
+            postId={displayPost.id}
+            onViewRecorded={handleViewRecorded}
+            onInteract={(a) => interact(a)}
+          />
 
           {/* Map */}
           {displayPost.location_lat != null && displayPost.location_lng != null && (

@@ -104,6 +104,8 @@ export interface ProductMP {
   is_draft?: boolean;
   abandoned_cart_count?: number;
   shop_data?: { id: string; name: string; handle: string; verification_status: string };
+  delivery_modes?: string[];
+  fulfillment_details?: Record<string, string>;
   created_at: string;
 }
 

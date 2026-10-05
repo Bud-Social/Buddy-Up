@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { CropModal } from '@/components/ui/CropModal';
 import { useToast } from '@/components/ui/Toast';
 import { InterestChips } from '@/components/profile/InterestChips';
+import { BuddySearchCard } from '@/components/profile/BuddySearchCard';
 import { useAuthStore } from '@/store/authStore';
 import { useThemeStore } from '@/store/themeStore';
 import { profilesApi } from '@/api';
@@ -234,6 +235,8 @@ export default function Profile() {
             )}
           </div>
         )}
+
+        {!isEditing && <BuddySearchCard />}
 
         {!isEditing && (
           <div className="flex gap-2 mb-2">

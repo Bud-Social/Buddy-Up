@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {MessageCircle,Trophy,Utensils, Search, Users, Dumbbell, Radio, TrendingUp, X, Hash, Ticket, Tag, Handshake, UserCheck } from 'lucide-react';
+import {MessageCircle,Trophy,Utensils, Search, Users, Dumbbell, Radio, TrendingUp, X, Hash, Ticket, Tag, Handshake, UserCheck, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -10,18 +10,19 @@ import { InterestChips } from '@/components/profile/InterestChips';
 import { profilesApi } from '@/api';
 import { gymsApi } from '@/api';
 import { livesApi } from '@/api';
+import { track } from '@/lib/analytics';
 import { PostCard } from '@/components/features/feed/PostCard';
 import type { DiscoverTrending } from '@/api/profiles';
 import type { Profile } from '@/types';
 import type { Gym } from '@/types';
 import type { BuddyLive } from '@/types/live';
 
-type DiscoverTab = 'people' | 'gyms' | 'lives';
+type DiscoverTab = 'all' | 'people' | 'gyms' | 'lives' | 'topics' | 'communities';
 
 export default function Discover() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<DiscoverTab>('people');
+  const [activeTab, setActiveTab] = useState<DiscoverTab>('all');
   const [query, setQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [trending, setTrending] = useState<DiscoverTrending | null>(null);
@@ -44,27 +45,33 @@ export default function Discover() {
   const [lives, setLives] = useState<BuddyLive[]>([]);
 
   const tabs: { key: DiscoverTab; label: string; icon: typeof Users }[] = [
+    { key: 'all', label: 'All', icon: LayoutGrid },
     { key: 'people', label: 'People', icon: Users },
     { key: 'gyms', label: 'Gyms', icon: Dumbbell },
-    { key: 'lives', label: 'Trending Lives', icon: Radio },
+    { key: 'lives', label: 'Lives', icon: Radio },
+    { key: 'topics', label: 'Topics', icon: Hash },
+    { key: 'communities', label: 'Communities', icon: MessageCircle },
   ];
 
   const doSearch = useCallback(async (q: string) => {
     setIsSearching(true);
     try {
-      if (activeTab === 'people') {
+      if (activeTab === 'people' || activeTab === 'all') {
         const res = await profilesApi.searchProfiles({ q, limit: 20 });
         setPeople(res.data);
-      } else if (activeTab === 'gyms') {
+      }
+      if (activeTab === 'gyms' || activeTab === 'all') {
         const res = await gymsApi.list({ q });
         setGyms(res.data);
-      } else if (activeTab === 'lives') {
+      }
+      if (activeTab === 'lives' || activeTab === 'all') {
         const res = await livesApi.browse({ tab: 'live' });
         setLives((res.data || []).filter((l) =>
           l.title.toLowerCase().includes(q.toLowerCase()) ||
           l.host.display_name.toLowerCase().includes(q.toLowerCase()),
         ));
       }
+      // topics + communities filter client-side from trending (see filteredTopics/ filteredCommunities).
     } catch {} finally {
       setIsSearching(false);
     }
@@ -83,20 +90,38 @@ export default function Discover() {
   }, [query.length]);
 
   useEffect(() => {
+    track('discover.tab_view', { properties: { tab: activeTab } });
+  }, [activeTab]);
+
+  const filteredTopics = useMemo(() => {
+    const tags = trending?.hashtags ?? [];
+    if (query.length < 2) return tags;
+    return tags.filter((h) => h.tag.toLowerCase().includes(query.replace(/^#/, '').toLowerCase()));
+  }, [trending, query]);
+
+  const filteredCommunities = useMemo(() => {
+    const list = trending?.communities ?? [];
+    if (query.length < 2) return list;
+    return list.filter((c) => c.group_name.toLowerCase().includes(query.toLowerCase()));
+  }, [trending, query]);
+
+  useEffect(() => {
     if (query.length >= 2) return;
-    if (activeTab === 'people') {
+    if (activeTab === 'people' || activeTab === 'all') {
       setIsSearching(true);
       profilesApi.getRecommendations()
         .then((res) => setPeople((res.data || []).map((r) => r.profile)))
         .catch(() => setPeople([]))
         .finally(() => setIsSearching(false));
-    } else if (activeTab === 'gyms') {
-      setIsSearching(true);
+    }
+    if (activeTab === 'gyms' || activeTab === 'all') {
+      if (activeTab !== 'all') setIsSearching(true);
       gymsApi.list({})
         .then((res) => setGyms(res.data || []))
         .catch(() => setGyms([]))
-        .finally(() => setIsSearching(false));
-    } else if (activeTab === 'lives') {
+        .finally(() => { if (activeTab !== 'all') setIsSearching(false); });
+    }
+    if (activeTab === 'lives' || activeTab === 'all') {
       livesApi.browse({ tab: 'live' }).then((res) => setLives(res.data || [])).catch(() => {});
     }
   }, [activeTab, query.length]);
@@ -129,14 +154,19 @@ export default function Discover() {
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-buddy-green" />
           <p className="text-sm font-medium text-buddy-text-primary">
-            {activeTab === 'people' && 'Recommended for you'}
+            {activeTab === 'all' && 'For you today'}
+            {activeTab === 'people' && (
+              <>Recommended for you · <button onClick={() => navigate('/buddies/find')} className="text-buddy-green font-medium">Find nearby →</button></>
+            )}
             {activeTab === 'gyms' && 'Browse gyms'}
             {activeTab === 'lives' && 'Trending live sessions'}
+            {activeTab === 'topics' && 'Trending topics'}
+            {activeTab === 'communities' && 'Active communities'}
           </p>
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -144,7 +174,7 @@ export default function Discover() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
                 isActive
                   ? 'bg-buddy-green text-buddy-black'
                   : 'bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
@@ -165,7 +195,7 @@ export default function Discover() {
 
       {!isSearching && query.length < 2 && trending && (
         <div className="space-y-6">
-          {trending.hashtags.length > 0 && (
+          {(trending.hashtags ?? []).length > 0 && (
             <div>
               <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
                 <Hash className="w-4 h-4 text-buddy-green" /> Trending Challenges
@@ -182,7 +212,7 @@ export default function Discover() {
             </div>
           )}
 
-          {trending.posts.length > 0 && (
+          {(trending.posts ?? []).length > 0 && (
             <div>
               <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
                 <TrendingUp className="w-4 h-4 text-buddy-green" /> Trending Posts
@@ -289,7 +319,7 @@ export default function Discover() {
             </div>
           )}
 
-          {trending.offers.length > 0 && (
+          {(trending.offers ?? []).length > 0 && (
             <div>
               <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
                 <Tag className="w-4 h-4 text-buddy-green" /> Trending Giveaways & Offers
@@ -342,7 +372,7 @@ export default function Discover() {
         </div>
       )}
 
-      {!isSearching && activeTab === 'people' && people.length > 0 && (
+      {!isSearching && (activeTab === 'people' || (activeTab === 'all' && query.length >= 2)) && people.length > 0 && (
         <div className="space-y-3">
           {people.slice(0, showAllPeople ? people.length : 4).map((p) => {
             const requested = buddyRequested.has(p.username);
@@ -403,7 +433,7 @@ export default function Discover() {
         </div>
       )}
 
-      {!isSearching && activeTab === 'gyms' && gyms.length > 0 && (
+      {!isSearching && (activeTab === 'gyms' || (activeTab === 'all' && query.length >= 2)) && gyms.length > 0 && (
         <div className="space-y-3">
           {gyms.map((g) => (
             <Card key={g.id} className="p-4 flex items-center gap-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors" onClick={() => navigate(`/gyms/${g.handle}`)}>
@@ -429,7 +459,7 @@ export default function Discover() {
         </div>
       )}
 
-      {!isSearching && activeTab === 'lives' && (
+      {!isSearching && (activeTab === 'lives' || (activeTab === 'all' && query.length >= 2)) && (
         <div className="space-y-3">
           {lives.length === 0 && query.length < 2 && (
             <div className="bg-buddy-surface rounded-2xl p-8 text-center">
@@ -470,13 +500,124 @@ export default function Discover() {
         </div>
       )}
 
+      {!isSearching && (activeTab === 'topics' || (activeTab === 'all' && query.length >= 2)) && (
+        <div className="space-y-3">
+          {filteredTopics.length === 0 && (
+            <div className="bg-buddy-surface rounded-2xl p-8 text-center">
+              <Hash className="w-10 h-10 text-buddy-text-secondary mx-auto mb-3" />
+              <p className="text-buddy-text-secondary">
+                {query.length >= 2 ? `No topics found for "${query}".` : 'No trending topics right now.'}
+              </p>
+            </div>
+          )}
+          {filteredTopics.length > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <Hash className="w-4 h-4 text-buddy-green" /> Trending Topics
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {filteredTopics.map((h) => (
+                  <button key={h.tag} onClick={() => { track('discover.topic_click', { properties: { tag: h.tag } }); setQuery(`#${h.tag}`); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-buddy-surface text-sm hover:bg-buddy-surface-raised transition-colors">
+                    <span className="text-buddy-green font-medium">#{h.tag}</span>
+                    <span className="text-xs text-buddy-text-secondary">{h.count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isSearching && (activeTab === 'communities' || (activeTab === 'all' && query.length >= 2)) && (
+        <div className="space-y-3">
+          {filteredCommunities.length === 0 && (
+            <div className="bg-buddy-surface rounded-2xl p-8 text-center">
+              <Users className="w-10 h-10 text-buddy-text-secondary mx-auto mb-3" />
+              <p className="text-buddy-text-secondary">
+                {query.length >= 2 ? `No communities found for "${query}".` : 'No active communities right now.'}
+              </p>
+            </div>
+          )}
+          {filteredCommunities.length > 0 && (
+            <div>
+              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
+                <Users className="w-4 h-4 text-buddy-green" /> Active Communities
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {filteredCommunities.map((c) => (
+                  <button key={c.id} onClick={() => { track('discover.community_click', { object_id: c.id }); navigate(`/communities/${c.id}`); }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-buddy-surface hover:bg-buddy-surface-raised transition-colors">
+                    {c.group_avatar_url ? (
+                      <img src={c.group_avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                    ) : (
+                      <span className="w-6 h-6 rounded-full bg-buddy-green/15 flex items-center justify-center text-[10px] font-bold text-buddy-green">
+                        {c.group_name.charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <span className="text-sm max-w-[140px] truncate">{c.group_name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isSearching && query.length < 2 && activeTab === 'all' && (
+        <div className="space-y-6">
+          {people.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary">
+                  <Users className="w-4 h-4 text-buddy-green" /> People for you
+                </p>
+                <button onClick={() => setActiveTab('people')} className="text-xs text-buddy-green font-medium">See all</button>
+              </div>
+              <div className="space-y-3">
+                {people.slice(0, 2).map((p) => (
+                  <Card key={p.user_id} className="p-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors" onClick={() => navigate(`/${p.username}`)}>
+                    <div className="flex items-center gap-3">
+                      <Avatar src={p.avatar_url} alt={p.display_name} size="lg" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-heading font-semibold truncate">{p.display_name}</p>
+                        <p className="text-sm text-buddy-text-secondary">@{p.username} · {p.buddy_count} buddies</p>
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/${p.username}`); }}>View</Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+          {lives.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary">
+                  <Radio className="w-4 h-4 text-buddy-red" /> Live now
+                </p>
+                <button onClick={() => setActiveTab('lives')} className="text-xs text-buddy-green font-medium">See all</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {lives.slice(0, 5).map((lv) => (
+                  <button key={lv.id} onClick={() => navigate(`/live/${lv.id}`)}
+                    className="px-3 py-1.5 rounded-full bg-buddy-surface text-sm hover:bg-buddy-surface-raised transition-colors max-w-[220px] truncate">
+                    {lv.status === 'live' ? '🔴 ' : ''}{lv.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {!isSearching && query.length >= 2 && activeTab === 'people' && people.length === 0 && (
         <div className="bg-buddy-surface rounded-2xl p-8 text-center">
           <p className="text-buddy-text-secondary">No users found for "{query}".</p>
         </div>
       )}
 
-      {!isSearching && query.length >= 2 && activeTab === 'gyms' && gyms.length === 0 && (
+      {!isSearching && query.length >= 2 && (activeTab === 'gyms' || activeTab === 'all') && gyms.length === 0 && (
         <div className="bg-buddy-surface rounded-2xl p-8 text-center">
           <p className="text-buddy-text-secondary">No gyms found for "{query}".</p>
         </div>

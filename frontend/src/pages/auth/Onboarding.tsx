@@ -13,10 +13,10 @@ const goals = ['weight_loss', 'muscle_gain', 'endurance', 'flexibility', 'genera
 const goalLabels: Record<string, string> = { weight_loss: 'Weight Loss', muscle_gain: 'Muscle Gain', endurance: 'Endurance', flexibility: 'Flexibility', general_wellness: 'General Wellness', nutrition: 'Nutrition', sports_performance: 'Sports Performance', rehabilitation: 'Rehabilitation', mental_health: 'Mental Health' };
 const levels = ['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'athlete'] as const;
 const levelLabels: Record<string, string> = { sedentary: 'Sedentary', lightly_active: 'Lightly Active', moderately_active: 'Moderately Active', very_active: 'Very Active', athlete: 'Athlete' };
-const workoutTypes = ['weights', 'cardio', 'hiit', 'yoga', 'pilates', 'crossfit', 'martial_arts', 'swimming', 'running', 'cycling', 'other'] as const;
-const workoutLabels: Record<string, string> = { weights: 'Weights', cardio: 'Cardio', hiit: 'HIIT', yoga: 'Yoga', pilates: 'Pilates', crossfit: 'CrossFit', martial_arts: 'Martial Arts', swimming: 'Swimming', running: 'Running', cycling: 'Cycling', other: 'Other' };
+const workoutTypes = ['weights', 'cardio', 'hiit', 'yoga', 'pilates', 'crossfit', 'martial_arts', 'swimming', 'running', 'cycling', 'walk', 'hiking', 'gym', 'other'] as const;
+const workoutLabels: Record<string, string> = { weights: 'Weights', cardio: 'Cardio', hiit: 'HIIT', yoga: 'Yoga', pilates: 'Pilates', crossfit: 'CrossFit', martial_arts: 'Martial Arts', swimming: 'Swimming', running: 'Running', cycling: 'Cycling', walk: 'Walk', hiking: 'Hiking', gym: 'Gym', other: 'Other' };
 const diets = ['none', 'vegan', 'vegetarian', 'keto', 'paleo', 'halal', 'kosher', 'gluten_free', 'other'] as const;
-const dietLabels: Record<string, string> = { none: 'None', vegan: 'Vegan', vegetarian: 'Keto', keto: 'Keto', paleo: 'Paleo', halal: 'Halal', kosher: 'Kosher', gluten_free: 'Gluten-Free', other: 'Other' };
+const dietLabels: Record<string, string> = { none: 'None', vegan: 'Vegan', vegetarian: 'Vegetarian', keto: 'Keto', paleo: 'Paleo', halal: 'Halal', kosher: 'Kosher', gluten_free: 'Gluten-Free', other: 'Other' };
 const times = ['early_morning', 'morning', 'afternoon', 'evening', 'night', 'flexible'] as const;
 const timeLabels: Record<string, string> = { early_morning: 'Early Morning', morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', night: 'Night', flexible: 'Flexible' };
 
@@ -278,7 +278,7 @@ export default function Onboarding() {
             )}
             {(profileError || error) && step === 2 && <p className="text-sm text-red-400">{profileError || error}</p>}
             <div className="flex gap-3 mt-4">
-              <Button variant="ghost" onClick={() => setStep(needsAge ? 0 : 1)} className="flex-1">Back</Button>
+              <Button variant="ghost" onClick={() => setStep(1)} className="flex-1">Back</Button>
               <Button className="flex-1" size="lg"
                 disabled={!displayNameValid || !usernameValid || usernameState === 'taken' || usernameChecking}
                 onClick={() => { if (validateProfileStep()) setStep(3); }}>Next</Button>

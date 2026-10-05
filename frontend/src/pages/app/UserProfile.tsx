@@ -25,6 +25,7 @@ import { Badge } from '@/components/ui/Badge';
 import { BuddyButton } from '@/components/features/profiles/BuddyButton';
 import { useToast } from '@/components/ui/Toast';
 import { InterestChips } from '@/components/profile/InterestChips';
+import { BuddySearchCard } from '@/components/profile/BuddySearchCard';
 import { profilesApi, messagingApi } from '@/api';
 import { livesApi } from '@/api/lives';
 import ReplayPlayer from '@/components/live/ReplayPlayer';
@@ -457,6 +458,8 @@ export default function UserProfile() {
           </div>
         </div>
       </Card>
+
+      <BuddySearchCard username={profile.username} />
 
       {/* Tabs */}
       <div className="flex border-b border-buddy-surface mb-4">

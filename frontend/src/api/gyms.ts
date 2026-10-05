@@ -33,7 +33,7 @@ export interface GymListParams {
   lat?: number;
   lng?: number;
   radius_km?: number;
-  ordering?: 'members' | 'rating' | 'newest';
+  ordering?: 'members' | 'rating' | 'newest' | 'nearest';
 }
 
 export const gymsApi = {

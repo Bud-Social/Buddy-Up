@@ -238,11 +238,11 @@ export const feedApi = {
 
   analyzeWorkoutForm: (file: File, exercise?: string) => {
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append(file.type.startsWith('video/') ? 'video' : 'image', file);
     if (exercise) formData.append('exercise', exercise);
     return apiClient.post<ApiResponse<any>>('/feed/workout-form/', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      timeout: 30000,
+      timeout: 120000,
     }).then((r) => r.data);
   },
 };

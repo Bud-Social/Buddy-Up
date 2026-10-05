@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { feedApi } from '@/api/feed';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Camera, Upload, RefreshCw } from 'lucide-react';
+import { Camera, Upload, RefreshCw, Video, Square, Timer } from 'lucide-react';
 
-const exercises = ['auto', 'squat', 'deadlift', 'bench_press', 'overhead_press'] as const;
+const exercises = ['auto', 'squat', 'deadlift', 'bench_press', 'overhead_press', 'bicep_curl', 'push_up', 'lunge'] as const;
+const PLAYBACK_SPEEDS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5] as const;
 const exerciseLabels: Record<string, string> = {
   auto: 'Auto Detect',
   squat: 'Squat',
@@ -15,14 +16,31 @@ const exerciseLabels: Record<string, string> = {
 
 export default function WorkoutForm() {
   const [exercise, setExercise] = useState<string>('auto');
+  const [mode, setMode] = useState<'photo' | 'video'>('photo');
   const [image, setImage] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [recSecs, setRecSecs] = useState(0);
+  const [speed, setSpeed] = useState<number>(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<number | null>(null);
+  const playbackRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (playbackRef.current) playbackRef.current.playbackRate = speed;
+  }, [speed, result]);
+
+  useEffect(() => () => {
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    stopCamera();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0];
@@ -71,6 +89,42 @@ export default function WorkoutForm() {
     }
   };
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      const rec = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : undefined });
+      chunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size) chunksRef.current.push(e.data); };
+      rec.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const f = new File([blob], `workout-${Date.now()}.webm`, { type: 'video/webm' });
+        setFile(f);
+        setImage(URL.createObjectURL(f));
+        setResult(null);
+        stopCamera();
+      };
+      rec.start(500);
+      recorderRef.current = rec;
+      setRecording(true);
+      setRecSecs(0);
+      timerRef.current = window.setInterval(() => setRecSecs((s) => s + 1), 1000);
+    } catch {
+      setError('Unable to access camera. Use upload instead.');
+    }
+  };
+
+  const stopRecording = () => {
+    recorderRef.current?.stop();
+    if (timerRef.current) window.clearInterval(timerRef.current);
+    setRecording(false);
+  };
+
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
   const analyze = async () => {
     if (!file) return;
     setLoading(true);
@@ -98,7 +152,15 @@ export default function WorkoutForm() {
   return (
     <div className="p-4 max-w-xl lg:max-w-3xl xl:max-w-4xl mx-auto space-y-4">
       <h1 className="font-display text-2xl font-bold">Form Analyzer</h1>
-      <p className="text-buddy-text-secondary text-sm">Capture or upload a video frame to get real-time form feedback.</p>
+      <p className="text-buddy-text-secondary text-sm">Capture a frame or record a set — the detector names the workout, counts reps and maps the muscles worked.</p>
+
+      <div className="flex rounded-xl bg-buddy-surface p-1">
+        {(['photo', 'video'] as const).map((m) => (
+          <button key={m} onClick={() => { setMode(m); setFile(null); setImage(null); setResult(null); }}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg capitalize transition-colors ${mode === m ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+          >{m === 'photo' ? 'Photo frame' : 'Record set'}</button>
+        ))}
+      </div>
 
       <Card className="p-4 space-y-4">
         <div>
@@ -121,20 +183,43 @@ export default function WorkoutForm() {
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" onClick={startCamera} className="flex-1 gap-2">
-            <Camera size={18} /> Camera
-          </Button>
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 gap-2">
-            <Upload size={18} /> Upload
-          </Button>
+          {mode === 'photo' ? (
+            <>
+              <Button variant="outline" onClick={startCamera} className="flex-1 gap-2">
+                <Camera size={18} /> Camera
+              </Button>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 gap-2">
+                <Upload size={18} /> Upload
+              </Button>
+            </>
+          ) : recording ? (
+            <Button variant="destructive" onClick={stopRecording} className="flex-1 gap-2">
+              <Square size={18} /> Stop ({fmtTime(recSecs)})
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={startRecording} className="flex-1 gap-2">
+                <Video size={18} /> Record set
+              </Button>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="flex-1 gap-2">
+                <Upload size={18} /> Upload clip
+              </Button>
+            </>
+          )}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept={mode === 'photo' ? 'image/*' : 'video/*'}
             className="hidden"
             onChange={handleFileChange}
           />
         </div>
+
+        {recording && (
+          <p className="flex items-center gap-2 text-sm text-buddy-red font-medium">
+            <Timer size={15} /> Recording… {fmtTime(recSecs)}
+          </p>
+        )}
 
         <video ref={videoRef} className="w-full rounded-xl bg-black" playsInline muted />
         <canvas ref={canvasRef} className="hidden" />
@@ -164,12 +249,52 @@ export default function WorkoutForm() {
         </Card>
       )}
 
+      {result && image && file?.type.startsWith('video/') && (
+        <Card className="p-4 space-y-3">
+          <video ref={playbackRef} src={image} controls playsInline className="w-full rounded-xl bg-black" />
+          <div>
+            <p className="text-xs font-medium text-buddy-text-secondary mb-1.5">Review speed (compressed replay)</p>
+            <div className="flex flex-wrap gap-1.5">
+              {PLAYBACK_SPEEDS.map((s) => (
+                <button key={s} onClick={() => setSpeed(s)}
+                  className={`px-2.5 py-1 rounded-full text-xs transition-colors ${speed === s ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary'}`}
+                >{s}x</button>
+              ))}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {result && (
         <Card className="p-6 space-y-4">
           <div className="flex items-baseline justify-between">
-            <p className="font-heading font-semibold text-lg">{exerciseLabels[result.exercise]}</p>
+            <p className="font-heading font-semibold text-lg">{exerciseLabels[result.exercise] || result.exercise?.replace(/_/g, ' ')}</p>
             <p className={`text-2xl font-extrabold ${scoreColor(result.form_score)}`}>{result.form_score}/100</p>
           </div>
+
+          {(result.reps !== undefined || result.muscles?.length > 0 || result.duration_seconds) && (
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="rounded-xl bg-buddy-surface-raised p-2.5">
+                <p className="font-mono font-bold text-lg">{result.reps ?? '—'}</p>
+                <p className="text-[11px] text-buddy-text-secondary">Reps</p>
+              </div>
+              <div className="rounded-xl bg-buddy-surface-raised p-2.5">
+                <p className="font-mono font-bold text-lg">{result.duration_seconds ? `${result.duration_seconds}s` : '—'}</p>
+                <p className="text-[11px] text-buddy-text-secondary">Time</p>
+              </div>
+              <div className="rounded-xl bg-buddy-surface-raised p-2.5">
+                <p className="font-mono font-bold text-sm leading-6 capitalize">{result.body_area || '—'}</p>
+                <p className="text-[11px] text-buddy-text-secondary">Area</p>
+              </div>
+            </div>
+          )}
+          {result.muscles?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {result.muscles.map((m: string) => (
+                <span key={m} className="text-xs px-2 py-1 rounded-md bg-buddy-green/10 text-buddy-green capitalize">{m}</span>
+              ))}
+            </div>
+          )}
 
           {result.hip_angle !== undefined && (
             <p className="text-sm text-buddy-text-secondary">Hip angle: {result.hip_angle}°</p>

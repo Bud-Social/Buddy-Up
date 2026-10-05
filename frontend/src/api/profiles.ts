@@ -16,6 +16,52 @@ export interface DiscoverTrending {
 
 export type RecommendationFeedback = 'not_interested' | 'irrelevant' | 'already_connected' | 'helpful';
 
+export const BUDDY_INTENTS = [
+  'walk', 'run', 'gym', 'hike', 'live_cohost', 'trainer', 'coach', 'book_club', 'friend',
+] as const;
+
+export const BUDDY_MODES = ['virtual', 'hybrid', 'in_person', 'neighbourhood'] as const;
+
+export const BUDDY_VISIBILITY = ['public', 'buddies', 'hidden'] as const;
+
+export const BUDDY_GOALS = [
+  'weight_loss', 'muscle_gain', 'endurance', 'get_faster',
+  'stay_consistent', 'learn_sport', 'rehabilitation', 'have_fun',
+] as const;
+
+export interface BuddySearchProfile {
+  intents: string[];
+  custom_intent: string;
+  modes: string[];
+  bio: string;
+  goals: string[];
+  age_band: string;
+  photos: string[];
+  neighbourhood: string;
+  latitude: number | null;
+  longitude: number | null;
+  search_radius_km: number | null;
+  available_now: boolean;
+  pace: string;
+  visibility: string;
+  incognito: boolean;
+  match_count?: number;
+}
+
+export interface NearbyBuddy {
+  profile: Profile;
+  distance_km: number | null;
+  intents: string[];
+  custom_intent: string;
+  modes: string[];
+  bio: string;
+  goals: string[];
+  age_band: string;
+  photos: string[];
+  available_now: boolean;
+  explanation: string;
+}
+
 export interface ProfileRecommendation {
   profile: Profile;
   match_score: number | null;
@@ -103,6 +149,23 @@ export const profilesApi = {
 
   getDiscoverTrending: () =>
     apiClient.get<ApiResponse<DiscoverTrending>>('/profiles/discover/trending/').then((r) => r.data),
+
+  getSearchProfile: () =>
+    apiClient.get<ApiResponse<BuddySearchProfile>>('/profiles/me/search-profile/').then((r) => r.data),
+
+  getUserSearchProfile: (username: string) =>
+    apiClient.get<ApiResponse<BuddySearchProfile>>(`/profiles/${username}/search-profile/`).then((r) => r.data),
+
+  updateSearchProfile: (payload: Partial<BuddySearchProfile>) =>
+    apiClient.put<ApiResponse<BuddySearchProfile>>('/profiles/me/search-profile/', payload).then((r) => r.data),
+
+  getNearbyBuddies: (params: {
+    intent?: string; mode?: string; lat?: number; lng?: number;
+    radius_km?: number; now?: boolean;
+  }) =>
+    apiClient.get<ApiResponse<NearbyBuddy[]>>('/profiles/buddies/nearby/', {
+      params: { ...params, now: params.now ? 1 : undefined },
+    }).then((r) => r.data),
 
   getProfilePosts: (username: string) =>
     apiClient.get<ApiResponse<Post[]>>(`/profiles/${username}/posts/`).then((r) => r.data),

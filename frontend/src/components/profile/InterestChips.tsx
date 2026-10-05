@@ -10,7 +10,7 @@ const GOAL_LABELS: Record<string, string> = {
 const WORKOUT_LABELS: Record<string, string> = {
   weights: 'Weights', cardio: 'Cardio', hiit: 'HIIT', yoga: 'Yoga', pilates: 'Pilates',
   crossfit: 'CrossFit', martial_arts: 'Martial Arts', swimming: 'Swimming', running: 'Running',
-  cycling: 'Cycling', other: 'Other',
+  cycling: 'Cycling', walk: 'Walk', hiking: 'Hiking', gym: 'Gym', other: 'Other',
 };
 
 const DIET_LABELS: Record<string, string> = {

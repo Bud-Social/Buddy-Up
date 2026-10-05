@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { CropModal } from '@/components/ui/CropModal';
 import { Toggle } from '@/components/ui/Toggle';
+import { BuddyVisibilityControls } from '@/components/profile/BuddyVisibilityControls';
 import { useToast } from '@/components/ui/Toast';
 import { useAuthStore } from '@/store/authStore';
 import { profilesApi } from '@/api';
@@ -72,8 +73,8 @@ export default function EditProfile() {
   // ── Interests (buddy matching) ──
   const GOALS = ['weight_loss', 'muscle_gain', 'endurance', 'flexibility', 'general_wellness', 'nutrition', 'sports_performance', 'rehabilitation', 'mental_health'];
   const GOAL_LABELS: Record<string, string> = { weight_loss: 'Weight Loss', muscle_gain: 'Muscle Gain', endurance: 'Endurance', flexibility: 'Flexibility', general_wellness: 'General Wellness', nutrition: 'Nutrition', sports_performance: 'Sports Performance', rehabilitation: 'Rehabilitation', mental_health: 'Mental Health' };
-  const WORKOUTS = ['weights', 'cardio', 'hiit', 'yoga', 'pilates', 'crossfit', 'martial_arts', 'swimming', 'running', 'cycling', 'other'];
-  const WORKOUT_LABELS: Record<string, string> = { weights: 'Weights', cardio: 'Cardio', hiit: 'HIIT', yoga: 'Yoga', pilates: 'Pilates', crossfit: 'CrossFit', martial_arts: 'Martial Arts', swimming: 'Swimming', running: 'Running', cycling: 'Cycling', other: 'Other' };
+  const WORKOUTS = ['weights', 'cardio', 'hiit', 'yoga', 'pilates', 'crossfit', 'martial_arts', 'swimming', 'running', 'cycling', 'walk', 'hiking', 'gym', 'other'];
+  const WORKOUT_LABELS: Record<string, string> = { weights: 'Weights', cardio: 'Cardio', hiit: 'HIIT', yoga: 'Yoga', pilates: 'Pilates', crossfit: 'CrossFit', martial_arts: 'Martial Arts', swimming: 'Swimming', running: 'Running', cycling: 'Cycling', walk: 'Walk', hiking: 'Hiking', gym: 'Gym', other: 'Other' };
   const prefs = profile?.preferences || {};
   const [goals, setGoals] = useState<string[]>(prefs.primary_goal || []);
   const [workouts, setWorkouts] = useState<string[]>(prefs.preferred_workouts || []);
@@ -320,6 +321,7 @@ export default function EditProfile() {
             onCheckedChange={(v) => setForm(p => ({ ...p, is_anonymous_posting: v }))}
             label="Anonymous posting" />
         </div>
+        <BuddyVisibilityControls />
       </Card>
 
       {cropImage && (

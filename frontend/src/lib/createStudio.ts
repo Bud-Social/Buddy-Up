@@ -429,7 +429,7 @@ export const CAPTION_PRESETS: { id: string; label: string; font?: string; color:
   { id: 'neon', label: 'Neon', font: 'neon', color: '#38E1FF', bg: 'none' },
 ];
 
-export const SPEED_OPTIONS = [0.3, 0.5, 1, 1.5, 2, 3] as const;
+export const SPEED_OPTIONS = [0.3, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5] as const;
 
 export function defaultAdjust(): EditAdjustments {
   return { brightness: 50, contrast: 50, saturation: 50, vignette: 0 };

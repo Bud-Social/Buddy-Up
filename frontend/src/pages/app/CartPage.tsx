@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, Trash2, Minus, Plus, Tag, ChevronLeft, Utensils, Dumbbell, Pill, Calendar, Percent, Coins, DollarSign, CheckCircle2, X, Truck, Store, MapPin } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { marketplaceApi } from '@/api/marketplace';
+import { walletApi, type BalanceItem } from '@/api/wallet';
 
 const itemIcons: Record<string, typeof Pill> = {
   meal_plan: Utensils,
@@ -82,16 +83,36 @@ export default function CartPage() {
   const [deliveryPhone, setDeliveryPhone] = useState('');
   const [pickupLocation, setPickupLocation] = useState('');
   const [pickupInstructions, setPickupInstructions] = useState('');
+  const [balance, setBalance] = useState<BalanceItem[]>([]);
+  const [suggested, setSuggested] = useState<{ type: string; available: string[]; detail: Record<string, unknown> } | null>(null);
+  const fulfillmentTouched = useRef(false);
 
   const fetchCart = useCallback(() => {
     setIsLoading(true);
-    marketplaceApi.getCart()
-      .then((res) => setCart(res.data))
+    Promise.all([marketplaceApi.getCart(), walletApi.getBalance().catch(() => null)])
+      .then(([cartRes, balRes]) => {
+        setCart(cartRes.data);
+        const sug = (cartRes.data as any)?.suggested_fulfillment;
+        if (sug) {
+          setSuggested(sug);
+          if (!fulfillmentTouched.current && sug.type) setFulfillmentType(sug.type);
+          const pickup = (sug.detail as any)?.pickup_location;
+          if (typeof pickup === 'string' && pickup) {
+            setPickupLocation((prev) => prev || pickup);
+          }
+        }
+        if (balRes?.data?.regular_balance) setBalance(balRes.data.regular_balance);
+      })
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => { fetchCart(); }, [fetchCart]);
+
+  const balanceFor = (type: string) => balance.find((b) => b.artifact_type === type)?.quantity ?? 0;
+  const cartTotals: Record<string, number> = (cart?.total_artifacts as Record<string, number>) || {};
+  const shortfall = Object.entries(cartTotals).filter(([, v]) => v > 0).find(([k, v]) => balanceFor(k) < v);
+  const afterPurchase = (type: string) => Math.max(0, balanceFor(type) - (cartTotals[type] || 0));
 
   const handleRemove = async (itemId: string) => {
     await marketplaceApi.removeFromCart(itemId);
@@ -121,13 +142,29 @@ export default function CartPage() {
       if (fulfillmentType === 'delivery') {
         payload.delivery_address = { line1: deliveryLine, city: deliveryCity, country: deliveryCountry, phone: deliveryPhone };
       } else if (fulfillmentType === 'pickup') {
-        payload.pickup_details = { location: pickupLocation, instructions: pickupInstructions };
+        payload.pickup_details = {
+          location: pickupLocation || (suggested?.detail as any)?.pickup_location || '',
+          instructions: pickupInstructions,
+        };
       }
       const res = await marketplaceApi.checkoutCart(payload);
       toast('success', 'Checkout successful! Items have been purchased.');
       setCart({ ...cart, items: [] });
       setShowConfirm(false);
       setReceipt(res.data || {});
+      const nb = (res.data as any)?.new_balance as Record<string, number> | undefined;
+      if (nb) {
+        setBalance((prev) => {
+          const next = [...prev];
+          for (const [k, v] of Object.entries(nb)) {
+            const i = next.findIndex((b) => b.artifact_type === k);
+            if (i >= 0) next[i] = { ...next[i], quantity: v };
+          }
+          return next;
+        });
+      } else {
+        walletApi.getBalance().then((b) => b.data?.regular_balance && setBalance(b.data.regular_balance)).catch(() => {});
+      }
       window.dispatchEvent(new CustomEvent('cart-updated'));
     } catch (err: any) {
       toast('error', err.response?.data?.message || 'Checkout failed');
@@ -365,6 +402,12 @@ export default function CartPage() {
                   <span>You paid</span>
                   <span className="text-buddy-green">{artifactDisplay(receipt.total_artifacts)}</span>
                 </div>
+                {receipt.new_balance && Object.keys(receipt.new_balance).length > 0 && (
+                  <div className="flex justify-between text-xs text-buddy-text-secondary">
+                    <span>Remaining balance</span>
+                    <span>{artifactDisplay(receipt.new_balance)}</span>
+                  </div>
+                )}
                 {receipt.spent_usd != null && (
                   <div className="flex justify-between text-xs text-buddy-text-secondary">
                     <span>Value ({baseCurrency})</span>
@@ -418,8 +461,22 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-buddy-gold/10 border border-buddy-gold/20 p-3 text-xs text-buddy-text-secondary">
-                Artifacts will be deducted instantly from your wallet. Your purchase unlocks instant access.
+              <div className="rounded-xl bg-buddy-gold/10 border border-buddy-gold/20 p-3 text-xs text-buddy-text-secondary space-y-1">
+                <p>Artifacts will be deducted instantly from your wallet. Your purchase unlocks instant access.</p>
+                {Object.entries(cartTotals).filter(([, v]) => v > 0).map(([k, v]) => (
+                  <p key={k} className="flex justify-between">
+                    <span>Balance: {balanceFor(k)} {k}</span>
+                    <span>After purchase: {afterPurchase(k)} {k}</span>
+                  </p>
+                ))}
+                {shortfall && (
+                  <p className="text-buddy-red font-medium">
+                    Insufficient {shortfall[0]} — you need {shortfall[1]}, have {balanceFor(shortfall[0])}. Top up in Wallet.
+                  </p>
+                )}
+                {suggested && (
+                  <p className="text-buddy-green">Auto-detected: {suggested.type} delivery{suggested.detail && Object.keys(suggested.detail).length > 0 ? ' (seller options available)' : ''}.</p>
+                )}
               </div>
 
               {/* Fulfillment method */}
@@ -433,7 +490,7 @@ export default function CartPage() {
                   ] as const).map(({ key, label, icon: Icon }) => (
                     <button
                       key={key}
-                      onClick={() => setFulfillmentType(key)}
+                      onClick={() => { fulfillmentTouched.current = true; setFulfillmentType(key); }}
                       className={`rounded-xl border p-2.5 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
                         fulfillmentType === key ? 'border-buddy-green bg-buddy-green/10 text-buddy-green' : 'border-buddy-surface-raised text-buddy-text-secondary hover:border-buddy-text-secondary/30'
                       }`}

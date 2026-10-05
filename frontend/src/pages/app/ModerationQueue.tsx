@@ -70,6 +70,9 @@ export default function ModerationQueue() {
   const [actingId, setActingId] = useState<string | null>(null);
   const [reasonFilter, setReasonFilter] = useState<'all' | ContentFlag['flag_reason']>('all');
   const [query, setQuery] = useState('');
+  const [tab, setTab] = useState<'flags' | 'reports' | 'appeals'>('flags');
+  const [reports, setReports] = useState<Array<{ id: string; reason: string; status: string; description: string; created_at: string }>>([]);
+  const [appeals, setAppeals] = useState<Array<{ id: string; status: string; reason?: string; created_at: string }>>([]);
 
   const load = useCallback((silent = false) => {
     if (!silent) setLoading(true);
@@ -87,6 +90,15 @@ export default function ModerationQueue() {
   }, [reasonFilter]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (tab === 'reports') {
+      moderationApi.getReports().then((r) => setReports(r.data || [])).catch(() => {});
+    }
+    if (tab === 'appeals') {
+      moderationApi.getAppeals().then((r) => setAppeals(r.data || [])).catch(() => {});
+    }
+  }, [tab]);
 
   useEffect(() => {
     const timer = window.setInterval(() => load(true), POLL_MS);
@@ -162,6 +174,63 @@ export default function ModerationQueue() {
         <StatCard label="By reason" value="—" sub={`${stats?.by_reason.medical_claim ?? 0} medical · ${stats?.by_reason.undisclosed_sponsor ?? 0} sponsor`} />
       </div>
 
+      <div className="flex items-center gap-2">
+        {(['flags', 'reports', 'appeals'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`text-xs px-3 py-1.5 rounded-lg capitalize font-medium transition-colors ${
+              tab === t ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:bg-buddy-surface-raised'
+            }`}
+          >
+            {t === 'flags' ? 'AI flags' : t === 'reports' ? 'User reports' : 'Appeals'}
+          </button>
+        ))}
+      </div>
+
+      {tab !== 'flags' ? (
+        <Card className="p-4">
+          {tab === 'reports' ? (
+            reports.length === 0 ? (
+              <p className="text-sm text-buddy-text-secondary text-center py-6">No user reports.</p>
+            ) : (
+              <div className="space-y-2">
+                {reports.map((r) => (
+                  <div key={r.id} className="flex items-start justify-between gap-3 py-2 border-b border-buddy-surface last:border-0">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold capitalize">{r.reason} · {r.status}</p>
+                      <p className="text-sm mt-0.5 break-words">{r.description}</p>
+                      <p className="text-[11px] text-buddy-text-secondary mt-1">{formatDate(r.created_at)}</p>
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <Button variant="outline" size="sm" onClick={() => moderationApi.handleReport(r.id, 'investigate').then(() => moderationApi.getReports().then((x) => setReports(x.data || [])))}>Investigate</Button>
+                      <Button variant="ghost" size="sm" onClick={() => moderationApi.handleReport(r.id, 'dismiss').then(() => moderationApi.getReports().then((x) => setReports(x.data || [])))}>Dismiss</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : appeals.length === 0 ? (
+            <p className="text-sm text-buddy-text-secondary text-center py-6">No appeals. Users appeal via Settings → Help & Safety within 14 days.</p>
+          ) : (
+            <div className="space-y-2">
+              {appeals.map((a) => (
+                <div key={a.id} className="flex items-center justify-between gap-3 py-2 border-b border-buddy-surface last:border-0">
+                  <div className="min-w-0">
+                    <p className="text-sm">Appeal {a.id.slice(0, 8)} · {a.status} · {formatDate(a.created_at)}</p>
+                    {a.reason && <p className="text-xs text-buddy-text-secondary truncate mt-0.5">{a.reason}</p>}
+                  </div>
+                  <div className="flex gap-1.5">
+                    <Button variant="outline" size="sm" onClick={() => moderationApi.reviewAppeal(a.id, 'approve').then(() => moderationApi.getAppeals().then((x) => setAppeals(x.data || []))).catch(() => setError(`Failed to approve appeal #${a.id.slice(0, 8)}.`))}>Approve</Button>
+                    <Button variant="ghost" size="sm" onClick={() => moderationApi.reviewAppeal(a.id, 'deny').then(() => moderationApi.getAppeals().then((x) => setAppeals(x.data || []))).catch(() => setError(`Failed to deny appeal #${a.id.slice(0, 8)}.`))}>Deny</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      ) : (
+      <>
       <div className="flex flex-wrap items-center gap-2">
         {(['all', ...REASONS] as const).map((r) => (
           <button
@@ -244,6 +313,8 @@ export default function ModerationQueue() {
             </Card>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );

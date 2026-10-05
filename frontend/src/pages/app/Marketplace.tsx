@@ -435,7 +435,7 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
 
   return (
     <>
-      <div className="flex items-center mb-3">
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 bg-buddy-surface-raised rounded-lg p-0.5">
             {SCOPE_OPTIONS.map((opt) => (
@@ -453,7 +453,7 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
             ))}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 ml-auto">
           <button onClick={() => navigate('/marketplace/events/my-tickets')} className="text-xs font-medium text-buddy-electric hover:underline">My Tickets</button>
           <button onClick={() => navigate(hasShop ? '/marketplace/events/create' : '/marketplace/creator')} className="text-xs font-medium text-buddy-green hover:underline">{hasShop ? 'Host' : 'Become Host'}</button>
         </div>

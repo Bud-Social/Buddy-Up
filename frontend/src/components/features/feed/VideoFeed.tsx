@@ -13,8 +13,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
-  Volume2, VolumeX, Loader2, Share2, Eye,
+  Volume2, VolumeX, Loader2, Share2, Eye, Flag,
 } from 'lucide-react';
+import { SensitiveGate } from '@/components/features/feed/SensitiveGate';
+import { isSensitive, sensitiveKind } from '@/lib/sensitive';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { PostPhotoCarousel } from '@/components/features/feed/PostPhotoCarousel';
@@ -24,7 +26,7 @@ import { PostShareSheet } from '@/components/features/feed/PostShareSheet';
 import { FeedTrackAudio } from '@/components/features/feed/FeedTrackAudio';
 import { useRecordPostView } from '@/components/features/feed/useRecordPostView';
 import { toEmoji } from '@/utils/emojiUtils';
-import { feedApi } from '@/api';
+import { feedApi, profilesApi } from '@/api';
 import { mediaPagesFromPost, postIsPhotoMode, firstVideoPage } from '@/lib/mediaPages';
 import type { Post } from '@/types';
 
@@ -114,47 +116,94 @@ function VideoFeedSlide({
     }
   };
 
+  const gated = isSensitive(post);
+  const kind = sensitiveKind(post);
+
+  const media = (revealed: boolean) => {
+    const blocked = gated && !revealed;
+    if (photoMode) {
+      return blocked ? null : <PostPhotoCarousel post={post} className="absolute inset-0" />;
+    }
+    if (!videoUrl) {
+      return (
+        <div className="absolute inset-0 flex items-center justify-center text-buddy-text-secondary text-sm">
+          Unsupported media
+        </div>
+      );
+    }
+    if (blocked) return null;
+    return (
+      <>
+        <video
+          ref={(el) => {
+            registerVideo(post.id, el);
+            // The parent autoplay effect won't refire when reveal remounts
+            // this video, so kick playback here when this slide is active.
+            if (el && active) el.play().catch(() => {});
+          }}
+          src={videoUrl}
+          poster={posterUrl}
+          loop
+          playsInline
+          muted={muted}
+          preload={active ? 'auto' : 'none'}
+          className="absolute inset-0 w-full h-full object-contain"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onTimeUpdate={(e) => {
+            const v = e.currentTarget;
+            if (v.duration > 0) setProgress(v.currentTime / v.duration);
+          }}
+        />
+        <FeedTrackAudio
+          getVideo={() => document.querySelector(`video[src="${CSS.escape(videoUrl)}"]`) as HTMLVideoElement | null}
+          editMeta={videoPage?.edit_meta}
+          soundUrl={videoPage?.sound_audio_url}
+          soundVolume={videoPage?.sound_volume}
+          soundPlacement={videoPage?.edit_meta?.sound_placement}
+          trimStartMs={videoPage?.trim_start_ms}
+          muted={muted}
+          active={active && isPlaying}
+        />
+      </>
+    );
+  };
+
+  const handleReport = async () => {
+    // Backend ModerationReport.target_user is a User FK: resolve user_id
+    // the same way PostCard does (username alone 400s).
+    let targetUser = post.author_data?.user_id;
+    if (!targetUser && post.author_data?.username) {
+      try {
+        const prof = await profilesApi.getProfile(post.author_data.username);
+        targetUser = (prof.data as unknown as { user_id?: string })?.user_id ?? post.author_data.username;
+      } catch {
+        targetUser = post.author_data.username;
+      }
+    }
+    if (!targetUser) return;
+    try {
+      await feedApi.submitReport({
+        target_user: targetUser,
+        reason: 'other',
+        description: `Post ${post.id} — reported from video feed`,
+        content_url: `/videos?start=${post.id}`,
+      });
+    } catch {}
+  };
+
   return (
     <div
       key={post.id}
       ref={last ? lastItemRef : undefined}
       className="relative h-full w-full snap-start snap-always bg-black"
     >
-      {photoMode ? (
-        <PostPhotoCarousel post={post} className="absolute inset-0" />
-      ) : videoUrl ? (
-        <>
-          <video
-            ref={(el) => registerVideo(post.id, el)}
-            src={videoUrl}
-            poster={posterUrl}
-            loop
-            playsInline
-            muted={muted}
-            preload={active ? 'auto' : 'none'}
-            className="absolute inset-0 w-full h-full object-contain"
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onTimeUpdate={(e) => {
-              const v = e.currentTarget;
-              if (v.duration > 0) setProgress(v.currentTime / v.duration);
-            }}
-          />
-          <FeedTrackAudio
-            getVideo={() => document.querySelector(`video[src="${CSS.escape(videoUrl)}"]`) as HTMLVideoElement | null}
-            editMeta={videoPage?.edit_meta}
-            soundUrl={videoPage?.sound_audio_url}
-            soundVolume={videoPage?.sound_volume}
-            soundPlacement={videoPage?.edit_meta?.sound_placement}
-            trimStartMs={videoPage?.trim_start_ms}
-            muted={muted}
-            active={active && isPlaying}
-          />
-        </>
+      {gated ? (
+        <SensitiveGate key={post.id} postId={post.id} blurred kind={kind}>
+          {(revealed) => media(revealed)}
+        </SensitiveGate>
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-buddy-text-secondary text-sm">
-          Unsupported media
-        </div>
+        media(true)
       )}
 
       {/* Qualified-view recorder */}
@@ -208,6 +257,12 @@ function VideoFeedSlide({
           label="Views"
           icon={<Eye size={30} className="drop-shadow" />}
           count={post.view_count ?? 0}
+        />
+        <RailAction
+          tone="onDark"
+          label="Report"
+          icon={<Flag size={26} className="drop-shadow" />}
+          onClick={() => void handleReport()}
         />
       </div>
 

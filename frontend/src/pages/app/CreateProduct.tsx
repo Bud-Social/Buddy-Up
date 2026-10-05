@@ -18,6 +18,7 @@ export default function CreateProduct() {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(isEditing);
   const [myShops, setMyShops] = useState<any[]>([]);
+  const DELIVERY_OPTIONS = ['digital', 'pickup', 'delivery'] as const;
   const [form, setForm] = useState({
     shop_id: '',
     name: '',
@@ -27,6 +28,10 @@ export default function CreateProduct() {
     image_url: '',
     affiliate_url: '',
     price_display: '',
+    delivery_modes: ['digital'] as string[],
+    pickup_location: '',
+    delivery_coverage: '',
+    digital_info: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -52,6 +57,10 @@ export default function CreateProduct() {
           image_url: p.image_url || '',
           affiliate_url: p.affiliate_url || '',
           price_display: p.price_display || '',
+          delivery_modes: p.delivery_modes?.length ? p.delivery_modes : ['digital'],
+          pickup_location: p.fulfillment_details?.pickup_location || '',
+          delivery_coverage: p.fulfillment_details?.delivery_coverage || '',
+          digital_info: p.fulfillment_details?.digital_info || '',
         });
         setIsLoading(false);
       })
@@ -60,6 +69,14 @@ export default function CreateProduct() {
 
   const canProceedToStep2 = form.name.trim().length > 0 && form.brand.trim().length > 0 && form.image_url;
   const canProceedToStep3 = form.affiliate_url.trim().length > 0;
+
+  const toggleDelivery = (m: string) =>
+    setForm((f) => ({
+      ...f,
+      delivery_modes: f.delivery_modes.includes(m)
+        ? f.delivery_modes.filter((x) => x !== m)
+        : [...f.delivery_modes, m],
+    }));
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -73,6 +90,12 @@ export default function CreateProduct() {
         image_url: form.image_url || undefined,
         affiliate_url: form.affiliate_url,
         price_display: form.price_display || undefined,
+        delivery_modes: form.delivery_modes.length ? form.delivery_modes : ['digital'],
+        fulfillment_details: {
+          ...(form.pickup_location.trim() ? { pickup_location: form.pickup_location.trim() } : {}),
+          ...(form.delivery_coverage.trim() ? { delivery_coverage: form.delivery_coverage.trim() } : {}),
+          ...(form.digital_info.trim() ? { digital_info: form.digital_info.trim() } : {}),
+        },
       };
       if (isEditing && editId) {
         await marketplaceApi.updateProduct(editId, payload);
@@ -207,6 +230,39 @@ export default function CreateProduct() {
                 <Input value={form.price_display} onChange={(e) => setForm({ ...form, price_display: e.target.value })} placeholder="e.g. $29.99 or Approx. KES 3500" className="bg-buddy-black" />
                 <p className="text-xs text-buddy-text-secondary mt-1 flex items-center gap-1">Give users an idea of how much it costs.</p>
               </div>
+
+              <div>
+                <label className="text-sm font-semibold mb-1.5 block">How is it delivered? (select all that apply)</label>
+                <div className="flex flex-wrap gap-2">
+                  {DELIVERY_OPTIONS.map((m) => (
+                    <button key={m} type="button" onClick={() => toggleDelivery(m)}
+                      className={`px-3 py-1.5 rounded-full text-xs capitalize transition-colors ${form.delivery_modes.includes(m) ? 'bg-buddy-electric text-white font-medium' : 'border border-buddy-surface-raised text-buddy-text-secondary hover:text-buddy-text-primary'}`}
+                    >{m}</button>
+                  ))}
+                </div>
+              </div>
+
+              {form.delivery_modes.includes('pickup') && (
+                <div>
+                  <label className="text-sm font-semibold mb-1.5 block">Pickup location (in-house: gym or store)</label>
+                  <Input value={form.pickup_location} onChange={(e) => setForm({ ...form, pickup_location: e.target.value })} placeholder="e.g. Iron Works Gym front desk, Nairobi" className="bg-buddy-black" />
+                </div>
+              )}
+
+              {form.delivery_modes.includes('delivery') && (
+                <div>
+                  <label className="text-sm font-semibold mb-1.5 block">Delivery coverage</label>
+                  <Input value={form.delivery_coverage} onChange={(e) => setForm({ ...form, delivery_coverage: e.target.value })} placeholder="e.g. Nairobi + Kiambu; countrywide via courier" className="bg-buddy-black" />
+                  <p className="text-xs text-buddy-text-secondary mt-1">Delivery depends on store coverage — buyers outside it pick another option.</p>
+                </div>
+              )}
+
+              {form.delivery_modes.includes('digital') && (
+                <div>
+                  <label className="text-sm font-semibold mb-1.5 block">Digital delivery note (optional)</label>
+                  <Input value={form.digital_info} onChange={(e) => setForm({ ...form, digital_info: e.target.value })} placeholder="e.g. download link sent after purchase" className="bg-buddy-black" />
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <Button variant="ghost" className="flex-1 h-12" onClick={() => setStep(1)}>Back</Button>

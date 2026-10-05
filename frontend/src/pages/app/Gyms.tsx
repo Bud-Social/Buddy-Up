@@ -1,56 +1,88 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Users, Star, Lock, Globe, EyeOff } from 'lucide-react';
+import { Search, Plus, Users, Star, Lock, Globe, EyeOff, MapPin, Dumbbell, LocateFixed, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
+import { NearbyNotice } from '@/components/ui/NearbyNotice';
 import { gymsApi } from '@/api/gyms';
+import { requestLocation, formatDistance, type GeoMeta } from '@/lib/geo';
 import type { Gym } from '@/types';
+
+type FormatTab = 'all' | 'virtual' | 'hybrid' | 'physical';
 
 export default function Gyms() {
   const navigate = useNavigate();
   const [gyms, setGyms] = useState<Gym[]>([]);
+  const [geo, setGeo] = useState<GeoMeta | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<'discover' | 'my_gyms'>('discover');
+  const [format, setFormat] = useState<FormatTab>('all');
   const [category, setCategory] = useState('');
   const [city, setCity] = useState('');
-  const [delivery, setDelivery] = useState<'any' | 'physical' | 'virtual' | 'hybrid'>('any');
   const [verifiedOnly, setVerifiedOnly] = useState(false);
-  const [ordering, setOrdering] = useState<'members' | 'rating' | 'newest'>('members');
+  const [ordering, setOrdering] = useState<'members' | 'rating' | 'newest' | 'nearest'>('members');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locStatus, setLocStatus] = useState<'idle' | 'locating' | 'ready' | 'denied'>('idle');
+  const [radius, setRadius] = useState<'auto' | 5 | 10>('auto');
 
   const categories = ['fitness', 'nutrition', 'yoga_wellness', 'strength', 'cardio_running', 'sport_specific', 'mixed', 'other'];
-  const deliveries = [
-    { key: 'any' as const, label: 'All formats' },
-    { key: 'physical' as const, label: 'Nearby gyms' },
-    { key: 'virtual' as const, label: 'Virtual' },
-    { key: 'hybrid' as const, label: 'Hybrid' },
+  const formats: Array<{ key: FormatTab; label: string }> = [
+    { key: 'all', label: 'All' },
+    { key: 'virtual', label: 'Virtual' },
+    { key: 'hybrid', label: 'Hybrid' },
+    { key: 'physical', label: 'Physical' },
   ];
 
   const fetchGyms = useCallback(async () => {
     setIsLoading(true);
     setError('');
     try {
+      const useGeo = coords !== null && format !== 'virtual';
       const res = await gymsApi.list({
         q: search || undefined,
         category: category || undefined,
         my: tab === 'my_gyms',
         city: city || undefined,
-        delivery: delivery === 'any' ? undefined : delivery,
+        delivery: format === 'all' ? undefined : format,
         verified: verifiedOnly || undefined,
-        ordering,
+        ordering: useGeo && ordering === 'members' ? 'nearest' : ordering,
+        lat: useGeo ? coords.lat : undefined,
+        lng: useGeo ? coords.lng : undefined,
+        radius_km: useGeo && radius !== 'auto' ? radius : undefined,
       });
-      setGyms(res.data || []);
+      const list = res.data || [];
+      // Client-side nearest sort as a safety net (backend sorts the page too).
+      if (useGeo) {
+        list.sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
+      }
+      setGyms([...list]);
+      setGeo(res.geo ?? null);
     } catch {
       setError('Could not load gyms. Check your connection.');
     } finally {
       setIsLoading(false);
     }
-  }, [search, category, tab, city, delivery, verifiedOnly, ordering]);
+  }, [search, category, tab, city, format, verifiedOnly, ordering, coords, radius]);
 
   useEffect(() => { fetchGyms(); }, [fetchGyms]);
+
+  const locate = async () => {
+    setLocStatus('locating');
+    try {
+      const c = await requestLocation();
+      setCoords(c);
+      setLocStatus('ready');
+      setOrdering('nearest');
+    } catch {
+      setLocStatus('denied');
+    }
+  };
+
+  const showDistance = format !== 'virtual';
 
   const accessIcon = (type: string) => {
     if (type === 'public') return <Globe size={12} />;
@@ -67,7 +99,7 @@ export default function Gyms() {
         </Button>
       </div>
 
-      <div className="flex rounded-xl bg-buddy-surface p-1 mb-4">
+      <div className="flex rounded-xl bg-buddy-surface p-1 mb-3">
         {[
           { key: 'discover' as const, label: 'Discover' },
           { key: 'my_gyms' as const, label: 'My Gyms' },
@@ -79,6 +111,18 @@ export default function Gyms() {
           >{label}</button>
         ))}
       </div>
+
+      <div className="flex rounded-xl bg-buddy-surface p-1 mb-3" role="tablist" aria-label="Gym format">
+        {formats.map(({ key, label }) => (
+          <button key={key} role="tab" aria-selected={format === key} onClick={() => setFormat(key)}
+            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+              format === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'
+            }`}
+          >{label}</button>
+        ))}
+      </div>
+
+      <NearbyNotice geo={coords ? geo : null} kind="gyms" />
 
       <div className="relative mb-3">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-buddy-text-secondary" />
@@ -100,15 +144,31 @@ export default function Gyms() {
           <option value="members">Most members</option>
           <option value="rating">Top rated</option>
           <option value="newest">Newest</option>
+          <option value="nearest">Nearest</option>
         </select>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide snap-x snap-mandatory">
-        {deliveries.map(({ key, label }) => (
-          <button key={key} onClick={() => setDelivery(key)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors snap-start ${delivery === key ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}
-          >{label}</button>
-        ))}
+        <button
+          onClick={coords ? () => { setCoords(null); setLocStatus('idle'); setGeo(null); } : locate}
+          disabled={locStatus === 'locating'}
+          className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors snap-start ${
+            coords ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+          }`}
+        >
+          {locStatus === 'locating' ? <Loader2 size={12} className="animate-spin" /> : <LocateFixed size={12} />}
+          {coords ? 'Near me ✓' : locStatus === 'denied' ? 'GPS blocked — tap to retry' : 'Near me'}
+        </button>
+        {coords && (
+          <select value={String(radius)} onChange={(e) => setRadius(e.target.value === 'auto' ? 'auto' : Number(e.target.value) as 5 | 10)}
+            className="flex-shrink-0 bg-buddy-surface border border-buddy-surface rounded-full px-3 py-1.5 text-xs text-buddy-text-primary focus:outline-none"
+            aria-label="Search radius"
+          >
+            <option value="auto">Auto radius (5–10 km)</option>
+            <option value={5}>5 km</option>
+            <option value={10}>10 km</option>
+          </select>
+        )}
         <button onClick={() => setVerifiedOnly((v) => !v)}
           className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors snap-start ${verifiedOnly ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}
         >Verified only</button>
@@ -151,8 +211,8 @@ export default function Gyms() {
             <Card key={gym.id} className="p-4 hover:bg-buddy-surface-raised transition-colors cursor-pointer"
               onClick={() => navigate(`/gyms/${gym.handle}`)}>
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-xl bg-buddy-green/10 flex items-center justify-center flex-shrink-0 text-2xl">
-                  {gym.logo_url ? <img src={gym.logo_url} alt="" className="w-full h-full rounded-xl object-cover" /> : '🏋️'}
+                <div className="w-14 h-14 rounded-xl bg-buddy-green/10 flex items-center justify-center flex-shrink-0 text-buddy-green">
+                  {gym.logo_url ? <img src={gym.logo_url} alt="" className="w-full h-full rounded-xl object-cover" /> : <Dumbbell size={26} />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -171,7 +231,14 @@ export default function Gyms() {
                     <span className="flex items-center gap-1">{accessIcon(gym.access_type)} {gym.access_type}</span>
                     {gym.delivery_modes?.includes('virtual') && <Badge variant="gold" label="Virtual" size="sm" />}
                     {gym.delivery_modes?.includes('hybrid') && <Badge variant="green" label="Hybrid" size="sm" />}
-                    {gym.location_city && <span>📍 {gym.location_city}</span>}
+                    {showDistance && gym.distance_km !== undefined && gym.distance_km !== null && (
+                      <span className="flex items-center gap-1 text-buddy-green font-medium">
+                        <MapPin size={12} /> {formatDistance(gym.distance_km)}
+                      </span>
+                    )}
+                    {gym.location_city && (gym.distance_km === undefined || gym.distance_km === null) && (
+                      <span className="flex items-center gap-1"><MapPin size={12} /> {gym.location_city}</span>
+                    )}
                   </div>
                 </div>
               </div>

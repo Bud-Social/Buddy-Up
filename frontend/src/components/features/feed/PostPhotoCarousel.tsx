@@ -6,6 +6,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { useInViewAutoplay } from '@/hooks/useInViewAutoplay';
 import { mediaPagesFromPost, type MediaPage } from '@/lib/mediaPages';
+import { SensitiveGate } from '@/components/features/feed/SensitiveGate';
+import { isSensitive, sensitiveKind } from '@/lib/sensitive';
 import type { Post } from '@/types';
 
 function PhotoModeVideo({ page }: { page: MediaPage }) {
@@ -52,29 +54,41 @@ export function PostPhotoCarousel({
     el.scrollTo({ left: (idx + 1) * el.clientWidth, behavior: 'smooth' });
   };
 
+  const gated = isSensitive(post);
+
+  const track = (revealed: boolean) => (
+    <div
+      ref={trackRef}
+      onScroll={onScroll}
+      onClick={advance}
+      className={`flex h-full w-full overflow-x-auto snap-x snap-mandatory scrollbar-none ${gated && !revealed ? 'blur-xl select-none pointer-events-none' : ''}`}
+    >
+      {pages.map((p, i) => (
+        <div key={`${p.url}-${i}`} className="relative w-full h-full shrink-0 snap-center snap-always bg-black">
+          {p.type === 'video' ? (
+            gated && !revealed ? null : <PhotoModeVideo page={p} />
+          ) : (
+            <img
+              src={p.url}
+              alt={p.alt_text ?? ''}
+              loading="lazy"
+              className="absolute inset-0 w-full h-full object-contain"
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className={`relative ${className ?? ''}`}>
-      <div
-        ref={trackRef}
-        onScroll={onScroll}
-        onClick={advance}
-        className="flex h-full w-full overflow-x-auto snap-x snap-mandatory scrollbar-none"
-      >
-        {pages.map((p, i) => (
-          <div key={`${p.url}-${i}`} className="relative w-full h-full shrink-0 snap-center snap-always bg-black">
-            {p.type === 'video' ? (
-              <PhotoModeVideo page={p} />
-            ) : (
-              <img
-                src={p.url}
-                alt={p.alt_text ?? ''}
-                loading="lazy"
-                className="absolute inset-0 w-full h-full object-contain"
-              />
-            )}
-          </div>
-        ))}
-      </div>
+      {gated ? (
+        <SensitiveGate key={post.id} postId={post.id} blurred kind={sensitiveKind(post)}>
+          {(revealed) => track(revealed)}
+        </SensitiveGate>
+      ) : (
+        track(true)
+      )}
 
       {pages.length > 1 && (
         <span className={`absolute z-10 px-2 py-0.5 rounded-full bg-black/60 text-white text-[11px] font-bold pointer-events-none ${counterClassName}`}>

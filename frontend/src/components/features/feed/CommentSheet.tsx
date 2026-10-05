@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { X, Send, Heart } from 'lucide-react';
+import { X, Send, Heart, Flag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { RichText } from '@/components/ui/RichText';
 import { feedApi } from '@/api';
 import { track } from '@/lib/analytics';
+import { isProfanityFilterEnabled, maskProfanity } from '@/lib/profanity';
 import type { Comment } from '@/types';
 
 interface CommentSheetProps {
@@ -78,7 +79,13 @@ export function CommentSheet({ postId, isOpen, onClose }: CommentSheetProps) {
           {comments.length === 0 ? (
             <div className="text-center py-12 text-buddy-text-secondary">No comments yet. Be the first!</div>
           ) : (
-            comments.map((c) => (
+            [...comments]
+              .sort((a, b) => {
+                if (sort === 'oldest') return a.created_at.localeCompare(b.created_at);
+                if (sort === 'top') return (b.reply_count || 0) - (a.reply_count || 0);
+                return b.created_at.localeCompare(a.created_at);
+              })
+              .map((c) => (
               <div key={c.id} className="flex gap-3">
                 <Avatar src={c.author_data?.avatar_url} alt={c.author_data?.display_name || 'User'} size="sm" />
                 <div className="flex-1 min-w-0">
@@ -87,13 +94,30 @@ export function CommentSheet({ postId, isOpen, onClose }: CommentSheetProps) {
                     <span className="text-buddy-text-secondary text-xs ml-1">@{c.author_data?.username}</span>
                   </p>
                   <p className="text-sm mt-0.5">
-                    <RichText text={c.body} />
+                    <RichText text={isProfanityFilterEnabled() ? maskProfanity(c.body) : c.body} />
                   </p>
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-xs text-buddy-text-secondary">{new Date(c.created_at).toLocaleDateString()}</span>
                     <button className="text-xs text-buddy-text-secondary hover:text-buddy-green">
                       <Heart size={12} className="inline mr-0.5" /> Reply
                     </button>
+                    {c.author_id && (
+                      <button
+                        title="Report comment"
+                        aria-label="Report comment"
+                        className="text-xs text-buddy-text-secondary hover:text-buddy-red"
+                        onClick={() => {
+                          track('feed.comment_report', { object_id: c.id, properties: { post_id: postId } });
+                          void feedApi.submitReport({
+                            target_user: c.author_id,
+                            reason: 'other',
+                            description: `Comment ${c.id} on post ${postId} — ${c.body.slice(0, 200)}`,
+                          }).catch(() => {});
+                        }}
+                      >
+                        <Flag size={12} className="inline mr-0.5" /> Report
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

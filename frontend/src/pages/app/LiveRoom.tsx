@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 import { livesApi } from '@/api/lives';
+import { track } from '@/lib/analytics';
 import { useLiveWebSocket } from '@/hooks/useLiveWebSocket';
 import { useAuthStore } from '@/store/authStore';
 import { useArtifactStore } from '@/store/artifactStore';
@@ -318,6 +319,7 @@ export default function LiveRoom() {
     try {
       // Admission performs access and payment checks before a media token is issued.
       await livesApi.joinLive(liveId);
+      track('live.joined', { object_type: 'live', object_id: liveId, surface: 'live_room' });
       const res = await livesApi.getLiveCredentials(liveId);
       setRoomData(res.data);
     } catch {

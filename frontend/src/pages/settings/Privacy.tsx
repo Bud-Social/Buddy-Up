@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/Toast';
 import { Toggle } from '@/components/ui/Toggle';
 import { useAuthStore } from '@/store/authStore';
 import { profilesApi } from '@/api';
+import { BuddyVisibilityControls } from '@/components/profile/BuddyVisibilityControls';
 import type { ContentRating } from '@/types';
 import { SectionShell } from './SectionShell';
 
@@ -102,6 +103,7 @@ export default function Privacy() {
               Mature content is disabled for under-18 accounts. Verify your age from Verifications if this is incorrect.
             </p>
           )}
+          <BuddyVisibilityControls />
         </Card>
         <Button variant="outline" className="w-full" size="sm" onClick={handlePrivacySave} isLoading={privacySaving}>Save Privacy Settings</Button>
       </div>
