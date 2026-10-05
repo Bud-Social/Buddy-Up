@@ -46,7 +46,7 @@ export function BuddySearchCard({ username }: Props) {
     <Card className="p-4 mb-4">
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold text-buddy-text-secondary uppercase tracking-wider flex items-center gap-1.5">
-          <Footprints size={13} className="text-buddy-green" /> Looking for a buddy
+          <Footprints size={13} className="text-buddy-green" /> Looking for a buddy{sp.display_name ? ` · ${sp.display_name}` : ''}
         </p>
         {!username && (
           <button onClick={() => navigate('/buddies/find')} className="text-xs text-buddy-green hover:underline">Manage</button>

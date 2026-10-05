@@ -17,6 +17,7 @@ export default function EventDetail() {
   const [isAdding, setIsAdding] = useState(false);
   const [qty, setQty] = useState(1);
   const [mediaIndex, setMediaIndex] = useState(0);
+  const [tier, setTier] = useState('');
 
   useEffect(() => {
     if (!eventId) return;
@@ -30,15 +31,19 @@ export default function EventDetail() {
     if (!event || !eventId) return;
     setIsAdding(true);
     try {
-      await marketplaceApi.addToCart('event_ticket', { event_id: eventId }, qty);
-      toast('success', 'Added to cart!');
+      await marketplaceApi.addToCart('event_ticket', { event_id: eventId }, qty, tier ? { tier } : undefined);
+      toast('success', tier ? `${tier} ticket added to cart!` : 'Added to cart!');
       window.dispatchEvent(new CustomEvent('cart-updated'));
-    } catch {
-      toast('error', 'Failed to add to cart');
+    } catch (e: any) {
+      toast('error', e?.response?.data?.message || 'Failed to add to cart');
     } finally {
       setIsAdding(false);
     }
   };
+
+  const tierPrice = (t: any) => t.price_artifacts && Object.keys(t.price_artifacts).length > 0
+    ? Object.entries(t.price_artifacts).map(([k, v]) => `${v} ${k}s`).join(', ')
+    : 'Free';
 
   const allMedia: { type: 'image' | 'video'; url: string }[] = [];
   if (event?.media?.length > 0) {
@@ -252,21 +257,21 @@ export default function EventDetail() {
             <div>
               <h3 className="font-bold text-lg mb-2 flex items-center gap-2"><Tag size={18} className="text-buddy-gold" /> Ticket Tiers</h3>
               <div className="space-y-2">
-                {event.ticket_tiers.map((tier: any, i: number) => (
-                  <div key={i} className="flex items-start justify-between bg-buddy-surface rounded-xl p-3">
-                    <div>
-                      <p className="text-sm font-semibold">{tier.name}</p>
-                      {tier.perks && tier.perks.length > 0 && (
-                        <p className="text-xs text-buddy-text-secondary mt-0.5">{tier.perks.join(' · ')}</p>
-                      )}
-                    </div>
-                    <span className="text-sm font-bold text-buddy-green flex-shrink-0 ml-3">
-                      {tier.price_artifacts && Object.keys(tier.price_artifacts).length > 0
-                        ? Object.entries(tier.price_artifacts).map(([k, v]) => `${v} ${k}s`).join(', ')
-                        : tier.price != null ? `${tier.price}` : ''}
-                    </span>
-                  </div>
-                ))}
+                {event.ticket_tiers.map((t: any, i: number) => {
+                  const selected = tier ? tier === t.name : i === 0 && !tier;
+                  return (
+                    <button key={i} onClick={() => setTier(t.name)}
+                      className={`w-full flex items-start justify-between rounded-xl p-3 text-left transition-colors ${selected ? 'bg-buddy-green/10 border border-buddy-green/40' : 'bg-buddy-surface border border-transparent hover:border-buddy-surface-raised'}`}>
+                      <div>
+                        <p className="text-sm font-semibold">{t.name} {selected && <span className="text-buddy-green">✓</span>}</p>
+                        {t.perks && t.perks.length > 0 && (
+                          <p className="text-xs text-buddy-text-secondary mt-0.5">{t.perks.join(' · ')}</p>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold text-buddy-green flex-shrink-0 ml-3">{tierPrice(t)}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -314,9 +319,14 @@ export default function EventDetail() {
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-buddy-black/95 backdrop-blur-xl border-t border-buddy-surface flex justify-center z-50">
         <div className="w-full max-w-xl flex items-center justify-between px-2">
           <div className="flex flex-col">
-            <span className="text-xs font-semibold text-buddy-text-secondary uppercase tracking-wider mb-0.5">Price</span>
+            <span className="text-xs font-semibold text-buddy-text-secondary uppercase tracking-wider mb-0.5">Price{tier ? ` · ${tier}` : ''}</span>
             <span className="text-xl font-bold text-buddy-green">
-              {event.is_free ? 'Free' : Object.entries(event.ticket_price_artifacts || {}).map(([k, v]) => `${v} ${k}s`).join(', ')}
+              {(() => {
+                const sel = (event.ticket_tiers || []).find((t: any) => t.name === tier);
+                const prices = sel?.price_artifacts || event.ticket_price_artifacts || {};
+                if (event.is_free && !sel?.price_artifacts) return 'Free';
+                return Object.entries(prices).map(([k, v]) => `${v} ${k}s`).join(', ') || 'Free';
+              })()}
             </span>
             {!event.is_free && event.ticket_price_artifacts && (() => {
               const values: Record<string, number> = { dumbbell: 0.10, barbell: 0.50, burpee: 1.00, squat: 2.50, sprint: 5.00, pr: 10.00, champion: 25.00 };

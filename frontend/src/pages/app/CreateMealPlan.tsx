@@ -11,6 +11,21 @@ import { marketplaceApi } from '@/api/marketplace';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 
 const DIET_TYPES = ['balanced', 'high_protein', 'weight_loss', 'muscle_gain', 'vegan', 'keto', 'gluten_free', 'other'];
+
+const MEAL_PLAN_TEMPLATES = [
+  {
+    name: 'Lean & High-Protein',
+    form: { title: 'Lean & High-Protein Reset', description: '4 weeks of simple high-protein meals for steady fat loss.', diet_type: 'high_protein', duration_weeks: 4, meals_per_day: 4, calorie_range: '1800-2100 kcal', macro_targets: { protein_pct: 40, carbs_pct: 30, fat_pct: 30 } },
+  },
+  {
+    name: 'Plant-Powered Week',
+    form: { title: 'Plant-Powered Week', description: '7 days of satisfying vegan meals, no cooking marathons.', diet_type: 'vegan', duration_weeks: 1, meals_per_day: 3, calorie_range: '1800-2200 kcal', macro_targets: { protein_pct: 25, carbs_pct: 50, fat_pct: 25 } },
+  },
+  {
+    name: 'Bulking Basics',
+    form: { title: 'Bulking Basics', description: 'Calorie-surplus staples to support a 6-week mass phase.', diet_type: 'muscle_gain', duration_weeks: 6, meals_per_day: 5, calorie_range: '2800-3200 kcal', macro_targets: { protein_pct: 30, carbs_pct: 45, fat_pct: 25 } },
+  },
+];
 const PRICE_ARTIFACTS = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'] as const;
 
 export default function CreateMealPlan() {
@@ -132,7 +147,19 @@ export default function CreateMealPlan() {
             <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
               <div className="space-y-1">
                 <h2 className="text-xl font-bold">The Basics</h2>
-                <p className="text-sm text-buddy-text-secondary">Start by giving your meal plan a catchy title and cover image.</p>
+                <p className="text-sm text-buddy-text-secondary">Start from a template or blank — then make it yours.</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold mb-1.5 block">Start from a template</label>
+                <div className="flex flex-wrap gap-2">
+                  {MEAL_PLAN_TEMPLATES.map((t) => (
+                    <button key={t.name} type="button" onClick={() => setForm((f) => ({ ...f, ...t.form }))}
+                      className="px-3 py-1.5 rounded-full text-xs border border-buddy-surface-raised text-buddy-text-secondary hover:text-buddy-green hover:border-buddy-green/40 transition-colors">
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {myShops.length > 0 && (

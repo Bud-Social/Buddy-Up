@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, LocateFixed, Loader2, Footprints, Camera, X } from 'lucide-react';
+import { Users, LocateFixed, Loader2, Footprints, Camera, X, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
@@ -9,6 +9,7 @@ import { NearbyNotice } from '@/components/ui/NearbyNotice';
 import { useToast } from '@/components/ui/Toast';
 import { InterestChips } from '@/components/profile/InterestChips';
 import { profilesApi, BUDDY_INTENTS, BUDDY_MODES, BUDDY_GOALS, BUDDY_VISIBILITY, type NearbyBuddy, type BuddySearchProfile } from '@/api/profiles';
+import { messagingApi } from '@/api';
 import { feedApi } from '@/api/feed';
 import { requestLocation, type GeoMeta } from '@/lib/geo';
 import { track } from '@/lib/analytics';
@@ -36,6 +37,7 @@ export default function FindBuddy() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [goals, setGoals] = useState<string[]>([]);
   const [dob, setDob] = useState('');
@@ -45,6 +47,9 @@ export default function FindBuddy() {
   const [neighbourhood, setNeighbourhood] = useState('');
   const [visibility, setVisibility] = useState('public');
   const [incognito, setIncognito] = useState(false);
+  const [hasSavedProfile, setHasSavedProfile] = useState(false);
+  const [matchCount, setMatchCount] = useState<number | null>(null);
+  const [msgSending, setMsgSending] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
   const fetchBuddies = useCallback(async () => {
@@ -73,6 +78,7 @@ export default function FindBuddy() {
     profilesApi.getSearchProfile().then((res) => {
       const sp = res.data as BuddySearchProfile;
       if (!sp) return;
+      setDisplayName(sp.display_name || '');
       setBio(sp.bio || '');
       setGoals(sp.goals || []);
       setAgeBand(sp.age_band || '');
@@ -86,6 +92,8 @@ export default function FindBuddy() {
       if (sp.custom_intent) setCustomIntent(sp.custom_intent);
       if (sp.modes?.length) setMode(sp.modes[0]);
       if (sp.latitude && sp.longitude) setCoords({ lat: Number(sp.latitude), lng: Number(sp.longitude) });
+      if (sp.intents?.length) setHasSavedProfile(true);
+      if (typeof sp.match_count === 'number') setMatchCount(sp.match_count);
     }).catch(() => {});
   }, []);
 
@@ -131,6 +139,7 @@ export default function FindBuddy() {
     try {
       const res = await profilesApi.updateSearchProfile({
         intents: intent ? [intent] : [],
+        display_name: displayName.trim().slice(0, 50),
         custom_intent: intent === 'other' ? customIntent.trim() : '',
         modes: mode ? [mode] : [],
         bio: bio.trim().slice(0, 140),
@@ -147,12 +156,15 @@ export default function FindBuddy() {
       const sp = res.data as BuddySearchProfile;
       if (sp.age_band) setAgeBand(sp.age_band);
       if (typeof sp.available_now === 'boolean') setLookingNow(sp.available_now);
+      if (typeof sp.match_count === 'number') setMatchCount(sp.match_count);
+      setHasSavedProfile(true);
+      setEditing(false);
       if (typeof sp.match_count === 'number' && (looking ?? lookingNow)) {
         toast('success', sp.match_count > 0 ? `${sp.match_count} buddie(s) nearby looking too 👀` : 'You’re visible as looking now (2h).');
       } else {
         toast('success', 'Search profile saved.');
       }
-      fetchBuddies();
+      await fetchBuddies();
     } catch (err) {
       const msg = (err as { response?: { data?: { errors?: unknown; message?: string } } })?.response?.data?.message;
       toast('error', msg || 'Could not save search profile.');
@@ -177,6 +189,26 @@ export default function FindBuddy() {
     }
   };
 
+  const handleMessage = async (username: string) => {
+    if (msgSending.has(username)) return;
+    setMsgSending((prev) => new Set(prev).add(username));
+    try {
+      const res = await messagingApi.startConversation([username]);
+      const convoId = res.data?.id;
+      navigate(convoId ? `/messages/${convoId}` : `/messages?user=${username}`);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 403) toast('error', 'Buddy up first to chat');
+      else toast('error', 'Failed to start conversation');
+    } finally {
+      setMsgSending((prev) => {
+        const next = new Set(prev);
+        next.delete(username);
+        return next;
+      });
+    }
+  };
+
   return (
     <div className="max-w-lg lg:max-w-2xl mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -187,6 +219,48 @@ export default function FindBuddy() {
           {lookingNow ? 'Looking ✓ (tap to stop)' : 'I’m looking now'}
         </Button>
       </div>
+
+      {!editing && hasSavedProfile && (
+        <Card className="p-4">
+          <div className="flex items-start gap-3">
+            <Avatar src={photos[0]} alt="Your buddy profile" size="lg" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">{displayName || 'Your buddy profile'}</p>
+                <button onClick={() => setEditing(true)}
+                  className="text-xs text-buddy-green font-medium hover:underline">
+                  Edit
+                </button>
+              </div>
+              {bio ? (
+                <p className="text-xs text-buddy-text-primary mt-1 line-clamp-2">{bio}</p>
+              ) : (
+                <p className="text-xs text-buddy-text-secondary mt-1">No bio yet — tap Edit to add one.</p>
+              )}
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {intent && <Badge variant="green" label={intent === 'other' && customIntent ? customIntent : intent.replace('_', ' ')} size="sm" />}
+                {mode && <Badge variant="silver" label={mode.replace('_', ' ')} size="sm" />}
+                {goals.map((g) => (
+                  <Badge key={g} variant="silver" label={g.replace(/_/g, ' ')} size="sm" />
+                ))}
+                {ageBand && <Badge variant="silver" label={ageBand} size="sm" />}
+                <Badge variant={visibility === 'public' ? 'green' : 'silver'} label={visibility === 'buddies' ? 'Buddies only' : visibility[0].toUpperCase() + visibility.slice(1)} size="sm" />
+                {incognito && <Badge variant="gold" label="Incognito" size="sm" />}
+                {lookingNow && <Badge variant="green" label="Looking now" size="sm" />}
+              </div>
+              {typeof matchCount === 'number' && matchCount > 0 && (
+                <p className="text-xs text-buddy-green font-medium mt-2">{matchCount} {matchCount === 1 ? 'buddy nearby' : 'buddies nearby'}</p>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {typeof matchCount === 'number' && matchCount > 0 && (
+        <div className="bg-buddy-green/10 border border-buddy-green/20 rounded-xl px-4 py-2.5 text-center">
+          <p className="text-xs text-buddy-green font-medium">{matchCount} {matchCount === 1 ? 'buddy nearby looking too 👀' : 'buddies nearby looking too 👀'}</p>
+        </div>
+      )}
 
       <div>
         <p className="text-xs font-medium text-buddy-text-secondary mb-2">I’m looking for</p>
@@ -242,6 +316,12 @@ export default function FindBuddy() {
         </button>
         {editing && (
           <div className="mt-3 space-y-3">
+            <label className="block text-xs text-buddy-text-secondary">Display name (shown on buddy search)
+              <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="e.g. Dawn Runner"
+                maxLength={50}
+                className="mt-1 w-full bg-buddy-surface-raised rounded-xl px-3 py-2.5 text-sm placeholder:text-buddy-text-secondary/50 focus:outline-none" />
+            </label>
             <textarea value={bio} onChange={(e) => setBio(e.target.value)} maxLength={140} rows={2}
               placeholder="Find-buddy bio — e.g. easy 5k at 6am, all paces welcome…"
               className="w-full bg-buddy-surface-raised rounded-xl px-4 py-2.5 text-sm placeholder:text-buddy-text-secondary/50 focus:outline-none focus:border-buddy-green/30" />
@@ -320,7 +400,13 @@ export default function FindBuddy() {
       ) : buddies.length === 0 ? (
         <div className="text-center py-16">
           <Users size={44} className="mx-auto text-buddy-text-secondary/30 mb-3" />
-          <p className="text-buddy-text-secondary">Nobody nearby for this yet — try another intent or widen the search.</p>
+          {!intent ? (
+            <p className="text-buddy-text-secondary">Pick an intent above to find your buddies — e.g. walk, run or gym.</p>
+          ) : !coords ? (
+            <p className="text-buddy-text-secondary">Tap <span className="font-medium text-buddy-text-primary">Near me</span> to find {intent.replace('_', ' ')} buddies around you.</p>
+          ) : (
+            <p className="text-buddy-text-secondary">Nobody nearby for this yet — try another intent or widen the search.</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -328,10 +414,10 @@ export default function FindBuddy() {
             <Card key={b.profile.user_id} className="p-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors"
               onClick={() => navigate(`/${b.profile.username}`)}>
               <div className="flex items-center gap-3">
-                <Avatar src={b.photos?.[0] || b.profile.avatar_url} alt={b.profile.display_name} size="lg" />
+                <Avatar src={b.photos?.[0] || b.profile.avatar_url} alt={b.display_name || b.profile.display_name} size="lg" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="font-heading font-semibold text-sm truncate">{b.profile.display_name}</p>
+                    <p className="font-heading font-semibold text-sm truncate">{b.display_name || b.profile.display_name}</p>
                     {b.available_now && <Badge variant="green" label="Now" size="sm" />}
                     {b.age_band && <Badge variant="silver" label={b.age_band} size="sm" />}
                   </div>
@@ -345,11 +431,23 @@ export default function FindBuddy() {
                   <p className="text-xs text-buddy-green mt-0.5">{b.explanation}</p>
                   <div className="mt-1.5"><InterestChips preferences={b.profile.preferences} /></div>
                 </div>
-                <Button size="sm" variant={requested.has(b.profile.username) ? 'ghost' : 'outline'}
-                  disabled={requested.has(b.profile.username)}
-                  onClick={(e) => { e.stopPropagation(); sendRequest(b.profile.username); }}>
-                  {requested.has(b.profile.username) ? 'Requested' : 'Buddy Up'}
-                </Button>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    aria-label={`Message @${b.profile.username}`}
+                    disabled={msgSending.has(b.profile.username)}
+                    onClick={(e) => { e.stopPropagation(); handleMessage(b.profile.username); }}
+                    className="p-2 rounded-full border border-buddy-surface text-buddy-text-secondary hover:text-buddy-green hover:border-buddy-green/40 transition-colors disabled:opacity-50"
+                  >
+                    {msgSending.has(b.profile.username)
+                      ? <Loader2 size={14} className="animate-spin" />
+                      : <MessageCircle size={14} />}
+                  </button>
+                  <Button size="sm" variant={requested.has(b.profile.username) ? 'ghost' : 'outline'}
+                    disabled={requested.has(b.profile.username)}
+                    onClick={(e) => { e.stopPropagation(); sendRequest(b.profile.username); }}>
+                    {requested.has(b.profile.username) ? 'Requested' : 'Buddy Up'}
+                  </Button>
+                </div>
               </div>
             </Card>
           ))}

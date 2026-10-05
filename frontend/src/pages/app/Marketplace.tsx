@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2, Package } from 'lucide-react';
+import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2, Package, LocateFixed, Loader2, MapPin } from 'lucide-react';
+import { NearbyNotice } from '@/components/ui/NearbyNotice';
+import { requestLocation, formatDistance, type GeoMeta } from '@/lib/geo';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
@@ -403,6 +405,9 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locStatus, setLocStatus] = useState<'idle' | 'locating' | 'denied'>('idle');
+  const [geo, setGeo] = useState<GeoMeta | null>(null);
 
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
@@ -412,14 +417,29 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
         q: search || undefined,
         event_type: formatFilter === 'all' ? undefined : formatFilter,
         verified: verifiedOnly || undefined,
+        lat: coords?.lat,
+        lng: coords?.lng,
       });
-      setEvents(res.data || []);
+      const list = res.data || [];
+      list.sort((a: any, b: any) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
+      setEvents(list);
+      setGeo((res as any).geo ?? null);
     } catch {
       setError('Could not load events. Check your connection.');
     } finally {
       setIsLoading(false);
     }
-  }, [scope, search, formatFilter, verifiedOnly]);
+  }, [scope, search, formatFilter, verifiedOnly, coords]);
+
+  const locate = async () => {
+    setLocStatus('locating');
+    try {
+      setCoords(await requestLocation());
+      setLocStatus('idle');
+    } catch {
+      setLocStatus('denied');
+    }
+  };
 
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
@@ -490,7 +510,17 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
         >
           Verified only
         </button>
+        <button onClick={coords ? () => { setCoords(null); setGeo(null); } : locate}
+          disabled={locStatus === 'locating'}
+          className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs whitespace-nowrap transition-colors snap-start font-medium ${
+            coords ? 'bg-buddy-electric text-white' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+          }`}
+        >
+          {locStatus === 'locating' ? <Loader2 size={12} className="animate-spin" /> : <LocateFixed size={12} />}
+          {coords ? 'Near me ✓' : locStatus === 'denied' ? 'GPS blocked — retry' : 'Near me'}
+        </button>
       </div>
+      <NearbyNotice geo={coords ? geo : null} kind="events" />
       <div className="flex gap-2 overflow-x-auto pb-3 mb-3 scrollbar-hide snap-x snap-mandatory">
         <button
           onClick={() => setCategoryFilter('all')}
@@ -562,6 +592,11 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
               <div className="flex-1">
                 <p className="text-sm font-medium truncate">{e.title}</p>
                 <p className="text-xs text-buddy-text-secondary mt-0.5 truncate">by {e.creator_data.display_name}</p>
+                {e.distance_km !== undefined && e.distance_km !== null && (
+                  <p className="text-[10px] text-buddy-green font-medium flex items-center gap-1 mt-0.5">
+                    <MapPin size={10} /> {formatDistance(e.distance_km)}
+                  </p>
+                )}
                 <p className="text-[10px] text-buddy-text-secondary mt-0.5 flex items-center gap-1">
                   <Calendar size={10} className="text-buddy-green" /> {new Date(e.start_datetime).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </p>

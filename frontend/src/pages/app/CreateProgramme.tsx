@@ -12,6 +12,36 @@ import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
 
 const CATEGORIES = ['strength', 'hypertrophy', 'endurance', 'hiit', 'bodyweight', 'flexibility', 'sport', 'other'];
 const PRICE_ARTIFACTS = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion'] as const;
+
+const PROGRAMME_TEMPLATES = [
+  {
+    name: '4-Week Strength Base',
+    form: { title: '4-Week Strength Base', description: 'Barbell fundamentals: squat, press, hinge and pull, 3 days a week.', category: 'strength', duration_weeks: 4 },
+    blocks: [
+      { week: 1, day: 1, title: 'Squat + Press', duration_mins: 60, timing: 'anytime' },
+      { week: 1, day: 3, title: 'Deadlift + Pull', duration_mins: 60, timing: 'anytime' },
+      { week: 1, day: 5, title: 'Squat + Bench', duration_mins: 60, timing: 'anytime' },
+    ],
+  },
+  {
+    name: 'Couch to 5K',
+    form: { title: 'Couch to 5K', description: 'Walk-run intervals building to a full 5K in 8 weeks.', category: 'endurance', duration_weeks: 8 },
+    blocks: [
+      { week: 1, day: 1, title: 'Walk 4 / Run 1 × 8', duration_mins: 30, timing: 'morning' },
+      { week: 1, day: 3, title: 'Walk 3 / Run 2 × 8', duration_mins: 30, timing: 'morning' },
+      { week: 1, day: 6, title: 'Easy walk 30 min', duration_mins: 30, timing: 'anytime' },
+    ],
+  },
+  {
+    name: 'Home HIIT Blast',
+    form: { title: 'Home HIIT Blast', description: 'No-equipment 20-minute burners, 4 days a week.', category: 'hiit', duration_weeks: 6 },
+    blocks: [
+      { week: 1, day: 1, title: 'Lower-body burner', duration_mins: 20, timing: 'anytime' },
+      { week: 1, day: 2, title: 'Upper-body burner', duration_mins: 20, timing: 'anytime' },
+      { week: 1, day: 4, title: 'Core finisher', duration_mins: 15, timing: 'anytime' },
+    ],
+  },
+];
 const SCHEDULE_TIMINGS = ['morning', 'midday', 'afternoon', 'evening', 'anytime'];
 
 export default function CreateProgramme() {
@@ -101,6 +131,13 @@ export default function CreateProgramme() {
     }]);
   };
 
+  const applyTemplate = (t: (typeof PROGRAMME_TEMPLATES)[number]) => {
+    setForm((f) => ({ ...f, ...t.form }));
+    setScheduleBlocks(t.blocks.map((b, i) => ({
+      id: Date.now() + i, ...b, video_url: '', description: '', tips: '', warnings: '',
+    })));
+  };
+
   const removeScheduleBlock = (id: number) => {
     setScheduleBlocks(scheduleBlocks.filter(b => b.id !== id));
   };
@@ -182,7 +219,19 @@ export default function CreateProgramme() {
             <Card className="p-6 space-y-5 border-none shadow-xl bg-buddy-surface/50 backdrop-blur-md">
               <div className="space-y-1">
                 <h2 className="text-xl font-bold">The Basics</h2>
-                <p className="text-sm text-buddy-text-secondary">Start by giving your programme a title and cover image.</p>
+                <p className="text-sm text-buddy-text-secondary">Start from a template or blank — then make it yours.</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-semibold mb-1.5 block">Start from a template</label>
+                <div className="flex flex-wrap gap-2">
+                  {PROGRAMME_TEMPLATES.map((t) => (
+                    <button key={t.name} type="button" onClick={() => applyTemplate(t)}
+                      className="px-3 py-1.5 rounded-full text-xs border border-buddy-surface-raised text-buddy-text-secondary hover:text-buddy-green hover:border-buddy-green/40 transition-colors">
+                      {t.name}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {myShops.length > 0 && (

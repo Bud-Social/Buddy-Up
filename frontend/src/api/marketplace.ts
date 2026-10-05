@@ -443,8 +443,8 @@ export const marketplaceApi = {
   getCart: () =>
     apiClient.get<ApiResponse<any>>('/marketplace/cart/').then((r) => r.data),
 
-  addToCart: (item_type: string, idData: Record<string, string>, quantity: number = 1) =>
-    apiClient.post<ApiResponse<any>>('/marketplace/cart/', { item_type, ...idData, quantity }).then((r) => r.data),
+  addToCart: (item_type: string, idData: Record<string, string>, quantity: number = 1, extra?: Record<string, string>) =>
+    apiClient.post<ApiResponse<any>>('/marketplace/cart/', { item_type, ...idData, quantity, ...extra }).then((r) => r.data),
 
   removeFromCart: (item_id?: string) =>
     apiClient.delete<ApiResponse<any>>('/marketplace/cart/', { data: { item_id } }).then((r) => r.data),

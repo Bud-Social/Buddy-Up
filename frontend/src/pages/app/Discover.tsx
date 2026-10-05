@@ -11,6 +11,8 @@ import { profilesApi } from '@/api';
 import { gymsApi } from '@/api';
 import { livesApi } from '@/api';
 import { track } from '@/lib/analytics';
+import { rankByAffinity } from '@/lib/discoverRank';
+import { useAuthStore } from '@/store/authStore';
 import { PostCard } from '@/components/features/feed/PostCard';
 import type { DiscoverTrending } from '@/api/profiles';
 import type { Profile } from '@/types';
@@ -43,6 +45,9 @@ export default function Discover() {
   const [people, setPeople] = useState<Profile[]>([]);
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [lives, setLives] = useState<BuddyLive[]>([]);
+  // People arrive pre-ranked from the AI embeddings recommender; the other
+  // tabs get a client-side interest-affinity blend over global order.
+  const myPrefs = useAuthStore((s) => s.profile?.preferences);
 
   const tabs: { key: DiscoverTab; label: string; icon: typeof Users }[] = [
     { key: 'all', label: 'All', icon: LayoutGrid },
@@ -95,15 +100,29 @@ export default function Discover() {
 
   const filteredTopics = useMemo(() => {
     const tags = trending?.hashtags ?? [];
-    if (query.length < 2) return tags;
-    return tags.filter((h) => h.tag.toLowerCase().includes(query.replace(/^#/, '').toLowerCase()));
-  }, [trending, query]);
+    const list = query.length < 2
+      ? tags
+      : tags.filter((h) => h.tag.toLowerCase().includes(query.replace(/^#/, '').toLowerCase()));
+    return rankByAffinity(list, (h) => h.tag, myPrefs);
+  }, [trending, query, myPrefs]);
 
   const filteredCommunities = useMemo(() => {
     const list = trending?.communities ?? [];
-    if (query.length < 2) return list;
-    return list.filter((c) => c.group_name.toLowerCase().includes(query.toLowerCase()));
-  }, [trending, query]);
+    const filtered = query.length < 2
+      ? list
+      : list.filter((c) => c.group_name.toLowerCase().includes(query.toLowerCase()));
+    return rankByAffinity(filtered, (c) => c.group_name, myPrefs);
+  }, [trending, query, myPrefs]);
+
+  const rankedGyms = useMemo(
+    () => rankByAffinity(gyms, (g) => `${g.name} ${g.category} ${(g.tags || []).join(' ')}`, myPrefs),
+    [gyms, myPrefs],
+  );
+
+  const rankedLives = useMemo(
+    () => rankByAffinity(lives, (l) => `${l.title} ${l.category || ''} ${l.host.display_name}`, myPrefs),
+    [lives, myPrefs],
+  );
 
   useEffect(() => {
     if (query.length >= 2) return;
@@ -433,9 +452,9 @@ export default function Discover() {
         </div>
       )}
 
-      {!isSearching && (activeTab === 'gyms' || (activeTab === 'all' && query.length >= 2)) && gyms.length > 0 && (
+      {!isSearching && (activeTab === 'gyms' || (activeTab === 'all' && query.length >= 2)) && rankedGyms.length > 0 && (
         <div className="space-y-3">
-          {gyms.map((g) => (
+          {rankedGyms.map((g) => (
             <Card key={g.id} className="p-4 flex items-center gap-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors" onClick={() => navigate(`/gyms/${g.handle}`)}>
               <Avatar src={g.logo_url} alt={g.name} size="lg" />
               <div className="flex-1 min-w-0">
@@ -472,7 +491,7 @@ export default function Discover() {
               <p className="text-buddy-text-secondary">No matching live sessions found.</p>
             </div>
           )}
-          {lives.map((l) => (
+          {rankedLives.map((l) => (
             <Card key={l.id} className="p-4 flex items-center gap-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors" onClick={() => navigate(`/live/${l.id}`)}>
               <Avatar src={l.host.avatar_url} alt={l.host.display_name} size="lg" />
               <div className="flex-1 min-w-0">
@@ -590,7 +609,7 @@ export default function Discover() {
               </div>
             </div>
           )}
-          {lives.length > 0 && (
+          {rankedLives.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary">
@@ -599,7 +618,7 @@ export default function Discover() {
                 <button onClick={() => setActiveTab('lives')} className="text-xs text-buddy-green font-medium">See all</button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {lives.slice(0, 5).map((lv) => (
+                {rankedLives.slice(0, 5).map((lv) => (
                   <button key={lv.id} onClick={() => navigate(`/live/${lv.id}`)}
                     className="px-3 py-1.5 rounded-full bg-buddy-surface text-sm hover:bg-buddy-surface-raised transition-colors max-w-[220px] truncate">
                     {lv.status === 'live' ? '🔴 ' : ''}{lv.title}

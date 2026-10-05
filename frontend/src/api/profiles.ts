@@ -31,6 +31,7 @@ export const BUDDY_GOALS = [
 
 export interface BuddySearchProfile {
   intents: string[];
+  display_name: string;
   custom_intent: string;
   modes: string[];
   bio: string;
@@ -51,6 +52,7 @@ export interface BuddySearchProfile {
 export interface NearbyBuddy {
   profile: Profile;
   distance_km: number | null;
+  display_name: string;
   intents: string[];
   custom_intent: string;
   modes: string[];

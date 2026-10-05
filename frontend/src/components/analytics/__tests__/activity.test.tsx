@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { RouteReplayMap } from '@/components/analytics/RouteReplayMap';
 import { ActivityTab } from '@/components/analytics/ActivityTab';
 import { analyticsApi } from '@/api/analytics';
@@ -62,7 +63,7 @@ describe('ActivityTab auto-save', () => {
       mockCreate.mockResolvedValue({ data: { id: 'abc-123' } });
       mockGet.mockResolvedValue({ data: [] });
 
-      render(<ActivityTab />);
+      render(<MemoryRouter><ActivityTab /></MemoryRouter>);
       fireEvent.click(screen.getByRole('button', { name: 'Start' }));
       await act(async () => { vi.advanceTimersByTime(3100); });
 

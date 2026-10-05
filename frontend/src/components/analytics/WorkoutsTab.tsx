@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Dumbbell, Timer, Flame } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Dumbbell, Timer, Flame, Share2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { StatCard } from '@/components/analytics/StatCard';
 import { formatNumber, titleCase, formatDateTime } from '@/components/analytics/format';
 import { analyticsApi } from '@/api/analytics';
+import { useToast } from '@/components/ui/Toast';
 import type { AnalyticsPeriod, AnalyticsSummaryData, WorkoutLogInput } from '@/types/analytics';
 
 interface Props { period: AnalyticsPeriod; }
@@ -44,11 +46,23 @@ const EMPTY: WorkoutLogInput = {
 };
 
 export function WorkoutsTab({ period }: Props) {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [summary, setSummary] = useState<AnalyticsSummaryData | null>(null);
   const [history, setHistory] = useState<WorkoutRow[]>([]);
   const [form, setForm] = useState<WorkoutLogInput>(EMPTY);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const shareWorkout = async (id: string) => {
+    try {
+      const res = await analyticsApi.shareActivity('workout', id);
+      toast('success', 'Shared to feed!');
+      if (res.data?.post_id) navigate(`/feed?post=${res.data.post_id}`);
+    } catch {
+      toast('error', 'Could not share workout.');
+    }
+  };
 
   useEffect(() => {
     analyticsApi.getSummary(period)
@@ -154,9 +168,15 @@ export function WorkoutsTab({ period }: Props) {
                       {r.weight_kg ? ` @ ${r.weight_kg} kg` : ''}
                     </p>
                   </div>
-                  {r.calories_burned != null && r.calories_burned > 0 && (
-                    <span className="flex-shrink-0 text-xs font-medium text-buddy-green">{Math.round(r.calories_burned)} kcal</span>
-                  )}
+                  <div className="flex-shrink-0 flex items-center gap-2">
+                    {r.calories_burned != null && r.calories_burned > 0 && (
+                      <span className="text-xs font-medium text-buddy-green">{Math.round(r.calories_burned)} kcal</span>
+                    )}
+                    <button onClick={() => shareWorkout(r.id)} title="Share to feed"
+                      className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-green/10 transition-colors">
+                      <Share2 size={14} />
+                    </button>
+                  </div>
                 </Card>
               ))}
             </div>

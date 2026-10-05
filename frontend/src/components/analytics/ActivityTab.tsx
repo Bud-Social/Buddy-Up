@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Square, Trash2, Navigation, Footprints, Activity as ActivityIcon, RotateCcw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Play, Square, Trash2, Navigation, Footprints, Activity as ActivityIcon, RotateCcw, Share2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { RouteMap } from '@/components/analytics/RouteMap';
 import { RouteReplayMap } from '@/components/analytics/RouteReplayMap';
 import { formatDuration, formatKm, formatPace, titleCase, formatDateTime } from '@/components/analytics/format';
 import { analyticsApi } from '@/api/analytics';
+import { useToast } from '@/components/ui/Toast';
 import type { ActivityRecordInput, ActivitySummary } from '@/types/analytics';
 
 const ACTIVITY_TYPES: { key: ActivityRecordInput['activity_type']; label: string; icon: typeof Footprints }[] = [
@@ -18,7 +20,19 @@ const ACTIVITY_TYPES: { key: ActivityRecordInput['activity_type']; label: string
 interface TrackPoint { lat: number; lng: number; ts: number; }
 
 export function ActivityTab() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [activities, setActivities] = useState<ActivitySummary['recent']>([]);
+
+  const shareActivity = async (id: string) => {
+    try {
+      const res = await analyticsApi.shareActivity('activity', id);
+      toast('success', 'Shared to feed!');
+      if (res.data?.post_id) navigate(`/feed?post=${res.data.post_id}`);
+    } catch {
+      toast('error', 'Could not share activity.');
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [type, setType] = useState<ActivityRecordInput['activity_type']>('run');
 
@@ -399,9 +413,14 @@ export function ActivityTab() {
                     <p className="font-medium text-sm capitalize">{titleCase(a.activity_type)}</p>
                     <span className="text-xs text-buddy-text-secondary">{formatDateTime(a.started_at)}</span>
                   </div>
-                  <button onClick={() => handleDelete(a.id)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-red hover:bg-buddy-red/10 transition-colors" title="Delete">
-                    <Trash2 size={15} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => shareActivity(a.id)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-green/10 transition-colors" title="Share to feed">
+                      <Share2 size={15} />
+                    </button>
+                    <button onClick={() => handleDelete(a.id)} className="p-1.5 rounded-lg text-buddy-text-secondary hover:text-buddy-red hover:bg-buddy-red/10 transition-colors" title="Delete">
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-sm mb-2">
                   <div>
