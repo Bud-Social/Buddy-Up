@@ -6,9 +6,11 @@ import CartPage from '@/pages/app/CartPage';
 import { marketplaceApi } from '@/api/marketplace';
 import { walletApi } from '@/api/wallet';
 
+const navigateMock = vi.fn();
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
-  return { ...actual, useNavigate: () => vi.fn() };
+  return { ...actual, useNavigate: () => navigateMock };
 });
 
 vi.mock('@/api/marketplace', () => ({
@@ -64,28 +66,45 @@ function renderCart() {
 }
 
 describe('CartPage shortfall', () => {
-  it('keeps Confirm enabled when the regular balance covers the cart', async () => {
+  it('stays quiet about the balance when it covers the cart', async () => {
     renderCart();
-    await userEvent.click(await screen.findByRole('button', { name: /Review & Checkout/ }));
 
-    const confirm = await screen.findByRole('button', { name: 'Confirm Payment' });
-    expect((confirm as HTMLButtonElement).disabled).toBe(false);
+    expect(await screen.findByText('Keto reset')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
+    expect((screen.getByRole('button', { name: /Review & Checkout/ }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it('disables Confirm and names the gap when the balance is short', async () => {
+  it('names the gap before checkout when the balance is short', async () => {
+    wallet.getBalance.mockResolvedValue({ data: { regular_balance: [{ artifact_type: 'dumbbell', quantity: 1 }] } });
+    renderCart();
+
+    // The shortfall is surfaced on the cart itself, not hidden behind a modal.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Not enough dumbbell');
+  });
+});
+
+describe('CartPage hands checkout over to the standalone page', () => {
+  it('navigates to /marketplace/checkout instead of opening its own modal', async () => {
+    renderCart();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Review & Checkout/ }));
+
+    expect(navigateMock).toHaveBeenCalledWith('/marketplace/checkout');
+    // The confirm and receipt modals are gone; the cart is a pure cart.
+    expect(screen.queryByRole('button', { name: 'Confirm Payment' })).toBeNull();
+    expect(screen.queryByText('Order Receipt')).toBeNull();
+    expect(screen.queryByText('Confirm Order')).toBeNull();
+  });
+
+  it('never places the order itself, even with a shortfall', async () => {
     wallet.getBalance.mockResolvedValue({ data: { regular_balance: [{ artifact_type: 'dumbbell', quantity: 1 }] } });
     renderCart();
 
     const review = await screen.findByRole('button', { name: /Review & Checkout/ });
-    // The shortfall is surfaced before the user even opens the modal.
-    expect(await screen.findByRole('alert')).toHaveTextContent('Not enough dumbbell');
-
+    expect((review as HTMLButtonElement).disabled).toBe(false);
     await userEvent.click(review);
-    const confirm = await screen.findByRole('button', { name: 'Confirm Payment' });
-    expect((confirm as HTMLButtonElement).disabled).toBe(true);
 
-    await userEvent.click(confirm);
+    expect(navigateMock).toHaveBeenCalledWith('/marketplace/checkout');
     expect(market.checkoutCart).not.toHaveBeenCalled();
   });
 });

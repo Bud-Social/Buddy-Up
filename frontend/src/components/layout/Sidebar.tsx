@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, MessageCircle, Bell, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, BrainCircuit, Activity, UsersRound, HeartHandshake, Footprints } from 'lucide-react';
+import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, MessageCircle, Bell, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, LayoutDashboard, Activity, UsersRound, HeartHandshake, Footprints } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useAuthStore } from '@/store/authStore';
@@ -27,7 +27,9 @@ export function Sidebar({ inDrawer = false }: { inDrawer?: boolean }) {
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
   const isStaff = useAuthStore((s) => s.user?.is_staff);
-  const navItems = isStaff ? [...main, { to: '/admin', icon: BrainCircuit, label: 'ML Admin' }] : main;
+  // Staff-only entry point back into the admin console. Same session, same
+// identity — no impersonation, just navigation.
+const navItems = isStaff ? [...main, { to: '/admin/overview', icon: LayoutDashboard, label: 'Admin' }] : main;
   const isCollapsed = inDrawer ? false : collapsed;
   const labelCls = inDrawer ? '' : `${collapsed ? 'hidden' : ''}`;
   return (

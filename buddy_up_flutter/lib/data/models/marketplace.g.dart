@@ -8,24 +8,24 @@ part of 'marketplace.dart';
 
 _CreatorData _$CreatorDataFromJson(Map<String, dynamic> json) => _CreatorData(
   username: json['username'] as String,
-  displayName: json['displayName'] as String,
-  avatarUrl: json['avatar_url'] as String,
+  displayName: json['display_name'] as String? ?? '',
+  avatarUrl: json['avatar_url'] as String? ?? '',
   verificationStatus: json['verification_status'] as String? ?? '',
 );
 
 Map<String, dynamic> _$CreatorDataToJson(_CreatorData instance) =>
     <String, dynamic>{
       'username': instance.username,
-      'displayName': instance.displayName,
+      'display_name': instance.displayName,
       'avatar_url': instance.avatarUrl,
       'verification_status': instance.verificationStatus,
     };
 
 _Shop _$ShopFromJson(Map<String, dynamic> json) => _Shop(
   id: json['id'] as String,
-  handle: json['handle'] as String,
-  name: json['name'] as String,
-  description: json['description'] as String,
+  handle: json['handle'] as String? ?? '',
+  name: json['name'] as String? ?? '',
+  description: json['description'] as String? ?? '',
   logoUrl: json['logo_url'] as String?,
   bannerUrl: json['banner_url'] as String?,
   accentColor: json['accent_color'] as String? ?? '#6366f1',
@@ -40,7 +40,7 @@ _Shop _$ShopFromJson(Map<String, dynamic> json) => _Shop(
   category: json['category'] as String? ?? '',
   verificationStatus: json['verification_status'] as String? ?? 'unverified',
   isActive: json['is_active'] as bool? ?? true,
-  createdAt: json['created_at'] as String,
+  createdAt: json['created_at'] as String? ?? '',
 );
 
 Map<String, dynamic> _$ShopToJson(_Shop instance) => <String, dynamic>{
@@ -132,7 +132,7 @@ _MealPlan _$MealPlanFromJson(Map<String, dynamic> json) => _MealPlan(
   creatorId: json['creator_id'] as String,
   title: json['title'] as String,
   description: json['description'] as String,
-  coverImageUrl: json['cover_image_url'] as String,
+  coverImageUrl: json['cover_image_url'] as String? ?? '',
   dietType: json['diet_type'] as String,
   durationWeeks: (json['duration_weeks'] as num).toInt(),
   calorieRange: json['calorie_range'] as String,
@@ -207,7 +207,7 @@ _TrainingProgramme _$TrainingProgrammeFromJson(Map<String, dynamic> json) =>
       creatorId: json['creator_id'] as String,
       title: json['title'] as String,
       description: json['description'] as String,
-      coverImageUrl: json['cover_image_url'] as String,
+      coverImageUrl: json['cover_image_url'] as String? ?? '',
       category: json['category'] as String,
       durationWeeks: (json['duration_weeks'] as num).toInt(),
       priceArtifacts: Map<String, int>.from(json['price_artifacts'] as Map),
@@ -317,7 +317,7 @@ _GymData _$GymDataFromJson(Map<String, dynamic> json) => _GymData(
   id: json['id'] as String,
   name: json['name'] as String,
   handle: json['handle'] as String,
-  logoUrl: json['logo_url'] as String,
+  logoUrl: json['logo_url'] as String? ?? '',
 );
 
 Map<String, dynamic> _$GymDataToJson(_GymData instance) => <String, dynamic>{
@@ -490,18 +490,22 @@ Map<String, dynamic> _$EventTicketToJson(_EventTicket instance) =>
 _CartItem _$CartItemFromJson(Map<String, dynamic> json) => _CartItem(
   id: json['id'] as String,
   itemType: json['item_type'] as String,
-  mealPlan: json['meal_plan'] == null
+  mealPlan: json['meal_plan_detail'] == null
       ? null
-      : MealPlan.fromJson(json['meal_plan'] as Map<String, dynamic>),
-  programme: json['programme'] == null
+      : MealPlan.fromJson(json['meal_plan_detail'] as Map<String, dynamic>),
+  programme: json['programme_detail'] == null
       ? null
-      : TrainingProgramme.fromJson(json['programme'] as Map<String, dynamic>),
-  product: json['product'] == null
+      : TrainingProgramme.fromJson(
+          json['programme_detail'] as Map<String, dynamic>,
+        ),
+  product: json['product_detail'] == null
       ? null
-      : MarketplaceProduct.fromJson(json['product'] as Map<String, dynamic>),
-  event: json['event'] == null
+      : MarketplaceProduct.fromJson(
+          json['product_detail'] as Map<String, dynamic>,
+        ),
+  event: json['event_detail'] == null
       ? null
-      : MarketplaceEvent.fromJson(json['event'] as Map<String, dynamic>),
+      : MarketplaceEvent.fromJson(json['event_detail'] as Map<String, dynamic>),
   quantity: (json['quantity'] as num?)?.toInt() ?? 1,
   itemTotalArtifacts:
       (json['item_total_artifacts'] as Map<String, dynamic>?)?.map(
@@ -514,10 +518,10 @@ _CartItem _$CartItemFromJson(Map<String, dynamic> json) => _CartItem(
 Map<String, dynamic> _$CartItemToJson(_CartItem instance) => <String, dynamic>{
   'id': instance.id,
   'item_type': instance.itemType,
-  'meal_plan': instance.mealPlan,
-  'programme': instance.programme,
-  'product': instance.product,
-  'event': instance.event,
+  'meal_plan_detail': instance.mealPlan,
+  'programme_detail': instance.programme,
+  'product_detail': instance.product,
+  'event_detail': instance.event,
   'quantity': instance.quantity,
   'item_total_artifacts': instance.itemTotalArtifacts,
   'item_total_usd': instance.itemTotalUsd,
@@ -1019,6 +1023,7 @@ _Order _$OrderFromJson(Map<String, dynamic> json) => _Order(
       ) ??
       const <String, int>{},
   spentUsd: (json['spentUsd'] as num?)?.toDouble() ?? 0.0,
+  totalUsd: (json['total_usd'] as num?)?.toDouble() ?? 0.0,
   discountCode: json['discount_code'] as String?,
   statusHistory:
       (json['status_history'] as List<dynamic>?)
@@ -1033,6 +1038,12 @@ _Order _$OrderFromJson(Map<String, dynamic> json) => _Order(
   fulfillment: json['fulfillment'] == null
       ? null
       : OrderFulfillment.fromJson(json['fulfillment'] as Map<String, dynamic>),
+  pickupStation: json['pickup_station'] as String?,
+  deliveryPersonnel: json['delivery_personnel'] as String?,
+  paymentMethod: json['payment_method'] as String?,
+  paymentStatus: json['payment_status'] as String? ?? 'unpaid',
+  paymentReference: json['payment_reference'] as String?,
+  paymentProvider: json['payment_provider'] as String?,
   isSeller: json['is_seller'] as bool? ?? false,
   paidAt: json['paid_at'] as String?,
   createdAt: json['created_at'] as String?,
@@ -1049,11 +1060,443 @@ Map<String, dynamic> _$OrderToJson(_Order instance) => <String, dynamic>{
   'total_artifacts': instance.totalArtifacts,
   'discount_artifacts': instance.discountArtifacts,
   'spentUsd': instance.spentUsd,
+  'total_usd': instance.totalUsd,
   'discount_code': instance.discountCode,
   'status_history': instance.statusHistory,
   'items': instance.items,
   'fulfillment': instance.fulfillment,
+  'pickup_station': instance.pickupStation,
+  'delivery_personnel': instance.deliveryPersonnel,
+  'payment_method': instance.paymentMethod,
+  'payment_status': instance.paymentStatus,
+  'payment_reference': instance.paymentReference,
+  'payment_provider': instance.paymentProvider,
   'is_seller': instance.isSeller,
   'paid_at': instance.paidAt,
   'created_at': instance.createdAt,
+};
+
+_PickupStation _$PickupStationFromJson(Map<String, dynamic> json) =>
+    _PickupStation(
+      id: json['id'] as String,
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String?,
+      address: json['address'] as String?,
+      city: json['city'] as String?,
+      country: json['country'] as String?,
+      latitude: _optDouble(json['latitude']),
+      longitude: _optDouble(json['longitude']),
+      openingHours:
+          json['opening_hours'] as Map<String, dynamic>? ??
+          const <String, dynamic>{},
+      phone: json['phone'] as String?,
+      instructions: json['instructions'] as String?,
+      isPrimary: json['is_primary'] as bool? ?? false,
+      isActive: json['is_active'] as bool? ?? true,
+      ownerType: json['owner_type'] as String? ?? '',
+      ownerName: json['owner_name'] as String?,
+      distanceKm: _optDouble(json['distance_km']),
+      shop: json['shop'] as String?,
+      gym: json['gym'] as String?,
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$PickupStationToJson(_PickupStation instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'description': instance.description,
+      'address': instance.address,
+      'city': instance.city,
+      'country': instance.country,
+      'latitude': instance.latitude,
+      'longitude': instance.longitude,
+      'opening_hours': instance.openingHours,
+      'phone': instance.phone,
+      'instructions': instance.instructions,
+      'is_primary': instance.isPrimary,
+      'is_active': instance.isActive,
+      'owner_type': instance.ownerType,
+      'owner_name': instance.ownerName,
+      'distance_km': instance.distanceKm,
+      'shop': instance.shop,
+      'gym': instance.gym,
+      'created_at': instance.createdAt,
+    };
+
+_OrderCourier _$OrderCourierFromJson(Map<String, dynamic> json) =>
+    _OrderCourier(
+      id: json['id'] as String,
+      profile: json['profile'] as String?,
+      username: json['username'] as String? ?? '',
+      displayName: json['display_name'] as String? ?? '',
+      avatarUrl: json['avatar_url'] as String?,
+      vehicleType: json['vehicle_type'] as String? ?? 'bike',
+      vehicleLabel: json['vehicle_label'] as String? ?? '',
+      serviceZones:
+          (json['service_zones'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      isActive: json['is_active'] as bool? ?? true,
+      rating: _optDouble(json['rating']),
+      distanceKm: _optDouble(json['distance_km']),
+      bio: json['bio'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$OrderCourierToJson(_OrderCourier instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'profile': instance.profile,
+      'username': instance.username,
+      'display_name': instance.displayName,
+      'avatar_url': instance.avatarUrl,
+      'vehicle_type': instance.vehicleType,
+      'vehicle_label': instance.vehicleLabel,
+      'service_zones': instance.serviceZones,
+      'is_active': instance.isActive,
+      'rating': instance.rating,
+      'distance_km': instance.distanceKm,
+      'bio': instance.bio,
+    };
+
+_OrderCourierGroup _$OrderCourierGroupFromJson(Map<String, dynamic> json) =>
+    _OrderCourierGroup(
+      vehicleType: json['vehicle_type'] as String? ?? '',
+      vehicleLabel: json['vehicle_label'] as String? ?? '',
+      count: (json['count'] as num?)?.toInt() ?? 0,
+      couriers:
+          (json['couriers'] as List<dynamic>?)
+              ?.map((e) => OrderCourier.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <OrderCourier>[],
+    );
+
+Map<String, dynamic> _$OrderCourierGroupToJson(_OrderCourierGroup instance) =>
+    <String, dynamic>{
+      'vehicle_type': instance.vehicleType,
+      'vehicle_label': instance.vehicleLabel,
+      'count': instance.count,
+      'couriers': instance.couriers,
+    };
+
+_OrderCourierList _$OrderCourierListFromJson(Map<String, dynamic> json) =>
+    _OrderCourierList(
+      orderId: json['order_id'] as String? ?? '',
+      orderNumber: json['order_number'] as String? ?? '',
+      fulfillmentType: json['fulfillment_type'] as String? ?? 'digital',
+      deliveryPersonnel: json['delivery_personnel'] as String?,
+      origin: json['origin'] as Map<String, dynamic>?,
+      couriers:
+          (json['couriers'] as List<dynamic>?)
+              ?.map((e) => OrderCourier.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <OrderCourier>[],
+      byVehicle:
+          (json['by_vehicle'] as List<dynamic>?)
+              ?.map(
+                (e) => OrderCourierGroup.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const <OrderCourierGroup>[],
+    );
+
+Map<String, dynamic> _$OrderCourierListToJson(_OrderCourierList instance) =>
+    <String, dynamic>{
+      'order_id': instance.orderId,
+      'order_number': instance.orderNumber,
+      'fulfillment_type': instance.fulfillmentType,
+      'delivery_personnel': instance.deliveryPersonnel,
+      'origin': instance.origin,
+      'couriers': instance.couriers,
+      'by_vehicle': instance.byVehicle,
+    };
+
+_DeliveryPersonnel _$DeliveryPersonnelFromJson(Map<String, dynamic> json) =>
+    _DeliveryPersonnel(
+      id: json['id'] as String,
+      profile: json['profile'] as String?,
+      username: json['username'] as String? ?? '',
+      displayName: json['display_name'] as String? ?? '',
+      avatarUrl: json['avatar_url'] as String?,
+      vehicleType: json['vehicle_type'] as String? ?? 'bike',
+      vehicleLabel: json['vehicle_label'] as String? ?? '',
+      serviceZones:
+          (json['service_zones'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      isActive: json['is_active'] as bool? ?? true,
+      rating: _optDouble(json['rating']),
+      bio: json['bio'] as String? ?? '',
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$DeliveryPersonnelToJson(_DeliveryPersonnel instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'profile': instance.profile,
+      'username': instance.username,
+      'display_name': instance.displayName,
+      'avatar_url': instance.avatarUrl,
+      'vehicle_type': instance.vehicleType,
+      'vehicle_label': instance.vehicleLabel,
+      'service_zones': instance.serviceZones,
+      'is_active': instance.isActive,
+      'rating': instance.rating,
+      'bio': instance.bio,
+      'created_at': instance.createdAt,
+    };
+
+_DeliveryPersonnelApplication _$DeliveryPersonnelApplicationFromJson(
+  Map<String, dynamic> json,
+) => _DeliveryPersonnelApplication(
+  id: json['id'] as String,
+  profile: json['profile'] as String?,
+  vehicleType: json['vehicle_type'] as String? ?? 'bike',
+  serviceZones:
+      (json['service_zones'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
+  idDocumentUrl: json['id_document_url'] as String? ?? '',
+  licenceDocumentUrl: json['licence_document_url'] as String? ?? '',
+  phone: json['phone'] as String? ?? '',
+  bio: json['bio'] as String? ?? '',
+  status: json['status'] as String? ?? 'draft',
+  reviewerNotes: json['reviewer_notes'] as String? ?? '',
+  rejectionReason: json['rejection_reason'] as String? ?? '',
+  reviewedAt: json['reviewed_at'] as String?,
+  createdAt: json['created_at'] as String?,
+);
+
+Map<String, dynamic> _$DeliveryPersonnelApplicationToJson(
+  _DeliveryPersonnelApplication instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'profile': instance.profile,
+  'vehicle_type': instance.vehicleType,
+  'service_zones': instance.serviceZones,
+  'id_document_url': instance.idDocumentUrl,
+  'licence_document_url': instance.licenceDocumentUrl,
+  'phone': instance.phone,
+  'bio': instance.bio,
+  'status': instance.status,
+  'reviewer_notes': instance.reviewerNotes,
+  'rejection_reason': instance.rejectionReason,
+  'reviewed_at': instance.reviewedAt,
+  'created_at': instance.createdAt,
+};
+
+_StationApplication _$StationApplicationFromJson(Map<String, dynamic> json) =>
+    _StationApplication(
+      id: json['id'] as String,
+      shop: json['shop'] as String?,
+      gym: json['gym'] as String?,
+      status: json['status'] as String? ?? 'draft',
+      businessRegistrationNumber:
+          json['business_registration_number'] as String? ?? '',
+      contactPhone: json['contact_phone'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      city: json['city'] as String? ?? '',
+      country: json['country'] as String? ?? '',
+      latitude: _optDouble(json['latitude']),
+      longitude: _optDouble(json['longitude']),
+      openingHours:
+          json['opening_hours'] as Map<String, dynamic>? ??
+          const <String, dynamic>{},
+      documents:
+          (json['documents'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          const <Map<String, dynamic>>[],
+      agreedToPolicy: json['agreed_to_policy'] as bool? ?? false,
+      agreedAt: json['agreed_at'] as String?,
+      reviewerNotes: json['reviewer_notes'] as String? ?? '',
+      rejectionReason: json['rejection_reason'] as String? ?? '',
+      reviewedAt: json['reviewed_at'] as String?,
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$StationApplicationToJson(_StationApplication instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'shop': instance.shop,
+      'gym': instance.gym,
+      'status': instance.status,
+      'business_registration_number': instance.businessRegistrationNumber,
+      'contact_phone': instance.contactPhone,
+      'address': instance.address,
+      'city': instance.city,
+      'country': instance.country,
+      'latitude': instance.latitude,
+      'longitude': instance.longitude,
+      'opening_hours': instance.openingHours,
+      'documents': instance.documents,
+      'agreed_to_policy': instance.agreedToPolicy,
+      'agreed_at': instance.agreedAt,
+      'reviewer_notes': instance.reviewerNotes,
+      'rejection_reason': instance.rejectionReason,
+      'reviewed_at': instance.reviewedAt,
+      'created_at': instance.createdAt,
+    };
+
+_CheckoutReceiptItem _$CheckoutReceiptItemFromJson(Map<String, dynamic> json) =>
+    _CheckoutReceiptItem(
+      itemType: json['item_type'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      priceArtifacts:
+          (json['price_artifacts'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const <String, int>{},
+      totalArtifacts:
+          (json['total_artifacts'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const <String, int>{},
+      paidArtifacts:
+          (json['paid_artifacts'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const <String, int>{},
+      creatorName: json['creator_name'] as String?,
+    );
+
+Map<String, dynamic> _$CheckoutReceiptItemToJson(
+  _CheckoutReceiptItem instance,
+) => <String, dynamic>{
+  'item_type': instance.itemType,
+  'title': instance.title,
+  'quantity': instance.quantity,
+  'price_artifacts': instance.priceArtifacts,
+  'total_artifacts': instance.totalArtifacts,
+  'paid_artifacts': instance.paidArtifacts,
+  'creator_name': instance.creatorName,
+};
+
+_CheckoutReceipt _$CheckoutReceiptFromJson(Map<String, dynamic> json) =>
+    _CheckoutReceipt(
+      orderId: json['order_id'] as String,
+      orderNumber: json['order_number'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      fulfillmentType: json['fulfillment_type'] as String? ?? 'digital',
+      pickupStationId: json['pickup_station_id'] as String?,
+      paymentMethod: json['payment_method'] as String?,
+      paymentStatus: json['payment_status'] as String?,
+      paymentRequired: json['payment_required'] as bool? ?? false,
+      items:
+          (json['items'] as List<dynamic>?)
+              ?.map(
+                (e) => CheckoutReceiptItem.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          const <CheckoutReceiptItem>[],
+      totalArtifacts:
+          (json['total_artifacts'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const <String, int>{},
+      originalArtifacts:
+          (json['original_artifacts'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const <String, int>{},
+      savingsArtifacts:
+          (json['savings_artifacts'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const <String, int>{},
+      savingsUsd: (json['savings_usd'] as num?)?.toDouble() ?? 0.0,
+      discountCode: json['discount_code'] as String?,
+      spentUsd: (json['spent_usd'] as num?)?.toDouble() ?? 0.0,
+      newBalance:
+          (json['new_balance'] as Map<String, dynamic>?)?.map(
+            (k, e) => MapEntry(k, (e as num).toInt()),
+          ) ??
+          const <String, int>{},
+    );
+
+Map<String, dynamic> _$CheckoutReceiptToJson(_CheckoutReceipt instance) =>
+    <String, dynamic>{
+      'order_id': instance.orderId,
+      'order_number': instance.orderNumber,
+      'status': instance.status,
+      'fulfillment_type': instance.fulfillmentType,
+      'pickup_station_id': instance.pickupStationId,
+      'payment_method': instance.paymentMethod,
+      'payment_status': instance.paymentStatus,
+      'payment_required': instance.paymentRequired,
+      'items': instance.items,
+      'total_artifacts': instance.totalArtifacts,
+      'original_artifacts': instance.originalArtifacts,
+      'savings_artifacts': instance.savingsArtifacts,
+      'savings_usd': instance.savingsUsd,
+      'discount_code': instance.discountCode,
+      'spent_usd': instance.spentUsd,
+      'new_balance': instance.newBalance,
+    };
+
+_PaymentIntent _$PaymentIntentFromJson(Map<String, dynamic> json) =>
+    _PaymentIntent(
+      id: json['id'] as String?,
+      order: json['order'] as String?,
+      orderNumber: json['order_number'] as String?,
+      provider: json['provider'] as String?,
+      method: json['method'] as String?,
+      methodLabel: json['method_label'] as String?,
+      amount: _optNum(json['amount']),
+      currency: json['currency'] as String?,
+      providerReference: json['provider_reference'] as String?,
+      status: json['status'] as String?,
+      rawResponse:
+          json['raw_response'] as Map<String, dynamic>? ??
+          const <String, dynamic>{},
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$PaymentIntentToJson(_PaymentIntent instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'order': instance.order,
+      'order_number': instance.orderNumber,
+      'provider': instance.provider,
+      'method': instance.method,
+      'method_label': instance.methodLabel,
+      'amount': instance.amount,
+      'currency': instance.currency,
+      'provider_reference': instance.providerReference,
+      'status': instance.status,
+      'raw_response': instance.rawResponse,
+      'created_at': instance.createdAt,
+    };
+
+_PaymentIntentResult _$PaymentIntentResultFromJson(Map<String, dynamic> json) =>
+    _PaymentIntentResult(
+      intent: json['intent'] == null
+          ? null
+          : PaymentIntent.fromJson(json['intent'] as Map<String, dynamic>),
+      railConfigured: json['rail_configured'] as bool?,
+      txRef: json['tx_ref'] as String?,
+      publicKey: json['public_key'] as String?,
+      amount: json['amount'] as String?,
+      currency: json['currency'] as String?,
+      customerEmail: json['customer_email'] as String?,
+      customerName: json['customer_name'] as String?,
+      status: json['status'] as String?,
+    );
+
+Map<String, dynamic> _$PaymentIntentResultToJson(
+  _PaymentIntentResult instance,
+) => <String, dynamic>{
+  'intent': instance.intent,
+  'rail_configured': instance.railConfigured,
+  'tx_ref': instance.txRef,
+  'public_key': instance.publicKey,
+  'amount': instance.amount,
+  'currency': instance.currency,
+  'customer_email': instance.customerEmail,
+  'customer_name': instance.customerName,
+  'status': instance.status,
 };

@@ -70,7 +70,29 @@ class GymSerializer(serializers.ModelSerializer):
             modes.append('hybrid')
         return modes
 
+    def _viewer_is_member(self, obj):
+        """True when the requesting viewer holds an active membership here.
+
+        Rosters (owners, reviewers) are member-only for non-public gyms;
+        `member_count` stays visible to everyone as the count signal.
+        """
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return False
+        return GymMembership.objects.filter(
+            gym=obj, member=request.user.profile, subscription_active=True
+        ).exists()
+
+    def _roster_visible(self, obj):
+        # Public gyms intentionally expose their roster; private/secret ones
+        # only ever expose it to active members.
+        if obj.access_type == 'public':
+            return True
+        return self._viewer_is_member(obj)
+
     def get_owner_data(self, obj):
+        if not self._roster_visible(obj):
+            return []
         owners = GymMembership.objects.filter(gym=obj, role__in=['owner', 'co_owner']).select_related('member')
         return [{
             'user_id': str(om.member.user_id),
@@ -115,6 +137,8 @@ class GymSerializer(serializers.ModelSerializer):
         return obj.reviews.count()
 
     def get_recent_reviewers(self, obj):
+        if not self._roster_visible(obj):
+            return []
         recent = obj.reviews.select_related('reviewer').order_by('-created_at')[:3]
         return [{
             'user_id': str(r.reviewer.user_id),

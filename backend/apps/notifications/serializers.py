@@ -22,6 +22,7 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
             'comment_push', 'live_starting_push', 'session_reminder_push',
             'streak_milestone_push', 'accountability_ping_push',
             'programme_reminder_push', 'meal_reminder_push', 'shop_cert_push', 'new_purchase_push',
+            'order_status_changed_push',
         ]
 
     def validate_timezone(self, value):

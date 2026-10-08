@@ -108,39 +108,37 @@ def handle_event_ticket_created(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender='marketplace.Order')
 def handle_order_status_changed(sender, instance, created, **kwargs):
+    """Order *creation* only.
+
+    This receiver used to fire on every status change as well, and so did
+    ``apps.marketplace.views._notify_order_status_change`` — the buyer ended up
+    with two notification rows per seller update, one of them mislabelled
+    `new_purchase`. Status changes are now notified from exactly one place (the
+    marketplace view, which also tells the sellers), so this receiver must stay
+    quiet on them or the duplicate comes straight back.
+    """
     from apps.notifications.tasks import create_notification
     buyer = getattr(instance, 'buyer', None) or getattr(instance, 'user', None)
-    if not buyer:
+    if not buyer or not created:
         return
 
     amount = getattr(instance, 'spent_usd', None) or getattr(instance, 'fiat_amount', '0')
 
-    if created:
-        create_notification.delay(
-            recipient_id=str(buyer.user_id),
-            notification_type='order_status_changed',
-            title=f'Order #{instance.order_number} confirmed! 🛒',
-            body=f'Your order of ${amount} is being processed.',
-            metadata={
-                'order_id': str(instance.id),
-                'order_number': instance.order_number,
-                'status': instance.status,
-                'total': str(amount),
-            },
-        )
-    else:
-        create_notification.delay(
-            recipient_id=str(buyer.user_id),
-            notification_type='order_status_changed',
-            title=f'Order #{instance.order_number} is now {instance.status.replace("_", " ").title()}',
-            body=f'Your order status has been updated to: {instance.status}.',
-            metadata={
-                'order_id': str(instance.id),
-                'order_number': instance.order_number,
-                'status': instance.status,
-                'total': str(amount),
-            },
-        )
+    create_notification.delay(
+        recipient_id=str(buyer.user_id),
+        notification_type='order_status_changed',
+        title=f'Order #{instance.order_number} confirmed! 🛒',
+        body=f'Your order of ${amount} is being processed.',
+        metadata={
+            'order_id': str(instance.id),
+            'order_number': instance.order_number,
+            'status': instance.status,
+            'total': str(amount),
+        },
+        # One row per order even if the order row is re-saved immediately after
+        # creation (checkout does), so the buyer is not told twice.
+        dedupe_key=f'order:{instance.id}:created',
+    )
 
 
 @receiver(post_save, sender='wallet.ArtifactTransaction')

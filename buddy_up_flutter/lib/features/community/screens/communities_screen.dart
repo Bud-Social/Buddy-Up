@@ -241,7 +241,7 @@ class _CommunitiesScreenState extends ConsumerState<CommunitiesScreen> {
           ],
         ),
         subtitle: Text(
-          c.description.isEmpty ? '${c.participantsData.length} members' : c.description,
+          c.description.isEmpty ? '${c.memberCount} members' : c.description,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),

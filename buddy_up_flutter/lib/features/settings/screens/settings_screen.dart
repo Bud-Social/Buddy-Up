@@ -140,6 +140,16 @@ class SettingsScreen extends ConsumerWidget {
               'Policies and guidelines', () => _showHelpSheet(context)),
           _tile(context, tileColor, Icons.block_outlined, 'Blocked Accounts',
               'People you have blocked', () => context.push('/settings/blocked')),
+          // Staff-only surfaces. The tile is hidden entirely for non-staff, the
+          // same way the web sidebar hides the admin link, and the console screen
+          // re-checks `is_staff` because a deep link must not bypass it.
+          if (user?.isStaff ?? false) ...[
+            const SizedBox(height: 4),
+            _tile(context, tileColor, Icons.admin_panel_settings_outlined,
+                'Admin Console',
+                'Staff only · users, shops, orders, logistics, wallet',
+                () => context.push('/admin')),
+          ],
           const SizedBox(height: 12),
           _tile(
             context,

@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$User {
 
- String get id; String get email; bool get emailVerified; String? get phone; bool get phoneVerified; bool get isAdult; bool get totpEnabled; String? get createdAt;
+ String get id; String get email; bool get emailVerified; String? get phone; bool get phoneVerified; bool get isAdult; bool get totpEnabled;@JsonKey(name: 'is_staff') bool get isStaff; String? get createdAt;
 /// Create a copy of User
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $UserCopyWith<User> get copyWith => _$UserCopyWithImpl<User>(this as User, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is User&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.emailVerified, emailVerified) || other.emailVerified == emailVerified)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.phoneVerified, phoneVerified) || other.phoneVerified == phoneVerified)&&(identical(other.isAdult, isAdult) || other.isAdult == isAdult)&&(identical(other.totpEnabled, totpEnabled) || other.totpEnabled == totpEnabled)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is User&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.emailVerified, emailVerified) || other.emailVerified == emailVerified)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.phoneVerified, phoneVerified) || other.phoneVerified == phoneVerified)&&(identical(other.isAdult, isAdult) || other.isAdult == isAdult)&&(identical(other.totpEnabled, totpEnabled) || other.totpEnabled == totpEnabled)&&(identical(other.isStaff, isStaff) || other.isStaff == isStaff)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,email,emailVerified,phone,phoneVerified,isAdult,totpEnabled,createdAt);
+int get hashCode => Object.hash(runtimeType,id,email,emailVerified,phone,phoneVerified,isAdult,totpEnabled,isStaff,createdAt);
 
 @override
 String toString() {
-  return 'User(id: $id, email: $email, emailVerified: $emailVerified, phone: $phone, phoneVerified: $phoneVerified, isAdult: $isAdult, totpEnabled: $totpEnabled, createdAt: $createdAt)';
+  return 'User(id: $id, email: $email, emailVerified: $emailVerified, phone: $phone, phoneVerified: $phoneVerified, isAdult: $isAdult, totpEnabled: $totpEnabled, isStaff: $isStaff, createdAt: $createdAt)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $UserCopyWith<$Res>  {
   factory $UserCopyWith(User value, $Res Function(User) _then) = _$UserCopyWithImpl;
 @useResult
 $Res call({
- String id, String email, bool emailVerified, String? phone, bool phoneVerified, bool isAdult, bool totpEnabled, String? createdAt
+ String id, String email, bool emailVerified, String? phone, bool phoneVerified, bool isAdult, bool totpEnabled,@JsonKey(name: 'is_staff') bool isStaff, String? createdAt
 });
 
 
@@ -65,7 +65,7 @@ class _$UserCopyWithImpl<$Res>
 
 /// Create a copy of User
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? email = null,Object? emailVerified = null,Object? phone = freezed,Object? phoneVerified = null,Object? isAdult = null,Object? totpEnabled = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? email = null,Object? emailVerified = null,Object? phone = freezed,Object? phoneVerified = null,Object? isAdult = null,Object? totpEnabled = null,Object? isStaff = null,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
@@ -74,6 +74,7 @@ as bool,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_t
 as String?,phoneVerified: null == phoneVerified ? _self.phoneVerified : phoneVerified // ignore: cast_nullable_to_non_nullable
 as bool,isAdult: null == isAdult ? _self.isAdult : isAdult // ignore: cast_nullable_to_non_nullable
 as bool,totpEnabled: null == totpEnabled ? _self.totpEnabled : totpEnabled // ignore: cast_nullable_to_non_nullable
+as bool,isStaff: null == isStaff ? _self.isStaff : isStaff // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
@@ -160,10 +161,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String email,  bool emailVerified,  String? phone,  bool phoneVerified,  bool isAdult,  bool totpEnabled,  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String email,  bool emailVerified,  String? phone,  bool phoneVerified,  bool isAdult,  bool totpEnabled, @JsonKey(name: 'is_staff')  bool isStaff,  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _User() when $default != null:
-return $default(_that.id,_that.email,_that.emailVerified,_that.phone,_that.phoneVerified,_that.isAdult,_that.totpEnabled,_that.createdAt);case _:
+return $default(_that.id,_that.email,_that.emailVerified,_that.phone,_that.phoneVerified,_that.isAdult,_that.totpEnabled,_that.isStaff,_that.createdAt);case _:
   return orElse();
 
 }
@@ -181,10 +182,10 @@ return $default(_that.id,_that.email,_that.emailVerified,_that.phone,_that.phone
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String email,  bool emailVerified,  String? phone,  bool phoneVerified,  bool isAdult,  bool totpEnabled,  String? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String email,  bool emailVerified,  String? phone,  bool phoneVerified,  bool isAdult,  bool totpEnabled, @JsonKey(name: 'is_staff')  bool isStaff,  String? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _User():
-return $default(_that.id,_that.email,_that.emailVerified,_that.phone,_that.phoneVerified,_that.isAdult,_that.totpEnabled,_that.createdAt);case _:
+return $default(_that.id,_that.email,_that.emailVerified,_that.phone,_that.phoneVerified,_that.isAdult,_that.totpEnabled,_that.isStaff,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -201,10 +202,10 @@ return $default(_that.id,_that.email,_that.emailVerified,_that.phone,_that.phone
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String email,  bool emailVerified,  String? phone,  bool phoneVerified,  bool isAdult,  bool totpEnabled,  String? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String email,  bool emailVerified,  String? phone,  bool phoneVerified,  bool isAdult,  bool totpEnabled, @JsonKey(name: 'is_staff')  bool isStaff,  String? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _User() when $default != null:
-return $default(_that.id,_that.email,_that.emailVerified,_that.phone,_that.phoneVerified,_that.isAdult,_that.totpEnabled,_that.createdAt);case _:
+return $default(_that.id,_that.email,_that.emailVerified,_that.phone,_that.phoneVerified,_that.isAdult,_that.totpEnabled,_that.isStaff,_that.createdAt);case _:
   return null;
 
 }
@@ -216,7 +217,7 @@ return $default(_that.id,_that.email,_that.emailVerified,_that.phone,_that.phone
 @JsonSerializable()
 
 class _User implements User {
-  const _User({required this.id, required this.email, this.emailVerified = false, this.phone, this.phoneVerified = false, this.isAdult = false, this.totpEnabled = false, this.createdAt});
+  const _User({required this.id, required this.email, this.emailVerified = false, this.phone, this.phoneVerified = false, this.isAdult = false, this.totpEnabled = false, @JsonKey(name: 'is_staff') this.isStaff = false, this.createdAt});
   factory _User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
 
 @override final  String id;
@@ -226,6 +227,7 @@ class _User implements User {
 @override@JsonKey() final  bool phoneVerified;
 @override@JsonKey() final  bool isAdult;
 @override@JsonKey() final  bool totpEnabled;
+@override@JsonKey(name: 'is_staff') final  bool isStaff;
 @override final  String? createdAt;
 
 /// Create a copy of User
@@ -241,16 +243,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _User&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.emailVerified, emailVerified) || other.emailVerified == emailVerified)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.phoneVerified, phoneVerified) || other.phoneVerified == phoneVerified)&&(identical(other.isAdult, isAdult) || other.isAdult == isAdult)&&(identical(other.totpEnabled, totpEnabled) || other.totpEnabled == totpEnabled)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _User&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.emailVerified, emailVerified) || other.emailVerified == emailVerified)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.phoneVerified, phoneVerified) || other.phoneVerified == phoneVerified)&&(identical(other.isAdult, isAdult) || other.isAdult == isAdult)&&(identical(other.totpEnabled, totpEnabled) || other.totpEnabled == totpEnabled)&&(identical(other.isStaff, isStaff) || other.isStaff == isStaff)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,email,emailVerified,phone,phoneVerified,isAdult,totpEnabled,createdAt);
+int get hashCode => Object.hash(runtimeType,id,email,emailVerified,phone,phoneVerified,isAdult,totpEnabled,isStaff,createdAt);
 
 @override
 String toString() {
-  return 'User(id: $id, email: $email, emailVerified: $emailVerified, phone: $phone, phoneVerified: $phoneVerified, isAdult: $isAdult, totpEnabled: $totpEnabled, createdAt: $createdAt)';
+  return 'User(id: $id, email: $email, emailVerified: $emailVerified, phone: $phone, phoneVerified: $phoneVerified, isAdult: $isAdult, totpEnabled: $totpEnabled, isStaff: $isStaff, createdAt: $createdAt)';
 }
 
 
@@ -261,7 +263,7 @@ abstract mixin class _$UserCopyWith<$Res> implements $UserCopyWith<$Res> {
   factory _$UserCopyWith(_User value, $Res Function(_User) _then) = __$UserCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String email, bool emailVerified, String? phone, bool phoneVerified, bool isAdult, bool totpEnabled, String? createdAt
+ String id, String email, bool emailVerified, String? phone, bool phoneVerified, bool isAdult, bool totpEnabled,@JsonKey(name: 'is_staff') bool isStaff, String? createdAt
 });
 
 
@@ -278,7 +280,7 @@ class __$UserCopyWithImpl<$Res>
 
 /// Create a copy of User
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? email = null,Object? emailVerified = null,Object? phone = freezed,Object? phoneVerified = null,Object? isAdult = null,Object? totpEnabled = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? email = null,Object? emailVerified = null,Object? phone = freezed,Object? phoneVerified = null,Object? isAdult = null,Object? totpEnabled = null,Object? isStaff = null,Object? createdAt = freezed,}) {
   return _then(_User(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
@@ -287,6 +289,7 @@ as bool,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_t
 as String?,phoneVerified: null == phoneVerified ? _self.phoneVerified : phoneVerified // ignore: cast_nullable_to_non_nullable
 as bool,isAdult: null == isAdult ? _self.isAdult : isAdult // ignore: cast_nullable_to_non_nullable
 as bool,totpEnabled: null == totpEnabled ? _self.totpEnabled : totpEnabled // ignore: cast_nullable_to_non_nullable
+as bool,isStaff: null == isStaff ? _self.isStaff : isStaff // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String?,
   ));

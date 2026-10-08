@@ -114,6 +114,11 @@ class NotificationPreference(TimestampedModel):
     meal_reminder_push = models.BooleanField(default=True)
     shop_cert_push = models.BooleanField(default=True)
     new_purchase_push = models.BooleanField(default=True)
+    # Order status changes now reach sellers as well as the buyer, and that push
+    # is no longer incidental. Without this column the lookup in
+    # ``create_notification`` (``getattr(prefs, f'{type}_push', None)``) returns
+    # None and the notification is pushed whether or not the user opted out.
+    order_status_changed_push = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'notifications_preference'

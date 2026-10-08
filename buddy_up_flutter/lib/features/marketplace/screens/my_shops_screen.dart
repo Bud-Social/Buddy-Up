@@ -36,6 +36,11 @@ class MyShopsScreen extends ConsumerWidget {
         backgroundColor: BuddyColors.surface,
         title: const Text('My Shops', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.store_outlined, size: 20),
+            tooltip: 'Manage pickup stations',
+            onPressed: () => context.push('/marketplace/stations'),
+          ),
           TextButton.icon(
             icon: const Icon(Icons.add, size: 18),
             label: const Text('New Shop'),

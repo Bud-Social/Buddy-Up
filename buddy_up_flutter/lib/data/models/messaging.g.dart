@@ -61,6 +61,7 @@ _Conversation _$ConversationFromJson(Map<String, dynamic> json) =>
               ?.map((e) => ParticipantData.fromJson(e as Map<String, dynamic>))
               .toList() ??
           const <ParticipantData>[],
+      memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
       unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
       membershipRole: json['membership_role'] as String?,
       lastMessage: json['last_message'] == null
@@ -91,6 +92,7 @@ Map<String, dynamic> _$ConversationToJson(_Conversation instance) =>
       'invite_code': instance.inviteCode,
       'is_public': instance.isPublic,
       'participants_data': instance.participantsData,
+      'member_count': instance.memberCount,
       'unread_count': instance.unreadCount,
       'membership_role': instance.membershipRole,
       'last_message': instance.lastMessage,

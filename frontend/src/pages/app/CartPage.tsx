@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCart, Trash2, Minus, Plus, Tag, ChevronLeft, Utensils, Dumbbell, Pill, Calendar, Percent, Coins, DollarSign, CheckCircle2, X, Truck, Store, MapPin } from 'lucide-react';
+import { ShoppingCart, Trash2, Minus, Plus, Tag, ChevronLeft, Utensils, Dumbbell, Pill, Calendar, Percent, Coins, DollarSign } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -65,42 +65,26 @@ function artifactDisplay(artifacts: Record<string, number>): string {
     .join(', ');
 }
 
+/**
+ * The cart is a pure cart: line editing, discount codes and totals only.
+ * Review, fulfillment, payment and the receipt all live on the standalone
+ * `/marketplace/checkout` page, which this navigates to.
+ */
 export default function CartPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [cart, setCart] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [checkingOut, setCheckingOut] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [applyingDiscount, setApplyingDiscount] = useState(false);
   const [discountMsg, setDiscountMsg] = useState('');
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [receipt, setReceipt] = useState<any>(null);
-  const [fulfillmentType, setFulfillmentType] = useState('digital');
-  const [deliveryLine, setDeliveryLine] = useState('');
-  const [deliveryCity, setDeliveryCity] = useState('');
-  const [deliveryCountry, setDeliveryCountry] = useState('');
-  const [deliveryPhone, setDeliveryPhone] = useState('');
-  const [pickupLocation, setPickupLocation] = useState('');
-  const [pickupInstructions, setPickupInstructions] = useState('');
   const [balance, setBalance] = useState<BalanceItem[]>([]);
-  const [suggested, setSuggested] = useState<{ type: string; available: string[]; detail: Record<string, unknown> } | null>(null);
-  const fulfillmentTouched = useRef(false);
 
   const fetchCart = useCallback(() => {
     setIsLoading(true);
     Promise.all([marketplaceApi.getCart(), walletApi.getBalance().catch(() => null)])
       .then(([cartRes, balRes]) => {
         setCart(cartRes.data);
-        const sug = (cartRes.data as any)?.suggested_fulfillment;
-        if (sug) {
-          setSuggested(sug);
-          if (!fulfillmentTouched.current && sug.type) setFulfillmentType(sug.type);
-          const pickup = (sug.detail as any)?.pickup_location;
-          if (typeof pickup === 'string' && pickup) {
-            setPickupLocation((prev) => prev || pickup);
-          }
-        }
         if (balRes?.data?.regular_balance) setBalance(balRes.data.regular_balance);
       })
       .catch(() => {})
@@ -112,7 +96,6 @@ export default function CartPage() {
   const balanceFor = (type: string) => balance.find((b) => b.artifact_type === type)?.quantity ?? 0;
   const cartTotals: Record<string, number> = (cart?.total_artifacts as Record<string, number>) || {};
   const shortfall = Object.entries(cartTotals).filter(([, v]) => v > 0).find(([k, v]) => balanceFor(k) < v);
-  const afterPurchase = (type: string) => Math.max(0, balanceFor(type) - (cartTotals[type] || 0));
 
   const handleRemove = async (itemId: string) => {
     await marketplaceApi.removeFromCart(itemId);
@@ -133,45 +116,6 @@ export default function CartPage() {
     await marketplaceApi.addToCart(type, { [CART_ADD_ID_KEYS[type]]: id }, newQty);
     window.dispatchEvent(new CustomEvent('cart-updated'));
     fetchCart();
-  };
-
-  const handleCheckout = async () => {
-    setCheckingOut(true);
-    try {
-      const payload: Record<string, unknown> = { fulfillment_type: fulfillmentType };
-      if (fulfillmentType === 'delivery') {
-        payload.delivery_address = { line1: deliveryLine, city: deliveryCity, country: deliveryCountry, phone: deliveryPhone };
-      } else if (fulfillmentType === 'pickup') {
-        payload.pickup_details = {
-          location: pickupLocation || (suggested?.detail as any)?.pickup_location || '',
-          instructions: pickupInstructions,
-        };
-      }
-      const res = await marketplaceApi.checkoutCart(payload);
-      toast('success', 'Checkout successful! Items have been purchased.');
-      setCart({ ...cart, items: [] });
-      setShowConfirm(false);
-      setReceipt(res.data || {});
-      const nb = (res.data as any)?.new_balance as Record<string, number> | undefined;
-      if (nb) {
-        setBalance((prev) => {
-          const next = [...prev];
-          for (const [k, v] of Object.entries(nb)) {
-            const i = next.findIndex((b) => b.artifact_type === k);
-            if (i >= 0) next[i] = { ...next[i], quantity: v };
-          }
-          return next;
-        });
-      } else {
-        walletApi.getBalance().then((b) => b.data?.regular_balance && setBalance(b.data.regular_balance)).catch(() => {});
-      }
-      window.dispatchEvent(new CustomEvent('cart-updated'));
-    } catch (err: any) {
-      toast('error', err.response?.data?.message || 'Checkout failed');
-      setShowConfirm(false);
-    } finally {
-      setCheckingOut(false);
-    }
   };
 
   const applyDiscount = async () => {
@@ -355,188 +299,10 @@ export default function CartPage() {
             </div>
           )}
 
-          <Button className="w-full" size="lg" onClick={() => setShowConfirm(true)} disabled={items.length === 0}>
+          <Button className="w-full" size="lg" onClick={() => navigate('/marketplace/checkout')} disabled={items.length === 0}>
             Review & Checkout {itemCount > 0 && `(${itemCount} item${itemCount > 1 ? 's' : ''})`}
           </Button>
         </>
-      )}
-
-      {receipt && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-          <div className="w-full max-w-md bg-buddy-surface rounded-2xl border border-buddy-surface-raised shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-5 border-b border-buddy-surface-raised flex items-center justify-between">
-              <h2 className="font-display text-lg font-extrabold">Order Receipt</h2>
-              <button onClick={() => setReceipt(null)} className="p-2 rounded-lg hover:bg-buddy-surface-raised transition-colors text-buddy-text-secondary"><X size={16} /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="flex flex-col items-center gap-2 py-2">
-                <CheckCircle2 size={44} className="text-buddy-green" />
-                <p className="font-semibold text-sm">Payment Successful</p>
-                <p className="text-xs text-buddy-text-secondary">Order #{receipt.order_number || receipt.order_id?.slice(0, 8).toUpperCase()}</p>
-              </div>
-
-              <div className="space-y-2">
-                {(receipt.items || []).map((it: any, i: number) => (
-                  <div key={i} className="rounded-xl bg-buddy-surface-raised/50 p-3 text-xs space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold truncate">{it.title} × {it.quantity}</span>
-                      <span className="text-buddy-text-secondary capitalize">{it.item_type.replace('_', ' ')}</span>
-                    </div>
-                    {it.paid_artifacts && Object.keys(it.paid_artifacts).length > 0 && (
-                      <p className="text-buddy-green font-medium">{artifactDisplay(it.paid_artifacts)}</p>
-                    )}
-                    {it.creator_name && <p className="text-buddy-text-secondary">to {it.creator_name}</p>}
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-1.5 text-sm border-t border-buddy-surface-raised pt-3">
-                <div className="flex justify-between text-xs">
-                  <span className="text-buddy-text-secondary">Original total</span>
-                  <span>{artifactDisplay(receipt.original_artifacts)}</span>
-                </div>
-                {receipt.savings_artifacts && Object.keys(receipt.savings_artifacts).filter(k => receipt.savings_artifacts[k] > 0).length > 0 && (
-                  <div className="flex justify-between text-xs text-buddy-green">
-                    <span className="flex items-center gap-1">
-                      <Percent size={11} /> Savings
-                      {receipt.discount_code && <span className="font-mono">({receipt.discount_code})</span>}
-                    </span>
-                    <span>-{artifactDisplay(receipt.savings_artifacts)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm font-bold pt-1 border-t border-buddy-surface-raised">
-                  <span>You paid</span>
-                  <span className="text-buddy-green">{artifactDisplay(receipt.total_artifacts)}</span>
-                </div>
-                {receipt.new_balance && Object.keys(receipt.new_balance).length > 0 && (
-                  <div className="flex justify-between text-xs text-buddy-text-secondary">
-                    <span>Remaining balance</span>
-                    <span>{artifactDisplay(receipt.new_balance)}</span>
-                  </div>
-                )}
-                {receipt.spent_usd != null && (
-                  <div className="flex justify-between text-xs text-buddy-text-secondary">
-                    <span>Value ({baseCurrency})</span>
-                    <span>${receipt.spent_usd.toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-
-              <Button className="w-full" onClick={() => receipt.order_id ? navigate(`/marketplace/orders/${receipt.order_id}`) : navigate('/marketplace')}>
-                View Order Tracking
-              </Button>
-              <Button variant="ghost" className="w-full" onClick={() => navigate('/marketplace')}>Done</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showConfirm && cart && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-          <div className="w-full max-w-md bg-buddy-surface rounded-2xl border border-buddy-surface-raised shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-5 border-b border-buddy-surface-raised flex items-center justify-between">
-              <h2 className="font-display text-lg font-extrabold">Confirm Order</h2>
-              <button onClick={() => setShowConfirm(false)} className="p-2 rounded-lg hover:bg-buddy-surface-raised transition-colors text-buddy-text-secondary"><X size={16} /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="space-y-2">
-                {items.map((item: any) => (
-                  <div key={item.id} className="flex items-center justify-between text-xs">
-                    <span className="truncate pr-2">{getItemName(item)} × {item.quantity}</span>
-                    <span className="font-medium flex-shrink-0">
-                      {artifactDisplay(item.item_total_artifacts) || (item.item_total_usd ? `$${item.item_total_usd.toFixed(2)}` : '')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-1.5 text-sm border-t border-buddy-surface-raised pt-3">
-                {cart.discount_code && (
-                  <div className="flex justify-between text-xs text-buddy-green">
-                    <span className="font-mono">{cart.discount_code.code}</span>
-                    <span>discount applied at checkout</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm font-bold">
-                  <span>Total to pay</span>
-                  <span className="text-buddy-green">{artifactDisplay(cart.total_artifacts)}</span>
-                </div>
-                <div className="flex justify-between text-xs text-buddy-text-secondary">
-                  <span>{baseCurrency} value</span>
-                  <span>${cart.total_usd?.toFixed(2)}{conversionRate > 0 ? ` · ${localCurrency} ${cart.total_local_currency?.toFixed(2)}` : ''}</span>
-                </div>
-              </div>
-
-              <div className={`rounded-xl p-3 text-xs text-buddy-text-secondary space-y-1 ${shortfall ? 'bg-buddy-red/10 border border-buddy-red/30' : 'bg-buddy-gold/10 border border-buddy-gold/20'}`}>
-                <p>Artifacts will be deducted instantly from your wallet. Your purchase unlocks instant access.</p>
-                {Object.keys(cartTotals).filter((k) => cartTotals[k] > 0).map((k) => (
-                  <p key={k} className="flex justify-between">
-                    <span>Balance: {balanceFor(k)} {k}</span>
-                    <span>After purchase: {afterPurchase(k)} {k}</span>
-                  </p>
-                ))}
-                {shortfall && (
-                  <p role="alert" className="text-buddy-red font-medium">
-                    Not enough {shortfall[0]} — this cart needs {shortfall[1]}, you have {balanceFor(shortfall[0])}. Top up in Wallet to continue.
-                  </p>
-                )}
-                {suggested && (
-                  <p className="text-buddy-green">Auto-detected: {suggested.type} delivery{suggested.detail && Object.keys(suggested.detail).length > 0 ? ' (seller options available)' : ''}.</p>
-                )}
-              </div>
-
-              {/* Fulfillment method */}
-              <div className="space-y-2">
-                <p className="text-xs font-semibold flex items-center gap-1.5"><Truck size={13} className="text-buddy-green" /> Delivery method</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {([
-                    { key: 'digital', label: 'Digital', icon: CheckCircle2 },
-                    { key: 'pickup', label: 'Pickup', icon: Store },
-                    { key: 'delivery', label: 'Delivery', icon: Truck },
-                  ] as const).map(({ key, label, icon: Icon }) => (
-                    <button
-                      key={key}
-                      onClick={() => { fulfillmentTouched.current = true; setFulfillmentType(key); }}
-                      className={`rounded-xl border p-2.5 text-xs font-medium flex flex-col items-center gap-1 transition-colors ${
-                        fulfillmentType === key ? 'border-buddy-green bg-buddy-green/10 text-buddy-green' : 'border-buddy-surface-raised text-buddy-text-secondary hover:border-buddy-text-secondary/30'
-                      }`}
-                    >
-                      <Icon size={14} />
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {fulfillmentType === 'delivery' && (
-                  <div className="space-y-2 rounded-xl bg-buddy-surface-raised/40 p-3">
-                    <div className="flex items-center gap-1.5 text-xs text-buddy-text-secondary"><MapPin size={11} /> Delivery address</div>
-                    <input className="w-full bg-buddy-background rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-buddy-green" placeholder="Street address" value={deliveryLine} onChange={(e) => setDeliveryLine(e.target.value)} />
-                    <div className="grid grid-cols-2 gap-2">
-                      <input className="bg-buddy-background rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-buddy-green" placeholder="City" value={deliveryCity} onChange={(e) => setDeliveryCity(e.target.value)} />
-                      <input className="bg-buddy-background rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-buddy-green" placeholder="Country" value={deliveryCountry} onChange={(e) => setDeliveryCountry(e.target.value)} />
-                    </div>
-                    <input className="w-full bg-buddy-background rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-buddy-green" placeholder="Phone" value={deliveryPhone} onChange={(e) => setDeliveryPhone(e.target.value)} />
-                  </div>
-                )}
-
-                {fulfillmentType === 'pickup' && (
-                  <div className="space-y-2 rounded-xl bg-buddy-surface-raised/40 p-3">
-                    <div className="flex items-center gap-1.5 text-xs text-buddy-text-secondary"><Store size={11} /> Pickup location</div>
-                    <input className="w-full bg-buddy-background rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-buddy-green" placeholder="Venue / location" value={pickupLocation} onChange={(e) => setPickupLocation(e.target.value)} />
-                    <input className="w-full bg-buddy-background rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-buddy-green" placeholder="Instructions (optional)" value={pickupInstructions} onChange={(e) => setPickupInstructions(e.target.value)} />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <Button variant="ghost" className="flex-1" onClick={() => setShowConfirm(false)} disabled={checkingOut}>Cancel</Button>
-                <Button className="flex-1" onClick={handleCheckout} isLoading={checkingOut} disabled={checkingOut || !!shortfall}>
-                  Confirm Payment
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

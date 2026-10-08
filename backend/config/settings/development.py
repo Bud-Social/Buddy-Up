@@ -94,11 +94,56 @@ else:
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-    },
-}
+# ── Channel layer ───────────────────────────────────────────────────────────
+# Daphne serves HTTP + WebSocket from one process, so same-process group_send
+# works with the in-memory layer and the bug is invisible locally. But the
+# celery worker/beat containers are separate processes: anything they broadcast
+# (notifications, live updates) never reaches a socket, and nothing in the logs
+# says so. Use the same Redis layer base.py configures and only fall back to
+# in-memory when Redis is genuinely unreachable (a laptop with no compose
+# stack). The probe is guarded so importing these settings can never fail on a
+# machine without Redis.
+import logging as _logging  # noqa: E402
+
+CHANNEL_LAYER_LOGGER = _logging.getLogger('buddyup.channel_layer')
+
+
+def _redis_reachable(url, timeout=0.5):
+    """True when Redis answers a PING at ``url``; never raises."""
+    try:
+        import redis
+
+        client = redis.Redis.from_url(
+            url, socket_connect_timeout=timeout, socket_timeout=timeout,
+        )
+        return bool(client.ping())
+    except Exception:  # noqa: BLE001 — unreachable, unparseable, or no redis lib
+        return False
+
+
+CHANNEL_LAYER_BACKEND = 'channels.layers.InMemoryChannelLayer'
+if _redis_reachable(REDIS_URL):
+    CHANNEL_LAYER_BACKEND = 'channels_redis.core.RedisChannelLayer'
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': CHANNEL_LAYER_BACKEND,
+            'CONFIG': {
+                'hosts': [REDIS_URL],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYER_LOGGER.warning(
+        'Redis at %s is unreachable; falling back to InMemoryChannelLayer — '
+        'same-process group_send still works, but broadcasts raised in the '
+        'celery worker/beat containers will never reach a WebSocket client.',
+        REDIS_URL,
+    )
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': CHANNEL_LAYER_BACKEND,
+        },
+    }
 
 CELERY_BROKER_URL = 'memory://'
 CELERY_TASK_ALWAYS_EAGER = True

@@ -1129,12 +1129,16 @@ class CommunityListView(views.APIView):
 
     def get(self, request):
         profile = request.user.profile
+        # One aggregate for the whole page: member_count must not be N+1.
+        annotate = db_models.Count('memberships', distinct=True)
         mine = Conversation.objects.filter(
             is_community=True, participants=profile,
-        ).order_by('-last_message_at')
+        ).annotate(annotated_member_count=annotate).order_by('-last_message_at')
         discoverable = Conversation.objects.filter(
             is_community=True, is_public=True,
-        ).exclude(participants=profile).order_by('-created_at')
+        ).exclude(participants=profile).annotate(
+            annotated_member_count=annotate,
+        ).order_by('-created_at')
 
         my_data = ConversationSerializer(mine, many=True, context={'request': request}).data
         discover_data = ConversationSerializer(discoverable, many=True, context={'request': request}).data
@@ -1194,7 +1198,13 @@ class CommunityDetailView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def _get_community(self, request, community_id):
-        return get_object_or_404(Conversation, id=community_id, is_community=True)
+        conv = get_object_or_404(
+            Conversation.objects.annotate(
+                annotated_member_count=db_models.Count('memberships', distinct=True),
+            ),
+            id=community_id, is_community=True,
+        )
+        return conv
 
     def get(self, request, community_id):
         conv = self._get_community(request, community_id)
@@ -1206,16 +1216,20 @@ class CommunityDetailView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_403_FORBIDDEN)
 
-        members = conv.memberships.select_related('profile').order_by(
-            db_models.Case(
-                db_models.When(role='owner', then=0),
-                db_models.When(role='admin', then=1),
-                default=2,
-            ), 'created_at',
-        )
         data = ConversationSerializer(conv, context={'request': request}).data
-        data['members'] = CommunityMemberSerializer(members, many=True).data
-        data['member_count'] = members.count()
+        # The roster is member-only even for public communities; non-members
+        # get the count only.
+        if membership is not None:
+            members = conv.memberships.select_related('profile').order_by(
+                db_models.Case(
+                    db_models.When(role='owner', then=0),
+                    db_models.When(role='admin', then=1),
+                    default=2,
+                ), 'created_at',
+            )
+            data['members'] = CommunityMemberSerializer(members, many=True).data
+        # Always present, for members and non-members alike.
+        data['member_count'] = conv.annotated_member_count
         data['my_role'] = membership.role if membership else None
         return Response({
             'success': True, 'data': data, 'message': 'OK',

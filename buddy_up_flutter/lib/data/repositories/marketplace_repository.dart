@@ -152,6 +152,47 @@ abstract class MarketplaceRepository {
   @DELETE('/marketplace/cart/discount/')
   Future<void> removeDiscount();
 
+  // --- Fulfillment logistics ---
+  // `distance_km` is only computed when both `lat` and `lng` are supplied, so a
+  // caller with no location gets a list with no distances at all. That is a
+  // degraded case, not an error — see features/marketplace/utils/stations.dart.
+  @GET('/marketplace/stations/')
+  Future<dynamic> getStations({
+    @Query('lat') double? lat,
+    @Query('lng') double? lng,
+    @Query('radius_km') double? radiusKm,
+    @Query('owner_type') String? ownerType,
+    @Query('q') String? query,
+  });
+
+  @GET('/marketplace/stations/{id}/')
+  Future<dynamic> getStation(@Path('id') String stationId);
+
+  @POST('/marketplace/stations/')
+  Future<dynamic> createStation(@Body() Map<String, dynamic> data);
+
+  @PATCH('/marketplace/stations/{id}/')
+  Future<dynamic> updateStation(
+    @Path('id') String stationId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  @POST('/marketplace/station-applications/')
+  Future<dynamic> applyForStation(@Body() Map<String, dynamic> data);
+
+  @POST('/marketplace/delivery-personnel/')
+  Future<dynamic> saveDeliveryPersonnel(@Body() Map<String, dynamic> data);
+
+  @POST('/marketplace/delivery-personnel-applications/')
+  Future<dynamic> applyAsDeliveryPersonnel(@Body() Map<String, dynamic> data);
+
+  // Real-money settlement for an order that already exists.
+  @POST('/marketplace/orders/payment-intents/')
+  Future<dynamic> createPaymentIntent(@Body() Map<String, dynamic> data);
+
+  @GET('/marketplace/orders/seller/{id}/couriers/')
+  Future<dynamic> getOrderCouriers(@Path('id') String orderId);
+
   @GET('/marketplace/orders/')
   Future<dynamic> getOrders({@Query('status') String? status});
 

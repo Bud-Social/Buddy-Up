@@ -74,6 +74,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class ConversationSerializer(serializers.ModelSerializer):
     participants_data = serializers.SerializerMethodField()
+    member_count = serializers.SerializerMethodField()
     unread_count = serializers.SerializerMethodField()
     last_message = serializers.SerializerMethodField()
     membership_role = serializers.SerializerMethodField()
@@ -92,11 +93,31 @@ class ConversationSerializer(serializers.ModelSerializer):
             'group_gym_id', 'description', 'cover_url', 'invite_code', 'is_public',
             'sub_channel', 'call_in_progress',
             'origin', 'promoted_at', 'promotable', 'promotion_status', 'promotion_id', 'promotion_requested_by',
-            'participants_data', 'unread_count', 'membership_role',
+            'participants_data', 'member_count', 'unread_count', 'membership_role',
             'last_message', 'last_message_at', 'created_at',
         ]
 
+    def get_member_count(self, obj):
+        """Roster size, always exposed — the only member signal non-members get.
+
+        Reads a queryset annotation when the view supplied one so listing
+        every community stays a single aggregate query instead of N+1.
+        """
+        annotated = getattr(obj, 'annotated_member_count', None)
+        if annotated is not None:
+            return annotated
+        return obj.memberships.count()
+
     def get_participants_data(self, obj):
+        """Full participant roster, member-only. Non-members get [] plus member_count."""
+        profile = self._viewer()
+        if profile is None:
+            return []
+        is_participant = obj.participants.filter(pk=profile.pk).exists()
+        if not is_participant and not ConversationMembership.objects.filter(
+            conversation=obj, profile=profile,
+        ).exists():
+            return []
         return [{
             'user_id': str(p.user_id),
             'username': p.username,

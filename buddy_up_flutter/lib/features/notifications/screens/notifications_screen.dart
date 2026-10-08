@@ -200,13 +200,25 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
       }
     }
 
-    if (type == 'order_status_changed') {
-      final orderId = meta['order_id']?.toString() ?? '';
-      if (orderId.isNotEmpty) {
-        context.push('/marketplace/orders/$orderId');
-      } else {
-        context.push('/marketplace/orders');
+    // Both commerce order types land on the seller hub, matching the web client:
+    // the notification can be for a buyer or a seller, and Creator Studio is
+    // where an order that needs action is acted on.
+    if (type == 'order_status_changed' || type == 'new_purchase') {
+      context.push('/marketplace/creator-studio');
+      return;
+    }
+
+    if (type == 'shop_created' ||
+        type == 'shop_invite' ||
+        type == 'shop_verified' ||
+        type == 'shop_cert_status' ||
+        type == 'verification_update') {
+      final shopId = meta['shop_id']?.toString() ?? '';
+      if (type != 'verification_update' && shopId.isNotEmpty) {
+        context.push('/marketplace/creator-studio');
+        return;
       }
+      context.push('/marketplace/creator-studio');
       return;
     }
 
@@ -450,6 +462,29 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
       case 'gym_update':
       case 'gym_invite':
         return Icons.fitness_center;
+      case 'shop_created':
+      case 'shop_invite':
+        return Icons.storefront;
+      case 'shop_verified':
+      case 'shop_cert_status':
+      case 'verification_update':
+        return Icons.verified_user;
+      case 'meal_reminder':
+        return Icons.restaurant;
+      case 'programme_reminder':
+        return Icons.event_available;
+      case 'new_device_login':
+        return Icons.devices;
+      case 'accountability_ping':
+        return Icons.bolt;
+      case 'buddy_declined':
+        return Icons.person_off;
+      case 'buddy_nearby_available':
+        return Icons.near_me;
+      case 'alarm_shared':
+      case 'alarm_share_accepted':
+      case 'alarm_suggested':
+        return Icons.alarm;
       default:
         return Icons.notifications;
     }

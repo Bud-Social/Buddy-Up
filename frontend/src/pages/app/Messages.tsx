@@ -271,6 +271,32 @@ export interface MessagesProps {
   scope?: 'all' | 'discovery';
 }
 
+/**
+ * Fold the server's authoritative copy of a message into the list.
+ *
+ * Every outgoing message is rendered optimistically under a `temp_` id, then
+ * swapped — never appended — for the real one. `tempId` is null when the
+ * optimistic entry is already gone (the WS echo got there first, or a re-fetch
+ * replaced it), so both arrival orders converge on exactly one bubble:
+ *
+ *   - server copy not present yet → replace the optimistic entry in place
+ *   - server copy already present  → drop the optimistic entry, append nothing
+ *
+ * Returning `prev` unchanged when neither applies keeps the real-id guard, which
+ * is what makes the REST fallback safe: the endpoint also broadcasts to the
+ * conversation group, so the echo and the HTTP response race each other.
+ */
+function reconcileMessage(prev: MsgType[], tempId: string | null, incoming: MsgType): MsgType[] {
+  if (prev.some((m) => m.id === incoming.id)) {
+    return tempId ? prev.filter((m) => m.id !== tempId) : prev;
+  }
+  const tempIdx = tempId ? prev.findIndex((m) => m.id === tempId) : -1;
+  if (tempIdx === -1) return [...prev, incoming];
+  const next = [...prev];
+  next[tempIdx] = incoming;
+  return next;
+}
+
 export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const { conversationId: routeConvoId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
@@ -420,18 +446,14 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
 
         // If it's our own message echoed back, replace the matching optimistic temp entry
         if (msg.sender_id === profile?.user_id) {
-          const tempIdx = prev.findIndex(
+          const tempId = prev.find(
             (m) =>
               m.id.startsWith('temp_') &&
               m.sender_id === msg.sender_id &&
               m.message_type === msg.message_type &&
               m.body === msg.body,
-          );
-          if (tempIdx !== -1) {
-            const next = [...prev];
-            next[tempIdx] = msg;
-            return next;
-          }
+          )?.id ?? null;
+          if (tempId) return reconcileMessage(prev, tempId, msg);
         }
 
         return [...prev, msg];
@@ -689,21 +711,39 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
     setMessages((prev) => [...prev, optimisticMsg]);
     setReplyTo(null);
 
-    const sent = sendMessage({
+    const convoId = activeConvoRef.current.id;
+    // Captured before the await: a conversation switch mid-flight clears the
+    // list, and the response must not be spliced back into the wrong thread.
+    const outgoing = {
       body: text,
       message_type: finalType,
       media_url: mediaUrl,
       media_mime: mediaMime,
       file_name: fileName,
-      reply_to_id: replyTo?.id,
+      reply_to_id: replyTo?.id ?? undefined,
       metadata: opts?.metadata ?? {},
-    });
+    };
 
-    if (!sent) {
+    if (sendMessage(outgoing)) return; // socket carried it; the echo reconciles
+
+    // The socket isn't OPEN — the access token may still be booting, or we're
+    // mid-reconnect. Sending is never dropped: POST to the endpoint the socket
+    // itself would have used, then swap the optimistic bubble for the server's
+    // copy. Both transports publish to the conversation group, so the echo and
+    // the HTTP response can arrive in either order; reconcileMessage collapses
+    // that race onto one bubble.
+    try {
+      const res = await messagingApi.sendMessage(convoId, outgoing);
+      if (activeConvoRef.current?.id !== convoId) return;
+      if (res.data) setMessages((prev) => reconcileMessage(prev, tempId, res.data));
+      else setMessages((prev) => prev.filter((m) => m.id !== tempId));
+    } catch (err: any) {
+      if (activeConvoRef.current?.id !== convoId) return;
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      console.warn('[Messages] WS not ready');
+      console.error('[Messages] REST send failed', err);
+      toast('error', err?.response?.data?.message || err?.message || 'Message not sent.');
     }
-  }, [body, mediaFile, isTyping, replyTo, sendMessage, sendTypingStop, profile, clearMediaFile]);
+  }, [body, mediaFile, isTyping, replyTo, sendMessage, sendTypingStop, profile, clearMediaFile, toast]);
 
   const handleVoiceNoteSend = useCallback(async (blob: Blob, duration: number) => {
     setShowVoiceRecorder(false);
@@ -712,10 +752,19 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
     try {
       const file = new File([blob], `voice_${Date.now()}.webm`, { type: blob.type });
       const up = await messagingApi.uploadAttachment(file);
-      sendMessage({ body: '', message_type: 'voice', media_url: up.data.url, media_mime: up.data.mime, file_name: up.data.file_name, metadata: { duration_ms: duration } });
+      // Routed through the shared composer so a voice note gets the same
+      // optimistic bubble + REST fallback as every other message type.
+      await sendTextOrMedia({
+        body: '',
+        message_type: 'voice',
+        media_url: up.data.url,
+        media_mime: up.data.mime,
+        file_name: up.data.file_name,
+        metadata: { duration_ms: duration },
+      });
     } catch { /* silent */ }
     finally { setIsUploading(false); }
-  }, [sendMessage]);
+  }, [sendTextOrMedia]);
 
   const handleLocationShare = useCallback((loc: { lat: number; lng: number; label: string; mapUrl: string }) => {
     sendTextOrMedia({ body: loc.label, message_type: 'location', media_url: loc.mapUrl, metadata: { lat: loc.lat, lng: loc.lng, label: loc.label } });

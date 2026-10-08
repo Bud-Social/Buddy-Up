@@ -3,6 +3,7 @@ import '../../../data/repositories/marketplace_repository.dart';
 import '../../../data/models/marketplace.dart';
 import '../../../core/api/api_client.dart';
 import '../../../shared/models/geo_notice.dart';
+import '../utils/stations.dart';
 
 final marketplaceRepositoryProvider = Provider<MarketplaceRepository>((ref) {
   final dio = ref.watch(apiClientProvider5).dio;
@@ -280,5 +281,57 @@ final creatorOrdersProvider = FutureProvider.family<List<Order>, String?>((ref, 
   return (raw['data'] as List)
       .map((e) => Order.fromJson(e as Map<String, dynamic>))
       .toList();
+});
+
+// -- Pickup stations --
+//
+// `distance_km` only exists when both lat & lng were supplied, so the family key
+// carries the coordinates and the list is re-sorted locally — a partially
+// measured list keeps its server order behind the measured rows.
+class StationQuery {
+  final double? lat;
+  final double? lng;
+  final String? query;
+  final String? ownerType;
+
+  const StationQuery({this.lat, this.lng, this.query, this.ownerType});
+
+  @override
+  bool operator ==(Object other) =>
+      other is StationQuery &&
+      other.lat == lat &&
+      other.lng == lng &&
+      other.query == query &&
+      other.ownerType == ownerType;
+
+  @override
+  int get hashCode => Object.hash(lat, lng, query, ownerType);
+
+  bool get hasCoords => lat != null && lng != null;
+}
+
+final stationsProvider =
+    FutureProvider.family<List<PickupStation>, StationQuery>((ref, filter) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getStations(
+    lat: filter.lat,
+    lng: filter.lng,
+    // A radius is only meaningful with an origin; sending one without
+    // coordinates would silently discard every station.
+    radiusKm: filter.hasCoords ? 25 : null,
+    ownerType: filter.ownerType,
+    query: (filter.query?.trim().isNotEmpty ?? false) ? filter.query!.trim() : null,
+  );
+  return sortStationsByDistance(stationList(raw['data']));
+});
+
+// -- Order couriers --
+// A seller may only read this for an order they sell in (403 otherwise), which
+// is exactly the scope the seller orders list hands us.
+final orderCouriersProvider =
+    FutureProvider.family<OrderCourierList, String>((ref, orderId) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getOrderCouriers(orderId);
+  return OrderCourierList.fromJson(raw['data'] as Map<String, dynamic>);
 });
 

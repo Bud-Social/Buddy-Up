@@ -27,6 +27,12 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
   const reconnectAttempts = useRef(0);
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
+  // The access token is memory-only, so it lands a tick *after* this hook
+  // mounts (boot refresh) — and rotates every ~15 minutes. Subscribing to it is
+  // what makes the connection (re)start the moment a token becomes available.
+  const accessToken = useAuthStore((s) => s.accessToken);
+  /** The current failure has already been explained once — don't repeat it per retry. */
+  const explainedRef = useRef(false);
 
   const sendRaw = useCallback((data: object) => {
     const ws = wsRef.current;
@@ -85,8 +91,9 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
 
   const connect = useCallback(() => {
     if (!conversationId || !enabled) return;
-    const currentToken = useAuthStore.getState().accessToken;
-    if (!currentToken) return;
+    // No token yet is a normal state, not an error: bail quietly and let the
+    // effect below re-run (with the token) as soon as the boot refresh lands.
+    if (!accessToken) return;
 
     // Close any existing connection first
     if (wsRef.current) {
@@ -98,11 +105,15 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
     // SECURITY: token rides in Sec-WebSocket-Protocol (['bearer', token]) —
     // never in the query string, which leaks into logs/proxies/referrers.
     const url = `${WS_BASE}/ws/conversation/${conversationId}/`;
-    const ws = new WebSocket(url, ['bearer', currentToken]);
+    const ws = new WebSocket(url, ['bearer', accessToken]);
     wsRef.current = ws;
+    // Per-socket: a replaced socket's close must not be read as the new one's.
+    let opened = false;
 
     ws.onopen = () => {
+      opened = true;
       reconnectAttempts.current = 0;
+      explainedRef.current = false;
       console.log('[ChatSocket] Connected to conversation', conversationId);
     };
 
@@ -116,16 +127,32 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
     };
 
     ws.onclose = (evt) => {
+      if (wsRef.current !== ws) return; // superseded by a newer socket
       wsRef.current = null;
       if (!enabled) return;
+      // Only an ASGI-level close reports these; daphne answers a pre-accept
+      // close with a bare HTTP 403, so a browser will normally see 1006 below.
       if (evt.code === 4001 || evt.code === 4003) {
         console.warn('[ChatSocket] Auth/member check failed, not reconnecting');
         return;
       }
+      const attempt = reconnectAttempts.current + 1;
       // Exponential backoff: 1s, 2s, 4s … max 30s
       const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30_000);
-      reconnectAttempts.current += 1;
-      console.log(`[ChatSocket] Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
+      reconnectAttempts.current = attempt;
+      // A close before onopen means the *upgrade request* never completed —
+      // with a token in hand that is an auth/permission rejection surfacing
+      // as 1006, the same code a missing host produces. Explain the first
+      // failure only, so a backoff loop stays readable.
+      if (import.meta.env.DEV && !explainedRef.current) {
+        explainedRef.current = true;
+        console.warn(
+          opened
+            ? `[ChatSocket] Dropped (code=${evt.code || 'none'}) after connecting — the connection ended unexpectedly.`
+            : `[ChatSocket] Handshake refused (code=${evt.code || 'none'}) — the server answered the upgrade with a failure status instead of 101. With a token in hand this is an auth/permission failure (daphne turns a pre-accept close into a bare HTTP 403).`,
+        );
+      }
+      console.log(`[ChatSocket] Reconnecting in ${delay}ms (attempt ${attempt})`);
       reconnectTimerRef.current = setTimeout(() => connect(), delay);
     };
 
@@ -133,7 +160,7 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
       console.error('[ChatSocket] WebSocket error', err);
       ws.close();
     };
-  }, [conversationId, enabled]);
+  }, [conversationId, enabled, accessToken]);
 
   useEffect(() => {
     connect();

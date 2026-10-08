@@ -677,3 +677,262 @@ class EventTicketNotificationSignalTests(TestCase):
             note.metadata['start_time'],
             self.event.start_datetime.isoformat(),
         )
+
+
+class FulfillmentAwareTransitionsTests(TestCase):
+    """Status transitions must mean something for the fulfillment type.
+
+    The old flat `ORDER_FORWARD_STATES` map let a pickup order go
+    `paid -> shipped -> out_for_delivery` and a digital one do the same, so a
+    buyer could see "out for delivery" for a PDF. These pin the vocabulary of
+    each fulfillment type.
+    """
+
+    def setUp(self):
+        self.buyer = Profile.objects.create(
+            user=User.objects.create_user(email='fs-buyer@example.com', password='TestPass123!'),
+            username='fsbuyer', display_name='FS Buyer',
+        )
+        self.seller = Profile.objects.create(
+            user=User.objects.create_user(email='fs-seller@example.com', password='TestPass123!'),
+            username='fsseller', display_name='FS Seller',
+        )
+        self.client = _auth_client(self.seller.user)
+
+    def _order(self, fulfillment_type, status='paid'):
+        order = Order.objects.create(
+            buyer=self.buyer, fulfillment_type=fulfillment_type, status=status,
+        )
+        OrderItem.objects.create(
+            order=order, item_type='product', title='Item', creator=self.seller,
+        )
+        return order
+
+    def _move(self, order, new_status):
+        return self.client.patch(
+            f'/api/v1/marketplace/orders/{order.id}/fulfillment/',
+            {'status': new_status}, format='json',
+        )
+
+    def test_pickup_rejects_out_for_delivery(self):
+        order = self._order('pickup')
+        res = self._move(order, 'out_for_delivery')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('from paid to out_for_delivery', res.json()['message'])
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'paid')
+
+    def test_digital_rejects_shipped_and_out_for_delivery(self):
+        for target in ('shipped', 'out_for_delivery'):
+            with self.subTest(target=target):
+                res = self._move(self._order('digital'), target)
+                self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn(f'from paid to {target}', res.json()['message'])
+                self.assertIn('digital', res.json()['message'])
+
+    def test_delivery_accepts_out_for_delivery(self):
+        order = self._order('delivery', status='shipped')
+        res = self._move(order, 'out_for_delivery')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'out_for_delivery')
+
+    def test_digital_walks_paid_processing_completed(self):
+        order = self._order('digital')
+        self.assertEqual(self._move(order, 'processing').status_code, status.HTTP_200_OK)
+        self.assertEqual(self._move(order, 'completed').status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'completed')
+
+    def test_pickup_walks_ready_for_pickup_delivered(self):
+        order = self._order('pickup')
+        self.assertEqual(self._move(order, 'ready_for_pickup').status_code, status.HTTP_200_OK)
+        self.assertEqual(self._move(order, 'delivered').status_code, status.HTTP_200_OK)
+
+
+class SellerOrderIsolationTests(TestCase):
+    """A seller must only ever see its own line items in a shared order."""
+
+    def setUp(self):
+        self.seller = Profile.objects.create(
+            user=User.objects.create_user(email='iso-seller@example.com', password='TestPass123!'),
+            username='isoseller', display_name='Iso Seller',
+        )
+        self.rival = Profile.objects.create(
+            user=User.objects.create_user(email='iso-rival@example.com', password='TestPass123!'),
+            username='isorival', display_name='Iso Rival',
+        )
+        self.buyer = Profile.objects.create(
+            user=User.objects.create_user(email='iso-buyer@example.com', password='TestPass123!'),
+            username='isobuyer', display_name='Iso Buyer',
+        )
+        self.order = Order.objects.create(buyer=self.buyer, status='paid')
+        OrderItem.objects.create(
+            order=self.order, item_type='product', title='Mine', creator=self.seller,
+            quantity=1, price_artifacts={'sprint': 10}, paid_artifacts={'sprint': 10},
+        )
+        OrderItem.objects.create(
+            order=self.order, item_type='product', title='Rival Secret', creator=self.rival,
+            quantity=1, price_artifacts={'champion': 40}, paid_artifacts={'champion': 40},
+        )
+        self.client = _auth_client(self.seller.user)
+
+    def test_seller_list_contains_no_other_sellers_rows(self):
+        res = self.client.get('/api/v1/marketplace/orders/seller/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()['data']
+        self.assertEqual(len(data), 1)
+        self.assertEqual([i['title'] for i in data[0]['items']], ['Mine'])
+        self.assertNotIn('Rival Secret', str(data))
+
+    def test_seller_totals_exclude_the_other_sellers_revenue(self):
+        order = self.client.get('/api/v1/marketplace/orders/seller/').json()['data'][0]
+        self.assertEqual(order['total_artifacts'], {'sprint': 10})
+        self.assertEqual(order['spent_usd'], 50.0)
+
+
+class CheckoutPaymentRailTests(TestCase):
+    """`payment_method` decides whether checkout settles or defers."""
+
+    def setUp(self):
+        from apps.marketplace.models import TrainingProgramme
+
+        self.seller = Profile.objects.create(
+            user=User.objects.create_user(email='pay-seller@example.com', password='TestPass123!'),
+            username='payseller', display_name='Pay Seller',
+        )
+        self.buyer = Profile.objects.create(
+            user=User.objects.create_user(email='pay-buyer@example.com', password='TestPass123!'),
+            username='paybuyer', display_name='Pay Buyer',
+            artifact_balance={'champion': 10},
+        )
+        self.programme = TrainingProgramme.objects.create(
+            creator=self.seller, title='Push Block', category='strength',
+            price_artifacts={'champion': 4},
+        )
+        self.shop = Shop.objects.create(name='Pay Shop', handle='payshop')
+        self.product = Product.objects.create(
+            name='Digital Manual', brand='Test', category='digital',
+            affiliate_url='https://example.test', delivery_modes=['digital'],
+            recommended_by=self.seller,
+        )
+        self.client = _auth_client(self.buyer.user)
+        self.client.post('/api/v1/marketplace/cart/', {
+            'item_type': 'programme', 'programme_id': str(self.programme.id), 'quantity': 1,
+        }, format='json')
+
+    def test_mpesa_checkout_defers_settlement(self):
+        res = self.client.post(
+            '/api/v1/marketplace/cart/checkout/',
+            {'fulfillment_type': 'digital', 'payment_method': 'mpesa'}, format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.artifact_balance, {'champion': 10})
+        order = Order.objects.get(buyer=self.buyer)
+        self.assertEqual(order.payment_status, 'pending')
+        self.assertEqual(order.payment_method, 'mpesa')
+        self.assertEqual(order.status, 'pending')
+        self.assertIsNone(order.paid_at)
+        self.assertEqual(res.json()['data']['payment_status'], 'pending')
+        self.assertEqual(res.json()['data']['payment_method'], 'mpesa')
+        # Not provisioned until the money lands.
+        self.assertFalse(self.programme.purchases.filter(buyer=self.buyer).exists())
+
+    def test_artifacts_checkout_is_unchanged(self):
+        res = self.client.post('/api/v1/marketplace/cart/checkout/', {}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+        self.buyer.refresh_from_db()
+        self.assertEqual(self.buyer.artifact_balance, {'champion': 6})
+        order = Order.objects.get(buyer=self.buyer)
+        self.assertEqual(order.payment_status, 'paid')
+        self.assertEqual(order.payment_method, 'artifacts')
+        self.assertEqual(order.status, 'paid')
+        self.assertIsNotNone(order.paid_at)
+        self.assertTrue(self.programme.purchases.filter(buyer=self.buyer).exists())
+
+    def test_digital_only_cart_rejects_a_delivery_fulfillment_type(self):
+        from apps.marketplace.models import Cart
+
+        self.client.post('/api/v1/marketplace/cart/checkout/', {}, format='json')
+        cart = Cart.objects.get(buyer=self.buyer)
+        self.client.post('/api/v1/marketplace/cart/', {
+            'item_type': 'product', 'product_id': str(self.product.id), 'quantity': 1,
+        }, format='json')
+        self.assertEqual(cart.items.count(), 1)
+        res = self.client.post('/api/v1/marketplace/cart/checkout/', {
+            'fulfillment_type': 'delivery', 'delivery_address': {'line1': 'Mansion Road'},
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('digital only', res.json()['message'])
+
+
+class OrderStatusNotificationDeduplicationTests(TestCase):
+    """One seller status change must produce exactly one buyer notification.
+
+    Both the Order post_save receiver and OrderFulfillmentView used to notify
+    the buyer, so every seller update arrived twice (once mislabelled
+    `new_purchase`). Sellers were not notified at all.
+    """
+
+    def setUp(self):
+        from apps.notifications.models import Notification
+
+        Notification.objects.all().delete()
+        self.seller = Profile.objects.create(
+            user=User.objects.create_user(email='dedup-seller@example.com', password='TestPass123!'),
+            username='dedupseller', display_name='Dedup Seller',
+        )
+        self.buyer = Profile.objects.create(
+            user=User.objects.create_user(email='dedup-buyer@example.com', password='TestPass123!'),
+            username='dedupbuyer', display_name='Dedup Buyer',
+        )
+        self.order = Order.objects.create(buyer=self.buyer, status='paid')
+        OrderItem.objects.create(
+            order=self.order, item_type='product', title='Item', creator=self.seller,
+        )
+        self.seller_client = _auth_client(self.seller.user)
+        self.url = f'/api/v1/marketplace/orders/{self.order.id}/fulfillment/'
+
+    def test_buyer_gets_exactly_one_notification_per_status_change(self):
+        from apps.notifications.models import Notification
+
+        Notification.objects.all().delete()
+        res = self.seller_client.patch(self.url, {'status': 'processing'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.content)
+        self.assertEqual(
+            Notification.objects.filter(recipient=self.buyer).count(), 1,
+            'post_save and the view must not both notify',
+        )
+
+    def test_seller_is_also_notified(self):
+        from apps.notifications.models import Notification
+
+        Notification.objects.all().delete()
+        self.seller_client.patch(self.url, {'status': 'processing'}, format='json')
+        self.assertEqual(
+            Notification.objects.filter(recipient=self.seller, notification_type='order_status_changed').count(),
+            1,
+        )
+
+    def test_a_rejected_transition_notifies_nobody(self):
+        from apps.notifications.models import Notification
+
+        self.order.fulfillment_type = 'pickup'
+        self.order.save(update_fields=['fulfillment_type'])
+        Notification.objects.all().delete()
+        res = self.seller_client.patch(self.url, {'status': 'out_for_delivery'}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Notification.objects.count(), 0)
+
+    def test_seller_notification_also_invokes_device_push(self):
+        from unittest import mock
+
+        from apps.notifications.models import Notification
+
+        Notification.objects.all().delete()
+        with mock.patch('apps.marketplace.tasks._push_notification_to_profile') as push:
+            self.seller_client.patch(self.url, {'status': 'processing'}, format='json')
+        pushed = [call.args[0] for call in push.call_args_list]
+        self.assertIn(self.seller, pushed)
+        self.assertIn(self.buyer, pushed)

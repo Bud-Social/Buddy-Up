@@ -6,6 +6,7 @@ import '../widgets/gym_tab_bar.dart';
 import '../widgets/schedule_post_card.dart';
 import '../widgets/review_card.dart';
 import '../widgets/member_tile.dart';
+import '../../../core/api/api_error.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -320,22 +321,76 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
 
   Widget _buildMembersTab(Gym gym) {
     final members = ref.watch(membersProvider(widget.slug));
+    // `owner_data` / `recent_reviewers` are member-only on a non-public gym and
+    // `members/` answers 403 there, so an error is a legitimate state, not a
+    // failure to report: show the count the server *does* expose and say what
+    // unlocks the rest.
+    final rosterHidden = gym.accessType != 'public' && !gym.isMember;
+    if (rosterHidden) return _rosterGate(gym);
     return members.when(
       loading: () => const PageLoader(),
-      error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(membersProvider(widget.slug))),
-      data: (list) => ListView.builder(
-        padding: const EdgeInsets.only(top: 8),
-        itemCount: list.length,
-        itemBuilder: (_, i) => MemberTile(
-          membership: list[i],
-          isOwner: gym.membershipRole == 'owner',
-          onManage: (uid, action) async {
-            final repo = ref.read(gymRepositoryProvider);
-            if (action == 'remove') {
-              await repo.removeMember(widget.slug, uid);
-            }
-            ref.invalidate(membersProvider(widget.slug));
-          },
+      error: (e, _) {
+        if (apiStatusCode(e) == 403) return _rosterGate(gym);
+        return ErrorView(
+            message: e.toString(),
+            onRetry: () => ref.invalidate(membersProvider(widget.slug)));
+      },
+      data: (list) {
+        if (list.isEmpty) {
+          return Center(
+            child: Text(
+              gym.memberCount > 0
+                  ? 'No members to show yet.'
+                  : 'No members yet.',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 8),
+          itemCount: list.length,
+          itemBuilder: (_, i) => MemberTile(
+            membership: list[i],
+            isOwner: gym.membershipRole == 'owner',
+            onManage: (uid, action) async {
+              final repo = ref.read(gymRepositoryProvider);
+              if (action == 'remove') {
+                await repo.removeMember(widget.slug, uid);
+              }
+              ref.invalidate(membersProvider(widget.slug));
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  /// Count-only state for a private gym the viewer has not joined.
+  Widget _rosterGate(Gym gym) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.lock_outline, size: 40, color: cs.onSurfaceVariant),
+            const SizedBox(height: 12),
+            Text(
+              '${gym.memberCount} member${gym.memberCount == 1 ? '' : 's'}',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'This gym is ${gym.accessType}. Join to see who is in it.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+            ),
+          ],
         ),
       ),
     );
@@ -402,6 +457,65 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        // Roster-backed blocks are member-only on a non-public gym, so they are
+        // rendered only when the server actually sent them — an absent list is
+        // never rendered as "no owners" / "no reviews".
+        if (gym.ownerData.isNotEmpty) ...[
+          const Text('Ownership',
+              style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
+          const SizedBox(height: 8),
+          ...gym.ownerData.map((owner) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Avatar(src: owner.avatarUrl.isEmpty ? null : owner.avatarUrl,
+                        alt: owner.displayName),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(owner.displayName.isEmpty ? owner.username : owner.displayName,
+                              style: const TextStyle(
+                                  color: BuddyColors.textPrimary, fontSize: 14)),
+                          Text('@${owner.username} · ${owner.role.replaceAll('_', ' ')}',
+                              style: const TextStyle(
+                                  color: BuddyColors.textSecondary, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+          const SizedBox(height: 16),
+        ],
+        if (gym.recentReviewers.isNotEmpty) ...[
+          const Text('Reviewed by',
+              style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: gym.recentReviewers.map((reviewer) => SizedBox(
+              width: 72,
+              child: Column(
+                children: [
+                  Avatar(src: reviewer.avatarUrl.isEmpty ? null : reviewer.avatarUrl,
+                      alt: reviewer.displayName),
+                  const SizedBox(height: 4),
+                  Text(
+                    reviewer.displayName.isEmpty ? reviewer.username : reviewer.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: BuddyColors.textSecondary, fontSize: 11),
+                  ),
+                ],
+              ),
+            )).toList(),
+          ),
+          const SizedBox(height: 16),
+        ],
         if (gym.rules.isNotEmpty) ...[
           const Text('Rules', style: TextStyle(color: BuddyColors.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
           const SizedBox(height: 8),

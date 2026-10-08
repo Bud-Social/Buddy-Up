@@ -52,6 +52,13 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
             icon: const Icon(Icons.receipt_long_outlined),
             onPressed: () => context.push('/marketplace/orders'),
           ),
+          // Courier self-service lives here: it is the marketplace's fulfillment
+          // half, and there is nowhere else a buyer-turned-courier would look.
+          IconButton(
+            icon: const Icon(Icons.local_shipping_outlined),
+            tooltip: 'Become a courier',
+            onPressed: () => context.push('/marketplace/delivery-personnel'),
+          ),
           TextButton.icon(
             onPressed: () => context.push('/marketplace/creator-studio'),
             icon: const Icon(Icons.storefront_outlined, size: 18),

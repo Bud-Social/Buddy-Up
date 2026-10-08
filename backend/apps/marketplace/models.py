@@ -1,6 +1,8 @@
 from uuid import uuid4
 
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from cloudinary.models import CloudinaryField
 from common.models import TimestampedModel
@@ -699,6 +701,250 @@ class CartItem(TimestampedModel):
 
 
 # ---------------------------------------------------------------------------
+# Fulfillment logistics: pickup stations, delivery couriers, applications
+# ---------------------------------------------------------------------------
+
+# One status vocabulary for every "apply, then staff review" flow in the app.
+# Deliberately identical to ShopVerificationApplication.STATUS_CHOICES so staff
+# only ever learn one set of states; test_fulfillment_models.py asserts the two
+# stay in lockstep.
+APPLICATION_STATUS_CHOICES = [
+    ('draft', 'Draft'),
+    ('submitted', 'Submitted'),
+    ('under_review', 'Under Review'),
+    ('approved', 'Approved'),
+    ('rejected', 'Rejected'),
+    ('more_info_needed', 'More Info Needed'),
+]
+
+# The complete set of vehicles a courier may ride or drive. Both
+# DeliveryPersonnel (the vetted, assignable record) and
+# DeliveryPersonnelApplication (the applicant's claim) point at this list so the
+# two can never drift.
+DELIVERY_VEHICLE_TYPES = [
+    ('bike', 'Bicycle'),
+    ('motorbike', 'Motorbike'),
+    ('tuktuk', 'Tuk-tuk'),
+    ('car', 'Car'),
+    ('pickup', 'Pickup Truck'),
+    ('lorry', 'Lorry / Truck'),
+]
+
+
+class PickupStation(TimestampedModel):
+    """A physical place a buyer collects a pickup order from.
+
+    Shops *and* gyms can both operate stations, so ownership is polymorphic:
+    exactly one of ``shop`` / ``gym`` must be set. That invariant is a database
+    CHECK rather than a Python ``clean()`` — ``objects.create()``, raw SQL and
+    bulk imports all go through it.
+
+    ``name`` is deliberately NOT unique: unrelated shops legitimately share a
+    building ("Level 2, Westlands Mall"), so identity comes from the owner, not
+    the label.
+    """
+
+    OWNER_TYPE_CHOICES = [
+        ('shop', 'Shop'),
+        ('gym', 'Gym'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+    address = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    country = models.CharField(max_length=100, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    opening_hours = models.JSONField(default=dict)    # {monday: {open: '08:00', close: '20:00'}}
+    phone = models.CharField(max_length=30, blank=True)
+    instructions = models.TextField(blank=True)        # "buzz 4B at the east gate"
+    is_active = models.BooleanField(default=True)
+    is_primary = models.BooleanField(default=False)
+    # Denormalised owner discriminator, kept in sync by save()/clean() so the
+    # station list can be filtered without a JOIN or a polymorphic dispatch.
+    owner_type = models.CharField(max_length=10, choices=OWNER_TYPE_CHOICES, blank=True)
+
+    shop = models.ForeignKey(Shop, null=True, blank=True, on_delete=models.SET_NULL,
+                             related_name='pickup_stations')
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL,
+                            related_name='pickup_stations')
+
+    class Meta:
+        db_table = 'marketplace_pickup_station'
+        constraints = [
+            # Exactly one owner. A station with neither has nobody accountable
+            # when a parcel goes missing; one with both makes it ambiguous whose
+            # inventory is being handed over.
+            models.CheckConstraint(
+                check=Q(shop__isnull=False, gym__isnull=True) | Q(shop__isnull=True, gym__isnull=False),
+                name='mkt_pickstation_one_owner',
+            ),
+            # "At most one primary station per owner" is a cross-row rule, which a
+            # CHECK constraint cannot express (each CHECK sees one row only) —
+            # partial unique indexes can. SQL treats NULLs as distinct, so
+            # gym-owned primaries don't collide with shop-owned ones, which is
+            # exactly the intent.
+            models.UniqueConstraint(fields=['shop'], condition=Q(is_primary=True),
+                                    name='mkt_pickstation_pri_shop_uniq'),
+            models.UniqueConstraint(fields=['gym'], condition=Q(is_primary=True),
+                                    name='mkt_pickstation_pri_gym_uniq'),
+        ]
+        indexes = [
+            # Mirrors gyms.VenueLocation's geo index: "active stations near me".
+            models.Index(fields=['is_active', 'latitude', 'longitude'],
+                         name='mkt_pickstation_geo_idx'),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    def clean(self):
+        if self.shop_id and self.gym_id:
+            raise ValidationError({'gym': 'A station belongs to a shop OR a gym, not both.'})
+        if not self.shop_id and not self.gym_id:
+            raise ValidationError({'shop': 'A station needs either a shop or a gym owner.'})
+        expected = 'shop' if self.shop_id else 'gym'
+        if self.owner_type and self.owner_type != expected:
+            raise ValidationError({'owner_type': f'owner_type must be {expected!r} for this station.'})
+        self.owner_type = expected
+
+    def save(self, *args, **kwargs):
+        if not self.owner_type:
+            if self.shop_id and not self.gym_id:
+                self.owner_type = 'shop'
+            elif self.gym_id and not self.shop_id:
+                self.owner_type = 'gym'
+        super().save(*args, **kwargs)
+
+
+class StationApplication(TimestampedModel):
+    """A shop or gym applying to become a pickup / delivery station.
+
+    Mirrors ShopVerificationApplication: the applicant fills in the form, staff
+    move it through the status vocabulary in a review PATCH, and approval is
+    what eventually creates the PickupStation itself.
+    """
+
+    STATUS_CHOICES = APPLICATION_STATUS_CHOICES
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    shop = models.ForeignKey(Shop, null=True, blank=True, on_delete=models.SET_NULL,
+                             related_name='station_applications')
+    gym = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL,
+                            related_name='station_applications')
+    submitted_by = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE,
+                                     related_name='station_applications')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    # Business + site details
+    business_registration_number = models.CharField(max_length=100, blank=True)
+    contact_phone = models.CharField(max_length=30, blank=True)
+    address = models.TextField(blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    country = models.CharField(max_length=100, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    opening_hours = models.JSONField(default=dict)    # {monday: {open, close}}
+    documents = models.JSONField(default=list)        # [{url, label}, ...]
+
+    # Policy agreement
+    agreed_to_policy = models.BooleanField(default=False)
+    agreed_at = models.DateTimeField(null=True, blank=True)
+
+    # Review fields
+    reviewed_by = models.ForeignKey('profiles.Profile', null=True, blank=True,
+                                   on_delete=models.SET_NULL,
+                                   related_name='reviewed_station_applications')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewer_notes = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'marketplace_station_application'
+        ordering = ['-created_at']
+        constraints = [
+            models.CheckConstraint(
+                check=Q(shop__isnull=False, gym__isnull=True) | Q(shop__isnull=True, gym__isnull=False),
+                name='mkt_stationapp_one_owner',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['status', '-created_at'], name='mkt_stationapp_status_idx'),
+        ]
+
+    def __str__(self):
+        owner = self.shop.name if self.shop_id else (self.gym.name if self.gym_id else '—')
+        return f'Station application: {owner} ({self.status})'
+
+
+class DeliveryPersonnel(TimestampedModel):
+    """A vetted courier who can be assigned to deliver an order.
+
+    Created from an approved DeliveryPersonnelApplication — one row per person,
+    hence the OneToOne. ``service_zones`` are free-text area names so new
+    neighbourhoods do not need a migration.
+    """
+
+    VEHICLE_TYPE_CHOICES = DELIVERY_VEHICLE_TYPES
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    profile = models.OneToOneField('profiles.Profile', on_delete=models.CASCADE,
+                                  related_name='delivery_personnel')
+    vehicle_type = models.CharField(max_length=10, choices=VEHICLE_TYPE_CHOICES, default='bike')
+    service_zones = models.JSONField(default=list)   # ['Westlands', 'Kilimani', ...]
+    is_active = models.BooleanField(default=True)
+    rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    bio = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'marketplace_delivery_personnel'
+        indexes = [
+            models.Index(fields=['is_active', 'vehicle_type'], name='mkt_deliverypers_active_idx'),
+        ]
+
+    def __str__(self):
+        return f'Courier: {self.profile.display_name} ({self.vehicle_type})'
+
+
+class DeliveryPersonnelApplication(TimestampedModel):
+    """A user applying to be approved as delivery personnel."""
+
+    STATUS_CHOICES = APPLICATION_STATUS_CHOICES
+    VEHICLE_TYPE_CHOICES = DELIVERY_VEHICLE_TYPES
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    profile = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE,
+                                related_name='delivery_personnel_applications')
+    vehicle_type = models.CharField(max_length=10, choices=VEHICLE_TYPE_CHOICES, default='bike')
+    service_zones = models.JSONField(default=list)   # ['Westlands', 'Kilimani', ...]
+    id_document_url = models.URLField(blank=True)
+    licence_document_url = models.URLField(blank=True)
+    phone = models.CharField(max_length=30, blank=True)
+    bio = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+
+    # Review fields
+    reviewed_by = models.ForeignKey('profiles.Profile', null=True, blank=True,
+                                   on_delete=models.SET_NULL,
+                                   related_name='reviewed_delivery_personnel_applications')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewer_notes = models.TextField(blank=True)
+    rejection_reason = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'marketplace_delivery_personnel_application'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at'], name='mkt_delapp_status_idx'),
+        ]
+
+    def __str__(self):
+        return f'Delivery application: {self.profile.display_name} ({self.status})'
+
+
+# ---------------------------------------------------------------------------
 # Orders & fulfillment
 # ---------------------------------------------------------------------------
 
@@ -720,6 +966,20 @@ class Order(TimestampedModel):
         ('pickup', 'Pickup'),
         ('delivery', 'Delivery'),
     ]
+    # Real money is opt-in: 'artifacts' is the historical settlement path and
+    # stays first so existing orders read correctly.
+    PAYMENT_METHOD_CHOICES = [
+        ('artifacts', 'Artifacts (in-app)'),
+        ('mpesa', 'M-Pesa'),
+        ('card', 'Card'),
+    ]
+    PAYMENT_STATUS_CHOICES = [
+        ('unpaid', 'Unpaid'),
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     buyer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='orders')
@@ -727,6 +987,19 @@ class Order(TimestampedModel):
     fulfillment_type = models.CharField(max_length=10, choices=FULFILLMENT_CHOICES, default='digital')
     delivery_address = models.JSONField(default=dict)   # {line1, line2, city, postal_code, country, phone, notes}
     pickup_details = models.JSONField(default=dict)     # {venue, location, instructions}
+    # Physical logistics. Both are nullable so historical artifact-only orders
+    # migrate untouched; they are only meaningful for pickup/delivery orders.
+    pickup_station = models.ForeignKey('PickupStation', null=True, blank=True,
+                                       on_delete=models.SET_NULL, related_name='orders')
+    delivery_personnel = models.ForeignKey('DeliveryPersonnel', null=True, blank=True,
+                                          on_delete=models.SET_NULL, related_name='orders')
+    # Real-money settlement. payment_method is nullable (not defaulted to
+    # 'artifacts') so "unknown" stays distinguishable from "paid with artifacts".
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES,
+                                      null=True, blank=True)
+    payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
+    payment_reference = models.CharField(max_length=120, blank=True)
+    payment_provider = models.CharField(max_length=40, blank=True)
     # Artifact ledger (original totals -> discounts -> final paid)
     items_total_artifacts = models.JSONField(default=dict)
     discount_artifacts = models.JSONField(default=dict)
@@ -744,6 +1017,7 @@ class Order(TimestampedModel):
             models.Index(fields=['buyer']),
             models.Index(fields=['status']),
             models.Index(fields=['order_number']),
+            models.Index(fields=['payment_status'], name='mkt_order_payment_status_idx'),
         ]
 
     def __str__(self):
@@ -767,8 +1041,18 @@ class Order(TimestampedModel):
 
     @property
     def fulfillment(self):
-        fulfillment, _ = OrderFulfillment.objects.get_or_create(order=self)
-        return fulfillment
+        """The OrderFulfillment row, or None if the order has none.
+
+        Read-only by design. This used to be ``get_or_create(order=self)``, so
+        merely *reading* ``order.fulfillment`` inserted a row — a GET request
+        mutated the database, and every caller silently depended on that. Code
+        that needs the record to exist must now create it explicitly, e.g.
+        ``OrderFulfillment.objects.get_or_create(order=order)[0]``.
+        """
+        try:
+            return self.fulfillment_record
+        except OrderFulfillment.DoesNotExist:
+            return None
 
 
 class OrderItem(TimestampedModel):
@@ -878,4 +1162,85 @@ class CreatorPayoutSetup(TimestampedModel):
 
     class Meta:
         db_table = 'marketplace_creator_payout_setup'
+
+
+# ---------------------------------------------------------------------------
+# Real-money order payments
+# ---------------------------------------------------------------------------
+
+class PaymentIntent(TimestampedModel):
+    """One attempt to pay for an order with real money.
+
+    A row is created when the buyer is sent to the provider, *not* when the
+    order is marked paid. The order only flips to ``payment_status='paid'``
+    once the provider confirms, so a redirected-and-abandoned checkout never
+    looks settled. Several intents per order is normal (a failed card attempt
+    is followed by M-Pesa), hence a plain FK rather than a OneToOne.
+
+    Webhook binding: the provider echoes the reference we sent it, so the
+    Flutterwave webhook must be able to resolve a PaymentIntent by
+    ``provider_reference`` — that is what the ``db_index`` on that column is
+    for. Note that ``FlutterwaveWebhookView`` in ``apps/wallet/views.py:455``
+    today resolves only ``event.data['tx_ref']`` against a *pending*
+    ArtifactTransaction (see ``apps/wallet/views.py:342``) and is scoped to
+    wallet top-ups, so it will not match a PaymentIntent; binding it to an
+    order needs a ``provider_reference`` -> ``order`` mapping added there
+    (out of scope for the marketplace app, which must not edit wallet/). ``provider_reference`` is intentionally NOT
+    unique so retries of the same reference can be recorded and audited rather
+    than raising IntegrityError on the webhook path.
+    """
+
+    PROVIDER_CHOICES = [
+        ('flutterwave', 'Flutterwave'),
+    ]
+    METHOD_CHOICES = [
+        ('mpesa', 'M-Pesa'),
+        ('card', 'Card'),
+    ]
+    STATUS_CHOICES = [
+        ('initiated', 'Initiated'),
+        ('awaiting_confirmation', 'Awaiting Confirmation'),
+        ('succeeded', 'Succeeded'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='payment_intents')
+    provider = models.CharField(max_length=30, choices=PROVIDER_CHOICES, default='flutterwave')
+    method = models.CharField(max_length=10, choices=METHOD_CHOICES)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=5, default='KES')
+    provider_reference = models.CharField(max_length=120, blank=True, db_index=True)
+    status = models.CharField(max_length=25, choices=STATUS_CHOICES, default='initiated')
+    raw_response = models.JSONField(default=dict)    # last provider payload, for disputes
+    created_by = models.ForeignKey('profiles.Profile', null=True, blank=True,
+                                  on_delete=models.SET_NULL, related_name='payment_intents')
+
+    class Meta:
+        db_table = 'marketplace_payment_intent'
+        ordering = ['-created_at']
+        constraints = [
+            # A zero or negative "intent" is never legitimate — it would create
+            # a refund-shaped row that no settlement report can sum.
+            models.CheckConstraint(check=Q(amount__gt=0), name='mkt_paymentintent_amt_gt0'),
+        ]
+        indexes = [
+            models.Index(fields=['order', '-created_at'], name='mkt_paymentintent_order_idx'),
+            models.Index(fields=['status'], name='mkt_paymentintent_status_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.get_method_display()} {self.amount} {self.currency} for {self.order.order_number} ({self.status})'
+
+    def mark_succeeded(self, provider_reference='', raw_response=None, commit=True):
+        """Record a confirmed charge. The caller is responsible for flipping
+        ``order.payment_status`` — this only records what the provider said."""
+        self.status = 'succeeded'
+        if provider_reference:
+            self.provider_reference = provider_reference
+        if raw_response is not None:
+            self.raw_response = raw_response
+        if commit:
+            self.save(update_fields=['status', 'provider_reference', 'raw_response', 'updated_at'])
 

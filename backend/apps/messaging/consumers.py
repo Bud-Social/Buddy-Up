@@ -56,6 +56,47 @@ MAX_METADATA_BYTES = 8192
 ALLOWED_MESSAGE_TYPES = {'text', 'photo', 'video', 'voice', 'document', 'location', 'poll', 'event'}
 
 
+# ─── Handshake rejection ──────────────────────────────────────────────────────
+
+class HandshakeRejectMixin:
+    """Reject a handshake in a way the client can actually read.
+
+    Daphne routes *any* ``websocket.close`` received while the connection is
+    still CONNECTING through ``serverReject()``, which discards the close code
+    and answers a bare ``HTTP/1.1 403 Access denied``. A client therefore could
+    not tell "your token is bad" (4001) from "you are not in this conversation"
+    (4003) from "this path does not exist" — every rejection looked identical,
+    and every rejection surfaced in the browser as an abnormal close (1006).
+    That opacity is what made the mobile handshake failure so slow to find.
+
+    Accepting first and closing immediately afterwards completes the handshake
+    with a real 101 and then delivers the close code, so the client sees 4001
+    or 4003 and can react (refresh the token, or stop retrying). The trade-off
+    is deliberate and worth stating plainly: for the few microseconds between
+    the accept and the close the peer holds an open socket. Nothing is joined
+    to a group, no handler is registered and no frame is read before the close,
+    so that socket is inert — and it is only ever granted to a peer we are
+    already refusing.
+    """
+
+    rejected = False
+
+    async def reject(self, code: int, reason: str, **context) -> None:
+        """Log why the handshake is being refused, then close with ``code``.
+
+        ``context`` is free-form identifying detail (conversation id, user id)
+        so ``podman logs`` answers "who was refused and why" without needing the
+        tokens, which are never logged.
+        """
+        detail = ' '.join(f'{key}={value}' for key, value in context.items())
+        logger.warning(
+            '%s ws rejected: %s (%s)', type(self).__name__, reason, detail or 'no context',
+        )
+        self.rejected = True
+        await self.accept()
+        await self.close(code=code)
+
+
 # ─── Viewer helpers ───────────────────────────────────────────────────────────
 
 async def _viewer_add(live_id, user_id):
@@ -140,7 +181,7 @@ class UserConsumer(AsyncJsonWebsocketConsumer):
 
 # ─── Chat consumer (messages + typing + WebRTC signaling) ────────────────────
 
-class ChatConsumer(AsyncJsonWebsocketConsumer):
+class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
     """
     Single consumer per conversation handling:
     - Real-time messages
@@ -151,25 +192,38 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
     """
 
     async def connect(self):
+        # Read the route before any auth check so every rejection below can name
+        # the conversation it was for.
+        self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
+
         token = get_token_from_scope(self.scope)
         user = await get_user_from_token(token) if token else None
         if not user or user.is_anonymous:
-            await self.close(code=4001)
+            await self.reject(
+                4001, 'bad token',
+                conversation=self.conversation_id,
+            )
             return
 
-        self.conversation_id = self.scope['url_route']['kwargs']['conversation_id']
         self.user = user
+        self.user_id = str(user.id)
         self.profile = await database_sync_to_async(
             lambda: getattr(user, 'profile', None)
         )()
         if not self.profile:
-            await self.close(code=4001)
+            await self.reject(
+                4001, 'no profile',
+                conversation=self.conversation_id, user=self.user_id,
+            )
             return
 
         # Verify membership
         is_member = await self._is_member()
         if not is_member:
-            await self.close(code=4003)
+            await self.reject(
+                4003, 'not a member',
+                conversation=self.conversation_id, user=self.user_id,
+            )
             return
 
         self.group_name = f'conversation_{self.conversation_id}'
@@ -178,6 +232,10 @@ class ChatConsumer(AsyncJsonWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
+        # A rejected handshake was never added to a group, so there is no
+        # presence to announce and nothing to clean up.
+        if getattr(self, 'rejected', False):
+            return
         if hasattr(self, 'group_name'):
             # Auto-stop typing on disconnect
             await self.channel_layer.group_send(self.group_name, {

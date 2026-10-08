@@ -319,6 +319,153 @@ export interface Order {
   created_at: string;
 }
 
+/* ------------------------------------------------------------------ */
+/* Cart & checkout                                                     */
+/* ------------------------------------------------------------------ */
+
+export type FulfillmentType = 'digital' | 'pickup' | 'delivery';
+
+/** Settlement rails for an order. Artifacts is the wallet rail, settled inline. */
+export type CheckoutPaymentMethod = 'artifacts' | 'mpesa' | 'card';
+
+/** Keys mirror `Order.delivery_address`, which is a free-form JSONField. */
+export interface CheckoutDeliveryAddress {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  postal_code?: string;
+  country?: string;
+  phone?: string;
+  notes?: string;
+}
+
+export interface CheckoutPickupDetails {
+  venue?: string;
+  location?: string;
+  instructions?: string;
+}
+
+/**
+ * `POST /marketplace/cart/checkout/`.
+ *
+ * Every member is optional: the artifact-only shape callers have always sent
+ * (`{fulfillment_type: 'digital'}`) stays valid, and the physical-logistics and
+ * payment fields are additive so a caller against an older backend still
+ * checks out cleanly — the server ignores what it does not read.
+ */
+export interface CheckoutPayload {
+  fulfillment_type?: FulfillmentType;
+  delivery_address?: CheckoutDeliveryAddress;
+  pickup_details?: CheckoutPickupDetails;
+  /** `null`/absent for digital and delivery orders. */
+  pickup_station_id?: string | null;
+  payment_method?: CheckoutPaymentMethod;
+  idempotency_key?: string;
+}
+
+export interface CheckoutCartItem {
+  item_type: string;
+  title: string;
+  quantity: number;
+  price_artifacts?: Record<string, number>;
+  paid_artifacts?: Record<string, number>;
+  total_artifacts?: Record<string, number>;
+  creator_name?: string | null;
+}
+
+export interface CheckoutResult {
+  order_id: string;
+  order_number: string;
+  status: string;
+  fulfillment_type: string;
+  items: CheckoutCartItem[];
+  total_artifacts: Record<string, number>;
+  original_artifacts?: Record<string, number>;
+  savings_artifacts?: Record<string, number>;
+  savings_usd?: number;
+  discount_code?: string | null;
+  spent_usd?: number;
+  new_balance?: Record<string, number>;
+  /** New settlement columns — absent until the backend persists them. */
+  payment_method?: CheckoutPaymentMethod | null;
+  payment_status?: string | null;
+  pickup_station?: string | { id?: string; name?: string } | null;
+  delivery_address?: CheckoutDeliveryAddress | null;
+  pickup_details?: CheckoutPickupDetails | null;
+}
+
+export interface CartItemPayload {
+  id: string;
+  item_type: string;
+  quantity: number;
+  meal_plan?: string | null;
+  programme?: string | null;
+  product?: string | null;
+  event?: string | null;
+  meal_plan_detail?: { id?: string; title?: string; cover_image_url?: string | null } | null;
+  programme_detail?: { id?: string; title?: string; cover_image_url?: string | null } | null;
+  /** Products are the only cart item type that carries `delivery_modes`. */
+  product_detail?: {
+    id?: string;
+    name?: string;
+    image_url?: string | null;
+    delivery_modes?: string[];
+    fulfillment_details?: Record<string, string>;
+  } | null;
+  event_detail?: { id?: string; title?: string; cover_image_url?: string | null } | null;
+  item_total_artifacts?: Record<string, number>;
+  item_total_usd?: number;
+}
+
+export interface CartSuggestedFulfillment {
+  type?: string;
+  available?: string[];
+  detail?: Record<string, unknown>;
+}
+
+export interface CartPayload {
+  id?: string;
+  items?: CartItemPayload[];
+  discount_code?: {
+    code?: string;
+    discount_type?: string;
+    discount_pct?: number;
+    discount_artifacts?: Record<string, number>;
+  } | null;
+  total_artifacts?: Record<string, number>;
+  subtotals?: CartItemPayload[];
+  total_usd?: number;
+  total_local_currency?: number;
+  base_currency?: string;
+  local_currency?: string;
+  conversion_rate?: number;
+  suggested_fulfillment?: CartSuggestedFulfillment | null;
+}
+
+interface CheckoutErrorPayload {
+  message?: string;
+  detail?: string;
+  errors?: Record<string, unknown> | unknown[] | null;
+}
+
+/**
+ * Best-effort human message for a rejected checkout.
+ *
+ * The ledger rejections the buyer can act on (`Insufficient dumbbell tokens.`,
+ * `Cart is empty.`, an event that sold out) arrive as `{success:false,
+ * message:'...'}` with a 4xx, so the body is the source of truth and the server
+ * wording is surfaced verbatim rather than replaced with generic copy.
+ */
+export function checkoutErrorMessage(error: unknown, fallback = 'Checkout failed. Please try again.'): string {
+  const payload = (error as { response?: { data?: CheckoutErrorPayload } } | undefined)?.response?.data;
+  const flat = payload?.errors
+    ? (Array.isArray(payload.errors)
+        ? payload.errors.map(String)
+        : Object.entries(payload.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' ') : String(v)}`))
+    : [];
+  return [payload?.message, payload?.detail, flat.join(' ')].filter(Boolean).join(' — ') || fallback;
+}
+
 export const marketplaceApi = {
   getMealPlans: (diet_type?: string) =>
     apiClient.get<ApiResponse<MealPlan[]>>('/marketplace/meal-plans/', { params: diet_type ? { diet_type } : {} }).then((r) => r.data),
@@ -441,7 +588,7 @@ export const marketplaceApi = {
     apiClient.delete<ApiResponse<null>>(`/marketplace/events/${eventId}/`).then((r) => r.data),
 
   getCart: () =>
-    apiClient.get<ApiResponse<any>>('/marketplace/cart/').then((r) => r.data),
+    apiClient.get<ApiResponse<CartPayload>>('/marketplace/cart/').then((r) => r.data),
 
   addToCart: (item_type: string, idData: Record<string, string>, quantity: number = 1, extra?: Record<string, string>) =>
     apiClient.post<ApiResponse<any>>('/marketplace/cart/', { item_type, ...idData, quantity, ...extra }).then((r) => r.data),
@@ -449,8 +596,8 @@ export const marketplaceApi = {
   removeFromCart: (item_id?: string) =>
     apiClient.delete<ApiResponse<any>>('/marketplace/cart/', { data: { item_id } }).then((r) => r.data),
 
-  checkoutCart: (data?: Record<string, unknown>) =>
-    apiClient.post<ApiResponse<any>>('/marketplace/cart/checkout/', data || {}).then((r) => r.data),
+  checkoutCart: (data?: CheckoutPayload) =>
+    apiClient.post<ApiResponse<CheckoutResult>>('/marketplace/cart/checkout/', data || {}).then((r) => r.data),
 
   getOrders: (status?: string) =>
     apiClient.get<ApiResponse<Order[]>>('/marketplace/orders/', { params: status ? { status } : {} }).then((r) => r.data),

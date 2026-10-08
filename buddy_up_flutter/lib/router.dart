@@ -76,6 +76,19 @@ import 'features/messaging/screens/conversation_list_screen.dart';
 import 'features/messaging/screens/chat_screen.dart';
 import 'features/community/screens/communities_screen.dart';
 import 'features/community/screens/community_detail_screen.dart';
+import 'features/marketplace/screens/checkout_screen.dart';
+import 'features/marketplace/screens/delivery_personnel_screen.dart';
+import 'features/marketplace/screens/manage_stations_screen.dart';
+import 'features/marketplace/screens/station_application_screen.dart';
+import 'features/admin/screens/admin_console_screen.dart';
+import 'features/admin/screens/admin_users_screen.dart';
+import 'features/admin/screens/admin_shops_screen.dart';
+import 'features/admin/screens/admin_orders_screen.dart';
+import 'features/admin/screens/admin_gyms_screen.dart';
+import 'features/admin/screens/admin_communities_screen.dart';
+import 'features/admin/screens/admin_stations_screen.dart';
+import 'features/admin/screens/admin_delivery_screen.dart';
+import 'features/admin/screens/admin_wallet_screen.dart';
 import 'shared/navigation/app_nav.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -314,6 +327,30 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const CartScreen(),
       ),
+      // Checkout is its own screen so the flow is deep-linkable and the payment /
+      // station / address choices are never squeezed into a bottom sheet.
+      GoRoute(
+        path: '/marketplace/checkout',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const CheckoutScreen(),
+      ),
+      // Fulfillment logistics: register as a courier, apply to become a pickup
+      // station, and manage the stations you own.
+      GoRoute(
+        path: '/marketplace/delivery-personnel',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const DeliveryPersonnelScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/stations/apply',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const StationApplicationScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/stations',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const ManageStationsScreen(),
+      ),
       GoRoute(
         path: '/marketplace/orders',
         parentNavigatorKey: _rootNavigatorKey,
@@ -548,6 +585,52 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
             trainerUsername: trainerUsername,
           );
         },
+      ),
+      // Admin console (staff only, gated on user.is_staff like the web AdminGuard).
+      GoRoute(
+        path: '/admin',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminConsoleScreen(),
+      ),
+      GoRoute(
+        path: '/admin/users',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminUsersScreen(),
+      ),
+      GoRoute(
+        path: '/admin/shops',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminShopsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/orders',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminOrdersScreen(),
+      ),
+      GoRoute(
+        path: '/admin/gyms',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminGymsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/communities',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminCommunitiesScreen(),
+      ),
+      GoRoute(
+        path: '/admin/stations',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminStationsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/delivery',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminDeliveryScreen(),
+      ),
+      GoRoute(
+        path: '/admin/wallet',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminWalletScreen(),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
@@ -826,7 +909,7 @@ class _AppShellState extends State<_AppShell> {
     '/gyms', '/lives', '/marketplace', '/wallet', '/analytics',
     '/notifications', '/verification', '/trainers', '/book', '/sessions',
     '/my-enrollments', '/programmes', '/discover', '/messages',
-    '/communities', '/profile', '/settings', '/buddies',
+    '/communities', '/profile', '/settings', '/buddies', '/admin',
   };
 
   bool _isUsernameRoute(String location) {

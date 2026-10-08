@@ -6,7 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from apps.accounts.models import User
 from apps.lives.models import BuddyLive
 from apps.messaging.models import (
-    Conversation, ConversationPromotion, CallSession, CallParticipant, Message,
+    Conversation, ConversationMembership, ConversationPromotion, CallSession,
+    CallParticipant, Message,
 )
 from apps.profiles.models import (
     BlockRelationship, BuddyRelationship, BuddySearchProfile, Profile,
@@ -671,3 +672,124 @@ class PromotionExposureTests(TestCase):
         resp = self.client_alice.get('/api/v1/messaging/conversations/')
         convo = next(c for c in resp.data['data'] if c['id'] == str(self.conv.id))
         self.assertEqual(str(convo['promotion_requested_by']), str(self.alice.user_id))
+
+
+class CommunityRosterPrivacyTests(TestCase):
+    """Member rosters are gated for non-members; member_count is always public."""
+
+    def setUp(self):
+        self.owner_user = User.objects.create_user(email='crow-owner@example.com', password='TestPass123!')
+        self.member_user = User.objects.create_user(email='crow-member@example.com', password='TestPass123!')
+        self.outsider_user = User.objects.create_user(email='crow-outsider@example.com', password='TestPass123!')
+        self.owner = Profile.objects.create(user=self.owner_user, username='crow-owner', display_name='Owner')
+        self.member = Profile.objects.create(user=self.member_user, username='crow-member', display_name='Member')
+        self.outsider = Profile.objects.create(user=self.outsider_user, username='crow-outsider', display_name='Outsider')
+
+        def make_community(name, is_public):
+            conv = Conversation.objects.create(
+                is_group=True, is_community=True, group_name=name, is_public=is_public,
+            )
+            conv.participants.add(self.owner, self.member)
+            ConversationMembership.objects.create(conversation=conv, profile=self.owner, role='owner')
+            ConversationMembership.objects.create(conversation=conv, profile=self.member, role='member')
+            return conv
+
+        self.public = make_community('Public Crew', True)
+        self.private = make_community('Private Crew', False)
+
+        def client_for(profile):
+            c = APIClient()
+            c.force_authenticate(profile.user)
+            return c
+
+        self.client_member = client_for(self.member)
+        self.client_outsider = client_for(self.outsider)
+
+    def _detail(self, conv, client):
+        res = client.get(f'/api/v1/messaging/communities/{conv.id}/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        return res.data['data']
+
+    def test_non_member_gets_count_but_no_roster_on_public_community(self):
+        data = self._detail(self.public, self.client_outsider)
+        self.assertEqual(data['participants_data'], [])
+        self.assertNotIn('members', data)
+        self.assertEqual(data['member_count'], 2)
+        self.assertIsNone(data['my_role'])
+
+    def test_non_member_is_403_on_private_community_detail(self):
+        res = self.client_outsider.get(f'/api/v1/messaging/communities/{self.private.id}/')
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIsNone(res.data['data'])
+
+    def test_member_sees_full_roster_and_members_list(self):
+        for conv in (self.public, self.private):
+            data = self._detail(conv, self.client_member)
+            self.assertEqual(
+                {p['username'] for p in data['participants_data']}, {'crow-owner', 'crow-member'},
+            )
+            self.assertEqual(
+                {m['username'] for m in data['members']}, {'crow-owner', 'crow-member'},
+            )
+            self.assertEqual(data['member_count'], 2)
+            self.assertEqual(data['my_role'], 'member')
+
+    def test_discover_list_hides_roster_and_still_reports_count(self):
+        res = self.client_outsider.get('/api/v1/messaging/communities/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        discover = {c['id']: c for c in res.data['data']['discover']}
+        entry = discover[str(self.public.id)]
+        self.assertEqual(entry['participants_data'], [])
+        self.assertEqual(entry['member_count'], 2)
+
+    def test_mine_list_shows_roster_to_member(self):
+        res = self.client_member.get('/api/v1/messaging/communities/')
+        mine = {c['id']: c for c in res.data['data']['mine']}
+        for conv in (self.public, self.private):
+            entry = mine[str(conv.id)]
+            self.assertEqual(
+                {p['username'] for p in entry['participants_data']}, {'crow-owner', 'crow-member'},
+            )
+            self.assertEqual(entry['member_count'], 2)
+
+    def test_member_count_queries_do_not_scale_with_community_count(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        def fetch():
+            with CaptureQueriesContext(connection) as captured:
+                res = self.client_outsider.get('/api/v1/messaging/communities/')
+                self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+                sql = [q['sql'] for q in captured.captured_queries]
+            discover = res.data['data']['discover']
+            aggregate_counts = [
+                q for q in sql
+                if 'messaging_conversation_membership' in q and 'COUNT(' in q.upper()
+            ]
+            return len(discover), aggregate_counts
+
+        before_n, before_counts = fetch()
+
+        for i in range(6):
+            conv = Conversation.objects.create(
+                is_group=True, is_community=True, group_name=f'Bulk Crew {i}', is_public=True,
+            )
+            conv.participants.add(self.owner, self.member)
+            ConversationMembership.objects.create(conversation=conv, profile=self.owner, role='owner')
+            ConversationMembership.objects.create(conversation=conv, profile=self.member, role='member')
+
+        after_n, after_counts = fetch()
+        self.assertGreater(after_n, before_n)
+        # member_count rides the queryset annotation: the number of membership
+        # COUNT queries stays flat no matter how many communities are listed.
+        self.assertEqual(len(after_counts), len(before_counts), after_counts)
+
+    def test_direct_conversation_roster_still_visible_to_participants(self):
+        conv = Conversation.objects.create(is_group=False, origin='direct')
+        conv.participants.add(self.owner, self.outsider)
+        res = self.client_outsider.get(f'/api/v1/messaging/conversations/{conv.id}/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        self.assertEqual(
+            {p['username'] for p in res.data['data']['participants_data']},
+            {'crow-owner', 'crow-outsider'},
+        )

@@ -534,3 +534,130 @@ class GymDiscoveryFilterTests(TestCase):
         self.assertIn('physical', modes)
         self.assertIn('virtual', modes)
         self.assertIn('hybrid', modes)
+
+
+def _make_profile(username):
+    user = User.objects.create_user(email=f'{username}@test.com', password='TestPass123!')
+    user.dob_hash = hash_dob(date(2000, 6, 15))
+    user.email_verified = True
+    user.save()
+    return Profile.objects.create(
+        user=user, username=username, display_name=username.title(),
+    )
+
+
+class GymRosterPrivacyTests(TestCase):
+    """Owner/reviewer rosters are member-only for private gyms; counts stay public."""
+
+    def setUp(self):
+        self.owner = _make_profile('rosterowner')
+        self.co_owner = _make_profile('rosterco')
+        self.member = _make_profile('rostermember')
+        self.outsider = _make_profile('rosteroutsider')
+
+        self.private = Gym.objects.create(
+            name='Roster Private', handle='roster-private', category='fitness',
+            access_type='private', member_count=3,
+        )
+        GymMembership.objects.create(gym=self.private, member=self.owner, role='owner')
+        GymMembership.objects.create(gym=self.private, member=self.co_owner, role='co_owner')
+        GymMembership.objects.create(
+            gym=self.private, member=self.member, role='member', subscription_active=True,
+        )
+        GymReview.objects.create(gym=self.private, reviewer=self.member, rating=5, comment='ok')
+
+        self.public = Gym.objects.create(
+            name='Roster Public', handle='roster-public', category='fitness',
+            access_type='public', member_count=2,
+        )
+        GymMembership.objects.create(gym=self.public, member=self.owner, role='owner')
+        GymMembership.objects.create(
+            gym=self.public, member=self.member, role='member', subscription_active=True,
+        )
+        GymReview.objects.create(gym=self.public, reviewer=self.member, rating=4, comment='ok')
+
+        self.secret = Gym.objects.create(
+            name='Roster Secret', handle='roster-secret', category='fitness',
+            access_type='secret', member_count=1,
+        )
+        GymMembership.objects.create(
+            gym=self.secret, member=self.owner, role='owner', subscription_active=True,
+        )
+
+    def _detail(self, handle, profile=None):
+        client = APIClient()
+        if profile is not None:
+            client.force_authenticate(profile.user)
+        res = client.get(f'/api/v1/gyms/{handle}/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        return res.data['data']
+
+    def _list_item(self, handle, profile=None):
+        client = APIClient()
+        if profile is not None:
+            client.force_authenticate(profile.user)
+        gym = Gym.objects.get(handle=handle)
+        res = client.get('/api/v1/gyms/', {'q': gym.name})
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        items = [g for g in res.json()['data'] if g['handle'] == handle]
+        self.assertEqual(len(items), 1, items)
+        return items[0]
+
+    def test_non_member_sees_no_owners_or_reviewers_on_private_gym(self):
+        data = self._detail('roster-private', self.outsider)
+        self.assertEqual(data['owner_data'], [])
+        self.assertEqual(data['recent_reviewers'], [])
+        self.assertFalse(data['is_member'])
+
+    def test_anonymous_sees_no_owners_or_reviewers_on_private_gym(self):
+        data = self._detail('roster-private')
+        self.assertEqual(data['owner_data'], [])
+        self.assertEqual(data['recent_reviewers'], [])
+
+    def test_non_member_still_sees_member_count_on_private_gym(self):
+        self.assertEqual(self._detail('roster-private', self.outsider)['member_count'], 3)
+        self.assertEqual(self._detail('roster-private')['member_count'], 3)
+
+    def test_member_sees_owners_and_reviewers_on_private_gym(self):
+        data = self._detail('roster-private', self.member)
+        self.assertEqual(
+            {o['username'] for o in data['owner_data']}, {'rosterowner', 'rosterco'},
+        )
+        self.assertEqual([r['username'] for r in data['recent_reviewers']], ['rostermember'])
+
+    def test_inactive_membership_does_not_unlock_private_roster(self):
+        lapsed = _make_profile('rosterlapsed')
+        GymMembership.objects.create(
+            gym=self.private, member=lapsed, role='member', subscription_active=False,
+        )
+        data = self._detail('roster-private', lapsed)
+        self.assertEqual(data['owner_data'], [])
+        self.assertEqual(data['recent_reviewers'], [])
+
+    def test_secret_gym_is_404_for_non_member_and_rostered_for_member(self):
+        # Detail view 404s secret gyms for non-members (pre-existing), and the
+        # serializer hides the roster from anyone who isn't an active member.
+        for profile in (None, self.outsider, self.member):
+            client = APIClient()
+            if profile is not None:
+                client.force_authenticate(profile.user)
+            res = client.get('/api/v1/gyms/roster-secret/')
+            self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND, res.data)
+        owner_view = self._detail('roster-secret', self.owner)
+        self.assertEqual([o['username'] for o in owner_view['owner_data']], ['rosterowner'])
+
+    def test_list_endpoint_hides_owners_and_reviewers_for_private_gyms(self):
+        item = self._list_item('roster-private', self.outsider)
+        self.assertEqual(item['owner_data'], [])
+        self.assertEqual(item['recent_reviewers'], [])
+        self.assertEqual(item['member_count'], 3)
+
+    def test_public_gym_roster_visible_to_non_member_and_member(self):
+        for profile in (self.outsider, self.member, None):
+            data = self._detail('roster-public', profile)
+            self.assertEqual([o['username'] for o in data['owner_data']], ['rosterowner'])
+            self.assertEqual([r['username'] for r in data['recent_reviewers']], ['rostermember'])
+            self.assertEqual(data['member_count'], 2)
+        item = self._list_item('roster-public', self.outsider)
+        self.assertEqual([o['username'] for o in item['owner_data']], ['rosterowner'])
+        self.assertEqual(item['member_count'], 2)

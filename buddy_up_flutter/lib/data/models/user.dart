@@ -13,6 +13,9 @@ abstract class User with _$User {
     @Default(false) bool phoneVerified,
     @Default(false) bool isAdult,
     @Default(false) bool totpEnabled,
+    // Sent by every auth endpoint. The app never writes it; it only gates the
+    // staff-only surfaces (the admin console), matching the web AdminGuard.
+    @JsonKey(name: 'is_staff') @Default(false) bool isStaff,
     String? createdAt,
   }) = _User;
 

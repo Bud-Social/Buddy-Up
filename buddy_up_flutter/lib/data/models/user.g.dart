@@ -14,6 +14,7 @@ _User _$UserFromJson(Map<String, dynamic> json) => _User(
   phoneVerified: json['phoneVerified'] as bool? ?? false,
   isAdult: json['isAdult'] as bool? ?? false,
   totpEnabled: json['totpEnabled'] as bool? ?? false,
+  isStaff: json['is_staff'] as bool? ?? false,
   createdAt: json['createdAt'] as String?,
 );
 
@@ -25,6 +26,7 @@ Map<String, dynamic> _$UserToJson(_User instance) => <String, dynamic>{
   'phoneVerified': instance.phoneVerified,
   'isAdult': instance.isAdult,
   'totpEnabled': instance.totpEnabled,
+  'is_staff': instance.isStaff,
   'createdAt': instance.createdAt,
 };
 

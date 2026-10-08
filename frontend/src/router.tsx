@@ -71,6 +71,7 @@ const EventDetail = lazy(() => import('@/pages/app/EventDetail'));
 const CreateEvent = lazy(() => import('@/pages/app/CreateEvent'));
 const MyEventTickets = lazy(() => import('@/pages/app/MyEventTickets'));
 const CartPage = lazy(() => import('@/pages/app/CartPage'));
+const CheckoutPage = lazy(() => import('@/pages/app/CheckoutPage'));
 const OrderHistory = lazy(() => import('@/pages/app/OrderHistory'));
 const OrderDetail = lazy(() => import('@/pages/app/OrderDetail'));
 const CreatorStudio = lazy(() => import('@/pages/app/CreatorStudio'));
@@ -112,6 +113,15 @@ const AnalyticsPage = lazy(() => import('@/pages/app/AnalyticsPage'));
 const AdminDashboard = lazy(() => import('@/pages/app/AdminDashboard'));
 const ModerationQueue = lazy(() => import('@/pages/app/ModerationQueue'));
 const AdminVerification = lazy(() => import('@/pages/app/AdminVerification'));
+const AdminHome = lazy(() => import('@/pages/admin/AdminHome'));
+const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
+const AdminShops = lazy(() => import('@/pages/admin/AdminShops'));
+const AdminOrders = lazy(() => import('@/pages/admin/AdminOrders'));
+const AdminGyms = lazy(() => import('@/pages/admin/AdminGyms'));
+const AdminCommunities = lazy(() => import('@/pages/admin/AdminCommunities'));
+const AdminStations = lazy(() => import('@/pages/admin/AdminStations'));
+const AdminDelivery = lazy(() => import('@/pages/admin/AdminDelivery'));
+const AdminWallet = lazy(() => import('@/pages/admin/AdminWallet'));
 
 const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Privacy = lazy(() => import('@/pages/legal/Privacy'));
@@ -200,6 +210,7 @@ export const router = createBrowserRouter([
 
           { path: '/marketplace/creator/discount-codes/:codeId/analytics', element: <SWrapper><DiscountCodeAnalyticsPage /></SWrapper> },
           { path: '/marketplace/cart', element: <SWrapper><CartPage /></SWrapper> },
+          { path: '/marketplace/checkout', element: <SWrapper><CheckoutPage /></SWrapper> },
           { path: '/marketplace/orders', element: <SWrapper><OrderHistory /></SWrapper> },
           { path: '/marketplace/orders/:orderId', element: <SWrapper><OrderDetail /></SWrapper> },
           { path: '/marketplace/events/create', element: <SWrapper><CreateEvent /></SWrapper> },
@@ -251,6 +262,15 @@ export const router = createBrowserRouter([
             element: <AdminLayout />,
             children: [
               { path: '/admin', element: <SWrapper><AdminDashboard /></SWrapper> },
+              { path: '/admin/overview', element: <SWrapper><AdminHome /></SWrapper> },
+              { path: '/admin/users', element: <SWrapper><AdminUsers /></SWrapper> },
+              { path: '/admin/shops', element: <SWrapper><AdminShops /></SWrapper> },
+              { path: '/admin/orders', element: <SWrapper><AdminOrders /></SWrapper> },
+              { path: '/admin/gyms', element: <SWrapper><AdminGyms /></SWrapper> },
+              { path: '/admin/communities', element: <SWrapper><AdminCommunities /></SWrapper> },
+              { path: '/admin/stations', element: <SWrapper><AdminStations /></SWrapper> },
+              { path: '/admin/delivery', element: <SWrapper><AdminDelivery /></SWrapper> },
+              { path: '/admin/wallet', element: <SWrapper><AdminWallet /></SWrapper> },
               { path: '/admin/moderation', element: <SWrapper><ModerationQueue /></SWrapper> },
               { path: '/admin/verification', element: <SWrapper><AdminVerification /></SWrapper> },
             ],

@@ -8,7 +8,7 @@ dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from channels.security.websocket import AllowedHostsOriginValidator
+from config.origin import native_friendly_origin_validator
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.development')
 
@@ -18,7 +18,10 @@ from apps.messaging.routing import websocket_urlpatterns  # noqa: E402
 
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
-    'websocket': AllowedHostsOriginValidator(
+    # Native clients (the Flutter app) send no Origin, so the stock
+    # AllowedHostsOriginValidator rejects every mobile handshake. This keeps the
+    # ALLOWED_HOSTS match for browsers and only waives the *absent* header.
+    'websocket': native_friendly_origin_validator(
         AuthMiddlewareStack(
             URLRouter(websocket_urlpatterns)
         )

@@ -54,6 +54,10 @@ abstract class Conversation with _$Conversation {
     @JsonKey(name: 'is_public') @Default(false) bool isPublic,
     @JsonKey(name: 'participants_data')
     @Default(<ParticipantData>[]) List<ParticipantData> participantsData,
+    /// Roster size. Always exposed — it is the only member signal a non-member
+    /// gets, because `participants_data` comes back empty for them. Never infer
+    /// the count from `participantsData.length`.
+    @JsonKey(name: 'member_count') @Default(0) int memberCount,
     @JsonKey(name: 'unread_count') @Default(0) int unreadCount,
     @JsonKey(name: 'membership_role') String? membershipRole,
     @JsonKey(name: 'last_message') LastMessageData? lastMessage,

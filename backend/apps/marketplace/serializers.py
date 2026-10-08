@@ -1,5 +1,6 @@
 import qrcode
 import base64
+from math import asin, cos, radians, sin, sqrt
 from io import BytesIO
 from django.utils import timezone
 from rest_framework import serializers
@@ -12,7 +13,10 @@ from .models import (
     ProgrammeActivityProgress,
     Product, MarketplaceEvent, EventMedia, EventTicket, Cart, CartItem, DiscountCode, DiscountUsage,
     Order, OrderItem, OrderFulfillment, OrderCase, CreatorPayoutSetup,
+    PickupStation, StationApplication, DeliveryPersonnel, DeliveryPersonnelApplication,
+    PaymentIntent,
 )
+from .models import APPLICATION_STATUS_CHOICES
 
 ARTIFACT_TYPES = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion']
 
@@ -921,6 +925,8 @@ class OrderSerializer(serializers.ModelSerializer):
                   'delivery_address', 'pickup_details', 'items_total_artifacts',
                   'discount_artifacts', 'total_artifacts', 'total_usd', 'spent_usd',
                   'discount_code', 'status_history', 'items', 'fulfillment',
+                  'pickup_station', 'delivery_personnel',
+                  'payment_method', 'payment_status', 'payment_reference', 'payment_provider',
                   'is_seller', 'paid_at', 'created_at']
 
     def get_fulfillment(self, obj):
@@ -940,6 +946,81 @@ class OrderSerializer(serializers.ModelSerializer):
         if viewer is None:
             return False
         return obj.items.filter(creator=viewer).exists()
+
+
+class SellerOrderSerializer(OrderSerializer):
+    """An order as seen by a *seller* of one of its line items.
+
+    Data minimisation, not cosmetics. ``SellerOrdersView`` used to hand every
+    seller the whole order: the other sellers' line items (their titles, prices
+    and per-unit paid amounts) and the order-wide money totals, which are the
+    sum of every seller's revenue. A seller only ever needs their own lines, so
+    both are narrowed here.
+
+    The buyer's ``delivery_address`` is deliberately *kept*: a seller cannot
+    fulfil a delivery or pickup order without knowing where it goes, and the
+    courier they assign reads the same record. That is the one field where the
+    seller's legitimate need is the buyer's private data.
+    """
+
+    items = serializers.SerializerMethodField()
+    items_total_artifacts = serializers.SerializerMethodField()
+    discount_artifacts = serializers.SerializerMethodField()
+    total_artifacts = serializers.SerializerMethodField()
+    spent_usd = serializers.SerializerMethodField()
+    items_count = serializers.SerializerMethodField()
+
+    def _own_items(self, obj):
+        """The caller's line items, and only theirs.
+
+        ``SellerOrdersView`` prefetches `items` down to the caller's rows, so
+        there the prefetch cache already holds nothing else; the detail
+        endpoints do not prefetch, so narrow here as well — otherwise the
+        detail view would be a way around the list view's filtering.
+        """
+        viewer = self.context.get('viewer')
+        items = obj.items.all()
+        if viewer is None:
+            return list(items)
+        return [item for item in items if item.creator_id == viewer.pk]
+
+    def get_items(self, obj):
+        return OrderItemSerializer(self._own_items(obj), many=True, context=self.context).data
+
+    def get_items_count(self, obj):
+        return len(self._own_items(obj))
+
+    class Meta(OrderSerializer.Meta):
+        fields = OrderSerializer.Meta.fields + ['items_count']
+
+    @staticmethod
+    def _sum_artifacts(items, field):
+        totals = {}
+        for item in items:
+            for artifact_type, qty in (getattr(item, field, None) or {}).items():
+                totals[artifact_type] = totals.get(artifact_type, 0) + qty
+        return totals
+
+    def get_items_total_artifacts(self, obj):
+        return self._sum_artifacts(self._own_items(obj), 'price_artifacts')
+
+    def get_discount_artifacts(self, obj):
+        """Per-item discount allocation is not modelled, so a seller sees the
+        gap between their gross lines and their net lines instead of the
+        order-wide savings figure (which describes other sellers' orders)."""
+        items = self._own_items(obj)
+        gross = self._sum_artifacts(items, 'price_artifacts')
+        net = self._sum_artifacts(items, 'paid_artifacts')
+        return {k: gross[k] - net.get(k, 0) for k in gross if gross[k] != net.get(k, 0)}
+
+    def get_total_artifacts(self, obj):
+        return self._sum_artifacts(self._own_items(obj), 'paid_artifacts')
+
+    def get_spent_usd(self, obj):
+        return round(sum(
+            ARTIFACT_VALUES.get(artifact_type, 0) * qty
+            for artifact_type, qty in self.get_total_artifacts(obj).items()
+        ), 2)
 
 
 class OrderCaseSerializer(serializers.ModelSerializer):
@@ -962,3 +1043,272 @@ class CreatorPayoutSetupSerializer(serializers.ModelSerializer):
                   'setup_status', 'accept_terms', 'created_at', 'updated_at']
         read_only_fields = ['is_verified', 'terms_accepted_at', 'setup_status',
                             'created_at', 'updated_at']
+
+
+# ---------------------------------------------------------------------------
+# Fulfillment logistics serializers
+# ---------------------------------------------------------------------------
+
+def _haversine_km(lat1, lng1, lat2, lng2):
+    """Great-circle distance in km between two decimal-degree lat/lng pairs."""
+    lat1, lng1, lat2, lng2 = (float(v) for v in (lat1, lng1, lat2, lng2))
+    dlat = radians(lat2 - lat1)
+    dlng = radians(lng2 - lng1)
+    a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    return 2 * 6371.0088 * asin(sqrt(a))
+
+
+class PickupStationSerializer(serializers.ModelSerializer):
+    """Public read + shop/gym-owner create/update for a collection point.
+
+    ``distance_km`` is computed *only* against an ``origin_latitude`` /
+    ``origin_longitude`` the caller sends in this request. The server never
+    infers a buyer's location (no IP, header or timezone sniffing), so without
+    an explicit origin the key is *omitted from the payload entirely* rather
+    than sent as ``null`` — clients switch on its presence, and a permanently
+    ``null`` field would make "no distance was measured" indistinguishable from
+    "the distance is zero".
+    """
+
+    owner_name = serializers.SerializerMethodField()
+    distance_km = serializers.SerializerMethodField()
+    origin_latitude = serializers.DecimalField(max_digits=9, decimal_places=6,
+                                               required=False, write_only=True)
+    origin_longitude = serializers.DecimalField(max_digits=9, decimal_places=6,
+                                                required=False, write_only=True)
+
+    class Meta:
+        model = PickupStation
+        fields = ['id', 'name', 'description', 'address', 'city', 'country',
+                  'latitude', 'longitude', 'opening_hours', 'phone', 'instructions',
+                  'is_active', 'is_primary', 'owner_type', 'shop', 'gym',
+                  'owner_name', 'distance_km', 'origin_latitude', 'origin_longitude',
+                  'created_at', 'updated_at']
+        read_only_fields = ['id', 'owner_type', 'created_at', 'updated_at']
+
+    def get_owner_name(self, obj):
+        if obj.shop_id:
+            return obj.shop.name
+        return obj.gym.name if obj.gym_id else None
+
+    # origin_* are write-only and are not model fields, so they must be stripped
+    # before validated_data reaches Model(**...).
+    @staticmethod
+    def _strip_origin(data):
+        return {k: v for k, v in data.items()
+                if k not in ('origin_latitude', 'origin_longitude')}
+
+    def create(self, validated_data):
+        return super().create(self._strip_origin(validated_data))
+
+    def update(self, instance, validated_data):
+        return super().update(instance, self._strip_origin(validated_data))
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Only report a distance when one was actually measured: no origin was
+        # sent, or this station has no coordinates of its own.
+        if data.get('distance_km') is None:
+            data.pop('distance_km', None)
+        return data
+
+    def get_distance_km(self, obj):
+        initial = getattr(self, 'initial_data', None)
+        if isinstance(initial, dict):
+            origin_lat = initial.get('origin_latitude')
+            origin_lng = initial.get('origin_longitude')
+        else:
+            # List/detail views pass the origin through the serializer context
+            # instead: there is no per-request `initial_data` for a queryset.
+            context = getattr(self, 'context', None) or {}
+            origin_lat = context.get('origin_latitude')
+            origin_lng = context.get('origin_longitude')
+        if origin_lat is None or origin_lng is None:
+            return None
+        if obj.latitude is None or obj.longitude is None:
+            return None
+        return round(_haversine_km(origin_lat, origin_lng, obj.latitude, obj.longitude), 3)
+
+    def _resolved_owner(self, data):
+        shop = data.get('shop', getattr(self.instance, 'shop', None))
+        gym = data.get('gym', getattr(self.instance, 'gym', None))
+        return shop, gym
+
+    def validate(self, data):
+        shop, gym = self._resolved_owner(data)
+        if bool(shop) == bool(gym):
+            raise serializers.ValidationError(
+                'A station must belong to exactly one owner: provide a shop or a gym, not both.'
+            )
+        if data.get('is_primary'):
+            clashes = PickupStation.objects.filter(is_primary=True)
+            if self.instance is not None:
+                clashes = clashes.exclude(pk=self.instance.pk)
+            clashes = clashes.filter(shop=shop) if shop else clashes.filter(gym=gym)
+            if clashes.exists():
+                owner = 'shop' if shop else 'gym'
+                raise serializers.ValidationError(
+                    {'is_primary': f'This {owner} already has a primary pickup station.'}
+                )
+        return data
+
+
+class StationApplicationSerializer(serializers.ModelSerializer):
+    """Applicant-facing view of a shop/gym station application.
+
+    Deliberately mirrors ShopVerificationApplicationSerializer: the review
+    fields are staff-owned, so a buyer cannot POST their way to 'approved'.
+    """
+
+    class Meta:
+        model = StationApplication
+        fields = ['id', 'shop', 'gym', 'submitted_by', 'status',
+                  'business_registration_number', 'contact_phone',
+                  'address', 'city', 'country', 'latitude', 'longitude',
+                  'opening_hours', 'documents',
+                  'agreed_to_policy', 'agreed_at',
+                  'reviewer_notes', 'rejection_reason', 'reviewed_at', 'created_at']
+        read_only_fields = ['id', 'status', 'reviewer_notes', 'rejection_reason',
+                            'reviewed_at', 'created_at']
+
+    def validate(self, data):
+        shop = data.get('shop', getattr(self.instance, 'shop', None))
+        gym = data.get('gym', getattr(self.instance, 'gym', None))
+        if bool(shop) == bool(gym):
+            raise serializers.ValidationError(
+                'An application must name exactly one applicant: a shop or a gym, not both.'
+            )
+        return data
+
+    def validate_documents(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError('documents must be a list of {url, label} objects.')
+        for doc in value:
+            if not isinstance(doc, dict) or not doc.get('url'):
+                raise serializers.ValidationError('Each document needs a url.')
+        return value
+
+
+class ApplicationReviewSerializer(serializers.Serializer):
+    """Staff-only transition payload shared by every application model.
+
+    Split out from the applicant serializers so "who may change the status" is
+    enforced by the view choosing this class, not by a field the client can
+    simply not bother sending.
+    """
+
+    status = serializers.ChoiceField(choices=APPLICATION_STATUS_CHOICES)
+    reviewer_notes = serializers.CharField(required=False, allow_blank=True, default='')
+    rejection_reason = serializers.CharField(required=False, allow_blank=True, default='')
+
+    def validate(self, data):
+        if data.get('status') == 'rejected' and not (data.get('rejection_reason') or '').strip():
+            raise serializers.ValidationError(
+                {'rejection_reason': 'A rejection reason is required when rejecting an application.'}
+            )
+        return data
+
+
+class DeliveryPersonnelSerializer(serializers.ModelSerializer):
+    """Read-mostly courier view.
+
+    ``profile`` and ``rating`` are read-only: a courier does not mint their own
+    record (an approved application does) and does not write their own rating.
+    """
+
+    username = serializers.CharField(source='profile.username', read_only=True)
+    display_name = serializers.CharField(source='profile.display_name', read_only=True)
+    avatar_url = serializers.URLField(source='profile.avatar_url', read_only=True)
+    vehicle_label = serializers.CharField(source='get_vehicle_type_display', read_only=True)
+
+    class Meta:
+        model = DeliveryPersonnel
+        fields = ['id', 'profile', 'username', 'display_name', 'avatar_url',
+                  'vehicle_type', 'vehicle_label', 'service_zones', 'is_active',
+                  'rating', 'bio', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'profile', 'rating', 'created_at', 'updated_at']
+
+    def validate_service_zones(self, value):
+        if not isinstance(value, list) or any(not isinstance(zone, str) for zone in value):
+            raise serializers.ValidationError('service_zones must be a list of area names.')
+        return value
+
+
+class DeliveryPersonnelApplicationSerializer(serializers.ModelSerializer):
+    """Applicant-facing view of a courier application; review fields read-only."""
+
+    class Meta:
+        model = DeliveryPersonnelApplication
+        fields = ['id', 'profile', 'vehicle_type', 'service_zones',
+                  'id_document_url', 'licence_document_url', 'phone', 'bio',
+                  'status', 'reviewer_notes', 'rejection_reason', 'reviewed_at',
+                  'created_at']
+        read_only_fields = ['id', 'status', 'reviewer_notes', 'rejection_reason',
+                            'reviewed_at', 'created_at']
+
+    def validate_service_zones(self, value):
+        if not isinstance(value, list) or any(not isinstance(zone, str) for zone in value):
+            raise serializers.ValidationError('service_zones must be a list of area names.')
+        return value
+
+
+class PaymentIntentSerializer(serializers.ModelSerializer):
+    """Read-mostly view of a real-money payment attempt.
+
+    ``status``, ``provider_reference`` and ``raw_response`` are read-only
+    because only the provider callback may write them — a checkout request must
+    not be able to declare its own payment successful. Creating an intent
+    always lands on ``status='initiated'``.
+    """
+
+    order_number = serializers.CharField(source='order.order_number', read_only=True)
+    method_label = serializers.CharField(source='get_method_display', read_only=True)
+
+    class Meta:
+        model = PaymentIntent
+        fields = ['id', 'order', 'order_number', 'provider', 'method', 'method_label',
+                  'amount', 'currency', 'provider_reference', 'status',
+                  'raw_response', 'created_by', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'provider', 'provider_reference', 'status',
+                            'raw_response', 'created_by', 'created_at', 'updated_at']
+
+    def validate_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError('amount must be greater than zero.')
+        return value
+
+
+class PaymentIntentCreateSerializer(serializers.Serializer):
+    """Body of POST /orders/payment-intents/.
+
+    Deliberately *not* a ModelSerializer on PaymentIntent: an intent is created
+    from the order, never from client-supplied money. The amount, currency,
+    provider, status and every provider-derived field are server-owned, so
+    there is nothing here a client could set to mark itself paid.
+    """
+
+    order_id = serializers.UUIDField()
+    method = serializers.ChoiceField(choices=['mpesa', 'card'])
+    phone = serializers.CharField(required=False, allow_blank=True, max_length=30)
+    # Card details are accepted only for the direct-charge path and are never
+    # persisted: they go straight into the provider call and are dropped. The
+    # hosted-checkout path (no card fields) is the default because it keeps PAN
+    # out of this service entirely.
+    card_number = serializers.CharField(required=False, allow_blank=True, max_length=30)
+    cvv = serializers.CharField(required=False, allow_blank=True, max_length=8)
+    expiry_month = serializers.CharField(required=False, allow_blank=True, max_length=4)
+    expiry_year = serializers.CharField(required=False, allow_blank=True, max_length=4)
+
+    def validate(self, data):
+        if data['method'] == 'mpesa' and not (data.get('phone') or '').strip():
+            raise serializers.ValidationError(
+                {'phone': 'An M-Pesa phone number is required to start an STK push.'}
+            )
+        card_fields = ('card_number', 'cvv', 'expiry_month', 'expiry_year')
+        provided = [f for f in card_fields if (data.get(f) or '').strip()]
+        if provided and len(provided) != len(card_fields):
+            raise serializers.ValidationError(
+                'Provide all four card fields (card_number, cvv, expiry_month, expiry_year) '
+                'or none of them.'
+            )
+        return data

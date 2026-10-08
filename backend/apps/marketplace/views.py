@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
 from django.utils import timezone
@@ -27,6 +28,9 @@ from .models import (
     Cart, CartItem, DiscountCode, DiscountUsage,
     Order, OrderItem, OrderFulfillment, InventoryReservation,
     CreatorPayoutSetup,
+    PickupStation, StationApplication,
+    DeliveryPersonnel, DeliveryPersonnelApplication,
+    PaymentIntent,
 )
 from .serializers import (
     ShopSerializer, ShopDetailSerializer, ShopCreateSerializer,
@@ -41,8 +45,11 @@ from .serializers import (
     EventTicketSerializer, CreateMealPlanSerializer, CreateTrainingProgrammeSerializer,
     CreateEventSerializer, ReviewInputSerializer,
     DiscountCodeSerializer, DiscountCodeWriteSerializer,
-    OrderSerializer, OrderFulfillmentSerializer,
+    OrderSerializer, SellerOrderSerializer, OrderFulfillmentSerializer,
     OrderCaseSerializer, CreatorPayoutSetupSerializer,
+    PickupStationSerializer, StationApplicationSerializer,
+    DeliveryPersonnelSerializer, DeliveryPersonnelApplicationSerializer,
+    PaymentIntentCreateSerializer, PaymentIntentSerializer,
     resolve_item_price,
 )
 from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator_artifacts, platform_cut
@@ -89,6 +96,109 @@ def _resolve_creator_shop(profile, shop_id=None):
     return membership_shop, None
 
 
+def _order_seller_profiles(order):
+    """Who must be told about this order, besides its buyer.
+
+    A seller has to be able to react to a sale without polling. Two groups
+    qualify:
+
+    * the ``OrderItem.creator`` of every line — the account that is actually
+      selling (always, even if it has no shop);
+    * every owner/manager of a shop that one of those creators sells through,
+      because in a real shop the person who has to ship the parcel is the shop
+      operator, not always the listed creator.
+
+Ordered by id so the fan-out is deterministic, and the buyer is never
+    included (they get their own order notification).
+    """
+    from apps.profiles.models import Profile
+
+    creator_ids = set(order.items.exclude(creator=None).values_list('creator_id', flat=True))
+    # The shops these creators sell through, then everyone who can operate them.
+    shop_ids = set(
+        ShopMembership.objects.filter(profile_id__in=creator_ids).values_list('shop_id', flat=True),
+    )
+    shop_operator_ids = set(
+        ShopMembership.objects.filter(shop_id__in=shop_ids, role__in=('owner', 'manager'))
+        .values_list('profile_id', flat=True)
+    )
+    target_ids = (creator_ids | shop_operator_ids) - {order.buyer_id}
+    if not target_ids:
+        return []
+    # Profile's primary key *is* the user id, so these are user ids.
+    return list(Profile.objects.filter(pk__in=target_ids).order_by('pk'))
+
+
+def _notify_sellers_of_new_order(order):
+    """Fan a `new_purchase` notification out to everyone selling in this order.
+
+    ``create_notification`` only writes the in-app row and pushes it over the
+    websocket channel layer — it never touches a device token, which is what
+    ``_push_notification_to_profile`` does. Every seller notification therefore
+    invokes BOTH; without the second call a seller with the app closed sees
+    nothing at all, which is the whole point of the fan-out.
+    """
+    from apps.notifications.tasks import create_notification
+    from .tasks import _push_notification_to_profile
+
+    seller_profiles = _order_seller_profiles(order)
+    if not seller_profiles:
+        return
+    buyer_name = order.buyer.display_name or order.buyer.username
+    title = f'New sale: order #{order.order_number}'
+    body = f'{buyer_name} bought {order.items.count()} item(s). Open the order to start fulfilling it.'
+    metadata = {
+        'order_id': str(order.id),
+        'order_number': order.order_number,
+        'status': order.status,
+        'fulfillment_type': order.fulfillment_type,
+        'total': str(order.spent_usd or '0'),
+        'buyer_username': order.buyer.username,
+    }
+    for profile in seller_profiles:
+        create_notification.delay(
+            str(profile.user_id), 'new_purchase', title, body, metadata,
+            # One row per (order, seller): a retried checkout must not bury a
+            # seller under duplicates of the same sale.
+            dedupe_key=f'order:{order.id}:new_purchase:{profile.pk}',
+        )
+        _push_notification_to_profile(profile, title, body, metadata)
+
+
+def _notify_order_status_change(order, new_status):
+    """Tell the buyer AND every seller that the order moved.
+
+    This is the single place an order status change notifies anybody.
+    ``notifications.signals.handle_order_status_changed`` deliberately does not
+    notify on status changes any more: it used to, and so did this view, so the
+    buyer received two rows per seller update. The signal still covers order
+    *creation* (which happens in code paths this function cannot see), and this
+    function covers every transition the API can perform.
+    """
+    from apps.notifications.tasks import create_notification
+    from .tasks import _push_notification_to_profile
+
+    label = dict(Order.STATUS_CHOICES).get(new_status, new_status.replace('_', ' ').title())
+    title = 'Order update'
+    body = f'Order #{order.order_number} is now {label}.'
+    metadata = {
+        'order_id': str(order.id),
+        'order_number': order.order_number,
+        'status': new_status,
+        'fulfillment_type': order.fulfillment_type,
+    }
+    recipients = list(_order_seller_profiles(order))
+    if not any(profile.pk == order.buyer_id for profile in recipients):
+        recipients.append(order.buyer)
+    for profile in recipients:
+        create_notification.delay(
+            str(profile.user_id), 'order_status_changed', title, body, metadata,
+            dedupe_key=f'order:{order.id}:status:{new_status}:{profile.pk}',
+        )
+        # Device push is a separate transport from the in-app row; both run.
+        _push_notification_to_profile(profile, title, body, metadata)
+
+
 def _create_order_for_purchase(buyer, item_type, item_obj, title, creator, price_artifacts):
     """Record a single-item Order (used by direct purchase endpoints)."""
     price_artifacts = price_artifacts or {}
@@ -120,6 +230,7 @@ def _create_order_for_purchase(buyer, item_type, item_obj, title, creator, price
         price_artifacts=price_artifacts,
         paid_artifacts=price_artifacts,
     )
+    _notify_sellers_of_new_order(order)
     return order
 
 
@@ -525,6 +636,457 @@ class ShopVerificationApplicationView(views.APIView):
         return Response({'success': True, 'data': ShopVerificationApplicationSerializer(app).data,
                          'message': f'Application status updated to {new_status}.',
                          'errors': None, 'pagination': None})
+
+
+SHOP_STATION_ROLES = ('owner', 'manager')
+GYM_STATION_ROLES = ('owner', 'co_owner')
+
+
+def _resolve_station_owner(profile, shop_id=None, gym_id=None):
+    """Resolve the shop/gym a station belongs to and authorise the caller.
+
+    Returns ``(shop, gym, error_message)``. A station is a shop's or a gym's
+    business location, so writing one requires the same authority as editing
+    that shop/gym: an owner or manager for a shop, an owner or co-owner for a
+    gym. ``staff``/``trainer`` memberships and unrelated profiles get ``error``.
+
+    The error is a message rather than a boolean because the caller-facing
+    reason differs: a stranger must not learn whether the shop exists.
+    """
+    from apps.gyms.models import Gym, GymMembership
+
+    if shop_id and gym_id:
+        return None, None, 'A station belongs to a shop OR a gym, not both.'
+    if not shop_id and not gym_id:
+        return None, None, 'Name the shop or the gym this pickup station belongs to.'
+
+    if shop_id:
+        try:
+            shop = Shop.objects.get(id=shop_id)
+        except (Shop.DoesNotExist, ValueError, TypeError):
+            return None, None, 'Shop not found.'
+        if not ShopMembership.objects.filter(
+            shop=shop, profile=profile, role__in=SHOP_STATION_ROLES,
+        ).exists():
+            return None, None, 'You need to be an owner or manager of this shop to add pickup stations.'
+        return shop, None, None
+
+    try:
+        gym = Gym.objects.get(id=gym_id)
+    except (Gym.DoesNotExist, ValueError, TypeError):
+        return None, None, 'Gym not found.'
+    if not GymMembership.objects.filter(
+        gym=gym, member=profile, role__in=GYM_STATION_ROLES,
+    ).exists():
+        return None, None, 'You need to be an owner or co-owner of this gym to add pickup stations.'
+    return None, gym, None
+
+
+def _can_manage_station(profile, station):
+    """Whether ``profile`` may edit ``station`` (its owner's authority)."""
+    if station.shop_id:
+        return ShopMembership.objects.filter(
+            shop_id=station.shop_id, profile=profile, role__in=SHOP_STATION_ROLES,
+        ).exists()
+    if station.gym_id:
+        from apps.gyms.models import GymMembership
+        return GymMembership.objects.filter(
+            gym_id=station.gym_id, member=profile, role__in=GYM_STATION_ROLES,
+        ).exists()
+    return False
+
+
+def _apply_geo_params(request, queryset, lat_field='latitude', lng_field='longitude'):
+    """House-style nearby plumbing, copied from ``EventListView``.
+
+    Returns ``(queryset, geo, origin)`` where ``geo`` is the top-level block the
+    events endpoint already returns (``None`` when no coordinates were sent),
+    ``origin`` is the ``(lat, lng)`` pair used for distance (``None`` without
+    coordinates), and every returned row carries a ``distance_km`` (1 dp,
+    ``None`` when its own coordinates are missing).
+
+    Explicit ``radius_km`` always wins; without one the radius adapts to how
+    many places are close by, and the chosen radius is reported so the UI can
+    explain itself.
+    """
+    from common.geo import (
+        NEAR_RADIUS_KM, adaptive_message, bbox_deltas,
+        count_within_latlng, pick_adaptive_radius,
+    )
+
+    lat = lng = None
+    try:
+        if request.query_params.get('lat') not in (None, ''):
+            lat = float(request.query_params.get('lat'))
+        if request.query_params.get('lng') not in (None, ''):
+            lng = float(request.query_params.get('lng'))
+    except (TypeError, ValueError):
+        lat = lng = None
+
+    radius_param = request.query_params.get('radius_km', '')
+    radius_explicit = str(radius_param).strip() != ''
+    try:
+        radius_km = float(radius_param or 25)
+    except (TypeError, ValueError):
+        radius_km = 25
+        radius_explicit = False
+    radius_km = min(max(radius_km, 1), 200)
+
+    geo_auto = False
+    geo_density = None
+    geo_count_in_near = None
+    if lat is not None and lng is not None and not radius_explicit:
+        geo_count_in_near = count_within_latlng(
+            queryset, lat, lng, NEAR_RADIUS_KM, lat_field=lat_field, lng_field=lng_field,
+        )
+        radius_km, geo_density = pick_adaptive_radius(geo_count_in_near)
+        geo_auto = True
+
+    geo = None
+    origin = (lat, lng) if (lat is not None and lng is not None) else None
+    if origin is None:
+        return queryset, None, None
+
+    lat_delta, lng_delta = bbox_deltas(lat, radius_km)
+    queryset = queryset.filter(
+        **{f'{lat_field}__isnull': False, f'{lng_field}__isnull': False},
+    ).filter(
+        **{
+            f'{lat_field}__gte': lat - lat_delta, f'{lat_field}__lte': lat + lat_delta,
+            f'{lng_field}__gte': lng - lng_delta, f'{lng_field}__lte': lng + lng_delta,
+        }
+    )
+    geo = {
+        'lat': lat, 'lng': lng, 'radius_km': radius_km, 'auto': geo_auto,
+        'density': geo_density, 'count_in_near': geo_count_in_near,
+        'message': adaptive_message(radius_km, geo_density or 'sparse', geo_count_in_near or 0)
+        if geo_auto else None,
+    }
+    return queryset, geo, origin
+
+
+class PickupStationListView(views.APIView):
+    """Public list of active pickup stations + owner-gated creation.
+
+    Station data is a business location (an address a buyer has to be able to
+    find), so it is readable by anyone, authenticated or not. Nothing private
+    is exposed: no buyer, order or member data is reachable from a station row.
+    """
+
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get(self, request):
+        qs = PickupStation.objects.filter(is_active=True).select_related('shop', 'gym')
+
+        owner_type = (request.query_params.get('owner_type') or '').strip()
+        if owner_type:
+            if owner_type not in dict(PickupStation.OWNER_TYPE_CHOICES):
+                return Response({'success': False, 'data': None, 'message':
+                                 f'owner_type must be one of: '
+                                 f'{[c[0] for c in PickupStation.OWNER_TYPE_CHOICES]}.',
+                                 'errors': None, 'pagination': None}, status=400)
+            qs = qs.filter(owner_type=owner_type)
+
+        query = (request.query_params.get('q') or '').strip()
+        if query:
+            qs = qs.filter(db_models.Q(name__icontains=query) | db_models.Q(city__icontains=query))
+
+        geo_result = _apply_geo_params(request, qs)
+        qs, geo, origin = geo_result
+        qs = qs.order_by('-is_primary', '-created_at')
+
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(qs, request)
+        data = list(PickupStationSerializer(page, many=True, context={'request': request}).data)
+
+        if geo is not None:
+            lat, lng = origin
+            from common.geo import haversine_km
+            for row in data:
+                try:
+                    # DecimalField columns serialise as strings.
+                    row['distance_km'] = round(
+                        haversine_km(lat, lng, float(row['latitude']), float(row['longitude'])), 1,
+                    )
+                except (TypeError, ValueError, KeyError):
+                    # Same rule as the serializer: no measured distance means no
+                    # key, not a null one.
+                    row.pop('distance_km', None)
+            # Nearest first; rows we could not measure sink to the bottom.
+            data.sort(key=lambda r: (r.get('distance_km') is None, r.get('distance_km') or 0))
+
+        return Response({
+            'success': True, 'data': data, 'message': 'OK', 'errors': None,
+            'geo': geo,
+            'pagination': {
+                'count': paginator.page.paginator.count,
+                'next': paginator.get_next_link(),
+                'previous': paginator.get_previous_link(),
+            },
+        })
+
+    def post(self, request):
+        profile = request.user.profile
+        shop, gym, error = _resolve_station_owner(
+            profile, request.data.get('shop'), request.data.get('gym'),
+        )
+        if error:
+            return Response({'success': False, 'data': None, 'message': error,
+                             'errors': None, 'pagination': None}, status=403)
+
+        payload = {k: v for k, v in request.data.items() if k not in ('shop', 'gym', 'owner_type')}
+        payload['shop' if shop else 'gym'] = (shop or gym).id
+        serializer = PickupStationSerializer(data=payload)
+        if not serializer.is_valid():
+            return Response({'success': False, 'data': None, 'message': 'Validation failed.',
+                             'errors': serializer.errors, 'pagination': None}, status=400)
+        station = serializer.save()
+        return Response({
+            'success': True, 'data': PickupStationSerializer(station, context={'request': request}).data,
+            'message': 'Pickup station created.', 'errors': None, 'pagination': None,
+        }, status=201)
+
+
+class PickupStationDetailView(views.APIView):
+    """Read one station; owners/managers may edit it."""
+
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_object(self, request, station_id):
+        station = get_object_or_404(
+            PickupStation.objects.select_related('shop', 'gym'), id=station_id,
+        )
+        # An inactive station is only meaningful to the people who operate it;
+        # everyone else sees the same 404 a deleted one would.
+        if not station.is_active and not (
+            request.user.is_authenticated
+            and _can_manage_station(request.user.profile, station)
+        ):
+            raise Http404
+        return station
+
+    def get(self, request, station_id):
+        station = self.get_object(request, station_id)
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
+        context = {'request': request}
+        if lat not in (None, '') and lng not in (None, ''):
+            context['origin_latitude'] = lat
+            context['origin_longitude'] = lng
+        return Response({
+            'success': True, 'data': PickupStationSerializer(station, context=context).data,
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+    def patch(self, request, station_id):
+        station = self.get_object(request, station_id)
+        if not request.user.is_authenticated:
+            return Response({'success': False, 'data': None, 'message': 'Auth required.',
+                             'errors': None, 'pagination': None}, status=401)
+        if not _can_manage_station(request.user.profile, station):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'You need to be an owner/manager of the shop or owner/co-owner of the '
+                           'gym that owns this pickup station.',
+                'errors': None, 'pagination': None,
+            }, status=403)
+
+        # Re-parenting a station would silently move a public collection point
+        # (and every order pointing at it) to an owner the caller may not even
+        # control, so the owner is immutable after creation.
+        for locked in ('shop', 'gym', 'owner_type'):
+            if locked in request.data:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'A pickup station\'s {locked} cannot be changed after it is created.',
+                    'errors': None, 'pagination': None,
+                }, status=400)
+
+        serializer = PickupStationSerializer(
+            station, data=request.data, partial=True, context={'request': request},
+        )
+        if not serializer.is_valid():
+            return Response({'success': False, 'data': None, 'message': 'Validation failed.',
+                             'errors': serializer.errors, 'pagination': None}, status=400)
+        station = serializer.save()
+        return Response({
+            'success': True, 'data': PickupStationSerializer(station, context={'request': request}).data,
+            'message': 'Pickup station updated.', 'errors': None, 'pagination': None,
+        })
+
+
+def _notify_station_owners(gym=None, shop=None, title='', body='', metadata=None):
+    """Tell whoever operates the entity that it just applied to be a station.
+
+    Same fan-out shape as the shop-cert review notification (views.py above):
+    create the in-app row AND push to the owner's devices, because
+    ``create_notification`` alone never reaches a device token.
+    """
+    from apps.notifications.tasks import create_notification
+    from .tasks import _push_notification_to_profile
+    from apps.profiles.models import Profile
+
+    recipient_ids = set()
+    if shop:
+        recipient_ids.update(
+            shop.memberships.filter(role='owner').values_list('profile__user_id', flat=True),
+        )
+    if gym:
+        recipient_ids.update(
+            gym.memberships.filter(role__in=GYM_STATION_ROLES).values_list('member__user_id', flat=True),
+        )
+        # Gym has no `admin` column of its own (see the shop-cert fan-out, which
+        # guards the same access with hasattr), so nothing else to add.
+    if not recipient_ids:
+        return
+    profiles = {p.user_id: p for p in Profile.objects.filter(user_id__in=recipient_ids)}
+    for user_id, profile in profiles.items():
+        create_notification.delay(str(user_id), 'verification_update', title, body, metadata or {})
+        _push_notification_to_profile(profile, title, body, metadata or {})
+
+
+class StationApplicationView(views.APIView):
+    """A shop or gym applies to become a pickup / delivery station.
+
+    Mirrors ``ShopVerificationApplicationView.post``: one live draft per
+    applicant, ``?submit=true`` moves it to 'submitted' and tells the owners.
+    Only staff can move it past 'submitted' (see the review PATCH), so a client
+    cannot apply its way to an approved station.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+        shop, gym, error = _resolve_station_owner(
+            profile, request.data.get('shop'), request.data.get('gym'),
+        )
+        if error:
+            return Response({'success': False, 'data': None, 'message': error,
+                             'errors': None, 'pagination': None}, status=403)
+
+        owner_field = 'shop' if shop else 'gym'
+        owner = shop or gym
+        app, _ = StationApplication.objects.get_or_create(
+            **{owner_field: owner, 'status': 'draft'},
+            defaults={'submitted_by': profile},
+        )
+        if app.submitted_by_id != profile.pk:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Another user already has a draft application for this shop or gym.',
+                'errors': None, 'pagination': None,
+            }, status=403)
+
+        payload = {k: v for k, v in request.data.items() if k not in ('shop', 'gym')}
+        serializer = StationApplicationSerializer(app, data=payload, partial=True)
+        if not serializer.is_valid():
+            return Response({'success': False, 'data': None, 'message': 'Validation failed.',
+                             'errors': serializer.errors, 'pagination': None}, status=400)
+        app = serializer.save()
+
+        if str(request.query_params.get('submit', '')).lower() == 'true' or \
+                str(request.data.get('submit', '')).lower() == 'true':
+            app.status = 'submitted'
+            app.save(update_fields=['status', 'updated_at'])
+            _notify_station_owners(
+                gym=gym, shop=shop,
+                title=f'Pickup station application submitted for "{owner.name}"',
+                body='Your station application is under review. We\'ll update you soon.',
+                metadata={
+                    'application_id': str(app.id),
+                    'application_kind': 'station',
+                    'status': 'submitted',
+                    **({'shop_id': str(shop.id)} if shop else {'gym_id': str(gym.id)}),
+                },
+            )
+
+        return Response({
+            'success': True, 'data': StationApplicationSerializer(app).data,
+            'message': f'Application {app.status}.', 'errors': None, 'pagination': None,
+        }, status=201 if app.status == 'submitted' else 200)
+
+
+class DeliveryPersonnelSelfView(views.APIView):
+    """A courier registers / updates their own ``DeliveryPersonnel`` record.
+
+    Self-service only. ``profile`` is read-only on the serializer *and* checked
+    here, so a caller can never mint or rewrite another user's courier record —
+    that would be a way to appear as somebody else's courier (and, with it, to
+    receive their orders).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+        target = request.data.get('profile')
+        if target and str(target) != str(profile.pk):
+            return Response({'success': False, 'data': None,
+                             'message': 'You can only register yourself as delivery personnel.',
+                             'errors': None, 'pagination': None}, status=403)
+
+        payload = {
+            k: v for k, v in request.data.items()
+            if k in ('vehicle_type', 'service_zones', 'is_active', 'bio')
+        }
+        personnel = DeliveryPersonnel.objects.filter(profile=profile).first()
+        created = personnel is None
+        # Validate against the database only after validation passes: creating
+        # the row first would leave a half-filled courier record behind every
+        # rejected request.
+        serializer = DeliveryPersonnelSerializer(
+            personnel, data=payload, partial=not created,
+        )
+        if not serializer.is_valid():
+            return Response({'success': False, 'data': None, 'message': 'Validation failed.',
+                             'errors': serializer.errors, 'pagination': None}, status=400)
+        personnel = serializer.save(profile=profile) if created else serializer.save()
+        return Response({
+            'success': True,
+            'data': DeliveryPersonnelSerializer(personnel, context={'request': request}).data,
+            'message': 'Courier profile saved.' if created else 'Courier profile updated.',
+            'errors': None, 'pagination': None,
+        }, status=201 if created else 200)
+
+
+class DeliveryPersonnelApplicationView(views.APIView):
+    """Apply to be approved as delivery personnel (draft → submitted)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+        target = request.data.get('profile')
+        if target and str(target) != str(profile.pk):
+            return Response({'success': False, 'data': None,
+                             'message': 'You can only apply for yourself.',
+                             'errors': None, 'pagination': None}, status=403)
+
+        app, _ = DeliveryPersonnelApplication.objects.get_or_create(
+            profile=profile, status='draft',
+        )
+        payload = {
+            k: v for k, v in request.data.items()
+            if k in ('vehicle_type', 'service_zones', 'id_document_url',
+                     'licence_document_url', 'phone', 'bio', 'submit')
+        }
+        serializer = DeliveryPersonnelApplicationSerializer(app, data=payload, partial=True)
+        if not serializer.is_valid():
+            return Response({'success': False, 'data': None, 'message': 'Validation failed.',
+                             'errors': serializer.errors, 'pagination': None}, status=400)
+        app = serializer.save()
+
+        submit = (str(request.query_params.get('submit', '')).lower() == 'true'
+                  or str(request.data.get('submit', '')).lower() == 'true')
+        if submit and app.status != 'submitted':
+            app.status = 'submitted'
+            app.save(update_fields=['status', 'updated_at'])
+
+        return Response({
+            'success': True, 'data': DeliveryPersonnelApplicationSerializer(app).data,
+            'message': f'Application {app.status}.', 'errors': None, 'pagination': None,
+        }, status=201 if app.status == 'submitted' else 200)
 
 
 class PushDeviceView(views.APIView):
@@ -1996,6 +2558,37 @@ class CheckoutCartView(views.APIView):
         delivery_address = request.data.get('delivery_address') or {}
         pickup_details = request.data.get('pickup_details') or {}
 
+        payment_method = request.data.get('payment_method') or 'artifacts'
+        if payment_method not in dict(Order.PAYMENT_METHOD_CHOICES):
+            return Response({'success': False, 'data': None,
+                             'message': f'payment_method must be one of: '
+                                        f'{[c[0] for c in Order.PAYMENT_METHOD_CHOICES]}.',
+                             'errors': None, 'pagination': None}, status=400)
+        # Real money is a promise, not a settlement: nothing is deducted and
+        # nothing is provisioned until the provider confirms. Only the artifacts
+        # rail settles inside checkout (and it is unchanged below).
+        defer_settlement = payment_method != 'artifacts'
+
+        pickup_station = None
+        pickup_station_id = request.data.get('pickup_station_id')
+        if pickup_station_id:
+            try:
+                pickup_station = PickupStation.objects.get(id=pickup_station_id)
+            except (PickupStation.DoesNotExist, ValueError, TypeError):
+                return Response({'success': False, 'data': None,
+                                 'message': 'That pickup station does not exist.',
+                                 'errors': None, 'pagination': None}, status=400)
+            if not pickup_station.is_active:
+                return Response({'success': False, 'data': None,
+                                 'message': f'"{pickup_station.name}" is not an active pickup station.',
+                                 'errors': None, 'pagination': None}, status=400)
+
+        def _has_delivery_address():
+            return any(
+                str(value).strip() for key, value in (delivery_address or {}).items()
+                if key in ('line1', 'line2', 'address', 'city', 'postal_code')
+            )
+
         def _item_price(item):
             price = resolve_item_price(item)
             if item.item_type == 'meal_plan' and item.meal_plan:
@@ -2031,8 +2624,33 @@ class CheckoutCartView(views.APIView):
                 event_qty[str(ev.id)] = event_qty.get(str(ev.id), 0) + item.quantity
             if item.item_type == 'product' and item.product and item.product.stock_tracking_enabled:
                 product_qty[str(item.product.id)] = product_qty.get(str(item.product.id), 0) + item.quantity
+            if item.item_type == 'product' and item.product and fulfillment_type != 'digital':
+                # `delivery_modes` is the seller's own declaration of how this
+                # product may be handed over. It was stored but never checked, so
+                # a seller who marked a product digital-only still shipped it.
+                # An empty list means the seller never declared anything
+                # (legacy rows), which stays permissive rather than becoming an
+                # accidental checkout block.
+                modes = [str(m).strip().lower() for m in (item.product.delivery_modes or [])]
+                if modes and fulfillment_type not in modes:
+                    return Response({'success': False, 'data': None,
+                                     'message': f'"{item.product.name}" is {"/".join(modes)} only '
+                                                f'and cannot be checked out as {fulfillment_type}.',
+                                     'errors': None, 'pagination': None}, status=400)
             if not price:
                 continue
+
+        # A pickup order without a station and a delivery order without an
+        # address are unfulfillable orders: both used to be accepted and left
+        # the seller to discover the problem.
+        if fulfillment_type == 'pickup' and pickup_station is None:
+            return Response({'success': False, 'data': None,
+                             'message': 'Choose an active pickup station for this order.',
+                             'errors': None, 'pagination': None}, status=400)
+        if fulfillment_type == 'delivery' and not _has_delivery_address():
+            return Response({'success': False, 'data': None,
+                             'message': 'A delivery address is required for delivery orders.',
+                             'errors': None, 'pagination': None}, status=400)
 
         # Capacity / sold-out check per event (aggregate across cart rows)
         for event_id, qty in event_qty.items():
@@ -2120,7 +2738,10 @@ class CheckoutCartView(views.APIView):
                         discounted_artifacts[k] = discounted
 
         # ---- Phase 3: deduct buyer + record debit transactions ----
-        for at, qty in discounted_artifacts.items():
+        # Skipped entirely for mpesa/card: deducting artifacts as well would
+        # charge the buyer twice, and marking the order paid before the money
+        # lands would let them walk away with unpaid goods.
+        for at, qty in (discounted_artifacts.items() if not defer_settlement else ()):
             if qty <= 0:
                 continue
             if not deduct_artifacts(request.user.profile, at, qty):
@@ -2160,42 +2781,59 @@ class CheckoutCartView(views.APIView):
 
         # ---- Phase 4.5: persist the Order ledger ----
         spent_usd = round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in discounted_artifacts.items()), 2)
+        order_status = 'pending' if defer_settlement else 'paid'
+        status_note = (
+            'Order placed. Awaiting payment confirmation.'
+            if defer_settlement else 'Order placed and payment confirmed.'
+        )
         order = Order.objects.create(
             buyer=request.user.profile,
             fulfillment_type=fulfillment_type,
             delivery_address=delivery_address,
             pickup_details=pickup_details,
+            pickup_station=pickup_station,
             items_total_artifacts=original_artifacts,
             discount_artifacts=savings_artifacts,
             total_artifacts=discounted_artifacts,
             spent_usd=spent_usd,
             discount_code=discount,
-            status='paid',
-            paid_at=timezone.now(),
+            status=order_status,
+            payment_method=payment_method,
+            payment_status='pending' if defer_settlement else 'paid',
+            paid_at=None if defer_settlement else timezone.now(),
             status_history=[{
-                'status': 'paid',
+                'status': order_status,
                 'at': timezone.now().isoformat(),
-                'note': 'Order placed and payment confirmed.',
+                'note': status_note,
             }],
         )
         if fulfillment_type != 'digital':
             fulfillment = OrderFulfillment.objects.create(order=order)
             if fulfillment_type == 'pickup' and pickup_details.get('location'):
                 fulfillment.pickup_location = pickup_details.get('location')
+            elif fulfillment_type == 'pickup' and pickup_station:
+                fulfillment.pickup_location = pickup_station.name
             if fulfillment_type == 'delivery' and delivery_address:
                 fulfillment.notes = 'Delivery to: ' + ', '.join(
                     str(v) for k, v in delivery_address.items() if v and k != 'notes'
                 )
-            fulfillment.add_timeline_entry('paid', 'Order placed and payment confirmed.', commit=False)
+            fulfillment.add_timeline_entry(order_status, status_note, commit=False)
             fulfillment.save()
 
         # ---- Phase 5: create purchases, credit creators on post-discount price ----
+        # Provisioning (purchases, tickets, stock consumption) and every ledger
+        # movement are skipped while a real-money payment is still in flight: a
+        # ticket handed out before the charge settles is a free ticket, and a
+        # credited creator who is never paid is a hole in the ledger. The order
+        # and its line items exist, so the seller can see the demand.
         purchase_rows = []
         purchase_rows_created_tickets = []
         for t in item_totals:
             item = t['item']
             discounted_item = t.get('allocated', {})
-            if item.item_type == 'meal_plan' and item.meal_plan:
+            if defer_settlement:
+                pass  # charge in flight: provision nothing (see the comment above)
+            elif item.item_type == 'meal_plan' and item.meal_plan:
                 for _ in range(item.quantity):
                     MealPlanPurchase.objects.get_or_create(meal_plan=item.meal_plan, buyer=request.user.profile)
                 item.meal_plan.purchase_count += item.quantity
@@ -2229,7 +2867,7 @@ class CheckoutCartView(views.APIView):
                     item.product.save(update_fields=['click_count'])
 
             # Credit creator on the discounted amount
-            if t['creator'] and t['price']:
+            if not defer_settlement and t['creator'] and t['price']:
                 for at, item_total in t['artifacts'].items():
                     paid_total = discounted_item.get(at, item_total)
                     if paid_total <= 0:
@@ -2288,7 +2926,9 @@ class CheckoutCartView(views.APIView):
 
         # ---- Phase 6: record discount usage ----
         savings_usd = round(sum(ARTIFACT_VALUES.get(k, 0) * v for k, v in savings_artifacts.items()), 2)
-        if discount:
+        # A discount is only "used" once the money actually moved; burning a
+        # single-use code on an unpaid order would lock a real customer out.
+        if discount and not defer_settlement:
             DiscountUsage.objects.create(
                 discount=discount,
                 user=request.user.profile,
@@ -2312,6 +2952,11 @@ class CheckoutCartView(views.APIView):
             for created_ticket in purchase_rows_created_tickets:
                 send_ticket_confirmation.delay(str(created_ticket.id))
 
+        # Sellers learn about the sale here rather than by polling: the Order
+        # post_save signal cannot do it because line items (and therefore the
+        # seller of each) do not exist yet at that point.
+        _notify_sellers_of_new_order(order)
+
         from apps.profiles.models import Profile as _BuyerProfile
         new_balance = _BuyerProfile.objects.filter(pk=request.user.profile.pk).values_list(
             'artifact_balance', flat=True,
@@ -2319,12 +2964,18 @@ class CheckoutCartView(views.APIView):
 
         return Response({
             'success': True,
-            'message': 'Cart checkout successful. Items have been purchased!',
+            'message': ('Cart checkout successful. Items have been purchased!'
+                        if not defer_settlement else
+                        'Cart checkout successful. Complete payment to confirm your order.'),
             'data': {
                 'order_id': str(order.id),
                 'order_number': order.order_number,
                 'status': order.status,
                 'fulfillment_type': order.fulfillment_type,
+                'pickup_station_id': str(order.pickup_station_id) if order.pickup_station_id else None,
+                'payment_method': order.payment_method,
+                'payment_status': order.payment_status,
+                'payment_required': defer_settlement,
                 'items': purchase_rows,
                 'total_artifacts': discounted_artifacts,
                 'original_artifacts': original_artifacts,
@@ -2350,9 +3001,124 @@ ORDER_FORWARD_STATES = {
     'delivered': ['completed'],
 }
 
+# ---------------------------------------------------------------------------
+# Fulfillment-aware status machine
+# ---------------------------------------------------------------------------
+# The flat map above treated every order as a parcel: a `pickup` order could be
+# marked "shipped"/"out_for_delivery" and a `digital` one could be "en route",
+# neither of which means anything. Sellers (and the buyer-facing timeline) read
+# those states literally, so they are now vocabulary of the fulfillment type
+# and nothing else.
+#
+#   digital  : nothing is moved, so there is no transport. paid -> processing ->
+#              completed (cancellable at every step).
+#   pickup   : the buyer collects. ready_for_pickup / delivered only.
+#   delivery : a courier moves it. shipped / out_for_delivery / delivered.
+#
+# 'cancelled' is legal from every non-terminal state of every type, and
+# delivered -> completed is the shared close-out.
+ORDER_TRANSITIONS_BY_FULFILLMENT = {
+    'digital': {
+        'pending': ['paid', 'cancelled'],
+        'paid': ['processing', 'completed', 'cancelled'],
+        'processing': ['completed', 'cancelled'],
+    },
+    'pickup': {
+        'pending': ['paid', 'cancelled'],
+        'paid': ['processing', 'ready_for_pickup', 'delivered', 'completed', 'cancelled'],
+        'processing': ['ready_for_pickup', 'delivered', 'completed', 'cancelled'],
+        'ready_for_pickup': ['delivered', 'completed', 'cancelled'],
+        'delivered': ['completed'],
+    },
+    'delivery': {
+        'pending': ['paid', 'cancelled'],
+        'paid': ['processing', 'shipped', 'out_for_delivery', 'delivered', 'completed', 'cancelled'],
+        'processing': ['shipped', 'out_for_delivery', 'delivered', 'completed', 'cancelled'],
+        'shipped': ['out_for_delivery', 'delivered', 'cancelled'],
+        'out_for_delivery': ['delivered', 'cancelled'],
+        'delivered': ['completed'],
+    },
+}
+
+# Orders placed before fulfillment_type was meaningful default to 'digital'
+# while sitting in a transport state (the old flat map let that happen). Those
+# rows must still be closeable, so from a *current* state that the order's own
+# fulfillment does not define, the generic transport chain is also allowed.
+# Entering such a state from a legal one is still rejected — that is the case
+# this table exists to catch.
+_LEGACY_TRANSPORT_CHAIN = ['out_for_delivery', 'delivered', 'completed', 'cancelled']
+
+# Closed states. Nothing follows them — the legacy widening below must never
+# resurrect a transition out of a cancelled or completed order.
+_ORDER_TERMINAL_STATES = ('cancelled', 'completed')
+
+
+def allowed_order_transitions(order):
+    """Statuses ``order`` may move to, given its fulfillment type."""
+    if order.status in _ORDER_TERMINAL_STATES:
+        return []
+    table = ORDER_TRANSITIONS_BY_FULFILLMENT.get(
+        getattr(order, 'fulfillment_type', None) or 'digital',
+        ORDER_TRANSITIONS_BY_FULFILLMENT['digital'],
+    )
+    if order.status in table:
+        return table[order.status]
+    # The order sits in a state its own fulfillment does not define (see
+    # _LEGACY_TRANSPORT_CHAIN), so fall back to the old flat map widened by the
+    # transport chain, purely so the order can still be closed out.
+    return list(dict.fromkeys(ORDER_FORWARD_STATES.get(order.status, []) + _LEGACY_TRANSPORT_CHAIN))
+
 
 def _is_order_seller(order, profile):
     return order.items.filter(creator=profile).exists()
+
+
+def _assign_delivery_personnel(order, profile, personnel_id):
+    """Assign (or clear) the courier on an order. Returns an error message or None.
+
+    Only a seller of *this* order may assign: the buyer picking their own
+    courier would let them redirect a parcel, and a random third party could
+    attach themselves to someone else's delivery.
+
+    An inactive courier is rejected rather than accepted-and-ignored. They can
+    also be one with no approved application behind them — ``is_active`` is the
+    availability flag, and an inactive one is not available, full stop.
+    """
+    if personnel_id in (None, '', 'null'):
+        order.delivery_personnel = None
+        order.save(update_fields=['delivery_personnel', 'updated_at'])
+        return None
+
+    try:
+        personnel = DeliveryPersonnel.objects.select_related('profile').get(id=personnel_id)
+    except (DeliveryPersonnel.DoesNotExist, ValueError, TypeError):
+        return 'That courier does not exist.'
+    if not personnel.is_active:
+        return (
+            f'{personnel.profile.display_name or personnel.profile.username} is not an active '
+            'courier and cannot be assigned to an order.'
+        )
+    order.delivery_personnel = personnel
+    order.save(update_fields=['delivery_personnel', 'updated_at'])
+    return None
+
+
+def _assign_pickup_station(order, profile, station_id):
+    """Assign (or clear) the pickup station on an order."""
+    if station_id in (None, '', 'null'):
+        order.pickup_station = None
+        order.save(update_fields=['pickup_station', 'updated_at'])
+        return None
+
+    try:
+        station = PickupStation.objects.get(id=station_id)
+    except (PickupStation.DoesNotExist, ValueError, TypeError):
+        return 'That pickup station does not exist.'
+    if not station.is_active:
+        return f'"{station.name}" is not an active pickup station.'
+    order.pickup_station = station
+    order.save(update_fields=['pickup_station', 'updated_at'])
+    return None
 
 
 def _apply_fulfillment_status(order, fulfillment, new_status, note=''):
@@ -2394,19 +3160,54 @@ class OrderListView(views.APIView):
 
 
 class SellerOrdersView(views.APIView):
+    """Orders the caller sells in, scoped to the caller's own line items.
+
+    Every seller of an order used to receive the *whole* order: all of the other
+    sellers' line items (titles, unit prices, what they were paid) and the
+    order-wide totals that are the sum of everyone's revenue. Both are
+    narrowed here — see ``SellerOrderSerializer``. What stays is what a seller
+    genuinely needs to fulfil: their own items, the order status, and the
+    buyer's delivery address for the parcel they are shipping.
+    """
+
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         profile = request.user.profile
-        item_ids = OrderItem.objects.filter(creator=profile).values_list('order_id', flat=True).distinct()
-        qs = Order.objects.filter(id__in=item_ids).prefetch_related('items')
+        seller_items = OrderItem.objects.filter(creator=profile)
+        qs = (
+            Order.objects.filter(items__in=seller_items)
+            .prefetch_related(
+                # Only the caller's rows are materialised, so the serializer
+                # cannot leak another seller's item even by accident.
+                db_models.Prefetch('items', queryset=seller_items),
+            )
+            .select_related('discount_code')
+            .distinct()
+        )
         status_filter = request.query_params.get('status', '')
         if status_filter:
             qs = qs.filter(status=status_filter)
+        fulfillment_filter = request.query_params.get('fulfillment_type', '')
+        if fulfillment_filter:
+            if fulfillment_filter not in dict(Order.FULFILLMENT_CHOICES):
+                return Response({'success': False, 'data': None,
+                                 'message': f'fulfillment_type must be one of: '
+                                            f'{[c[0] for c in Order.FULFILLMENT_CHOICES]}.',
+                                 'errors': None, 'pagination': None}, status=400)
+            qs = qs.filter(fulfillment_type=fulfillment_filter)
+        payment_filter = request.query_params.get('payment_status', '')
+        if payment_filter:
+            if payment_filter not in dict(Order.PAYMENT_STATUS_CHOICES):
+                return Response({'success': False, 'data': None,
+                                 'message': f'payment_status must be one of: '
+                                            f'{[c[0] for c in Order.PAYMENT_STATUS_CHOICES]}.',
+                                 'errors': None, 'pagination': None}, status=400)
+            qs = qs.filter(payment_status=payment_filter)
         qs = qs.order_by('-created_at')
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs, request)
-        serializer = OrderSerializer(page, many=True, context={'request': request, 'viewer': profile})
+        serializer = SellerOrderSerializer(page, many=True, context={'request': request, 'viewer': profile})
         return Response({
             'success': True, 'data': serializer.data, 'message': 'OK', 'errors': None,
             'pagination': {
@@ -2415,6 +3216,268 @@ class SellerOrdersView(views.APIView):
                 'previous': paginator.get_previous_link(),
             },
         })
+
+
+def _order_delivery_coords(order, request=None):
+    """Coordinates the order is being delivered to, if the buyer supplied any.
+
+    Read from ``Order.delivery_address`` (latitude/longitude or lat/lng), with
+    explicit ``?lat=&lng=`` query parameters winning so a seller can check
+    "how far is this from where I am" without editing the order.
+    """
+    if request is not None:
+        raw_lat = request.query_params.get('lat')
+        raw_lng = request.query_params.get('lng')
+        if raw_lat not in (None, '') and raw_lng not in (None, ''):
+            try:
+                return float(raw_lat), float(raw_lng)
+            except (TypeError, ValueError):
+                pass
+    address = order.delivery_address or {}
+    raw_lat = address.get('latitude', address.get('lat'))
+    raw_lng = address.get('longitude', address.get('lng'))
+    if raw_lat in (None, '') or raw_lng in (None, ''):
+        return None
+    try:
+        return float(raw_lat), float(raw_lng)
+    except (TypeError, ValueError):
+        return None
+
+
+class OrderCourierListView(views.APIView):
+    """The couriers a seller may assign to one of their orders.
+
+    There is no order weight, size or "needs a motorbike" field anywhere on the
+    order, so this endpoint deliberately does NOT pretend to fit vehicles to
+    orders: it returns every active courier, summarised by vehicle type, and
+    lets the seller choose. Inventing a compatibility rule from nothing would
+    hide couriers a seller legitimately wants.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, order_id):
+        profile = request.user.profile
+        order = get_object_or_404(Order, id=order_id)
+        if not _is_order_seller(order, profile):
+            return Response({'success': False, 'data': None, 'message': 'Permission denied.',
+                             'errors': None, 'pagination': None}, status=403)
+
+        couriers = list(
+            DeliveryPersonnel.objects.filter(is_active=True)
+            .select_related('profile', 'profile__search_profile')
+            .order_by('vehicle_type', 'id')
+        )
+        origin = _order_delivery_coords(order, request)
+        data = DeliveryPersonnelSerializer(couriers, many=True, context={'request': request}).data
+        for row, courier in zip(data, couriers):
+            row.pop('distance_km', None)
+            if origin is None:
+                continue
+            # DeliveryPersonnel stores no coordinates, so the only place a
+            # courier can have one is their opt-in buddy search profile — which
+            # is documented as radius-only and never exposed for other users.
+            # It is honoured here only when that profile is not incognito, and
+            # only as a distance (never as coordinates). Otherwise the seller
+            # gets no distance and picks on service zones instead.
+            search = getattr(courier.profile, 'search_profile', None)
+            if (search is None or search.visibility == 'incognito'
+                    or search.latitude is None or search.longitude is None):
+                continue
+            try:
+                lat, lng = origin
+                from common.geo import haversine_km
+                row['distance_km'] = round(
+                    haversine_km(lat, lng, float(search.latitude), float(search.longitude)), 1,
+                )
+            except (TypeError, ValueError):
+                continue
+
+        by_vehicle = {}
+        for row in data:
+            entry = by_vehicle.setdefault(row['vehicle_type'], {
+                'vehicle_type': row['vehicle_type'],
+                'vehicle_label': row['vehicle_label'],
+                'count': 0, 'couriers': [],
+            })
+            entry['count'] += 1
+            entry['couriers'].append(row)
+
+        return Response({
+            'success': True,
+            'data': {
+                'order_id': str(order.id),
+                'order_number': order.order_number,
+                'fulfillment_type': order.fulfillment_type,
+                'delivery_personnel': str(order.delivery_personnel_id) if order.delivery_personnel_id else None,
+                'origin': {'lat': origin[0], 'lng': origin[1]} if origin else None,
+                'couriers': data,
+                'by_vehicle': list(by_vehicle.values()),
+            },
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+
+class OrderPaymentIntentView(views.APIView):
+    """Start a real-money (M-Pesa / card) payment for one of your orders.
+
+    Safe without live provider credentials: when the Flutterwave keys are absent
+    the intent is recorded as ``initiated``, the provider is NOT called, and the
+    response says the rail is not configured. Checkout therefore degrades to the
+    artifacts rail instead of 500-ing on a half-configured deployment.
+
+    The order is only ever moved to ``payment_status='pending'`` here. Nothing
+    in this app marks an order ``paid`` from a client request; that requires a
+    provider confirmation, and the existing ``FlutterwaveWebhookView`` still only
+    resolves wallet top-ups, so an order payment is confirmed out of band for
+    now (see ``PaymentIntent``'s docstring).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = PaymentIntentCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response({'success': False, 'data': None, 'message': 'Validation failed.',
+                             'errors': serializer.errors, 'pagination': None}, status=400)
+        data = serializer.data
+        order = get_object_or_404(Order, id=data['order_id'])
+        if order.buyer != request.user.profile:
+            return Response({'success': False, 'data': None,
+                             'message': 'Only the buyer can pay for this order.',
+                             'errors': None, 'pagination': None}, status=403)
+        if order.payment_status in ('paid', 'refunded'):
+            return Response({'success': False, 'data': None,
+                             'message': f'Order #{order.order_number} is already '
+                                        f'{order.payment_status}.',
+                             'errors': None, 'pagination': None}, status=400)
+
+        amount = order.spent_usd or 0
+        if amount <= 0:
+            return Response({'success': False, 'data': None,
+                             'message': 'This order has no fiat amount to charge. Pay with artifacts.',
+                             'errors': None, 'pagination': None}, status=400)
+
+        secret = getattr(settings, 'FLUTTERWAVE_SECRET_KEY', '')
+        public = getattr(settings, 'FLUTTERWAVE_PUBLIC_KEY', '')
+        method = data['method']
+        rail_configured = bool(secret and public)
+
+        tx_ref = f'pi-{uuid4().hex[:12]}'
+        intent = PaymentIntent.objects.create(
+            order=order,
+            method=method,
+            amount=amount,
+            currency='KES' if method == 'mpesa' else 'USD',
+            # We send this reference to the provider and Flutterwave echoes it
+            # back on the webhook, so it is the handle a future confirmation
+            # path resolves the intent by.
+            provider_reference=tx_ref,
+            status='initiated',
+            created_by=request.user.profile,
+        )
+
+        if not rail_configured:
+            intent.raw_response = {'skipped': 'provider_not_configured'}
+            intent.save(update_fields=['raw_response', 'updated_at'])
+            order.payment_method = method
+            order.payment_provider = ''
+            order.save(update_fields=['payment_method', 'payment_provider', 'updated_at'])
+            return Response({
+                'success': True,
+                'data': {
+                    'intent': PaymentIntentSerializer(intent).data,
+                    'rail_configured': False,
+                },
+                'message': f'{method.upper()} is not configured on this deployment, so no charge '
+                           'was started. Pay with artifacts instead.',
+                'errors': None, 'pagination': None,
+            }, status=201)
+
+        from apps.wallet.flutterwave import FlutterwaveClient
+
+        fw = FlutterwaveClient()
+        card_fields = (data.get('card_number'), data.get('cvv'),
+                       data.get('expiry_month'), data.get('expiry_year'))
+
+        if method == 'mpesa':
+            resp = fw.mpesa_stk_push(data.get('phone'), float(amount), tx_ref, request.user.email)
+        elif all(card_fields):
+            resp = fw.charge_card(
+                data['card_number'], data['cvv'], data['expiry_month'], data['expiry_year'],
+                float(amount), tx_ref, request.user.email, request.user.profile.display_name,
+            )
+        else:
+            # Hosted checkout: the PAN never reaches this service. Same posture
+            # as the wallet top-up card path.
+            resp = None
+
+        if resp is None:
+            intent.status = 'awaiting_confirmation'
+            intent.raw_response = {'mode': 'hosted_checkout', 'public_key': public}
+            intent.save(update_fields=['status', 'raw_response', 'updated_at'])
+            order.payment_method = 'card'
+            order.payment_provider = 'flutterwave'
+            order.payment_status = 'pending'
+            order.payment_reference = tx_ref
+            order.save(update_fields=['payment_method', 'payment_provider',
+                                      'payment_status', 'payment_reference', 'updated_at'])
+            return Response({
+                'success': True,
+                'data': {
+                    'intent': PaymentIntentSerializer(intent).data,
+                    'tx_ref': tx_ref,
+                    'public_key': public,
+                    'amount': str(amount),
+                    'currency': 'USD',
+                    'customer_email': request.user.email,
+                    'customer_name': request.user.profile.display_name,
+                },
+                'message': 'Card payment initialised. Complete via Flutterwave checkout.',
+                'errors': None, 'pagination': None,
+            }, status=201)
+
+        intent.status = 'awaiting_confirmation' if (resp.success or resp.status == 'pending') else 'failed'
+        # Only the reference we sent is trusted for lookups; the provider's own
+        # id is kept in raw_response for support, not as the binding key.
+        intent.raw_response = resp.data if resp.data else {'error': resp.message}
+        intent.save(update_fields=['status', 'raw_response', 'updated_at'])
+
+        if intent.status == 'failed':
+            return Response({'success': False, 'data': None,
+                             'message': resp.message or 'Payment could not be started.',
+                             'errors': None, 'pagination': None}, status=402)
+
+        order.payment_method = method
+        order.payment_provider = 'flutterwave'
+        order.payment_status = 'pending'
+        order.payment_reference = tx_ref
+        order.save(update_fields=['payment_method', 'payment_provider',
+                                  'payment_status', 'payment_reference', 'updated_at'])
+
+        return Response({
+            'success': True,
+            'data': {
+                'intent': PaymentIntentSerializer(intent).data,
+                'tx_ref': tx_ref,
+                'status': resp.status,
+            },
+            'message': 'M-Pesa payment prompt sent. Complete on your phone.' if method == 'mpesa'
+                       else 'Card payment started.',
+            'errors': None, 'pagination': None,
+        }, status=201)
+
+
+def _order_serializer_for(order, profile, request):
+    """Pick the order representation the viewer is entitled to.
+
+    The buyer sees their whole order. A seller sees the same shape but scoped
+    to their own lines (``SellerOrderSerializer``) — the same narrowing
+    ``SellerOrdersView`` applies, so the detail endpoint is not a way around it.
+    """
+    if order.buyer_id != profile.pk and _is_order_seller(order, profile):
+        return SellerOrderSerializer(order, context={'request': request, 'viewer': profile})
+    return OrderSerializer(order, context={'request': request, 'viewer': profile})
 
 
 class OrderDetailView(views.APIView):
@@ -2430,13 +3493,19 @@ class OrderDetailView(views.APIView):
         if order.buyer != profile and not _is_order_seller(order, profile):
             return Response({'success': False, 'data': None, 'message': 'Permission denied.',
                              'errors': None, 'pagination': None}, status=403)
-        serializer = OrderSerializer(order, context={'request': request, 'viewer': profile})
+        serializer = _order_serializer_for(order, profile, request)
         return Response({'success': True, 'data': serializer.data, 'message': 'OK',
                          'errors': None, 'pagination': None})
 
 
 class OrderFulfillmentView(views.APIView):
-    """Sellers update shipping/pickup/delivery tracking on their orders."""
+    """Sellers update shipping/pickup/delivery tracking on their orders.
+
+    Also the single place an order status change notifies anyone (see
+    ``_notify_order_status_change``): the buyer and every seller hear about it
+    once, with a device push each.
+    """
+
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, order_id):
@@ -2446,7 +3515,7 @@ class OrderFulfillmentView(views.APIView):
             return Response({'success': False, 'message': 'Order not found.'}, status=404)
         if order.buyer != request.user.profile and not _is_order_seller(order, request.user.profile):
             return Response({'success': False, 'message': 'Permission denied.'}, status=403)
-        fulfillment = order.fulfillment
+        fulfillment, _ = OrderFulfillment.objects.get_or_create(order=order)
         return Response({'success': True, 'data': OrderFulfillmentSerializer(fulfillment).data})
 
     @transaction.atomic
@@ -2461,7 +3530,7 @@ class OrderFulfillmentView(views.APIView):
         if not is_seller and not is_buyer:
             return Response({'success': False, 'message': 'Permission denied.'}, status=403)
 
-        fulfillment = order.fulfillment
+        fulfillment, _ = OrderFulfillment.objects.get_or_create(order=order)
         new_status = request.data.get('status')
         note = request.data.get('note', '')
 
@@ -2475,8 +3544,9 @@ class OrderFulfillmentView(views.APIView):
             _apply_fulfillment_status(order, fulfillment, 'delivered', note or 'Confirmed by buyer')
             fulfillment.save()
             order.refresh_from_db()
+            _notify_order_status_change(order, 'delivered')
             return Response({'success': True,
-                             'data': OrderSerializer(order, context={'request': request, 'viewer': profile}).data})
+                             'data': _order_serializer_for(order, profile, request).data})
 
         if carrier := request.data.get('carrier'):
             fulfillment.carrier = carrier
@@ -2491,24 +3561,45 @@ class OrderFulfillmentView(views.APIView):
         if notes is not None:
             fulfillment.notes = notes
 
-        if new_status and new_status != order.status:
-            if new_status not in ORDER_FORWARD_STATES.get(order.status, []):
-                return Response({'success': False, 'message': f'Cannot move order from {order.status} to {new_status}.'}, status=400)
+        # ---- Reject an illegal transition before anything is written ----
+        # The assignment helpers below each save the order immediately, and a
+        # returned Response does not roll back the surrounding atomic block, so
+        # validating after them would let a rejected transition half-apply the
+        # courier/station change it was sent alongside.
+        previous_status = order.status
+        changing_status = bool(new_status) and new_status != previous_status
+        if changing_status and new_status not in allowed_order_transitions(order):
+            return Response({'success': False, 'message': (
+                f'Cannot move order from {order.status} to {new_status}: '
+                f'{new_status} is not a valid status for a '
+                f'{order.fulfillment_type} order.'
+            )}, status=400)
+
+        # ---- Physical logistics assignment (sellers only) ----
+        if 'delivery_personnel_id' in request.data:
+            error = _assign_delivery_personnel(order, profile, request.data.get('delivery_personnel_id'))
+            if error:
+                return Response({'success': False, 'message': error}, status=400)
+        if 'pickup_station_id' in request.data:
+            error = _assign_pickup_station(order, profile, request.data.get('pickup_station_id'))
+            if error:
+                return Response({'success': False, 'message': error}, status=400)
+
+        if changing_status:
             _apply_fulfillment_status(order, fulfillment, new_status, note)
         fulfillment.save()
         order.refresh_from_db()
 
-        if new_status in ('shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered'):
-            from apps.notifications.tasks import create_notification
-            from .tasks import _push_notification_to_profile
-            message = f'Your order {order.order_number} is now {dict(Order.STATUS_CHOICES).get(new_status, new_status)}.'
-            create_notification.delay(
-                str(order.buyer.user_id), 'new_purchase', 'Order update', message,
-                {'order_id': str(order.id), 'order_number': order.order_number, 'status': new_status},
-            )
-            _push_notification_to_profile(order.buyer, 'Order update', message)
+        # Notify once per real transition. Previously this fired on the four
+        # "en route" statuses only, while the post_save signal covered the rest
+        # — which is exactly how the buyer ended up with two rows per change.
+        if changing_status:
+            _notify_order_status_change(order, new_status)
 
-        return Response({'success': True, 'data': OrderSerializer(order, context={'request': request, 'viewer': profile}).data})
+        return Response({
+            'success': True,
+            'data': _order_serializer_for(order, profile, request).data,
+        })
 
 
 class OrderCaseView(views.APIView):

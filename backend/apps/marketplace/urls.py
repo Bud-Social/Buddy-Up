@@ -59,6 +59,14 @@ urlpatterns = [
     path('cart/checkout/', views.CheckoutCartView.as_view(), name='cart_checkout'),
     path('cart/discount/', views.DiscountCodeView.as_view(), name='cart_discount'),
 
+    # --- Fulfillment logistics ---
+    path('stations/', views.PickupStationListView.as_view(), name='stations'),
+    path('stations/<uuid:station_id>/', views.PickupStationDetailView.as_view(), name='station_detail'),
+    path('station-applications/', views.StationApplicationView.as_view(), name='station_applications'),
+    path('delivery-personnel/', views.DeliveryPersonnelSelfView.as_view(), name='delivery_personnel'),
+    path('delivery-personnel-applications/', views.DeliveryPersonnelApplicationView.as_view(),
+         name='delivery_personnel_applications'),
+
     # --- Orders & Tracking ---
     path('orders/', views.OrderListView.as_view(), name='orders'),
     path('orders/seller/', views.SellerOrdersView.as_view(), name='seller_orders'),
@@ -66,7 +74,13 @@ urlpatterns = [
     path('orders/<uuid:order_id>/', views.OrderDetailView.as_view(), name='order_detail'),
     path('orders/<uuid:order_id>/fulfillment/', views.OrderFulfillmentView.as_view(), name='order_fulfillment'),
     path('orders/<uuid:order_id>/status/', views.OrderFulfillmentView.as_view(), name='order_status'),
+    path('orders/<uuid:order_id>/couriers/', views.OrderCourierListView.as_view(), name='order_couriers'),
+    # Same view under the seller-namespaced path some clients were built against.
+    # Harmless duplicate: the <uuid:...> converter above cannot match 'seller'.
+    path('orders/seller/<uuid:order_id>/couriers/', views.OrderCourierListView.as_view(),
+         name='seller_order_couriers'),
     path('orders/<uuid:order_id>/cases/', views.OrderCaseView.as_view(), name='order_cases'),
+    path('orders/payment-intents/', views.OrderPaymentIntentView.as_view(), name='order_payment_intents'),
     path('creator/payout-setup/', views.CreatorPayoutSetupView.as_view(), name='creator_payout_setup'),
 
     # --- Discount Codes ---

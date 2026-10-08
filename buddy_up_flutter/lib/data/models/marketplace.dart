@@ -3,12 +3,31 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'marketplace.freezed.dart';
 part 'marketplace.g.dart';
 
+/// Backend speaks snake_case (plain DRF JSONRenderer). Geo columns and money
+/// columns are `DecimalField`s, so they serialise as strings — parse them
+/// leniently instead of casting.
+/// A `DecimalField` arrives as a string and is rendered as-is. Converting it
+/// through a double would silently reformat "25.00" as "25.0", which is a
+/// cosmetic lie about money, so this only normalises a num into text.
+String? _optNum(dynamic v) {
+  if (v == null) return null;
+  return v is String ? v : v.toString();
+}
+
+double? _optDouble(dynamic v) {
+  if (v == null) return null;
+  if (v is num) return v.toDouble();
+  return double.tryParse(v.toString());
+}
+
 @freezed
 abstract class CreatorData with _$CreatorData {
   const factory CreatorData({
     required String username,
-    required String displayName,
-    @JsonKey(name: 'avatar_url') required String avatarUrl,
+    @JsonKey(name: 'display_name') @Default('') String displayName,
+    // `Profile.avatar_url` is nullable and the serializer passes it straight
+    // through, so an avatar-less creator must not make the row unparseable.
+    @JsonKey(name: 'avatar_url') @Default('') String avatarUrl,
     @JsonKey(name: 'verification_status') @Default('') String verificationStatus,
   }) = _CreatorData;
 
@@ -16,13 +35,17 @@ abstract class CreatorData with _$CreatorData {
       _$CreatorDataFromJson(json);
 }
 
+/// A shop row. Every member past `id` is optional on purpose: the marketplace
+/// serializers embed a shop as a four-key `shop_data` block on a meal plan,
+/// programme, product or event, and a model that demanded the full
+/// `ShopDetailSerializer` shape made every shop-owned cart row unparseable.
 @freezed
 abstract class Shop with _$Shop {
   const factory Shop({
     required String id,
-    required String handle,
-    required String name,
-    required String description,
+    @Default('') String handle,
+    @Default('') String name,
+    @Default('') String description,
     @JsonKey(name: 'logo_url') String? logoUrl,
     @JsonKey(name: 'banner_url') String? bannerUrl,
     @JsonKey(name: 'accent_color') @Default('#6366f1') String accentColor,
@@ -33,7 +56,7 @@ abstract class Shop with _$Shop {
     @Default('') String category,
     @JsonKey(name: 'verification_status') @Default('unverified') String verificationStatus,
     @JsonKey(name: 'is_active') @Default(true) bool isActive,
-    @JsonKey(name: 'created_at') required String createdAt,
+    @JsonKey(name: 'created_at') @Default('') String createdAt,
   }) = _Shop;
 
   factory Shop.fromJson(Map<String, dynamic> json) => _$ShopFromJson(json);
@@ -88,7 +111,10 @@ abstract class MealPlan with _$MealPlan {
     @JsonKey(name: 'creator_id') required String creatorId,
     required String title,
     required String description,
-    @JsonKey(name: 'cover_image_url') required String coverImageUrl,
+    // `MealPlanSerializer` exposes the image as `cover`, so a row from a list endpoint
+    // carries no `cover_image_url`. Default it rather than making the whole object
+    // unparseable over a missing thumbnail.
+    @JsonKey(name: 'cover_image_url') @Default('') String coverImageUrl,
     @JsonKey(name: 'diet_type') required String dietType,
     @JsonKey(name: 'duration_weeks') required int durationWeeks,
     @JsonKey(name: 'calorie_range') required String calorieRange,
@@ -132,7 +158,8 @@ abstract class TrainingProgramme with _$TrainingProgramme {
     @JsonKey(name: 'creator_id') required String creatorId,
     required String title,
     required String description,
-    @JsonKey(name: 'cover_image_url') required String coverImageUrl,
+    // Same story as `MealPlan.coverImageUrl`: the list serializer sends `cover`.
+    @JsonKey(name: 'cover_image_url') @Default('') String coverImageUrl,
     required String category,
     @JsonKey(name: 'duration_weeks') required int durationWeeks,
     @JsonKey(name: 'price_artifacts') required Map<String, int> priceArtifacts,
@@ -195,7 +222,8 @@ abstract class GymData with _$GymData {
     required String id,
     required String name,
     required String handle,
-    @JsonKey(name: 'logo_url') required String logoUrl,
+    // Nullable in the serializer, and only present when the gym has one.
+    @JsonKey(name: 'logo_url') @Default('') String logoUrl,
   }) = _GymData;
 
   factory GymData.fromJson(Map<String, dynamic> json) =>
@@ -289,11 +317,13 @@ abstract class CartItem with _$CartItem {
   const factory CartItem({
     required String id,
     @JsonKey(name: 'item_type') required String itemType,
-    @JsonKey(name: 'meal_plan') MealPlan? mealPlan,
-    TrainingProgramme? programme,
-    @JsonKey(name: 'product')
-    MarketplaceProduct? product,
-    MarketplaceEvent? event,
+    // `*_detail` is the serialised object; the bare `meal_plan` / `product` /
+    // `event` keys next to it are foreign-key UUIDs. Reading the detail key is
+    // the only way to get a title or a `delivery_modes` list out of a cart row.
+    @JsonKey(name: 'meal_plan_detail') MealPlan? mealPlan,
+    @JsonKey(name: 'programme_detail') TrainingProgramme? programme,
+    @JsonKey(name: 'product_detail') MarketplaceProduct? product,
+    @JsonKey(name: 'event_detail') MarketplaceEvent? event,
     @Default(1) int quantity,
     @JsonKey(name: 'item_total_artifacts') @Default(<String, int>{}) Map<String, int> itemTotalArtifacts,
     @JsonKey(name: 'item_total_usd') @Default(0.0) double itemTotalUsd,
@@ -645,14 +675,292 @@ abstract class Order with _$Order {
     @JsonKey(name: 'total_artifacts') @Default(<String, int>{}) Map<String, int> totalArtifacts,
     @JsonKey(name: 'discount_artifacts') @Default(<String, int>{}) Map<String, int> discountArtifacts,
     @Default(0.0) double spentUsd,
+    @JsonKey(name: 'total_usd') @Default(0.0) double totalUsd,
     @JsonKey(name: 'discount_code') String? discountCode,
     @JsonKey(name: 'status_history') @Default(<OrderTimelineEntry>[]) List<OrderTimelineEntry> statusHistory,
     @Default(<OrderItem>[]) List<OrderItem> items,
     OrderFulfillment? fulfillment,
+    @JsonKey(name: 'pickup_station') String? pickupStation,
+    @JsonKey(name: 'delivery_personnel') String? deliveryPersonnel,
+    @JsonKey(name: 'payment_method') String? paymentMethod,
+    @JsonKey(name: 'payment_status') @Default('unpaid') String paymentStatus,
+    @JsonKey(name: 'payment_reference') String? paymentReference,
+    @JsonKey(name: 'payment_provider') String? paymentProvider,
     @JsonKey(name: 'is_seller') @Default(false) bool isSeller,
     @JsonKey(name: 'paid_at') String? paidAt,
     @JsonKey(name: 'created_at') String? createdAt,
   }) = _Order;
 
   factory Order.fromJson(Map<String, dynamic> json) => _$OrderFromJson(json);
+}
+
+// ---------------------------------------------------------------------------
+// Fulfillment logistics: pickup stations, couriers, applications
+// ---------------------------------------------------------------------------
+
+/// A collection point a buyer can pick a `pickup` order up from.
+///
+/// `distanceKm` is present ONLY when the list was called with both `lat` and
+/// `lng` — the server never infers a buyer's location. See
+/// `features/marketplace/utils/stations.dart` for the degraded-path helpers.
+@freezed
+abstract class PickupStation with _$PickupStation {
+  const factory PickupStation({
+    required String id,
+    @Default('') String name,
+    String? description,
+    String? address,
+    String? city,
+    String? country,
+    @JsonKey(fromJson: _optDouble) double? latitude,
+    @JsonKey(fromJson: _optDouble) double? longitude,
+    @JsonKey(name: 'opening_hours') @Default(<String, dynamic>{}) Map<String, dynamic> openingHours,
+    String? phone,
+    String? instructions,
+    @JsonKey(name: 'is_primary') @Default(false) bool isPrimary,
+    @JsonKey(name: 'is_active') @Default(true) bool isActive,
+    @JsonKey(name: 'owner_type') @Default('') String ownerType,
+    @JsonKey(name: 'owner_name') String? ownerName,
+    @JsonKey(name: 'distance_km', fromJson: _optDouble) double? distanceKm,
+    String? shop,
+    String? gym,
+    @JsonKey(name: 'created_at') String? createdAt,
+  }) = _PickupStation;
+
+  factory PickupStation.fromJson(Map<String, dynamic> json) =>
+      _$PickupStationFromJson(json);
+}
+
+/// One courier a seller may assign to one of their orders
+/// (`GET /marketplace/orders/seller/<id>/couriers/`).
+///
+/// The endpoint returns *every* active courier summarised by vehicle type — it
+/// deliberately does not try to fit vehicles to orders — so the seller picks.
+/// `distanceKm` is null unless the courier shares a non-incognito search
+/// profile AND the order carries coordinates.
+@freezed
+abstract class OrderCourier with _$OrderCourier {
+  const factory OrderCourier({
+    required String id,
+    @JsonKey(name: 'profile') String? profile,
+    @JsonKey(name: 'username') @Default('') String username,
+    @JsonKey(name: 'display_name') @Default('') String displayName,
+    @JsonKey(name: 'avatar_url') String? avatarUrl,
+    @JsonKey(name: 'vehicle_type') @Default('bike') String vehicleType,
+    @JsonKey(name: 'vehicle_label') @Default('') String vehicleLabel,
+    @JsonKey(name: 'service_zones') @Default(<String>[]) List<String> serviceZones,
+    @JsonKey(name: 'is_active') @Default(true) bool isActive,
+    @JsonKey(name: 'rating', fromJson: _optDouble) double? rating,
+    @JsonKey(name: 'distance_km', fromJson: _optDouble) double? distanceKm,
+    @JsonKey(name: 'bio') @Default('') String bio,
+  }) = _OrderCourier;
+
+  factory OrderCourier.fromJson(Map<String, dynamic> json) =>
+      _$OrderCourierFromJson(json);
+}
+
+@freezed
+abstract class OrderCourierGroup with _$OrderCourierGroup {
+  const factory OrderCourierGroup({
+    @JsonKey(name: 'vehicle_type') @Default('') String vehicleType,
+    @JsonKey(name: 'vehicle_label') @Default('') String vehicleLabel,
+    @Default(0) int count,
+    @Default(<OrderCourier>[]) List<OrderCourier> couriers,
+  }) = _OrderCourierGroup;
+
+  factory OrderCourierGroup.fromJson(Map<String, dynamic> json) =>
+      _$OrderCourierGroupFromJson(json);
+}
+
+@freezed
+abstract class OrderCourierList with _$OrderCourierList {
+  const factory OrderCourierList({
+    @JsonKey(name: 'order_id') @Default('') String orderId,
+    @JsonKey(name: 'order_number') @Default('') String orderNumber,
+    @JsonKey(name: 'fulfillment_type') @Default('digital') String fulfillmentType,
+    @JsonKey(name: 'delivery_personnel') String? deliveryPersonnel,
+    Map<String, dynamic>? origin,
+    @Default(<OrderCourier>[]) List<OrderCourier> couriers,
+    @JsonKey(name: 'by_vehicle') @Default(<OrderCourierGroup>[]) List<OrderCourierGroup> byVehicle,
+  }) = _OrderCourierList;
+
+  factory OrderCourierList.fromJson(Map<String, dynamic> json) =>
+      _$OrderCourierListFromJson(json);
+}
+
+/// A user's own courier record (`POST /marketplace/delivery-personnel/`).
+///
+/// Created by the self-registration endpoint, but in practice an approved
+/// application creates it — which is why this is the same shape the seller
+/// courier picker reads.
+@freezed
+abstract class DeliveryPersonnel with _$DeliveryPersonnel {
+  const factory DeliveryPersonnel({
+    required String id,
+    @JsonKey(name: 'profile') String? profile,
+    @JsonKey(name: 'username') @Default('') String username,
+    @JsonKey(name: 'display_name') @Default('') String displayName,
+    @JsonKey(name: 'avatar_url') String? avatarUrl,
+    @JsonKey(name: 'vehicle_type') @Default('bike') String vehicleType,
+    @JsonKey(name: 'vehicle_label') @Default('') String vehicleLabel,
+    @JsonKey(name: 'service_zones') @Default(<String>[]) List<String> serviceZones,
+    @JsonKey(name: 'is_active') @Default(true) bool isActive,
+    @JsonKey(name: 'rating', fromJson: _optDouble) double? rating,
+    @JsonKey(name: 'bio') @Default('') String bio,
+    @JsonKey(name: 'created_at') String? createdAt,
+  }) = _DeliveryPersonnel;
+
+  factory DeliveryPersonnel.fromJson(Map<String, dynamic> json) =>
+      _$DeliveryPersonnelFromJson(json);
+}
+
+/// `POST /marketplace/delivery-personnel-applications/` — the applicant's own
+/// courier claim (draft -> submitted). Review fields are staff-owned.
+@freezed
+abstract class DeliveryPersonnelApplication with _$DeliveryPersonnelApplication {
+  const factory DeliveryPersonnelApplication({
+    required String id,
+    @JsonKey(name: 'profile') String? profile,
+    @JsonKey(name: 'vehicle_type') @Default('bike') String vehicleType,
+    @JsonKey(name: 'service_zones') @Default(<String>[]) List<String> serviceZones,
+    @JsonKey(name: 'id_document_url') @Default('') String idDocumentUrl,
+    @JsonKey(name: 'licence_document_url') @Default('') String licenceDocumentUrl,
+    @Default('') String phone,
+    @Default('') String bio,
+    @Default('draft') String status,
+    @JsonKey(name: 'reviewer_notes') @Default('') String reviewerNotes,
+    @JsonKey(name: 'rejection_reason') @Default('') String rejectionReason,
+    @JsonKey(name: 'reviewed_at') String? reviewedAt,
+    @JsonKey(name: 'created_at') String? createdAt,
+  }) = _DeliveryPersonnelApplication;
+
+  factory DeliveryPersonnelApplication.fromJson(Map<String, dynamic> json) =>
+      _$DeliveryPersonnelApplicationFromJson(json);
+}
+
+/// `POST /marketplace/station-applications/` — a shop or gym applying to become
+/// a pickup station. Exactly one of `shop` / `gym` is set server-side.
+@freezed
+abstract class StationApplication with _$StationApplication {
+  const factory StationApplication({
+    required String id,
+    String? shop,
+    String? gym,
+    @Default('draft') String status,
+    @JsonKey(name: 'business_registration_number')
+    @Default('')
+    String businessRegistrationNumber,
+    @JsonKey(name: 'contact_phone') @Default('') String contactPhone,
+    @Default('') String address,
+    @Default('') String city,
+    @Default('') String country,
+    @JsonKey(fromJson: _optDouble) double? latitude,
+    @JsonKey(fromJson: _optDouble) double? longitude,
+    @JsonKey(name: 'opening_hours') @Default(<String, dynamic>{}) Map<String, dynamic> openingHours,
+    @JsonKey(name: 'documents') @Default(<Map<String, dynamic>>[]) List<Map<String, dynamic>> documents,
+    @JsonKey(name: 'agreed_to_policy') @Default(false) bool agreedToPolicy,
+    @JsonKey(name: 'agreed_at') String? agreedAt,
+    @JsonKey(name: 'reviewer_notes') @Default('') String reviewerNotes,
+    @JsonKey(name: 'rejection_reason') @Default('') String rejectionReason,
+    @JsonKey(name: 'reviewed_at') String? reviewedAt,
+    @JsonKey(name: 'created_at') String? createdAt,
+  }) = _StationApplication;
+
+  factory StationApplication.fromJson(Map<String, dynamic> json) =>
+      _$StationApplicationFromJson(json);
+}
+
+// ---------------------------------------------------------------------------
+// Checkout
+// ---------------------------------------------------------------------------
+
+/// One line of `POST /marketplace/cart/checkout/`'s receipt payload.
+@freezed
+abstract class CheckoutReceiptItem with _$CheckoutReceiptItem {
+  const factory CheckoutReceiptItem({
+    @JsonKey(name: 'item_type') @Default('') String itemType,
+    @Default('') String title,
+    @Default(1) int quantity,
+    @JsonKey(name: 'price_artifacts') @Default(<String, int>{}) Map<String, int> priceArtifacts,
+    @JsonKey(name: 'total_artifacts') @Default(<String, int>{}) Map<String, int> totalArtifacts,
+    @JsonKey(name: 'paid_artifacts') @Default(<String, int>{}) Map<String, int> paidArtifacts,
+    @JsonKey(name: 'creator_name') String? creatorName,
+  }) = _CheckoutReceiptItem;
+
+  factory CheckoutReceiptItem.fromJson(Map<String, dynamic> json) =>
+      _$CheckoutReceiptItemFromJson(json);
+}
+
+/// What checkout returns once the order exists.
+///
+/// `paymentRequired` is true for M-Pesa / Card: nothing was deducted and nothing
+/// was provisioned, and the order stays `pending` until the provider confirms.
+@freezed
+abstract class CheckoutReceipt with _$CheckoutReceipt {
+  const factory CheckoutReceipt({
+    @JsonKey(name: 'order_id') required String orderId,
+    @JsonKey(name: 'order_number') @Default('') String orderNumber,
+    @Default('') String status,
+    @JsonKey(name: 'fulfillment_type') @Default('digital') String fulfillmentType,
+    @JsonKey(name: 'pickup_station_id') String? pickupStationId,
+    @JsonKey(name: 'payment_method') String? paymentMethod,
+    @JsonKey(name: 'payment_status') String? paymentStatus,
+    @JsonKey(name: 'payment_required') @Default(false) bool paymentRequired,
+    @Default(<CheckoutReceiptItem>[]) List<CheckoutReceiptItem> items,
+    @JsonKey(name: 'total_artifacts') @Default(<String, int>{}) Map<String, int> totalArtifacts,
+    @JsonKey(name: 'original_artifacts') @Default(<String, int>{}) Map<String, int> originalArtifacts,
+    @JsonKey(name: 'savings_artifacts') @Default(<String, int>{}) Map<String, int> savingsArtifacts,
+    @JsonKey(name: 'savings_usd') @Default(0.0) double savingsUsd,
+    @JsonKey(name: 'discount_code') String? discountCode,
+    @JsonKey(name: 'spent_usd') @Default(0.0) double spentUsd,
+    @JsonKey(name: 'new_balance') @Default(<String, int>{}) Map<String, int> newBalance,
+  }) = _CheckoutReceipt;
+
+  factory CheckoutReceipt.fromJson(Map<String, dynamic> json) =>
+      _$CheckoutReceiptFromJson(json);
+}
+
+@freezed
+abstract class PaymentIntent with _$PaymentIntent {
+  const factory PaymentIntent({
+    String? id,
+    @JsonKey(name: 'order') String? order,
+    @JsonKey(name: 'order_number') String? orderNumber,
+    String? provider,
+    String? method,
+    @JsonKey(name: 'method_label') String? methodLabel,
+    @JsonKey(fromJson: _optNum) String? amount,
+    String? currency,
+    @JsonKey(name: 'provider_reference') String? providerReference,
+    String? status,
+    @JsonKey(name: 'raw_response') @Default(<String, dynamic>{}) Map<String, dynamic> rawResponse,
+    @JsonKey(name: 'created_at') String? createdAt,
+  }) = _PaymentIntent;
+
+  factory PaymentIntent.fromJson(Map<String, dynamic> json) =>
+      _$PaymentIntentFromJson(json);
+}
+
+/// The three shapes `POST /marketplace/orders/payment-intents/` answers with,
+/// flattened: an unconfigured rail, a hosted-checkout card hand-off, and a
+/// live M-Pesa STK push.
+///
+/// `railConfigured == false` is a *success*, not a failure — the deployment has
+/// no Flutterwave keys, so the order exists and no charge was started.
+@freezed
+abstract class PaymentIntentResult with _$PaymentIntentResult {
+  const factory PaymentIntentResult({
+    PaymentIntent? intent,
+    @JsonKey(name: 'rail_configured') bool? railConfigured,
+    @JsonKey(name: 'tx_ref') String? txRef,
+    @JsonKey(name: 'public_key') String? publicKey,
+    @JsonKey(name: 'amount') String? amount,
+    String? currency,
+    @JsonKey(name: 'customer_email') String? customerEmail,
+    @JsonKey(name: 'customer_name') String? customerName,
+    String? status,
+  }) = _PaymentIntentResult;
+
+  factory PaymentIntentResult.fromJson(Map<String, dynamic> json) =>
+      _$PaymentIntentResultFromJson(json);
 }
