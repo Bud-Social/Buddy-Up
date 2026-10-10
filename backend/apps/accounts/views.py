@@ -28,7 +28,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from common.utils import hash_dob, calculate_age
 from common.observability import prometheus_metrics
 from common.pagination import CursorPagination
-from .models import User, OTPToken, DeviceSession, AccountEvent, WebAuthnCredential
+from .models import (
+    AccountStanding, User, OTPToken, DeviceSession, AccountEvent, WebAuthnCredential,
+)
+from .services import get_standing_object
 from .policy_versions import CURRENT_POLICY_VERSIONS, policy_version
 from .serializers import (
     RegisterSerializer, LoginSerializer, OTPSerializer, ResendOTPSerializer,
@@ -194,6 +197,138 @@ def _verify_temp_token(token_str, expected_purpose):
         return None
 
 
+#: Failed password / OTP / TOTP attempts before the account is locked, and
+#: how long the lock lasts.
+MAX_FAILED_LOGINS = 5
+LOCKOUT_DURATION = timedelta(minutes=15)
+
+
+def _register_failed_login(user):
+    """Count one failed authentication attempt and lock the account at the cap.
+
+    The counter is on ``User`` rather than in the cache so it survives a
+    restart and is shared across devices — a per-IP counter would let an
+    attacker simply rotate IPs. Returns True if this failure caused the lock.
+    """
+    count = (user.failed_login_count or 0) + 1
+    fields = ['failed_login_count']
+    locked_now = False
+    if count >= MAX_FAILED_LOGINS:
+        user.locked_until = timezone.now() + LOCKOUT_DURATION
+        fields.append('locked_until')
+        locked_now = True
+    user.failed_login_count = count
+    user.save(update_fields=fields)
+    return locked_now
+
+
+def _clear_failed_logins(user):
+    if (user.failed_login_count or 0) == 0 and user.locked_until is None:
+        return
+    user.failed_login_count = 0
+    user.locked_until = None
+    user.save(update_fields=['failed_login_count', 'locked_until'])
+
+
+def _is_locked_out(user) -> bool:
+    return bool(user.locked_until and user.locked_until > timezone.now())
+
+
+def _locked_out_response(user):
+    """429 while a lockout is live. Deliberately says nothing about the password."""
+    remaining = int((user.locked_until - timezone.now()).total_seconds())
+    return Response({
+        'success': False,
+        'data': {'locked_until': user.locked_until.isoformat(), 'retry_after_seconds': max(remaining, 0)},
+        'message': (
+            'Too many failed sign-in attempts. This account is temporarily '
+            f'locked — try again in {max(remaining // 60, 1)} minute(s), or '
+            'reset your password.'
+        ),
+        'errors': None,
+        'pagination': None,
+    }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+
+def _standing_rejection_response(standing, *, appeal: bool = True):
+    """The one 403 shape every standing rejection returns."""
+    message = 'Your account access has been restricted.'
+    if appeal:
+        if standing.permanent:
+            message = (
+                'Your account has been permanently suspended. If you believe '
+                'this is a mistake, contact support to appeal the decision.'
+            )
+        elif standing.suspended_until:
+            message = (
+                'Your account is suspended until '
+                f'{standing.suspended_until.isoformat()}. If you believe this is '
+                'a mistake, contact support to appeal the decision.'
+            )
+        else:
+            message = (
+                'Your account is suspended. If you believe this is a mistake, '
+                'contact support to appeal the decision.'
+            )
+    if standing.reason:
+        message = f'{message} Reason: {standing.reason}'
+    return Response({
+        'success': False,
+        'data': None,
+        'message': message,
+        'errors': None,
+        'pagination': None,
+        'standing': standing.as_payload(),
+    }, status=status.HTTP_403_FORBIDDEN)
+
+
+def _check_standing(user):
+    """Response to return when standing blocks this user, else None.
+
+    Called before ANY token is minted. Without it an already-issued access
+    token keeps working for up to ACCESS_TOKEN_LIFETIME and a refresh token
+    mints a fresh one — a ban that only bites at the next login is not a ban.
+    """
+    standing = get_standing_object(user)
+    if standing is not None and standing.blocks_authentication():
+        return _standing_rejection_response(standing)
+    return None
+
+
+def _check_staff_mfa(user):
+    """403 for staff without TOTP, so the client can route them to enrolment.
+
+    Enforced at login and refresh, deliberately NOT in
+    ``SafeJWTAuthentication``: enforcing it in DRF auth would lock a staff
+    member out of the very endpoints that enrol TOTP (``/totp/setup``,
+    ``/totp/verify`` are IsAuthenticated), leaving no path back in except a
+    password reset. At login and refresh the block is complete — no session
+    and no refresh — while the enrolment window stays reachable for an
+    already-authenticated operator.
+    """
+    if user.totp_enabled:
+        return None
+    if not (user.is_staff or user.is_superuser):
+        return None
+    from .services import require_totp_enrolment
+    require_totp_enrolment(user=user, reason='login')
+    return Response({
+        'success': False,
+        'code': 'mfa_enrolment_required',
+        'data': {
+            'code': 'mfa_enrolment_required',
+            'email': user.email,
+            'enrolment_path': '/api/v1/auth/totp/setup/',
+        },
+        'message': (
+            'Two-factor authentication is required for staff accounts. '
+            'Set up an authenticator app to continue.'
+        ),
+        'errors': None,
+        'pagination': None,
+    }, status=status.HTTP_403_FORBIDDEN)
+
+
 def _authenticate_allow_inactive(request, email, password):
     """Password authentication that also matches deactivated accounts.
 
@@ -334,6 +469,20 @@ class VerifyRegistrationOTPView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # This is a fourth token-minting path, and the easiest to forget: it
+        # hands out a full access+refresh pair and a DeviceSession like a login
+        # does. A signup that is banned before its email is verified (mass
+        # fake-account creation is exactly what that ban is for) would
+        # otherwise walk straight through the suspension here. Checked before
+        # any work is done, so a blocked account burns no OTP attempt.
+        blocked = _check_standing(user)
+        if blocked is not None:
+            return blocked
+
+        mfa_required = _check_staff_mfa(user)
+        if mfa_required is not None:
+            return mfa_required
+
         if user.email_verified:
             return Response({
                 'success': False, 'data': None,
@@ -431,6 +580,11 @@ class LoginView(views.APIView):
             try:
                 u = User.objects.get(email__iexact=data['email'])
                 _log_event(u, 'login_failed', request)
+                # Count the failure against the account (shared across
+                # devices), then refuse outright while a lock is live.
+                if _is_locked_out(u):
+                    return _locked_out_response(u)
+                _register_failed_login(u)
                 # Google/Apple accounts are provisioned with an unusable
                 # password — point the user at social sign-in instead of a
                 # bare "invalid credentials" 401.
@@ -452,11 +606,66 @@ class LoginView(views.APIView):
                 'pagination': None,
             }, status=status.HTTP_401_UNAUTHORIZED)
 
+        if _is_locked_out(user):
+            return _locked_out_response(user)
+
+        # Account standing is checked BEFORE the reactivation gate below.
+        # Ordering matters: a suspended user is is_active=False, so without
+        # this the flow would fall into the "your account is deactivated,
+        # log in again to reactivate it" branch — which is exactly the
+        # self-reversal hole. A moderation decision is not reversible by the
+        # person it is served to.
+        blocked = _check_standing(user)
+        if blocked is not None:
+            _log_event(user, 'login_failed', request, metadata={'reason': 'account_standing'})
+            return blocked
+
         # Reactivation gate: deactivation and login-initiated deletion both
         # mark the account. Credentials are correct here — a 403 would lose
         # them, so the client gets a reactivation prompt instead. Login only
         # proceeds when the client explicitly opts in.
         if not user.is_active or user.deleted_at:
+            # Defence in depth for the self-reversal hole: the standing check
+            # above already returned, so a moderation suspension can never
+            # reach this branch. If the check is ever moved or weakened, this
+            # is what keeps `reactivate: true` from undoing a ban.
+            standing = get_standing_object(user)
+            moderation_hold = bool(
+                standing is not None
+                and standing.is_moderation_action
+                and standing.state in AccountStanding.BLOCKING_STATES
+            )
+            if moderation_hold:
+                _log_event(user, 'login_failed', request,
+                           metadata={'reason': 'moderation_reactivation_attempt'})
+                return _standing_rejection_response(standing)
+
+            # Second gate, for the surface that flips is_active WITHOUT
+            # writing a standing row: admin_portal's suspend button. Those
+            # rows have no deletion_type, while a genuine self-deactivation
+            # always carries deletion_type='user' (DeactivateAccountView /
+            # DeleteAccountView). Without this, a portal suspension stays
+            # self-reversible exactly like the moderation one was.
+            if user.deletion_type != 'user':
+                _log_event(user, 'login_failed', request,
+                           metadata={'reason': 'non_self_deactivation'})
+                return Response({
+                    'success': False,
+                    'data': None,
+                    'message': (
+                        'Your account has been restricted. Contact support to '
+                        'have it restored — it cannot be reactivated from login.'
+                    ),
+                    'errors': None,
+                    'pagination': None,
+                    'standing': (standing.as_payload() if standing is not None else {
+                        'state': AccountStanding.STATE_CLEAR,
+                        'reason': '',
+                        'until': None,
+                        'permanent': False,
+                    }),
+                }, status=status.HTTP_403_FORBIDDEN)
+
             if data.get('reactivate') is not True:
                 scheduled = user.hard_delete_at
                 if scheduled:
@@ -469,7 +678,10 @@ class LoginView(views.APIView):
                 return Response({
                     'success': False,
                     'data': {
-                        'reactivatable': True,
+                        # Only a genuine self-deactivation is reactivatable. A
+                        # moderation suspension never reaches here, and never
+                        # advertises itself as reactivatable to the client.
+                        'reactivatable': not moderation_hold,
                         'hard_deletion_scheduled': scheduled.isoformat() if scheduled else None,
                     },
                     'message': message,
@@ -570,6 +782,16 @@ class VerifyLoginOTPView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        if _is_locked_out(user):
+            return _locked_out_response(user)
+
+        # Enforcement point 2 of 3 for account standing: this is where a
+        # password login mints its JWT, so a ban applied between the password
+        # step and here still stops the token from being issued.
+        blocked = _check_standing(user)
+        if blocked is not None:
+            return blocked
+
         try:
             otp_token = OTPToken.objects.filter(
                 user=user, channel='email', is_used=False
@@ -597,6 +819,7 @@ class VerifyLoginOTPView(views.APIView):
                     'message': 'Too many failed attempts. Please login again.',
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_429_TOO_MANY_REQUESTS)
+            _register_failed_login(user)
             return Response({
                 'success': False, 'data': None,
                 'message': 'Invalid OTP code.',
@@ -615,9 +838,16 @@ class VerifyLoginOTPView(views.APIView):
                     'temp_token': temp_token,
                 },
                 'message': 'OTP verified. Please enter your authenticator code.',
-                'errors': None,
-                'pagination': None,
+                'errors': None, 'pagination': None,
             })
+
+        # Staff without a second factor get no token at all — see
+        # _check_staff_mfa for why this is not enforced in DRF auth.
+        mfa_required = _check_staff_mfa(user)
+        if mfa_required is not None:
+            return mfa_required
+
+        _clear_failed_logins(user)
 
         tokens = _get_tokens_for_user(user, remember_me=data.get('remember_me', False))
         _create_device_session(user, tokens['refresh'], request)
@@ -663,6 +893,12 @@ class VerifyLoginOTPView(views.APIView):
 
 class TOTPSetupView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
+    # 'otp' is the closest existing scope: these are second-factor endpoints
+    # with the same brute-force profile as an OTP challenge. A dedicated
+    # 'totp' scope would need config/settings, which this change does not own,
+    # and inventing one that silently does not exist would leave these views
+    # UNTHROTTLED — ScopedRateThrottle treats an unknown scope as unlimited.
+    throttle_scope = 'otp'
 
     def get(self, request):
         if request.user.totp_enabled:
@@ -698,6 +934,7 @@ class TOTPSetupView(views.APIView):
 
 class TOTPVerifyView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'otp'
 
     def post(self, request):
         if request.user.totp_enabled:
@@ -722,6 +959,8 @@ class TOTPVerifyView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # totp_secret is an EncryptedCharField: assigning plaintext and saving
+        # is all that is needed, the column holds ciphertext.
         request.user.totp_secret = secret
         request.user.totp_enabled = True
         request.user.save(update_fields=['totp_secret', 'totp_enabled'])
@@ -758,6 +997,7 @@ class TOTPVerifyView(views.APIView):
 
 class TOTPDisableView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'otp'
 
     def post(self, request):
         if not request.user.totp_enabled:
@@ -801,8 +1041,12 @@ class TOTPChallengeView(views.APIView):
         serializer = TOTPChallengeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         temp_token = serializer.validated_data['temp_token']
-        code = serializer.validated_data['code']
-        recovery_code = (request.data.get('recovery_code') or '').strip()
+        # Both come from validated_data now: the recovery branch used to read
+        # raw request.data while `code` was required=True, so a recovery-only
+        # request could never reach it. The serializer now requires exactly
+        # one of the two, so this pair is always well formed.
+        code = (serializer.validated_data.get('code') or '').strip()
+        recovery_code = (serializer.validated_data.get('recovery_code') or '').strip()
 
         user = _verify_temp_token(temp_token, 'totp_challenge')
         if not user:
@@ -811,6 +1055,13 @@ class TOTPChallengeView(views.APIView):
                 'message': 'Invalid or expired session.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
+
+        if _is_locked_out(user):
+            return _locked_out_response(user)
+
+        blocked = _check_standing(user)
+        if blocked is not None:
+            return blocked
 
         if not user.totp_enabled:
             return Response({
@@ -829,6 +1080,7 @@ class TOTPChallengeView(views.APIView):
                 is_used=False,
             ).first()
             if not rc:
+                _register_failed_login(user)
                 return Response({
                     'success': False, 'data': None,
                     'message': 'Invalid or already-used recovery code.',
@@ -841,11 +1093,14 @@ class TOTPChallengeView(views.APIView):
         else:
             totp = pyotp.TOTP(user.totp_secret)
             if not totp.verify(code):
+                _register_failed_login(user)
                 return Response({
                     'success': False, 'data': None,
                     'message': 'Invalid authenticator code.',
                     'errors': None, 'pagination': None,
                 }, status=status.HTTP_400_BAD_REQUEST)
+
+        _clear_failed_logins(user)
 
         tokens = _get_tokens_for_user(user)
         _create_device_session(user, tokens['refresh'], request)
@@ -943,11 +1198,42 @@ def _provision_social_user(email, provider_field, provider_id, name='', picture=
     return user, created
 
 
+class _StandingBlocked(Exception):
+    """Carries a ready-to-return Response out of a shared login helper.
+
+    ``_finalize_social_login`` returns a payload tuple, so it cannot return a
+    403 without changing a signature four callers unpack. Raising keeps the
+    rejection impossible to ignore: a caller that forgets the ``except`` gets
+    a 500 in tests rather than a silently issued token in production.
+    """
+
+    def __init__(self, response):
+        self.response = response
+        super().__init__('account standing blocks this login')
+
+
 def _finalize_social_login(user, method, request):
     """Build the login payload; TOTP-enabled users get a challenge instead.
 
     Returns (data_dict, challenged_bool).
+
+    Raises ``_StandingBlocked`` when account standing or the staff-MFA rule
+    forbids this login: this is the single funnel every social/passkey path
+    (Google, Apple, passkey, social age setup) goes through, so the standing
+    check lives here rather than in four separate views where one could be
+    forgotten.
     """
+    blocked = _check_standing(user)
+    if blocked is not None:
+        raise _StandingBlocked(blocked)
+
+    mfa_required = _check_staff_mfa(user)
+    if mfa_required is not None:
+        raise _StandingBlocked(mfa_required)
+
+    if _is_locked_out(user):
+        raise _StandingBlocked(_locked_out_response(user))
+
     if user.totp_enabled:
         temp_token = _generate_temp_token(user, 'totp_challenge', expiry_minutes=5)
         return ({
@@ -955,6 +1241,8 @@ def _finalize_social_login(user, method, request):
             'temp_token': temp_token,
             'message': 'Enter your authenticator code.',
         }, True)
+
+    _clear_failed_logins(user)
 
     tokens = _get_tokens_for_user(user)
     _create_device_session(user, tokens['refresh'], request)
@@ -1069,7 +1357,10 @@ class GoogleLoginView(views.APIView):
             user.consent_log = log
             user.save(update_fields=['consent_log'])
 
-        data, challenged = _finalize_social_login(user, 'google', request)
+        try:
+            data, challenged = _finalize_social_login(user, 'google', request)
+        except _StandingBlocked as blocked:
+            return blocked.response
         message = 'Additional verification required.' if challenged else (
             'Account created. Please complete age verification to finish setting up.'
             if data.get('require_age_setup') else 'Google login successful.')
@@ -1153,7 +1444,12 @@ class AppleLoginView(views.APIView):
             if created:
                 _log_event(user, 'registered', request, metadata={'method': 'apple'})
 
-            data, challenged = _finalize_social_login(user, 'apple', request)
+            try:
+                data, challenged = _finalize_social_login(user, 'apple', request)
+            except _StandingBlocked as blocked:
+                # Before the generic handler below, which would turn a 403
+                # into a misleading "Invalid Apple token" 400.
+                return blocked.response
             message = 'Additional verification required.' if challenged else (
                 'Account created. Please complete age verification to finish setting up.'
                 if data.get('require_age_setup') else 'Apple login successful.')
@@ -1244,6 +1540,25 @@ class TokenRefreshView(views.APIView):
         try:
             token = RefreshToken(refresh_token)
             token_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
+
+            # Enforcement point 3 of 3 for account standing. Checked BEFORE
+            # the session row so the caller gets the 403 + standing payload
+            # rather than a generic 401: apply_standing_action revokes every
+            # device session, so by the time the session lookup runs there is
+            # nothing left to find and the client would be told "sign in
+            # again" — advice that cannot work for a suspended account. The
+            # token itself is signature- and expiry-checked at this point, so
+            # the user id inside it is trustworthy.
+            refresh_user = User.objects.filter(
+                id=token['user_id'], deleted_at__isnull=True,
+            ).first()
+            if refresh_user is not None:
+                blocked = _check_standing(refresh_user)
+                if blocked is not None:
+                    return blocked
+                mfa_required = _check_staff_mfa(refresh_user)
+                if mfa_required is not None:
+                    return mfa_required
 
             # Rotate under a row lock: two concurrent refreshes with the same
             # token are serialised here, and the loser re-reads the row with
@@ -1972,7 +2287,10 @@ class PasskeyLoginFinishView(views.APIView):
         cred.last_verified_at = timezone.now()
         cred.save(update_fields=['sign_count', 'last_verified_at'])
 
-        payload, challenged = _finalize_social_login(cred.user, 'passkey', request)
+        try:
+            payload, challenged = _finalize_social_login(cred.user, 'passkey', request)
+        except _StandingBlocked as blocked:
+            return blocked.response
         message = 'Additional verification required.' if challenged else (
             'Please complete age verification to finish setting up.'
             if payload.get('require_age_setup') else 'Passkey login successful.')
@@ -2122,7 +2440,10 @@ class SocialAgeSetupView(views.APIView):
         user.save(update_fields=['dob_hash', 'is_adult'])
         _log_event(user, 'age_verified', request, metadata={'method': 'social_signup'})
 
-        payload, challenged = _finalize_social_login(user, f'{request.data.get("provider", "social")}', request)
+        try:
+            payload, challenged = _finalize_social_login(user, f'{request.data.get("provider", "social")}', request)
+        except _StandingBlocked as blocked:
+            return blocked.response
         response = Response({
             'success': True,
             'data': {**payload, 'age': age, 'is_adult': user.is_adult},

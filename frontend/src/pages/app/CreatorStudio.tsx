@@ -31,13 +31,19 @@ const TYPE_COLORS: Record<string, string> = {
 
 const ARTIFACT_VALUES: Record<string, number> = { dumbbell: 0.10, barbell: 0.50, burpee: 1.00, squat: 2.50, sprint: 5.00, pr: 10.00, champion: 25.00 };
 
-/** Allowed forward transitions for bulk seller updates (mirrors backend). */
+/**
+ * Bulk seller transitions. The backend is authoritative and rejects anything
+ * not legal for the order's fulfilment type — this map only hides the obvious
+ * dead ends, it never grants a move the server will refuse.
+ */
 const SELLER_FORWARD_OK: Record<string, string[]> = {
+  pending: ['paid', 'cancelled'],
   paid: ['processing', 'shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered', 'cancelled'],
-  processing: ['shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered'],
-  shipped: ['out_for_delivery', 'ready_for_pickup', 'delivered'],
-  out_for_delivery: ['ready_for_pickup', 'delivered'],
-  ready_for_pickup: ['delivered'],
+  processing: ['shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered', 'cancelled'],
+  shipped: ['out_for_delivery', 'delivered', 'cancelled'],
+  out_for_delivery: ['delivered', 'cancelled'],
+  ready_for_pickup: ['delivered', 'completed', 'cancelled'],
+  delivered: ['completed'],
 };
 
 function artifactUsd(artifacts: Record<string, number> | undefined): number {
@@ -626,7 +632,7 @@ export default function CreatorStudio() {
             <h2 className="text-sm font-bold text-buddy-text-secondary uppercase">Creator Orders ({orders.length})</h2>
             <div className="flex items-center gap-2">
               <div className="flex gap-1 overflow-x-auto">
-                {['', 'paid', 'shipped', 'delivered', 'cancelled'].map((st) => (
+                {['', 'pending', 'paid', 'processing', 'shipped', 'out_for_delivery', 'ready_for_pickup', 'delivered', 'completed', 'cancelled'].map((st) => (
                   <button
                     key={st}
                     onClick={() => setOrderStatusFilter(st)}

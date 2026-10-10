@@ -189,6 +189,8 @@ export interface PortalOrder {
   updated_at?: string | null;
   items?: PortalOrderItem[];
   status_history?: Array<{ status?: string; at?: string | null; note?: string }>;
+  /** Legal next states, computed server-side from the order's fulfilment type. */
+  allowed_next_statuses?: string[];
 }
 
 export interface PortalOrderFilters extends PortalPaginationParams {

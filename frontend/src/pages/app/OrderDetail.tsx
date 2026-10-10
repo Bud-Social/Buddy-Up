@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/Toast';
 import { marketplaceApi, type Order } from '@/api/marketplace';
 
 const STATUS_STYLES: Record<string, string> = {
+  pending: 'bg-buddy-surface-raised text-buddy-text-secondary',
   paid: 'bg-buddy-green/20 text-buddy-green',
   processing: 'bg-buddy-blue/20 text-buddy-blue',
   shipped: 'bg-buddy-gold/20 text-buddy-gold',
@@ -18,6 +19,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
   paid: 'Paid',
   processing: 'Processing',
   shipped: 'Shipped',

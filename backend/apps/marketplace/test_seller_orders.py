@@ -190,3 +190,24 @@ class SellerOrderVisibilityTests(TestCase):
         order = client_for(self.owner).get(SELLER_ORDERS_URL).json()['data'][0]
         self.assertEqual(order['pickup_station'], str(station.id))
         self.assertIsNone(order['delivery_personnel'])
+    def test_unknown_status_filter_is_rejected_not_silently_ignored(self):
+        """A status from the wrong vocabulary must report itself.
+
+        The web admin shipped a filter chip sending `refunded` (a
+        payment_status) here, and because `status` was never validated the
+        query matched nothing and the seller saw an empty list.
+        """
+        client = client_for(self.owner)
+        for bad in ('refunded', 'confirmed', 'teleported', 'unpaid', 'failed'):
+            with self.subTest(status=bad):
+                res = client.get(SELLER_ORDERS_URL, {'status': bad})
+                self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn('status must be one of', res.json()['message'])
+
+    def test_every_real_order_status_is_accepted(self):
+        from apps.marketplace.models import Order
+        client = client_for(self.owner)
+        for good in dict(Order.STATUS_CHOICES):
+            with self.subTest(status=good):
+                res = client.get(SELLER_ORDERS_URL, {'status': good})
+                self.assertEqual(res.status_code, status.HTTP_200_OK)

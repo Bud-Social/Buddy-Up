@@ -3187,6 +3187,14 @@ class SellerOrdersView(views.APIView):
         )
         status_filter = request.query_params.get('status', '')
         if status_filter:
+            # Validate like the sibling filters below do. Without this an
+            # unknown status silently matched nothing instead of telling the
+            # caller they had used a value from the wrong vocabulary.
+            if status_filter not in dict(Order.STATUS_CHOICES):
+                return Response({'success': False, 'data': None,
+                                 'message': f'status must be one of: '
+                                            f'{[c[0] for c in Order.STATUS_CHOICES]}.',
+                                 'errors': None, 'pagination': None}, status=400)
             qs = qs.filter(status=status_filter)
         fulfillment_filter = request.query_params.get('fulfillment_type', '')
         if fulfillment_filter:

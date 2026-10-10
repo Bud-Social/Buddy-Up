@@ -22,6 +22,9 @@ sendgrid-django>=4.0
 django-ratelimit>=4.1
 qrcode>=7.4
 pyotp>=2.9
+# Fernet for accounts.crypto — encrypts User.totp_secret at rest. Previously
+# only present transitively (cloudinary/autobahn); now imported directly.
+cryptography>=42
 # WebAuthn/passkeys. NOTE: the maintained Duo Labs library is published on
 # PyPI as "webauthn" (import name webauthn); "pywebauthn" is an unrelated,
 # abandoned stub with no compatible releases.

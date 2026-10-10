@@ -55,6 +55,10 @@ INSTALLED_APPS = [
     # Staff read/act surface mounted at /api/v1/portal/. Deliberately NOT named
     # 'admin' — a top-level app called 'admin' would shadow django.contrib.admin.
     'apps.admin_portal',
+    # Staff roles + two-person approvals, mounted at /api/v1/governance/.
+    # Owns the scope definitions that admin_portal's ScopedPlatformAdmin
+    # enforces, so it must load after admin_portal's permission class imports it.
+    'apps.governance',
 ]
 
 MIDDLEWARE = [

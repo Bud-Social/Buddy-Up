@@ -1,12 +1,28 @@
 """Staff-only permissions for the admin portal.
 
-Admin capability on this platform is modelled *only* by Django's
-``is_staff`` / ``is_superuser`` (accounts/models.py). There are no permission
-groups in use and no per-domain role table, so these classes deliberately do
-not invent one: ``ScopedPlatformAdmin`` records which domain a route touches
-and authorises exactly like ``IsAdminUser`` does today.
+``IsPlatformAdmin`` is unchanged: any ``is_staff`` user.
+
+``ScopedPlatformAdmin`` *enforces* the scope its route declares. The scope used
+to be metadata — declared on 27 routes and read by nothing — which meant a
+support agent with no business touching payouts could do exactly that. It is now
+an allow-list check, resolved by ``apps.governance.services`` rather than
+reimplemented here.
+
+Three ways a caller gets through:
+
+* ``is_superuser`` — always. The platform owner is never narrowed by a role row.
+* Holds a ``governance.StaffRole`` — allowed on the routes whose scope is in
+  ``effective_scopes(user)``, everything else 403 with the missing scope and the
+  role named so the operator can ask for it.
+* Staff with *no* ``StaffRole`` row — allowed everywhere, which is the
+  pre-governance behaviour. See the back-compat branch in
+  ``governance.services.effective_scopes``; it exists so landing this app does
+  not lock the existing operator out of the console.
 """
 from rest_framework import permissions
+from rest_framework.exceptions import PermissionDenied
+
+from apps.governance.services import effective_scopes
 
 
 class IsPlatformAdmin(permissions.IsAdminUser):
@@ -25,13 +41,7 @@ class IsPlatformAdmin(permissions.IsAdminUser):
 
 
 class ScopedPlatformAdmin(IsPlatformAdmin):
-    """``IsPlatformAdmin`` with a recorded scope, e.g. ``'users.write'``.
-
-    The scope is *metadata only*. Nothing reads it to grant or deny anything
-    today — authorisation is exactly ``IsAdminUser``. It exists so every route
-    in ``urls.py`` declares the domain it can mutate, which is what a future
-    per-domain grant would key off. Adding the check later is a one-line
-    change here rather than an audit of the URL table.
+    """``IsPlatformAdmin`` restricted to one declared scope, e.g. ``'users.write'``.
 
     Usage::
 
@@ -39,6 +49,11 @@ class ScopedPlatformAdmin(IsPlatformAdmin):
 
     ``for_scope`` returns a subclass carrying the scope, because DRF
     instantiates permission classes with no arguments.
+
+    The check runs *after* :class:`IsPlatformAdmin`, so an anonymous caller
+    still gets 401 and a non-staff caller still gets 403 with no scope detail
+    leaked — a user who cannot staff the console learns nothing about what the
+    scopes are.
     """
 
     required_scope = None
@@ -57,3 +72,34 @@ class ScopedPlatformAdmin(IsPlatformAdmin):
         if not scope or not isinstance(scope, str):
             raise ValueError(f'Scope must be a non-empty string, got {scope!r}.')
         return type(f'{cls.__name__}[{scope}]', (cls,), {'required_scope': scope})
+
+    def has_permission(self, request, view):
+        if not super().has_permission(request, view):
+            return False
+        user = request.user
+        if getattr(user, 'is_superuser', False):
+            return True
+
+        scopes = effective_scopes(user)
+        if self.scope in scopes:
+            return True
+
+        raise PermissionDenied(
+            f'Your staff role ({_role_label(user)}) does not include the '
+            f'{self.scope!r} scope, so this action is not available to you. '
+            f'Ask an administrator to grant it, or use a different route.'
+        )
+
+
+def _role_label(user):
+    """The role name for a 403 message, or a description of the status quo.
+
+    Never raises and never returns a bare id — the message is read by a human
+    deciding whether to escalate.
+    """
+    row = getattr(user, 'staff_role', None)
+    if row is None:
+        return 'none'
+    if getattr(row, 'revoked_at', None) is not None:
+        return f'{row.role} (revoked)'
+    return row.role

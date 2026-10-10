@@ -33,12 +33,19 @@ class _CreatorOrdersScreenState extends ConsumerState<CreatorOrdersScreen> {
   final Set<String> _selectedOrderIds = <String>{};
   bool _bulkUpdating = false;
 
+  /// Mirrors `Order.STATUS_CHOICES`. `pending_fulfillment` used to be sent
+  /// here and the seller endpoint did not validate, so it silently matched
+  /// nothing instead of reporting the mistake.
   final _statusFilters = const [
     {'label': 'All', 'value': null},
+    {'label': 'Pending', 'value': 'pending'},
     {'label': 'Paid', 'value': 'paid'},
-    {'label': 'Pending', 'value': 'pending_fulfillment'},
+    {'label': 'Processing', 'value': 'processing'},
     {'label': 'Shipped', 'value': 'shipped'},
+    {'label': 'Out for delivery', 'value': 'out_for_delivery'},
+    {'label': 'Ready for pickup', 'value': 'ready_for_pickup'},
     {'label': 'Delivered', 'value': 'delivered'},
+    {'label': 'Completed', 'value': 'completed'},
     {'label': 'Cancelled', 'value': 'cancelled'},
   ];
 
@@ -466,10 +473,8 @@ class _OrderCard extends StatelessWidget {
       case 'out_for_delivery':
         return const Color(0xFF60A5FA);
       case 'pending':
-      case 'pending_fulfillment':
         return Colors.orange;
       case 'cancelled':
-      case 'failed':
         return Colors.red;
       default:
         return const Color(0xFF9CA3AF);

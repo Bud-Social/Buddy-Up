@@ -160,8 +160,29 @@ class LoginOTPSerializer(serializers.Serializer):
 
 
 class TOTPChallengeSerializer(serializers.Serializer):
+    """Exactly one of `code` or `recovery_code`.
+
+    `code` used to be required=True while the view's recovery branch read
+    `recovery_code` from raw request.data — so a recovery-only request died in
+    validation and the documented recovery path could never run. Both are
+    optional here and `validate` requires exactly one, which also rejects an
+    ambiguous request carrying a valid code *and* a bogus recovery code.
+    """
+
     temp_token = serializers.CharField()
-    code = serializers.CharField(min_length=6, max_length=6)
+    code = serializers.CharField(min_length=6, max_length=6, required=False, allow_blank=True)
+    recovery_code = serializers.CharField(required=False, allow_blank=True, write_only=True)
+
+    def validate(self, attrs):
+        code = (attrs.get('code') or '').strip()
+        recovery = (attrs.get('recovery_code') or '').strip()
+        if bool(code) == bool(recovery):
+            raise serializers.ValidationError(
+                'Provide exactly one of: an authenticator code, or a recovery code.'
+            )
+        attrs['code'] = code
+        attrs['recovery_code'] = recovery
+        return attrs
 
 
 class TOTPDisableSerializer(serializers.Serializer):

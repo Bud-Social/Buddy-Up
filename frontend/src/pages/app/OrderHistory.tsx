@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { marketplaceApi, type Order } from '@/api/marketplace';
 
 const STATUS_STYLES: Record<string, string> = {
+  pending: 'bg-buddy-surface-raised text-buddy-text-secondary',
   paid: 'bg-buddy-green/20 text-buddy-green',
   processing: 'bg-buddy-blue/20 text-buddy-blue',
   shipped: 'bg-buddy-gold/20 text-buddy-gold',

@@ -20,30 +20,23 @@ import {
 import { formatDate, formatMoney, shortId, text } from './format';
 import { useDebounced, usePortalAction, usePortalList } from './usePortalList';
 
-/** Order lifecycle as the marketplace models it. */
+/** Order lifecycle as `Order.STATUS_CHOICES` defines it (marketplace/models.py).
+ *  Payment-only values such as `refunded` belong to `payment_status` and are
+ *  rejected by the server's status filter — never list them here. */
 const ORDER_STATUSES = [
   'pending',
-  'confirmed',
+  'paid',
   'processing',
   'shipped',
   'out_for_delivery',
   'ready_for_pickup',
   'delivered',
+  'completed',
   'cancelled',
-  'refunded',
 ];
 
-const NEXT_STATUSES: Record<string, string[]> = {
-  pending: ['confirmed', 'cancelled'],
-  confirmed: ['processing', 'cancelled'],
-  processing: ['shipped', 'ready_for_pickup', 'cancelled'],
-  shipped: ['out_for_delivery'],
-  out_for_delivery: ['delivered'],
-  ready_for_pickup: ['delivered'],
-  delivered: ['refunded'],
-  cancelled: [],
-  refunded: [],
-};
+/** States that close an order for good, so they drop out of "open". */
+const CLOSED_STATUSES = ['delivered', 'completed', 'cancelled'];
 
 const FULFILMENT_OPTIONS = [
   { value: 'all', label: 'Any fulfilment' },
@@ -124,7 +117,7 @@ export default function AdminOrders() {
   if (error && !items.length) return <AdminErrorState message={error} onRetry={() => reload()} />;
 
   const unpaid = items.filter((o) => o.payment_status === 'unpaid' || o.payment_status === 'failed').length;
-  const open = items.filter((o) => !['delivered', 'cancelled', 'refunded'].includes(String(o.status))).length;
+  const open = items.filter((o) => !CLOSED_STATUSES.includes(String(o.status))).length;
 
   return (
     <div className="space-y-6 pb-8">
@@ -178,7 +171,9 @@ export default function AdminOrders() {
             const key = order.id || `order-${index}`;
             const isOpen = expanded === key;
             const busy = action.actingId === key;
-            const options = NEXT_STATUSES[String(order.status)] ?? [];
+            // The server decides which transitions are legal — it knows the
+            // order's fulfilment type, which a client-side map cannot know.
+            const options = order.allowed_next_statuses ?? [];
             const total = text(order.total_usd === null || order.total_usd === undefined ? undefined : formatMoney(order.total_usd));
             return (
               <Card key={key} className="p-4">
@@ -247,7 +242,7 @@ export default function AdminOrders() {
                           {options.map((next) => (
                             <Button
                               key={next}
-                              variant={next === 'cancelled' || next === 'refunded' ? 'destructive' : 'outline'}
+                              variant={next === 'cancelled' ? 'destructive' : 'outline'}
                               size="sm"
                               disabled={busy}
                               onClick={() => setPending({ id: key, status: next })}

@@ -2,15 +2,66 @@ import hashlib
 
 from datetime import timedelta
 
+from django.core.cache import cache
+from django.db import connection
 from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import date
-from .models import User, OTPToken, DeviceSession, AccountEvent, WebAuthnCredential
+from .models import (
+    AccountStanding, DeviceSession, OTPToken, RecoveryCode, User, AccountEvent,
+    WebAuthnCredential,
+)
+from .services import apply_standing_action, lift_standing_action
 from apps.profiles.models import Profile
 from common.utils import hash_dob, calculate_age
+
+LOGIN_URL = '/api/v1/auth/login/'
+VERIFY_LOGIN_OTP_URL = '/api/v1/auth/verify-login-otp/'
+REFRESH_URL = '/api/v1/auth/token/refresh/'
+TOTP_CHALLENGE_URL = '/api/v1/auth/totp/challenge/'
+
+
+def _standing_user(email, *, verified=True, password='TestPass123!', **extra):
+    user = User.objects.create_user(email=email, password=password, **extra)
+    user.dob_hash = hash_dob(date(1995, 5, 5))
+    user.email_verified = verified
+    user.save()
+    Profile.objects.create(
+        user=user, username=email.split('@')[0][:24], display_name='Standing User',
+    )
+    return user
+
+
+def _login(user, client=None, **extra):
+    client = client or APIClient()
+    return client.post(LOGIN_URL, {
+        'email': user.email, 'password': 'TestPass123!', **extra,
+    }, format='json')
+
+
+def _full_login(user, client=None, password='TestPass123!'):
+    """Drive login -> OTP verification and return the final response."""
+    client = client or APIClient()
+    first = client.post(LOGIN_URL, {'email': user.email, 'password': password}, format='json')
+    assert first.status_code == status.HTTP_200_OK, first.data
+    otp = OTPToken.objects.filter(user=user, channel='email', is_used=False).latest('created_at').code
+    return client.post(VERIFY_LOGIN_OTP_URL, {
+        'login_token': first.data['data']['login_token'], 'otp': otp,
+    }, format='json')
+
+
+class _CacheClearingMixin:
+    """DRF throttles through the default cache, which locmem shares across
+    tests in a process. Clearing it keeps a new test class from inheriting
+    another one's exhausted 'login' / 'otp' budget."""
+
+    def setUp(self):
+        super().setUp()
+        cache.clear()
+        self.addCleanup(cache.clear)
 
 
 class AuthTests(TestCase):
@@ -683,3 +734,705 @@ class UnverifiedLoginRedirectTests(TestCase):
         self.assertEqual(verify.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
         self.assertTrue(self.user.email_verified)
+
+
+class AccountStandingServiceTests(TestCase):
+    """The writer: apply_standing_action / lift_standing_action."""
+
+    def setUp(self):
+        self.user = _standing_user('standing-svc@example.com')
+
+    def test_unknown_action_raises_value_error(self):
+        with self.assertRaises(ValueError) as ctx:
+            apply_standing_action(
+                target_user_id=self.user.id, action='user_nuked', reason='nope',
+            )
+        self.assertIn('user_nuked', str(ctx.exception))
+        # Nothing was written and the account is untouched.
+        self.assertFalse(AccountStanding.objects.filter(user=self.user).exists())
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_active)
+
+    def test_suspension_without_duration_is_indefinite_not_permanent(self):
+        standing = apply_standing_action(
+            target_user_id=self.user.id, action='user_suspended', reason='spam',
+        )
+        self.assertEqual(standing.state, AccountStanding.STATE_SUSPENDED)
+        self.assertFalse(standing.permanent)
+        self.assertIsNone(standing.suspended_until)
+        self.assertTrue(standing.is_moderation_action)
+        self.assertFalse(standing.is_expired)
+        self.assertTrue(standing.blocks_authentication())
+
+    def test_suspension_with_duration_sets_an_expiry(self):
+        standing = apply_standing_action(
+            target_user_id=self.user.id, action='user_suspended',
+            reason='spam', duration_days=7,
+        )
+        self.assertFalse(standing.permanent)
+        self.assertIsNotNone(standing.suspended_until)
+        self.assertGreater(standing.suspended_until, timezone.now() + timedelta(days=6))
+        self.assertFalse(standing.is_expired)
+
+    def test_ban_is_permanent_and_ignores_duration(self):
+        standing = apply_standing_action(
+            target_user_id=self.user.id, action='user_banned',
+            reason='fraud', duration_days=3,
+        )
+        self.assertEqual(standing.state, AccountStanding.STATE_BANNED)
+        self.assertTrue(standing.permanent)
+        self.assertIsNone(standing.suspended_until)
+
+    def test_non_positive_duration_is_rejected(self):
+        with self.assertRaises(ValueError):
+            apply_standing_action(
+                target_user_id=self.user.id, action='user_suspended',
+                reason='x', duration_days=0,
+            )
+
+    def test_apply_deactivates_and_revokes_every_device_session(self):
+        for i in range(3):
+            DeviceSession.objects.create(
+                user=self.user, refresh_token_hash=hashlib.sha256(f's{i}'.encode()).hexdigest(),
+                device_name=f'Device {i}', ip_address='127.0.0.1',
+            )
+
+        apply_standing_action(
+            target_user_id=self.user.id, action='user_banned',
+            reason='fraud', actor=self.user, source='governance:abc-123',
+        )
+
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+        self.assertEqual(DeviceSession.objects.filter(user=self.user, is_active=True).count(), 0)
+        standing = AccountStanding.objects.get(user=self.user)
+        self.assertEqual(standing.action_id, 'governance:abc-123')
+        self.assertTrue(AccountEvent.objects.filter(
+            user=self.user, event_type='account_banned').exists())
+
+    def test_lift_restores_the_account(self):
+        apply_standing_action(
+            target_user_id=self.user.id, action='user_suspended', reason='spam',
+        )
+        standing = lift_standing_action(
+            target_user_id=self.user.id, actor=self.user, reason='appeal upheld',
+        )
+        self.assertEqual(standing.state, AccountStanding.STATE_CLEAR)
+        self.assertFalse(standing.blocks_authentication())
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.is_active)
+        self.assertTrue(AccountEvent.objects.filter(
+            user=self.user, event_type='account_standing_lifted').exists())
+
+
+class AccountStandingEnforcementTests(_CacheClearingMixin, TestCase):
+    """A suspension has to bite immediately, not in fifteen minutes."""
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+
+    def _session_and_tokens(self, user):
+        refresh = str(RefreshToken.for_user(user))
+        DeviceSession.objects.create(
+            user=user, refresh_token_hash=hashlib.sha256(refresh.encode()).hexdigest(),
+            device_name='Phone', ip_address='127.0.0.1',
+        )
+        return refresh, str(RefreshToken.for_user(user).access_token)
+
+    def test_suspended_user_cannot_log_in(self):
+        user = _standing_user('suspended-login@example.com')
+        apply_standing_action(
+            target_user_id=user.id, action='user_suspended', reason='spam',
+        )
+
+        res = _login(user, self.client)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(res.data['success'])
+        self.assertEqual(res.data['standing']['state'], 'suspended')
+        self.assertEqual(res.data['standing']['reason'], 'spam')
+        self.assertIsNone(res.data['standing']['until'])
+        self.assertFalse(res.data['standing']['permanent'])
+        self.assertNotIn('access', res.data.get('data') or {})
+        # No login OTP was sent either — nothing was minted for them.
+        self.assertFalse(OTPToken.objects.filter(
+            user=user, channel='email', is_used=False).exists())
+
+    def test_banned_user_cannot_log_in_even_with_reactivate(self):
+        user = _standing_user('banned-reactivate@example.com')
+        apply_standing_action(
+            target_user_id=user.id, action='user_banned', reason='fraud',
+        )
+
+        res = _login(user, self.client, reactivate=True)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.data['standing']['state'], 'banned')
+        self.assertTrue(res.data['standing']['permanent'])
+        user.refresh_from_db()
+        self.assertFalse(user.is_active, 'reactivate must never undo a ban')
+
+    def test_reactivation_prompt_is_not_offered_for_a_moderation_suspension(self):
+        user = _standing_user('susp-no-prompt@example.com')
+        apply_standing_action(
+            target_user_id=user.id, action='user_suspended', reason='spam',
+        )
+
+        res = _login(user, self.client)
+
+        self.assertNotIn('reactivatable', (res.data.get('data') or {}))
+
+    def test_self_deactivation_is_still_reactivatable(self):
+        """The regression guard: the fix must not break the legitimate path."""
+        user = _standing_user('self-deactivate@example.com')
+        user.is_active = False
+        user.deleted_at = timezone.now()
+        user.deletion_type = 'user'
+        user.save()
+
+        prompt = _login(user, self.client)
+        self.assertEqual(prompt.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertTrue(prompt.data['data']['reactivatable'])
+
+        restored = _login(user, self.client, reactivate=True)
+        self.assertEqual(restored.status_code, status.HTTP_200_OK)
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+
+    def test_suspended_user_cannot_refresh(self):
+        user = _standing_user('suspended-refresh@example.com')
+        refresh, _access = self._session_and_tokens(user)
+        apply_standing_action(
+            target_user_id=user.id, action='user_suspended', reason='spam',
+        )
+
+        res = self.client.post(REFRESH_URL, {'refresh': refresh}, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.data['standing']['state'], 'suspended')
+        self.assertNotIn('access', res.data.get('data') or {})
+
+    def test_already_issued_access_token_stops_working(self):
+        user = _standing_user('suspended-drf@example.com')
+        _refresh, access = self._session_and_tokens(user)
+
+        ok = self.client.get('/api/v1/auth/sessions/',
+                             HTTP_AUTHORIZATION=f'Bearer {access}')
+        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+
+        apply_standing_action(
+            target_user_id=user.id, action='user_banned', reason='fraud',
+        )
+
+        blocked = self.client.get('/api/v1/auth/sessions/',
+                                  HTTP_AUTHORIZATION=f'Bearer {access}')
+        self.assertEqual(blocked.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_warned_user_logs_in_normally(self):
+        user = _standing_user('warned@example.com')
+        AccountStanding.objects.create(
+            user=user, state=AccountStanding.STATE_WARNED, reason='first warning',
+            is_moderation_action=True,
+        )
+
+        res = _full_login(user, self.client)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('access', res.data['data'])
+
+    def test_expired_suspension_self_clears(self):
+        user = _standing_user('lapsed@example.com')
+        apply_standing_action(
+            target_user_id=user.id, action='user_suspended',
+            reason='7 days', duration_days=7,
+        )
+        standing = AccountStanding.objects.get(user=user)
+        AccountStanding.objects.filter(pk=standing.pk).update(
+            suspended_until=timezone.now() - timedelta(minutes=1),
+        )
+
+        res = _full_login(user, self.client)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('access', res.data['data'])
+        standing.refresh_from_db()
+        self.assertEqual(standing.state, AccountStanding.STATE_CLEAR)
+        self.assertIsNone(standing.suspended_until)
+        user.refresh_from_db()
+        self.assertTrue(user.is_active, 'a lapsed suspension hands the account back')
+
+    def test_social_login_funnel_refuses_a_suspended_user(self):
+        """_finalize_social_login is the shared Google/Apple/passkey funnel."""
+        from unittest import mock
+
+        from . import views as accounts_views
+
+        user = _standing_user('suspended-social@example.com')
+        apply_standing_action(
+            target_user_id=user.id, action='user_suspended', reason='spam',
+        )
+        request = APIClient().post('/').wsgi_request
+
+        with self.assertRaises(accounts_views._StandingBlocked) as ctx:
+            accounts_views._finalize_social_login(user, 'google', request)
+
+        self.assertEqual(ctx.exception.response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertFalse(
+            DeviceSession.objects.filter(user=user).exists(),
+            'no session may be created for a suspended account',
+        )
+
+
+class TotpSecretEncryptionTests(TestCase):
+    """The seed must not sit in the table — or in the admin — in clear."""
+
+    def setUp(self):
+        self.user = _standing_user('secret@example.com')
+        self.plain = 'JBSWY3DPEHPK3PXP'
+
+    def _raw_secret(self, user):
+        """The value as it physically sits in the column.
+
+        Raw SQL because the ORM decrypts on read, which is the whole point.
+        Matched on email so it is backend-agnostic (SQLite stores UUIDs as
+        dashless hex, Postgres as a native uuid column).
+        """
+        with connection.cursor() as cursor:
+            cursor.execute(
+                'SELECT totp_secret FROM accounts_user WHERE email = %s', [user.email],
+            )
+            row = cursor.fetchone()
+        self.assertIsNotNone(row, 'the account row was not found')
+        return row[0]
+
+    def test_secret_round_trips_through_encryption(self):
+        self.user.totp_secret = self.plain
+        self.user.totp_enabled = True
+        self.user.save()
+
+        raw = self._raw_secret(self.user)
+        self.assertNotEqual(raw, self.plain)
+        self.assertNotIn(self.plain, raw)
+        self.assertTrue(raw.startswith('f1:'))
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.totp_secret, self.plain)
+
+    def test_challenges_still_verify_with_an_encrypted_secret(self):
+        import pyotp
+
+        self.user.totp_secret = self.plain
+        self.user.totp_enabled = True
+        self.user.save()
+        self.user.refresh_from_db()
+
+        self.assertTrue(pyotp.TOTP(self.user.totp_secret).verify(
+            pyotp.TOTP(self.plain).now()))
+
+    def test_legacy_plaintext_value_is_readable_and_encrypted_on_write(self):
+        User.objects.filter(pk=self.user.pk).update(totp_secret=self.plain)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.totp_secret, self.plain)
+
+        self.user.save(update_fields=['totp_secret'])
+        self.assertTrue(self._raw_secret(self.user).startswith('f1:'))
+
+    def test_admin_fieldset_does_not_expose_the_secret(self):
+        from .admin import UserAdmin
+
+        rendered = repr(UserAdmin.fieldsets) + repr(UserAdmin.add_fieldsets)
+        self.assertNotIn('totp_secret', rendered)
+        self.assertIn('totp_enabled', rendered)
+
+
+class StaffMfaEnrolmentTests(_CacheClearingMixin, TestCase):
+    """Staff cannot hold a session without a second factor."""
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+
+    def test_staff_without_totp_cannot_complete_login(self):
+        staff = _standing_user('staff-mfa@example.com', is_staff=True)
+
+        res = _full_login(staff, self.client)
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.data['code'], 'mfa_enrolment_required')
+        self.assertNotIn('access', res.data['data'])
+        self.assertFalse(
+            DeviceSession.objects.filter(user=staff).exists(),
+            'no session may be created before enrolment',
+        )
+
+    def test_superuser_is_covered_too(self):
+        su = _standing_user('su-mfa@example.com', is_superuser=True)
+
+        res = _full_login(su, self.client)
+
+        self.assertEqual(res.data.get('code'), 'mfa_enrolment_required')
+
+    def test_staff_with_totp_gets_the_normal_challenge(self):
+        staff = _standing_user('staff-ok@example.com', is_staff=True)
+        staff.totp_secret = 'JBSWY3DPEHPK3PXP'
+        staff.totp_enabled = True
+        staff.save()
+
+        res = _full_login(staff, self.client)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data['data']['require_totp'])
+
+    def test_refresh_is_blocked_for_staff_without_totp(self):
+        staff = _standing_user('staff-refresh@example.com', is_staff=True)
+        refresh = str(RefreshToken.for_user(staff))
+        DeviceSession.objects.create(
+            user=staff, refresh_token_hash=hashlib.sha256(refresh.encode()).hexdigest(),
+            device_name='Laptop', ip_address='127.0.0.1',
+        )
+
+        res = self.client.post(REFRESH_URL, {'refresh': refresh}, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.data['code'], 'mfa_enrolment_required')
+
+    def test_non_staff_login_is_unaffected(self):
+        user = _standing_user('plain-mfa@example.com')
+
+        res = _full_login(user, self.client)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('access', res.data['data'])
+
+
+class RecoveryCodeLoginTests(_CacheClearingMixin, TestCase):
+    """The documented recovery path actually works end to end."""
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self.user = _standing_user('recovery@example.com')
+        self.user.totp_secret = 'JBSWY3DPEHPK3PXP'
+        self.user.totp_enabled = True
+        self.user.save()
+        self.plain_code = 'ABCDE-FGHIJ'
+        RecoveryCode.objects.create(
+            user=self.user,
+            code_hash=RecoveryCode.hash_code(self.plain_code),
+        )
+
+    def _challenge(self):
+        first = self.client.post(LOGIN_URL, {
+            'email': self.user.email, 'password': 'TestPass123!',
+        }, format='json')
+        otp = OTPToken.objects.filter(user=self.user, channel='email', is_used=False).latest('created_at').code
+        verified = self.client.post(VERIFY_LOGIN_OTP_URL, {
+            'login_token': first.data['data']['login_token'], 'otp': otp,
+        }, format='json')
+        self.assertTrue(verified.data['data']['require_totp'])
+        return verified.data['data']['temp_token']
+
+    def test_recovery_code_login_succeeds(self):
+        temp_token = self._challenge()
+
+        res = self.client.post(TOTP_CHALLENGE_URL, {
+            'temp_token': temp_token, 'recovery_code': self.plain_code,
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        self.assertIn('access', res.data['data'])
+        self.assertTrue(res.data['data']['recovery_code_used'])
+        self.assertTrue(RecoveryCode.objects.filter(
+            user=self.user, is_used=True).exists())
+
+    def test_recovery_code_is_single_use(self):
+        temp_token = self._challenge()
+        first = self.client.post(TOTP_CHALLENGE_URL, {
+            'temp_token': temp_token, 'recovery_code': self.plain_code,
+        }, format='json')
+        self.assertEqual(first.status_code, status.HTTP_200_OK)
+
+        replay = self.client.post(TOTP_CHALLENGE_URL, {
+            'temp_token': temp_token, 'recovery_code': self.plain_code,
+        }, format='json')
+
+        self.assertEqual(replay.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_authenticator_code_still_works(self):
+        import pyotp
+
+        temp_token = self._challenge()
+
+        res = self.client.post(TOTP_CHALLENGE_URL, {
+            'temp_token': temp_token,
+            'code': pyotp.TOTP('JBSWY3DPEHPK3PXP').now(),
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        self.assertNotIn('recovery_code_used', res.data['data'])
+
+    def test_neither_or_both_is_rejected(self):
+        temp_token = self._challenge()
+
+        neither = self.client.post(TOTP_CHALLENGE_URL, {
+            'temp_token': temp_token,
+        }, format='json')
+        both = self.client.post(TOTP_CHALLENGE_URL, {
+            'temp_token': temp_token,
+            'code': '123456',
+            'recovery_code': self.plain_code,
+        }, format='json')
+
+        self.assertEqual(neither.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(both.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(RecoveryCode.objects.filter(
+            user=self.user, is_used=True).exists())
+
+
+class LoginLockoutTests(_CacheClearingMixin, TestCase):
+    """Five failures lock the account; a success clears the counter."""
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self.user = _standing_user('lockout@example.com')
+
+    def _fail(self, times=1, password='WrongPass123!'):
+        for _ in range(times):
+            return_value = self.client.post(LOGIN_URL, {
+                'email': self.user.email, 'password': password,
+            }, format='json')
+        return return_value
+
+    def test_five_failures_lock_the_account(self):
+        for _ in range(4):
+            res = _login(self.user, self.client, password='WrongPass123!')
+            self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        fifth = _login(self.user, self.client, password='WrongPass123!')
+        self.assertEqual(fifth.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.failed_login_count, 5)
+        self.assertIsNotNone(self.user.locked_until)
+
+        correct = _login(self.user, self.client)
+        self.assertEqual(correct.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertIn('locked', correct.data['message'].lower())
+        self.assertGreater(correct.data['data']['retry_after_seconds'], 0)
+
+    def test_locked_out_user_cannot_reactivate_either(self):
+        for _ in range(5):
+            _login(self.user, self.client, password='WrongPass123!')
+        self.user.refresh_from_db()
+        self.user.is_active = False
+        self.user.deleted_at = timezone.now()
+        self.user.deletion_type = 'user'
+        self.user.save()
+
+        res = _login(self.user, self.client, reactivate=True)
+
+        self.assertEqual(res.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+
+    def test_successful_login_resets_the_counter(self):
+        _login(self.user, self.client, password='WrongPass123!')
+        _login(self.user, self.client, password='WrongPass123!')
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.failed_login_count, 2)
+
+        res = _full_login(self.user, self.client)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.failed_login_count, 0)
+        self.assertIsNone(self.user.locked_until)
+
+    def test_wrong_otp_counts_as_a_failure(self):
+        """The OTP step feeds the same account-level counter as the password.
+
+        Each OTP token has its own 3-attempt cap, so the account lock is only
+        reachable across several login rounds — which is exactly why the
+        counter has to live on the user and not on the token.
+        """
+        statuses = []
+        for _ in range(5):
+            first = _login(self.user, self.client)
+            if first.status_code == status.HTTP_429_TOO_MANY_REQUESTS:
+                statuses.append(first.status_code)
+                break
+            login_token = first.data['data']['login_token']
+            for _ in range(2):
+                res = self.client.post(VERIFY_LOGIN_OTP_URL, {
+                    'login_token': login_token, 'otp': '000000',
+                }, format='json')
+                statuses.append(res.status_code)
+
+        self.assertIn(status.HTTP_429_TOO_MANY_REQUESTS, statuses)
+        self.user.refresh_from_db()
+        self.assertGreaterEqual(self.user.failed_login_count, 5)
+        self.assertIsNotNone(self.user.locked_until)
+
+        locked = _login(self.user, self.client)
+        self.assertEqual(locked.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+
+    def test_forgot_password_stays_available_while_locked_out(self):
+        for _ in range(5):
+            _login(self.user, self.client, password='WrongPass123!')
+
+        res = self.client.post('/api/v1/auth/forgot-password/',
+                               {'email': self.user.email}, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data['success'])
+        self.assertTrue(OTPToken.objects.filter(user=self.user, channel='email').exists())
+
+    def test_lock_lapses_once_the_window_passes(self):
+        for _ in range(5):
+            _login(self.user, self.client, password='WrongPass123!')
+        User.objects.filter(pk=self.user.pk).update(
+            locked_until=timezone.now() - timedelta(minutes=1),
+        )
+        self.user.refresh_from_db()
+
+        res = _login(self.user, self.client)
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+
+class RegistrationVerifyStandingTests(_CacheClearingMixin, TestCase):
+    """Completing email verification must not be a way around a suspension.
+
+    ``VerifyRegistrationOTPView`` mints a full access+refresh pair and a
+    DeviceSession exactly like a login does, so it is a fourth enforcement
+    point. It is the one most easily overlooked because it does not look like
+    a login — but a mass fake-account signup that gets banned before its
+    email is verified would otherwise complete registration and hold a session.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self.user = _standing_user('unverified-suspended@example.com', verified=False)
+        self.url = '/api/v1/auth/verify-registration-otp/'
+
+    def _registration_token(self):
+        OTPToken.objects.create(
+            user=self.user, code='123456', channel='email',
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        from .views import _generate_temp_token
+        return _generate_temp_token(self.user, 'registration', expiry_minutes=10)
+
+    def test_suspended_user_cannot_complete_registration(self):
+        apply_standing_action(
+            target_user_id=self.user.id, action='user_suspended', reason='fake signup',
+        )
+
+        res = self.client.post(
+            self.url,
+            {'registration_token': self._registration_token(), 'otp': '123456'},
+            format='json',
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.data['standing']['state'], 'suspended')
+        self.assertEqual(res.data['standing']['reason'], 'fake signup')
+        self.assertNotIn('access', res.data.get('data') or {})
+        self.assertFalse(
+            DeviceSession.objects.filter(user=self.user).exists(),
+            'no session may be minted for a suspended account',
+        )
+
+    def test_banned_user_cannot_complete_registration(self):
+        apply_standing_action(
+            target_user_id=self.user.id, action='user_banned', reason='fraud',
+        )
+
+        res = self.client.post(
+            self.url,
+            {'registration_token': self._registration_token(), 'otp': '123456'},
+            format='json',
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.data['standing']['state'], 'banned')
+        self.assertNotIn('access', res.data.get('data') or {})
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.is_active)
+
+    def test_unverified_user_with_clear_standing_still_completes(self):
+        """The guard must not break ordinary onboarding."""
+        res = self.client.post(
+            self.url,
+            {'registration_token': self._registration_token(), 'otp': '123456'},
+            format='json',
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        self.assertIn('access', res.data['data'])
+
+    def test_staff_cannot_complete_registration_without_totp(self):
+        self.user.is_staff = True
+        self.user.save(update_fields=['is_staff'])
+
+        res = self.client.post(
+            self.url,
+            {'registration_token': self._registration_token(), 'otp': '123456'},
+            format='json',
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(res.data['code'], 'mfa_enrolment_required')
+
+
+class AccountEventChoiceIntegrityTests(SimpleTestCase):
+    """Every event the code logs must be a declared choice.
+
+    ``Model.save()`` does not validate ``choices``, so an undeclared event
+    type writes happily and then fails ``full_clean()`` — invisible in the app,
+    visible as a 500 on any admin/serializer path that validates. The recovery
+    branch of TOTPChallengeView logged '2fa_recovery_used', which was not in
+    EVENT_CHOICES.
+    """
+
+    #: Scoped to the MFA events this change added/fixed. An AST sweep of every
+    #: ``_log_event`` call also turns up pre-existing undeclared types
+    #: ('registered', 'email_verified', 'age_verified', 'session_revoked',
+    #: '2fa_recovery_regenerated'). Those are unrelated drift in a taxonomy other
+    #: apps filter on, so widening EVENT_CHOICES for them is a separate change
+    #: with its own review — flagged, not silently absorbed here.
+    GUARDED = {'2fa_enabled', '2fa_disabled', '2fa_recovery_used'}
+
+    def test_mfa_events_logged_by_the_view_are_declared_choices(self):
+        import ast
+        import pathlib
+
+        from .models import AccountEvent
+
+        declared = {choice for choice, _label in AccountEvent.EVENT_CHOICES}
+        source = pathlib.Path(__file__).with_name('views.py').read_text()
+        tree = ast.parse(source)
+
+        logged = set()
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == '_log_event'
+                and len(node.args) > 1
+                and isinstance(node.args[1], ast.Constant)
+            ):
+                logged.add(node.args[1].value)
+
+        self.assertTrue(
+            self.GUARDED <= logged,
+            f'expected these MFA events to be logged: {sorted(self.GUARDED - logged)}',
+        )
+        undeclared = (logged & self.GUARDED) - declared
+        self.assertEqual(
+            undeclared, set(),
+            f'_log_event writes undeclared MFA event types: {sorted(undeclared)}',
+        )

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { adminPortalApi, type PortalOrder, type PortalShopCertification } from '@/api/adminPortal';
 import AdminShops from '@/pages/admin/AdminShops';
@@ -193,17 +193,42 @@ describe('AdminShops error handling', () => {
   });
 });
 
-describe('AdminOrders illegal transition surfacing', () => {
-  it('shows the server 400 message for an illegal status transition', async () => {
+describe('AdminOrders status vocabulary', () => {
+  it('offers only real order statuses, never payment-only values', async () => {
+    const getOrders = adminPortalApi.getOrders as unknown as ReturnType<typeof vi.fn>;
+    getOrders.mockResolvedValue(env([], 0));
+    const { default: AdminOrders } = await import('@/pages/admin/AdminOrders');
+
+    render(
+      <MemoryRouter>
+        <AdminOrders />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(screen.getByText('Any status')).toBeInTheDocument());
+    // `refunded` is a payment_status, `confirmed` never existed. Either one
+    // here 400s the entire list request.
+    expect(screen.queryByRole('button', { name: /^refunded$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^confirmed$/i })).not.toBeInTheDocument();
+    // `paid` and `completed` were missing, and `paid` is the default status
+    // of every new order.
+    expect(screen.getByRole('button', { name: /^paid$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^completed$/i })).toBeInTheDocument();
+  });
+
+  it('renders transitions from the server-provided allowed_next_statuses', async () => {
     const getOrders = adminPortalApi.getOrders as unknown as ReturnType<typeof vi.fn>;
     const updateStatus = adminPortalApi.updateOrderStatus as unknown as ReturnType<typeof vi.fn>;
     const { default: AdminOrders } = await import('@/pages/admin/AdminOrders');
 
-    const order: PortalOrder = { id: 'o1', order_number: 'ORD-1', status: 'delivered', payment_status: 'paid' };
+    const order: PortalOrder = {
+      id: 'o1', order_number: 'ORD-1', status: 'paid', payment_status: 'paid',
+      allowed_next_statuses: ['processing', 'cancelled'],
+    };
     getOrders.mockResolvedValue(env([order], 1));
     updateStatus.mockRejectedValue(
       Object.assign(new Error('x'), {
-        response: { status: 400, data: { success: false, message: 'Illegal transition: delivered → refunded is not allowed.' } },
+        response: { status: 400, data: { success: false, message: 'Cannot move order from paid to cancelled for a digital order.' } },
       }),
     );
 
@@ -215,13 +240,17 @@ describe('AdminOrders illegal transition surfacing', () => {
 
     await waitFor(() => expect(screen.getByText('ORD-1')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /details/i }));
-    // The status filter chip and the transition button share a label; the
-    // transition button is the one carrying the arrow icon.
-    const transition = (await screen.findAllByRole('button', { name: /refunded/i })).pop()!;
-    fireEvent.click(transition);
+
+    // Exactly the server's list inside the "Move to" panel — nothing
+    // invented client-side, and nothing the server omitted.
+    const moveTo = (await screen.findByText('Move to')).parentElement as HTMLElement;
+    const offered = within(moveTo).getAllByRole('button');
+    expect(offered.map((b) => b.textContent?.replace(/.*\s/, ''))).toEqual(['processing', 'cancelled']);
+
+    fireEvent.click(within(moveTo).getByRole('button', { name: /cancelled/i }));
     fireEvent.click(await screen.findByRole('button', { name: /^confirm$/i }));
 
-    await waitFor(() => expect(screen.getByText(/Illegal transition: delivered/)).toBeInTheDocument());
-    expect(updateStatus).toHaveBeenCalledWith('o1', { status: 'refunded', note: undefined });
+    await waitFor(() => expect(screen.getByText(/Cannot move order from paid/)).toBeInTheDocument());
+    expect(updateStatus).toHaveBeenCalledWith('o1', { status: 'cancelled', note: undefined });
   });
 });

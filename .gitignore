@@ -90,3 +90,7 @@ docs/security-posture-*.md
 docs/security-posture-*.docx
 docs/Business_Model_Strategy_2026.docx
 docs/BuddyUp_Security_Posture_*.docx
+
+# Generated ML training/synthetic datasets (224MB+, reproducible from
+# backend/ai_service/training/). Never commit these.
+data/
