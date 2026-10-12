@@ -122,6 +122,14 @@ const AdminCommunities = lazy(() => import('@/pages/admin/AdminCommunities'));
 const AdminStations = lazy(() => import('@/pages/admin/AdminStations'));
 const AdminDelivery = lazy(() => import('@/pages/admin/AdminDelivery'));
 const AdminWallet = lazy(() => import('@/pages/admin/AdminWallet'));
+// Governance surfaces. These decide who may use the console above and record
+// the actions too dangerous to apply in one step, so they live beside — and
+// visibly apart from — the day-to-day domain pages.
+const AdminModeration = lazy(() => import('@/pages/admin/AdminModeration'));
+const AdminApprovals = lazy(() => import('@/pages/admin/AdminApprovals'));
+const AdminAudit = lazy(() => import('@/pages/admin/AdminAudit'));
+const AdminEmail = lazy(() => import('@/pages/admin/AdminEmail'));
+const AdminStaff = lazy(() => import('@/pages/admin/AdminStaff'));
 
 const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Privacy = lazy(() => import('@/pages/legal/Privacy'));
@@ -271,7 +279,12 @@ export const router = createBrowserRouter([
               { path: '/admin/stations', element: <SWrapper><AdminStations /></SWrapper> },
               { path: '/admin/delivery', element: <SWrapper><AdminDelivery /></SWrapper> },
               { path: '/admin/wallet', element: <SWrapper><AdminWallet /></SWrapper> },
-              { path: '/admin/moderation', element: <SWrapper><ModerationQueue /></SWrapper> },
+              { path: '/admin/moderation', element: <SWrapper><AdminModeration /></SWrapper> },
+              { path: '/admin/appeals', element: <SWrapper><ModerationQueue /></SWrapper> },
+              { path: '/admin/approvals', element: <SWrapper><AdminApprovals /></SWrapper> },
+              { path: '/admin/audit', element: <SWrapper><AdminAudit /></SWrapper> },
+              { path: '/admin/email', element: <SWrapper><AdminEmail /></SWrapper> },
+              { path: '/admin/staff', element: <SWrapper><AdminStaff /></SWrapper> },
               { path: '/admin/verification', element: <SWrapper><AdminVerification /></SWrapper> },
             ],
           },

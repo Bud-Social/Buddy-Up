@@ -1,20 +1,25 @@
 """Serializers for the governance API.
 
-Two rules shape these:
+Three rules shape these:
 
 * ``user`` is written as a UUID in, a ``{id, email, display_name}`` object out.
   Staff need to know *who* a row concerns, and they need it after the account is
   deleted — which is why the account action request also carries a plain
-  ``requested_by_profile`` string that survives a cascade.
+  ``requested_by_profile`` string that survives a cascade, and why every audit
+  row carries an ``actor_email`` snapshot.
 * No field here can write ``is_staff`` / ``is_superuser``. Granting a
   ``StaffRole`` narrows access; minting a superuser is not this API's job, and
   a compromised staff session should not be able to escalate through it.
+* Nothing here is writable on an audit row or an email log. They are written by
+  the code that performs the action, from the server's side. A serializer that
+  accepted input for ``before`` would let a staff member forge the record of
+  their own action, which is the one thing an audit trail must not be.
 """
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 
-from .models import AccountActionRequest, StaffRole
+from .models import AccountActionRequest, AdminActionLog, EmailLog, StaffRole
 
 User = get_user_model()
 
@@ -310,3 +315,176 @@ class DecisionSerializer(serializers.Serializer):
     """
 
     note = serializers.CharField(required=False, allow_blank=True, default='')
+
+
+# ---------------------------------------------------------------------------
+# Audit trail
+# ---------------------------------------------------------------------------
+
+class AdminActionLogSerializer(serializers.ModelSerializer):
+    """Read side of an audit row.
+
+    ``before`` / ``after`` are returned in full — that is the "recall the
+    details of any action" requirement — so this serializer is also what the
+    CSV export is built from. Both are scrubbed at *write* time by
+    :func:`apps.governance.services.record_admin_action`, not here, because a
+    row written before the contract existed is already in the table and hiding
+    it at read time would be a false assurance.
+    """
+
+    class Meta:
+        model = AdminActionLog
+        fields = [
+            'id',
+            'actor',
+            'actor_email',
+            'action',
+            'target_type',
+            'target_id',
+            'summary',
+            'before',
+            'after',
+            'request_id',
+            'ip_address',
+            'user_agent',
+            'created_at',
+        ]
+        read_only_fields = fields
+
+
+# ---------------------------------------------------------------------------
+# Assistance console
+# ---------------------------------------------------------------------------
+
+class StaffEmailSendSerializer(serializers.Serializer):
+    """Input for the staff→user assistance console.
+
+    The abuse controls are in the *schema*, not in the view, because a schema is
+    the one thing a caller cannot negotiate with:
+
+    * **One recipient.** ``user_id`` and ``email`` are both scalars and there is
+      no list-valued field. Unknown keys are rejected outright below, so
+      ``recipients``/``to``/``cc``/``bcc`` are a 400 rather than a silently
+      ignored bulk send. This endpoint must never become a spam relay, and the
+      cheapest way to guarantee that is for there to be nowhere to put a second
+      address.
+    * **A registered recipient.** ``validate`` resolves ``to_email`` against a
+      real, non-deleted ``User`` and fails if there is none. An address that
+      matches nobody cannot be delivered to, and accepting one would make this a
+      relay for arbitrary mail.
+    * **A real subject and a real body.** Bounded, because the console is not a
+      newsletter tool.
+    """
+
+    MAX_SUBJECT = 300
+    MAX_BODY = 5000
+
+    user_id = serializers.UUIDField(required=False)
+    email = serializers.EmailField(required=False)
+    subject = serializers.CharField(max_length=MAX_SUBJECT)
+    body = serializers.CharField(max_length=MAX_BODY)
+    related_object_type = serializers.CharField(
+        required=False, allow_blank=True, default='', max_length=50,
+    )
+    related_object_id = serializers.CharField(
+        required=False, allow_blank=True, default='', max_length=64,
+    )
+
+    def to_internal_value(self, data):
+        """Reject unknown keys instead of ignoring them.
+
+        DRF drops undeclared fields silently, which would make
+        ``{"recipients": [...]}`` a perfectly ordinary-looking 202 that quietly
+        sent to one person instead. The caller must be told that this endpoint
+        does not take a list, rather than discovering later that their bulk send
+        went nowhere.
+        """
+        if isinstance(data, dict):
+            known = set(self.fields)
+            unknown = sorted(set(data) - known)
+            if unknown:
+                raise serializers.ValidationError({
+                    key: [
+                        'Not accepted by this endpoint. It sends to exactly one '
+                        f'recipient; unexpected field(s): {unknown}.'
+                    ]
+                    for key in unknown
+                })
+        return super().to_internal_value(data)
+
+    def validate(self, attrs):
+        user_id = attrs.get('user_id')
+        email = (attrs.get('email') or '').strip()
+
+        if not user_id and not email:
+            raise serializers.ValidationError({
+                'user_id': 'Provide user_id or email — exactly one recipient.',
+            })
+        if user_id and email:
+            raise serializers.ValidationError({
+                'user_id': 'Provide user_id or email, not both.',
+            })
+
+        if user_id:
+            recipient = User.objects.filter(pk=user_id).first()
+            if recipient is None:
+                raise serializers.ValidationError({'user_id': 'No such user.'})
+        else:
+            # The hard "registered accounts only" rule. An address with no
+            # account behind it is refused outright rather than queued and
+            # bounced.
+            recipient = User.objects.filter(email__iexact=email).first()
+            if recipient is None:
+                raise serializers.ValidationError({
+                    'email': (
+                        'No account is registered with this address. This console '
+                        'can only message users who have an account.'
+                    ),
+                })
+
+        if getattr(recipient, 'deleted_at', None) is not None:
+            raise serializers.ValidationError({
+                'email': 'This account has been deleted and cannot be messaged.',
+            })
+
+        body = (attrs.get('body') or '').strip()
+        if not body:
+            raise serializers.ValidationError({'body': 'A message body is required.'})
+        # Belt and braces on "one recipient": a single address field that
+        # somehow carries two addresses is not one recipient.
+        if ',' in email or ';' in email or ' ' in email.strip():
+            raise serializers.ValidationError({
+                'email': 'One recipient per message. Bulk sending is not supported.',
+            })
+
+        attrs['_recipient'] = recipient
+        attrs['_to_email'] = recipient.email
+        attrs['_body'] = body
+        return attrs
+
+
+class EmailLogSerializer(serializers.ModelSerializer):
+    recipient = UserRefField(source='recipient_user')
+    sender = UserRefField(source='sent_by')
+
+    class Meta:
+        model = EmailLog
+        fields = [
+            'id',
+            'recipient_user',
+            'recipient',
+            'recipient_email',
+            'subject',
+            'body_preview',
+            'template_key',
+            'sent_by',
+            'sender',
+            'sent_by_email',
+            'status',
+            'error',
+            'dedupe_key',
+            'related_object_type',
+            'related_object_id',
+            'created_at',
+        ]
+        read_only_fields = fields

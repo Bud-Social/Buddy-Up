@@ -257,6 +257,12 @@ export function DataRow({ label, children }: { label: string; children: ReactNod
 /**
  * Compact inline action panel for "enter a reason and approve/reject".
  * Extracted so each review queue behaves identically.
+ *
+ * `requireNote` defaults to "required when rejecting", which is the historic
+ * behaviour. It is overridable because some endpoints demand the note on the
+ * *approve* path too — `ModerationAppealReviewSerializer` requires
+ * `resolution_note` for every decision, so an appeal approved without one is a
+ * 400 and the reviewer's only recourse is a reload.
  */
 export function ReasonPrompt({
   open,
@@ -264,6 +270,7 @@ export function ReasonPrompt({
   placeholder,
   busy,
   submitLabel,
+  requireNote,
   onSubmit,
   onCancel,
 }: {
@@ -272,15 +279,18 @@ export function ReasonPrompt({
   placeholder: string;
   busy?: boolean;
   submitLabel: string;
+  requireNote?: boolean;
   onSubmit: (reason: string) => void;
   onCancel: () => void;
 }) {
   const [reason, setReason] = useState('');
+  const noteRequired = requireNote ?? action === 'rejected';
   if (!open) return null;
   return (
     <div className="mt-3 pt-3 border-t border-buddy-surface">
       <label className="block text-xs text-buddy-text-secondary mb-1.5">
         Reason {action === 'rejected' ? '(sent to the applicant)' : '(internal note)'}
+        {noteRequired && <span className="text-buddy-red"> *</span>}
       </label>
       <textarea
         autoFocus
@@ -296,7 +306,7 @@ export function ReasonPrompt({
           size="sm"
           variant={action === 'rejected' ? 'destructive' : 'primary'}
           isLoading={busy}
-          disabled={action === 'rejected' && !reason.trim()}
+          disabled={noteRequired && !reason.trim()}
           onClick={() => onSubmit(reason.trim())}
         >
           {submitLabel}

@@ -58,6 +58,26 @@ class SettingsScreen extends ConsumerWidget {
               padding: EdgeInsets.all(16),
               child: Text('Help & Safety', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
+            // Above the policy links, not below them: this is the entry point
+            // for "a moderator did something to my account and I want to see
+            // why and challenge it", which is a help-and-safety question
+            // rather than a documents question.
+            ListTile(
+              leading: const Icon(Icons.gavel_outlined, color: BuddyColors.green),
+              title: const Text('Moderation & appeals',
+                  style: TextStyle(color: BuddyColors.green)),
+              subtitle: const Text(
+                'Warnings, suspensions and bans on your account — and how to '
+                'appeal one',
+                style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+              ),
+              trailing: const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                context.push('/settings/moderation');
+              },
+            ),
+            const Divider(height: 1),
             for (final (label, route) in links)
               ListTile(
                 title: Text(label, style: const TextStyle(color: BuddyColors.green)),
@@ -147,7 +167,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 4),
             _tile(context, tileColor, Icons.admin_panel_settings_outlined,
                 'Admin Console',
-                'Staff only · users, shops, orders, logistics, wallet',
+                'Staff only · users, orders, moderation, approvals, audit',
                 () => context.push('/admin')),
           ],
           const SizedBox(height: 12),

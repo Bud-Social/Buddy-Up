@@ -1,14 +1,23 @@
-"""Staff roles and two-person approvals.
+"""Staff roles, two-person approvals, and the record of both.
 
 This app owns the two tables that make ``ScopedPlatformAdmin``'s ``scope``
-string *mean* something, plus the request queue for the handful of actions that
-must never be applied by the person who asked for them.
+string *mean* something, the request queue for the handful of actions that must
+never be applied by the person who asked for them, and the two tables that
+answer "what did staff actually do, and what was actually sent".
 
-Two models, no more:
+Two models do the jobbing:
 
 * :class:`StaffRole` — one row per staff user holding a role and its scopes.
 * :class:`AccountActionRequest` — a high-risk action waiting for a second pair
   of eyes.
+
+Two more record what happened, because neither of the above is an audit trail:
+a ``StaffRole`` row answers "what role does this person hold *now*", and an
+``AccountActionRequest`` answers "what is this request", but neither answers
+"what happened at 14:32 on Tuesday".
+
+* :class:`AdminActionLog` — one immutable row per mutating staff action.
+* :class:`EmailLog` — one row per message sent to a user, with its outcome.
 
 Why one role per user (:class:`StaffRole` is a ``OneToOne``, not a
 ``StaffRoleGrant`` join table):
@@ -352,3 +361,165 @@ class AccountActionRequest(TimestampedModel):
     def requires_scope(self):
         """The scope an approver must hold, or None for an unknown action."""
         return self.ACTION_SCOPES.get(self.action)
+
+
+# ---------------------------------------------------------------------------
+# The audit trail
+# ---------------------------------------------------------------------------
+
+class AdminActionLog(TimestampedModel):
+    """One row per mutating staff action. Append-only; never updated in place.
+
+    This is the table that makes ``AdminLayout``'s claim — "Actions here are
+    recorded against your staff account" — true. Until it existed that line was
+    a lie: a suspended user left no trace of who suspended them, and there was
+    no way to answer "what happened to this order".
+
+    Shape
+    -----
+    ``actor`` is a ``SET_NULL`` FK *and* ``actor_email`` is a snapshot string.
+    The redundancy is the point: ``actor_email`` is written at call time, so
+    deleting a staff account does not delete the evidence that it acted. Same
+    reasoning as ``AccountActionRequest.requested_by_profile``.
+
+    ``action`` is a dotted verb — ``users.suspend``, ``orders.status_change``,
+    ``emails.send`` — not a FK. The verbs are declared by the app that performs
+    the action, so ``admin_portal`` can add its own without this app knowing
+    them. The first token is the domain; the second is the specific verb.
+
+    ``target_type`` + ``target_id`` are a loose pair rather than a FK for the
+    same reason: an audit row must outlive the object, and a deleted user must
+    still be recallable. ``target_id`` is a ``CharField`` for the same reason —
+    a UUID here, an int there, a string handle elsewhere.
+
+    Privacy contract
+    ----------------
+    ``before`` / ``after`` are for *state deltas*: a role that changed, a
+    status that moved, a field that was corrected. They are never for content.
+    The same contract ``analytics.AnalyticsEvent`` documents applies and is
+    enforced by :func:`apps.governance.services.record_admin_action`, which
+    redacts by key name before writing:
+
+    * no message bodies, post bodies or comment bodies
+    * no credentials, passwords, tokens, refresh tokens or API keys
+    * no TOTP/OTP secrets or one-time codes
+    * no raw GPS coordinates
+
+    The redaction is by *key name*, not by inspecting values, because a value
+    cannot be recognised as a secret by looking at it. Pass summaries, not
+    payloads. ``email`` is the one personal identifier allowed here — the whole
+    point of an audit is answering "did staff email this person" — and it is
+    deliberately absent from the denylist.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admin_actions',
+    )
+    # Snapshot, so the row survives the actor's account being deleted.
+    actor_email = models.CharField(max_length=254, blank=True)
+    action = models.CharField(max_length=80)
+    target_type = models.CharField(max_length=50, blank=True)
+    target_id = models.CharField(max_length=64, blank=True)
+    summary = models.CharField(max_length=300)
+    before = models.JSONField(null=True, blank=True, default=None)
+    after = models.JSONField(null=True, blank=True, default=None)
+    request_id = models.CharField(max_length=64, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        db_table = 'governance_admin_action_log'
+        # Newest first: the list view is "what just happened", the timeline view
+        # reverses this explicitly for chronological reading.
+        ordering = ['-created_at']
+        indexes = [
+            # "everything we did to users this week" — the common question.
+            models.Index(fields=['action', '-created_at']),
+            # "everything that ever happened to this one object".
+            models.Index(fields=['target_type', 'target_id']),
+            # "everything one operator has done".
+            models.Index(fields=['actor', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.action} by {self.actor_email or "system"} @ {self.created_at:%Y-%m-%d %H:%M}'
+
+
+# ---------------------------------------------------------------------------
+# Email delivery
+# ---------------------------------------------------------------------------
+
+class EmailLog(TimestampedModel):
+    """One row per message this platform sends to a user, with its outcome.
+
+    There was no delivery record anywhere before this: a send either arrived or
+    vanished, and "did the platform ever email them?" had no answer. This is
+    that answer, and it is deliberately *not* the message.
+
+    ``body_preview`` is the first 500 characters of the rendered body, not the
+    body. A log that stored whole messages would become the largest, longest-
+    lived copy of everything the platform has ever said to a user — a private
+    copy that outlives the user's account deletion, the retention policy and
+    every deletion request. A preview is enough to answer "what did we tell
+    them"; the full text is in the user's mailbox.
+
+    ``status`` is the delivery lifecycle: ``queued`` when the row is written
+    (which happens *before* the worker is handed the message), ``sent`` when
+    SMTP accepted it, ``failed`` when the last retry gave up, ``skipped`` when
+    a dedupe key suppressed a duplicate.
+    """
+
+    STATUS_CHOICES = [
+        ('queued', 'Queued'),
+        ('sent', 'Sent'),
+        ('failed', 'Failed'),
+        ('skipped', 'Skipped'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    recipient_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='email_logs',
+    )
+    # Denormalised: the row must still say who it was *to* after the account is
+    # gone, and the console has to search by address without a join.
+    recipient_email = models.CharField(max_length=254)
+    subject = models.CharField(max_length=300)
+    body_preview = models.CharField(max_length=500, blank=True)
+    template_key = models.CharField(max_length=80, blank=True)
+    sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='emails_sent',
+    )
+    sent_by_email = models.CharField(max_length=254, blank=True)
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='queued')
+    error = models.TextField(blank=True)
+    # Set by the caller when a duplicate send would be meaningless ("one reset
+    # email per hour", "one receipt per order"). Blank means "no dedupe".
+    dedupe_key = models.CharField(max_length=200, blank=True)
+    related_object_type = models.CharField(max_length=50, blank=True)
+    related_object_id = models.CharField(max_length=64, blank=True)
+
+    class Meta:
+        db_table = 'governance_email_log'
+        ordering = ['-created_at']
+        indexes = [
+            # The console's "what is failing?" question.
+            models.Index(fields=['status', '-created_at']),
+            # "What have we sent this person?"
+            models.Index(fields=['recipient_email', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.status} -> {self.recipient_email}'

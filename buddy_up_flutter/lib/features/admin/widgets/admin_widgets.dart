@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/admin_portal.dart';
 import '../providers/admin_provider.dart';
+import '../providers/governance_provider.dart';
 
 /// Shared building blocks for the admin console.
 ///
@@ -413,6 +415,71 @@ class AdminPager<T> extends StatelessWidget {
   }
 }
 
+/// Pager for a cursor-paginated list.
+///
+/// [AdminPager] cannot be used on these: DRF's `CursorPagination` has no page
+/// number and no count, so a page-number pager would render a "Next" that
+/// re-requests page one and returns the same rows. This follows the `next`
+/// link the server actually handed back, and says how many rows are in hand
+/// rather than inventing a total.
+class AdminCursorPager extends StatelessWidget {
+  final CursorStack stack;
+  final PortalPage<Object> page;
+  final bool busy;
+  /// Called after the stack moves, so the page label rebuilds. The stack is
+  /// mutated in place rather than replaced, so without this the label would
+  /// keep reading "Page 1" after Next.
+  final VoidCallback onChanged;
+
+  const AdminCursorPager({
+    super.key,
+    required this.stack,
+    required this.page,
+    required this.busy,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (page.items.isEmpty) return const SizedBox.shrink();
+    final cs = Theme.of(context).colorScheme;
+    final hasNext = page.pagination.next != null;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Page ${stack.page} · ${page.items.length} rows in hand',
+          style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+        ),
+        Row(
+          children: [
+            TextButton(
+              onPressed: busy || !stack.canGoBack
+                  ? null
+                  : () {
+                      stack.goBack();
+                      onChanged();
+                    },
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              child: const Text('Previous', style: TextStyle(fontSize: 12)),
+            ),
+            TextButton(
+              onPressed: busy || !hasNext
+                  ? null
+                  : () {
+                      stack.advance(page.pagination.next);
+                      onChanged();
+                    },
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              child: const Text('Next', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 /// Shared console row: title, subtitle, status pills and trailing actions.
 class AdminRowCard extends StatelessWidget {
   final String title;
@@ -529,6 +596,321 @@ class AdminActionButton extends StatelessWidget {
       ),
       icon: Icon(icon, size: 14),
       label: Text(label, style: const TextStyle(fontSize: 12)),
+    );
+  }
+}
+
+/// Severity pill for a content flag. Critical and high share a colour with
+/// only weight distinguishing them, because the split that matters is
+/// "must look now" versus "can wait for the queue", not a four-step scale.
+class AdminSeverityBadge extends StatelessWidget {
+  final String? severity;
+
+  const AdminSeverityBadge({super.key, required this.severity});
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = (severity ?? '').toLowerCase();
+    final color = switch (raw) {
+      'critical' || 'high' => BuddyColors.red,
+      'medium' => BuddyColors.gold,
+      'low' => BuddyColors.textSecondary,
+      _ => BuddyColors.textSecondary,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        raw.isEmpty ? 'unrated' : raw.toUpperCase(),
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+/// SLA pill for a moderation report.
+///
+/// Reads the server's own `sla_due_at` / `sla_breached` and never recomputes a
+/// deadline — see `slaStateFor`. A settled report shows no pill at all: a
+/// closed ticket has no clock to be late against, and showing "ON TRACK" on a
+/// resolved report would imply someone still owes it an answer.
+class AdminSlaBadge extends StatelessWidget {
+  final ModerationReport report;
+
+  const AdminSlaBadge({super.key, required this.report});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = slaStateFor(report);
+    if (state == SlaState.settled) return const SizedBox.shrink();
+    final (label, color) = switch (state) {
+      SlaState.breached => ('SLA breached', BuddyColors.red),
+      SlaState.dueSoon => ('SLA due soon', BuddyColors.gold),
+      _ => ('On track', BuddyColors.green),
+    };
+    return AdminStatusBadge(status: label, upper: false);
+  }
+}
+
+/// Horizontal tab switcher for a screen with several queues in it.
+///
+/// A plain segmented row rather than a `TabBarView`: the moderation
+/// dashboard's tabs are peer queues with their own refresh state, and keeping
+/// one `ListView` per tab means a scroll position survives a filter change
+/// instead of resetting under the operator mid-triage.
+class AdminSectionTabs extends StatelessWidget {
+  final List<({String value, String label})> options;
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  const AdminSectionTabs({
+    super.key,
+    required this.options,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cs.outline.withValues(alpha: 0.15)),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        children: [
+          for (final option in options)
+            Expanded(
+              child: InkWell(
+                onTap: () => onChanged(option.value),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: value == option.value
+                        ? BuddyColors.green.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    option.label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: value == option.value
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                      color: value == option.value
+                          ? BuddyColors.green
+                          : cs.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Mandatory-reason prompt.
+///
+/// The server refuses a reversal, a rejection, a cancellation and a
+/// disciplinary action that arrive without one, and the reason is the record a
+/// target reads in an appeal or a reviewer reads in an incident. So the field
+/// is required in the widget too: the button stays disabled until something is
+/// typed rather than letting the operator spend a round trip learning the rule.
+class AdminReasonPrompt extends StatefulWidget {
+  final String title;
+  final String hint;
+  final String confirmLabel;
+  final bool destructive;
+  final bool busy;
+  final int minLength;
+  final int maxLines;
+  final ValueChanged<String> onSubmit;
+  final VoidCallback onCancel;
+
+  const AdminReasonPrompt({
+    super.key,
+    required this.title,
+    required this.onSubmit,
+    required this.onCancel,
+    this.hint = 'Reason (required)',
+    this.confirmLabel = 'Submit',
+    this.destructive = false,
+    this.busy = false,
+    this.minLength = 1,
+    this.maxLines = 3,
+  });
+
+  @override
+  State<AdminReasonPrompt> createState() => _AdminReasonPromptState();
+}
+
+class _AdminReasonPromptState extends State<AdminReasonPrompt> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final length = _controller.text.trim().length;
+    final ready = length >= widget.minLength;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(widget.title, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _controller,
+          maxLines: widget.maxLines,
+          minLines: 1,
+          decoration: InputDecoration(
+            hintText: widget.hint,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          onChanged: (_) => setState(() {}),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: widget.busy || !ready
+                  ? null
+                  : () => widget.onSubmit(_controller.text.trim()),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                foregroundColor:
+                    widget.destructive ? BuddyColors.red : BuddyColors.green,
+              ),
+              icon: widget.busy
+                  ? const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check, size: 14),
+              label: Text(widget.confirmLabel, style: const TextStyle(fontSize: 12)),
+            ),
+            const SizedBox(width: 4),
+            TextButton(
+              onPressed: widget.busy ? null : widget.onCancel,
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+              child: const Text('Cancel', style: TextStyle(fontSize: 12)),
+            ),
+            const Spacer(),
+            Text(
+              ready ? '$length characters' : 'Required',
+              style: TextStyle(
+                fontSize: 11,
+                color: ready ? cs.onSurfaceVariant : BuddyColors.gold,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Flat explanatory note — the gold-bordered block the console uses to state a
+/// rule an operator cannot see from the data ("a grant needs a second
+/// approver"). Deliberately not a dialog: it stays on screen while the row
+/// underneath it is being acted on.
+class AdminRuleNote extends StatelessWidget {
+  final String text;
+  final IconData icon;
+
+  const AdminRuleNote({
+    super.key,
+    required this.text,
+    this.icon = Icons.info_outline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: BuddyColors.gold.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BuddyColors.gold.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: BuddyColors.gold),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Grey-bordered variant of [AdminRuleNote] for neutral asides.
+class AdminHintNote extends StatelessWidget {
+  final String text;
+
+  const AdminHintNote({super.key, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outline.withValues(alpha: 0.15)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant, height: 1.4),
+      ),
+    );
+  }
+}
+
+/// Busy spinner used in place of a list, matching the console's other pages.
+class AdminLoadingBlock extends StatelessWidget {
+  const AdminLoadingBlock({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
     );
   }
 }

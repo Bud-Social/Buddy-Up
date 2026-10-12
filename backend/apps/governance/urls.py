@@ -33,4 +33,20 @@ urlpatterns = [
          name='approval_reject'),
     path('approvals/<uuid:pk>/cancel/', views.ApprovalCancelView.as_view(),
          name='approval_cancel'),
+
+    # --- Audit trail ---
+    #
+    # `timeline/` and `export/` are declared before `<uuid:>` deliberately: a
+    # path converter does not match the literal, so the ordering is not load
+    # -bearing, but putting the literals first means a reader does not have to
+    # prove that to themselves.
+    path('audit/', views.AuditListView.as_view(), name='audit'),
+    path('audit/export/', views.AuditExportView.as_view(), name='audit_export'),
+    path('audit/timeline/', views.AuditTimelineView.as_view(), name='audit_timeline'),
+    path('audit/<uuid:pk>/', views.AuditDetailView.as_view(), name='audit_detail'),
+
+    # --- Assistance console ---
+    path('emails/send/', views.StaffEmailSendView.as_view(), name='email_send'),
+    path('emails/log/', views.EmailLogListView.as_view(), name='email_log'),
+    path('emails/<uuid:pk>/resend/', views.EmailResendView.as_view(), name='email_resend'),
 ]

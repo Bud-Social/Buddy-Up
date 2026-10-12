@@ -392,6 +392,345 @@ export interface PortalReconciliationReport {
 }
 
 /* ------------------------------------------------------------------ */
+/* Governance — staff roles, approvals, audit, assistance email        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Identity shape shared by every governance serializer.
+ *
+ * The read side returns `{id, email, display_name}` rather than a whole user
+ * row on purpose: staff need to know *who* a row concerns after the account is
+ * gone, which is why `display_name` is a snapshot string rather than a lookup.
+ * Every member is optional so a caller can render `—` instead of crashing.
+ */
+export interface GovernanceUserRef {
+  id?: string | null;
+  email?: string | null;
+  display_name?: string | null;
+}
+
+export interface StaffRoleAssignment {
+  id?: string;
+  user?: GovernanceUserRef | null;
+  role?: string | null;
+  role_display?: string | null;
+  /** Stored extras, added on top of the role's defaults. */
+  scopes?: string[] | null;
+  /** The floor the role itself grants. */
+  default_scopes?: string[] | null;
+  effective_scopes?: string[] | null;
+  granted_by?: GovernanceUserRef | null;
+  granted_at?: string | null;
+  notes?: string | null;
+  revoked_at?: string | null;
+  is_active?: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface StaffRoleFilters extends PortalPaginationParams {
+  role?: string;
+  /** `'true'` lists revoked rows too; `'false'` lists only live ones. */
+  revoked?: boolean | string;
+}
+
+export interface StaffRoleGrantPayload {
+  user: string;
+  role: string;
+  scopes?: string[];
+  notes?: string;
+  /** Defaults to true server-side. False applies the grant inline. */
+  requires_second?: boolean;
+}
+
+export interface StaffRoleUpdatePayload {
+  role?: string;
+  scopes?: string[];
+  notes?: string;
+}
+
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+export type ApprovalAction =
+  | 'ban'
+  | 'suspension'
+  | 'verification_decision'
+  | 'payout'
+  | 'staff_role_grant';
+
+export interface GovernanceApproval {
+  id?: string;
+  action?: string | null;
+  action_display?: string | null;
+  /** The scope the *approver* must hold — checked at approve time, not raise time. */
+  required_scope?: string | null;
+  target_user?: GovernanceUserRef | null;
+  payload?: Record<string, unknown> | null;
+  status?: string | null;
+  is_open?: boolean;
+  requested_by?: GovernanceUserRef | null;
+  requested_by_profile?: string | null;
+  decided_by?: GovernanceUserRef | null;
+  decided_at?: string | null;
+  decision_note?: string | null;
+  requires_second?: boolean;
+  applied_at?: string | null;
+  /** Approve response only: what the server actually did. */
+  effect?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ApprovalFilters extends PortalPaginationParams {
+  status?: string;
+  action?: string;
+  target_user?: string;
+  /** `'true'` narrows to requests this operator raised. */
+  mine?: boolean | string;
+}
+
+export interface ApprovalRequestPayload {
+  action: string;
+  target_user: string;
+  payload?: Record<string, unknown>;
+  notes?: string;
+  requires_second?: boolean;
+}
+
+export interface DecisionPayload {
+  /** Required by the server for reject and cancel; optional for approve. */
+  note?: string;
+}
+
+export interface AuditLogEntry {
+  id?: string;
+  actor?: string | null;
+  /** Snapshot of the actor's address at write time; survives account deletion. */
+  actor_email?: string | null;
+  action?: string | null;
+  target_type?: string | null;
+  target_id?: string | null;
+  summary?: string | null;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  request_id?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  created_at?: string | null;
+}
+
+export interface AuditFilters extends PortalPaginationParams {
+  action?: string;
+  target_type?: string;
+  target_id?: string;
+  actor?: string;
+  date_from?: string;
+  date_to?: string;
+}
+
+export type StaffEmailStatus = 'queued' | 'sent' | 'failed' | 'skipped';
+
+export interface StaffEmailLog {
+  id?: string;
+  recipient_user?: string | null;
+  recipient?: GovernanceUserRef | null;
+  recipient_email?: string | null;
+  subject?: string | null;
+  body_preview?: string | null;
+  template_key?: string | null;
+  sent_by?: string | null;
+  sender?: GovernanceUserRef | null;
+  sent_by_email?: string | null;
+  status?: string | null;
+  error?: string | null;
+  dedupe_key?: string | null;
+  related_object_type?: string | null;
+  related_object_id?: string | null;
+  created_at?: string | null;
+}
+
+export interface EmailLogFilters extends PortalPaginationParams {
+  status?: string;
+  recipient_email?: string;
+  sent_by?: string;
+}
+
+export interface SendStaffEmailPayload {
+  /** Exactly one of `user_id` / `email`. The schema has no list field at all. */
+  user_id?: string;
+  email?: string;
+  subject: string;
+  body: string;
+  related_object_type?: string;
+  related_object_id?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* Moderation operations (staff side)                                  */
+/* ------------------------------------------------------------------ */
+
+export type ContentFlagReason =
+  | 'nsfw' | 'toxic' | 'spam' | 'misinfo' | 'custom'
+  | 'medical_claim' | 'undisclosed_sponsor' | 'adult_ungated';
+
+export interface ContentFlagRow {
+  id?: string;
+  flag_reason?: string | null;
+  severity?: string | null;
+  confidence?: number | null;
+  source?: string | null;
+  content_type?: string | null;
+  content_id?: string | null;
+  content_preview?: string | null;
+  is_actioned?: boolean;
+  action_taken?: string | null;
+  created_at?: string | null;
+}
+
+export interface ModerationStatsRow {
+  total?: number;
+  unactioned?: number;
+  actioned?: number;
+  by_severity?: Record<string, number>;
+  by_reason?: Record<string, number>;
+}
+
+export interface ModerationReportRow {
+  id?: string;
+  reporter?: string | null;
+  target_user?: string | null;
+  reason?: string | null;
+  description?: string | null;
+  content_url?: string | null;
+  status?: string | null;
+  assigned_to?: string | null;
+  resolved_at?: string | null;
+  resolution_note?: string | null;
+  /** Computed server-side from `created_at` + reason (4h urgent, 24h standard). */
+  sla_due_at?: string | null;
+  sla_breached?: boolean | null;
+  created_at?: string | null;
+}
+
+export interface ModerationReportFilters extends PortalPaginationParams {
+  status?: string;
+  reason?: string;
+  /** `'me'` or a user id. `'unassigned'` is *not* a value — use `unassigned`. */
+  assigned_to?: string;
+  unassigned?: boolean | string;
+}
+
+export interface AssignReportPayload {
+  /** A staff user id, or `null` to unassign. Omitting it entirely is a 400. */
+  assigned_to: string | null;
+  note?: string;
+}
+
+export interface ModerationActionRow {
+  id?: string;
+  action?: string | null;
+  moderator?: string | null;
+  report?: string | null;
+  target_user?: string | null;
+  reason?: string | null;
+  duration_days?: number | null;
+  content_type?: string | null;
+  content_type_display?: string | null;
+  content_id?: string | null;
+  is_reversed?: boolean;
+  reversed_by?: string | null;
+  reversed_at?: string | null;
+  reversal_reason?: string | null;
+  reversed_by_moderator?: GovernanceUserRef | null;
+  created_at?: string | null;
+}
+
+export interface ModerationActionFilters extends PortalPaginationParams {
+  action?: string;
+}
+
+export interface CreateModerationActionPayload {
+  action: string;
+  target_user: string;
+  reason: string;
+  /** Required for `user_suspended`, refused for `user_banned`. */
+  duration_days?: number | null;
+  report?: string | null;
+}
+
+/**
+ * The create endpoint answers in two different shapes:
+ *
+ * - `warning` → **201**, `data` is the `ModerationAction` row itself.
+ * - `user_suspended` / `user_banned` → **202**, `data` is
+ *   `{moderation_action, approval, applied: false}` — the action is *raised*,
+ *   not applied, and nothing has happened to the account yet.
+ *
+ * Both are declared as one all-optional type so a page can discriminate on
+ * `applied` without a cast that could be wrong. Read the outcome through
+ * {@link moderationActionApplied} rather than branching on the HTTP status,
+ * which axios discards on success.
+ */
+export interface ModerationActionSubmission {
+  /* The 201 warning shape. */
+  id?: string;
+  action?: string | null;
+  reason?: string | null;
+  target_user?: string | null;
+  created_at?: string | null;
+  /* The 202 pending shape. */
+  moderation_action?: ModerationActionRow | null;
+  approval?: {
+    id?: string;
+    action?: string | null;
+    status?: string | null;
+    requires_second?: boolean;
+  } | null;
+  applied?: boolean;
+}
+
+export interface ReverseModerationActionPayload {
+  reason: string;
+}
+
+export interface PendingApprovalRow {
+  id?: string;
+  /** The governance action word: `ban` or `suspension`. */
+  governance_action?: string | null;
+  target_user?: string | null;
+  requested_by?: string | null;
+  requested_by_profile?: string | null;
+  reason?: string | null;
+  duration_days?: number | null;
+  requires_second?: boolean;
+  waiting_seconds?: number | null;
+  created_at?: string | null;
+  moderation_action_id?: string | null;
+}
+
+export interface Commendation {
+  id?: string;
+  recipient?: GovernanceUserRef | null;
+  issued_by?: GovernanceUserRef | null;
+  category?: string | null;
+  category_display?: string | null;
+  message?: string | null;
+  visible_to_recipient?: boolean;
+  created_at?: string | null;
+}
+
+export interface CommendationFilters extends PortalPaginationParams {
+  category?: string;
+}
+
+export interface CreateCommendationPayload {
+  /** A **Profile** id, not a user id — the API says so in its 400. */
+  recipient: string;
+  category: string;
+  message: string;
+}
+
+/* ------------------------------------------------------------------ */
 /* Error handling                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -473,6 +812,44 @@ function clean(params?: Record<string, unknown>): Record<string, unknown> | unde
     return acc;
   }, {});
   return Object.keys(out).length ? out : undefined;
+}
+
+/**
+ * Whether a disciplinary action actually landed on the account.
+ *
+ * The discriminator is `applied`, not the HTTP status: axios resolves 2xx, so a
+ * **202** and a **201** are indistinguishable to a caller that only checks for
+ * a rejection. `applied === false` is the server saying, in as many words,
+ * "this is queued for a second approver and nothing has been done to this
+ * user". Treating that as success is the single worst thing this console could
+ * get wrong — a moderator would tell a user they had been banned when they had
+ * not.
+ *
+ * `applied === undefined` means the 201 warning shape (a warning applies
+ * immediately), so it counts as applied.
+ */
+export function moderationActionApplied(data: ModerationActionSubmission | null | undefined): boolean {
+  return data?.applied !== false;
+}
+
+/**
+ * Absolute URL for the audit CSV export, carrying the current filters.
+ *
+ * Returns a plain URL rather than an apiClient call because the endpoint sets
+ * `Content-Disposition: attachment` and is meant to be followed by the browser:
+ * streaming a 50k-row file through a JS buffer to re-create the same file
+ * client-side would be strictly worse. Note the access token travels in the
+ * `Authorization` header this client adds, so a signed-in staff member is
+ * authenticated; an export opened in a fresh tab without a session is refused
+ * by the API rather than silently exported.
+ */
+export function auditExportUrl(params?: AuditFilters): string {
+  const base = String(apiClient.defaults?.baseURL || '/api/v1').replace(/\/+$/, '');
+  const query = clean(params as Record<string, unknown>);
+  const qs = query
+    ? `?${new URLSearchParams(Object.entries(query).map(([k, v]) => [k, String(v)])).toString()}`
+    : '';
+  return `${base}/governance/audit/export/${qs}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -561,6 +938,135 @@ export const adminPortalApi = {
 
   getReconciliation: (params?: { date_from?: string; date_to?: string }) =>
     apiClient.get<ApiResponse<PortalReconciliationReport>>('/portal/wallet/reconciliation/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  /* Governance — staff roles --------------------------------------- */
+  getStaffRoles: (params?: StaffRoleFilters) =>
+    apiClient.get<ApiResponse<StaffRoleAssignment[]>>('/governance/staff-roles/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  getStaffRole: (id: string) =>
+    apiClient.get<ApiResponse<StaffRoleAssignment>>(`/governance/staff-roles/${id}/`).then((r) => r.data),
+
+  /**
+   * Grant or replace a role.
+   *
+   * Returns **202** with an `AccountActionRequest` when `requires_second` is
+   * left at its default: nothing has been applied. Read `data.status` /
+   * `data.requires_second` rather than treating a resolution as a grant.
+   */
+  createStaffRole: (payload: StaffRoleGrantPayload) =>
+    apiClient.post<ApiResponse<StaffRoleAssignment | GovernanceApproval>>('/governance/staff-roles/', payload).then((r) => r.data),
+
+  updateStaffRole: (id: string, payload: StaffRoleUpdatePayload) =>
+    apiClient.patch<ApiResponse<StaffRoleAssignment>>(`/governance/staff-roles/${id}/`, payload).then((r) => r.data),
+
+  /** Revokes rather than deletes — the row is the audit trail. */
+  revokeStaffRole: (id: string, notes?: string) =>
+    apiClient
+      .delete<ApiResponse<StaffRoleAssignment>>(`/governance/staff-roles/${id}/`, {
+        data: notes ? { notes } : undefined,
+      })
+      .then((r) => r.data),
+
+  /* Governance — two-person approvals ------------------------------- */
+  getApprovals: (params?: ApprovalFilters) =>
+    apiClient.get<ApiResponse<GovernanceApproval[]>>('/governance/approvals/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  getApproval: (id: string) =>
+    apiClient.get<ApiResponse<GovernanceApproval>>(`/governance/approvals/${id}/`).then((r) => r.data),
+
+  approveApproval: (id: string, payload: DecisionPayload = {}) =>
+    apiClient.post<ApiResponse<GovernanceApproval>>(`/governance/approvals/${id}/approve/`, payload).then((r) => r.data),
+
+  rejectApproval: (id: string, payload: DecisionPayload = {}) =>
+    apiClient.post<ApiResponse<GovernanceApproval>>(`/governance/approvals/${id}/reject/`, payload).then((r) => r.data),
+
+  cancelApproval: (id: string, payload: DecisionPayload = {}) =>
+    apiClient.post<ApiResponse<GovernanceApproval>>(`/governance/approvals/${id}/cancel/`, payload).then((r) => r.data),
+
+  /** Raises a request. Nothing is applied until a different operator approves. */
+  requestApproval: (payload: ApprovalRequestPayload) =>
+    apiClient.post<ApiResponse<GovernanceApproval>>('/governance/approvals/request/', payload).then((r) => r.data),
+
+  /* Governance — audit trail ---------------------------------------- */
+  getAuditLog: (params?: AuditFilters) =>
+    apiClient.get<ApiResponse<AuditLogEntry[]>>('/governance/audit/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  getAuditEntry: (id: string) =>
+    apiClient.get<ApiResponse<AuditLogEntry>>(`/governance/audit/${id}/`).then((r) => r.data),
+
+  /** Chronological history of one object. `target_type` is mandatory server-side. */
+  getAuditTimeline: (params: AuditFilters & { target_type: string }) =>
+    apiClient
+      .get<ApiResponse<AuditLogEntry[]>>('/governance/audit/timeline/', {
+        params: clean(params as unknown as Record<string, unknown>),
+      })
+      .then((r) => r.data),
+
+  /* Governance — assistance email ----------------------------------- */
+  getEmailLog: (params?: EmailLogFilters) =>
+    apiClient.get<ApiResponse<StaffEmailLog[]>>('/governance/emails/log/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  /** Answers **202**: queued for delivery, not delivered. 429s at 20/hour/staff. */
+  sendStaffEmail: (payload: SendStaffEmailPayload) =>
+    apiClient.post<ApiResponse<StaffEmailLog>>('/governance/emails/send/', payload).then((r) => r.data),
+
+  /** Failed messages only — the server refuses a `sent` or `queued` one with 409. */
+  resendStaffEmail: (id: string) =>
+    apiClient.post<ApiResponse<StaffEmailLog>>(`/governance/emails/${id}/resend/`, {}).then((r) => r.data),
+
+  /* Moderation — reports -------------------------------------------- */
+  getModerationReports: (params?: ModerationReportFilters) =>
+    apiClient.get<ApiResponse<ModerationReportRow[]>>('/moderation/reports/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  assignModerationReport: (id: string, payload: AssignReportPayload) =>
+    apiClient.post<ApiResponse<ModerationReportRow>>(`/moderation/reports/${id}/assign/`, payload).then((r) => r.data),
+
+  handleModerationReport: (id: string, action: 'investigate' | 'resolve' | 'dismiss', resolution_note = '') =>
+    apiClient.post<ApiResponse<ModerationReportRow>>(`/moderation/reports/${id}/handle/`, { action, resolution_note }).then((r) => r.data),
+
+  /* Moderation — flags ---------------------------------------------- */
+  getContentFlags: (params?: { flag_reason?: string; severity?: string; is_actioned?: boolean }) =>
+    apiClient.get<ApiResponse<ContentFlagRow[]>>('/moderation/content-flags/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  actOnContentFlag: (id: string, action: 'approve' | 'remove' | 'escalate', note = '') =>
+    apiClient.post<ApiResponse<{ flag?: ContentFlagRow; effect?: string }>>(`/moderation/content-flags/${id}/act/`, { action, note }).then((r) => r.data),
+
+  getContentFlagStats: () =>
+    apiClient.get<ApiResponse<ModerationStatsRow>>('/moderation/content-flags/stats/').then((r) => r.data),
+
+  /** Ban/suspension requests raised from moderation, awaiting a second approver. */
+  getPendingApprovals: () =>
+    apiClient.get<ApiResponse<PendingApprovalRow[]>>('/moderation/content-flags/pending-approvals/').then((r) => r.data),
+
+  /* Moderation — disciplinary actions -------------------------------- */
+  getModerationActions: (params?: ModerationActionFilters) =>
+    apiClient.get<ApiResponse<ModerationActionRow[]>>('/moderation/actions/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  /**
+   * `warning` applies at once (**201**). `user_suspended` / `user_banned` are
+   * raised for approval and return **202** with `applied: false` — use
+   * {@link moderationActionApplied} before telling anyone anything happened.
+   */
+  createModerationAction: (payload: CreateModerationActionPayload) =>
+    apiClient.post<ApiResponse<ModerationActionSubmission>>('/moderation/actions/', payload).then((r) => r.data),
+
+  reverseModerationAction: (id: string, payload: ReverseModerationActionPayload) =>
+    apiClient.post<ApiResponse<{ reversed_action?: ModerationActionRow; reversal?: ModerationActionRow; effect?: string }>>(`/moderation/actions/${id}/reverse/`, payload).then((r) => r.data),
+
+  /* Moderation — commendations --------------------------------------- */
+  getCommendations: (params?: CommendationFilters) =>
+    apiClient.get<ApiResponse<Commendation[]>>('/moderation/commendations/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  createCommendation: (payload: CreateCommendationPayload) =>
+    apiClient.post<ApiResponse<Commendation>>('/moderation/commendations/', payload).then((r) => r.data),
+
+  /** Hard delete. The recipient may remove their own; staff may remove any. */
+  deleteCommendation: (id: string) =>
+    apiClient.delete<ApiResponse<null>>(`/moderation/commendations/${id}/`).then((r) => r.data),
+
+  /** Withdraws from the recipient's view but keeps the row. Failed ones 409. */
+  revokeCommendation: (id: string, payload: { reason?: string } = {}) =>
+    apiClient.post<ApiResponse<Commendation>>(`/moderation/commendations/${id}/revoke/`, payload).then((r) => r.data),
 };
 
 export type AdminPortalApi = typeof adminPortalApi;

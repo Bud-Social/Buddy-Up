@@ -56,6 +56,21 @@ class Notification(TimestampedModel):
         ('alarm_shared', 'Alarm Shared'),
         ('alarm_share_accepted', 'Alarm Share Accepted'),
         ('alarm_suggestion', 'Alarm Suggestion'),
+        # Moderation & commendations
+        #
+        # Every type below has a matching ``NotificationPreference`` push column.
+        # That is not tidiness: ``create_notification`` resolves per-type opt-out
+        # with ``getattr(prefs, f'{notification_type}_push', None)`` and a
+        # MISSING column returns None, which the ``category_pref is not False``
+        # check reads as "push". A type without a column is therefore silently
+        # un-disableable — it would reach every user on the platform with no way
+        # to turn it off. Adding the type and the column is one change, not two.
+        ('moderation_warning', 'Moderation Warning'),
+        ('moderation_content_removed', 'Content Removed'),
+        ('moderation_suspension', 'Account Suspended'),
+        ('moderation_ban', 'Account Banned'),
+        ('moderation_action_reversed', 'Moderation Action Reversed'),
+        ('commendation_received', 'Commendation Received'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -119,6 +134,15 @@ class NotificationPreference(TimestampedModel):
     # ``create_notification`` (``getattr(prefs, f'{type}_push', None)``) returns
     # None and the notification is pushed whether or not the user opted out.
     order_status_changed_push = models.BooleanField(default=True)
+    # Moderation push preferences. See the note on TYPE_CHOICES: each of these
+    # types MUST have a column here or the notification is pushed to every
+    # recipient with no opt-out.
+    moderation_warning_push = models.BooleanField(default=True)
+    moderation_content_removed_push = models.BooleanField(default=True)
+    moderation_suspension_push = models.BooleanField(default=True)
+    moderation_ban_push = models.BooleanField(default=True)
+    moderation_action_reversed_push = models.BooleanField(default=True)
+    commendation_received_push = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'notifications_preference'

@@ -102,14 +102,25 @@ class ContentFlag(TimestampedModel):
 
 
 class ModerationAction(TimestampedModel):
+    #: ``escalated`` is an *internal* routing decision, not something the user is
+    #: told about. It exists because a flag being sent to a second reviewer is
+    #: not a warning, and recording it as one notified the flagged user that
+    #: staff had looked at their content and told them nothing — the single most
+    #: alarming thing a platform can do by accident.
     ACTION_CHOICES = [
         ('warning', 'Warning'),
         ('content_removed', 'Content Removed'),
         ('user_suspended', 'User Suspended'),
         ('user_banned', 'User Banned'),
         ('report_dismissed', 'Report Dismissed'),
+        ('escalated', 'Escalated for Second Review'),
         ('action_reversed', 'Action Reversed on Appeal'),
     ]
+
+    #: Actions that change (or undo) a user's access. They are never applied by
+    #: one person: ``apps.moderation.services.request_standing_action`` routes
+    #: them through a two-person approval instead.
+    STANDING_ACTIONS = ('user_suspended', 'user_banned')
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     action = models.CharField(max_length=25, choices=ACTION_CHOICES)
@@ -127,6 +138,20 @@ class ModerationAction(TimestampedModel):
     )
     reason = models.TextField()
     duration_days = models.IntegerField(null=True, blank=True)
+    #: What this action acted on. Written for ``content_removed`` so the removal
+    #: can be reversed later: without the pointer on the audit row, "un-remove
+    #: this" has nothing to resolve ``content_id`` against.
+    content_type = models.CharField(max_length=50, blank=True)
+    content_id = models.CharField(max_length=100, blank=True)
+    #: Set when this action has been undone. Null ``reversed_by`` means the
+    #: action still stands; a populated row is the record of who undid it and
+    #: why, which is what an appeal panel reads.
+    reversed_by = models.ForeignKey(
+        'self', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='reversals',
+    )
+    reversed_at = models.DateTimeField(null=True, blank=True)
+    reversal_reason = models.TextField(blank=True)
 
     class Meta:
         db_table = 'moderation_action'
@@ -134,6 +159,10 @@ class ModerationAction(TimestampedModel):
 
     def __str__(self):
         return f'{self.action} by {self.moderator}'
+
+    @property
+    def is_reversed(self):
+        return self.reversed_at is not None
 
 
 class ModerationAppeal(TimestampedModel):
@@ -171,3 +200,52 @@ class ModerationAppeal(TimestampedModel):
                 fields=['action', 'appellant'], name='uniq_action_appellant_appeal',
             ),
         ]
+
+    def __str__(self):
+        return f'Appeal against {self.action_id} ({self.status})'
+
+
+class Commendation(TimestampedModel):
+    """A staff-recorded "you did good" for a user.
+
+    The positive half of moderation. Every other model in this app records what
+    somebody did wrong; a queue that only ever subtracts trains moderators to
+    think in negatives and gives users no way to be told they were valued. This
+    is the row that says so, permanently, in the user's own notification feed.
+
+    ``visible_to_recipient=False`` is a revoke, not a delete: the row stays so
+    an operator cannot erase the fact that they issued a commendation, and the
+    recipient simply stops seeing it.
+    """
+
+    CATEGORY_CHOICES = [
+        ('excellent_service', 'Excellent Service'),
+        ('helpful', 'Helpful'),
+        ('reliable', 'Reliable'),
+        ('community_builder', 'Community Builder'),
+        ('above_and_beyond', 'Above and Beyond'),
+        ('resolved_issue', 'Resolved Issue'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    recipient = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='commendations',
+    )
+    issued_by = models.ForeignKey(
+        'profiles.Profile', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='commendations_issued',
+    )
+    category = models.CharField(max_length=32, choices=CATEGORY_CHOICES, default='helpful')
+    message = models.TextField(max_length=500)
+    visible_to_recipient = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'moderation_commendation'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', '-created_at']),
+            models.Index(fields=['category']),
+        ]
+
+    def __str__(self):
+        return f'{self.get_category_display()} for {self.recipient_id}'

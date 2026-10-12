@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ subject|default:"BuddyUp Fit" }}{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background:#0A0A0A;-webkit-font-smoothing:antialiased;">
+  <!-- Preheader: invisible summary text. Overridden per template. -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">
+    {% block preheader %}{{ subject|default:"A message from the BuddyUp Fit team" }}{% endblock %}
+  </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#0A0A0A;">
+    <tr>
+      <td align="center" style="padding:40px 16px;">
+
+        <!-- Logo -->
+        <table cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:28px;">
+          <tr>
+            <td align="center">
+              {% if logo_url %}
+              <img src="{{ logo_url }}" width="56" height="56" alt="BuddyUp Fit"
+                   style="display:block;border-radius:14px;border:2px solid #00C89622;" />
+              {% endif %}
+              <p style="font-family:'Syne','Segoe UI',Arial,sans-serif;font-size:24px;font-weight:800;
+                        color:#F8F8F8;letter-spacing:0.5px;margin:12px 0 0;">
+                Buddy<span style="color:#00C896;">Up</span>
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Card -->
+        <table width="480" cellpadding="0" cellspacing="0" role="presentation"
+               style="background:#141414;border-radius:20px;border:1px solid #232323;max-width:480px;">
+          <tr>
+            <td style="padding:36px 36px 8px;">
+              <h2 style="font-family:'Syne','Segoe UI',Arial,sans-serif;font-size:20px;color:#F8F8F8;margin:0 0 10px;">
+                {% block heading %}{{ subject }}{% endblock %}
+              </h2>
+              <p style="color:#A0A0A0;font-size:15px;line-height:1.6;margin:0;">
+                {% block greeting %}Hi {{ username }},{% endblock %}
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 36px 8px;font-size:15px;line-height:1.7;color:#D4D4D4;">
+              {% block content %}{% endblock %}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:8px 36px 28px;">
+              {% block footer_extra %}{% endblock %}
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 36px 26px;border-top:1px solid #1E1E1E;">
+              {% block footer %}
+              <p style="color:#5A5A5A;font-size:11px;margin:0;text-align:center;line-height:1.7;">
+                Move together, get stronger together.<br>
+                &copy; 2026 BuddyUp Fit Ltd. All rights reserved.
+              </p>
+              {% endblock %}
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

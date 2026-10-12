@@ -1,0 +1,51 @@
+{% extends "emails/base.html" %}
+{% comment %}
+A direct message from a named member of staff to one user, sent from the
+assistance console.
+
+Not a template a marketing send should ever use: it says a specific person
+wrote this, so it must only be rendered with `staff_name` set. The console
+refuses to send it without one.
+
+The body is operator-written free text. It is rendered through Django's
+autoescaping ({{ body|linebreaksbr }}), so a staff member pasting something
+from a ticket cannot inject markup into a user's inbox.
+{% endcomment %}
+
+{% block title %}{{ subject }}{% endblock %}
+
+{% block preheader %}{{ staff_name }} from BuddyUp Fit wrote to you{% endblock %}
+
+{% block heading %}A message from {{ staff_name }}{% endblock %}
+
+{% block greeting %}Hi {{ username }},{% endblock %}
+
+{% block content %}
+  <div style="background:#1A1A1A;border-left:3px solid #00C896;border-radius:0 12px 12px 0;padding:16px 18px;">
+    {{ body|linebreaksbr }}
+  </div>
+
+  <p style="color:#A0A0A0;font-size:14px;line-height:1.7;margin:22px 0 0;">
+    This is a one-to-one message from the BuddyUp Fit team — you do not need to
+    reply for us to have received it. If you would like to talk it through,
+    reply to this email and it will reach a person.
+  </p>
+{% endblock %}
+
+{% block footer_extra %}
+  <table cellpadding="0" cellspacing="0" role="presentation" style="width:100%;">
+    <tr>
+      <td align="center" style="padding:4px 0 18px;">
+        <a href="mailto:{{ reply_to }}"
+           style="font-family:'Syne','Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;
+                  color:#00C896;text-decoration:none;">
+          Reply to {{ staff_name }}
+        </a>
+      </td>
+    </tr>
+  </table>
+  <p style="color:#5A5A5A;font-size:11px;margin:0;text-align:center;line-height:1.7;">
+    Sent by {{ staff_name }} on behalf of BuddyUp Fit.<br>
+    You are receiving this because you have an account with us.
+  </p>
+{% endblock %}

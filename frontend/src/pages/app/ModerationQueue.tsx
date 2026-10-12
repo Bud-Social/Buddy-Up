@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2, Flag, RefreshCw, Search, ShieldAlert,
-  ShieldCheck, Trash2, ArrowUpRight,
+  ShieldCheck, Trash2, ArrowUpRight, Clock,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { moderationApi, type ContentFlag, type FlagReason, type ModerationStats } from '@/api/moderation';
+import { Badge } from '@/components/ui/Badge';
+import { moderationApi, type ContentFlag, type FlagReason, type ModerationAppeal, type ModerationStats, type UserReport } from '@/api/moderation';
+import { ReasonPrompt } from '@/pages/admin/shared';
+// `formatDate` stays local to this screen; the shared admin formatters are
+// imported for the SLA maths and id shortening only.
+import { shortId, slaState, text } from '@/pages/admin/format';
 
 const POLL_MS = 30_000;
 
@@ -71,8 +76,18 @@ export default function ModerationQueue() {
   const [reasonFilter, setReasonFilter] = useState<'all' | ContentFlag['flag_reason']>('all');
   const [query, setQuery] = useState('');
   const [tab, setTab] = useState<'flags' | 'reports' | 'appeals'>('flags');
-  const [reports, setReports] = useState<Array<{ id: string; reason: string; status: string; description: string; created_at: string }>>([]);
-  const [appeals, setAppeals] = useState<Array<{ id: string; status: string; reason?: string; created_at: string }>>([]);
+  const [reports, setReports] = useState<UserReport[]>([]);
+  const [appeals, setAppeals] = useState<ModerationAppeal[]>([]);
+  /**
+   * Which appeal row is waiting on a note, and for which decision.
+   *
+   * This state exists because of a bug. `ModerationAppealReviewSerializer`
+   * declares `resolution_note` as required for *every* decision, and this screen
+   * called `reviewAppeal` without it — so every appeal approved or denied from
+   * here returned a 400 and the reviewer had no way to complete the job. The
+   * note is now collected before the call is made at all.
+   */
+  const [appealPrompt, setAppealPrompt] = useState<{ id: string; decision: 'approve' | 'deny' } | null>(null);
 
   const load = useCallback((silent = false) => {
     if (!silent) setLoading(true);
@@ -99,7 +114,6 @@ export default function ModerationQueue() {
       moderationApi.getAppeals().then((r) => setAppeals(r.data || [])).catch(() => {});
     }
   }, [tab]);
-
   useEffect(() => {
     const timer = window.setInterval(() => load(true), POLL_MS);
     return () => window.clearInterval(timer);
@@ -124,6 +138,41 @@ export default function ModerationQueue() {
     }
   }, [load]);
 
+  const reloadReports = useCallback(async () => {
+    const r = await moderationApi.getReports();
+    setReports(r.data || []);
+  }, []);
+
+  const reloadAppeals = useCallback(async () => {
+    const r = await moderationApi.getAppeals();
+    setAppeals(r.data || []);
+  }, []);
+
+  /**
+   * Decide an appeal. `resolution_note` is mandatory — see the state above.
+   *
+   * Approving an appeal runs the *reversal* path server-side, so the account is
+   * genuinely reinstated rather than having `is_active` flipped by hand. A
+   * refusal from the takedown registry comes back as a 409 and is shown as-is.
+   */
+  const decideAppeal = useCallback(async (appeal: ModerationAppeal, decision: 'approve' | 'deny', resolutionNote: string) => {
+    setActingId(appeal.id);
+    setError('');
+    try {
+      await moderationApi.reviewAppeal(appeal.id, decision, resolutionNote);
+      setAppealPrompt(null);
+      await reloadAppeals();
+    } catch {
+      setError(
+        `Failed to ${decision === 'approve' ? 'approve' : 'deny'} appeal ${shortId(appeal.id)}. ` +
+        'A decision requires a resolution note and only a submitted appeal can be decided.',
+      );
+      setAppealPrompt(null);
+    } finally {
+      setActingId(null);
+    }
+  }, [reloadAppeals]);
+
   if (loading && !flags.length) {
     return (
       <div className="space-y-4">
@@ -135,7 +184,11 @@ export default function ModerationQueue() {
     );
   }
 
-  if (error && !flags.length) {
+  // Full-page error only while the flag queue is the visible surface. On the
+  // reports and appeals tabs a single failed call must not replace the whole
+  // page — a reviewer mid-queue would lose the row they were acting on because
+  // something unrelated broke.
+  if (error && !flags.length && tab === 'flags') {
     return (
       <Card className="p-8 text-center">
         <ShieldAlert size={32} className="mx-auto text-buddy-red mb-3" />
@@ -195,35 +248,116 @@ export default function ModerationQueue() {
               <p className="text-sm text-buddy-text-secondary text-center py-6">No user reports.</p>
             ) : (
               <div className="space-y-2">
-                {reports.map((r) => (
-                  <div key={r.id} className="flex items-start justify-between gap-3 py-2 border-b border-buddy-surface last:border-0">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold capitalize">{r.reason} · {r.status}</p>
-                      <p className="text-sm mt-0.5 break-words">{r.description}</p>
-                      <p className="text-[11px] text-buddy-text-secondary mt-1">{formatDate(r.created_at)}</p>
+                {reports.map((r) => {
+                  const sla = slaState(r.sla_due_at, r.sla_breached);
+                  const settled = r.status === 'resolved' || r.status === 'dismissed';
+                  const busy = actingId === r.id;
+                  return (
+                    <div key={r.id} className="py-3 border-b border-buddy-surface last:border-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-xs font-semibold capitalize">{r.reason} · {r.status}</p>
+                            {r.assigned_to ? (
+                              <Badge variant="blue" label={`Assigned ${shortId(r.assigned_to)}`} size="sm" />
+                            ) : (
+                              <Badge variant="silver" label="Unassigned" size="sm" />
+                            )}
+                            {!settled && (
+                              <Badge
+                                variant={sla.variant}
+                                label={sla.overdue ? `SLA breached · ${sla.label}` : `SLA ${sla.label}`}
+                                size="sm"
+                              />
+                            )}
+                          </div>
+                          <p className="text-sm mt-0.5 break-words">{text(r.description, 'No description supplied.')}</p>
+                          <p className="text-[11px] text-buddy-text-secondary mt-1 flex items-center gap-1">
+                            <Clock size={11} /> target {shortId(r.target_user)} · {formatDate(r.created_at)}
+                            {r.sla_due_at ? ` · due ${formatDate(r.sla_due_at)}` : ''}
+                          </p>
+                          {r.resolution_note && (
+                            <p className="text-[11px] text-buddy-text-secondary mt-1 break-words">Resolution: {r.resolution_note}</p>
+                          )}
+                        </div>
+                        {!settled && (
+                          <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                            <Button
+                              variant="outline" size="sm" disabled={busy}
+                              onClick={() => moderationApi.handleReport(r.id, 'investigate').then(reloadReports).catch(() => setError(`Failed to investigate ${shortId(r.id)}.`))}
+                            >
+                              Investigate
+                            </Button>
+                            <Button
+                              variant="outline" size="sm" disabled={busy}
+                              onClick={() => moderationApi.handleReport(r.id, 'resolve').then(reloadReports).catch(() => setError(`Failed to resolve ${shortId(r.id)}.`))}
+                            >
+                              <CheckCircle2 size={14} className="mr-1" /> Resolve
+                            </Button>
+                            <Button
+                              variant="ghost" size="sm" disabled={busy}
+                              onClick={() => moderationApi.handleReport(r.id, 'dismiss').then(reloadReports).catch(() => setError(`Failed to dismiss ${shortId(r.id)}.`))}
+                            >
+                              Dismiss
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      <Button variant="outline" size="sm" onClick={() => moderationApi.handleReport(r.id, 'investigate').then(() => moderationApi.getReports().then((x) => setReports(x.data || [])))}>Investigate</Button>
-                      <Button variant="ghost" size="sm" onClick={() => moderationApi.handleReport(r.id, 'dismiss').then(() => moderationApi.getReports().then((x) => setReports(x.data || [])))}>Dismiss</Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )
           ) : appeals.length === 0 ? (
-            <p className="text-sm text-buddy-text-secondary text-center py-6">No appeals. Users appeal via Settings → Help & Safety within 14 days.</p>
+            <p className="text-sm text-buddy-text-secondary text-center py-6">No appeals. Users appeal via Settings → Help &amp; Safety within 14 days.</p>
           ) : (
             <div className="space-y-2">
               {appeals.map((a) => (
-                <div key={a.id} className="flex items-center justify-between gap-3 py-2 border-b border-buddy-surface last:border-0">
-                  <div className="min-w-0">
-                    <p className="text-sm">Appeal {a.id.slice(0, 8)} · {a.status} · {formatDate(a.created_at)}</p>
-                    {a.reason && <p className="text-xs text-buddy-text-secondary truncate mt-0.5">{a.reason}</p>}
+                <div key={a.id} className="py-3 border-b border-buddy-surface last:border-0">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm">Appeal {shortId(a.id)} · {a.status} · {formatDate(a.created_at)}</p>
+                      {a.reason && <p className="text-xs text-buddy-text-secondary truncate mt-0.5">{a.reason}</p>}
+                      {a.resolution_note && (
+                        <p className="text-[11px] text-buddy-text-secondary mt-1 break-words">Decision: {a.resolution_note}</p>
+                      )}
+                    </div>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <Button
+                        variant="outline" size="sm" disabled={actingId === a.id}
+                        onClick={() => setAppealPrompt(appealPrompt?.id === a.id && appealPrompt.decision === 'approve' ? null : { id: a.id, decision: 'approve' })}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm" disabled={actingId === a.id}
+                        onClick={() => setAppealPrompt(appealPrompt?.id === a.id && appealPrompt.decision === 'deny' ? null : { id: a.id, decision: 'deny' })}
+                      >
+                        Deny
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-1.5">
-                    <Button variant="outline" size="sm" onClick={() => moderationApi.reviewAppeal(a.id, 'approve').then(() => moderationApi.getAppeals().then((x) => setAppeals(x.data || []))).catch(() => setError(`Failed to approve appeal #${a.id.slice(0, 8)}.`))}>Approve</Button>
-                    <Button variant="ghost" size="sm" onClick={() => moderationApi.reviewAppeal(a.id, 'deny').then(() => moderationApi.getAppeals().then((x) => setAppeals(x.data || []))).catch(() => setError(`Failed to deny appeal #${a.id.slice(0, 8)}.`))}>Deny</Button>
-                  </div>
+                  <ReasonPrompt
+                    open={appealPrompt?.id === a.id}
+                    action={appealPrompt?.decision === 'deny' ? 'rejected' : 'approved'}
+                    // Required for BOTH decisions: the API rejects a review with
+                    // an empty `resolution_note`, and approving reverses the
+                    // underlying action, so the note is the record of why.
+                    requireNote
+                    submitLabel={appealPrompt?.decision === 'deny' ? 'Deny appeal' : 'Approve appeal & reverse the action'}
+                    placeholder={
+                      appealPrompt?.decision === 'deny'
+                        ? 'Why is this appeal denied? The user reads this.'
+                        : 'Why is the action being reversed? The user reads this, and it is the audit record.'
+                    }
+                    busy={actingId === a.id}
+                    onSubmit={(note) => {
+                      const target = appeals.find((x) => x.id === a.id);
+                      const decision = appealPrompt?.decision ?? 'approve';
+                      if (target) decideAppeal(target, decision, note);
+                    }}
+                    onCancel={() => setAppealPrompt(null)}
+                  />
                 </div>
               ))}
             </div>

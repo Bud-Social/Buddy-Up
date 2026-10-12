@@ -680,3 +680,491 @@ Map<String, dynamic> _$PortalPaginationToJson(_PortalPagination instance) =>
       'next': instance.next,
       'previous': instance.previous,
     };
+
+_GovernanceUserRef _$GovernanceUserRefFromJson(Map<String, dynamic> json) =>
+    _GovernanceUserRef(
+      id: json['id'] as String?,
+      email: json['email'] as String?,
+      displayName: json['display_name'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$GovernanceUserRefToJson(_GovernanceUserRef instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'email': instance.email,
+      'display_name': instance.displayName,
+    };
+
+_StaffRole _$StaffRoleFromJson(Map<String, dynamic> json) => _StaffRole(
+  id: json['id'] as String?,
+  user: json['user'] == null
+      ? null
+      : GovernanceUserRef.fromJson(json['user'] as Map<String, dynamic>),
+  role: json['role'] as String? ?? '',
+  roleDisplay: json['role_display'] as String? ?? '',
+  scopes:
+      (json['scopes'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+      const <String>[],
+  defaultScopes:
+      (json['default_scopes'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
+  effectiveScopes:
+      (json['effective_scopes'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
+  grantedBy: json['granted_by'] == null
+      ? null
+      : GovernanceUserRef.fromJson(json['granted_by'] as Map<String, dynamic>),
+  grantedAt: json['granted_at'] as String?,
+  notes: json['notes'] as String? ?? '',
+  revokedAt: json['revoked_at'] as String?,
+  isActive: json['is_active'] as bool? ?? false,
+  createdAt: json['created_at'] as String?,
+  updatedAt: json['updated_at'] as String?,
+);
+
+Map<String, dynamic> _$StaffRoleToJson(_StaffRole instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'user': instance.user,
+      'role': instance.role,
+      'role_display': instance.roleDisplay,
+      'scopes': instance.scopes,
+      'default_scopes': instance.defaultScopes,
+      'effective_scopes': instance.effectiveScopes,
+      'granted_by': instance.grantedBy,
+      'granted_at': instance.grantedAt,
+      'notes': instance.notes,
+      'revoked_at': instance.revokedAt,
+      'is_active': instance.isActive,
+      'created_at': instance.createdAt,
+      'updated_at': instance.updatedAt,
+    };
+
+_AccountActionRequest _$AccountActionRequestFromJson(
+  Map<String, dynamic> json,
+) => _AccountActionRequest(
+  id: json['id'] as String?,
+  action: json['action'] as String? ?? '',
+  actionDisplay: json['action_display'] as String? ?? '',
+  requiredScope: json['required_scope'] as String? ?? '',
+  targetUser: json['target_user'] == null
+      ? null
+      : GovernanceUserRef.fromJson(json['target_user'] as Map<String, dynamic>),
+  payload: json['payload'] == null
+      ? const <String, dynamic>{}
+      : _stringKeyedMapOrEmpty(json['payload']),
+  status: json['status'] as String? ?? '',
+  isOpen: json['is_open'] as bool? ?? false,
+  requestedBy: json['requested_by'] == null
+      ? null
+      : GovernanceUserRef.fromJson(
+          json['requested_by'] as Map<String, dynamic>,
+        ),
+  requestedByProfile: json['requested_by_profile'] as String? ?? '',
+  decidedBy: json['decided_by'] == null
+      ? null
+      : GovernanceUserRef.fromJson(json['decided_by'] as Map<String, dynamic>),
+  decidedAt: json['decided_at'] as String?,
+  decisionNote: json['decision_note'] as String? ?? '',
+  requiresSecond: json['requires_second'] as bool? ?? true,
+  appliedAt: json['applied_at'] as String?,
+  effect: const _FlexibleTextConverter().fromJson(json['effect']),
+  createdAt: json['created_at'] as String?,
+  updatedAt: json['updated_at'] as String?,
+);
+
+Map<String, dynamic> _$AccountActionRequestToJson(
+  _AccountActionRequest instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'action': instance.action,
+  'action_display': instance.actionDisplay,
+  'required_scope': instance.requiredScope,
+  'target_user': instance.targetUser,
+  'payload': instance.payload,
+  'status': instance.status,
+  'is_open': instance.isOpen,
+  'requested_by': instance.requestedBy,
+  'requested_by_profile': instance.requestedByProfile,
+  'decided_by': instance.decidedBy,
+  'decided_at': instance.decidedAt,
+  'decision_note': instance.decisionNote,
+  'requires_second': instance.requiresSecond,
+  'applied_at': instance.appliedAt,
+  'effect': const _FlexibleTextConverter().toJson(instance.effect),
+  'created_at': instance.createdAt,
+  'updated_at': instance.updatedAt,
+};
+
+_AdminActionLog _$AdminActionLogFromJson(Map<String, dynamic> json) =>
+    _AdminActionLog(
+      id: json['id'] as String?,
+      actor: json['actor'] as String?,
+      actorEmail: json['actor_email'] as String? ?? '',
+      action: json['action'] as String? ?? '',
+      targetType: json['target_type'] as String? ?? '',
+      targetId: json['target_id'] as String? ?? '',
+      summary: json['summary'] as String? ?? '',
+      before: _stringKeyedMap(json['before']),
+      after: _stringKeyedMap(json['after']),
+      requestId: json['request_id'] as String? ?? '',
+      ipAddress: json['ip_address'] as String?,
+      userAgent: json['user_agent'] as String? ?? '',
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$AdminActionLogToJson(_AdminActionLog instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'actor': instance.actor,
+      'actor_email': instance.actorEmail,
+      'action': instance.action,
+      'target_type': instance.targetType,
+      'target_id': instance.targetId,
+      'summary': instance.summary,
+      'before': instance.before,
+      'after': instance.after,
+      'request_id': instance.requestId,
+      'ip_address': instance.ipAddress,
+      'user_agent': instance.userAgent,
+      'created_at': instance.createdAt,
+    };
+
+_EmailLog _$EmailLogFromJson(Map<String, dynamic> json) => _EmailLog(
+  id: json['id'] as String?,
+  recipientUser: json['recipient_user'] as String?,
+  recipient: json['recipient'] == null
+      ? null
+      : GovernanceUserRef.fromJson(json['recipient'] as Map<String, dynamic>),
+  recipientEmail: json['recipient_email'] as String? ?? '',
+  subject: json['subject'] as String? ?? '',
+  bodyPreview: json['body_preview'] as String? ?? '',
+  templateKey: json['template_key'] as String? ?? '',
+  sentBy: json['sent_by'] as String?,
+  sender: json['sender'] == null
+      ? null
+      : GovernanceUserRef.fromJson(json['sender'] as Map<String, dynamic>),
+  sentByEmail: json['sent_by_email'] as String? ?? '',
+  status: json['status'] as String? ?? '',
+  error: json['error'] as String? ?? '',
+  dedupeKey: json['dedupe_key'] as String? ?? '',
+  relatedObjectType: json['related_object_type'] as String? ?? '',
+  relatedObjectId: json['related_object_id'] as String? ?? '',
+  createdAt: json['created_at'] as String?,
+);
+
+Map<String, dynamic> _$EmailLogToJson(_EmailLog instance) => <String, dynamic>{
+  'id': instance.id,
+  'recipient_user': instance.recipientUser,
+  'recipient': instance.recipient,
+  'recipient_email': instance.recipientEmail,
+  'subject': instance.subject,
+  'body_preview': instance.bodyPreview,
+  'template_key': instance.templateKey,
+  'sent_by': instance.sentBy,
+  'sender': instance.sender,
+  'sent_by_email': instance.sentByEmail,
+  'status': instance.status,
+  'error': instance.error,
+  'dedupe_key': instance.dedupeKey,
+  'related_object_type': instance.relatedObjectType,
+  'related_object_id': instance.relatedObjectId,
+  'created_at': instance.createdAt,
+};
+
+_ContentFlag _$ContentFlagFromJson(Map<String, dynamic> json) => _ContentFlag(
+  id: json['id'] as String?,
+  flagReason: json['flag_reason'] as String? ?? '',
+  severity: json['severity'] as String? ?? '',
+  confidence: json['confidence'] == null
+      ? 0.0
+      : _optDoubleOrZero(json['confidence']),
+  source: json['source'] as String? ?? 'auto',
+  contentType: json['content_type'] as String? ?? '',
+  contentId: json['content_id'] as String? ?? '',
+  contentPreview: json['content_preview'] as String? ?? '',
+  isActioned: json['is_actioned'] as bool? ?? false,
+  actionTaken: json['action_taken'] as String? ?? '',
+  createdAt: json['created_at'] as String?,
+);
+
+Map<String, dynamic> _$ContentFlagToJson(_ContentFlag instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'flag_reason': instance.flagReason,
+      'severity': instance.severity,
+      'confidence': instance.confidence,
+      'source': instance.source,
+      'content_type': instance.contentType,
+      'content_id': instance.contentId,
+      'content_preview': instance.contentPreview,
+      'is_actioned': instance.isActioned,
+      'action_taken': instance.actionTaken,
+      'created_at': instance.createdAt,
+    };
+
+_ModerationStats _$ModerationStatsFromJson(Map<String, dynamic> json) =>
+    _ModerationStats(
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      unactioned: (json['unactioned'] as num?)?.toInt() ?? 0,
+      actioned: (json['actioned'] as num?)?.toInt() ?? 0,
+      bySeverity: json['by_severity'] == null
+          ? const <String, dynamic>{}
+          : _stringKeyedMapOrEmpty(json['by_severity']),
+      byReason: json['by_reason'] == null
+          ? const <String, dynamic>{}
+          : _stringKeyedMapOrEmpty(json['by_reason']),
+    );
+
+Map<String, dynamic> _$ModerationStatsToJson(_ModerationStats instance) =>
+    <String, dynamic>{
+      'total': instance.total,
+      'unactioned': instance.unactioned,
+      'actioned': instance.actioned,
+      'by_severity': instance.bySeverity,
+      'by_reason': instance.byReason,
+    };
+
+_ModerationReport _$ModerationReportFromJson(Map<String, dynamic> json) =>
+    _ModerationReport(
+      id: json['id'] as String?,
+      reporter: json['reporter'] as String?,
+      targetUser: json['target_user'] as String?,
+      reason: json['reason'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      contentUrl: json['content_url'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      assignedTo: json['assigned_to'] as String?,
+      resolvedAt: json['resolved_at'] as String?,
+      resolutionNote: json['resolution_note'] as String? ?? '',
+      slaDueAt: json['sla_due_at'] as String?,
+      slaBreached: json['sla_breached'] as bool? ?? false,
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$ModerationReportToJson(_ModerationReport instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'reporter': instance.reporter,
+      'target_user': instance.targetUser,
+      'reason': instance.reason,
+      'description': instance.description,
+      'content_url': instance.contentUrl,
+      'status': instance.status,
+      'assigned_to': instance.assignedTo,
+      'resolved_at': instance.resolvedAt,
+      'resolution_note': instance.resolutionNote,
+      'sla_due_at': instance.slaDueAt,
+      'sla_breached': instance.slaBreached,
+      'created_at': instance.createdAt,
+    };
+
+_ModerationAction _$ModerationActionFromJson(Map<String, dynamic> json) =>
+    _ModerationAction(
+      id: json['id'] as String?,
+      action: json['action'] as String? ?? '',
+      moderator: json['moderator'] as String?,
+      report: json['report'] as String?,
+      targetUser: json['target_user'] as String?,
+      reason: json['reason'] as String? ?? '',
+      durationDays: (json['duration_days'] as num?)?.toInt(),
+      contentType: json['content_type'] as String? ?? '',
+      contentTypeDisplay: json['content_type_display'] as String? ?? '',
+      contentId: json['content_id'] as String? ?? '',
+      isReversed: json['is_reversed'] as bool? ?? false,
+      reversedBy: json['reversed_by'] as String?,
+      reversedAt: json['reversed_at'] as String?,
+      reversalReason: json['reversal_reason'] as String? ?? '',
+      reversedByModerator: json['reversed_by_moderator'] == null
+          ? const <String, dynamic>{}
+          : _stringKeyedMapOrEmpty(json['reversed_by_moderator']),
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$ModerationActionToJson(_ModerationAction instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'action': instance.action,
+      'moderator': instance.moderator,
+      'report': instance.report,
+      'target_user': instance.targetUser,
+      'reason': instance.reason,
+      'duration_days': instance.durationDays,
+      'content_type': instance.contentType,
+      'content_type_display': instance.contentTypeDisplay,
+      'content_id': instance.contentId,
+      'is_reversed': instance.isReversed,
+      'reversed_by': instance.reversedBy,
+      'reversed_at': instance.reversedAt,
+      'reversal_reason': instance.reversalReason,
+      'reversed_by_moderator': instance.reversedByModerator,
+      'created_at': instance.createdAt,
+    };
+
+_ModerationActionOutcome _$ModerationActionOutcomeFromJson(
+  Map<String, dynamic> json,
+) => _ModerationActionOutcome(
+  moderationAction: json['moderation_action'] == null
+      ? null
+      : ModerationAction.fromJson(
+          json['moderation_action'] as Map<String, dynamic>,
+        ),
+  approval: json['approval'] == null
+      ? null
+      : ModerationApprovalStub.fromJson(
+          json['approval'] as Map<String, dynamic>,
+        ),
+  applied: json['applied'] as bool? ?? false,
+);
+
+Map<String, dynamic> _$ModerationActionOutcomeToJson(
+  _ModerationActionOutcome instance,
+) => <String, dynamic>{
+  'moderation_action': instance.moderationAction,
+  'approval': instance.approval,
+  'applied': instance.applied,
+};
+
+_ModerationApprovalStub _$ModerationApprovalStubFromJson(
+  Map<String, dynamic> json,
+) => _ModerationApprovalStub(
+  id: json['id'] as String?,
+  action: json['action'] as String? ?? '',
+  status: json['status'] as String? ?? '',
+  requiresSecond: json['requires_second'] as bool? ?? true,
+  requestedBy: json['requested_by'] as String?,
+);
+
+Map<String, dynamic> _$ModerationApprovalStubToJson(
+  _ModerationApprovalStub instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'action': instance.action,
+  'status': instance.status,
+  'requires_second': instance.requiresSecond,
+  'requested_by': instance.requestedBy,
+};
+
+_ModerationReversalOutcome _$ModerationReversalOutcomeFromJson(
+  Map<String, dynamic> json,
+) => _ModerationReversalOutcome(
+  reversedAction: json['reversed_action'] == null
+      ? null
+      : ModerationAction.fromJson(
+          json['reversed_action'] as Map<String, dynamic>,
+        ),
+  reversal: json['reversal'] == null
+      ? null
+      : ModerationAction.fromJson(json['reversal'] as Map<String, dynamic>),
+  effect: const _FlexibleTextConverter().fromJson(json['effect']),
+);
+
+Map<String, dynamic> _$ModerationReversalOutcomeToJson(
+  _ModerationReversalOutcome instance,
+) => <String, dynamic>{
+  'reversed_action': instance.reversedAction,
+  'reversal': instance.reversal,
+  'effect': const _FlexibleTextConverter().toJson(instance.effect),
+};
+
+_ContentFlagOutcome _$ContentFlagOutcomeFromJson(Map<String, dynamic> json) =>
+    _ContentFlagOutcome(
+      flag: json['flag'] == null
+          ? null
+          : ContentFlag.fromJson(json['flag'] as Map<String, dynamic>),
+      effect: const _FlexibleTextConverter().fromJson(json['effect']),
+    );
+
+Map<String, dynamic> _$ContentFlagOutcomeToJson(_ContentFlagOutcome instance) =>
+    <String, dynamic>{
+      'flag': instance.flag,
+      'effect': const _FlexibleTextConverter().toJson(instance.effect),
+    };
+
+_ModerationPendingApproval _$ModerationPendingApprovalFromJson(
+  Map<String, dynamic> json,
+) => _ModerationPendingApproval(
+  id: json['id'] as String?,
+  governanceAction: json['governance_action'] as String? ?? '',
+  targetUser: json['target_user'] as String?,
+  requestedBy: json['requested_by'] as String?,
+  requestedByProfile: json['requested_by_profile'] as String? ?? '',
+  reason: json['reason'] as String? ?? '',
+  durationDays: (json['duration_days'] as num?)?.toInt(),
+  requiresSecond: json['requires_second'] as bool? ?? true,
+  waitingSeconds: (json['waiting_seconds'] as num?)?.toInt() ?? 0,
+  createdAt: json['created_at'] as String?,
+  moderationActionId: json['moderation_action_id'] as String?,
+);
+
+Map<String, dynamic> _$ModerationPendingApprovalToJson(
+  _ModerationPendingApproval instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'governance_action': instance.governanceAction,
+  'target_user': instance.targetUser,
+  'requested_by': instance.requestedBy,
+  'requested_by_profile': instance.requestedByProfile,
+  'reason': instance.reason,
+  'duration_days': instance.durationDays,
+  'requires_second': instance.requiresSecond,
+  'waiting_seconds': instance.waitingSeconds,
+  'created_at': instance.createdAt,
+  'moderation_action_id': instance.moderationActionId,
+};
+
+_ModerationAppeal _$ModerationAppealFromJson(Map<String, dynamic> json) =>
+    _ModerationAppeal(
+      id: json['id'] as String?,
+      action: json['action'] as String?,
+      appellant: json['appellant'] as String?,
+      reason: json['reason'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      reviewer: json['reviewer'] as String?,
+      reviewedAt: json['reviewed_at'] as String?,
+      resolutionNote: json['resolution_note'] as String? ?? '',
+      createdAt: json['created_at'] as String?,
+    );
+
+Map<String, dynamic> _$ModerationAppealToJson(_ModerationAppeal instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'action': instance.action,
+      'appellant': instance.appellant,
+      'reason': instance.reason,
+      'status': instance.status,
+      'reviewer': instance.reviewer,
+      'reviewed_at': instance.reviewedAt,
+      'resolution_note': instance.resolutionNote,
+      'created_at': instance.createdAt,
+    };
+
+_ModerationCommendation _$ModerationCommendationFromJson(
+  Map<String, dynamic> json,
+) => _ModerationCommendation(
+  id: json['id'] as String?,
+  recipient: json['recipient'] as String?,
+  issuedBy: json['issued_by'] as String?,
+  category: json['category'] as String? ?? '',
+  categoryDisplay: json['category_display'] as String? ?? '',
+  message: json['message'] as String? ?? '',
+  visibleToRecipient: json['visible_to_recipient'] as bool? ?? true,
+  createdAt: json['created_at'] as String?,
+);
+
+Map<String, dynamic> _$ModerationCommendationToJson(
+  _ModerationCommendation instance,
+) => <String, dynamic>{
+  'id': instance.id,
+  'recipient': instance.recipient,
+  'issued_by': instance.issuedBy,
+  'category': instance.category,
+  'category_display': instance.categoryDisplay,
+  'message': instance.message,
+  'visible_to_recipient': instance.visibleToRecipient,
+  'created_at': instance.createdAt,
+};

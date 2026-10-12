@@ -5011,4 +5011,4994 @@ as String?,
 
 }
 
+
+/// @nodoc
+mixin _$GovernanceUserRef {
+
+ String? get id; String? get email;@JsonKey(name: 'display_name') String get displayName;
+/// Create a copy of GovernanceUserRef
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<GovernanceUserRef> get copyWith => _$GovernanceUserRefCopyWithImpl<GovernanceUserRef>(this as GovernanceUserRef, _$identity);
+
+  /// Serializes this GovernanceUserRef to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GovernanceUserRef&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.displayName, displayName) || other.displayName == displayName));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,email,displayName);
+
+@override
+String toString() {
+  return 'GovernanceUserRef(id: $id, email: $email, displayName: $displayName)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $GovernanceUserRefCopyWith<$Res>  {
+  factory $GovernanceUserRefCopyWith(GovernanceUserRef value, $Res Function(GovernanceUserRef) _then) = _$GovernanceUserRefCopyWithImpl;
+@useResult
+$Res call({
+ String? id, String? email,@JsonKey(name: 'display_name') String displayName
+});
+
+
+
+
+}
+/// @nodoc
+class _$GovernanceUserRefCopyWithImpl<$Res>
+    implements $GovernanceUserRefCopyWith<$Res> {
+  _$GovernanceUserRefCopyWithImpl(this._self, this._then);
+
+  final GovernanceUserRef _self;
+  final $Res Function(GovernanceUserRef) _then;
+
+/// Create a copy of GovernanceUserRef
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? email = freezed,Object? displayName = null,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [GovernanceUserRef].
+extension GovernanceUserRefPatterns on GovernanceUserRef {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _GovernanceUserRef value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _GovernanceUserRef() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _GovernanceUserRef value)  $default,){
+final _that = this;
+switch (_that) {
+case _GovernanceUserRef():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _GovernanceUserRef value)?  $default,){
+final _that = this;
+switch (_that) {
+case _GovernanceUserRef() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String? email, @JsonKey(name: 'display_name')  String displayName)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _GovernanceUserRef() when $default != null:
+return $default(_that.id,_that.email,_that.displayName);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String? email, @JsonKey(name: 'display_name')  String displayName)  $default,) {final _that = this;
+switch (_that) {
+case _GovernanceUserRef():
+return $default(_that.id,_that.email,_that.displayName);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String? email, @JsonKey(name: 'display_name')  String displayName)?  $default,) {final _that = this;
+switch (_that) {
+case _GovernanceUserRef() when $default != null:
+return $default(_that.id,_that.email,_that.displayName);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _GovernanceUserRef implements GovernanceUserRef {
+  const _GovernanceUserRef({this.id, this.email, @JsonKey(name: 'display_name') this.displayName = ''});
+  factory _GovernanceUserRef.fromJson(Map<String, dynamic> json) => _$GovernanceUserRefFromJson(json);
+
+@override final  String? id;
+@override final  String? email;
+@override@JsonKey(name: 'display_name') final  String displayName;
+
+/// Create a copy of GovernanceUserRef
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$GovernanceUserRefCopyWith<_GovernanceUserRef> get copyWith => __$GovernanceUserRefCopyWithImpl<_GovernanceUserRef>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$GovernanceUserRefToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GovernanceUserRef&&(identical(other.id, id) || other.id == id)&&(identical(other.email, email) || other.email == email)&&(identical(other.displayName, displayName) || other.displayName == displayName));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,email,displayName);
+
+@override
+String toString() {
+  return 'GovernanceUserRef(id: $id, email: $email, displayName: $displayName)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$GovernanceUserRefCopyWith<$Res> implements $GovernanceUserRefCopyWith<$Res> {
+  factory _$GovernanceUserRefCopyWith(_GovernanceUserRef value, $Res Function(_GovernanceUserRef) _then) = __$GovernanceUserRefCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id, String? email,@JsonKey(name: 'display_name') String displayName
+});
+
+
+
+
+}
+/// @nodoc
+class __$GovernanceUserRefCopyWithImpl<$Res>
+    implements _$GovernanceUserRefCopyWith<$Res> {
+  __$GovernanceUserRefCopyWithImpl(this._self, this._then);
+
+  final _GovernanceUserRef _self;
+  final $Res Function(_GovernanceUserRef) _then;
+
+/// Create a copy of GovernanceUserRef
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? email = freezed,Object? displayName = null,}) {
+  return _then(_GovernanceUserRef(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$StaffRole {
+
+ String? get id;@JsonKey(name: 'user') GovernanceUserRef? get user; String get role;@JsonKey(name: 'role_display') String get roleDisplay; List<String> get scopes;@JsonKey(name: 'default_scopes') List<String> get defaultScopes;@JsonKey(name: 'effective_scopes') List<String> get effectiveScopes;@JsonKey(name: 'granted_by') GovernanceUserRef? get grantedBy;@JsonKey(name: 'granted_at') String? get grantedAt; String get notes;@JsonKey(name: 'revoked_at') String? get revokedAt;/// A revoked row grants nothing but is kept for the audit trail, so this
+/// defaults false: an absent field must not read as "currently holds it".
+@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'created_at') String? get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
+/// Create a copy of StaffRole
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$StaffRoleCopyWith<StaffRole> get copyWith => _$StaffRoleCopyWithImpl<StaffRole>(this as StaffRole, _$identity);
+
+  /// Serializes this StaffRole to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StaffRole&&(identical(other.id, id) || other.id == id)&&(identical(other.user, user) || other.user == user)&&(identical(other.role, role) || other.role == role)&&(identical(other.roleDisplay, roleDisplay) || other.roleDisplay == roleDisplay)&&const DeepCollectionEquality().equals(other.scopes, scopes)&&const DeepCollectionEquality().equals(other.defaultScopes, defaultScopes)&&const DeepCollectionEquality().equals(other.effectiveScopes, effectiveScopes)&&(identical(other.grantedBy, grantedBy) || other.grantedBy == grantedBy)&&(identical(other.grantedAt, grantedAt) || other.grantedAt == grantedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.revokedAt, revokedAt) || other.revokedAt == revokedAt)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,user,role,roleDisplay,const DeepCollectionEquality().hash(scopes),const DeepCollectionEquality().hash(defaultScopes),const DeepCollectionEquality().hash(effectiveScopes),grantedBy,grantedAt,notes,revokedAt,isActive,createdAt,updatedAt);
+
+@override
+String toString() {
+  return 'StaffRole(id: $id, user: $user, role: $role, roleDisplay: $roleDisplay, scopes: $scopes, defaultScopes: $defaultScopes, effectiveScopes: $effectiveScopes, grantedBy: $grantedBy, grantedAt: $grantedAt, notes: $notes, revokedAt: $revokedAt, isActive: $isActive, createdAt: $createdAt, updatedAt: $updatedAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $StaffRoleCopyWith<$Res>  {
+  factory $StaffRoleCopyWith(StaffRole value, $Res Function(StaffRole) _then) = _$StaffRoleCopyWithImpl;
+@useResult
+$Res call({
+ String? id,@JsonKey(name: 'user') GovernanceUserRef? user, String role,@JsonKey(name: 'role_display') String roleDisplay, List<String> scopes,@JsonKey(name: 'default_scopes') List<String> defaultScopes,@JsonKey(name: 'effective_scopes') List<String> effectiveScopes,@JsonKey(name: 'granted_by') GovernanceUserRef? grantedBy,@JsonKey(name: 'granted_at') String? grantedAt, String notes,@JsonKey(name: 'revoked_at') String? revokedAt,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') String? createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+});
+
+
+$GovernanceUserRefCopyWith<$Res>? get user;$GovernanceUserRefCopyWith<$Res>? get grantedBy;
+
+}
+/// @nodoc
+class _$StaffRoleCopyWithImpl<$Res>
+    implements $StaffRoleCopyWith<$Res> {
+  _$StaffRoleCopyWithImpl(this._self, this._then);
+
+  final StaffRole _self;
+  final $Res Function(StaffRole) _then;
+
+/// Create a copy of StaffRole
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? user = freezed,Object? role = null,Object? roleDisplay = null,Object? scopes = null,Object? defaultScopes = null,Object? effectiveScopes = null,Object? grantedBy = freezed,Object? grantedAt = freezed,Object? notes = null,Object? revokedAt = freezed,Object? isActive = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,user: freezed == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String,roleDisplay: null == roleDisplay ? _self.roleDisplay : roleDisplay // ignore: cast_nullable_to_non_nullable
+as String,scopes: null == scopes ? _self.scopes : scopes // ignore: cast_nullable_to_non_nullable
+as List<String>,defaultScopes: null == defaultScopes ? _self.defaultScopes : defaultScopes // ignore: cast_nullable_to_non_nullable
+as List<String>,effectiveScopes: null == effectiveScopes ? _self.effectiveScopes : effectiveScopes // ignore: cast_nullable_to_non_nullable
+as List<String>,grantedBy: freezed == grantedBy ? _self.grantedBy : grantedBy // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,grantedAt: freezed == grantedAt ? _self.grantedAt : grantedAt // ignore: cast_nullable_to_non_nullable
+as String?,notes: null == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String,revokedAt: freezed == revokedAt ? _self.revokedAt : revokedAt // ignore: cast_nullable_to_non_nullable
+as String?,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+/// Create a copy of StaffRole
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get user {
+    if (_self.user == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.user!, (value) {
+    return _then(_self.copyWith(user: value));
+  });
+}/// Create a copy of StaffRole
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get grantedBy {
+    if (_self.grantedBy == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.grantedBy!, (value) {
+    return _then(_self.copyWith(grantedBy: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [StaffRole].
+extension StaffRolePatterns on StaffRole {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _StaffRole value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _StaffRole() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _StaffRole value)  $default,){
+final _that = this;
+switch (_that) {
+case _StaffRole():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _StaffRole value)?  $default,){
+final _that = this;
+switch (_that) {
+case _StaffRole() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'user')  GovernanceUserRef? user,  String role, @JsonKey(name: 'role_display')  String roleDisplay,  List<String> scopes, @JsonKey(name: 'default_scopes')  List<String> defaultScopes, @JsonKey(name: 'effective_scopes')  List<String> effectiveScopes, @JsonKey(name: 'granted_by')  GovernanceUserRef? grantedBy, @JsonKey(name: 'granted_at')  String? grantedAt,  String notes, @JsonKey(name: 'revoked_at')  String? revokedAt, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _StaffRole() when $default != null:
+return $default(_that.id,_that.user,_that.role,_that.roleDisplay,_that.scopes,_that.defaultScopes,_that.effectiveScopes,_that.grantedBy,_that.grantedAt,_that.notes,_that.revokedAt,_that.isActive,_that.createdAt,_that.updatedAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'user')  GovernanceUserRef? user,  String role, @JsonKey(name: 'role_display')  String roleDisplay,  List<String> scopes, @JsonKey(name: 'default_scopes')  List<String> defaultScopes, @JsonKey(name: 'effective_scopes')  List<String> effectiveScopes, @JsonKey(name: 'granted_by')  GovernanceUserRef? grantedBy, @JsonKey(name: 'granted_at')  String? grantedAt,  String notes, @JsonKey(name: 'revoked_at')  String? revokedAt, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
+switch (_that) {
+case _StaffRole():
+return $default(_that.id,_that.user,_that.role,_that.roleDisplay,_that.scopes,_that.defaultScopes,_that.effectiveScopes,_that.grantedBy,_that.grantedAt,_that.notes,_that.revokedAt,_that.isActive,_that.createdAt,_that.updatedAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'user')  GovernanceUserRef? user,  String role, @JsonKey(name: 'role_display')  String roleDisplay,  List<String> scopes, @JsonKey(name: 'default_scopes')  List<String> defaultScopes, @JsonKey(name: 'effective_scopes')  List<String> effectiveScopes, @JsonKey(name: 'granted_by')  GovernanceUserRef? grantedBy, @JsonKey(name: 'granted_at')  String? grantedAt,  String notes, @JsonKey(name: 'revoked_at')  String? revokedAt, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
+switch (_that) {
+case _StaffRole() when $default != null:
+return $default(_that.id,_that.user,_that.role,_that.roleDisplay,_that.scopes,_that.defaultScopes,_that.effectiveScopes,_that.grantedBy,_that.grantedAt,_that.notes,_that.revokedAt,_that.isActive,_that.createdAt,_that.updatedAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _StaffRole implements StaffRole {
+  const _StaffRole({this.id, @JsonKey(name: 'user') this.user, this.role = '', @JsonKey(name: 'role_display') this.roleDisplay = '', final  List<String> scopes = const <String>[], @JsonKey(name: 'default_scopes') final  List<String> defaultScopes = const <String>[], @JsonKey(name: 'effective_scopes') final  List<String> effectiveScopes = const <String>[], @JsonKey(name: 'granted_by') this.grantedBy, @JsonKey(name: 'granted_at') this.grantedAt, this.notes = '', @JsonKey(name: 'revoked_at') this.revokedAt, @JsonKey(name: 'is_active') this.isActive = false, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _scopes = scopes,_defaultScopes = defaultScopes,_effectiveScopes = effectiveScopes;
+  factory _StaffRole.fromJson(Map<String, dynamic> json) => _$StaffRoleFromJson(json);
+
+@override final  String? id;
+@override@JsonKey(name: 'user') final  GovernanceUserRef? user;
+@override@JsonKey() final  String role;
+@override@JsonKey(name: 'role_display') final  String roleDisplay;
+ final  List<String> _scopes;
+@override@JsonKey() List<String> get scopes {
+  if (_scopes is EqualUnmodifiableListView) return _scopes;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_scopes);
+}
+
+ final  List<String> _defaultScopes;
+@override@JsonKey(name: 'default_scopes') List<String> get defaultScopes {
+  if (_defaultScopes is EqualUnmodifiableListView) return _defaultScopes;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_defaultScopes);
+}
+
+ final  List<String> _effectiveScopes;
+@override@JsonKey(name: 'effective_scopes') List<String> get effectiveScopes {
+  if (_effectiveScopes is EqualUnmodifiableListView) return _effectiveScopes;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_effectiveScopes);
+}
+
+@override@JsonKey(name: 'granted_by') final  GovernanceUserRef? grantedBy;
+@override@JsonKey(name: 'granted_at') final  String? grantedAt;
+@override@JsonKey() final  String notes;
+@override@JsonKey(name: 'revoked_at') final  String? revokedAt;
+/// A revoked row grants nothing but is kept for the audit trail, so this
+/// defaults false: an absent field must not read as "currently holds it".
+@override@JsonKey(name: 'is_active') final  bool isActive;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+@override@JsonKey(name: 'updated_at') final  String? updatedAt;
+
+/// Create a copy of StaffRole
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$StaffRoleCopyWith<_StaffRole> get copyWith => __$StaffRoleCopyWithImpl<_StaffRole>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$StaffRoleToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StaffRole&&(identical(other.id, id) || other.id == id)&&(identical(other.user, user) || other.user == user)&&(identical(other.role, role) || other.role == role)&&(identical(other.roleDisplay, roleDisplay) || other.roleDisplay == roleDisplay)&&const DeepCollectionEquality().equals(other._scopes, _scopes)&&const DeepCollectionEquality().equals(other._defaultScopes, _defaultScopes)&&const DeepCollectionEquality().equals(other._effectiveScopes, _effectiveScopes)&&(identical(other.grantedBy, grantedBy) || other.grantedBy == grantedBy)&&(identical(other.grantedAt, grantedAt) || other.grantedAt == grantedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.revokedAt, revokedAt) || other.revokedAt == revokedAt)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,user,role,roleDisplay,const DeepCollectionEquality().hash(_scopes),const DeepCollectionEquality().hash(_defaultScopes),const DeepCollectionEquality().hash(_effectiveScopes),grantedBy,grantedAt,notes,revokedAt,isActive,createdAt,updatedAt);
+
+@override
+String toString() {
+  return 'StaffRole(id: $id, user: $user, role: $role, roleDisplay: $roleDisplay, scopes: $scopes, defaultScopes: $defaultScopes, effectiveScopes: $effectiveScopes, grantedBy: $grantedBy, grantedAt: $grantedAt, notes: $notes, revokedAt: $revokedAt, isActive: $isActive, createdAt: $createdAt, updatedAt: $updatedAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$StaffRoleCopyWith<$Res> implements $StaffRoleCopyWith<$Res> {
+  factory _$StaffRoleCopyWith(_StaffRole value, $Res Function(_StaffRole) _then) = __$StaffRoleCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id,@JsonKey(name: 'user') GovernanceUserRef? user, String role,@JsonKey(name: 'role_display') String roleDisplay, List<String> scopes,@JsonKey(name: 'default_scopes') List<String> defaultScopes,@JsonKey(name: 'effective_scopes') List<String> effectiveScopes,@JsonKey(name: 'granted_by') GovernanceUserRef? grantedBy,@JsonKey(name: 'granted_at') String? grantedAt, String notes,@JsonKey(name: 'revoked_at') String? revokedAt,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') String? createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+});
+
+
+@override $GovernanceUserRefCopyWith<$Res>? get user;@override $GovernanceUserRefCopyWith<$Res>? get grantedBy;
+
+}
+/// @nodoc
+class __$StaffRoleCopyWithImpl<$Res>
+    implements _$StaffRoleCopyWith<$Res> {
+  __$StaffRoleCopyWithImpl(this._self, this._then);
+
+  final _StaffRole _self;
+  final $Res Function(_StaffRole) _then;
+
+/// Create a copy of StaffRole
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? user = freezed,Object? role = null,Object? roleDisplay = null,Object? scopes = null,Object? defaultScopes = null,Object? effectiveScopes = null,Object? grantedBy = freezed,Object? grantedAt = freezed,Object? notes = null,Object? revokedAt = freezed,Object? isActive = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+  return _then(_StaffRole(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,user: freezed == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String,roleDisplay: null == roleDisplay ? _self.roleDisplay : roleDisplay // ignore: cast_nullable_to_non_nullable
+as String,scopes: null == scopes ? _self._scopes : scopes // ignore: cast_nullable_to_non_nullable
+as List<String>,defaultScopes: null == defaultScopes ? _self._defaultScopes : defaultScopes // ignore: cast_nullable_to_non_nullable
+as List<String>,effectiveScopes: null == effectiveScopes ? _self._effectiveScopes : effectiveScopes // ignore: cast_nullable_to_non_nullable
+as List<String>,grantedBy: freezed == grantedBy ? _self.grantedBy : grantedBy // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,grantedAt: freezed == grantedAt ? _self.grantedAt : grantedAt // ignore: cast_nullable_to_non_nullable
+as String?,notes: null == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String,revokedAt: freezed == revokedAt ? _self.revokedAt : revokedAt // ignore: cast_nullable_to_non_nullable
+as String?,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+/// Create a copy of StaffRole
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get user {
+    if (_self.user == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.user!, (value) {
+    return _then(_self.copyWith(user: value));
+  });
+}/// Create a copy of StaffRole
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get grantedBy {
+    if (_self.grantedBy == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.grantedBy!, (value) {
+    return _then(_self.copyWith(grantedBy: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$AccountActionRequest {
+
+ String? get id; String get action;@JsonKey(name: 'action_display') String get actionDisplay;@JsonKey(name: 'required_scope') String get requiredScope;@JsonKey(name: 'target_user') GovernanceUserRef? get targetUser;@JsonKey(name: 'payload', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> get payload; String get status;@JsonKey(name: 'is_open') bool get isOpen;@JsonKey(name: 'requested_by') GovernanceUserRef? get requestedBy;/// Snapshot of the requester's name. Survives the actor's deletion, which
+/// is the row you most want to still be able to audit.
+@JsonKey(name: 'requested_by_profile') String get requestedByProfile;@JsonKey(name: 'decided_by') GovernanceUserRef? get decidedBy;@JsonKey(name: 'decided_at') String? get decidedAt;@JsonKey(name: 'decision_note') String get decisionNote;@JsonKey(name: 'requires_second') bool get requiresSecond;/// Null until the approve call has actually applied the effect. A request
+/// reading "approved" with no `applied_at` is the case the approve view
+/// rolls back rather than leaves lying.
+@JsonKey(name: 'applied_at') String? get appliedAt;/// Only on the approve response: a human-readable description of what
+/// happened. Other actions record that nothing automatic was done.
+@JsonKey(name: 'effect')@_FlexibleTextConverter() String? get effect;@JsonKey(name: 'created_at') String? get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
+/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AccountActionRequestCopyWith<AccountActionRequest> get copyWith => _$AccountActionRequestCopyWithImpl<AccountActionRequest>(this as AccountActionRequest, _$identity);
+
+  /// Serializes this AccountActionRequest to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AccountActionRequest&&(identical(other.id, id) || other.id == id)&&(identical(other.action, action) || other.action == action)&&(identical(other.actionDisplay, actionDisplay) || other.actionDisplay == actionDisplay)&&(identical(other.requiredScope, requiredScope) || other.requiredScope == requiredScope)&&(identical(other.targetUser, targetUser) || other.targetUser == targetUser)&&const DeepCollectionEquality().equals(other.payload, payload)&&(identical(other.status, status) || other.status == status)&&(identical(other.isOpen, isOpen) || other.isOpen == isOpen)&&(identical(other.requestedBy, requestedBy) || other.requestedBy == requestedBy)&&(identical(other.requestedByProfile, requestedByProfile) || other.requestedByProfile == requestedByProfile)&&(identical(other.decidedBy, decidedBy) || other.decidedBy == decidedBy)&&(identical(other.decidedAt, decidedAt) || other.decidedAt == decidedAt)&&(identical(other.decisionNote, decisionNote) || other.decisionNote == decisionNote)&&(identical(other.requiresSecond, requiresSecond) || other.requiresSecond == requiresSecond)&&(identical(other.appliedAt, appliedAt) || other.appliedAt == appliedAt)&&(identical(other.effect, effect) || other.effect == effect)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,action,actionDisplay,requiredScope,targetUser,const DeepCollectionEquality().hash(payload),status,isOpen,requestedBy,requestedByProfile,decidedBy,decidedAt,decisionNote,requiresSecond,appliedAt,effect,createdAt,updatedAt);
+
+@override
+String toString() {
+  return 'AccountActionRequest(id: $id, action: $action, actionDisplay: $actionDisplay, requiredScope: $requiredScope, targetUser: $targetUser, payload: $payload, status: $status, isOpen: $isOpen, requestedBy: $requestedBy, requestedByProfile: $requestedByProfile, decidedBy: $decidedBy, decidedAt: $decidedAt, decisionNote: $decisionNote, requiresSecond: $requiresSecond, appliedAt: $appliedAt, effect: $effect, createdAt: $createdAt, updatedAt: $updatedAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AccountActionRequestCopyWith<$Res>  {
+  factory $AccountActionRequestCopyWith(AccountActionRequest value, $Res Function(AccountActionRequest) _then) = _$AccountActionRequestCopyWithImpl;
+@useResult
+$Res call({
+ String? id, String action,@JsonKey(name: 'action_display') String actionDisplay,@JsonKey(name: 'required_scope') String requiredScope,@JsonKey(name: 'target_user') GovernanceUserRef? targetUser,@JsonKey(name: 'payload', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> payload, String status,@JsonKey(name: 'is_open') bool isOpen,@JsonKey(name: 'requested_by') GovernanceUserRef? requestedBy,@JsonKey(name: 'requested_by_profile') String requestedByProfile,@JsonKey(name: 'decided_by') GovernanceUserRef? decidedBy,@JsonKey(name: 'decided_at') String? decidedAt,@JsonKey(name: 'decision_note') String decisionNote,@JsonKey(name: 'requires_second') bool requiresSecond,@JsonKey(name: 'applied_at') String? appliedAt,@JsonKey(name: 'effect')@_FlexibleTextConverter() String? effect,@JsonKey(name: 'created_at') String? createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+});
+
+
+$GovernanceUserRefCopyWith<$Res>? get targetUser;$GovernanceUserRefCopyWith<$Res>? get requestedBy;$GovernanceUserRefCopyWith<$Res>? get decidedBy;
+
+}
+/// @nodoc
+class _$AccountActionRequestCopyWithImpl<$Res>
+    implements $AccountActionRequestCopyWith<$Res> {
+  _$AccountActionRequestCopyWithImpl(this._self, this._then);
+
+  final AccountActionRequest _self;
+  final $Res Function(AccountActionRequest) _then;
+
+/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? action = null,Object? actionDisplay = null,Object? requiredScope = null,Object? targetUser = freezed,Object? payload = null,Object? status = null,Object? isOpen = null,Object? requestedBy = freezed,Object? requestedByProfile = null,Object? decidedBy = freezed,Object? decidedAt = freezed,Object? decisionNote = null,Object? requiresSecond = null,Object? appliedAt = freezed,Object? effect = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,action: null == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String,actionDisplay: null == actionDisplay ? _self.actionDisplay : actionDisplay // ignore: cast_nullable_to_non_nullable
+as String,requiredScope: null == requiredScope ? _self.requiredScope : requiredScope // ignore: cast_nullable_to_non_nullable
+as String,targetUser: freezed == targetUser ? _self.targetUser : targetUser // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,payload: null == payload ? _self.payload : payload // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,isOpen: null == isOpen ? _self.isOpen : isOpen // ignore: cast_nullable_to_non_nullable
+as bool,requestedBy: freezed == requestedBy ? _self.requestedBy : requestedBy // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,requestedByProfile: null == requestedByProfile ? _self.requestedByProfile : requestedByProfile // ignore: cast_nullable_to_non_nullable
+as String,decidedBy: freezed == decidedBy ? _self.decidedBy : decidedBy // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,decidedAt: freezed == decidedAt ? _self.decidedAt : decidedAt // ignore: cast_nullable_to_non_nullable
+as String?,decisionNote: null == decisionNote ? _self.decisionNote : decisionNote // ignore: cast_nullable_to_non_nullable
+as String,requiresSecond: null == requiresSecond ? _self.requiresSecond : requiresSecond // ignore: cast_nullable_to_non_nullable
+as bool,appliedAt: freezed == appliedAt ? _self.appliedAt : appliedAt // ignore: cast_nullable_to_non_nullable
+as String?,effect: freezed == effect ? _self.effect : effect // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get targetUser {
+    if (_self.targetUser == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.targetUser!, (value) {
+    return _then(_self.copyWith(targetUser: value));
+  });
+}/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get requestedBy {
+    if (_self.requestedBy == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.requestedBy!, (value) {
+    return _then(_self.copyWith(requestedBy: value));
+  });
+}/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get decidedBy {
+    if (_self.decidedBy == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.decidedBy!, (value) {
+    return _then(_self.copyWith(decidedBy: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [AccountActionRequest].
+extension AccountActionRequestPatterns on AccountActionRequest {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _AccountActionRequest value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _AccountActionRequest() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _AccountActionRequest value)  $default,){
+final _that = this;
+switch (_that) {
+case _AccountActionRequest():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _AccountActionRequest value)?  $default,){
+final _that = this;
+switch (_that) {
+case _AccountActionRequest() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String action, @JsonKey(name: 'action_display')  String actionDisplay, @JsonKey(name: 'required_scope')  String requiredScope, @JsonKey(name: 'target_user')  GovernanceUserRef? targetUser, @JsonKey(name: 'payload', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> payload,  String status, @JsonKey(name: 'is_open')  bool isOpen, @JsonKey(name: 'requested_by')  GovernanceUserRef? requestedBy, @JsonKey(name: 'requested_by_profile')  String requestedByProfile, @JsonKey(name: 'decided_by')  GovernanceUserRef? decidedBy, @JsonKey(name: 'decided_at')  String? decidedAt, @JsonKey(name: 'decision_note')  String decisionNote, @JsonKey(name: 'requires_second')  bool requiresSecond, @JsonKey(name: 'applied_at')  String? appliedAt, @JsonKey(name: 'effect')@_FlexibleTextConverter()  String? effect, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _AccountActionRequest() when $default != null:
+return $default(_that.id,_that.action,_that.actionDisplay,_that.requiredScope,_that.targetUser,_that.payload,_that.status,_that.isOpen,_that.requestedBy,_that.requestedByProfile,_that.decidedBy,_that.decidedAt,_that.decisionNote,_that.requiresSecond,_that.appliedAt,_that.effect,_that.createdAt,_that.updatedAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String action, @JsonKey(name: 'action_display')  String actionDisplay, @JsonKey(name: 'required_scope')  String requiredScope, @JsonKey(name: 'target_user')  GovernanceUserRef? targetUser, @JsonKey(name: 'payload', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> payload,  String status, @JsonKey(name: 'is_open')  bool isOpen, @JsonKey(name: 'requested_by')  GovernanceUserRef? requestedBy, @JsonKey(name: 'requested_by_profile')  String requestedByProfile, @JsonKey(name: 'decided_by')  GovernanceUserRef? decidedBy, @JsonKey(name: 'decided_at')  String? decidedAt, @JsonKey(name: 'decision_note')  String decisionNote, @JsonKey(name: 'requires_second')  bool requiresSecond, @JsonKey(name: 'applied_at')  String? appliedAt, @JsonKey(name: 'effect')@_FlexibleTextConverter()  String? effect, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
+switch (_that) {
+case _AccountActionRequest():
+return $default(_that.id,_that.action,_that.actionDisplay,_that.requiredScope,_that.targetUser,_that.payload,_that.status,_that.isOpen,_that.requestedBy,_that.requestedByProfile,_that.decidedBy,_that.decidedAt,_that.decisionNote,_that.requiresSecond,_that.appliedAt,_that.effect,_that.createdAt,_that.updatedAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String action, @JsonKey(name: 'action_display')  String actionDisplay, @JsonKey(name: 'required_scope')  String requiredScope, @JsonKey(name: 'target_user')  GovernanceUserRef? targetUser, @JsonKey(name: 'payload', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> payload,  String status, @JsonKey(name: 'is_open')  bool isOpen, @JsonKey(name: 'requested_by')  GovernanceUserRef? requestedBy, @JsonKey(name: 'requested_by_profile')  String requestedByProfile, @JsonKey(name: 'decided_by')  GovernanceUserRef? decidedBy, @JsonKey(name: 'decided_at')  String? decidedAt, @JsonKey(name: 'decision_note')  String decisionNote, @JsonKey(name: 'requires_second')  bool requiresSecond, @JsonKey(name: 'applied_at')  String? appliedAt, @JsonKey(name: 'effect')@_FlexibleTextConverter()  String? effect, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
+switch (_that) {
+case _AccountActionRequest() when $default != null:
+return $default(_that.id,_that.action,_that.actionDisplay,_that.requiredScope,_that.targetUser,_that.payload,_that.status,_that.isOpen,_that.requestedBy,_that.requestedByProfile,_that.decidedBy,_that.decidedAt,_that.decisionNote,_that.requiresSecond,_that.appliedAt,_that.effect,_that.createdAt,_that.updatedAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _AccountActionRequest implements AccountActionRequest {
+  const _AccountActionRequest({this.id, this.action = '', @JsonKey(name: 'action_display') this.actionDisplay = '', @JsonKey(name: 'required_scope') this.requiredScope = '', @JsonKey(name: 'target_user') this.targetUser, @JsonKey(name: 'payload', fromJson: _stringKeyedMapOrEmpty) final  Map<String, dynamic> payload = const <String, dynamic>{}, this.status = '', @JsonKey(name: 'is_open') this.isOpen = false, @JsonKey(name: 'requested_by') this.requestedBy, @JsonKey(name: 'requested_by_profile') this.requestedByProfile = '', @JsonKey(name: 'decided_by') this.decidedBy, @JsonKey(name: 'decided_at') this.decidedAt, @JsonKey(name: 'decision_note') this.decisionNote = '', @JsonKey(name: 'requires_second') this.requiresSecond = true, @JsonKey(name: 'applied_at') this.appliedAt, @JsonKey(name: 'effect')@_FlexibleTextConverter() this.effect, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _payload = payload;
+  factory _AccountActionRequest.fromJson(Map<String, dynamic> json) => _$AccountActionRequestFromJson(json);
+
+@override final  String? id;
+@override@JsonKey() final  String action;
+@override@JsonKey(name: 'action_display') final  String actionDisplay;
+@override@JsonKey(name: 'required_scope') final  String requiredScope;
+@override@JsonKey(name: 'target_user') final  GovernanceUserRef? targetUser;
+ final  Map<String, dynamic> _payload;
+@override@JsonKey(name: 'payload', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> get payload {
+  if (_payload is EqualUnmodifiableMapView) return _payload;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_payload);
+}
+
+@override@JsonKey() final  String status;
+@override@JsonKey(name: 'is_open') final  bool isOpen;
+@override@JsonKey(name: 'requested_by') final  GovernanceUserRef? requestedBy;
+/// Snapshot of the requester's name. Survives the actor's deletion, which
+/// is the row you most want to still be able to audit.
+@override@JsonKey(name: 'requested_by_profile') final  String requestedByProfile;
+@override@JsonKey(name: 'decided_by') final  GovernanceUserRef? decidedBy;
+@override@JsonKey(name: 'decided_at') final  String? decidedAt;
+@override@JsonKey(name: 'decision_note') final  String decisionNote;
+@override@JsonKey(name: 'requires_second') final  bool requiresSecond;
+/// Null until the approve call has actually applied the effect. A request
+/// reading "approved" with no `applied_at` is the case the approve view
+/// rolls back rather than leaves lying.
+@override@JsonKey(name: 'applied_at') final  String? appliedAt;
+/// Only on the approve response: a human-readable description of what
+/// happened. Other actions record that nothing automatic was done.
+@override@JsonKey(name: 'effect')@_FlexibleTextConverter() final  String? effect;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+@override@JsonKey(name: 'updated_at') final  String? updatedAt;
+
+/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$AccountActionRequestCopyWith<_AccountActionRequest> get copyWith => __$AccountActionRequestCopyWithImpl<_AccountActionRequest>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$AccountActionRequestToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AccountActionRequest&&(identical(other.id, id) || other.id == id)&&(identical(other.action, action) || other.action == action)&&(identical(other.actionDisplay, actionDisplay) || other.actionDisplay == actionDisplay)&&(identical(other.requiredScope, requiredScope) || other.requiredScope == requiredScope)&&(identical(other.targetUser, targetUser) || other.targetUser == targetUser)&&const DeepCollectionEquality().equals(other._payload, _payload)&&(identical(other.status, status) || other.status == status)&&(identical(other.isOpen, isOpen) || other.isOpen == isOpen)&&(identical(other.requestedBy, requestedBy) || other.requestedBy == requestedBy)&&(identical(other.requestedByProfile, requestedByProfile) || other.requestedByProfile == requestedByProfile)&&(identical(other.decidedBy, decidedBy) || other.decidedBy == decidedBy)&&(identical(other.decidedAt, decidedAt) || other.decidedAt == decidedAt)&&(identical(other.decisionNote, decisionNote) || other.decisionNote == decisionNote)&&(identical(other.requiresSecond, requiresSecond) || other.requiresSecond == requiresSecond)&&(identical(other.appliedAt, appliedAt) || other.appliedAt == appliedAt)&&(identical(other.effect, effect) || other.effect == effect)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,action,actionDisplay,requiredScope,targetUser,const DeepCollectionEquality().hash(_payload),status,isOpen,requestedBy,requestedByProfile,decidedBy,decidedAt,decisionNote,requiresSecond,appliedAt,effect,createdAt,updatedAt);
+
+@override
+String toString() {
+  return 'AccountActionRequest(id: $id, action: $action, actionDisplay: $actionDisplay, requiredScope: $requiredScope, targetUser: $targetUser, payload: $payload, status: $status, isOpen: $isOpen, requestedBy: $requestedBy, requestedByProfile: $requestedByProfile, decidedBy: $decidedBy, decidedAt: $decidedAt, decisionNote: $decisionNote, requiresSecond: $requiresSecond, appliedAt: $appliedAt, effect: $effect, createdAt: $createdAt, updatedAt: $updatedAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$AccountActionRequestCopyWith<$Res> implements $AccountActionRequestCopyWith<$Res> {
+  factory _$AccountActionRequestCopyWith(_AccountActionRequest value, $Res Function(_AccountActionRequest) _then) = __$AccountActionRequestCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id, String action,@JsonKey(name: 'action_display') String actionDisplay,@JsonKey(name: 'required_scope') String requiredScope,@JsonKey(name: 'target_user') GovernanceUserRef? targetUser,@JsonKey(name: 'payload', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> payload, String status,@JsonKey(name: 'is_open') bool isOpen,@JsonKey(name: 'requested_by') GovernanceUserRef? requestedBy,@JsonKey(name: 'requested_by_profile') String requestedByProfile,@JsonKey(name: 'decided_by') GovernanceUserRef? decidedBy,@JsonKey(name: 'decided_at') String? decidedAt,@JsonKey(name: 'decision_note') String decisionNote,@JsonKey(name: 'requires_second') bool requiresSecond,@JsonKey(name: 'applied_at') String? appliedAt,@JsonKey(name: 'effect')@_FlexibleTextConverter() String? effect,@JsonKey(name: 'created_at') String? createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+});
+
+
+@override $GovernanceUserRefCopyWith<$Res>? get targetUser;@override $GovernanceUserRefCopyWith<$Res>? get requestedBy;@override $GovernanceUserRefCopyWith<$Res>? get decidedBy;
+
+}
+/// @nodoc
+class __$AccountActionRequestCopyWithImpl<$Res>
+    implements _$AccountActionRequestCopyWith<$Res> {
+  __$AccountActionRequestCopyWithImpl(this._self, this._then);
+
+  final _AccountActionRequest _self;
+  final $Res Function(_AccountActionRequest) _then;
+
+/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? action = null,Object? actionDisplay = null,Object? requiredScope = null,Object? targetUser = freezed,Object? payload = null,Object? status = null,Object? isOpen = null,Object? requestedBy = freezed,Object? requestedByProfile = null,Object? decidedBy = freezed,Object? decidedAt = freezed,Object? decisionNote = null,Object? requiresSecond = null,Object? appliedAt = freezed,Object? effect = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+  return _then(_AccountActionRequest(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,action: null == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String,actionDisplay: null == actionDisplay ? _self.actionDisplay : actionDisplay // ignore: cast_nullable_to_non_nullable
+as String,requiredScope: null == requiredScope ? _self.requiredScope : requiredScope // ignore: cast_nullable_to_non_nullable
+as String,targetUser: freezed == targetUser ? _self.targetUser : targetUser // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,payload: null == payload ? _self._payload : payload // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,isOpen: null == isOpen ? _self.isOpen : isOpen // ignore: cast_nullable_to_non_nullable
+as bool,requestedBy: freezed == requestedBy ? _self.requestedBy : requestedBy // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,requestedByProfile: null == requestedByProfile ? _self.requestedByProfile : requestedByProfile // ignore: cast_nullable_to_non_nullable
+as String,decidedBy: freezed == decidedBy ? _self.decidedBy : decidedBy // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,decidedAt: freezed == decidedAt ? _self.decidedAt : decidedAt // ignore: cast_nullable_to_non_nullable
+as String?,decisionNote: null == decisionNote ? _self.decisionNote : decisionNote // ignore: cast_nullable_to_non_nullable
+as String,requiresSecond: null == requiresSecond ? _self.requiresSecond : requiresSecond // ignore: cast_nullable_to_non_nullable
+as bool,appliedAt: freezed == appliedAt ? _self.appliedAt : appliedAt // ignore: cast_nullable_to_non_nullable
+as String?,effect: freezed == effect ? _self.effect : effect // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get targetUser {
+    if (_self.targetUser == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.targetUser!, (value) {
+    return _then(_self.copyWith(targetUser: value));
+  });
+}/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get requestedBy {
+    if (_self.requestedBy == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.requestedBy!, (value) {
+    return _then(_self.copyWith(requestedBy: value));
+  });
+}/// Create a copy of AccountActionRequest
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get decidedBy {
+    if (_self.decidedBy == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.decidedBy!, (value) {
+    return _then(_self.copyWith(decidedBy: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$AdminActionLog {
+
+ String? get id; String? get actor;/// Snapshot of the actor's address at call time, so deleting a staff
+/// account does not delete the evidence that it acted.
+@JsonKey(name: 'actor_email') String get actorEmail; String get action;@JsonKey(name: 'target_type') String get targetType;@JsonKey(name: 'target_id') String get targetId; String get summary;@JsonKey(name: 'before', fromJson: _stringKeyedMap) Map<String, dynamic>? get before;@JsonKey(name: 'after', fromJson: _stringKeyedMap) Map<String, dynamic>? get after;@JsonKey(name: 'request_id') String get requestId;@JsonKey(name: 'ip_address') String? get ipAddress;@JsonKey(name: 'user_agent') String get userAgent;@JsonKey(name: 'created_at') String? get createdAt;
+/// Create a copy of AdminActionLog
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$AdminActionLogCopyWith<AdminActionLog> get copyWith => _$AdminActionLogCopyWithImpl<AdminActionLog>(this as AdminActionLog, _$identity);
+
+  /// Serializes this AdminActionLog to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is AdminActionLog&&(identical(other.id, id) || other.id == id)&&(identical(other.actor, actor) || other.actor == actor)&&(identical(other.actorEmail, actorEmail) || other.actorEmail == actorEmail)&&(identical(other.action, action) || other.action == action)&&(identical(other.targetType, targetType) || other.targetType == targetType)&&(identical(other.targetId, targetId) || other.targetId == targetId)&&(identical(other.summary, summary) || other.summary == summary)&&const DeepCollectionEquality().equals(other.before, before)&&const DeepCollectionEquality().equals(other.after, after)&&(identical(other.requestId, requestId) || other.requestId == requestId)&&(identical(other.ipAddress, ipAddress) || other.ipAddress == ipAddress)&&(identical(other.userAgent, userAgent) || other.userAgent == userAgent)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,actor,actorEmail,action,targetType,targetId,summary,const DeepCollectionEquality().hash(before),const DeepCollectionEquality().hash(after),requestId,ipAddress,userAgent,createdAt);
+
+@override
+String toString() {
+  return 'AdminActionLog(id: $id, actor: $actor, actorEmail: $actorEmail, action: $action, targetType: $targetType, targetId: $targetId, summary: $summary, before: $before, after: $after, requestId: $requestId, ipAddress: $ipAddress, userAgent: $userAgent, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $AdminActionLogCopyWith<$Res>  {
+  factory $AdminActionLogCopyWith(AdminActionLog value, $Res Function(AdminActionLog) _then) = _$AdminActionLogCopyWithImpl;
+@useResult
+$Res call({
+ String? id, String? actor,@JsonKey(name: 'actor_email') String actorEmail, String action,@JsonKey(name: 'target_type') String targetType,@JsonKey(name: 'target_id') String targetId, String summary,@JsonKey(name: 'before', fromJson: _stringKeyedMap) Map<String, dynamic>? before,@JsonKey(name: 'after', fromJson: _stringKeyedMap) Map<String, dynamic>? after,@JsonKey(name: 'request_id') String requestId,@JsonKey(name: 'ip_address') String? ipAddress,@JsonKey(name: 'user_agent') String userAgent,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$AdminActionLogCopyWithImpl<$Res>
+    implements $AdminActionLogCopyWith<$Res> {
+  _$AdminActionLogCopyWithImpl(this._self, this._then);
+
+  final AdminActionLog _self;
+  final $Res Function(AdminActionLog) _then;
+
+/// Create a copy of AdminActionLog
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? actor = freezed,Object? actorEmail = null,Object? action = null,Object? targetType = null,Object? targetId = null,Object? summary = null,Object? before = freezed,Object? after = freezed,Object? requestId = null,Object? ipAddress = freezed,Object? userAgent = null,Object? createdAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,actor: freezed == actor ? _self.actor : actor // ignore: cast_nullable_to_non_nullable
+as String?,actorEmail: null == actorEmail ? _self.actorEmail : actorEmail // ignore: cast_nullable_to_non_nullable
+as String,action: null == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String,targetType: null == targetType ? _self.targetType : targetType // ignore: cast_nullable_to_non_nullable
+as String,targetId: null == targetId ? _self.targetId : targetId // ignore: cast_nullable_to_non_nullable
+as String,summary: null == summary ? _self.summary : summary // ignore: cast_nullable_to_non_nullable
+as String,before: freezed == before ? _self.before : before // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,after: freezed == after ? _self.after : after // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,requestId: null == requestId ? _self.requestId : requestId // ignore: cast_nullable_to_non_nullable
+as String,ipAddress: freezed == ipAddress ? _self.ipAddress : ipAddress // ignore: cast_nullable_to_non_nullable
+as String?,userAgent: null == userAgent ? _self.userAgent : userAgent // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [AdminActionLog].
+extension AdminActionLogPatterns on AdminActionLog {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _AdminActionLog value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _AdminActionLog() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _AdminActionLog value)  $default,){
+final _that = this;
+switch (_that) {
+case _AdminActionLog():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _AdminActionLog value)?  $default,){
+final _that = this;
+switch (_that) {
+case _AdminActionLog() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String? actor, @JsonKey(name: 'actor_email')  String actorEmail,  String action, @JsonKey(name: 'target_type')  String targetType, @JsonKey(name: 'target_id')  String targetId,  String summary, @JsonKey(name: 'before', fromJson: _stringKeyedMap)  Map<String, dynamic>? before, @JsonKey(name: 'after', fromJson: _stringKeyedMap)  Map<String, dynamic>? after, @JsonKey(name: 'request_id')  String requestId, @JsonKey(name: 'ip_address')  String? ipAddress, @JsonKey(name: 'user_agent')  String userAgent, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _AdminActionLog() when $default != null:
+return $default(_that.id,_that.actor,_that.actorEmail,_that.action,_that.targetType,_that.targetId,_that.summary,_that.before,_that.after,_that.requestId,_that.ipAddress,_that.userAgent,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String? actor, @JsonKey(name: 'actor_email')  String actorEmail,  String action, @JsonKey(name: 'target_type')  String targetType, @JsonKey(name: 'target_id')  String targetId,  String summary, @JsonKey(name: 'before', fromJson: _stringKeyedMap)  Map<String, dynamic>? before, @JsonKey(name: 'after', fromJson: _stringKeyedMap)  Map<String, dynamic>? after, @JsonKey(name: 'request_id')  String requestId, @JsonKey(name: 'ip_address')  String? ipAddress, @JsonKey(name: 'user_agent')  String userAgent, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _AdminActionLog():
+return $default(_that.id,_that.actor,_that.actorEmail,_that.action,_that.targetType,_that.targetId,_that.summary,_that.before,_that.after,_that.requestId,_that.ipAddress,_that.userAgent,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String? actor, @JsonKey(name: 'actor_email')  String actorEmail,  String action, @JsonKey(name: 'target_type')  String targetType, @JsonKey(name: 'target_id')  String targetId,  String summary, @JsonKey(name: 'before', fromJson: _stringKeyedMap)  Map<String, dynamic>? before, @JsonKey(name: 'after', fromJson: _stringKeyedMap)  Map<String, dynamic>? after, @JsonKey(name: 'request_id')  String requestId, @JsonKey(name: 'ip_address')  String? ipAddress, @JsonKey(name: 'user_agent')  String userAgent, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _AdminActionLog() when $default != null:
+return $default(_that.id,_that.actor,_that.actorEmail,_that.action,_that.targetType,_that.targetId,_that.summary,_that.before,_that.after,_that.requestId,_that.ipAddress,_that.userAgent,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _AdminActionLog implements AdminActionLog {
+  const _AdminActionLog({this.id, this.actor, @JsonKey(name: 'actor_email') this.actorEmail = '', this.action = '', @JsonKey(name: 'target_type') this.targetType = '', @JsonKey(name: 'target_id') this.targetId = '', this.summary = '', @JsonKey(name: 'before', fromJson: _stringKeyedMap) final  Map<String, dynamic>? before, @JsonKey(name: 'after', fromJson: _stringKeyedMap) final  Map<String, dynamic>? after, @JsonKey(name: 'request_id') this.requestId = '', @JsonKey(name: 'ip_address') this.ipAddress, @JsonKey(name: 'user_agent') this.userAgent = '', @JsonKey(name: 'created_at') this.createdAt}): _before = before,_after = after;
+  factory _AdminActionLog.fromJson(Map<String, dynamic> json) => _$AdminActionLogFromJson(json);
+
+@override final  String? id;
+@override final  String? actor;
+/// Snapshot of the actor's address at call time, so deleting a staff
+/// account does not delete the evidence that it acted.
+@override@JsonKey(name: 'actor_email') final  String actorEmail;
+@override@JsonKey() final  String action;
+@override@JsonKey(name: 'target_type') final  String targetType;
+@override@JsonKey(name: 'target_id') final  String targetId;
+@override@JsonKey() final  String summary;
+ final  Map<String, dynamic>? _before;
+@override@JsonKey(name: 'before', fromJson: _stringKeyedMap) Map<String, dynamic>? get before {
+  final value = _before;
+  if (value == null) return null;
+  if (_before is EqualUnmodifiableMapView) return _before;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
+ final  Map<String, dynamic>? _after;
+@override@JsonKey(name: 'after', fromJson: _stringKeyedMap) Map<String, dynamic>? get after {
+  final value = _after;
+  if (value == null) return null;
+  if (_after is EqualUnmodifiableMapView) return _after;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
+@override@JsonKey(name: 'request_id') final  String requestId;
+@override@JsonKey(name: 'ip_address') final  String? ipAddress;
+@override@JsonKey(name: 'user_agent') final  String userAgent;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+
+/// Create a copy of AdminActionLog
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$AdminActionLogCopyWith<_AdminActionLog> get copyWith => __$AdminActionLogCopyWithImpl<_AdminActionLog>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$AdminActionLogToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _AdminActionLog&&(identical(other.id, id) || other.id == id)&&(identical(other.actor, actor) || other.actor == actor)&&(identical(other.actorEmail, actorEmail) || other.actorEmail == actorEmail)&&(identical(other.action, action) || other.action == action)&&(identical(other.targetType, targetType) || other.targetType == targetType)&&(identical(other.targetId, targetId) || other.targetId == targetId)&&(identical(other.summary, summary) || other.summary == summary)&&const DeepCollectionEquality().equals(other._before, _before)&&const DeepCollectionEquality().equals(other._after, _after)&&(identical(other.requestId, requestId) || other.requestId == requestId)&&(identical(other.ipAddress, ipAddress) || other.ipAddress == ipAddress)&&(identical(other.userAgent, userAgent) || other.userAgent == userAgent)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,actor,actorEmail,action,targetType,targetId,summary,const DeepCollectionEquality().hash(_before),const DeepCollectionEquality().hash(_after),requestId,ipAddress,userAgent,createdAt);
+
+@override
+String toString() {
+  return 'AdminActionLog(id: $id, actor: $actor, actorEmail: $actorEmail, action: $action, targetType: $targetType, targetId: $targetId, summary: $summary, before: $before, after: $after, requestId: $requestId, ipAddress: $ipAddress, userAgent: $userAgent, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$AdminActionLogCopyWith<$Res> implements $AdminActionLogCopyWith<$Res> {
+  factory _$AdminActionLogCopyWith(_AdminActionLog value, $Res Function(_AdminActionLog) _then) = __$AdminActionLogCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id, String? actor,@JsonKey(name: 'actor_email') String actorEmail, String action,@JsonKey(name: 'target_type') String targetType,@JsonKey(name: 'target_id') String targetId, String summary,@JsonKey(name: 'before', fromJson: _stringKeyedMap) Map<String, dynamic>? before,@JsonKey(name: 'after', fromJson: _stringKeyedMap) Map<String, dynamic>? after,@JsonKey(name: 'request_id') String requestId,@JsonKey(name: 'ip_address') String? ipAddress,@JsonKey(name: 'user_agent') String userAgent,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$AdminActionLogCopyWithImpl<$Res>
+    implements _$AdminActionLogCopyWith<$Res> {
+  __$AdminActionLogCopyWithImpl(this._self, this._then);
+
+  final _AdminActionLog _self;
+  final $Res Function(_AdminActionLog) _then;
+
+/// Create a copy of AdminActionLog
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? actor = freezed,Object? actorEmail = null,Object? action = null,Object? targetType = null,Object? targetId = null,Object? summary = null,Object? before = freezed,Object? after = freezed,Object? requestId = null,Object? ipAddress = freezed,Object? userAgent = null,Object? createdAt = freezed,}) {
+  return _then(_AdminActionLog(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,actor: freezed == actor ? _self.actor : actor // ignore: cast_nullable_to_non_nullable
+as String?,actorEmail: null == actorEmail ? _self.actorEmail : actorEmail // ignore: cast_nullable_to_non_nullable
+as String,action: null == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String,targetType: null == targetType ? _self.targetType : targetType // ignore: cast_nullable_to_non_nullable
+as String,targetId: null == targetId ? _self.targetId : targetId // ignore: cast_nullable_to_non_nullable
+as String,summary: null == summary ? _self.summary : summary // ignore: cast_nullable_to_non_nullable
+as String,before: freezed == before ? _self._before : before // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,after: freezed == after ? _self._after : after // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,requestId: null == requestId ? _self.requestId : requestId // ignore: cast_nullable_to_non_nullable
+as String,ipAddress: freezed == ipAddress ? _self.ipAddress : ipAddress // ignore: cast_nullable_to_non_nullable
+as String?,userAgent: null == userAgent ? _self.userAgent : userAgent // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$EmailLog {
+
+ String? get id;@JsonKey(name: 'recipient_user') String? get recipientUser;@JsonKey(name: 'recipient') GovernanceUserRef? get recipient;@JsonKey(name: 'recipient_email') String get recipientEmail; String get subject;@JsonKey(name: 'body_preview') String get bodyPreview;@JsonKey(name: 'template_key') String get templateKey;@JsonKey(name: 'sent_by') String? get sentBy;@JsonKey(name: 'sender') GovernanceUserRef? get sender;@JsonKey(name: 'sent_by_email') String get sentByEmail;/// queued / sent / failed / skipped.
+ String get status; String get error;@JsonKey(name: 'dedupe_key') String get dedupeKey;@JsonKey(name: 'related_object_type') String get relatedObjectType;@JsonKey(name: 'related_object_id') String get relatedObjectId;@JsonKey(name: 'created_at') String? get createdAt;
+/// Create a copy of EmailLog
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$EmailLogCopyWith<EmailLog> get copyWith => _$EmailLogCopyWithImpl<EmailLog>(this as EmailLog, _$identity);
+
+  /// Serializes this EmailLog to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EmailLog&&(identical(other.id, id) || other.id == id)&&(identical(other.recipientUser, recipientUser) || other.recipientUser == recipientUser)&&(identical(other.recipient, recipient) || other.recipient == recipient)&&(identical(other.recipientEmail, recipientEmail) || other.recipientEmail == recipientEmail)&&(identical(other.subject, subject) || other.subject == subject)&&(identical(other.bodyPreview, bodyPreview) || other.bodyPreview == bodyPreview)&&(identical(other.templateKey, templateKey) || other.templateKey == templateKey)&&(identical(other.sentBy, sentBy) || other.sentBy == sentBy)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.sentByEmail, sentByEmail) || other.sentByEmail == sentByEmail)&&(identical(other.status, status) || other.status == status)&&(identical(other.error, error) || other.error == error)&&(identical(other.dedupeKey, dedupeKey) || other.dedupeKey == dedupeKey)&&(identical(other.relatedObjectType, relatedObjectType) || other.relatedObjectType == relatedObjectType)&&(identical(other.relatedObjectId, relatedObjectId) || other.relatedObjectId == relatedObjectId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,recipientUser,recipient,recipientEmail,subject,bodyPreview,templateKey,sentBy,sender,sentByEmail,status,error,dedupeKey,relatedObjectType,relatedObjectId,createdAt);
+
+@override
+String toString() {
+  return 'EmailLog(id: $id, recipientUser: $recipientUser, recipient: $recipient, recipientEmail: $recipientEmail, subject: $subject, bodyPreview: $bodyPreview, templateKey: $templateKey, sentBy: $sentBy, sender: $sender, sentByEmail: $sentByEmail, status: $status, error: $error, dedupeKey: $dedupeKey, relatedObjectType: $relatedObjectType, relatedObjectId: $relatedObjectId, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $EmailLogCopyWith<$Res>  {
+  factory $EmailLogCopyWith(EmailLog value, $Res Function(EmailLog) _then) = _$EmailLogCopyWithImpl;
+@useResult
+$Res call({
+ String? id,@JsonKey(name: 'recipient_user') String? recipientUser,@JsonKey(name: 'recipient') GovernanceUserRef? recipient,@JsonKey(name: 'recipient_email') String recipientEmail, String subject,@JsonKey(name: 'body_preview') String bodyPreview,@JsonKey(name: 'template_key') String templateKey,@JsonKey(name: 'sent_by') String? sentBy,@JsonKey(name: 'sender') GovernanceUserRef? sender,@JsonKey(name: 'sent_by_email') String sentByEmail, String status, String error,@JsonKey(name: 'dedupe_key') String dedupeKey,@JsonKey(name: 'related_object_type') String relatedObjectType,@JsonKey(name: 'related_object_id') String relatedObjectId,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+$GovernanceUserRefCopyWith<$Res>? get recipient;$GovernanceUserRefCopyWith<$Res>? get sender;
+
+}
+/// @nodoc
+class _$EmailLogCopyWithImpl<$Res>
+    implements $EmailLogCopyWith<$Res> {
+  _$EmailLogCopyWithImpl(this._self, this._then);
+
+  final EmailLog _self;
+  final $Res Function(EmailLog) _then;
+
+/// Create a copy of EmailLog
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? recipientUser = freezed,Object? recipient = freezed,Object? recipientEmail = null,Object? subject = null,Object? bodyPreview = null,Object? templateKey = null,Object? sentBy = freezed,Object? sender = freezed,Object? sentByEmail = null,Object? status = null,Object? error = null,Object? dedupeKey = null,Object? relatedObjectType = null,Object? relatedObjectId = null,Object? createdAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,recipientUser: freezed == recipientUser ? _self.recipientUser : recipientUser // ignore: cast_nullable_to_non_nullable
+as String?,recipient: freezed == recipient ? _self.recipient : recipient // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,recipientEmail: null == recipientEmail ? _self.recipientEmail : recipientEmail // ignore: cast_nullable_to_non_nullable
+as String,subject: null == subject ? _self.subject : subject // ignore: cast_nullable_to_non_nullable
+as String,bodyPreview: null == bodyPreview ? _self.bodyPreview : bodyPreview // ignore: cast_nullable_to_non_nullable
+as String,templateKey: null == templateKey ? _self.templateKey : templateKey // ignore: cast_nullable_to_non_nullable
+as String,sentBy: freezed == sentBy ? _self.sentBy : sentBy // ignore: cast_nullable_to_non_nullable
+as String?,sender: freezed == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,sentByEmail: null == sentByEmail ? _self.sentByEmail : sentByEmail // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,error: null == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as String,dedupeKey: null == dedupeKey ? _self.dedupeKey : dedupeKey // ignore: cast_nullable_to_non_nullable
+as String,relatedObjectType: null == relatedObjectType ? _self.relatedObjectType : relatedObjectType // ignore: cast_nullable_to_non_nullable
+as String,relatedObjectId: null == relatedObjectId ? _self.relatedObjectId : relatedObjectId // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+/// Create a copy of EmailLog
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get recipient {
+    if (_self.recipient == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.recipient!, (value) {
+    return _then(_self.copyWith(recipient: value));
+  });
+}/// Create a copy of EmailLog
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get sender {
+    if (_self.sender == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.sender!, (value) {
+    return _then(_self.copyWith(sender: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [EmailLog].
+extension EmailLogPatterns on EmailLog {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _EmailLog value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _EmailLog() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _EmailLog value)  $default,){
+final _that = this;
+switch (_that) {
+case _EmailLog():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _EmailLog value)?  $default,){
+final _that = this;
+switch (_that) {
+case _EmailLog() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'recipient_user')  String? recipientUser, @JsonKey(name: 'recipient')  GovernanceUserRef? recipient, @JsonKey(name: 'recipient_email')  String recipientEmail,  String subject, @JsonKey(name: 'body_preview')  String bodyPreview, @JsonKey(name: 'template_key')  String templateKey, @JsonKey(name: 'sent_by')  String? sentBy, @JsonKey(name: 'sender')  GovernanceUserRef? sender, @JsonKey(name: 'sent_by_email')  String sentByEmail,  String status,  String error, @JsonKey(name: 'dedupe_key')  String dedupeKey, @JsonKey(name: 'related_object_type')  String relatedObjectType, @JsonKey(name: 'related_object_id')  String relatedObjectId, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _EmailLog() when $default != null:
+return $default(_that.id,_that.recipientUser,_that.recipient,_that.recipientEmail,_that.subject,_that.bodyPreview,_that.templateKey,_that.sentBy,_that.sender,_that.sentByEmail,_that.status,_that.error,_that.dedupeKey,_that.relatedObjectType,_that.relatedObjectId,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'recipient_user')  String? recipientUser, @JsonKey(name: 'recipient')  GovernanceUserRef? recipient, @JsonKey(name: 'recipient_email')  String recipientEmail,  String subject, @JsonKey(name: 'body_preview')  String bodyPreview, @JsonKey(name: 'template_key')  String templateKey, @JsonKey(name: 'sent_by')  String? sentBy, @JsonKey(name: 'sender')  GovernanceUserRef? sender, @JsonKey(name: 'sent_by_email')  String sentByEmail,  String status,  String error, @JsonKey(name: 'dedupe_key')  String dedupeKey, @JsonKey(name: 'related_object_type')  String relatedObjectType, @JsonKey(name: 'related_object_id')  String relatedObjectId, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _EmailLog():
+return $default(_that.id,_that.recipientUser,_that.recipient,_that.recipientEmail,_that.subject,_that.bodyPreview,_that.templateKey,_that.sentBy,_that.sender,_that.sentByEmail,_that.status,_that.error,_that.dedupeKey,_that.relatedObjectType,_that.relatedObjectId,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'recipient_user')  String? recipientUser, @JsonKey(name: 'recipient')  GovernanceUserRef? recipient, @JsonKey(name: 'recipient_email')  String recipientEmail,  String subject, @JsonKey(name: 'body_preview')  String bodyPreview, @JsonKey(name: 'template_key')  String templateKey, @JsonKey(name: 'sent_by')  String? sentBy, @JsonKey(name: 'sender')  GovernanceUserRef? sender, @JsonKey(name: 'sent_by_email')  String sentByEmail,  String status,  String error, @JsonKey(name: 'dedupe_key')  String dedupeKey, @JsonKey(name: 'related_object_type')  String relatedObjectType, @JsonKey(name: 'related_object_id')  String relatedObjectId, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _EmailLog() when $default != null:
+return $default(_that.id,_that.recipientUser,_that.recipient,_that.recipientEmail,_that.subject,_that.bodyPreview,_that.templateKey,_that.sentBy,_that.sender,_that.sentByEmail,_that.status,_that.error,_that.dedupeKey,_that.relatedObjectType,_that.relatedObjectId,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _EmailLog implements EmailLog {
+  const _EmailLog({this.id, @JsonKey(name: 'recipient_user') this.recipientUser, @JsonKey(name: 'recipient') this.recipient, @JsonKey(name: 'recipient_email') this.recipientEmail = '', this.subject = '', @JsonKey(name: 'body_preview') this.bodyPreview = '', @JsonKey(name: 'template_key') this.templateKey = '', @JsonKey(name: 'sent_by') this.sentBy, @JsonKey(name: 'sender') this.sender, @JsonKey(name: 'sent_by_email') this.sentByEmail = '', this.status = '', this.error = '', @JsonKey(name: 'dedupe_key') this.dedupeKey = '', @JsonKey(name: 'related_object_type') this.relatedObjectType = '', @JsonKey(name: 'related_object_id') this.relatedObjectId = '', @JsonKey(name: 'created_at') this.createdAt});
+  factory _EmailLog.fromJson(Map<String, dynamic> json) => _$EmailLogFromJson(json);
+
+@override final  String? id;
+@override@JsonKey(name: 'recipient_user') final  String? recipientUser;
+@override@JsonKey(name: 'recipient') final  GovernanceUserRef? recipient;
+@override@JsonKey(name: 'recipient_email') final  String recipientEmail;
+@override@JsonKey() final  String subject;
+@override@JsonKey(name: 'body_preview') final  String bodyPreview;
+@override@JsonKey(name: 'template_key') final  String templateKey;
+@override@JsonKey(name: 'sent_by') final  String? sentBy;
+@override@JsonKey(name: 'sender') final  GovernanceUserRef? sender;
+@override@JsonKey(name: 'sent_by_email') final  String sentByEmail;
+/// queued / sent / failed / skipped.
+@override@JsonKey() final  String status;
+@override@JsonKey() final  String error;
+@override@JsonKey(name: 'dedupe_key') final  String dedupeKey;
+@override@JsonKey(name: 'related_object_type') final  String relatedObjectType;
+@override@JsonKey(name: 'related_object_id') final  String relatedObjectId;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+
+/// Create a copy of EmailLog
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$EmailLogCopyWith<_EmailLog> get copyWith => __$EmailLogCopyWithImpl<_EmailLog>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$EmailLogToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _EmailLog&&(identical(other.id, id) || other.id == id)&&(identical(other.recipientUser, recipientUser) || other.recipientUser == recipientUser)&&(identical(other.recipient, recipient) || other.recipient == recipient)&&(identical(other.recipientEmail, recipientEmail) || other.recipientEmail == recipientEmail)&&(identical(other.subject, subject) || other.subject == subject)&&(identical(other.bodyPreview, bodyPreview) || other.bodyPreview == bodyPreview)&&(identical(other.templateKey, templateKey) || other.templateKey == templateKey)&&(identical(other.sentBy, sentBy) || other.sentBy == sentBy)&&(identical(other.sender, sender) || other.sender == sender)&&(identical(other.sentByEmail, sentByEmail) || other.sentByEmail == sentByEmail)&&(identical(other.status, status) || other.status == status)&&(identical(other.error, error) || other.error == error)&&(identical(other.dedupeKey, dedupeKey) || other.dedupeKey == dedupeKey)&&(identical(other.relatedObjectType, relatedObjectType) || other.relatedObjectType == relatedObjectType)&&(identical(other.relatedObjectId, relatedObjectId) || other.relatedObjectId == relatedObjectId)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,recipientUser,recipient,recipientEmail,subject,bodyPreview,templateKey,sentBy,sender,sentByEmail,status,error,dedupeKey,relatedObjectType,relatedObjectId,createdAt);
+
+@override
+String toString() {
+  return 'EmailLog(id: $id, recipientUser: $recipientUser, recipient: $recipient, recipientEmail: $recipientEmail, subject: $subject, bodyPreview: $bodyPreview, templateKey: $templateKey, sentBy: $sentBy, sender: $sender, sentByEmail: $sentByEmail, status: $status, error: $error, dedupeKey: $dedupeKey, relatedObjectType: $relatedObjectType, relatedObjectId: $relatedObjectId, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$EmailLogCopyWith<$Res> implements $EmailLogCopyWith<$Res> {
+  factory _$EmailLogCopyWith(_EmailLog value, $Res Function(_EmailLog) _then) = __$EmailLogCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id,@JsonKey(name: 'recipient_user') String? recipientUser,@JsonKey(name: 'recipient') GovernanceUserRef? recipient,@JsonKey(name: 'recipient_email') String recipientEmail, String subject,@JsonKey(name: 'body_preview') String bodyPreview,@JsonKey(name: 'template_key') String templateKey,@JsonKey(name: 'sent_by') String? sentBy,@JsonKey(name: 'sender') GovernanceUserRef? sender,@JsonKey(name: 'sent_by_email') String sentByEmail, String status, String error,@JsonKey(name: 'dedupe_key') String dedupeKey,@JsonKey(name: 'related_object_type') String relatedObjectType,@JsonKey(name: 'related_object_id') String relatedObjectId,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+@override $GovernanceUserRefCopyWith<$Res>? get recipient;@override $GovernanceUserRefCopyWith<$Res>? get sender;
+
+}
+/// @nodoc
+class __$EmailLogCopyWithImpl<$Res>
+    implements _$EmailLogCopyWith<$Res> {
+  __$EmailLogCopyWithImpl(this._self, this._then);
+
+  final _EmailLog _self;
+  final $Res Function(_EmailLog) _then;
+
+/// Create a copy of EmailLog
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? recipientUser = freezed,Object? recipient = freezed,Object? recipientEmail = null,Object? subject = null,Object? bodyPreview = null,Object? templateKey = null,Object? sentBy = freezed,Object? sender = freezed,Object? sentByEmail = null,Object? status = null,Object? error = null,Object? dedupeKey = null,Object? relatedObjectType = null,Object? relatedObjectId = null,Object? createdAt = freezed,}) {
+  return _then(_EmailLog(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,recipientUser: freezed == recipientUser ? _self.recipientUser : recipientUser // ignore: cast_nullable_to_non_nullable
+as String?,recipient: freezed == recipient ? _self.recipient : recipient // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,recipientEmail: null == recipientEmail ? _self.recipientEmail : recipientEmail // ignore: cast_nullable_to_non_nullable
+as String,subject: null == subject ? _self.subject : subject // ignore: cast_nullable_to_non_nullable
+as String,bodyPreview: null == bodyPreview ? _self.bodyPreview : bodyPreview // ignore: cast_nullable_to_non_nullable
+as String,templateKey: null == templateKey ? _self.templateKey : templateKey // ignore: cast_nullable_to_non_nullable
+as String,sentBy: freezed == sentBy ? _self.sentBy : sentBy // ignore: cast_nullable_to_non_nullable
+as String?,sender: freezed == sender ? _self.sender : sender // ignore: cast_nullable_to_non_nullable
+as GovernanceUserRef?,sentByEmail: null == sentByEmail ? _self.sentByEmail : sentByEmail // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,error: null == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
+as String,dedupeKey: null == dedupeKey ? _self.dedupeKey : dedupeKey // ignore: cast_nullable_to_non_nullable
+as String,relatedObjectType: null == relatedObjectType ? _self.relatedObjectType : relatedObjectType // ignore: cast_nullable_to_non_nullable
+as String,relatedObjectId: null == relatedObjectId ? _self.relatedObjectId : relatedObjectId // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+/// Create a copy of EmailLog
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get recipient {
+    if (_self.recipient == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.recipient!, (value) {
+    return _then(_self.copyWith(recipient: value));
+  });
+}/// Create a copy of EmailLog
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$GovernanceUserRefCopyWith<$Res>? get sender {
+    if (_self.sender == null) {
+    return null;
+  }
+
+  return $GovernanceUserRefCopyWith<$Res>(_self.sender!, (value) {
+    return _then(_self.copyWith(sender: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$ContentFlag {
+
+ String? get id;@JsonKey(name: 'flag_reason') String get flagReason; String get severity;@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) double get confidence; String get source;@JsonKey(name: 'content_type') String get contentType;@JsonKey(name: 'content_id') String get contentId;@JsonKey(name: 'content_preview') String get contentPreview;@JsonKey(name: 'is_actioned') bool get isActioned;@JsonKey(name: 'action_taken') String get actionTaken;@JsonKey(name: 'created_at') String? get createdAt;
+/// Create a copy of ContentFlag
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ContentFlagCopyWith<ContentFlag> get copyWith => _$ContentFlagCopyWithImpl<ContentFlag>(this as ContentFlag, _$identity);
+
+  /// Serializes this ContentFlag to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ContentFlag&&(identical(other.id, id) || other.id == id)&&(identical(other.flagReason, flagReason) || other.flagReason == flagReason)&&(identical(other.severity, severity) || other.severity == severity)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.source, source) || other.source == source)&&(identical(other.contentType, contentType) || other.contentType == contentType)&&(identical(other.contentId, contentId) || other.contentId == contentId)&&(identical(other.contentPreview, contentPreview) || other.contentPreview == contentPreview)&&(identical(other.isActioned, isActioned) || other.isActioned == isActioned)&&(identical(other.actionTaken, actionTaken) || other.actionTaken == actionTaken)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,flagReason,severity,confidence,source,contentType,contentId,contentPreview,isActioned,actionTaken,createdAt);
+
+@override
+String toString() {
+  return 'ContentFlag(id: $id, flagReason: $flagReason, severity: $severity, confidence: $confidence, source: $source, contentType: $contentType, contentId: $contentId, contentPreview: $contentPreview, isActioned: $isActioned, actionTaken: $actionTaken, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ContentFlagCopyWith<$Res>  {
+  factory $ContentFlagCopyWith(ContentFlag value, $Res Function(ContentFlag) _then) = _$ContentFlagCopyWithImpl;
+@useResult
+$Res call({
+ String? id,@JsonKey(name: 'flag_reason') String flagReason, String severity,@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) double confidence, String source,@JsonKey(name: 'content_type') String contentType,@JsonKey(name: 'content_id') String contentId,@JsonKey(name: 'content_preview') String contentPreview,@JsonKey(name: 'is_actioned') bool isActioned,@JsonKey(name: 'action_taken') String actionTaken,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$ContentFlagCopyWithImpl<$Res>
+    implements $ContentFlagCopyWith<$Res> {
+  _$ContentFlagCopyWithImpl(this._self, this._then);
+
+  final ContentFlag _self;
+  final $Res Function(ContentFlag) _then;
+
+/// Create a copy of ContentFlag
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? flagReason = null,Object? severity = null,Object? confidence = null,Object? source = null,Object? contentType = null,Object? contentId = null,Object? contentPreview = null,Object? isActioned = null,Object? actionTaken = null,Object? createdAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,flagReason: null == flagReason ? _self.flagReason : flagReason // ignore: cast_nullable_to_non_nullable
+as String,severity: null == severity ? _self.severity : severity // ignore: cast_nullable_to_non_nullable
+as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
+as double,source: null == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
+as String,contentType: null == contentType ? _self.contentType : contentType // ignore: cast_nullable_to_non_nullable
+as String,contentId: null == contentId ? _self.contentId : contentId // ignore: cast_nullable_to_non_nullable
+as String,contentPreview: null == contentPreview ? _self.contentPreview : contentPreview // ignore: cast_nullable_to_non_nullable
+as String,isActioned: null == isActioned ? _self.isActioned : isActioned // ignore: cast_nullable_to_non_nullable
+as bool,actionTaken: null == actionTaken ? _self.actionTaken : actionTaken // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ContentFlag].
+extension ContentFlagPatterns on ContentFlag {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ContentFlag value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ContentFlag() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ContentFlag value)  $default,){
+final _that = this;
+switch (_that) {
+case _ContentFlag():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ContentFlag value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ContentFlag() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'flag_reason')  String flagReason,  String severity, @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero)  double confidence,  String source, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'content_preview')  String contentPreview, @JsonKey(name: 'is_actioned')  bool isActioned, @JsonKey(name: 'action_taken')  String actionTaken, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ContentFlag() when $default != null:
+return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.source,_that.contentType,_that.contentId,_that.contentPreview,_that.isActioned,_that.actionTaken,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'flag_reason')  String flagReason,  String severity, @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero)  double confidence,  String source, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'content_preview')  String contentPreview, @JsonKey(name: 'is_actioned')  bool isActioned, @JsonKey(name: 'action_taken')  String actionTaken, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _ContentFlag():
+return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.source,_that.contentType,_that.contentId,_that.contentPreview,_that.isActioned,_that.actionTaken,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'flag_reason')  String flagReason,  String severity, @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero)  double confidence,  String source, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'content_preview')  String contentPreview, @JsonKey(name: 'is_actioned')  bool isActioned, @JsonKey(name: 'action_taken')  String actionTaken, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _ContentFlag() when $default != null:
+return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.source,_that.contentType,_that.contentId,_that.contentPreview,_that.isActioned,_that.actionTaken,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ContentFlag implements ContentFlag {
+  const _ContentFlag({this.id, @JsonKey(name: 'flag_reason') this.flagReason = '', this.severity = '', @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) this.confidence = 0.0, this.source = 'auto', @JsonKey(name: 'content_type') this.contentType = '', @JsonKey(name: 'content_id') this.contentId = '', @JsonKey(name: 'content_preview') this.contentPreview = '', @JsonKey(name: 'is_actioned') this.isActioned = false, @JsonKey(name: 'action_taken') this.actionTaken = '', @JsonKey(name: 'created_at') this.createdAt});
+  factory _ContentFlag.fromJson(Map<String, dynamic> json) => _$ContentFlagFromJson(json);
+
+@override final  String? id;
+@override@JsonKey(name: 'flag_reason') final  String flagReason;
+@override@JsonKey() final  String severity;
+@override@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) final  double confidence;
+@override@JsonKey() final  String source;
+@override@JsonKey(name: 'content_type') final  String contentType;
+@override@JsonKey(name: 'content_id') final  String contentId;
+@override@JsonKey(name: 'content_preview') final  String contentPreview;
+@override@JsonKey(name: 'is_actioned') final  bool isActioned;
+@override@JsonKey(name: 'action_taken') final  String actionTaken;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+
+/// Create a copy of ContentFlag
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ContentFlagCopyWith<_ContentFlag> get copyWith => __$ContentFlagCopyWithImpl<_ContentFlag>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ContentFlagToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ContentFlag&&(identical(other.id, id) || other.id == id)&&(identical(other.flagReason, flagReason) || other.flagReason == flagReason)&&(identical(other.severity, severity) || other.severity == severity)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.source, source) || other.source == source)&&(identical(other.contentType, contentType) || other.contentType == contentType)&&(identical(other.contentId, contentId) || other.contentId == contentId)&&(identical(other.contentPreview, contentPreview) || other.contentPreview == contentPreview)&&(identical(other.isActioned, isActioned) || other.isActioned == isActioned)&&(identical(other.actionTaken, actionTaken) || other.actionTaken == actionTaken)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,flagReason,severity,confidence,source,contentType,contentId,contentPreview,isActioned,actionTaken,createdAt);
+
+@override
+String toString() {
+  return 'ContentFlag(id: $id, flagReason: $flagReason, severity: $severity, confidence: $confidence, source: $source, contentType: $contentType, contentId: $contentId, contentPreview: $contentPreview, isActioned: $isActioned, actionTaken: $actionTaken, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ContentFlagCopyWith<$Res> implements $ContentFlagCopyWith<$Res> {
+  factory _$ContentFlagCopyWith(_ContentFlag value, $Res Function(_ContentFlag) _then) = __$ContentFlagCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id,@JsonKey(name: 'flag_reason') String flagReason, String severity,@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) double confidence, String source,@JsonKey(name: 'content_type') String contentType,@JsonKey(name: 'content_id') String contentId,@JsonKey(name: 'content_preview') String contentPreview,@JsonKey(name: 'is_actioned') bool isActioned,@JsonKey(name: 'action_taken') String actionTaken,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$ContentFlagCopyWithImpl<$Res>
+    implements _$ContentFlagCopyWith<$Res> {
+  __$ContentFlagCopyWithImpl(this._self, this._then);
+
+  final _ContentFlag _self;
+  final $Res Function(_ContentFlag) _then;
+
+/// Create a copy of ContentFlag
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? flagReason = null,Object? severity = null,Object? confidence = null,Object? source = null,Object? contentType = null,Object? contentId = null,Object? contentPreview = null,Object? isActioned = null,Object? actionTaken = null,Object? createdAt = freezed,}) {
+  return _then(_ContentFlag(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,flagReason: null == flagReason ? _self.flagReason : flagReason // ignore: cast_nullable_to_non_nullable
+as String,severity: null == severity ? _self.severity : severity // ignore: cast_nullable_to_non_nullable
+as String,confidence: null == confidence ? _self.confidence : confidence // ignore: cast_nullable_to_non_nullable
+as double,source: null == source ? _self.source : source // ignore: cast_nullable_to_non_nullable
+as String,contentType: null == contentType ? _self.contentType : contentType // ignore: cast_nullable_to_non_nullable
+as String,contentId: null == contentId ? _self.contentId : contentId // ignore: cast_nullable_to_non_nullable
+as String,contentPreview: null == contentPreview ? _self.contentPreview : contentPreview // ignore: cast_nullable_to_non_nullable
+as String,isActioned: null == isActioned ? _self.isActioned : isActioned // ignore: cast_nullable_to_non_nullable
+as bool,actionTaken: null == actionTaken ? _self.actionTaken : actionTaken // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$ModerationStats {
+
+ int get total; int get unactioned; int get actioned;@JsonKey(name: 'by_severity', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> get bySeverity;@JsonKey(name: 'by_reason', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> get byReason;
+/// Create a copy of ModerationStats
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ModerationStatsCopyWith<ModerationStats> get copyWith => _$ModerationStatsCopyWithImpl<ModerationStats>(this as ModerationStats, _$identity);
+
+  /// Serializes this ModerationStats to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModerationStats&&(identical(other.total, total) || other.total == total)&&(identical(other.unactioned, unactioned) || other.unactioned == unactioned)&&(identical(other.actioned, actioned) || other.actioned == actioned)&&const DeepCollectionEquality().equals(other.bySeverity, bySeverity)&&const DeepCollectionEquality().equals(other.byReason, byReason));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,total,unactioned,actioned,const DeepCollectionEquality().hash(bySeverity),const DeepCollectionEquality().hash(byReason));
+
+@override
+String toString() {
+  return 'ModerationStats(total: $total, unactioned: $unactioned, actioned: $actioned, bySeverity: $bySeverity, byReason: $byReason)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ModerationStatsCopyWith<$Res>  {
+  factory $ModerationStatsCopyWith(ModerationStats value, $Res Function(ModerationStats) _then) = _$ModerationStatsCopyWithImpl;
+@useResult
+$Res call({
+ int total, int unactioned, int actioned,@JsonKey(name: 'by_severity', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> bySeverity,@JsonKey(name: 'by_reason', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> byReason
+});
+
+
+
+
+}
+/// @nodoc
+class _$ModerationStatsCopyWithImpl<$Res>
+    implements $ModerationStatsCopyWith<$Res> {
+  _$ModerationStatsCopyWithImpl(this._self, this._then);
+
+  final ModerationStats _self;
+  final $Res Function(ModerationStats) _then;
+
+/// Create a copy of ModerationStats
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? total = null,Object? unactioned = null,Object? actioned = null,Object? bySeverity = null,Object? byReason = null,}) {
+  return _then(_self.copyWith(
+total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
+as int,unactioned: null == unactioned ? _self.unactioned : unactioned // ignore: cast_nullable_to_non_nullable
+as int,actioned: null == actioned ? _self.actioned : actioned // ignore: cast_nullable_to_non_nullable
+as int,bySeverity: null == bySeverity ? _self.bySeverity : bySeverity // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,byReason: null == byReason ? _self.byReason : byReason // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ModerationStats].
+extension ModerationStatsPatterns on ModerationStats {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ModerationStats value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ModerationStats() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ModerationStats value)  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationStats():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ModerationStats value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationStats() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int total,  int unactioned,  int actioned, @JsonKey(name: 'by_severity', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> bySeverity, @JsonKey(name: 'by_reason', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> byReason)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ModerationStats() when $default != null:
+return $default(_that.total,_that.unactioned,_that.actioned,_that.bySeverity,_that.byReason);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int total,  int unactioned,  int actioned, @JsonKey(name: 'by_severity', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> bySeverity, @JsonKey(name: 'by_reason', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> byReason)  $default,) {final _that = this;
+switch (_that) {
+case _ModerationStats():
+return $default(_that.total,_that.unactioned,_that.actioned,_that.bySeverity,_that.byReason);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int total,  int unactioned,  int actioned, @JsonKey(name: 'by_severity', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> bySeverity, @JsonKey(name: 'by_reason', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> byReason)?  $default,) {final _that = this;
+switch (_that) {
+case _ModerationStats() when $default != null:
+return $default(_that.total,_that.unactioned,_that.actioned,_that.bySeverity,_that.byReason);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ModerationStats implements ModerationStats {
+  const _ModerationStats({this.total = 0, this.unactioned = 0, this.actioned = 0, @JsonKey(name: 'by_severity', fromJson: _stringKeyedMapOrEmpty) final  Map<String, dynamic> bySeverity = const <String, dynamic>{}, @JsonKey(name: 'by_reason', fromJson: _stringKeyedMapOrEmpty) final  Map<String, dynamic> byReason = const <String, dynamic>{}}): _bySeverity = bySeverity,_byReason = byReason;
+  factory _ModerationStats.fromJson(Map<String, dynamic> json) => _$ModerationStatsFromJson(json);
+
+@override@JsonKey() final  int total;
+@override@JsonKey() final  int unactioned;
+@override@JsonKey() final  int actioned;
+ final  Map<String, dynamic> _bySeverity;
+@override@JsonKey(name: 'by_severity', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> get bySeverity {
+  if (_bySeverity is EqualUnmodifiableMapView) return _bySeverity;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_bySeverity);
+}
+
+ final  Map<String, dynamic> _byReason;
+@override@JsonKey(name: 'by_reason', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> get byReason {
+  if (_byReason is EqualUnmodifiableMapView) return _byReason;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_byReason);
+}
+
+
+/// Create a copy of ModerationStats
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ModerationStatsCopyWith<_ModerationStats> get copyWith => __$ModerationStatsCopyWithImpl<_ModerationStats>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ModerationStatsToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModerationStats&&(identical(other.total, total) || other.total == total)&&(identical(other.unactioned, unactioned) || other.unactioned == unactioned)&&(identical(other.actioned, actioned) || other.actioned == actioned)&&const DeepCollectionEquality().equals(other._bySeverity, _bySeverity)&&const DeepCollectionEquality().equals(other._byReason, _byReason));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,total,unactioned,actioned,const DeepCollectionEquality().hash(_bySeverity),const DeepCollectionEquality().hash(_byReason));
+
+@override
+String toString() {
+  return 'ModerationStats(total: $total, unactioned: $unactioned, actioned: $actioned, bySeverity: $bySeverity, byReason: $byReason)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ModerationStatsCopyWith<$Res> implements $ModerationStatsCopyWith<$Res> {
+  factory _$ModerationStatsCopyWith(_ModerationStats value, $Res Function(_ModerationStats) _then) = __$ModerationStatsCopyWithImpl;
+@override @useResult
+$Res call({
+ int total, int unactioned, int actioned,@JsonKey(name: 'by_severity', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> bySeverity,@JsonKey(name: 'by_reason', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> byReason
+});
+
+
+
+
+}
+/// @nodoc
+class __$ModerationStatsCopyWithImpl<$Res>
+    implements _$ModerationStatsCopyWith<$Res> {
+  __$ModerationStatsCopyWithImpl(this._self, this._then);
+
+  final _ModerationStats _self;
+  final $Res Function(_ModerationStats) _then;
+
+/// Create a copy of ModerationStats
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? total = null,Object? unactioned = null,Object? actioned = null,Object? bySeverity = null,Object? byReason = null,}) {
+  return _then(_ModerationStats(
+total: null == total ? _self.total : total // ignore: cast_nullable_to_non_nullable
+as int,unactioned: null == unactioned ? _self.unactioned : unactioned // ignore: cast_nullable_to_non_nullable
+as int,actioned: null == actioned ? _self.actioned : actioned // ignore: cast_nullable_to_non_nullable
+as int,bySeverity: null == bySeverity ? _self._bySeverity : bySeverity // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,byReason: null == byReason ? _self._byReason : byReason // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$ModerationReport {
+
+ String? get id; String? get reporter;@JsonKey(name: 'target_user') String? get targetUser; String get reason; String get description;@JsonKey(name: 'content_url') String get contentUrl;/// open / investigating / resolved / dismissed.
+ String get status;@JsonKey(name: 'assigned_to') String? get assignedTo;@JsonKey(name: 'resolved_at') String? get resolvedAt;@JsonKey(name: 'resolution_note') String get resolutionNote;@JsonKey(name: 'sla_due_at') String? get slaDueAt;@JsonKey(name: 'sla_breached') bool get slaBreached;@JsonKey(name: 'created_at') String? get createdAt;
+/// Create a copy of ModerationReport
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ModerationReportCopyWith<ModerationReport> get copyWith => _$ModerationReportCopyWithImpl<ModerationReport>(this as ModerationReport, _$identity);
+
+  /// Serializes this ModerationReport to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModerationReport&&(identical(other.id, id) || other.id == id)&&(identical(other.reporter, reporter) || other.reporter == reporter)&&(identical(other.targetUser, targetUser) || other.targetUser == targetUser)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.description, description) || other.description == description)&&(identical(other.contentUrl, contentUrl) || other.contentUrl == contentUrl)&&(identical(other.status, status) || other.status == status)&&(identical(other.assignedTo, assignedTo) || other.assignedTo == assignedTo)&&(identical(other.resolvedAt, resolvedAt) || other.resolvedAt == resolvedAt)&&(identical(other.resolutionNote, resolutionNote) || other.resolutionNote == resolutionNote)&&(identical(other.slaDueAt, slaDueAt) || other.slaDueAt == slaDueAt)&&(identical(other.slaBreached, slaBreached) || other.slaBreached == slaBreached)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,reporter,targetUser,reason,description,contentUrl,status,assignedTo,resolvedAt,resolutionNote,slaDueAt,slaBreached,createdAt);
+
+@override
+String toString() {
+  return 'ModerationReport(id: $id, reporter: $reporter, targetUser: $targetUser, reason: $reason, description: $description, contentUrl: $contentUrl, status: $status, assignedTo: $assignedTo, resolvedAt: $resolvedAt, resolutionNote: $resolutionNote, slaDueAt: $slaDueAt, slaBreached: $slaBreached, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ModerationReportCopyWith<$Res>  {
+  factory $ModerationReportCopyWith(ModerationReport value, $Res Function(ModerationReport) _then) = _$ModerationReportCopyWithImpl;
+@useResult
+$Res call({
+ String? id, String? reporter,@JsonKey(name: 'target_user') String? targetUser, String reason, String description,@JsonKey(name: 'content_url') String contentUrl, String status,@JsonKey(name: 'assigned_to') String? assignedTo,@JsonKey(name: 'resolved_at') String? resolvedAt,@JsonKey(name: 'resolution_note') String resolutionNote,@JsonKey(name: 'sla_due_at') String? slaDueAt,@JsonKey(name: 'sla_breached') bool slaBreached,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$ModerationReportCopyWithImpl<$Res>
+    implements $ModerationReportCopyWith<$Res> {
+  _$ModerationReportCopyWithImpl(this._self, this._then);
+
+  final ModerationReport _self;
+  final $Res Function(ModerationReport) _then;
+
+/// Create a copy of ModerationReport
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? reporter = freezed,Object? targetUser = freezed,Object? reason = null,Object? description = null,Object? contentUrl = null,Object? status = null,Object? assignedTo = freezed,Object? resolvedAt = freezed,Object? resolutionNote = null,Object? slaDueAt = freezed,Object? slaBreached = null,Object? createdAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,reporter: freezed == reporter ? _self.reporter : reporter // ignore: cast_nullable_to_non_nullable
+as String?,targetUser: freezed == targetUser ? _self.targetUser : targetUser // ignore: cast_nullable_to_non_nullable
+as String?,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,contentUrl: null == contentUrl ? _self.contentUrl : contentUrl // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,assignedTo: freezed == assignedTo ? _self.assignedTo : assignedTo // ignore: cast_nullable_to_non_nullable
+as String?,resolvedAt: freezed == resolvedAt ? _self.resolvedAt : resolvedAt // ignore: cast_nullable_to_non_nullable
+as String?,resolutionNote: null == resolutionNote ? _self.resolutionNote : resolutionNote // ignore: cast_nullable_to_non_nullable
+as String,slaDueAt: freezed == slaDueAt ? _self.slaDueAt : slaDueAt // ignore: cast_nullable_to_non_nullable
+as String?,slaBreached: null == slaBreached ? _self.slaBreached : slaBreached // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ModerationReport].
+extension ModerationReportPatterns on ModerationReport {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ModerationReport value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ModerationReport() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ModerationReport value)  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationReport():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ModerationReport value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationReport() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String? reporter, @JsonKey(name: 'target_user')  String? targetUser,  String reason,  String description, @JsonKey(name: 'content_url')  String contentUrl,  String status, @JsonKey(name: 'assigned_to')  String? assignedTo, @JsonKey(name: 'resolved_at')  String? resolvedAt, @JsonKey(name: 'resolution_note')  String resolutionNote, @JsonKey(name: 'sla_due_at')  String? slaDueAt, @JsonKey(name: 'sla_breached')  bool slaBreached, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ModerationReport() when $default != null:
+return $default(_that.id,_that.reporter,_that.targetUser,_that.reason,_that.description,_that.contentUrl,_that.status,_that.assignedTo,_that.resolvedAt,_that.resolutionNote,_that.slaDueAt,_that.slaBreached,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String? reporter, @JsonKey(name: 'target_user')  String? targetUser,  String reason,  String description, @JsonKey(name: 'content_url')  String contentUrl,  String status, @JsonKey(name: 'assigned_to')  String? assignedTo, @JsonKey(name: 'resolved_at')  String? resolvedAt, @JsonKey(name: 'resolution_note')  String resolutionNote, @JsonKey(name: 'sla_due_at')  String? slaDueAt, @JsonKey(name: 'sla_breached')  bool slaBreached, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _ModerationReport():
+return $default(_that.id,_that.reporter,_that.targetUser,_that.reason,_that.description,_that.contentUrl,_that.status,_that.assignedTo,_that.resolvedAt,_that.resolutionNote,_that.slaDueAt,_that.slaBreached,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String? reporter, @JsonKey(name: 'target_user')  String? targetUser,  String reason,  String description, @JsonKey(name: 'content_url')  String contentUrl,  String status, @JsonKey(name: 'assigned_to')  String? assignedTo, @JsonKey(name: 'resolved_at')  String? resolvedAt, @JsonKey(name: 'resolution_note')  String resolutionNote, @JsonKey(name: 'sla_due_at')  String? slaDueAt, @JsonKey(name: 'sla_breached')  bool slaBreached, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _ModerationReport() when $default != null:
+return $default(_that.id,_that.reporter,_that.targetUser,_that.reason,_that.description,_that.contentUrl,_that.status,_that.assignedTo,_that.resolvedAt,_that.resolutionNote,_that.slaDueAt,_that.slaBreached,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ModerationReport implements ModerationReport {
+  const _ModerationReport({this.id, this.reporter, @JsonKey(name: 'target_user') this.targetUser, this.reason = '', this.description = '', @JsonKey(name: 'content_url') this.contentUrl = '', this.status = '', @JsonKey(name: 'assigned_to') this.assignedTo, @JsonKey(name: 'resolved_at') this.resolvedAt, @JsonKey(name: 'resolution_note') this.resolutionNote = '', @JsonKey(name: 'sla_due_at') this.slaDueAt, @JsonKey(name: 'sla_breached') this.slaBreached = false, @JsonKey(name: 'created_at') this.createdAt});
+  factory _ModerationReport.fromJson(Map<String, dynamic> json) => _$ModerationReportFromJson(json);
+
+@override final  String? id;
+@override final  String? reporter;
+@override@JsonKey(name: 'target_user') final  String? targetUser;
+@override@JsonKey() final  String reason;
+@override@JsonKey() final  String description;
+@override@JsonKey(name: 'content_url') final  String contentUrl;
+/// open / investigating / resolved / dismissed.
+@override@JsonKey() final  String status;
+@override@JsonKey(name: 'assigned_to') final  String? assignedTo;
+@override@JsonKey(name: 'resolved_at') final  String? resolvedAt;
+@override@JsonKey(name: 'resolution_note') final  String resolutionNote;
+@override@JsonKey(name: 'sla_due_at') final  String? slaDueAt;
+@override@JsonKey(name: 'sla_breached') final  bool slaBreached;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+
+/// Create a copy of ModerationReport
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ModerationReportCopyWith<_ModerationReport> get copyWith => __$ModerationReportCopyWithImpl<_ModerationReport>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ModerationReportToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModerationReport&&(identical(other.id, id) || other.id == id)&&(identical(other.reporter, reporter) || other.reporter == reporter)&&(identical(other.targetUser, targetUser) || other.targetUser == targetUser)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.description, description) || other.description == description)&&(identical(other.contentUrl, contentUrl) || other.contentUrl == contentUrl)&&(identical(other.status, status) || other.status == status)&&(identical(other.assignedTo, assignedTo) || other.assignedTo == assignedTo)&&(identical(other.resolvedAt, resolvedAt) || other.resolvedAt == resolvedAt)&&(identical(other.resolutionNote, resolutionNote) || other.resolutionNote == resolutionNote)&&(identical(other.slaDueAt, slaDueAt) || other.slaDueAt == slaDueAt)&&(identical(other.slaBreached, slaBreached) || other.slaBreached == slaBreached)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,reporter,targetUser,reason,description,contentUrl,status,assignedTo,resolvedAt,resolutionNote,slaDueAt,slaBreached,createdAt);
+
+@override
+String toString() {
+  return 'ModerationReport(id: $id, reporter: $reporter, targetUser: $targetUser, reason: $reason, description: $description, contentUrl: $contentUrl, status: $status, assignedTo: $assignedTo, resolvedAt: $resolvedAt, resolutionNote: $resolutionNote, slaDueAt: $slaDueAt, slaBreached: $slaBreached, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ModerationReportCopyWith<$Res> implements $ModerationReportCopyWith<$Res> {
+  factory _$ModerationReportCopyWith(_ModerationReport value, $Res Function(_ModerationReport) _then) = __$ModerationReportCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id, String? reporter,@JsonKey(name: 'target_user') String? targetUser, String reason, String description,@JsonKey(name: 'content_url') String contentUrl, String status,@JsonKey(name: 'assigned_to') String? assignedTo,@JsonKey(name: 'resolved_at') String? resolvedAt,@JsonKey(name: 'resolution_note') String resolutionNote,@JsonKey(name: 'sla_due_at') String? slaDueAt,@JsonKey(name: 'sla_breached') bool slaBreached,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$ModerationReportCopyWithImpl<$Res>
+    implements _$ModerationReportCopyWith<$Res> {
+  __$ModerationReportCopyWithImpl(this._self, this._then);
+
+  final _ModerationReport _self;
+  final $Res Function(_ModerationReport) _then;
+
+/// Create a copy of ModerationReport
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? reporter = freezed,Object? targetUser = freezed,Object? reason = null,Object? description = null,Object? contentUrl = null,Object? status = null,Object? assignedTo = freezed,Object? resolvedAt = freezed,Object? resolutionNote = null,Object? slaDueAt = freezed,Object? slaBreached = null,Object? createdAt = freezed,}) {
+  return _then(_ModerationReport(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,reporter: freezed == reporter ? _self.reporter : reporter // ignore: cast_nullable_to_non_nullable
+as String?,targetUser: freezed == targetUser ? _self.targetUser : targetUser // ignore: cast_nullable_to_non_nullable
+as String?,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
+as String,contentUrl: null == contentUrl ? _self.contentUrl : contentUrl // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,assignedTo: freezed == assignedTo ? _self.assignedTo : assignedTo // ignore: cast_nullable_to_non_nullable
+as String?,resolvedAt: freezed == resolvedAt ? _self.resolvedAt : resolvedAt // ignore: cast_nullable_to_non_nullable
+as String?,resolutionNote: null == resolutionNote ? _self.resolutionNote : resolutionNote // ignore: cast_nullable_to_non_nullable
+as String,slaDueAt: freezed == slaDueAt ? _self.slaDueAt : slaDueAt // ignore: cast_nullable_to_non_nullable
+as String?,slaBreached: null == slaBreached ? _self.slaBreached : slaBreached // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$ModerationAction {
+
+ String? get id; String get action; String? get moderator; String? get report;@JsonKey(name: 'target_user') String? get targetUser; String get reason;@JsonKey(name: 'duration_days') int? get durationDays;@JsonKey(name: 'content_type') String get contentType;@JsonKey(name: 'content_type_display') String get contentTypeDisplay;@JsonKey(name: 'content_id') String get contentId;@JsonKey(name: 'is_reversed') bool get isReversed;@JsonKey(name: 'reversed_by') String? get reversedBy;@JsonKey(name: 'reversed_at') String? get reversedAt;@JsonKey(name: 'reversal_reason') String get reversalReason;@JsonKey(name: 'reversed_by_moderator', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> get reversedByModerator;@JsonKey(name: 'created_at') String? get createdAt;
+/// Create a copy of ModerationAction
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ModerationActionCopyWith<ModerationAction> get copyWith => _$ModerationActionCopyWithImpl<ModerationAction>(this as ModerationAction, _$identity);
+
+  /// Serializes this ModerationAction to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModerationAction&&(identical(other.id, id) || other.id == id)&&(identical(other.action, action) || other.action == action)&&(identical(other.moderator, moderator) || other.moderator == moderator)&&(identical(other.report, report) || other.report == report)&&(identical(other.targetUser, targetUser) || other.targetUser == targetUser)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.durationDays, durationDays) || other.durationDays == durationDays)&&(identical(other.contentType, contentType) || other.contentType == contentType)&&(identical(other.contentTypeDisplay, contentTypeDisplay) || other.contentTypeDisplay == contentTypeDisplay)&&(identical(other.contentId, contentId) || other.contentId == contentId)&&(identical(other.isReversed, isReversed) || other.isReversed == isReversed)&&(identical(other.reversedBy, reversedBy) || other.reversedBy == reversedBy)&&(identical(other.reversedAt, reversedAt) || other.reversedAt == reversedAt)&&(identical(other.reversalReason, reversalReason) || other.reversalReason == reversalReason)&&const DeepCollectionEquality().equals(other.reversedByModerator, reversedByModerator)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,action,moderator,report,targetUser,reason,durationDays,contentType,contentTypeDisplay,contentId,isReversed,reversedBy,reversedAt,reversalReason,const DeepCollectionEquality().hash(reversedByModerator),createdAt);
+
+@override
+String toString() {
+  return 'ModerationAction(id: $id, action: $action, moderator: $moderator, report: $report, targetUser: $targetUser, reason: $reason, durationDays: $durationDays, contentType: $contentType, contentTypeDisplay: $contentTypeDisplay, contentId: $contentId, isReversed: $isReversed, reversedBy: $reversedBy, reversedAt: $reversedAt, reversalReason: $reversalReason, reversedByModerator: $reversedByModerator, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ModerationActionCopyWith<$Res>  {
+  factory $ModerationActionCopyWith(ModerationAction value, $Res Function(ModerationAction) _then) = _$ModerationActionCopyWithImpl;
+@useResult
+$Res call({
+ String? id, String action, String? moderator, String? report,@JsonKey(name: 'target_user') String? targetUser, String reason,@JsonKey(name: 'duration_days') int? durationDays,@JsonKey(name: 'content_type') String contentType,@JsonKey(name: 'content_type_display') String contentTypeDisplay,@JsonKey(name: 'content_id') String contentId,@JsonKey(name: 'is_reversed') bool isReversed,@JsonKey(name: 'reversed_by') String? reversedBy,@JsonKey(name: 'reversed_at') String? reversedAt,@JsonKey(name: 'reversal_reason') String reversalReason,@JsonKey(name: 'reversed_by_moderator', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> reversedByModerator,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$ModerationActionCopyWithImpl<$Res>
+    implements $ModerationActionCopyWith<$Res> {
+  _$ModerationActionCopyWithImpl(this._self, this._then);
+
+  final ModerationAction _self;
+  final $Res Function(ModerationAction) _then;
+
+/// Create a copy of ModerationAction
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? action = null,Object? moderator = freezed,Object? report = freezed,Object? targetUser = freezed,Object? reason = null,Object? durationDays = freezed,Object? contentType = null,Object? contentTypeDisplay = null,Object? contentId = null,Object? isReversed = null,Object? reversedBy = freezed,Object? reversedAt = freezed,Object? reversalReason = null,Object? reversedByModerator = null,Object? createdAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,action: null == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String,moderator: freezed == moderator ? _self.moderator : moderator // ignore: cast_nullable_to_non_nullable
+as String?,report: freezed == report ? _self.report : report // ignore: cast_nullable_to_non_nullable
+as String?,targetUser: freezed == targetUser ? _self.targetUser : targetUser // ignore: cast_nullable_to_non_nullable
+as String?,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,durationDays: freezed == durationDays ? _self.durationDays : durationDays // ignore: cast_nullable_to_non_nullable
+as int?,contentType: null == contentType ? _self.contentType : contentType // ignore: cast_nullable_to_non_nullable
+as String,contentTypeDisplay: null == contentTypeDisplay ? _self.contentTypeDisplay : contentTypeDisplay // ignore: cast_nullable_to_non_nullable
+as String,contentId: null == contentId ? _self.contentId : contentId // ignore: cast_nullable_to_non_nullable
+as String,isReversed: null == isReversed ? _self.isReversed : isReversed // ignore: cast_nullable_to_non_nullable
+as bool,reversedBy: freezed == reversedBy ? _self.reversedBy : reversedBy // ignore: cast_nullable_to_non_nullable
+as String?,reversedAt: freezed == reversedAt ? _self.reversedAt : reversedAt // ignore: cast_nullable_to_non_nullable
+as String?,reversalReason: null == reversalReason ? _self.reversalReason : reversalReason // ignore: cast_nullable_to_non_nullable
+as String,reversedByModerator: null == reversedByModerator ? _self.reversedByModerator : reversedByModerator // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ModerationAction].
+extension ModerationActionPatterns on ModerationAction {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ModerationAction value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ModerationAction() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ModerationAction value)  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationAction():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ModerationAction value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationAction() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String action,  String? moderator,  String? report, @JsonKey(name: 'target_user')  String? targetUser,  String reason, @JsonKey(name: 'duration_days')  int? durationDays, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_type_display')  String contentTypeDisplay, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'is_reversed')  bool isReversed, @JsonKey(name: 'reversed_by')  String? reversedBy, @JsonKey(name: 'reversed_at')  String? reversedAt, @JsonKey(name: 'reversal_reason')  String reversalReason, @JsonKey(name: 'reversed_by_moderator', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> reversedByModerator, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ModerationAction() when $default != null:
+return $default(_that.id,_that.action,_that.moderator,_that.report,_that.targetUser,_that.reason,_that.durationDays,_that.contentType,_that.contentTypeDisplay,_that.contentId,_that.isReversed,_that.reversedBy,_that.reversedAt,_that.reversalReason,_that.reversedByModerator,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String action,  String? moderator,  String? report, @JsonKey(name: 'target_user')  String? targetUser,  String reason, @JsonKey(name: 'duration_days')  int? durationDays, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_type_display')  String contentTypeDisplay, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'is_reversed')  bool isReversed, @JsonKey(name: 'reversed_by')  String? reversedBy, @JsonKey(name: 'reversed_at')  String? reversedAt, @JsonKey(name: 'reversal_reason')  String reversalReason, @JsonKey(name: 'reversed_by_moderator', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> reversedByModerator, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _ModerationAction():
+return $default(_that.id,_that.action,_that.moderator,_that.report,_that.targetUser,_that.reason,_that.durationDays,_that.contentType,_that.contentTypeDisplay,_that.contentId,_that.isReversed,_that.reversedBy,_that.reversedAt,_that.reversalReason,_that.reversedByModerator,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String action,  String? moderator,  String? report, @JsonKey(name: 'target_user')  String? targetUser,  String reason, @JsonKey(name: 'duration_days')  int? durationDays, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_type_display')  String contentTypeDisplay, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'is_reversed')  bool isReversed, @JsonKey(name: 'reversed_by')  String? reversedBy, @JsonKey(name: 'reversed_at')  String? reversedAt, @JsonKey(name: 'reversal_reason')  String reversalReason, @JsonKey(name: 'reversed_by_moderator', fromJson: _stringKeyedMapOrEmpty)  Map<String, dynamic> reversedByModerator, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _ModerationAction() when $default != null:
+return $default(_that.id,_that.action,_that.moderator,_that.report,_that.targetUser,_that.reason,_that.durationDays,_that.contentType,_that.contentTypeDisplay,_that.contentId,_that.isReversed,_that.reversedBy,_that.reversedAt,_that.reversalReason,_that.reversedByModerator,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ModerationAction implements ModerationAction {
+  const _ModerationAction({this.id, this.action = '', this.moderator, this.report, @JsonKey(name: 'target_user') this.targetUser, this.reason = '', @JsonKey(name: 'duration_days') this.durationDays, @JsonKey(name: 'content_type') this.contentType = '', @JsonKey(name: 'content_type_display') this.contentTypeDisplay = '', @JsonKey(name: 'content_id') this.contentId = '', @JsonKey(name: 'is_reversed') this.isReversed = false, @JsonKey(name: 'reversed_by') this.reversedBy, @JsonKey(name: 'reversed_at') this.reversedAt, @JsonKey(name: 'reversal_reason') this.reversalReason = '', @JsonKey(name: 'reversed_by_moderator', fromJson: _stringKeyedMapOrEmpty) final  Map<String, dynamic> reversedByModerator = const <String, dynamic>{}, @JsonKey(name: 'created_at') this.createdAt}): _reversedByModerator = reversedByModerator;
+  factory _ModerationAction.fromJson(Map<String, dynamic> json) => _$ModerationActionFromJson(json);
+
+@override final  String? id;
+@override@JsonKey() final  String action;
+@override final  String? moderator;
+@override final  String? report;
+@override@JsonKey(name: 'target_user') final  String? targetUser;
+@override@JsonKey() final  String reason;
+@override@JsonKey(name: 'duration_days') final  int? durationDays;
+@override@JsonKey(name: 'content_type') final  String contentType;
+@override@JsonKey(name: 'content_type_display') final  String contentTypeDisplay;
+@override@JsonKey(name: 'content_id') final  String contentId;
+@override@JsonKey(name: 'is_reversed') final  bool isReversed;
+@override@JsonKey(name: 'reversed_by') final  String? reversedBy;
+@override@JsonKey(name: 'reversed_at') final  String? reversedAt;
+@override@JsonKey(name: 'reversal_reason') final  String reversalReason;
+ final  Map<String, dynamic> _reversedByModerator;
+@override@JsonKey(name: 'reversed_by_moderator', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> get reversedByModerator {
+  if (_reversedByModerator is EqualUnmodifiableMapView) return _reversedByModerator;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(_reversedByModerator);
+}
+
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+
+/// Create a copy of ModerationAction
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ModerationActionCopyWith<_ModerationAction> get copyWith => __$ModerationActionCopyWithImpl<_ModerationAction>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ModerationActionToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModerationAction&&(identical(other.id, id) || other.id == id)&&(identical(other.action, action) || other.action == action)&&(identical(other.moderator, moderator) || other.moderator == moderator)&&(identical(other.report, report) || other.report == report)&&(identical(other.targetUser, targetUser) || other.targetUser == targetUser)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.durationDays, durationDays) || other.durationDays == durationDays)&&(identical(other.contentType, contentType) || other.contentType == contentType)&&(identical(other.contentTypeDisplay, contentTypeDisplay) || other.contentTypeDisplay == contentTypeDisplay)&&(identical(other.contentId, contentId) || other.contentId == contentId)&&(identical(other.isReversed, isReversed) || other.isReversed == isReversed)&&(identical(other.reversedBy, reversedBy) || other.reversedBy == reversedBy)&&(identical(other.reversedAt, reversedAt) || other.reversedAt == reversedAt)&&(identical(other.reversalReason, reversalReason) || other.reversalReason == reversalReason)&&const DeepCollectionEquality().equals(other._reversedByModerator, _reversedByModerator)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,action,moderator,report,targetUser,reason,durationDays,contentType,contentTypeDisplay,contentId,isReversed,reversedBy,reversedAt,reversalReason,const DeepCollectionEquality().hash(_reversedByModerator),createdAt);
+
+@override
+String toString() {
+  return 'ModerationAction(id: $id, action: $action, moderator: $moderator, report: $report, targetUser: $targetUser, reason: $reason, durationDays: $durationDays, contentType: $contentType, contentTypeDisplay: $contentTypeDisplay, contentId: $contentId, isReversed: $isReversed, reversedBy: $reversedBy, reversedAt: $reversedAt, reversalReason: $reversalReason, reversedByModerator: $reversedByModerator, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ModerationActionCopyWith<$Res> implements $ModerationActionCopyWith<$Res> {
+  factory _$ModerationActionCopyWith(_ModerationAction value, $Res Function(_ModerationAction) _then) = __$ModerationActionCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id, String action, String? moderator, String? report,@JsonKey(name: 'target_user') String? targetUser, String reason,@JsonKey(name: 'duration_days') int? durationDays,@JsonKey(name: 'content_type') String contentType,@JsonKey(name: 'content_type_display') String contentTypeDisplay,@JsonKey(name: 'content_id') String contentId,@JsonKey(name: 'is_reversed') bool isReversed,@JsonKey(name: 'reversed_by') String? reversedBy,@JsonKey(name: 'reversed_at') String? reversedAt,@JsonKey(name: 'reversal_reason') String reversalReason,@JsonKey(name: 'reversed_by_moderator', fromJson: _stringKeyedMapOrEmpty) Map<String, dynamic> reversedByModerator,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$ModerationActionCopyWithImpl<$Res>
+    implements _$ModerationActionCopyWith<$Res> {
+  __$ModerationActionCopyWithImpl(this._self, this._then);
+
+  final _ModerationAction _self;
+  final $Res Function(_ModerationAction) _then;
+
+/// Create a copy of ModerationAction
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? action = null,Object? moderator = freezed,Object? report = freezed,Object? targetUser = freezed,Object? reason = null,Object? durationDays = freezed,Object? contentType = null,Object? contentTypeDisplay = null,Object? contentId = null,Object? isReversed = null,Object? reversedBy = freezed,Object? reversedAt = freezed,Object? reversalReason = null,Object? reversedByModerator = null,Object? createdAt = freezed,}) {
+  return _then(_ModerationAction(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,action: null == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String,moderator: freezed == moderator ? _self.moderator : moderator // ignore: cast_nullable_to_non_nullable
+as String?,report: freezed == report ? _self.report : report // ignore: cast_nullable_to_non_nullable
+as String?,targetUser: freezed == targetUser ? _self.targetUser : targetUser // ignore: cast_nullable_to_non_nullable
+as String?,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,durationDays: freezed == durationDays ? _self.durationDays : durationDays // ignore: cast_nullable_to_non_nullable
+as int?,contentType: null == contentType ? _self.contentType : contentType // ignore: cast_nullable_to_non_nullable
+as String,contentTypeDisplay: null == contentTypeDisplay ? _self.contentTypeDisplay : contentTypeDisplay // ignore: cast_nullable_to_non_nullable
+as String,contentId: null == contentId ? _self.contentId : contentId // ignore: cast_nullable_to_non_nullable
+as String,isReversed: null == isReversed ? _self.isReversed : isReversed // ignore: cast_nullable_to_non_nullable
+as bool,reversedBy: freezed == reversedBy ? _self.reversedBy : reversedBy // ignore: cast_nullable_to_non_nullable
+as String?,reversedAt: freezed == reversedAt ? _self.reversedAt : reversedAt // ignore: cast_nullable_to_non_nullable
+as String?,reversalReason: null == reversalReason ? _self.reversalReason : reversalReason // ignore: cast_nullable_to_non_nullable
+as String,reversedByModerator: null == reversedByModerator ? _self._reversedByModerator : reversedByModerator // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$ModerationActionOutcome {
+
+@JsonKey(name: 'moderation_action') ModerationAction? get moderationAction;@JsonKey(name: 'approval') ModerationApprovalStub? get approval; bool get applied;
+/// Create a copy of ModerationActionOutcome
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ModerationActionOutcomeCopyWith<ModerationActionOutcome> get copyWith => _$ModerationActionOutcomeCopyWithImpl<ModerationActionOutcome>(this as ModerationActionOutcome, _$identity);
+
+  /// Serializes this ModerationActionOutcome to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModerationActionOutcome&&(identical(other.moderationAction, moderationAction) || other.moderationAction == moderationAction)&&(identical(other.approval, approval) || other.approval == approval)&&(identical(other.applied, applied) || other.applied == applied));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,moderationAction,approval,applied);
+
+@override
+String toString() {
+  return 'ModerationActionOutcome(moderationAction: $moderationAction, approval: $approval, applied: $applied)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ModerationActionOutcomeCopyWith<$Res>  {
+  factory $ModerationActionOutcomeCopyWith(ModerationActionOutcome value, $Res Function(ModerationActionOutcome) _then) = _$ModerationActionOutcomeCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'moderation_action') ModerationAction? moderationAction,@JsonKey(name: 'approval') ModerationApprovalStub? approval, bool applied
+});
+
+
+$ModerationActionCopyWith<$Res>? get moderationAction;$ModerationApprovalStubCopyWith<$Res>? get approval;
+
+}
+/// @nodoc
+class _$ModerationActionOutcomeCopyWithImpl<$Res>
+    implements $ModerationActionOutcomeCopyWith<$Res> {
+  _$ModerationActionOutcomeCopyWithImpl(this._self, this._then);
+
+  final ModerationActionOutcome _self;
+  final $Res Function(ModerationActionOutcome) _then;
+
+/// Create a copy of ModerationActionOutcome
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? moderationAction = freezed,Object? approval = freezed,Object? applied = null,}) {
+  return _then(_self.copyWith(
+moderationAction: freezed == moderationAction ? _self.moderationAction : moderationAction // ignore: cast_nullable_to_non_nullable
+as ModerationAction?,approval: freezed == approval ? _self.approval : approval // ignore: cast_nullable_to_non_nullable
+as ModerationApprovalStub?,applied: null == applied ? _self.applied : applied // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+/// Create a copy of ModerationActionOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ModerationActionCopyWith<$Res>? get moderationAction {
+    if (_self.moderationAction == null) {
+    return null;
+  }
+
+  return $ModerationActionCopyWith<$Res>(_self.moderationAction!, (value) {
+    return _then(_self.copyWith(moderationAction: value));
+  });
+}/// Create a copy of ModerationActionOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ModerationApprovalStubCopyWith<$Res>? get approval {
+    if (_self.approval == null) {
+    return null;
+  }
+
+  return $ModerationApprovalStubCopyWith<$Res>(_self.approval!, (value) {
+    return _then(_self.copyWith(approval: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [ModerationActionOutcome].
+extension ModerationActionOutcomePatterns on ModerationActionOutcome {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ModerationActionOutcome value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ModerationActionOutcome() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ModerationActionOutcome value)  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationActionOutcome():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ModerationActionOutcome value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationActionOutcome() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'moderation_action')  ModerationAction? moderationAction, @JsonKey(name: 'approval')  ModerationApprovalStub? approval,  bool applied)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ModerationActionOutcome() when $default != null:
+return $default(_that.moderationAction,_that.approval,_that.applied);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'moderation_action')  ModerationAction? moderationAction, @JsonKey(name: 'approval')  ModerationApprovalStub? approval,  bool applied)  $default,) {final _that = this;
+switch (_that) {
+case _ModerationActionOutcome():
+return $default(_that.moderationAction,_that.approval,_that.applied);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'moderation_action')  ModerationAction? moderationAction, @JsonKey(name: 'approval')  ModerationApprovalStub? approval,  bool applied)?  $default,) {final _that = this;
+switch (_that) {
+case _ModerationActionOutcome() when $default != null:
+return $default(_that.moderationAction,_that.approval,_that.applied);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ModerationActionOutcome implements ModerationActionOutcome {
+  const _ModerationActionOutcome({@JsonKey(name: 'moderation_action') this.moderationAction, @JsonKey(name: 'approval') this.approval, this.applied = false});
+  factory _ModerationActionOutcome.fromJson(Map<String, dynamic> json) => _$ModerationActionOutcomeFromJson(json);
+
+@override@JsonKey(name: 'moderation_action') final  ModerationAction? moderationAction;
+@override@JsonKey(name: 'approval') final  ModerationApprovalStub? approval;
+@override@JsonKey() final  bool applied;
+
+/// Create a copy of ModerationActionOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ModerationActionOutcomeCopyWith<_ModerationActionOutcome> get copyWith => __$ModerationActionOutcomeCopyWithImpl<_ModerationActionOutcome>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ModerationActionOutcomeToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModerationActionOutcome&&(identical(other.moderationAction, moderationAction) || other.moderationAction == moderationAction)&&(identical(other.approval, approval) || other.approval == approval)&&(identical(other.applied, applied) || other.applied == applied));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,moderationAction,approval,applied);
+
+@override
+String toString() {
+  return 'ModerationActionOutcome(moderationAction: $moderationAction, approval: $approval, applied: $applied)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ModerationActionOutcomeCopyWith<$Res> implements $ModerationActionOutcomeCopyWith<$Res> {
+  factory _$ModerationActionOutcomeCopyWith(_ModerationActionOutcome value, $Res Function(_ModerationActionOutcome) _then) = __$ModerationActionOutcomeCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'moderation_action') ModerationAction? moderationAction,@JsonKey(name: 'approval') ModerationApprovalStub? approval, bool applied
+});
+
+
+@override $ModerationActionCopyWith<$Res>? get moderationAction;@override $ModerationApprovalStubCopyWith<$Res>? get approval;
+
+}
+/// @nodoc
+class __$ModerationActionOutcomeCopyWithImpl<$Res>
+    implements _$ModerationActionOutcomeCopyWith<$Res> {
+  __$ModerationActionOutcomeCopyWithImpl(this._self, this._then);
+
+  final _ModerationActionOutcome _self;
+  final $Res Function(_ModerationActionOutcome) _then;
+
+/// Create a copy of ModerationActionOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? moderationAction = freezed,Object? approval = freezed,Object? applied = null,}) {
+  return _then(_ModerationActionOutcome(
+moderationAction: freezed == moderationAction ? _self.moderationAction : moderationAction // ignore: cast_nullable_to_non_nullable
+as ModerationAction?,approval: freezed == approval ? _self.approval : approval // ignore: cast_nullable_to_non_nullable
+as ModerationApprovalStub?,applied: null == applied ? _self.applied : applied // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+/// Create a copy of ModerationActionOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ModerationActionCopyWith<$Res>? get moderationAction {
+    if (_self.moderationAction == null) {
+    return null;
+  }
+
+  return $ModerationActionCopyWith<$Res>(_self.moderationAction!, (value) {
+    return _then(_self.copyWith(moderationAction: value));
+  });
+}/// Create a copy of ModerationActionOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ModerationApprovalStubCopyWith<$Res>? get approval {
+    if (_self.approval == null) {
+    return null;
+  }
+
+  return $ModerationApprovalStubCopyWith<$Res>(_self.approval!, (value) {
+    return _then(_self.copyWith(approval: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$ModerationApprovalStub {
+
+ String? get id; String get action; String get status;@JsonKey(name: 'requires_second') bool get requiresSecond;@JsonKey(name: 'requested_by') String? get requestedBy;
+/// Create a copy of ModerationApprovalStub
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ModerationApprovalStubCopyWith<ModerationApprovalStub> get copyWith => _$ModerationApprovalStubCopyWithImpl<ModerationApprovalStub>(this as ModerationApprovalStub, _$identity);
+
+  /// Serializes this ModerationApprovalStub to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModerationApprovalStub&&(identical(other.id, id) || other.id == id)&&(identical(other.action, action) || other.action == action)&&(identical(other.status, status) || other.status == status)&&(identical(other.requiresSecond, requiresSecond) || other.requiresSecond == requiresSecond)&&(identical(other.requestedBy, requestedBy) || other.requestedBy == requestedBy));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,action,status,requiresSecond,requestedBy);
+
+@override
+String toString() {
+  return 'ModerationApprovalStub(id: $id, action: $action, status: $status, requiresSecond: $requiresSecond, requestedBy: $requestedBy)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ModerationApprovalStubCopyWith<$Res>  {
+  factory $ModerationApprovalStubCopyWith(ModerationApprovalStub value, $Res Function(ModerationApprovalStub) _then) = _$ModerationApprovalStubCopyWithImpl;
+@useResult
+$Res call({
+ String? id, String action, String status,@JsonKey(name: 'requires_second') bool requiresSecond,@JsonKey(name: 'requested_by') String? requestedBy
+});
+
+
+
+
+}
+/// @nodoc
+class _$ModerationApprovalStubCopyWithImpl<$Res>
+    implements $ModerationApprovalStubCopyWith<$Res> {
+  _$ModerationApprovalStubCopyWithImpl(this._self, this._then);
+
+  final ModerationApprovalStub _self;
+  final $Res Function(ModerationApprovalStub) _then;
+
+/// Create a copy of ModerationApprovalStub
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? action = null,Object? status = null,Object? requiresSecond = null,Object? requestedBy = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,action: null == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,requiresSecond: null == requiresSecond ? _self.requiresSecond : requiresSecond // ignore: cast_nullable_to_non_nullable
+as bool,requestedBy: freezed == requestedBy ? _self.requestedBy : requestedBy // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ModerationApprovalStub].
+extension ModerationApprovalStubPatterns on ModerationApprovalStub {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ModerationApprovalStub value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ModerationApprovalStub() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ModerationApprovalStub value)  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationApprovalStub():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ModerationApprovalStub value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationApprovalStub() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String action,  String status, @JsonKey(name: 'requires_second')  bool requiresSecond, @JsonKey(name: 'requested_by')  String? requestedBy)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ModerationApprovalStub() when $default != null:
+return $default(_that.id,_that.action,_that.status,_that.requiresSecond,_that.requestedBy);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String action,  String status, @JsonKey(name: 'requires_second')  bool requiresSecond, @JsonKey(name: 'requested_by')  String? requestedBy)  $default,) {final _that = this;
+switch (_that) {
+case _ModerationApprovalStub():
+return $default(_that.id,_that.action,_that.status,_that.requiresSecond,_that.requestedBy);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String action,  String status, @JsonKey(name: 'requires_second')  bool requiresSecond, @JsonKey(name: 'requested_by')  String? requestedBy)?  $default,) {final _that = this;
+switch (_that) {
+case _ModerationApprovalStub() when $default != null:
+return $default(_that.id,_that.action,_that.status,_that.requiresSecond,_that.requestedBy);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ModerationApprovalStub implements ModerationApprovalStub {
+  const _ModerationApprovalStub({this.id, this.action = '', this.status = '', @JsonKey(name: 'requires_second') this.requiresSecond = true, @JsonKey(name: 'requested_by') this.requestedBy});
+  factory _ModerationApprovalStub.fromJson(Map<String, dynamic> json) => _$ModerationApprovalStubFromJson(json);
+
+@override final  String? id;
+@override@JsonKey() final  String action;
+@override@JsonKey() final  String status;
+@override@JsonKey(name: 'requires_second') final  bool requiresSecond;
+@override@JsonKey(name: 'requested_by') final  String? requestedBy;
+
+/// Create a copy of ModerationApprovalStub
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ModerationApprovalStubCopyWith<_ModerationApprovalStub> get copyWith => __$ModerationApprovalStubCopyWithImpl<_ModerationApprovalStub>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ModerationApprovalStubToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModerationApprovalStub&&(identical(other.id, id) || other.id == id)&&(identical(other.action, action) || other.action == action)&&(identical(other.status, status) || other.status == status)&&(identical(other.requiresSecond, requiresSecond) || other.requiresSecond == requiresSecond)&&(identical(other.requestedBy, requestedBy) || other.requestedBy == requestedBy));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,action,status,requiresSecond,requestedBy);
+
+@override
+String toString() {
+  return 'ModerationApprovalStub(id: $id, action: $action, status: $status, requiresSecond: $requiresSecond, requestedBy: $requestedBy)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ModerationApprovalStubCopyWith<$Res> implements $ModerationApprovalStubCopyWith<$Res> {
+  factory _$ModerationApprovalStubCopyWith(_ModerationApprovalStub value, $Res Function(_ModerationApprovalStub) _then) = __$ModerationApprovalStubCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id, String action, String status,@JsonKey(name: 'requires_second') bool requiresSecond,@JsonKey(name: 'requested_by') String? requestedBy
+});
+
+
+
+
+}
+/// @nodoc
+class __$ModerationApprovalStubCopyWithImpl<$Res>
+    implements _$ModerationApprovalStubCopyWith<$Res> {
+  __$ModerationApprovalStubCopyWithImpl(this._self, this._then);
+
+  final _ModerationApprovalStub _self;
+  final $Res Function(_ModerationApprovalStub) _then;
+
+/// Create a copy of ModerationApprovalStub
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? action = null,Object? status = null,Object? requiresSecond = null,Object? requestedBy = freezed,}) {
+  return _then(_ModerationApprovalStub(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,action: null == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,requiresSecond: null == requiresSecond ? _self.requiresSecond : requiresSecond // ignore: cast_nullable_to_non_nullable
+as bool,requestedBy: freezed == requestedBy ? _self.requestedBy : requestedBy // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$ModerationReversalOutcome {
+
+@JsonKey(name: 'reversed_action') ModerationAction? get reversedAction;@JsonKey(name: 'reversal') ModerationAction? get reversal;@JsonKey(name: 'effect')@_FlexibleTextConverter() String? get effect;
+/// Create a copy of ModerationReversalOutcome
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ModerationReversalOutcomeCopyWith<ModerationReversalOutcome> get copyWith => _$ModerationReversalOutcomeCopyWithImpl<ModerationReversalOutcome>(this as ModerationReversalOutcome, _$identity);
+
+  /// Serializes this ModerationReversalOutcome to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModerationReversalOutcome&&(identical(other.reversedAction, reversedAction) || other.reversedAction == reversedAction)&&(identical(other.reversal, reversal) || other.reversal == reversal)&&(identical(other.effect, effect) || other.effect == effect));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,reversedAction,reversal,effect);
+
+@override
+String toString() {
+  return 'ModerationReversalOutcome(reversedAction: $reversedAction, reversal: $reversal, effect: $effect)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ModerationReversalOutcomeCopyWith<$Res>  {
+  factory $ModerationReversalOutcomeCopyWith(ModerationReversalOutcome value, $Res Function(ModerationReversalOutcome) _then) = _$ModerationReversalOutcomeCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'reversed_action') ModerationAction? reversedAction,@JsonKey(name: 'reversal') ModerationAction? reversal,@JsonKey(name: 'effect')@_FlexibleTextConverter() String? effect
+});
+
+
+$ModerationActionCopyWith<$Res>? get reversedAction;$ModerationActionCopyWith<$Res>? get reversal;
+
+}
+/// @nodoc
+class _$ModerationReversalOutcomeCopyWithImpl<$Res>
+    implements $ModerationReversalOutcomeCopyWith<$Res> {
+  _$ModerationReversalOutcomeCopyWithImpl(this._self, this._then);
+
+  final ModerationReversalOutcome _self;
+  final $Res Function(ModerationReversalOutcome) _then;
+
+/// Create a copy of ModerationReversalOutcome
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? reversedAction = freezed,Object? reversal = freezed,Object? effect = freezed,}) {
+  return _then(_self.copyWith(
+reversedAction: freezed == reversedAction ? _self.reversedAction : reversedAction // ignore: cast_nullable_to_non_nullable
+as ModerationAction?,reversal: freezed == reversal ? _self.reversal : reversal // ignore: cast_nullable_to_non_nullable
+as ModerationAction?,effect: freezed == effect ? _self.effect : effect // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+/// Create a copy of ModerationReversalOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ModerationActionCopyWith<$Res>? get reversedAction {
+    if (_self.reversedAction == null) {
+    return null;
+  }
+
+  return $ModerationActionCopyWith<$Res>(_self.reversedAction!, (value) {
+    return _then(_self.copyWith(reversedAction: value));
+  });
+}/// Create a copy of ModerationReversalOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ModerationActionCopyWith<$Res>? get reversal {
+    if (_self.reversal == null) {
+    return null;
+  }
+
+  return $ModerationActionCopyWith<$Res>(_self.reversal!, (value) {
+    return _then(_self.copyWith(reversal: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [ModerationReversalOutcome].
+extension ModerationReversalOutcomePatterns on ModerationReversalOutcome {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ModerationReversalOutcome value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ModerationReversalOutcome() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ModerationReversalOutcome value)  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationReversalOutcome():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ModerationReversalOutcome value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationReversalOutcome() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'reversed_action')  ModerationAction? reversedAction, @JsonKey(name: 'reversal')  ModerationAction? reversal, @JsonKey(name: 'effect')@_FlexibleTextConverter()  String? effect)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ModerationReversalOutcome() when $default != null:
+return $default(_that.reversedAction,_that.reversal,_that.effect);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'reversed_action')  ModerationAction? reversedAction, @JsonKey(name: 'reversal')  ModerationAction? reversal, @JsonKey(name: 'effect')@_FlexibleTextConverter()  String? effect)  $default,) {final _that = this;
+switch (_that) {
+case _ModerationReversalOutcome():
+return $default(_that.reversedAction,_that.reversal,_that.effect);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'reversed_action')  ModerationAction? reversedAction, @JsonKey(name: 'reversal')  ModerationAction? reversal, @JsonKey(name: 'effect')@_FlexibleTextConverter()  String? effect)?  $default,) {final _that = this;
+switch (_that) {
+case _ModerationReversalOutcome() when $default != null:
+return $default(_that.reversedAction,_that.reversal,_that.effect);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ModerationReversalOutcome implements ModerationReversalOutcome {
+  const _ModerationReversalOutcome({@JsonKey(name: 'reversed_action') this.reversedAction, @JsonKey(name: 'reversal') this.reversal, @JsonKey(name: 'effect')@_FlexibleTextConverter() this.effect});
+  factory _ModerationReversalOutcome.fromJson(Map<String, dynamic> json) => _$ModerationReversalOutcomeFromJson(json);
+
+@override@JsonKey(name: 'reversed_action') final  ModerationAction? reversedAction;
+@override@JsonKey(name: 'reversal') final  ModerationAction? reversal;
+@override@JsonKey(name: 'effect')@_FlexibleTextConverter() final  String? effect;
+
+/// Create a copy of ModerationReversalOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ModerationReversalOutcomeCopyWith<_ModerationReversalOutcome> get copyWith => __$ModerationReversalOutcomeCopyWithImpl<_ModerationReversalOutcome>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ModerationReversalOutcomeToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModerationReversalOutcome&&(identical(other.reversedAction, reversedAction) || other.reversedAction == reversedAction)&&(identical(other.reversal, reversal) || other.reversal == reversal)&&(identical(other.effect, effect) || other.effect == effect));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,reversedAction,reversal,effect);
+
+@override
+String toString() {
+  return 'ModerationReversalOutcome(reversedAction: $reversedAction, reversal: $reversal, effect: $effect)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ModerationReversalOutcomeCopyWith<$Res> implements $ModerationReversalOutcomeCopyWith<$Res> {
+  factory _$ModerationReversalOutcomeCopyWith(_ModerationReversalOutcome value, $Res Function(_ModerationReversalOutcome) _then) = __$ModerationReversalOutcomeCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'reversed_action') ModerationAction? reversedAction,@JsonKey(name: 'reversal') ModerationAction? reversal,@JsonKey(name: 'effect')@_FlexibleTextConverter() String? effect
+});
+
+
+@override $ModerationActionCopyWith<$Res>? get reversedAction;@override $ModerationActionCopyWith<$Res>? get reversal;
+
+}
+/// @nodoc
+class __$ModerationReversalOutcomeCopyWithImpl<$Res>
+    implements _$ModerationReversalOutcomeCopyWith<$Res> {
+  __$ModerationReversalOutcomeCopyWithImpl(this._self, this._then);
+
+  final _ModerationReversalOutcome _self;
+  final $Res Function(_ModerationReversalOutcome) _then;
+
+/// Create a copy of ModerationReversalOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? reversedAction = freezed,Object? reversal = freezed,Object? effect = freezed,}) {
+  return _then(_ModerationReversalOutcome(
+reversedAction: freezed == reversedAction ? _self.reversedAction : reversedAction // ignore: cast_nullable_to_non_nullable
+as ModerationAction?,reversal: freezed == reversal ? _self.reversal : reversal // ignore: cast_nullable_to_non_nullable
+as ModerationAction?,effect: freezed == effect ? _self.effect : effect // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+/// Create a copy of ModerationReversalOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ModerationActionCopyWith<$Res>? get reversedAction {
+    if (_self.reversedAction == null) {
+    return null;
+  }
+
+  return $ModerationActionCopyWith<$Res>(_self.reversedAction!, (value) {
+    return _then(_self.copyWith(reversedAction: value));
+  });
+}/// Create a copy of ModerationReversalOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ModerationActionCopyWith<$Res>? get reversal {
+    if (_self.reversal == null) {
+    return null;
+  }
+
+  return $ModerationActionCopyWith<$Res>(_self.reversal!, (value) {
+    return _then(_self.copyWith(reversal: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$ContentFlagOutcome {
+
+ ContentFlag? get flag;@JsonKey(name: 'effect')@_FlexibleTextConverter() String? get effect;
+/// Create a copy of ContentFlagOutcome
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ContentFlagOutcomeCopyWith<ContentFlagOutcome> get copyWith => _$ContentFlagOutcomeCopyWithImpl<ContentFlagOutcome>(this as ContentFlagOutcome, _$identity);
+
+  /// Serializes this ContentFlagOutcome to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ContentFlagOutcome&&(identical(other.flag, flag) || other.flag == flag)&&(identical(other.effect, effect) || other.effect == effect));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,flag,effect);
+
+@override
+String toString() {
+  return 'ContentFlagOutcome(flag: $flag, effect: $effect)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ContentFlagOutcomeCopyWith<$Res>  {
+  factory $ContentFlagOutcomeCopyWith(ContentFlagOutcome value, $Res Function(ContentFlagOutcome) _then) = _$ContentFlagOutcomeCopyWithImpl;
+@useResult
+$Res call({
+ ContentFlag? flag,@JsonKey(name: 'effect')@_FlexibleTextConverter() String? effect
+});
+
+
+$ContentFlagCopyWith<$Res>? get flag;
+
+}
+/// @nodoc
+class _$ContentFlagOutcomeCopyWithImpl<$Res>
+    implements $ContentFlagOutcomeCopyWith<$Res> {
+  _$ContentFlagOutcomeCopyWithImpl(this._self, this._then);
+
+  final ContentFlagOutcome _self;
+  final $Res Function(ContentFlagOutcome) _then;
+
+/// Create a copy of ContentFlagOutcome
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? flag = freezed,Object? effect = freezed,}) {
+  return _then(_self.copyWith(
+flag: freezed == flag ? _self.flag : flag // ignore: cast_nullable_to_non_nullable
+as ContentFlag?,effect: freezed == effect ? _self.effect : effect // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+/// Create a copy of ContentFlagOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ContentFlagCopyWith<$Res>? get flag {
+    if (_self.flag == null) {
+    return null;
+  }
+
+  return $ContentFlagCopyWith<$Res>(_self.flag!, (value) {
+    return _then(_self.copyWith(flag: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [ContentFlagOutcome].
+extension ContentFlagOutcomePatterns on ContentFlagOutcome {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ContentFlagOutcome value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ContentFlagOutcome() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ContentFlagOutcome value)  $default,){
+final _that = this;
+switch (_that) {
+case _ContentFlagOutcome():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ContentFlagOutcome value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ContentFlagOutcome() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( ContentFlag? flag, @JsonKey(name: 'effect')@_FlexibleTextConverter()  String? effect)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ContentFlagOutcome() when $default != null:
+return $default(_that.flag,_that.effect);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( ContentFlag? flag, @JsonKey(name: 'effect')@_FlexibleTextConverter()  String? effect)  $default,) {final _that = this;
+switch (_that) {
+case _ContentFlagOutcome():
+return $default(_that.flag,_that.effect);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( ContentFlag? flag, @JsonKey(name: 'effect')@_FlexibleTextConverter()  String? effect)?  $default,) {final _that = this;
+switch (_that) {
+case _ContentFlagOutcome() when $default != null:
+return $default(_that.flag,_that.effect);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ContentFlagOutcome implements ContentFlagOutcome {
+  const _ContentFlagOutcome({this.flag, @JsonKey(name: 'effect')@_FlexibleTextConverter() this.effect});
+  factory _ContentFlagOutcome.fromJson(Map<String, dynamic> json) => _$ContentFlagOutcomeFromJson(json);
+
+@override final  ContentFlag? flag;
+@override@JsonKey(name: 'effect')@_FlexibleTextConverter() final  String? effect;
+
+/// Create a copy of ContentFlagOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ContentFlagOutcomeCopyWith<_ContentFlagOutcome> get copyWith => __$ContentFlagOutcomeCopyWithImpl<_ContentFlagOutcome>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ContentFlagOutcomeToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ContentFlagOutcome&&(identical(other.flag, flag) || other.flag == flag)&&(identical(other.effect, effect) || other.effect == effect));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,flag,effect);
+
+@override
+String toString() {
+  return 'ContentFlagOutcome(flag: $flag, effect: $effect)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ContentFlagOutcomeCopyWith<$Res> implements $ContentFlagOutcomeCopyWith<$Res> {
+  factory _$ContentFlagOutcomeCopyWith(_ContentFlagOutcome value, $Res Function(_ContentFlagOutcome) _then) = __$ContentFlagOutcomeCopyWithImpl;
+@override @useResult
+$Res call({
+ ContentFlag? flag,@JsonKey(name: 'effect')@_FlexibleTextConverter() String? effect
+});
+
+
+@override $ContentFlagCopyWith<$Res>? get flag;
+
+}
+/// @nodoc
+class __$ContentFlagOutcomeCopyWithImpl<$Res>
+    implements _$ContentFlagOutcomeCopyWith<$Res> {
+  __$ContentFlagOutcomeCopyWithImpl(this._self, this._then);
+
+  final _ContentFlagOutcome _self;
+  final $Res Function(_ContentFlagOutcome) _then;
+
+/// Create a copy of ContentFlagOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? flag = freezed,Object? effect = freezed,}) {
+  return _then(_ContentFlagOutcome(
+flag: freezed == flag ? _self.flag : flag // ignore: cast_nullable_to_non_nullable
+as ContentFlag?,effect: freezed == effect ? _self.effect : effect // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+/// Create a copy of ContentFlagOutcome
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$ContentFlagCopyWith<$Res>? get flag {
+    if (_self.flag == null) {
+    return null;
+  }
+
+  return $ContentFlagCopyWith<$Res>(_self.flag!, (value) {
+    return _then(_self.copyWith(flag: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$ModerationPendingApproval {
+
+ String? get id;/// `ban` or `suspension` — the governance action vocabulary, not the
+/// moderation one (`user_banned` / `user_suspended`).
+@JsonKey(name: 'governance_action') String get governanceAction;@JsonKey(name: 'target_user') String? get targetUser;@JsonKey(name: 'requested_by') String? get requestedBy;@JsonKey(name: 'requested_by_profile') String get requestedByProfile; String get reason;@JsonKey(name: 'duration_days') int? get durationDays;@JsonKey(name: 'requires_second') bool get requiresSecond;@JsonKey(name: 'waiting_seconds') int get waitingSeconds;@JsonKey(name: 'created_at') String? get createdAt;@JsonKey(name: 'moderation_action_id') String? get moderationActionId;
+/// Create a copy of ModerationPendingApproval
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ModerationPendingApprovalCopyWith<ModerationPendingApproval> get copyWith => _$ModerationPendingApprovalCopyWithImpl<ModerationPendingApproval>(this as ModerationPendingApproval, _$identity);
+
+  /// Serializes this ModerationPendingApproval to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModerationPendingApproval&&(identical(other.id, id) || other.id == id)&&(identical(other.governanceAction, governanceAction) || other.governanceAction == governanceAction)&&(identical(other.targetUser, targetUser) || other.targetUser == targetUser)&&(identical(other.requestedBy, requestedBy) || other.requestedBy == requestedBy)&&(identical(other.requestedByProfile, requestedByProfile) || other.requestedByProfile == requestedByProfile)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.durationDays, durationDays) || other.durationDays == durationDays)&&(identical(other.requiresSecond, requiresSecond) || other.requiresSecond == requiresSecond)&&(identical(other.waitingSeconds, waitingSeconds) || other.waitingSeconds == waitingSeconds)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.moderationActionId, moderationActionId) || other.moderationActionId == moderationActionId));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,governanceAction,targetUser,requestedBy,requestedByProfile,reason,durationDays,requiresSecond,waitingSeconds,createdAt,moderationActionId);
+
+@override
+String toString() {
+  return 'ModerationPendingApproval(id: $id, governanceAction: $governanceAction, targetUser: $targetUser, requestedBy: $requestedBy, requestedByProfile: $requestedByProfile, reason: $reason, durationDays: $durationDays, requiresSecond: $requiresSecond, waitingSeconds: $waitingSeconds, createdAt: $createdAt, moderationActionId: $moderationActionId)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ModerationPendingApprovalCopyWith<$Res>  {
+  factory $ModerationPendingApprovalCopyWith(ModerationPendingApproval value, $Res Function(ModerationPendingApproval) _then) = _$ModerationPendingApprovalCopyWithImpl;
+@useResult
+$Res call({
+ String? id,@JsonKey(name: 'governance_action') String governanceAction,@JsonKey(name: 'target_user') String? targetUser,@JsonKey(name: 'requested_by') String? requestedBy,@JsonKey(name: 'requested_by_profile') String requestedByProfile, String reason,@JsonKey(name: 'duration_days') int? durationDays,@JsonKey(name: 'requires_second') bool requiresSecond,@JsonKey(name: 'waiting_seconds') int waitingSeconds,@JsonKey(name: 'created_at') String? createdAt,@JsonKey(name: 'moderation_action_id') String? moderationActionId
+});
+
+
+
+
+}
+/// @nodoc
+class _$ModerationPendingApprovalCopyWithImpl<$Res>
+    implements $ModerationPendingApprovalCopyWith<$Res> {
+  _$ModerationPendingApprovalCopyWithImpl(this._self, this._then);
+
+  final ModerationPendingApproval _self;
+  final $Res Function(ModerationPendingApproval) _then;
+
+/// Create a copy of ModerationPendingApproval
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? governanceAction = null,Object? targetUser = freezed,Object? requestedBy = freezed,Object? requestedByProfile = null,Object? reason = null,Object? durationDays = freezed,Object? requiresSecond = null,Object? waitingSeconds = null,Object? createdAt = freezed,Object? moderationActionId = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,governanceAction: null == governanceAction ? _self.governanceAction : governanceAction // ignore: cast_nullable_to_non_nullable
+as String,targetUser: freezed == targetUser ? _self.targetUser : targetUser // ignore: cast_nullable_to_non_nullable
+as String?,requestedBy: freezed == requestedBy ? _self.requestedBy : requestedBy // ignore: cast_nullable_to_non_nullable
+as String?,requestedByProfile: null == requestedByProfile ? _self.requestedByProfile : requestedByProfile // ignore: cast_nullable_to_non_nullable
+as String,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,durationDays: freezed == durationDays ? _self.durationDays : durationDays // ignore: cast_nullable_to_non_nullable
+as int?,requiresSecond: null == requiresSecond ? _self.requiresSecond : requiresSecond // ignore: cast_nullable_to_non_nullable
+as bool,waitingSeconds: null == waitingSeconds ? _self.waitingSeconds : waitingSeconds // ignore: cast_nullable_to_non_nullable
+as int,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,moderationActionId: freezed == moderationActionId ? _self.moderationActionId : moderationActionId // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ModerationPendingApproval].
+extension ModerationPendingApprovalPatterns on ModerationPendingApproval {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ModerationPendingApproval value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ModerationPendingApproval() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ModerationPendingApproval value)  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationPendingApproval():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ModerationPendingApproval value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationPendingApproval() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'governance_action')  String governanceAction, @JsonKey(name: 'target_user')  String? targetUser, @JsonKey(name: 'requested_by')  String? requestedBy, @JsonKey(name: 'requested_by_profile')  String requestedByProfile,  String reason, @JsonKey(name: 'duration_days')  int? durationDays, @JsonKey(name: 'requires_second')  bool requiresSecond, @JsonKey(name: 'waiting_seconds')  int waitingSeconds, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'moderation_action_id')  String? moderationActionId)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ModerationPendingApproval() when $default != null:
+return $default(_that.id,_that.governanceAction,_that.targetUser,_that.requestedBy,_that.requestedByProfile,_that.reason,_that.durationDays,_that.requiresSecond,_that.waitingSeconds,_that.createdAt,_that.moderationActionId);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'governance_action')  String governanceAction, @JsonKey(name: 'target_user')  String? targetUser, @JsonKey(name: 'requested_by')  String? requestedBy, @JsonKey(name: 'requested_by_profile')  String requestedByProfile,  String reason, @JsonKey(name: 'duration_days')  int? durationDays, @JsonKey(name: 'requires_second')  bool requiresSecond, @JsonKey(name: 'waiting_seconds')  int waitingSeconds, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'moderation_action_id')  String? moderationActionId)  $default,) {final _that = this;
+switch (_that) {
+case _ModerationPendingApproval():
+return $default(_that.id,_that.governanceAction,_that.targetUser,_that.requestedBy,_that.requestedByProfile,_that.reason,_that.durationDays,_that.requiresSecond,_that.waitingSeconds,_that.createdAt,_that.moderationActionId);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'governance_action')  String governanceAction, @JsonKey(name: 'target_user')  String? targetUser, @JsonKey(name: 'requested_by')  String? requestedBy, @JsonKey(name: 'requested_by_profile')  String requestedByProfile,  String reason, @JsonKey(name: 'duration_days')  int? durationDays, @JsonKey(name: 'requires_second')  bool requiresSecond, @JsonKey(name: 'waiting_seconds')  int waitingSeconds, @JsonKey(name: 'created_at')  String? createdAt, @JsonKey(name: 'moderation_action_id')  String? moderationActionId)?  $default,) {final _that = this;
+switch (_that) {
+case _ModerationPendingApproval() when $default != null:
+return $default(_that.id,_that.governanceAction,_that.targetUser,_that.requestedBy,_that.requestedByProfile,_that.reason,_that.durationDays,_that.requiresSecond,_that.waitingSeconds,_that.createdAt,_that.moderationActionId);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ModerationPendingApproval implements ModerationPendingApproval {
+  const _ModerationPendingApproval({this.id, @JsonKey(name: 'governance_action') this.governanceAction = '', @JsonKey(name: 'target_user') this.targetUser, @JsonKey(name: 'requested_by') this.requestedBy, @JsonKey(name: 'requested_by_profile') this.requestedByProfile = '', this.reason = '', @JsonKey(name: 'duration_days') this.durationDays, @JsonKey(name: 'requires_second') this.requiresSecond = true, @JsonKey(name: 'waiting_seconds') this.waitingSeconds = 0, @JsonKey(name: 'created_at') this.createdAt, @JsonKey(name: 'moderation_action_id') this.moderationActionId});
+  factory _ModerationPendingApproval.fromJson(Map<String, dynamic> json) => _$ModerationPendingApprovalFromJson(json);
+
+@override final  String? id;
+/// `ban` or `suspension` — the governance action vocabulary, not the
+/// moderation one (`user_banned` / `user_suspended`).
+@override@JsonKey(name: 'governance_action') final  String governanceAction;
+@override@JsonKey(name: 'target_user') final  String? targetUser;
+@override@JsonKey(name: 'requested_by') final  String? requestedBy;
+@override@JsonKey(name: 'requested_by_profile') final  String requestedByProfile;
+@override@JsonKey() final  String reason;
+@override@JsonKey(name: 'duration_days') final  int? durationDays;
+@override@JsonKey(name: 'requires_second') final  bool requiresSecond;
+@override@JsonKey(name: 'waiting_seconds') final  int waitingSeconds;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+@override@JsonKey(name: 'moderation_action_id') final  String? moderationActionId;
+
+/// Create a copy of ModerationPendingApproval
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ModerationPendingApprovalCopyWith<_ModerationPendingApproval> get copyWith => __$ModerationPendingApprovalCopyWithImpl<_ModerationPendingApproval>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ModerationPendingApprovalToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModerationPendingApproval&&(identical(other.id, id) || other.id == id)&&(identical(other.governanceAction, governanceAction) || other.governanceAction == governanceAction)&&(identical(other.targetUser, targetUser) || other.targetUser == targetUser)&&(identical(other.requestedBy, requestedBy) || other.requestedBy == requestedBy)&&(identical(other.requestedByProfile, requestedByProfile) || other.requestedByProfile == requestedByProfile)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.durationDays, durationDays) || other.durationDays == durationDays)&&(identical(other.requiresSecond, requiresSecond) || other.requiresSecond == requiresSecond)&&(identical(other.waitingSeconds, waitingSeconds) || other.waitingSeconds == waitingSeconds)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.moderationActionId, moderationActionId) || other.moderationActionId == moderationActionId));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,governanceAction,targetUser,requestedBy,requestedByProfile,reason,durationDays,requiresSecond,waitingSeconds,createdAt,moderationActionId);
+
+@override
+String toString() {
+  return 'ModerationPendingApproval(id: $id, governanceAction: $governanceAction, targetUser: $targetUser, requestedBy: $requestedBy, requestedByProfile: $requestedByProfile, reason: $reason, durationDays: $durationDays, requiresSecond: $requiresSecond, waitingSeconds: $waitingSeconds, createdAt: $createdAt, moderationActionId: $moderationActionId)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ModerationPendingApprovalCopyWith<$Res> implements $ModerationPendingApprovalCopyWith<$Res> {
+  factory _$ModerationPendingApprovalCopyWith(_ModerationPendingApproval value, $Res Function(_ModerationPendingApproval) _then) = __$ModerationPendingApprovalCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id,@JsonKey(name: 'governance_action') String governanceAction,@JsonKey(name: 'target_user') String? targetUser,@JsonKey(name: 'requested_by') String? requestedBy,@JsonKey(name: 'requested_by_profile') String requestedByProfile, String reason,@JsonKey(name: 'duration_days') int? durationDays,@JsonKey(name: 'requires_second') bool requiresSecond,@JsonKey(name: 'waiting_seconds') int waitingSeconds,@JsonKey(name: 'created_at') String? createdAt,@JsonKey(name: 'moderation_action_id') String? moderationActionId
+});
+
+
+
+
+}
+/// @nodoc
+class __$ModerationPendingApprovalCopyWithImpl<$Res>
+    implements _$ModerationPendingApprovalCopyWith<$Res> {
+  __$ModerationPendingApprovalCopyWithImpl(this._self, this._then);
+
+  final _ModerationPendingApproval _self;
+  final $Res Function(_ModerationPendingApproval) _then;
+
+/// Create a copy of ModerationPendingApproval
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? governanceAction = null,Object? targetUser = freezed,Object? requestedBy = freezed,Object? requestedByProfile = null,Object? reason = null,Object? durationDays = freezed,Object? requiresSecond = null,Object? waitingSeconds = null,Object? createdAt = freezed,Object? moderationActionId = freezed,}) {
+  return _then(_ModerationPendingApproval(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,governanceAction: null == governanceAction ? _self.governanceAction : governanceAction // ignore: cast_nullable_to_non_nullable
+as String,targetUser: freezed == targetUser ? _self.targetUser : targetUser // ignore: cast_nullable_to_non_nullable
+as String?,requestedBy: freezed == requestedBy ? _self.requestedBy : requestedBy // ignore: cast_nullable_to_non_nullable
+as String?,requestedByProfile: null == requestedByProfile ? _self.requestedByProfile : requestedByProfile // ignore: cast_nullable_to_non_nullable
+as String,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,durationDays: freezed == durationDays ? _self.durationDays : durationDays // ignore: cast_nullable_to_non_nullable
+as int?,requiresSecond: null == requiresSecond ? _self.requiresSecond : requiresSecond // ignore: cast_nullable_to_non_nullable
+as bool,waitingSeconds: null == waitingSeconds ? _self.waitingSeconds : waitingSeconds // ignore: cast_nullable_to_non_nullable
+as int,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,moderationActionId: freezed == moderationActionId ? _self.moderationActionId : moderationActionId // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$ModerationAppeal {
+
+ String? get id; String? get action; String? get appellant; String get reason;/// submitted / under_review / approved / denied.
+ String get status; String? get reviewer;@JsonKey(name: 'reviewed_at') String? get reviewedAt;@JsonKey(name: 'resolution_note') String get resolutionNote;@JsonKey(name: 'created_at') String? get createdAt;
+/// Create a copy of ModerationAppeal
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ModerationAppealCopyWith<ModerationAppeal> get copyWith => _$ModerationAppealCopyWithImpl<ModerationAppeal>(this as ModerationAppeal, _$identity);
+
+  /// Serializes this ModerationAppeal to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModerationAppeal&&(identical(other.id, id) || other.id == id)&&(identical(other.action, action) || other.action == action)&&(identical(other.appellant, appellant) || other.appellant == appellant)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.status, status) || other.status == status)&&(identical(other.reviewer, reviewer) || other.reviewer == reviewer)&&(identical(other.reviewedAt, reviewedAt) || other.reviewedAt == reviewedAt)&&(identical(other.resolutionNote, resolutionNote) || other.resolutionNote == resolutionNote)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,action,appellant,reason,status,reviewer,reviewedAt,resolutionNote,createdAt);
+
+@override
+String toString() {
+  return 'ModerationAppeal(id: $id, action: $action, appellant: $appellant, reason: $reason, status: $status, reviewer: $reviewer, reviewedAt: $reviewedAt, resolutionNote: $resolutionNote, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ModerationAppealCopyWith<$Res>  {
+  factory $ModerationAppealCopyWith(ModerationAppeal value, $Res Function(ModerationAppeal) _then) = _$ModerationAppealCopyWithImpl;
+@useResult
+$Res call({
+ String? id, String? action, String? appellant, String reason, String status, String? reviewer,@JsonKey(name: 'reviewed_at') String? reviewedAt,@JsonKey(name: 'resolution_note') String resolutionNote,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$ModerationAppealCopyWithImpl<$Res>
+    implements $ModerationAppealCopyWith<$Res> {
+  _$ModerationAppealCopyWithImpl(this._self, this._then);
+
+  final ModerationAppeal _self;
+  final $Res Function(ModerationAppeal) _then;
+
+/// Create a copy of ModerationAppeal
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? action = freezed,Object? appellant = freezed,Object? reason = null,Object? status = null,Object? reviewer = freezed,Object? reviewedAt = freezed,Object? resolutionNote = null,Object? createdAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,action: freezed == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String?,appellant: freezed == appellant ? _self.appellant : appellant // ignore: cast_nullable_to_non_nullable
+as String?,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,reviewer: freezed == reviewer ? _self.reviewer : reviewer // ignore: cast_nullable_to_non_nullable
+as String?,reviewedAt: freezed == reviewedAt ? _self.reviewedAt : reviewedAt // ignore: cast_nullable_to_non_nullable
+as String?,resolutionNote: null == resolutionNote ? _self.resolutionNote : resolutionNote // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ModerationAppeal].
+extension ModerationAppealPatterns on ModerationAppeal {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ModerationAppeal value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ModerationAppeal() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ModerationAppeal value)  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationAppeal():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ModerationAppeal value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationAppeal() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String? action,  String? appellant,  String reason,  String status,  String? reviewer, @JsonKey(name: 'reviewed_at')  String? reviewedAt, @JsonKey(name: 'resolution_note')  String resolutionNote, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ModerationAppeal() when $default != null:
+return $default(_that.id,_that.action,_that.appellant,_that.reason,_that.status,_that.reviewer,_that.reviewedAt,_that.resolutionNote,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String? action,  String? appellant,  String reason,  String status,  String? reviewer, @JsonKey(name: 'reviewed_at')  String? reviewedAt, @JsonKey(name: 'resolution_note')  String resolutionNote, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _ModerationAppeal():
+return $default(_that.id,_that.action,_that.appellant,_that.reason,_that.status,_that.reviewer,_that.reviewedAt,_that.resolutionNote,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String? action,  String? appellant,  String reason,  String status,  String? reviewer, @JsonKey(name: 'reviewed_at')  String? reviewedAt, @JsonKey(name: 'resolution_note')  String resolutionNote, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _ModerationAppeal() when $default != null:
+return $default(_that.id,_that.action,_that.appellant,_that.reason,_that.status,_that.reviewer,_that.reviewedAt,_that.resolutionNote,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ModerationAppeal implements ModerationAppeal {
+  const _ModerationAppeal({this.id, this.action, this.appellant, this.reason = '', this.status = '', this.reviewer, @JsonKey(name: 'reviewed_at') this.reviewedAt, @JsonKey(name: 'resolution_note') this.resolutionNote = '', @JsonKey(name: 'created_at') this.createdAt});
+  factory _ModerationAppeal.fromJson(Map<String, dynamic> json) => _$ModerationAppealFromJson(json);
+
+@override final  String? id;
+@override final  String? action;
+@override final  String? appellant;
+@override@JsonKey() final  String reason;
+/// submitted / under_review / approved / denied.
+@override@JsonKey() final  String status;
+@override final  String? reviewer;
+@override@JsonKey(name: 'reviewed_at') final  String? reviewedAt;
+@override@JsonKey(name: 'resolution_note') final  String resolutionNote;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+
+/// Create a copy of ModerationAppeal
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ModerationAppealCopyWith<_ModerationAppeal> get copyWith => __$ModerationAppealCopyWithImpl<_ModerationAppeal>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ModerationAppealToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModerationAppeal&&(identical(other.id, id) || other.id == id)&&(identical(other.action, action) || other.action == action)&&(identical(other.appellant, appellant) || other.appellant == appellant)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.status, status) || other.status == status)&&(identical(other.reviewer, reviewer) || other.reviewer == reviewer)&&(identical(other.reviewedAt, reviewedAt) || other.reviewedAt == reviewedAt)&&(identical(other.resolutionNote, resolutionNote) || other.resolutionNote == resolutionNote)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,action,appellant,reason,status,reviewer,reviewedAt,resolutionNote,createdAt);
+
+@override
+String toString() {
+  return 'ModerationAppeal(id: $id, action: $action, appellant: $appellant, reason: $reason, status: $status, reviewer: $reviewer, reviewedAt: $reviewedAt, resolutionNote: $resolutionNote, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ModerationAppealCopyWith<$Res> implements $ModerationAppealCopyWith<$Res> {
+  factory _$ModerationAppealCopyWith(_ModerationAppeal value, $Res Function(_ModerationAppeal) _then) = __$ModerationAppealCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id, String? action, String? appellant, String reason, String status, String? reviewer,@JsonKey(name: 'reviewed_at') String? reviewedAt,@JsonKey(name: 'resolution_note') String resolutionNote,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$ModerationAppealCopyWithImpl<$Res>
+    implements _$ModerationAppealCopyWith<$Res> {
+  __$ModerationAppealCopyWithImpl(this._self, this._then);
+
+  final _ModerationAppeal _self;
+  final $Res Function(_ModerationAppeal) _then;
+
+/// Create a copy of ModerationAppeal
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? action = freezed,Object? appellant = freezed,Object? reason = null,Object? status = null,Object? reviewer = freezed,Object? reviewedAt = freezed,Object? resolutionNote = null,Object? createdAt = freezed,}) {
+  return _then(_ModerationAppeal(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,action: freezed == action ? _self.action : action // ignore: cast_nullable_to_non_nullable
+as String?,appellant: freezed == appellant ? _self.appellant : appellant // ignore: cast_nullable_to_non_nullable
+as String?,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,reviewer: freezed == reviewer ? _self.reviewer : reviewer // ignore: cast_nullable_to_non_nullable
+as String?,reviewedAt: freezed == reviewedAt ? _self.reviewedAt : reviewedAt // ignore: cast_nullable_to_non_nullable
+as String?,resolutionNote: null == resolutionNote ? _self.resolutionNote : resolutionNote // ignore: cast_nullable_to_non_nullable
+as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$ModerationCommendation {
+
+ String? get id;/// A profile UUID, per `Commendation.recipient`.
+ String? get recipient;@JsonKey(name: 'issued_by') String? get issuedBy; String get category;@JsonKey(name: 'category_display') String get categoryDisplay; String get message;@JsonKey(name: 'visible_to_recipient') bool get visibleToRecipient;@JsonKey(name: 'created_at') String? get createdAt;
+/// Create a copy of ModerationCommendation
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ModerationCommendationCopyWith<ModerationCommendation> get copyWith => _$ModerationCommendationCopyWithImpl<ModerationCommendation>(this as ModerationCommendation, _$identity);
+
+  /// Serializes this ModerationCommendation to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ModerationCommendation&&(identical(other.id, id) || other.id == id)&&(identical(other.recipient, recipient) || other.recipient == recipient)&&(identical(other.issuedBy, issuedBy) || other.issuedBy == issuedBy)&&(identical(other.category, category) || other.category == category)&&(identical(other.categoryDisplay, categoryDisplay) || other.categoryDisplay == categoryDisplay)&&(identical(other.message, message) || other.message == message)&&(identical(other.visibleToRecipient, visibleToRecipient) || other.visibleToRecipient == visibleToRecipient)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,recipient,issuedBy,category,categoryDisplay,message,visibleToRecipient,createdAt);
+
+@override
+String toString() {
+  return 'ModerationCommendation(id: $id, recipient: $recipient, issuedBy: $issuedBy, category: $category, categoryDisplay: $categoryDisplay, message: $message, visibleToRecipient: $visibleToRecipient, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ModerationCommendationCopyWith<$Res>  {
+  factory $ModerationCommendationCopyWith(ModerationCommendation value, $Res Function(ModerationCommendation) _then) = _$ModerationCommendationCopyWithImpl;
+@useResult
+$Res call({
+ String? id, String? recipient,@JsonKey(name: 'issued_by') String? issuedBy, String category,@JsonKey(name: 'category_display') String categoryDisplay, String message,@JsonKey(name: 'visible_to_recipient') bool visibleToRecipient,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$ModerationCommendationCopyWithImpl<$Res>
+    implements $ModerationCommendationCopyWith<$Res> {
+  _$ModerationCommendationCopyWithImpl(this._self, this._then);
+
+  final ModerationCommendation _self;
+  final $Res Function(ModerationCommendation) _then;
+
+/// Create a copy of ModerationCommendation
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? recipient = freezed,Object? issuedBy = freezed,Object? category = null,Object? categoryDisplay = null,Object? message = null,Object? visibleToRecipient = null,Object? createdAt = freezed,}) {
+  return _then(_self.copyWith(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,recipient: freezed == recipient ? _self.recipient : recipient // ignore: cast_nullable_to_non_nullable
+as String?,issuedBy: freezed == issuedBy ? _self.issuedBy : issuedBy // ignore: cast_nullable_to_non_nullable
+as String?,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,categoryDisplay: null == categoryDisplay ? _self.categoryDisplay : categoryDisplay // ignore: cast_nullable_to_non_nullable
+as String,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,visibleToRecipient: null == visibleToRecipient ? _self.visibleToRecipient : visibleToRecipient // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [ModerationCommendation].
+extension ModerationCommendationPatterns on ModerationCommendation {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ModerationCommendation value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ModerationCommendation() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ModerationCommendation value)  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationCommendation():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ModerationCommendation value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ModerationCommendation() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String? recipient, @JsonKey(name: 'issued_by')  String? issuedBy,  String category, @JsonKey(name: 'category_display')  String categoryDisplay,  String message, @JsonKey(name: 'visible_to_recipient')  bool visibleToRecipient, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ModerationCommendation() when $default != null:
+return $default(_that.id,_that.recipient,_that.issuedBy,_that.category,_that.categoryDisplay,_that.message,_that.visibleToRecipient,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String? recipient, @JsonKey(name: 'issued_by')  String? issuedBy,  String category, @JsonKey(name: 'category_display')  String categoryDisplay,  String message, @JsonKey(name: 'visible_to_recipient')  bool visibleToRecipient, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _ModerationCommendation():
+return $default(_that.id,_that.recipient,_that.issuedBy,_that.category,_that.categoryDisplay,_that.message,_that.visibleToRecipient,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String? recipient, @JsonKey(name: 'issued_by')  String? issuedBy,  String category, @JsonKey(name: 'category_display')  String categoryDisplay,  String message, @JsonKey(name: 'visible_to_recipient')  bool visibleToRecipient, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _ModerationCommendation() when $default != null:
+return $default(_that.id,_that.recipient,_that.issuedBy,_that.category,_that.categoryDisplay,_that.message,_that.visibleToRecipient,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ModerationCommendation implements ModerationCommendation {
+  const _ModerationCommendation({this.id, this.recipient, @JsonKey(name: 'issued_by') this.issuedBy, this.category = '', @JsonKey(name: 'category_display') this.categoryDisplay = '', this.message = '', @JsonKey(name: 'visible_to_recipient') this.visibleToRecipient = true, @JsonKey(name: 'created_at') this.createdAt});
+  factory _ModerationCommendation.fromJson(Map<String, dynamic> json) => _$ModerationCommendationFromJson(json);
+
+@override final  String? id;
+/// A profile UUID, per `Commendation.recipient`.
+@override final  String? recipient;
+@override@JsonKey(name: 'issued_by') final  String? issuedBy;
+@override@JsonKey() final  String category;
+@override@JsonKey(name: 'category_display') final  String categoryDisplay;
+@override@JsonKey() final  String message;
+@override@JsonKey(name: 'visible_to_recipient') final  bool visibleToRecipient;
+@override@JsonKey(name: 'created_at') final  String? createdAt;
+
+/// Create a copy of ModerationCommendation
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ModerationCommendationCopyWith<_ModerationCommendation> get copyWith => __$ModerationCommendationCopyWithImpl<_ModerationCommendation>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ModerationCommendationToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ModerationCommendation&&(identical(other.id, id) || other.id == id)&&(identical(other.recipient, recipient) || other.recipient == recipient)&&(identical(other.issuedBy, issuedBy) || other.issuedBy == issuedBy)&&(identical(other.category, category) || other.category == category)&&(identical(other.categoryDisplay, categoryDisplay) || other.categoryDisplay == categoryDisplay)&&(identical(other.message, message) || other.message == message)&&(identical(other.visibleToRecipient, visibleToRecipient) || other.visibleToRecipient == visibleToRecipient)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,recipient,issuedBy,category,categoryDisplay,message,visibleToRecipient,createdAt);
+
+@override
+String toString() {
+  return 'ModerationCommendation(id: $id, recipient: $recipient, issuedBy: $issuedBy, category: $category, categoryDisplay: $categoryDisplay, message: $message, visibleToRecipient: $visibleToRecipient, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ModerationCommendationCopyWith<$Res> implements $ModerationCommendationCopyWith<$Res> {
+  factory _$ModerationCommendationCopyWith(_ModerationCommendation value, $Res Function(_ModerationCommendation) _then) = __$ModerationCommendationCopyWithImpl;
+@override @useResult
+$Res call({
+ String? id, String? recipient,@JsonKey(name: 'issued_by') String? issuedBy, String category,@JsonKey(name: 'category_display') String categoryDisplay, String message,@JsonKey(name: 'visible_to_recipient') bool visibleToRecipient,@JsonKey(name: 'created_at') String? createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$ModerationCommendationCopyWithImpl<$Res>
+    implements _$ModerationCommendationCopyWith<$Res> {
+  __$ModerationCommendationCopyWithImpl(this._self, this._then);
+
+  final _ModerationCommendation _self;
+  final $Res Function(_ModerationCommendation) _then;
+
+/// Create a copy of ModerationCommendation
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? recipient = freezed,Object? issuedBy = freezed,Object? category = null,Object? categoryDisplay = null,Object? message = null,Object? visibleToRecipient = null,Object? createdAt = freezed,}) {
+  return _then(_ModerationCommendation(
+id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String?,recipient: freezed == recipient ? _self.recipient : recipient // ignore: cast_nullable_to_non_nullable
+as String?,issuedBy: freezed == issuedBy ? _self.issuedBy : issuedBy // ignore: cast_nullable_to_non_nullable
+as String?,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,categoryDisplay: null == categoryDisplay ? _self.categoryDisplay : categoryDisplay // ignore: cast_nullable_to_non_nullable
+as String,message: null == message ? _self.message : message // ignore: cast_nullable_to_non_nullable
+as String,visibleToRecipient: null == visibleToRecipient ? _self.visibleToRecipient : visibleToRecipient // ignore: cast_nullable_to_non_nullable
+as bool,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
 // dart format on

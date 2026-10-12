@@ -1,17 +1,34 @@
+import logging
+
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import models as db_models
-from rest_framework import viewsets, mixins, status
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
-from django.utils import timezone
 
-from .models import ModerationReport, ContentFlag, ModerationAction, ModerationAppeal
+from . import services
+from .models import Commendation, ContentFlag, ModerationAction, ModerationAppeal, ModerationReport
 from .serializers import (
-    ModerationReportSerializer, ModerationReportActionSerializer,
-    ContentFlagSerializer, ContentFlagActionSerializer,
-    ModerationActionSerializer, ModerationAppealSerializer,
-    ModerationAppealReviewSerializer,
+    CommendationCreateSerializer, CommendationRevokeSerializer, CommendationSerializer,
+    ContentFlagActionSerializer, ContentFlagSerializer,
+    ModerationActionCreateSerializer, ModerationActionReverseSerializer,
+    ModerationActionSerializer, ModerationAppealReviewSerializer,
+    ModerationAppealSerializer, ModerationReportActionSerializer,
+    ModerationReportAssignSerializer, ModerationReportSerializer,
 )
+from .takedown import ContentTakedownError, UnsupportedContentType, describe_registry
+
+logger = logging.getLogger(__name__)
+
+User = get_user_model()
+
+_TRUE = ('true', '1', 'yes')
+_FALSE = ('false', '0', 'no')
 
 
 class ModerationReportViewSet(
@@ -33,14 +50,49 @@ class ModerationReportViewSet(
 
         Without this, `queryset = ...all()` leaks every report (reporter
         identity, target user, resolution notes) to any authenticated user.
+
+        `assigned_to` was write-only before: `handle` set it and nothing ever
+        read it back, so an assignment could not be filtered on, listed or
+        handed to a moderator as "yours". These three query parameters are the
+        read side, and they only apply to the staff queue — for a non-staff user
+        the queryset is already their own reports and an `assigned_to` filter
+        would just be noise.
         """
         queryset = ModerationReport.objects.select_related(
             'reporter', 'target_user', 'assigned_to',
         ).all()
         user = self.request.user
-        if user.is_staff or user.is_superuser:
-            return queryset
-        return queryset.filter(reporter=user)
+        if not (user.is_staff or user.is_superuser):
+            return queryset.filter(reporter=user)
+
+        queryset = self._apply_assignment_filters(queryset)
+        return queryset
+
+    def _apply_assignment_filters(self, queryset):
+        params = self.request.query_params
+        errors = {}
+
+        assigned_to = (params.get('assigned_to') or '').strip()
+        if assigned_to:
+            if assigned_to == 'me':
+                queryset = queryset.filter(assigned_to=self.request.user)
+            else:
+                try:
+                    queryset = queryset.filter(assigned_to_id=assigned_to)
+                except (ValueError, TypeError, DjangoValidationError):
+                    errors['assigned_to'] = ['Must be a user id, or "me".']
+
+        unassigned = (params.get('unassigned') or '').strip().lower()
+        if unassigned in _TRUE:
+            queryset = queryset.filter(assigned_to__isnull=True)
+        elif unassigned in _FALSE:
+            queryset = queryset.filter(assigned_to__isnull=False)
+        elif unassigned:
+            errors['unassigned'] = ['Must be true or false.']
+
+        if errors:
+            raise ValidationError(errors)
+        return queryset
 
     def perform_create(self, serializer):
         from datetime import timedelta
@@ -92,9 +144,52 @@ class ModerationReportViewSet(
         report.save(update_fields=['status', 'assigned_to', 'resolved_at', 'resolution_note'])
         return Response(ModerationReportSerializer(report).data)
 
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def assign(self, request, pk=None):
+        """Assign a report to a staff member, or unassign it.
+
+        Separate from ``handle`` on purpose: ``handle``'s ``investigate`` branch
+        assigns to *the caller* as a side effect of a status change, which is not
+        a queue-management operation and cannot express handing a report to
+        someone else or taking it back.
+        """
+        report = self.get_object()
+        serializer = ModerationReportAssignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        assignee_id = serializer.validated_data['assigned_to']
+        if assignee_id is None:
+            report.assigned_to = None
+        else:
+            assignee = User.objects.filter(pk=assignee_id).first()
+            if assignee is None:
+                return Response({
+                    'success': False, 'data': None,
+                    'message': f'No user with id {assignee_id}.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_404_NOT_FOUND)
+            if not (assignee.is_staff or assignee.is_superuser):
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Reports can only be assigned to a staff member.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            report.assigned_to = assignee
+
+        report.save(update_fields=['assigned_to', 'updated_at'])
+        report.refresh_from_db()
+        return Response({
+            'success': True,
+            'data': ModerationReportSerializer(report).data,
+            'message': 'Report unassigned.' if assignee_id is None else 'Report assigned.',
+            'errors': None,
+            'pagination': None,
+        })
+
 
 class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
     """HITL moderation queue for AI-flagged content (Sprint B3)."""
+
     queryset = ContentFlag.objects.all()
     serializer_class = ContentFlagSerializer
     permission_classes = [IsAdminUser]
@@ -135,6 +230,7 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
             'message': 'OK',
             'errors': None,
             'pagination': None,
+            'supported_content_types': describe_registry(),
         })
 
     @action(detail=False, methods=['get'], url_path='stats')
@@ -167,15 +263,64 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
             'pagination': None,
         })
 
+    @action(detail=False, methods=['get'], url_path='pending-approvals')
+    def pending_approvals(self, request):
+        """Ban/suspension requests waiting for their second approver.
+
+        A moderator raising a ban does not get a ban — they get a row in
+        ``apps.governance`` and a queue entry that stays pending until somebody
+        else says yes. If that wait is invisible from the moderation side, the
+        moderator's natural assumption is that the ban failed, and the obvious
+        "fix" is to try again. So the pending state is surfaced here, next to the
+        flags, with the target and how long it has been waiting.
+        """
+        from apps.governance.models import AccountActionRequest
+
+        queryset = AccountActionRequest.objects.filter(
+            status='pending', action__in=('ban', 'suspension'),
+        ).select_related('target_user', 'requested_by').order_by('created_at')
+
+        now = timezone.now()
+        data = [
+            {
+                'id': str(row.id),
+                'governance_action': row.action,
+                'target_user': str(row.target_user_id),
+                'requested_by': str(row.requested_by_id) if row.requested_by_id else None,
+                'requested_by_profile': row.requested_by_profile,
+                'reason': (row.payload or {}).get('reason', ''),
+                'duration_days': (row.payload or {}).get('duration_days'),
+                'requires_second': row.requires_second,
+                'waiting_seconds': int((now - row.created_at).total_seconds()),
+                'created_at': row.created_at.isoformat(),
+                'moderation_action_id': (row.payload or {}).get('moderation_action_id'),
+            }
+            for row in queryset[:100]
+        ]
+        return Response({
+            'success': True,
+            'data': data,
+            'count': queryset.count(),
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
     @action(detail=True, methods=['post'], url_path='act')
     def act_on_flag(self, request, pk=None):
         """Moderator decision on a flagged item.
 
         Body: {"action": "approve"|"remove"|"escalate", "note": "..."}
 
-        - approve: mark flag actioned, keep content visible
-        - remove: mark flag actioned, remove underlying content
-        - escalate: keep flag unactioned, assigned_to = current moderator
+        - approve: clear the content's flag marker, keep content visible
+        - remove: remove the underlying content, notify its author
+        - escalate: keep the flag unactioned and recorded as escalated
+
+        ``remove`` is ordered content-first, flag-second. The previous
+        implementation set ``is_actioned=True`` *before* attempting the removal
+        and swallowed every exception, so a takedown that failed still left the
+        queue saying "handled" while the content stayed live. A takedown that
+        cannot be completed now returns 4xx and leaves the flag open.
         """
         flag = self.get_object()
         serializer = ContentFlagActionSerializer(data=request.data)
@@ -184,43 +329,76 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
         note = serializer.validated_data.get('note', '')
 
         moderator = request.user
-        content_author = self._get_content_author(flag) or moderator
+        effect = None
 
         if action_name == 'approve':
+            try:
+                effect = services.clear_flag_marker(flag)
+            except ContentTakedownError as exc:
+                logger.warning('Approve of flag %s could not clear its marker: %s', flag.id, exc)
+                effect = str(exc)
             flag.is_actioned = True
             flag.action_taken = 'approved'
             flag.save(update_fields=['is_actioned', 'action_taken', 'updated_at'])
-            self._unflag_content(flag)
             ModerationAction.objects.create(
                 action='report_dismissed',
                 moderator=moderator,
                 report=None,
-                target_user=content_author,
+                target_user=services.resolve_author(flag) or moderator,
                 reason=f'Approved flag #{flag.id}: {note}'.strip(),
             )
+
         elif action_name == 'remove':
-            flag.is_actioned = True
-            flag.action_taken = 'content_removed'
-            flag.save(update_fields=['is_actioned', 'action_taken', 'updated_at'])
-            self._remove_content(flag)
-            ModerationAction.objects.create(
-                action='content_removed',
-                moderator=moderator,
-                report=None,
-                target_user=content_author,
-                reason=f'Removed flag #{flag.id}: {note}'.strip(),
-            )
+            try:
+                action_row, effect = services.remove_flagged_content(
+                    flag=flag, moderator=moderator, note=note,
+                )
+            except ContentTakedownError as exc:
+                # The decisive bit: `is_actioned` stays False, no
+                # ModerationAction row exists, and the moderator is told why.
+                logger.exception('Takedown of flag %s failed; flag left unactioned', flag.id)
+                return Response({
+                    'success': False,
+                    'data': {
+                        'flag_id': str(flag.id),
+                        'content_type': flag.content_type,
+                        'content_id': flag.content_id,
+                        'is_actioned': False,
+                        'takedown_performed': False,
+                    },
+                    'message': f'Content was NOT removed: {exc}',
+                    'errors': {'content': [str(exc)]},
+                    'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as exc:  # noqa: BLE001
+                logger.exception('Unexpected takedown failure for flag %s', flag.id)
+                return Response({
+                    'success': False,
+                    'data': {'flag_id': str(flag.id), 'is_actioned': False,
+                             'takedown_performed': False},
+                    'message': f'Content was NOT removed: {exc}',
+                    'errors': {'content': [str(exc)]},
+                    'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+
         elif action_name == 'escalate':
+            # NOT a warning. Escalating is an internal routing decision — "send
+            # this to somebody senior" — and it previously wrote a
+            # `ModerationAction(action='warning')`, which told the flagged user
+            # they had been warned while staff had in fact done nothing to them
+            # and told them nothing.
             moderator_label = getattr(moderator, 'username', None) or getattr(moderator, 'email', str(moderator.id))
             flag.action_taken = f'escalated by {moderator_label}'
             flag.save(update_fields=['action_taken', 'updated_at'])
             ModerationAction.objects.create(
-                action='warning',
+                action='escalated',
                 moderator=moderator,
                 report=None,
-                target_user=content_author,
-                reason=f'Escalated flag #{flag.id}: {note}'.strip(),
+                target_user=services.resolve_author(flag) or moderator,
+                reason=f'Escalated flag #{flag.id} for second review: {note}'.strip(),
             )
+            effect = 'flag left unactioned and marked for second review; the author was not notified'
+
         else:
             return Response({
                 'success': False, 'data': None,
@@ -230,56 +408,164 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
 
         return Response({
             'success': True,
-            'data': ContentFlagSerializer(flag).data,
+            'data': {
+                'flag': ContentFlagSerializer(flag).data,
+                'effect': effect,
+            },
             'message': f'Flag {action_name}d successfully.',
-            'errors': None, 'pagination': None,
+            'errors': None,
+            'pagination': None,
         })
 
-    def _remove_content(self, flag: ContentFlag) -> None:
-        """Mark the underlying content as removed based on flag.content_type/id."""
-        ct = flag.content_type
-        cid = flag.content_id
-        try:
-            if ct == 'feed.post':
-                from apps.feed.models import Post
-                Post.objects.filter(id=cid).update(moderation_status='removed')
-        except Exception:  # noqa: BLE001
-            pass
 
-    def _unflag_content(self, flag: ContentFlag) -> None:
-        """Clear a flagged status from the underlying content (approve path)."""
-        ct = flag.content_type
-        cid = flag.content_id
-        try:
-            if ct == 'feed.post':
-                from apps.feed.models import Post
-                Post.objects.filter(id=cid, moderation_status='flagged').update(
-                    moderation_status='clean',
-                )
-        except Exception:  # noqa: BLE001
-            pass
+class ModerationActionViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
+    """The moderation ledger, and the staff endpoint that writes to it.
 
-    def _get_content_author(self, flag: ContentFlag):
-        """Resolve the author profile of the flagged content, or None."""
-        ct = flag.content_type
-        cid = flag.content_id
-        try:
-            if ct == 'feed.post':
-                from apps.feed.models import Post
-                post = Post.objects.filter(id=cid).select_related('author').first()
-                if post:
-                    return post.author
-        except Exception:  # noqa: BLE001
-            pass
-        return None
+    ``warning`` applies immediately — it carries no access consequence and
+    blocking it behind a second approver would train staff to batch warnings.
+    ``user_suspended`` and ``user_banned`` never apply here: they create a
+    pending ``apps.governance.AccountActionRequest`` and return 202. One person
+    may ask for a ban. One person may not grant one.
+    """
 
-
-class ModerationActionViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = ModerationAction.objects.select_related('moderator', 'target_user').all()
+    queryset = ModerationAction.objects.select_related(
+        'moderator', 'target_user', 'reversed_by',
+    ).all()
     serializer_class = ModerationActionSerializer
     permission_classes = [IsAdminUser]
     filterset_fields = ['action']
     search_fields = ['reason']
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return ModerationActionCreateSerializer
+        if self.action == 'reverse':
+            return ModerationActionReverseSerializer
+        return ModerationActionSerializer
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['user_model'] = User
+        return context
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        target = data['_target']
+        report = None
+        if data.get('report'):
+            report = get_object_or_404(ModerationReport, pk=data['report'])
+
+        if data['action'] == 'warning':
+            action_row = services.issue_warning(
+                target_user=target,
+                reason=data['reason'],
+                moderator=request.user,
+                report=report,
+            )
+            return Response({
+                'success': True,
+                'data': ModerationActionSerializer(action_row).data,
+                'message': 'Warning issued and the user has been notified.',
+                'errors': None,
+                'pagination': None,
+            }, status=status.HTTP_201_CREATED)
+
+        try:
+            action_row, approval = services.request_standing_action(
+                action=data['action'],
+                target_user=target,
+                reason=data['reason'],
+                duration_days=data.get('duration_days'),
+                moderator=request.user,
+                report=report,
+            )
+        except PermissionError as exc:
+            return Response({
+                'success': False, 'data': None,
+                'message': str(exc),
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_403_FORBIDDEN)
+        except ValueError as exc:
+            return Response({
+                'success': False, 'data': None,
+                'message': str(exc),
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'success': True,
+            'data': {
+                'moderation_action': ModerationActionSerializer(action_row).data,
+                'approval': {
+                    'id': str(approval.id),
+                    'action': approval.action,
+                    'status': approval.status,
+                    'requires_second': True,
+                    'requested_by': str(approval.requested_by_id) if approval.requested_by_id else None,
+                },
+                'applied': False,
+            },
+            'message': (
+                f'{data["action"]} requires a second approver. The request has been '
+                'raised in the governance queue and nothing has been applied yet.'
+            ),
+            'errors': None,
+            'pagination': None,
+        }, status=status.HTTP_202_ACCEPTED)
+
+    @action(detail=True, methods=['post'])
+    def reverse(self, request, pk=None):
+        """Undo an action: restore removed content, or lift a suspension/ban.
+
+        Stamps ``reversed_by`` / ``reversed_at`` / ``reversal_reason`` on the
+        original row and writes a linked ``action_reversed`` row, so "what
+        happened and who undid it" is answerable from either direction.
+        """
+        action_row = self.get_object()
+        serializer = ModerationActionReverseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            reversal, effect = services.reverse_action(
+                action_row=action_row,
+                actor=request.user,
+                reason=serializer.validated_data['reason'],
+            )
+        except ContentTakedownError as exc:
+            logger.warning('Reversal of action %s refused: %s', action_row.id, exc)
+            return Response({
+                'success': False,
+                'data': None,
+                'message': str(exc),
+                'errors': None,
+                'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+        except UnsupportedContentType as exc:
+            return Response({
+                'success': False, 'data': None,
+                'message': str(exc),
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        action_row.refresh_from_db()
+        return Response({
+            'success': True,
+            'data': {
+                'reversed_action': ModerationActionSerializer(action_row).data,
+                'reversal': ModerationActionSerializer(reversal).data,
+                'effect': effect,
+            },
+            'message': f'Reversed: {effect}',
+            'errors': None,
+            'pagination': None,
+        })
 
 
 class ModerationAppealViewSet(
@@ -302,7 +588,6 @@ class ModerationAppealViewSet(
     def perform_create(self, serializer):
         action = serializer.validated_data['action']
         if action.target_user_id != self.request.user.id:
-            from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('You may only appeal actions applied to your account.')
         serializer.save(appellant=self.request.user)
 
@@ -321,15 +606,124 @@ class ModerationAppealViewSet(
         appeal.save(update_fields=['status', 'reviewer', 'reviewed_at', 'resolution_note'])
 
         if decision == 'approve':
-            original = appeal.action
-            if original.action in ('user_suspended', 'user_banned'):
-                original.target_user.is_active = True
-                original.target_user.save(update_fields=['is_active'])
-            ModerationAction.objects.create(
-                action='action_reversed',
-                moderator=request.user,
-                report=appeal.action.report,
-                target_user=appeal.action.target_user,
-                reason=f'Appeal approved for action #{appeal.action_id}: {appeal.resolution_note}',
-            )
+            # Same reversal path the reverse endpoint uses. The old code set
+            # `target_user.is_active = True` directly, which reactivated the
+            # login while leaving the AccountStanding row still reading
+            # "suspended" — so `get_standing_object` re-suspended the account the
+            # instant it was read back, and the appeal fixed nothing.
+            try:
+                services.reverse_action(
+                    action_row=appeal.action,
+                    actor=request.user,
+                    reason=f'Appeal approved: {appeal.resolution_note}'.strip(),
+                )
+            except ContentTakedownError as exc:
+                logger.warning('Appeal %s approved but reversal refused: %s',
+                               appeal.id, exc)
+                return Response({
+                    'success': False, 'data': None,
+                    'message': str(exc),
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_409_CONFLICT)
         return Response(ModerationAppealSerializer(appeal).data)
+
+
+class CommendationViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    """Staff-recorded commendations.
+
+    Read access is deliberately narrow: a user sees commendations addressed to
+    them, plus the ones they issued. A commendation is a judgement about
+    somebody, written by staff, and making it browsable platform-wide would turn
+    it into a popularity scoreboard.
+    """
+
+    queryset = Commendation.objects.select_related('recipient', 'issued_by')
+    serializer_class = CommendationSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['category']
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Commendation.objects.select_related('recipient', 'issued_by')
+        if user.is_staff or user.is_superuser:
+            return queryset
+        return queryset.filter(
+            db_models.Q(recipient__user_id=user.pk) | db_models.Q(issued_by__user_id=user.pk),
+        ).filter(visible_to_recipient=True)
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CommendationCreateSerializer
+        if self.action == 'revoke':
+            return CommendationRevokeSerializer
+        return CommendationSerializer
+
+    def create(self, request, *args, **kwargs):
+        if not (request.user.is_staff or request.user.is_superuser):
+            raise PermissionDenied('Only staff may issue commendations.')
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # A superuser created via `createsuperuser` has no Profile row. That is a
+        # legitimate issuer of a commendation, so it records NULL rather than
+        # 500 — the recipient's notification does not need an issuer name.
+        issuer = getattr(request.user, 'profile', None)
+        commendation = serializer.save(issued_by=issuer)
+        services.notify_commendation(commendation)
+        return Response({
+            'success': True,
+            'data': CommendationSerializer(commendation).data,
+            'message': 'Commendation issued and the recipient has been notified.',
+            'errors': None,
+            'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, *args, **kwargs):
+        """The recipient may delete their own; staff may delete any.
+
+        Hard delete, unlike ``revoke``: the recipient is removing something from
+        their own feed, and keeping a row they cannot see would be pointless.
+        The issuing staff member's record of having sent it is the appeal log,
+        not this table.
+        """
+        commendation = self.get_object()
+        is_recipient = commendation.recipient_id == request.user.pk
+        if not (is_recipient or request.user.is_staff or request.user.is_superuser):
+            raise PermissionDenied('You can only remove your own commendation.')
+        commendation.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def revoke(self, request, pk=None):
+        """Staff withdraw a commendation without erasing the row.
+
+        ``visible_to_recipient=False`` keeps the audit trail — an operator must
+        not be able to quietly un-send a commendation they regret — while
+        removing it from the recipient's view.
+        """
+        commendation = self.get_object()
+        serializer = CommendationRevokeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if not commendation.visible_to_recipient:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'This commendation was already revoked.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_409_CONFLICT)
+
+        commendation.visible_to_recipient = False
+        commendation.save(update_fields=['visible_to_recipient', 'updated_at'])
+        return Response({
+            'success': True,
+            'data': CommendationSerializer(commendation).data,
+            'message': 'Commendation revoked. The record is kept; the recipient '
+                       'no longer sees it.',
+            'errors': None,
+            'pagination': None,
+        })

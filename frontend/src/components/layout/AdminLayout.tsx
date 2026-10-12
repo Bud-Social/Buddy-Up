@@ -2,6 +2,7 @@ import { Outlet, Link, NavLink } from 'react-router-dom';
 import {
   ArrowLeft, BrainCircuit, Building2, CreditCard, Dumbbell, LayoutDashboard,
   RadioTower, ShieldCheck, BadgeCheck, ShoppingCart, Users, UsersRound, Bike,
+  Gavel, ScrollText, Mail, KeyRound, UserCheck,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
@@ -38,8 +39,23 @@ const PRIMARY_NAV: NavItem[] = [
   { to: '/admin/wallet', label: 'Wallet', icon: CreditCard },
 ];
 
+/**
+ * Operational tools, separated from the domain pages by the divider in the nav.
+ *
+ * The split is not cosmetic. Everything above this line reads and acts on a
+ * domain; everything on it decides *who may use* the domains above, or records
+ * what was done. A support agent opening the console should be able to see at a
+ * glance that granting, approving and the audit trail are a different kind of
+ * surface from adjusting an order's status — and they are, because those pages
+ * enforce two-person rules that the domain pages do not.
+ */
 const OPS_NAV: NavItem[] = [
   { to: '/admin/moderation', label: 'Moderation', icon: ShieldCheck },
+  { to: '/admin/appeals', label: 'Appeals', icon: Gavel },
+  { to: '/admin/approvals', label: 'Approvals', icon: UserCheck },
+  { to: '/admin/audit', label: 'Audit', icon: ScrollText },
+  { to: '/admin/email', label: 'Email', icon: Mail },
+  { to: '/admin/staff', label: 'Staff', icon: KeyRound },
   { to: '/admin/verification', label: 'Verification', icon: BadgeCheck },
 ];
 
@@ -121,7 +137,8 @@ export function AdminLayout() {
           BuddyUp Fit Admin — people, marketplace, delivery &amp; platform health
         </p>
         <p className="text-center text-[11px] text-buddy-text-secondary/70 mt-1">
-          You are signed in as yourself. Actions here are recorded against your staff account.
+          You are signed in as yourself. Actions here are recorded against your staff account — read them
+          back any time under <Link to="/admin/audit" className="text-buddy-green hover:underline">Audit</Link>.
         </p>
       </footer>
     </div>

@@ -7,12 +7,19 @@ import '../../../shared/widgets/error_view.dart';
 import '../providers/admin_provider.dart';
 import '../widgets/admin_widgets.dart';
 
-/// Staff-gated admin console for `/api/v1/portal/**`.
+/// Staff-gated admin console for `/api/v1/portal/**`, `/governance/**` and
+/// `/moderation/**`.
 ///
-/// Read-mostly by design: the web console is the primary surface, so this
-/// mirrors its capabilities rather than inventing new ones. Gym and community
-/// rows expose `member_count` and nothing else — a roster is deliberately not
-/// reachable from here.
+/// The first block is the day-to-day read-and-act surface. The second is
+/// governance — the routes that decide who may use the first block and record
+/// what was done — kept as its own group because a support agent reading this
+/// list should not have to infer that "Approvals" is a different kind of thing
+/// from "Orders".
+///
+/// Read-mostly by design on the portal half: the web console is the primary
+/// surface, so this mirrors its capabilities rather than inventing new ones.
+/// Gym and community rows expose `member_count` and nothing else — a roster is
+/// deliberately not reachable from here.
 class AdminConsoleScreen extends ConsumerWidget {
   const AdminConsoleScreen({super.key});
 
@@ -68,6 +75,93 @@ class AdminConsoleScreen extends ConsumerWidget {
     ),
   ];
 
+  /// The governance destinations: the routes that decide who may use the blocks
+  /// above, and that record what was done to the ones who did.
+  ///
+  /// Grouped separately rather than appended because they are a different kind
+  /// of thing. "Orders" is a queue you work; "Approvals" is a queue where the
+  /// only safe action is to be somebody else from the requester.
+  static const List<({String route, String label, String blurb, IconData icon})>
+      governanceSections = [
+    (
+      route: '/admin/moderation',
+      label: 'Moderation',
+      blurb: 'Flag queue, reports, discipline and commendations',
+      icon: Icons.shield_outlined
+    ),
+    (
+      route: '/admin/approvals',
+      label: 'Approvals',
+      blurb: 'Two-person queue — a ban applies only when approved',
+      icon: Icons.how_to_reg_outlined
+    ),
+    (
+      route: '/admin/staff-roles',
+      label: 'Staff Roles',
+      blurb: 'Who may use the console, and with which scopes',
+      icon: Icons.badge_outlined
+    ),
+    (
+      route: '/admin/audit',
+      label: 'Audit Log',
+      blurb: 'Every staff action, with before/after and CSV export',
+      icon: Icons.history
+    ),
+    (
+      route: '/admin/emails',
+      label: 'Email Console',
+      blurb: 'Message a user, and read what was sent',
+      icon: Icons.outbox_outlined
+    ),
+  ];
+
+  static Widget _sectionTile(
+    BuildContext context,
+    ColorScheme cs,
+    ({String route, String label, String blurb, IconData icon}) section,
+  ) {
+    return InkWell(
+      onTap: () => context.push(section.route),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: cs.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outline.withValues(alpha: 0.15)),
+        ),
+        child: Row(
+          children: [
+            Icon(section.icon, size: 20, color: BuddyColors.green),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    section.label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    section.blurb,
+                    style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right,
+                size: 20, color: BuddyColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isStaff = ref.watch(isStaffProvider);
@@ -90,55 +184,32 @@ class AdminConsoleScreen extends ConsumerWidget {
         children: [
           const AdminPageHeader(
             title: 'Platform administration',
-            description: 'Staff only. Read-mostly — the web console is the '
-                'primary surface.',
+            description: 'Staff only. The portal blocks are read-mostly — the '
+                'web console is the primary surface.',
           ),
           const SizedBox(height: 16),
           for (final section in sections)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: InkWell(
-                onTap: () => context.push(section.route),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: cs.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border:
-                        Border.all(color: cs.outline.withValues(alpha: 0.15)),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(section.icon, size: 20, color: BuddyColors.green),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              section.label,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: cs.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              section.blurb,
-                              style: TextStyle(
-                                  fontSize: 12, color: cs.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right,
-                          size: 20, color: BuddyColors.textSecondary),
-                    ],
-                  ),
-                ),
+              child: _sectionTile(context, cs, section),
+            ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+            child: Text(
+              'GOVERNANCE',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.1,
+                color: cs.onSurfaceVariant,
               ),
+            ),
+          ),
+          for (final section in governanceSections)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _sectionTile(context, cs, section),
             ),
           const SizedBox(height: 8),
           Container(

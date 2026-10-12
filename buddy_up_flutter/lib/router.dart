@@ -89,6 +89,12 @@ import 'features/admin/screens/admin_communities_screen.dart';
 import 'features/admin/screens/admin_stations_screen.dart';
 import 'features/admin/screens/admin_delivery_screen.dart';
 import 'features/admin/screens/admin_wallet_screen.dart';
+import 'features/admin/screens/admin_moderation_screen.dart';
+import 'features/admin/screens/admin_approvals_screen.dart';
+import 'features/admin/screens/admin_audit_screen.dart';
+import 'features/admin/screens/admin_email_screen.dart';
+import 'features/admin/screens/admin_staff_screen.dart';
+import 'features/settings/screens/moderation_screen.dart';
 import 'shared/navigation/app_nav.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -631,6 +637,45 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         path: '/admin/wallet',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const AdminWalletScreen(),
+      ),
+      // Governance: the two-person surface. Every screen re-checks `is_staff`
+      // in build, so a deep link cannot bypass the gate the way the server's
+      // 403 alone would be a poor experience.
+      GoRoute(
+        path: '/admin/moderation',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminModerationScreen(),
+      ),
+      GoRoute(
+        path: '/admin/approvals',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminApprovalsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/audit',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminAuditScreen(),
+      ),
+      GoRoute(
+        path: '/admin/emails',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminEmailScreen(),
+      ),
+      GoRoute(
+        path: '/admin/staff-roles',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminStaffScreen(),
+      ),
+      // User-side moderation: their own record, appeals and commendations.
+      // Not staff-gated — an action a user cannot see is one they cannot
+      // appeal. `?action=` deep-links from the notification that raised the
+      // action and opens the appeal form pre-filled.
+      GoRoute(
+        path: '/settings/moderation',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) => ModerationScreen(
+          appealActionId: state.uri.queryParameters['action'],
+        ),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,

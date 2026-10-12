@@ -11,9 +11,21 @@ part 'admin_portal_repository.g.dart';
 /// optional filter map passed straight through as query params — same
 /// convention as `MarketplaceRepository`.
 ///
-/// This surface is read-mostly by design: it is the mobile shadow of the web
-/// admin console, not a second moderation desk. Nothing here deletes a row and
-/// nothing here writes the wallet ledger.
+/// The portal half is read-mostly by design: it is the mobile shadow of the web
+/// admin console, not a second moderation desk.
+///
+/// Two namespaces are appended below and are deliberately *not* folded into the
+/// portal surface:
+///
+/// * `/governance/**` — staff roles, two-person approvals, the audit trail and
+///   the staff email console. Same envelope, same conventions.
+/// * `/moderation/**` — flags, reports, the action ledger, appeals and
+///   commendations. These are DRF viewsets, so the list shape differs; see the
+///   section comment above those methods.
+///
+/// Filters are always passed through rather than validated client-side. The
+/// endpoints 400 on an unknown value naming the allowed set, and that error is
+/// more useful than a guess that silently returns everything.
 @RestApi()
 abstract class AdminPortalRepository {
   factory AdminPortalRepository(Dio dio, {String baseUrl}) = _AdminPortalRepository;
@@ -217,4 +229,280 @@ abstract class AdminPortalRepository {
 
   @GET('/portal/wallet/reconciliation/')
   Future<dynamic> getReconciliation();
+
+  // -------------------------------------------------------------------------
+  // `/governance/**` — two-person approvals, the audit trail, staff email.
+  //
+  // Separate from `/portal/**` because that is how the server splits it: the
+  // routes that grant access must not live in the same table as the routes
+  // access is granted over. Envelope-identical to the portal surface.
+  // -------------------------------------------------------------------------
+
+  // --- Staff roles ---
+
+  @GET('/governance/staff-roles/')
+  Future<dynamic> getStaffRoles({
+    @Query('role') String? role,
+    @Query('revoked') String? revoked,
+    @Query('page') int? page,
+    @Query('page_size') int? pageSize,
+  });
+
+  /// Grants a role. Returns a `StaffRole` at 201 when applied directly, or an
+  /// `AccountActionRequest` at 202 when `requiresSecond` put it in the approval
+  /// queue — the same endpoint, two very different outcomes.
+  @POST('/governance/staff-roles/')
+  Future<dynamic> grantStaffRole(@Body() Map<String, dynamic> data);
+
+  @GET('/governance/staff-roles/{id}/')
+  Future<dynamic> getStaffRole(@Path('id') String roleId);
+
+  @PATCH('/governance/staff-roles/{id}/')
+  Future<dynamic> updateStaffRole(
+    @Path('id') String roleId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  /// Revokes rather than deletes: the row is the record of who was given what.
+  @DELETE('/governance/staff-roles/{id}/')
+  Future<dynamic> revokeStaffRole(@Path('id') String roleId);
+
+  // --- Approvals ---
+
+  @GET('/governance/approvals/')
+  Future<dynamic> getApprovals({
+    @Query('status') String? status,
+    @Query('action') String? action,
+    @Query('target_user') String? targetUser,
+    @Query('mine') String? mine,
+    @Query('page') int? page,
+    @Query('page_size') int? pageSize,
+  });
+
+  @GET('/governance/approvals/{id}/')
+  Future<dynamic> getApproval(@Path('id') String approvalId);
+
+  @POST('/governance/approvals/request/')
+  Future<dynamic> requestApproval(@Body() Map<String, dynamic> data);
+
+  @POST('/governance/approvals/{id}/approve/')
+  Future<dynamic> approveApproval(
+    @Path('id') String approvalId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  @POST('/governance/approvals/{id}/reject/')
+  Future<dynamic> rejectApproval(
+    @Path('id') String approvalId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  @POST('/governance/approvals/{id}/cancel/')
+  Future<dynamic> cancelApproval(
+    @Path('id') String approvalId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  // --- Audit trail ---
+
+  @GET('/governance/audit/')
+  Future<dynamic> getAuditLog({
+    @Query('action') String? action,
+    @Query('target_type') String? targetType,
+    @Query('target_id') String? targetId,
+    @Query('actor') String? actor,
+    @Query('date_from') String? dateFrom,
+    @Query('date_to') String? dateTo,
+    @Query('page') int? page,
+    @Query('page_size') int? pageSize,
+  });
+
+  @GET('/governance/audit/{id}/')
+  Future<dynamic> getAuditRow(@Path('id') String rowId);
+
+  /// Chronological history of one object. `target_type` is required — the
+  /// server 400s without it rather than returning every action on record.
+  @GET('/governance/audit/timeline/')
+  Future<dynamic> getAuditTimeline({
+    @Query('target_type') String? targetType,
+    @Query('target_id') String? targetId,
+    @Query('page') int? page,
+    @Query('page_size') int? pageSize,
+  });
+
+  /// CSV of the *current* filter, `Content-Disposition: attachment`.
+  ///
+  /// Not a normal JSON call. `@DioResponseType(bytes)` keeps Dio from trying to
+  /// parse a CSV as JSON, and returning `HttpResponse` hands back the headers
+  /// alongside the body — the filename, which names the filter and the export
+  /// time, exists nowhere else. Uses the same filter names as `getAuditLog` so
+  /// an export is always exactly what the operator was looking at.
+  @GET('/governance/audit/export/')
+  @DioResponseType(ResponseType.bytes)
+  Future<HttpResponse<dynamic>> exportAuditLog({
+    @Query('action') String? action,
+    @Query('target_type') String? targetType,
+    @Query('target_id') String? targetId,
+    @Query('actor') String? actor,
+    @Query('date_from') String? dateFrom,
+    @Query('date_to') String? dateTo,
+  });
+
+  // --- Assistance console ---
+
+  /// One message to one registered, non-deleted account.
+  ///
+  /// Exactly one of `user_id` / `email`. The serializer rejects unknown keys
+  /// outright, so there is nowhere to put a second recipient and no bulk send
+  /// to accidentally build.
+  @POST('/governance/emails/send/')
+  Future<dynamic> sendStaffEmail(@Body() Map<String, dynamic> data);
+
+  @GET('/governance/emails/log/')
+  Future<dynamic> getEmailLog({
+    @Query('status') String? status,
+    @Query('recipient_email') String? recipientEmail,
+    @Query('sent_by') String? sentBy,
+    @Query('page') int? page,
+    @Query('page_size') int? pageSize,
+  });
+
+  /// Failed deliveries only — the server 409s on any other status.
+  @POST('/governance/emails/{id}/resend/')
+  Future<dynamic> resendStaffEmail(@Path('id') String emailId);
+
+  // -------------------------------------------------------------------------
+  // `/moderation/**` — flags, reports, the action ledger, appeals, praise.
+  //
+  // A different envelope convention to `/portal/**` and `/governance/**`:
+  // these are DRF viewsets, so a list is `{next, previous, results}` and the
+  // hand-written action views return the raw serializer row with no envelope
+  // at all. `moderationRows` / `moderationPagination` in the provider
+  // normalise both shapes.
+  //
+  // They are also *cursor*-paginated: there is no page number and no `count`.
+  // Every list below therefore takes `cursor`/`limit`; passing `page` would be
+  // accepted and ignored, which looks like paging and is not.
+  // -------------------------------------------------------------------------
+
+  /// Cursor-paginated, so this takes `cursor`/`limit` rather than a page
+  /// number. DRF's `CursorPagination` ignores `page` entirely; sending one
+  /// would look like paging and silently return the same first page every
+  /// time.
+  @GET('/moderation/reports/')
+  Future<dynamic> getModerationReports({
+    @Query('status') String? status,
+    @Query('reason') String? reason,
+    /// `me` or a staff user id. Staff-only; ignored for a reporter's own list.
+    @Query('assigned_to') String? assignedTo,
+    @Query('unassigned') String? unassigned,
+    @Query('cursor') String? cursor,
+    @Query('limit') int? limit,
+  });
+
+  @GET('/moderation/reports/{id}/')
+  Future<dynamic> getModerationReport(@Path('id') String reportId);
+
+  @POST('/moderation/reports/{id}/handle/')
+  Future<dynamic> handleModerationReport(
+    @Path('id') String reportId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  /// Assign to a staff user, or unassign by sending an explicit `null`.
+  @POST('/moderation/reports/{id}/assign/')
+  Future<dynamic> assignModerationReport(
+    @Path('id') String reportId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  /// Un-actioned flags, worst severity and highest confidence first.
+  @GET('/moderation/content-flags/queue/')
+  Future<dynamic> getContentFlagQueue({
+    @Query('flag_reason') String? flagReason,
+    @Query('severity') String? severity,
+  });
+
+  @GET('/moderation/content-flags/stats/')
+  Future<dynamic> getContentFlagStats();
+
+  @GET('/moderation/content-flags/pending-approvals/')
+  Future<dynamic> getPendingModerationApprovals();
+
+  @POST('/moderation/content-flags/{id}/act/')
+  Future<dynamic> actOnContentFlag(
+    @Path('id') String flagId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  /// The ledger. `action` filter vocabulary: warning, content_removed,
+  /// user_suspended, user_banned, report_dismissed, escalated, action_reversed.
+  @GET('/moderation/actions/')
+  Future<dynamic> getModerationActions({
+    @Query('action') String? action,
+    @Query('cursor') String? cursor,
+    @Query('limit') int? limit,
+  });
+
+  @GET('/moderation/actions/{id}/')
+  Future<dynamic> getModerationAction(@Path('id') String actionId);
+
+  /// `warning` applies immediately (201). `user_suspended` / `user_banned`
+  /// never do: they create a governance request and answer 202 with
+  /// `applied: false`. Read the status code, not just the body.
+  @POST('/moderation/actions/')
+  Future<dynamic> createModerationAction(@Body() Map<String, dynamic> data);
+
+  @POST('/moderation/actions/{id}/reverse/')
+  Future<dynamic> reverseModerationAction(
+    @Path('id') String actionId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  /// The caller's own appeals for a non-staff user, every appeal for staff.
+  @GET('/moderation/appeals/')
+  Future<dynamic> getModerationAppeals({
+    @Query('status') String? status,
+    @Query('cursor') String? cursor,
+    @Query('limit') int? limit,
+  });
+
+  @GET('/moderation/appeals/{id}/')
+  Future<dynamic> getModerationAppeal(@Path('id') String appealId);
+
+  /// `{action: <moderation_action_id>, reason}` — the action must be one
+  /// applied to the caller's own account, and there may be only one appeal per
+  /// (action, appellant) pair.
+  @POST('/moderation/appeals/')
+  Future<dynamic> createModerationAppeal(@Body() Map<String, dynamic> data);
+
+  @POST('/moderation/appeals/{id}/review/')
+  Future<dynamic> reviewModerationAppeal(
+    @Path('id') String appealId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  /// Commendations addressed to the caller plus the ones they issued.
+  @GET('/moderation/commendations/')
+  Future<dynamic> getModerationCommendations({
+    @Query('category') String? category,
+    @Query('cursor') String? cursor,
+    @Query('limit') int? limit,
+  });
+
+  /// `recipient` is a **Profile** id, not a user id.
+  @POST('/moderation/commendations/')
+  Future<dynamic> createModerationCommendation(@Body() Map<String, dynamic> data);
+
+  /// Hard delete. The recipient may remove their own; staff may remove any.
+  @DELETE('/moderation/commendations/{id}/')
+  Future<dynamic> deleteModerationCommendation(@Path('id') String commendationId);
+
+  /// Withdraw without erasing: the row stays, `visible_to_recipient` goes
+  /// false, so an operator cannot quietly un-send a commendation they regret.
+  @POST('/moderation/commendations/{id}/revoke/')
+  Future<dynamic> revokeModerationCommendation(
+    @Path('id') String commendationId,
+    @Body() Map<String, dynamic> data,
+  );
 }
