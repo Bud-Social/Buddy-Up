@@ -20,6 +20,31 @@ import type { ApiResponse } from '@/types';
 
 export type StationOwnerType = 'shop' | 'gym';
 
+/**
+ * A station's owning entity. `GET /marketplace/stations/` returns one of these
+ * inline on each row (`owner_type: 'shop' | 'gym'`) rather than only the id, so
+ * ownership can be derived from the list response alone — no extra round trip.
+ *
+ * `membership_role` is what makes gym ownership decidable: a gym's `owner_data`
+ * lists every leader with their role, and only `owner`/`co_owner` may edit a
+ * station (matching the backend's write guard).
+ */
+export interface StationOwnerRef {
+  id?: string | null;
+  name?: string | null;
+  handle?: string | null;
+  /** The owning entity's own user id, when the backend denormalises it. */
+  owner?: string | null;
+  owner_username?: string | null;
+  membership_role?: string | null;
+  owner_data?: Array<{ user_id?: string | null; username?: string | null; role?: string | null }> | null;
+}
+
+export interface StationOwnerIdentity {
+  id?: string | null;
+  username?: string | null;
+}
+
 /** Real-money methods only. Artifacts (wallet) never goes through a provider. */
 export type StationPaymentMethod = 'mpesa' | 'card';
 
@@ -50,8 +75,58 @@ export interface PickupStation {
   instructions?: string | null;
   is_primary?: boolean;
   owner_type?: StationOwnerType | string | null;
+  /** Present when `owner_type === 'shop'`. */
+  shop?: StationOwnerRef | null;
+  /** Present when `owner_type === 'gym'`. */
+  gym?: StationOwnerRef | null;
   /** Present only when the list was called with both `lat` and `lng`. */
   distance_km?: number | null;
+  created_at?: string | null;
+}
+
+/**
+ * Write payload for `POST/PATCH /marketplace/stations/`.
+ *
+ * `owner_type` plus exactly one of `shop`/`gym` identifies the owner. The
+ * backend enforces who may write (shop owner/manager, gym owner/co-owner); this
+ * type only describes the shape.
+ */
+export interface StationWritePayload {
+  name: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  phone?: string;
+  description?: string;
+  instructions?: string;
+  opening_hours?: StationOpeningHours | null;
+  is_primary?: boolean;
+  owner_type?: StationOwnerType;
+  shop?: string;
+  gym?: string;
+}
+
+/** `POST /marketplace/station-applications/` — reviewed by an admin. */
+export interface StationApplication {
+  id?: string;
+  status?: string | null;
+  station_name?: string | null;
+  name?: string | null;
+  city?: string | null;
+  country?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  rejection_reason?: string | null;
+  created_at?: string | null;
+}
+
+/** Statuses an application sits in before a decision lands. */
+export const STATION_APPLICATION_PENDING = ['pending', 'submitted', 'under_review'] as const;
+
+export function isPendingApplication(status: unknown): boolean {
+  return typeof status === 'string' && (STATION_APPLICATION_PENDING as readonly string[]).includes(status.toLowerCase());
 }
 
 export interface StationListParams {
@@ -208,6 +283,76 @@ function cleanParams(params?: StationListParams): Record<string, unknown> | unde
   return Object.keys(out).length ? out : undefined;
 }
 
+/* ------------------------------------------------------------------ */
+/* Ownership derivation                                                */
+/* ------------------------------------------------------------------ */
+
+const STATION_OWNER_ROLES = ['owner', 'co_owner'];
+
+function matchesUser(value: string | null | undefined, identity: StationOwnerIdentity): boolean {
+  if (!value) return false;
+  if (identity.id && value === identity.id) return true;
+  return Boolean(identity.username && value === identity.username);
+}
+
+/**
+ * Does the signed-in user own (and so may edit) this station?
+ *
+ * The backend's write guard is "shop owner/manager or gym owner/co-owner", so
+ * the same rule is mirrored here rather than probed per row. Each owner type is
+ * checked against every signal the list response might carry, because the
+ * serializer shape varies with what is related — a shop row may inline only
+ * `owner`, a gym row only `owner_data`:
+ *
+ *  1. the owner reference's own `owner` / `owner_username` matches me;
+ *  2. for gyms, `owner_data` contains me at `owner`/`co_owner` — a plain
+ *     `member` or `moderator` entry is NOT ownership, so it is excluded;
+ *  3. an explicitly denormalised `membership_role` at `owner`/`co_owner`.
+ *
+ * Unknown owner type → false. An identity with neither id nor username matches
+ * nothing, so an unauthenticated render never claims a station as its own.
+ */
+export function isStationOwnedBy(station: PickupStation, identity: StationOwnerIdentity | null | undefined): boolean {
+  if (!identity || (!identity.id && !identity.username)) return false;
+  const type = station.owner_type;
+  if (type !== 'shop' && type !== 'gym') return false;
+
+  const ref = type === 'shop' ? station.shop : station.gym;
+  if (!ref) return false;
+
+  if (matchesUser(ref.owner, identity) || matchesUser(ref.owner_username, identity)) return true;
+
+  if (type === 'gym' && Array.isArray(ref.owner_data)) {
+    const leads = ref.owner_data.filter((o) => STATION_OWNER_ROLES.includes((o.role || '').toLowerCase()));
+    if (leads.some((o) => matchesUser(o.user_id, identity) || matchesUser(o.username, identity))) return true;
+  }
+
+  // The caller is being described as the owner entity itself, with their role
+  // denormalised onto the row. Only a leadership role qualifies — a `moderator`
+  // or `member` membership_role is not station ownership.
+  if (typeof ref.membership_role === 'string' && STATION_OWNER_ROLES.includes(ref.membership_role.toLowerCase())) {
+    return matchesUser(ref.id, identity);
+  }
+
+  return false;
+}
+
+/** Keep only the stations the signed-in user owns. Order is preserved. */
+export function deriveOwnedStations<T extends PickupStation>(stations: T[], identity: StationOwnerIdentity | null | undefined): T[] {
+  if (!Array.isArray(stations)) return [];
+  return stations.filter((s) => isStationOwnedBy(s, identity));
+}
+
+/**
+ * A station's owner, as one human line. Falls back to the owner type alone when
+ * the related row is not inlined, so the line is never blank.
+ */
+export function stationOwnerLabel(station: PickupStation): string {
+  const ref = station.owner_type === 'gym' ? station.gym : station.shop;
+  if (!ref) return station.owner_type ? `${station.owner_type} owned` : 'Unknown owner';
+  return ref.name || ref.handle || `${station.owner_type} owned`;
+}
+
 export const stationsApi = {
   /**
    * Stations, nearest first when `lat`/`lng` are supplied. The response envelope
@@ -233,6 +378,17 @@ export const stationsApi = {
         ...(payload.phone ? { phone: payload.phone } : {}),
       })
       .then((r) => r.data),
+
+  /** Owner-only write. The backend rejects a non-owner shop/gym admin. */
+  create: (data: StationWritePayload) =>
+    apiClient.post<ApiResponse<PickupStation>>('/marketplace/stations/', data).then((r) => r.data),
+
+  update: (id: string, data: Partial<StationWritePayload>) =>
+    apiClient.patch<ApiResponse<PickupStation>>(`/marketplace/stations/${id}/`, data).then((r) => r.data),
+
+  /** Apply to run a station. Reviewed by an admin; status comes back on submit. */
+  apply: (data: Record<string, unknown>) =>
+    apiClient.post<ApiResponse<StationApplication>>('/marketplace/station-applications/', data).then((r) => r.data),
 };
 
 export type StationsApi = typeof stationsApi;

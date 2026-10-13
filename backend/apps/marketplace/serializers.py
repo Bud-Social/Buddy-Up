@@ -1,5 +1,6 @@
 import qrcode
 import base64
+from decimal import Decimal
 from math import asin, cos, radians, sin, sqrt
 from io import BytesIO
 from django.utils import timezone
@@ -17,6 +18,7 @@ from .models import (
     PaymentIntent,
 )
 from .models import APPLICATION_STATUS_CHOICES
+from .models import COURIER_FULFILLMENT_STATUS, COURIER_TRANSITIONS, SOLD_TICKET_STATUSES
 
 ARTIFACT_TYPES = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion']
 
@@ -1312,3 +1314,224 @@ class PaymentIntentCreateSerializer(serializers.Serializer):
                 'or none of them.'
             )
         return data
+
+
+# ---------------------------------------------------------------------------
+# Courier (delivery personnel) serializers
+# ---------------------------------------------------------------------------
+
+def estimate_commission_artifacts(total_artifacts, commission_rate):
+    """``commission_rate`` of every artifact bucket, rounded DOWN per bucket.
+
+    Artifacts are indivisible — there is no "half a sprint" — so ``floor`` per
+    bucket is the only rounding the rest of the wallet can honour, and it can
+    never promise more than was delivered. Every key in ``total_artifacts``
+    comes back, including the ones that floor to zero: a bucket that rounded to
+    nothing is information ("you moved 3 sprints, worth 0 sprints of
+    commission"), and dropping it would hide the arithmetic from the caller.
+
+    ``commission_rate`` is a Decimal fraction (``0.15``). An empty/missing
+    ``total_artifacts`` yields ``{}``.
+    """
+    if not total_artifacts:
+        return {}
+    try:
+        rate = Decimal(str(commission_rate or 0))
+    except (TypeError, ValueError, ArithmeticError):
+        return {}
+    commission = {}
+    for artifact_type, qty in total_artifacts.items():
+        amount = Decimal(str(qty or 0)) * rate
+        # int() truncates toward zero; quantities are non-negative and the rate
+        # is clamped to [0, 1] by a CHECK constraint, so that is a floor.
+        commission[artifact_type] = int(amount) if amount > 0 else 0
+    return commission
+
+
+class CourierOrderItemSerializer(serializers.ModelSerializer):
+    """Just enough of a line item for a courier to recognise the parcel."""
+
+    creator_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderItem
+        fields = ['title', 'quantity', 'item_type', 'creator_name']
+
+    def get_creator_name(self, obj):
+        return (obj.creator.display_name or obj.creator.username) if obj.creator_id else None
+
+
+class CourierOrderSerializer(serializers.ModelSerializer):
+    """An order as the assigned courier sees it.
+
+    A courier cannot fulfil anything without the address and the line items, so
+    both are here in full — the buyer knowingly gave a courier this information,
+    which is the same position the seller is in (see ``SellerOrderSerializer``).
+
+    Deliberately *not* included: the order-wide money totals, the discount code,
+    and every seller's earnings. ``commission_artifacts`` is a locally computed
+    estimate over ``total_artifacts`` and is the only monetary figure exposed.
+    """
+
+    status_label = serializers.SerializerMethodField()
+    fulfillment_status = serializers.SerializerMethodField()
+    allowed_transitions = serializers.SerializerMethodField()
+    items = CourierOrderItemSerializer(many=True, read_only=True)
+    pickup_station = serializers.SerializerMethodField()
+    delivery_personnel_name = serializers.SerializerMethodField()
+    commission_artifacts = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = [
+            'id', 'order_number', 'status', 'status_label',
+            'fulfillment_type', 'fulfillment_status', 'allowed_transitions',
+            'items', 'delivery_address', 'pickup_station',
+            'delivery_personnel_name', 'commission_artifacts',
+            'total_artifacts', 'created_at', 'paid_at',
+        ]
+
+    def get_status_label(self, obj):
+        return dict(Order.STATUS_CHOICES).get(obj.status, obj.status)
+
+    def get_fulfillment_status(self, obj):
+        """The courier's own vocabulary, derived from the order status.
+
+        ``Order.status`` is written by sellers and buyers as well, so it does
+        not say what the *courier* should be doing. This maps it onto the four
+        things a courier app actually renders: waiting, collect, deliver, done.
+        """
+        return COURIER_FULFILLMENT_STATUS.get(obj.status, 'unknown')
+
+    def get_allowed_transitions(self, obj):
+        """Exactly the statuses this courier may set right now.
+
+        Sent with every row so a client never hardcodes the transition map and
+        never offers a button the API will reject.
+        """
+        return list(COURIER_TRANSITIONS.get(obj.status, ()))
+
+    def get_pickup_station(self, obj):
+        station = obj.pickup_station
+        if not station:
+            return None
+        return {
+            'id': str(station.id),
+            'name': station.name,
+            'address': station.address,
+            'city': station.city,
+        }
+
+    def get_delivery_personnel_name(self, obj):
+        personnel = obj.delivery_personnel
+        if not personnel:
+            return None
+        return personnel.profile.display_name or personnel.profile.username
+
+    def get_commission_artifacts(self, obj):
+        rate = getattr(obj, '_commission_rate', None)
+        if rate is None:
+            rate = getattr(getattr(obj, 'delivery_personnel', None), 'commission_rate', None)
+        return estimate_commission_artifacts(obj.total_artifacts, rate)
+
+
+# ---------------------------------------------------------------------------
+# Event organiser serializers
+# ---------------------------------------------------------------------------
+
+class OrganiserEventSerializer(serializers.ModelSerializer):
+    """An event as its organiser sees it, for the "my events" dashboard.
+
+    ``attendee_count`` is the denormalised counter the checkout flow maintains
+    (active tickets only). ``tickets_sold_count`` is computed live over every
+    non-cancelled, non-refunded ticket — the two drift whenever a ticket is
+    cancelled outside checkout, and the dashboard needs the honest number.
+    """
+
+    tickets_sold_count = serializers.SerializerMethodField()
+    is_organizer = serializers.SerializerMethodField()
+    shop_data = serializers.SerializerMethodField()
+    gym_data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MarketplaceEvent
+        fields = [
+            'id', 'title', 'description', 'event_type',
+            'shop_id', 'gym_id', 'shop_data', 'gym_data',
+            'location', 'online_url',
+            'start_datetime', 'end_datetime', 'timezone',
+            'capacity', 'attendee_count', 'tickets_sold_count',
+            'ticket_tiers', 'ticket_price_artifacts', 'is_free',
+            'is_published', 'is_cancelled', 'is_draft',
+            'is_organizer', 'created_at',
+        ]
+
+    def get_tickets_sold_count(self, obj):
+        cached = getattr(obj, 'tickets_sold_count', None)
+        if cached is not None:
+            return cached
+        return obj.tickets.filter(status__in=SOLD_TICKET_STATUSES).count()
+
+    def get_is_organizer(self, obj):
+        """True when the caller created the event (as opposed to it being hosted
+        by a shop they operate). Annotated by ``OrganiserEventListView``; absent
+        from the annotation means "hosted by their shop"."""
+        return bool(getattr(obj, 'is_organizer', False))
+
+    def get_shop_data(self, obj):
+        if not obj.shop:
+            return None
+        return {'id': str(obj.shop.id), 'name': obj.shop.name, 'handle': obj.shop.handle,
+                'verification_status': obj.shop.verification_status}
+
+    def get_gym_data(self, obj):
+        if not obj.gym:
+            return None
+        return {'id': str(obj.gym.id), 'name': obj.gym.name, 'handle': obj.gym.handle,
+                'logo_url': obj.gym.logo_url, 'is_verified': obj.gym.is_verified}
+
+
+class EventAttendeeSerializer(serializers.ModelSerializer):
+    """One row of the organiser's attendee list.
+
+    The holder's name is flat (``display_name`` / ``username``) rather than
+    nested, so a door-list row and a scan result are the same shape.
+
+    Email is deliberately absent. ``EventTicketSerializer.get_holder_data``
+    exposes a holder as username / display_name / avatar_url and nothing else,
+    and ``Profile`` has no email column of its own (it lives on ``User``) — so
+    adding ``user.email`` here would widen attendee-holder PII beyond what every
+    other marketplace serializer already discloses. Omitted on purpose, not
+    forgotten: the organiser scans ``ticket_code`` / ``display_name`` at the
+    door, which needs no email.
+    """
+
+    display_name = serializers.SerializerMethodField()
+    username = serializers.CharField(source='holder.username', read_only=True)
+
+    class Meta:
+        model = EventTicket
+        fields = ['id', 'ticket_code', 'tier', 'status', 'is_checked_in',
+                  'checked_in_at', 'price_paid_artifacts', 'display_name',
+                  'username', 'created_at']
+
+    def get_display_name(self, obj):
+        return obj.holder.display_name or obj.holder.username
+
+
+class OrganiserEventCheckInSerializer(serializers.ModelSerializer):
+    """Result of a check-in / check-out, returned to the organiser's scanner.
+
+    Same shape as an attendee row minus the fields a scanner does not need.
+    """
+
+    display_name = serializers.SerializerMethodField()
+    username = serializers.CharField(source='holder.username', read_only=True)
+
+    class Meta:
+        model = EventTicket
+        fields = ['id', 'ticket_code', 'tier', 'status', 'is_checked_in',
+                  'checked_in_at', 'display_name', 'username']
+
+    def get_display_name(self, obj):
+        return obj.holder.display_name or obj.holder.username

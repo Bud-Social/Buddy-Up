@@ -204,6 +204,16 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
                   },
                   child: const Text('Join Gym'),
                 ),
+              // The management surface exists for anyone, but only an owner,
+              // co-owner or moderator is offered it — same rule as the web.
+              if (isGymAdminRole(gym.membershipRole)) ...[
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/gyms/${gym.handle}/manage'),
+                  icon: const Icon(Icons.admin_panel_settings_outlined, size: 16),
+                  label: const Text('Manage'),
+                ),
+              ],
               if (gym.isDonationsEnabled) ...[
                 const SizedBox(width: 8),
                 OutlinedButton.icon(

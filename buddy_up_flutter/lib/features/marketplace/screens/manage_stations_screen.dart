@@ -1,216 +1,134 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/api/api_error.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../data/models/gym.dart';
 import '../../../data/models/marketplace.dart';
-import '../../../shared/widgets/empty_state.dart';
-import '../../../shared/widgets/error_view.dart';
-import '../../../shared/widgets/input.dart';
+import '../../../shared/widgets/badge.dart';
 import '../../../shared/widgets/page_loader.dart';
+import '../../../shared/widgets/role_dashboard_shell.dart';
 import '../../gym/providers/gym_provider.dart';
 import '../providers/marketplace_provider.dart';
+import '../providers/station_application_provider.dart';
+import '../utils/organiser.dart';
 import '../utils/stations.dart';
 import 'station_application_screen.dart' show DayHours;
 
-/// Manage the pickup stations you own.
+/// Manage the pickup stations you run, and apply to run another.
 ///
 /// `GET /marketplace/stations/` is the public list a buyer picks from, so it is
-/// also what this screen reads: the caller's own stations are the rows whose
-/// `shop` / `gym` id is one of theirs. There is no "my stations" endpoint, so
-/// the narrowing happens here rather than being invented server-side.
+/// also what this screen reads — there is no "my stations" endpoint. Ownership
+/// is therefore *derived* from the rows themselves: each one names its owner
+/// (`owner_type` plus a `shop` or `gym` id), and the screen narrows that list
+/// against the caller's own shops and the gyms they own or co-own. Nothing here
+/// trusts the caller: a station whose owner is not recognised is excluded, not
+/// included.
 ///
-/// Editing is restricted to what the API accepts. `shop`, `gym` and
-/// `owner_type` are locked after creation — re-parenting would silently move a
-/// public collection point and every order pointing at it — so this screen never
-/// offers them.
-class ManageStationsScreen extends ConsumerStatefulWidget {
+/// The guard that actually runs server-side is `_can_manage_station` — an owner
+/// or manager of the shop, an owner or co-owner of the gym.
+class ManageStationsScreen extends ConsumerWidget {
   const ManageStationsScreen({super.key});
 
   @override
-  ConsumerState<ManageStationsScreen> createState() =>
-      _ManageStationsScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stationsAsync = ref.watch(stationsProvider(const StationQuery()));
+    final shops = ref.watch(myShopsProvider).value ?? const <Shop>[];
+    final ownedGyms = ref.watch(ownedGymsProvider).value ?? const <OwnedGym>[];
 
-class _ManageStationsScreenState extends ConsumerState<ManageStationsScreen> {
-  final _gymHandleController = TextEditingController();
-  String? _gymId;
-  bool _resolvingGym = false;
-
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => _reload());
-  }
-
-  @override
-  void dispose() {
-    _gymHandleController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _reload() async {
-    await ref.read(stationsProvider(const StationQuery()).future);
-  }
-
-  Future<void> _resolveGym() async {
-    final handle = _gymHandleController.text.trim();
-    if (handle.isEmpty) return;
-    setState(() {
-      _resolvingGym = true;
-      _gymId = null;
-    });
-    try {
-      final raw = await ref.read(gymRepositoryProvider).getGym(handle);
-      if (!mounted) return;
-      final gym = Gym.fromJson(raw['data'] as Map<String, dynamic>);
-      setState(() => _gymId = gym.id);
-      await _reload();
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(apiErrorMessage(
-              e,
-              fallback: 'Could not find a gym with that handle.',
-            )),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _resolvingGym = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final shops = ref.watch(myShopsProvider);
-    final stations = ref.watch(stationsProvider(const StationQuery()));
-    final shopIds = (shops.value ?? const <Shop>[]).map((s) => s.id).toSet();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pickup Stations'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.invalidate(stationsProvider),
-          ),
-        ],
-      ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          TextButton.icon(
-            onPressed: () => context.push('/marketplace/stations/apply'),
-            icon: const Icon(Icons.how_to_reg, size: 18),
-            label: const Text('Apply to become a station'),
-          ),
-          FloatingActionButton.extended(
-            backgroundColor: BuddyColors.green,
-            foregroundColor: Colors.black,
-            onPressed: () => _openStationEditor(context, null),
-            icon: const Icon(Icons.add),
-            label: const Text('Add station'),
-          ),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: BuddyColors.surface,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Stations for your ${shopIds.isEmpty && _gymId == null ? 'shops and gym' : _gymId == null ? 'shops' : 'gym'}',
-                  style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: BuddyColors.textSecondary),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: BuddyInput(
-                        hint: 'Or filter by gym handle',
-                        controller: _gymHandleController,
-                        suffixIcon: Icons.search,
-                        onSuffixTap: _resolveGym,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    if (_gymId != null)
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        tooltip: 'Show my shops instead',
-                        onPressed: () => setState(() {
-                          _gymId = null;
-                          _gymHandleController.clear();
-                          _reload();
-                        }),
-                      ),
-                  ],
-                ),
-                if (_resolvingGym)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: stations.when(
+    return RoleDashboardShell(
+      title: 'Pickup stations',
+      subtitle: 'Collection points you run',
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: 'New station',
+          onPressed: () => _openEditor(context, ref, null),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh',
+          onPressed: () => ref.invalidate(stationsProvider),
+        ),
+      ],
+      body: RefreshIndicator(
+        onRefresh: () async => ref.invalidate(stationsProvider),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            const RoleSectionTitle('Your stations'),
+            stationsAsync.when(
               loading: () => const PageLoader(fullScreen: false),
-              error: (e, _) => ErrorView(
-                message: apiErrorMessage(
-                  e,
-                  fallback: 'Could not load pickup stations.',
+              error: (error, _) => RoleCard(
+                child: Text(
+                  isStationsUnavailable(error)
+                      ? 'Pickup stations are not available on this server yet.'
+                      : apiErrorMessage(
+                          error,
+                          fallback: 'Could not load pickup stations.',
+                        ),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.error,
+                    height: 1.35,
+                  ),
                 ),
-                onRetry: () => ref.invalidate(stationsProvider),
               ),
               data: (all) {
-                final mine = all
-                    .where((s) =>
-                        (s.shop != null && shopIds.contains(s.shop)) ||
-                        (_gymId != null && s.gym == _gymId))
-                    .toList();
-                if (mine.isEmpty) {
-                  return const EmptyState(
-                    icon: Icons.store_outlined,
-                    title: 'No stations yet',
-                    subtitle: 'Add a collection point so buyers can pick up '
-                        'orders from you.',
+                final owned = deriveOwnedStations(
+                  all,
+                  shopIds: shops.map((shop) => shop.id).toSet(),
+                  gymIds: ownedGyms.map((gym) => gym.id).toSet(),
+                );
+                if (owned.isEmpty) {
+                  return RoleCard(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.storefront_outlined,
+                            color: BuddyColors.textSecondary, size: 28),
+                        const SizedBox(height: 10),
+                        Text(
+                          all.isEmpty
+                              ? 'No pickup stations exist yet.'
+                              : 'You do not own any of the stations on this '
+                                  'server yet.',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: BuddyColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        ElevatedButton(
+                          onPressed: () => _openEditor(context, ref, null),
+                          child: const Text('Create your first station'),
+                        ),
+                      ],
+                    ),
                   );
                 }
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: mine.length,
-                  itemBuilder: (_, i) => _StationCard(
-                    station: mine[i],
-                    onTap: () => _openStationEditor(context, mine[i]),
-                  ),
+                return Column(
+                  children: [
+                    for (final station in owned)
+                      _StationCard(
+                        station: station,
+                        onTap: () => _openEditor(context, ref, station),
+                      ),
+                  ],
                 );
               },
             ),
-          ),
-        ],
+            const RoleSectionTitle('Run a station elsewhere'),
+            const _ApplicationCard(),
+          ],
+        ),
       ),
     );
   }
 
-  void _openStationEditor(BuildContext context, PickupStation? station) {
-    showModalBottomSheet(
+  void _openEditor(BuildContext context, WidgetRef ref, PickupStation? station) {
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -218,9 +136,92 @@ class _ManageStationsScreenState extends ConsumerState<ManageStationsScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _StationEditorSheet(
         station: station,
-        onSaved: () {
-          ref.invalidate(stationsProvider);
-        },
+        onSaved: () => ref.invalidate(stationsProvider),
+      ),
+    );
+  }
+}
+
+/// Application status.
+///
+/// `POST /marketplace/station-applications/` is the only place the caller can
+/// read a status back — there is no read endpoint — so this renders whatever the
+/// wizard last recorded, and otherwise offers the application itself.
+class _ApplicationCard extends ConsumerWidget {
+  const _ApplicationCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final application = ref.watch(stationApplicationProvider);
+    final app = application;
+
+    if (app == null) {
+      return RoleCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Own a shop or gym but need a collection point somewhere else? '
+              'Apply to run one — an admin reviews each application.',
+              style: TextStyle(
+                fontSize: 12,
+                color: BuddyColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => context.push('/marketplace/stations/apply'),
+              icon: const Icon(Icons.how_to_reg, size: 16),
+              label: const Text('Apply to become a station'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final status = stationApplicationStatusLabel(app.status);
+    return RoleCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Application status',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                ),
+              ),
+              BuddyBadge(
+                label: status,
+                color: isPendingApplicationStatus(app.status)
+                    ? BuddyColors.gold
+                    : status == 'approved'
+                        ? BuddyColors.green
+                        : BuddyColors.red,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            stationApplicationHint(
+              status: app.status,
+              rejectionReason: app.rejectionReason,
+            ),
+            style: const TextStyle(
+              fontSize: 12,
+              color: BuddyColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextButton.icon(
+            onPressed: () => context.push('/marketplace/stations/apply'),
+            icon: const Icon(Icons.edit_outlined, size: 14),
+            label: const Text('Update my application'),
+          ),
+        ],
       ),
     );
   }
@@ -235,57 +236,78 @@ class _StationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Card(
-      color: cs.surface,
-      margin: const EdgeInsets.only(bottom: 10),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
-        onTap: onTap,
-        leading: Icon(
-          station.isActive ? Icons.store : Icons.storefront,
-          color: station.isActive ? BuddyColors.green : cs.onSurfaceVariant,
-        ),
-        title: Row(
-          children: [
-            Flexible(
-              child: Text(
-                station.name.isEmpty ? 'Pickup station' : station.name,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 14),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+    return RoleCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        children: [
+          Icon(
+            station.isActive ? Icons.store : Icons.storefront,
+            color: station.isActive ? BuddyColors.green : cs.onSurfaceVariant,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        station.name.isEmpty ? 'Unnamed station' : station.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    if (station.isPrimary) ...[
+                      const SizedBox(width: 6),
+                      const BuddyBadge(
+                          label: 'Primary', color: BuddyColors.gold),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  stationAreaLabel(station),
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+                Text(
+                  stationOpeningHoursLabel(station.openingHours),
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      station.ownerType == 'gym' ? 'Gym owned' : 'Shop owned',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: BuddyColors.textSecondary,
+                      ),
+                    ),
+                    if ((station.phone ?? '').trim().isNotEmpty) ...[
+                      const Text(' · ',
+                          style: TextStyle(
+                              fontSize: 11, color: BuddyColors.textSecondary)),
+                      Text(
+                        station.phone!.trim(),
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: BuddyColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
-            if (station.isPrimary) ...[
-              const SizedBox(width: 6),
-              const Text('PRIMARY',
-                  style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: BuddyColors.gold)),
-            ],
-            if (!station.isActive) ...[
-              const SizedBox(width: 6),
-              const Text('INACTIVE',
-                  style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: BuddyColors.red)),
-            ],
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(stationAreaLabel(station),
-                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
-            Text(
-              stationOpeningHoursLabel(station.openingHours),
-              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
-            ),
-          ],
-        ),
-        trailing: const Icon(Icons.chevron_right, size: 20),
+          ),
+          const Icon(Icons.edit_outlined, size: 16, color: BuddyColors.textSecondary),
+        ],
       ),
     );
   }
@@ -294,7 +316,9 @@ class _StationCard extends StatelessWidget {
 /// Create or edit one station.
 ///
 /// The owner is chosen on creation and then locked, because the API rejects it:
-/// a station's `shop`, `gym` and `owner_type` are immutable after creation.
+/// a station's `shop`, `gym` and `owner_type` are immutable after creation —
+/// re-parenting would silently move a public collection point and every order
+/// pointing at it — so this sheet never offers them on an edit.
 class _StationEditorSheet extends ConsumerStatefulWidget {
   final PickupStation? station;
   final VoidCallback onSaved;
@@ -308,7 +332,6 @@ class _StationEditorSheet extends ConsumerStatefulWidget {
 
 class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
   final _nameController = TextEditingController();
-  final _descriptionController = TextEditingController();
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
   final _countryController = TextEditingController();
@@ -316,8 +339,6 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
   final _instructionsController = TextEditingController();
   final _latitudeController = TextEditingController();
   final _longitudeController = TextEditingController();
-
-  final TextEditingController _gymHandleController = TextEditingController();
 
   late Map<String, DayHours> _hours;
   late bool _isActive;
@@ -332,7 +353,6 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
     super.initState();
     final station = widget.station;
     _nameController.text = station?.name ?? '';
-    _descriptionController.text = station?.description ?? '';
     _addressController.text = station?.address ?? '';
     _cityController.text = station?.city ?? '';
     _countryController.text = station?.country ?? '';
@@ -350,7 +370,6 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
   @override
   void dispose() {
     _nameController.dispose();
-    _descriptionController.dispose();
     _addressController.dispose();
     _cityController.dispose();
     _countryController.dispose();
@@ -358,7 +377,6 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
     _instructionsController.dispose();
     _latitudeController.dispose();
     _longitudeController.dispose();
-    _gymHandleController.dispose();
     super.dispose();
   }
 
@@ -367,31 +385,32 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
   static Map<String, DayHours> _parseHours(Map<String, dynamic>? hours) {
     final out = <String, DayHours>{};
     for (final day in stationDayKeys) {
-      out[day] = (open: true, from: const TimeOfDay(hour: 8, minute: 0), to: const TimeOfDay(hour: 20, minute: 0));
+      out[day] = (
+        open: true,
+        from: const TimeOfDay(hour: 8, minute: 0),
+        to: const TimeOfDay(hour: 20, minute: 0)
+      );
     }
     if (hours == null) return out;
     hours.forEach((key, value) {
       if (!stationDayKeys.contains(key)) return;
+      final current = out[key]!;
       if (value is String) {
         final parts = value.split('-');
         final from = _parseHhmm(parts.first);
         final to = parts.length > 1 ? _parseHhmm(parts.last) : from;
-        final current = out[key]!;
-        if (from != null && to != null) {
-          out[key] = (open: true, from: from, to: to);
-        } else {
-          out[key] = (open: false, from: current.from, to: current.to);
-        }
+        out[key] = (from != null && to != null)
+            ? (open: true, from: from, to: to)
+            : (open: false, from: current.from, to: current.to);
         return;
       }
       if (value is Map && value['closed'] == true) {
-        final current = out[key]!;
         out[key] = (open: false, from: current.from, to: current.to);
         return;
       }
       if (value is Map) {
-        final from = _parseHhmm(value['open'] as String?);
-        final to = _parseHhmm(value['close'] as String?);
+        final from = _parseHhmm(value['open']);
+        final to = _parseHhmm(value['close']);
         if (from == null || to == null) return;
         out[key] = (open: true, from: from, to: to);
       }
@@ -430,9 +449,9 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
 
     final lat = double.tryParse(_latitudeController.text.trim());
     final lng = double.tryParse(_longitudeController.text.trim());
-    if ((lat == null || lng == null) &&
-        (_latitudeController.text.trim().isNotEmpty ||
-            _longitudeController.text.trim().isNotEmpty)) {
+    final hasLatText = _latitudeController.text.trim().isNotEmpty;
+    final hasLngText = _longitudeController.text.trim().isNotEmpty;
+    if ((hasLatText || hasLngText) && (lat == null || lng == null)) {
       setState(() =>
           _serverError = 'Latitude and longitude must both be valid numbers.');
       return;
@@ -440,7 +459,6 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
 
     final payload = <String, dynamic>{
       'name': _nameController.text.trim(),
-      'description': _descriptionController.text.trim(),
       'address': _addressController.text.trim(),
       'city': _cityController.text.trim(),
       'country': _countryController.text.trim(),
@@ -472,7 +490,7 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(raw['message'] as String? ?? 'Station saved.')),
+        SnackBar(content: Text('${raw['message'] ?? 'Station saved.'}')),
       );
     } catch (e) {
       if (mounted) {
@@ -503,44 +521,26 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
                   const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 16),
           if (!isEdit) _ownerSection(),
-          BuddyInput(
-            label: 'Name',
-            hint: 'e.g. Level 2, Westlands Mall',
-            controller: _nameController,
-          ),
+          _Field(label: 'Name', hint: 'e.g. Level 2, Westlands Mall', controller: _nameController),
           const SizedBox(height: 12),
-          BuddyInput(
-            label: 'Description (optional)',
-            controller: _descriptionController,
-          ),
-          const SizedBox(height: 12),
-          BuddyInput(
-            label: 'Street address',
-            controller: _addressController,
-          ),
+          _Field(label: 'Street address', controller: _addressController),
           const SizedBox(height: 12),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: BuddyInput(
-                    label: 'City', controller: _cityController),
-              ),
+              Expanded(child: _Field(label: 'City', controller: _cityController)),
               const SizedBox(width: 10),
-              Expanded(
-                child: BuddyInput(
-                    label: 'Country', controller: _countryController),
-              ),
+              Expanded(child: _Field(label: 'Country', controller: _countryController)),
             ],
           ),
           const SizedBox(height: 12),
-          BuddyInput(
+          _Field(
             label: 'Phone',
             controller: _phoneController,
             keyboardType: TextInputType.phone,
           ),
           const SizedBox(height: 12),
-          BuddyInput(
+          _Field(
             label: 'Collection instructions',
             hint: 'Buzz 4B at the east gate',
             controller: _instructionsController,
@@ -551,7 +551,7 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: BuddyInput(
+                child: _Field(
                   label: 'Latitude',
                   controller: _latitudeController,
                   keyboardType: const TextInputType.numberWithOptions(
@@ -560,7 +560,7 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: BuddyInput(
+                child: _Field(
                   label: 'Longitude',
                   controller: _longitudeController,
                   keyboardType: const TextInputType.numberWithOptions(
@@ -582,7 +582,6 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
                 onChanged: (value) => setState(() => _hours[day] = value),
               ),
             ),
-          const SizedBox(height: 8),
           SwitchListTile(
             value: _isActive,
             activeThumbColor: BuddyColors.green,
@@ -607,20 +606,7 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
           ),
           if (_serverError != null) ...[
             const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: BuddyColors.red.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: BuddyColors.red.withValues(alpha: 0.3)),
-              ),
-              child: Text(
-                _serverError!,
-                style:
-                    const TextStyle(fontSize: 12, color: BuddyColors.red, height: 1.35),
-              ),
-            ),
+            RoleNotice(message: _serverError!, isError: true),
           ],
           const SizedBox(height: 16),
           ElevatedButton(
@@ -645,65 +631,84 @@ class _StationEditorSheetState extends ConsumerState<_StationEditorSheet> {
     );
   }
 
+  /// Only the caller's *own* businesses are offered as owners — the backend
+  /// answers 403 for anything else, and offering it would only produce a
+  /// confusing rejection after the fact.
   Widget _ownerSection() {
     final shops = ref.watch(myShopsProvider).value ?? const <Shop>[];
+    final gyms = ref.watch(ownedGymsProvider).value ?? const <OwnedGym>[];
+    final hasOwner = shops.isNotEmpty || gyms.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Owner',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final shop in shops)
-              ChoiceChip(
-                label: Text(shop.name, style: const TextStyle(fontSize: 12)),
-                selected: _shopId == shop.id,
-                onSelected: (v) => setState(() {
-                  _shopId = v ? shop.id : null;
-                  _gymId = null;
-                }),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        BuddyInput(
-          label: '…or a gym handle you own',
-          controller: _gymHandleController,
-          suffixIcon: Icons.search,
-          onSuffixTap: () async {
-            final handle = _gymHandleController.text.trim();
-            if (handle.isEmpty) return;
-            try {
-              final raw = await ref.read(gymRepositoryProvider).getGym(handle);
-              final gym = Gym.fromJson(raw['data'] as Map<String, dynamic>);
-              if (mounted) {
-                setState(() {
-                  _gymId = gym.id;
-                  _shopId = null;
-                });
-              }
-            } catch (e) {
-              if (mounted) {
-                setState(() => _serverError = apiErrorMessage(
-                      e,
-                      fallback: 'Could not resolve that gym.',
-                    ));
-              }
-            }
-          },
-        ),
-        if (_gymId != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Text(
-              'Gym owner: $_gymId',
-              style: const TextStyle(fontSize: 11, color: BuddyColors.green),
-            ),
+        if (!hasOwner)
+          const Text(
+            'You need a shop or a gym before you can own a pickup station.',
+            style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+          )
+        else
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final shop in shops)
+                ChoiceChip(
+                  label: Text(shop.name, style: const TextStyle(fontSize: 12)),
+                  selected: _shopId == shop.id,
+                  onSelected: (v) => setState(() {
+                    _shopId = v ? shop.id : null;
+                    _gymId = null;
+                  }),
+                ),
+              for (final gym in gyms)
+                ChoiceChip(
+                  label: Text(gym.name, style: const TextStyle(fontSize: 12)),
+                  avatar: const Icon(Icons.fitness_center,
+                      size: 14, color: BuddyColors.green),
+                  selected: _gymId == gym.id,
+                  onSelected: (v) => setState(() {
+                    _gymId = v ? gym.id : null;
+                    _shopId = null;
+                  }),
+                ),
+            ],
           ),
       ],
+    );
+  }
+}
+
+class _Field extends StatelessWidget {
+  final String label;
+  final String? hint;
+  final TextEditingController controller;
+  final TextInputType keyboardType;
+  final int maxLines;
+
+  const _Field({
+    required this.label,
+    this.hint,
+    required this.controller,
+    this.keyboardType = TextInputType.text,
+    this.maxLines = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      style: const TextStyle(fontSize: 15),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        isDense: true,
+      ),
     );
   }
 }
@@ -772,31 +777,6 @@ class _HoursRow extends StatelessWidget {
                 style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
         ],
       ),
-    );
-  }
-}
-
-/// Convenience so the "apply for a station" screen is reachable from here too.
-class StationApplicationLauncher extends StatelessWidget {
-  const StationApplicationLauncher({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BuddyButtonLike(onTap: () => context.push('/marketplace/stations/apply'));
-  }
-}
-
-class BuddyButtonLike extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const BuddyButtonLike({super.key, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton.icon(
-      onPressed: onTap,
-      icon: const Icon(Icons.how_to_reg, size: 18),
-      label: const Text('Apply to become a station'),
     );
   }
 }

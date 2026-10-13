@@ -20,6 +20,40 @@ double? _optDouble(dynamic v) {
   return double.tryParse(v.toString());
 }
 
+/// Artifact maps (`commission_artifacts`, `counts`, `total_artifacts`) are the
+/// single most volatile shape the backend sends: the values are sometimes ints,
+/// sometimes Decimal-as-string, and a zero-filled `counts` map can gain a new key
+/// with a null value after a deployment. A strict `Map<String, int>` decode
+/// turns any of those into a crash on the whole row, so every artifact-shaped
+/// field goes through this instead.
+Map<String, int> _intMap(dynamic v) {
+  if (v is! Map) return const <String, int>{};
+  final out = <String, int>{};
+  v.forEach((key, value) {
+    if (value is num) {
+      out['$key'] = value.toInt();
+    } else {
+      final parsed = int.tryParse('$value');
+      if (parsed != null) out['$key'] = parsed;
+    }
+  });
+  return out;
+}
+
+/// `delivery_address` is a `JSONField` on the model but older/imported rows —
+/// and the web client, defensively — treat it as a plain string. Accept both.
+Map<String, dynamic> _jsonMap(dynamic v) {
+  if (v is Map) return v.map((key, value) => MapEntry('$key', value));
+  return <String, dynamic>{};
+}
+
+/// `allowed_transitions` / `service_zones` are lists that are occasionally
+/// absent on a partially-serialised row.
+List<String> _stringList(dynamic v) {
+  if (v is! List) return const <String>[];
+  return v.map((e) => '$e').where((e) => e.isNotEmpty).toList();
+}
+
 @freezed
 abstract class CreatorData with _$CreatorData {
   const factory CreatorData({
@@ -868,6 +902,286 @@ abstract class StationApplication with _$StationApplication {
 
   factory StationApplication.fromJson(Map<String, dynamic> json) =>
       _$StationApplicationFromJson(json);
+}
+
+// ---------------------------------------------------------------------------
+// Courier dashboard — GET /marketplace/delivery/summary/
+// ---------------------------------------------------------------------------
+
+/// The signed-in rider's own courier record plus their current workload
+/// (`CourierSummaryView`).
+///
+/// This endpoint is *scoped to the caller*, so a 404 is not "the profile is
+/// missing" — it is "you have no `DeliveryPersonnel` row". The dashboard treats
+/// it as the gate to registration; see `features/marketplace/utils/courier.dart`.
+///
+/// `counts` is server-side zero-filled across every `Order.STATUS_CHOICES`
+/// value, so a tile can render a fixed set without probing for absent keys — but
+/// `_intMap` still tolerates a null value appearing after a deployment.
+@freezed
+abstract class CourierProfile with _$CourierProfile {
+  const factory CourierProfile({
+    String? id,
+    @JsonKey(name: 'vehicle_type') @Default('') String vehicleType,
+    @JsonKey(name: 'vehicle_label') @Default('') String vehicleLabel,
+    @JsonKey(name: 'service_zones', fromJson: _stringList)
+    @Default(<String>[])
+    List<String> serviceZones,
+    @JsonKey(name: 'is_active') @Default(true) bool isActive,
+    @JsonKey(name: 'rating', fromJson: _optDouble) double? rating,
+    @Default('') String bio,
+    @JsonKey(name: 'commission_rate', fromJson: _optDouble) double? commissionRate,
+    @JsonKey(fromJson: _intMap) @Default(<String, int>{}) Map<String, int> counts,
+    @JsonKey(name: 'total_assigned') @Default(0) int totalAssigned,
+    /// True when at least one assigned order is in a non-terminal state.
+    @Default(false) bool active,
+  }) = _CourierProfile;
+
+  factory CourierProfile.fromJson(Map<String, dynamic> json) =>
+      _$CourierProfileFromJson(json);
+}
+
+/// One line of a courier order (`CourierOrderItemSerializer`).
+///
+/// `capacity` / `tickets_sold` / `checked_in` / `gross_artifacts` /
+/// `sold_by_tier` ride on the *event* variant of this item; a plain product line
+/// carries none of them, which is why every field past `quantity` defaults.
+@freezed
+abstract class CourierOrderItem with _$CourierOrderItem {
+  const factory CourierOrderItem({
+    String? id,
+    @Default('') String title,
+    @Default(1) int quantity,
+    @JsonKey(name: 'item_type') @Default('') String itemType,
+    @JsonKey(name: 'creator_name') @Default('') String creatorName,
+    @JsonKey(name: 'price_artifacts', fromJson: _intMap)
+    @Default(<String, int>{})
+    Map<String, int> priceArtifacts,
+    @JsonKey(name: 'total_artifacts', fromJson: _intMap)
+    @Default(<String, int>{})
+    Map<String, int> totalArtifacts,
+  }) = _CourierOrderItem;
+
+  factory CourierOrderItem.fromJson(Map<String, dynamic> json) =>
+      _$CourierOrderItemFromJson(json);
+}
+
+/// The collection point on a courier order, denormalised for the door list
+/// (`CourierOrderSerializer.get_pickup_station`). A courier has no shop page to
+/// click through to, so the address has to be inline.
+@freezed
+abstract class CourierPickupPoint with _$CourierPickupPoint {
+  const factory CourierPickupPoint({
+    required String id,
+    @Default('') String name,
+    @Default('') String address,
+    @Default('') String city,
+    @JsonKey(name: 'distance_km', fromJson: _optDouble) double? distanceKm,
+  }) = _CourierPickupPoint;
+
+  factory CourierPickupPoint.fromJson(Map<String, dynamic> json) =>
+      _$CourierPickupPointFromJson(json);
+}
+
+/// An order as the assigned courier sees it (`CourierOrderSerializer`).
+///
+/// The order-wide money totals, the discount code and the seller's earnings are
+/// deliberately absent from this serializer — `commissionArtifacts` is a locally
+/// computed estimate over `totalArtifacts` and is the only money shown. A client
+/// must not reconstruct a balance from it; see `CourierEarnings`.
+@freezed
+abstract class CourierOrder with _$CourierOrder {
+  const factory CourierOrder({
+    required String id,
+    @JsonKey(name: 'order_number') @Default('') String orderNumber,
+    @Default('') String status,
+    @JsonKey(name: 'status_label') @Default('') String statusLabel,
+    @JsonKey(name: 'fulfillment_type') @Default('delivery') String fulfillmentType,
+    @JsonKey(name: 'fulfillment_status') @Default('') String fulfillmentStatus,
+    /// The statuses this courier may set *right now*, per the server.
+    ///
+    /// Authoritative. A dashboard renders its buttons from this list and never
+    /// from a client-side transition map, so a status the backend adds later
+    /// shows up without an app release and an illegal move is never offered.
+    @JsonKey(name: 'allowed_transitions', fromJson: _stringList)
+    @Default(<String>[])
+    List<String> allowedTransitions,
+    @Default(<CourierOrderItem>[]) List<CourierOrderItem> items,
+    @JsonKey(name: 'delivery_address', fromJson: _jsonMap)
+    @Default(<String, dynamic>{})
+    Map<String, dynamic> deliveryAddress,
+    @JsonKey(name: 'pickup_station') CourierPickupPoint? pickupStation,
+    @JsonKey(name: 'delivery_personnel_name') @Default('') String deliveryPersonnelName,
+    @JsonKey(name: 'commission_artifacts', fromJson: _intMap)
+    @Default(<String, int>{})
+    Map<String, int> commissionArtifacts,
+    @JsonKey(name: 'total_artifacts', fromJson: _intMap)
+    @Default(<String, int>{})
+    Map<String, int> totalArtifacts,
+    @JsonKey(name: 'created_at') @Default('') String createdAt,
+    @JsonKey(name: 'paid_at') String? paidAt,
+  }) = _CourierOrder;
+
+  factory CourierOrder.fromJson(Map<String, dynamic> json) =>
+      _$CourierOrderFromJson(json);
+}
+
+/// `GET /marketplace/delivery/earnings/` — an *informational estimate*.
+///
+/// `isPayout` and `note` are carried on the payload and are always
+/// false / the server's own disclaimer. They are modelled rather than hardcoded
+/// in the UI so the label reads from the same place the server writes it, and so
+/// a future backend that does introduce a ledger changes one flag here instead of
+/// every string in every client.
+@freezed
+abstract class CourierEarnings with _$CourierEarnings {
+  const factory CourierEarnings({
+    @JsonKey(name: 'delivered_count') @Default(0) int deliveredCount,
+    @JsonKey(name: 'delivered_value_artifacts', fromJson: _intMap)
+    @Default(<String, int>{})
+    Map<String, int> deliveredValueArtifacts,
+    @JsonKey(name: 'commission_rate', fromJson: _optDouble) double? commissionRate,
+    @JsonKey(name: 'commission_artifacts', fromJson: _intMap)
+    @Default(<String, int>{})
+    Map<String, int> commissionArtifacts,
+    @JsonKey(name: 'window', fromJson: _jsonMap)
+    @Default(<String, dynamic>{})
+    Map<String, dynamic> window,
+    @JsonKey(name: 'is_payout') @Default(false) bool isPayout,
+    @Default('') String note,
+  }) = _CourierEarnings;
+
+  factory CourierEarnings.fromJson(Map<String, dynamic> json) =>
+      _$CourierEarningsFromJson(json);
+}
+
+// ---------------------------------------------------------------------------
+// Event organiser — GET /marketplace/events/mine/ and friends
+// ---------------------------------------------------------------------------
+
+/// An event the caller organises (`OrganiserEventListView`): created by them,
+/// *or* hosted by a shop where they are `owner` / `manager`.
+///
+/// A deliberately flatter shape than `MarketplaceEvent` — the organiser view is
+/// a selector plus stats, not a public event page, so it does not drag in the
+/// full description / media / ticket-tier payload every time it reloads.
+@freezed
+abstract class OrganiserEvent with _$OrganiserEvent {
+  const factory OrganiserEvent({
+    required String id,
+    @Default('') String title,
+    @JsonKey(name: 'event_type') @Default('') String eventType,
+    @Default('') String location,
+    @JsonKey(name: 'online_url') @Default('') String onlineUrl,
+    @JsonKey(name: 'start_datetime') @Default('') String startDatetime,
+    @JsonKey(name: 'end_datetime') @Default('') String endDatetime,
+    @Default(0) int capacity,
+    @JsonKey(name: 'attendee_count') @Default(0) int attendeeCount,
+    @JsonKey(name: 'tickets_sold_count') @Default(0) int ticketsSoldCount,
+    @JsonKey(name: 'ticket_tiers') @Default(<Map<String, dynamic>>[])
+    List<Map<String, dynamic>> ticketTiers,
+    @JsonKey(name: 'is_free') @Default(false) bool isFree,
+    @JsonKey(name: 'is_published') @Default(false) bool isPublished,
+    @JsonKey(name: 'is_cancelled') @Default(false) bool isCancelled,
+    /// True when the caller created it (rather than merely hosting it).
+    @JsonKey(name: 'is_organizer') @Default(false) bool isOrganizer,
+  }) = _OrganiserEvent;
+
+  factory OrganiserEvent.fromJson(Map<String, dynamic> json) =>
+      _$OrganiserEventFromJson(json);
+}
+
+/// One ticket at the door (`EventAttendeeSerializer`).
+///
+/// `displayName` / `username` are *flat* on this serializer — unlike most
+/// marketplace rows, which nest a `*_data` block — so reading a nested
+/// `holder_data` here would silently render every attendee as "Attendee".
+@freezed
+abstract class EventAttendee with _$EventAttendee {
+  const factory EventAttendee({
+    required String id,
+    @JsonKey(name: 'ticket_code') @Default('') String ticketCode,
+    @Default('') String tier,
+    @Default('') String status,
+    @JsonKey(name: 'is_checked_in') @Default(false) bool isCheckedIn,
+    @JsonKey(name: 'checked_in_at') String? checkedInAt,
+    @JsonKey(name: 'price_paid_artifacts', fromJson: _intMap)
+    @Default(<String, int>{})
+    Map<String, int> pricePaidArtifacts,
+    @JsonKey(name: 'display_name') @Default('') String displayName,
+    @Default('') String username,
+    @JsonKey(name: 'created_at') @Default('') String createdAt,
+  }) = _EventAttendee;
+
+  factory EventAttendee.fromJson(Map<String, dynamic> json) =>
+      _$EventAttendeeFromJson(json);
+}
+
+extension EventAttendeeX on EventAttendee {
+  /// Best available human name: the display name, else the handle, else nothing.
+  /// Never derived from the ticket id — "Attendee 7" is not an identity.
+  String get label {
+    if (displayName.trim().isNotEmpty) return displayName.trim();
+    if (username.trim().isNotEmpty) return '@${username.trim()}';
+    return '';
+  }
+}
+
+/// One row of `stats.sold_by_tier`.
+@freezed
+abstract class EventTierSales with _$EventTierSales {
+  const factory EventTierSales({
+    @Default('') String tier,
+    @Default(0) int count,
+    @JsonKey(name: 'gross_artifacts', fromJson: _intMap)
+    @Default(<String, int>{})
+    Map<String, int> grossArtifacts,
+  }) = _EventTierSales;
+
+  factory EventTierSales.fromJson(Map<String, dynamic> json) =>
+      _$EventTierSalesFromJson(json);
+}
+
+/// `GET /marketplace/events/<id>/stats/`.
+///
+/// `capacityIsUnlimited` is its own flag rather than being inferred from
+/// `capacity == 0`: an unlimited event genuinely has no cap, and rendering a
+/// hard "0" next to "spots remaining" would be a lie in the other direction.
+@freezed
+abstract class EventStats with _$EventStats {
+  const factory EventStats({
+    @Default(0) int capacity,
+    @JsonKey(name: 'capacity_is_unlimited') @Default(false) bool capacityIsUnlimited,
+    @JsonKey(name: 'spots_remaining') @Default(0) int spotsRemaining,
+    @JsonKey(name: 'attendee_count') @Default(0) int attendeeCount,
+    @JsonKey(name: 'tickets_sold') @Default(0) int ticketsSold,
+    @JsonKey(name: 'checked_in') @Default(0) int checkedIn,
+    @JsonKey(name: 'gross_artifacts', fromJson: _intMap)
+    @Default(<String, int>{})
+    Map<String, int> grossArtifacts,
+    @JsonKey(name: 'sold_by_tier') @Default(<EventTierSales>[]) List<EventTierSales> soldByTier,
+  }) = _EventStats;
+
+  factory EventStats.fromJson(Map<String, dynamic> json) =>
+      _$EventStatsFromJson(json);
+}
+
+/// What `POST /marketplace/events/<id>/check-in/` and `check-out/` answer with.
+///
+/// Thin on purpose: the confirmation an organiser actually needs is the
+/// envelope's own `message`, which the caller reads off the raw response. This
+/// models only the fields the server does put inside `data`.
+@freezed
+abstract class CheckInResult with _$CheckInResult {
+  const factory CheckInResult({
+    EventAttendee? attendee,
+    @JsonKey(name: 'checked_in_at') String? checkedInAt,
+    @JsonKey(name: 'is_checked_in') bool? isCheckedIn,
+    @Default('') String message,
+  }) = _CheckInResult;
+
+  factory CheckInResult.fromJson(Map<String, dynamic> json) =>
+      _$CheckInResultFromJson(json);
 }
 
 // ---------------------------------------------------------------------------

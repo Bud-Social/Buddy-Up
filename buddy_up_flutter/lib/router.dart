@@ -28,6 +28,7 @@ import 'features/feed/screens/workout_form_screen.dart';
 import 'features/gym/screens/gym_list_screen.dart';
 import 'features/gym/screens/gym_detail_screen.dart';
 import 'features/gym/screens/create_gym_screen.dart';
+import 'features/gym/screens/gym_manage_screen.dart';
 import 'features/live/screens/live_browser_screen.dart';
 import 'features/live/screens/live_room_screen.dart';
 import 'features/live/screens/create_live_screen.dart';
@@ -80,6 +81,8 @@ import 'features/marketplace/screens/checkout_screen.dart';
 import 'features/marketplace/screens/delivery_personnel_screen.dart';
 import 'features/marketplace/screens/manage_stations_screen.dart';
 import 'features/marketplace/screens/station_application_screen.dart';
+import 'features/marketplace/screens/courier_dashboard_screen.dart';
+import 'features/marketplace/screens/event_organiser_screen.dart';
 import 'features/admin/screens/admin_console_screen.dart';
 import 'features/admin/screens/admin_users_screen.dart';
 import 'features/admin/screens/admin_shops_screen.dart';
@@ -248,6 +251,17 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const CreateGymScreen(),
       ),
+      // Declared BEFORE `/gyms/:slug` so `manage` is never read as a slug.
+      // Without a real route here, the "Manage" button on a gym detail page sent
+      // owners into their own profile — the same dead link the web had.
+      GoRoute(
+        path: '/gyms/:slug/manage',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) {
+          final slug = state.pathParameters['slug'] ?? '';
+          return GymManageScreen(slug: slug);
+        },
+      ),
       GoRoute(
         path: '/gyms/:slug',
         parentNavigatorKey: _rootNavigatorKey,
@@ -315,6 +329,22 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           return ProductDetailScreen(productId: productId);
         },
       ),
+      // Create and the organiser dashboard must both precede
+      // `/marketplace/events/:eventId`, or go_router reads `create` as an event
+      // id — the same ordering rule the product routes above already follow.
+      GoRoute(
+        path: '/marketplace/events',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const EventOrganiserScreen(),
+      ),
+      GoRoute(
+        path: '/marketplace/events/create',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, state) {
+          final shopHandle = state.uri.queryParameters['shop'];
+          return CreateEventScreen(shopHandle: shopHandle);
+        },
+      ),
       GoRoute(
         path: '/marketplace/events/:eventId',
         parentNavigatorKey: _rootNavigatorKey,
@@ -340,8 +370,13 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const CheckoutScreen(),
       ),
-      // Fulfillment logistics: register as a courier, apply to become a pickup
-      // station, and manage the stations you own.
+      // Fulfillment logistics: register as a courier, run your deliveries, apply
+      // to become a pickup station, and manage the stations you own.
+      GoRoute(
+        path: '/marketplace/delivery',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const CourierDashboardScreen(),
+      ),
       GoRoute(
         path: '/marketplace/delivery-personnel',
         parentNavigatorKey: _rootNavigatorKey,
@@ -401,14 +436,8 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
           );
         },
       ),
-      GoRoute(
-        path: '/marketplace/events/create',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (_, state) {
-          final shopHandle = state.uri.queryParameters['shop'];
-          return CreateEventScreen(shopHandle: shopHandle);
-        },
-      ),
+      // `/marketplace/events/create` is declared above, next to the organiser
+      // dashboard, so both precede `/marketplace/events/:eventId`.
       // Shop routes
       GoRoute(
         path: '/marketplace/shops',

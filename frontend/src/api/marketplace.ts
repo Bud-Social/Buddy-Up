@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import type { ApiResponse } from '@/types';
+import type { PickupStation, StationApplication, StationWritePayload } from './stations';
 
 export interface Shop {
   id: string;
@@ -466,6 +467,169 @@ export function checkoutErrorMessage(error: unknown, fallback = 'Checkout failed
   return [payload?.message, payload?.detail, flat.join(' ')].filter(Boolean).join(' — ') || fallback;
 }
 
+/* ------------------------------------------------------------------ */
+/* Courier (delivery personnel)                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The only four status moves the delivery endpoint accepts.
+ *
+ * `POST/PATCH /marketplace/delivery/my-orders/<id>/` rejects everything else
+ * with a 400 that names the illegal move, so this map is rendered verbatim and
+ * is never widened — a courier cannot cancel, refund, or re-open a shipment.
+ * `processing` is reachable both as a pickup handoff (`shipped → out for
+ * delivery`) and as the rollback from a failed delivery attempt.
+ */
+export const COURIER_STATUS_ACTIONS = {
+  processing: [{ to: 'out_for_delivery', label: 'Start delivery' }],
+  shipped: [{ to: 'out_for_delivery', label: 'Start delivery' }],
+  out_for_delivery: [
+    { to: 'delivered', label: 'Mark delivered' },
+    { to: 'processing', label: 'Return to processing' },
+  ],
+} as const satisfies Record<string, readonly { to: string; label: string }[]>;
+
+export type CourierSourceStatus = keyof typeof COURIER_STATUS_ACTIONS;
+export type CourierTargetStatus = (typeof COURIER_STATUS_ACTIONS)[CourierSourceStatus][number]['to'];
+
+/**
+ * The legal actions for a status, or an empty list.
+ *
+ * An unknown status (a value the backend adds later) yields no buttons at all
+ * rather than a guess — the server is the authority on legality and offering a
+ * move it will reject is worse than offering none.
+ */
+export function courierActionsFor(status: string | null | undefined): { to: string; label: string }[] {
+  if (!status) return [];
+  const actions = (COURIER_STATUS_ACTIONS as Record<string, readonly { to: string; label: string }[]>)[status];
+  return actions ? actions.map((a) => ({ ...a })) : [];
+}
+
+export interface CourierProfile {
+  vehicle_type?: string | null;
+  service_zones?: string[] | null;
+  is_active?: boolean;
+  rating?: number | null;
+  commission_rate?: number | null;
+  counts?: Record<string, number> | null;
+  /** True when this courier has any order in a non-terminal state. */
+  active?: boolean;
+}
+
+export interface CourierOrderItem {
+  title?: string;
+  quantity?: number;
+  creator_name?: string | null;
+}
+
+export interface CourierPickupStation {
+  name?: string;
+  address?: string | null;
+}
+
+export interface CourierOrder {
+  id: string;
+  order_number?: string;
+  status?: string;
+  status_label?: string;
+  fulfillment_status?: string | null;
+  created_at?: string;
+  paid_at?: string | null;
+  items?: CourierOrderItem[];
+  delivery_address?: Record<string, unknown> | string | null;
+  pickup_station?: CourierPickupStation | null;
+  commission_artifacts?: Record<string, number> | null;
+}
+
+/**
+ * An informational estimate computed from completed orders. It is explicitly
+ * NOT a payable balance — the wallet ledger is the only thing that pays out,
+ * and the dashboard labels this figure as an estimate for that reason.
+ */
+export interface CourierEarnings {
+  delivered_count?: number;
+  delivered_value_artifacts?: Record<string, number> | null;
+  commission_artifacts?: Record<string, number> | null;
+  window?: { from?: string | null; to?: string | null } | null;
+}
+
+export interface CourierRegistrationPayload {
+  vehicle_type?: string;
+  vehicle_plate?: string;
+  phone?: string;
+  station?: string;
+  service_zones?: string[];
+  is_active?: boolean;
+}
+
+/* ------------------------------------------------------------------ */
+/* Event organiser                                                     */
+/* ------------------------------------------------------------------ */
+
+export interface OrganiserEvent {
+  id: string;
+  title?: string;
+  start_datetime?: string;
+  end_datetime?: string;
+  capacity?: number;
+  attendee_count?: number;
+  tickets_sold_count?: number;
+  is_published?: boolean;
+  is_cancelled?: boolean;
+}
+
+export interface EventAttendee {
+  id: string;
+  ticket_code?: string;
+  tier?: string | null;
+  status?: string;
+  is_checked_in?: boolean;
+  checked_in_at?: string | null;
+  price_paid_artifacts?: Record<string, number> | null;
+  display_name?: string | null;
+  username?: string | null;
+}
+
+export interface EventTierSales {
+  tier?: string;
+  count?: number;
+  gross_artifacts?: Record<string, number> | null;
+}
+
+export interface EventStats {
+  capacity?: number;
+  tickets_sold?: number;
+  checked_in?: number;
+  gross_artifacts?: Record<string, number> | null;
+  sold_by_tier?: EventTierSales[];
+}
+
+export interface EventAttendeeFilters {
+  checked_in?: boolean | '';
+  status?: string;
+  tier?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export interface CheckInResult {
+  attendee?: EventAttendee;
+  checked_in_at?: string;
+  is_checked_in?: boolean;
+  message?: string;
+}
+
+/** Extract the server's own wording from a 400/404/409, verbatim. */
+export function eventActionErrorMessage(error: unknown, fallback = 'That did not work.'): string {
+  const payload = (error as { response?: { data?: { message?: string; detail?: string; errors?: Record<string, unknown> | unknown[] | null } } } | undefined)?.response?.data;
+  const flat = payload?.errors
+    ? (Array.isArray(payload.errors)
+        ? payload.errors.map(String)
+        : Object.entries(payload.errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(' ') : String(v)}`))
+    : [];
+  return [payload?.message, payload?.detail, flat.join(' ')].filter(Boolean).join(' — ') || fallback;
+}
+
 export const marketplaceApi = {
   getMealPlans: (diet_type?: string) =>
     apiClient.get<ApiResponse<MealPlan[]>>('/marketplace/meal-plans/', { params: diet_type ? { diet_type } : {} }).then((r) => r.data),
@@ -699,4 +863,104 @@ export const marketplaceApi = {
 
   registerPushToken: (token: string, platform: string = 'web', device_name: string = 'Browser') =>
     apiClient.post<ApiResponse<any>>('/marketplace/push-devices/', { token, platform, device_name }).then((r) => r.data),
+
+  /* ---------------------------------------------------------------- */
+  /* Courier                                                           */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Courier profile + status counts for the signed-in rider.
+   *
+   * A 404 here means "this user has no `DeliveryPersonnel` row" — the endpoint
+   * is scoped to the signed-in courier, so it cannot 404 for a missing id. That
+   * is the signal the dashboard uses to route to the registration wizard rather
+   * than render an empty shell.
+   */
+  getCourierSummary: () =>
+    apiClient.get<ApiResponse<CourierProfile>>('/marketplace/delivery/summary/').then((r) => r.data),
+
+  getCourierOrders: (status?: string, page?: number) =>
+    apiClient.get<ApiResponse<CourierOrder[]>>('/marketplace/delivery/my-orders/', {
+      params: {
+        ...(status ? { status } : {}),
+        ...(page ? { page } : {}),
+      },
+    }).then((r) => r.data),
+
+  /**
+   * Move an order through one of the four legal courier transitions.
+   *
+   * Deliberately typed to `CourierTargetStatus`: the UI can only compile a call
+   * for a status the endpoint accepts, so an illegal move is a type error rather
+   * than a 400 at runtime.
+   */
+  updateCourierOrderStatus: (orderId: string, status: CourierTargetStatus) =>
+    apiClient.patch<ApiResponse<CourierOrder>>(`/marketplace/delivery/my-orders/${orderId}/`, { status }).then((r) => r.data),
+
+  /**
+   * Informational commission estimate over a window — not a payable balance.
+   */
+  getCourierEarnings: (params?: { from?: string; to?: string }) =>
+    apiClient.get<ApiResponse<CourierEarnings>>('/marketplace/delivery/earnings/', {
+      params: params || undefined,
+    }).then((r) => r.data),
+
+  /**
+   * Self-registration. Also doubles as the active-toggle write: posting
+   * `{is_active}` against an existing row flips the rider's availability.
+   */
+  registerDeliveryPersonnel: (data: CourierRegistrationPayload) =>
+    apiClient.post<ApiResponse<any>>('/marketplace/delivery-personnel/', data).then((r) => r.data),
+
+  toggleCourierActive: (is_active: boolean, extra?: CourierRegistrationPayload) =>
+    apiClient.post<ApiResponse<any>>('/marketplace/delivery-personnel/', { ...(extra || {}), is_active }).then((r) => r.data),
+
+  /* ---------------------------------------------------------------- */
+  /* Event organiser                                                   */
+  /* ---------------------------------------------------------------- */
+
+  /** Events the signed-in user organises. 403 for anyone else. */
+  getOrganisedEvents: () =>
+    apiClient.get<ApiResponse<OrganiserEvent[]>>('/marketplace/events/mine/').then((r) => r.data),
+
+  getEventAttendees: (eventId: string, filters: EventAttendeeFilters = {}) => {
+    const params: Record<string, unknown> = {};
+    if (filters.checked_in !== undefined && filters.checked_in !== '') params.checked_in = filters.checked_in;
+    if (filters.status) params.status = filters.status;
+    if (filters.tier) params.tier = filters.tier;
+    if (filters.page) params.page = filters.page;
+    if (filters.page_size) params.page_size = filters.page_size;
+    return apiClient.get<ApiResponse<EventAttendee[]>>(`/marketplace/events/${eventId}/attendees/`, { params }).then((r) => r.data);
+  },
+
+  /**
+   * Check a ticket in.
+   *
+   * The status codes are meaningful and surfaced inline by the UI rather than
+   * being flattened: 404 = unknown code, 409 = already checked in (the server
+   * reports who and when), 400 = cancelled ticket.
+   */
+  checkInAttendee: (eventId: string, ticket_code: string) =>
+    apiClient.post<ApiResponse<CheckInResult>>(`/marketplace/events/${eventId}/check-in/`, { ticket_code }).then((r) => r.data),
+
+  /** Reverses a mistaken check-in. */
+  checkOutAttendee: (eventId: string, ticket_code: string) =>
+    apiClient.post<ApiResponse<CheckInResult>>(`/marketplace/events/${eventId}/check-out/`, { ticket_code }).then((r) => r.data),
+
+  getEventStats: (eventId: string) =>
+    apiClient.get<ApiResponse<EventStats>>(`/marketplace/events/${eventId}/stats/`).then((r) => r.data),
+
+  /* ---------------------------------------------------------------- */
+  /* Pickup stations                                                   */
+  /* ---------------------------------------------------------------- */
+
+  createStation: (data: StationWritePayload) =>
+    apiClient.post<ApiResponse<PickupStation>>('/marketplace/stations/', data).then((r) => r.data),
+
+  updateStation: (stationId: string, data: Partial<StationWritePayload>) =>
+    apiClient.patch<ApiResponse<PickupStation>>(`/marketplace/stations/${stationId}/`, data).then((r) => r.data),
+
+  /** Apply to become a station owner. Admin reviews; status is surfaced back. */
+  applyForStation: (data: Record<string, unknown>) =>
+    apiClient.post<ApiResponse<StationApplication>>('/marketplace/station-applications/', data).then((r) => r.data),
 };

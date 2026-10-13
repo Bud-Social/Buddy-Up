@@ -149,6 +149,49 @@ bool isStationsUnavailable(Object error) {
   return status == 404 || status == 405 || status == 501;
 }
 
+/// Stations the caller may actually write, mirroring `deriveOwnedStations` in
+/// `frontend/src/api/stations.ts`.
+///
+/// `GET /marketplace/stations/` is the public list a buyer picks from, so it is
+/// also what a management screen has to read: there is no "my stations"
+/// endpoint, and inventing one client-side would mean showing a caller rows the
+/// backend will refuse to edit.
+///
+/// `owner_type` decides *which* id field is authoritative — a `shop` row carries
+/// `shop` and no `gym`, and reading the wrong one would match a station owned by
+/// a different business that happens to share the id space. The guard itself is
+/// the backend's: an owner or manager of the shop, an owner or co-owner of the
+/// gym. The caller supplies those id sets from their own shops and gyms, which
+/// is what makes this a derivation rather than a trust decision.
+///
+/// A row whose owner id is missing from both sets is *excluded*, not included:
+/// an unknown owner must never widen the set.
+List<PickupStation> deriveOwnedStations(
+  List<PickupStation> stations, {
+  Set<String> shopIds = const {},
+  Set<String> gymIds = const {},
+}) {
+  return stations.where((station) {
+    if (station.ownerType == 'shop') {
+      final id = station.shop;
+      return id != null && id.isNotEmpty && shopIds.contains(id);
+    }
+    if (station.ownerType == 'gym') {
+      final id = station.gym;
+      return id != null && id.isNotEmpty && gymIds.contains(id);
+    }
+    // No recognised owner_type: fall back to whichever id the row actually
+    // carries, so a station saved before the field existed is not invisible.
+    if (station.shop != null && station.shop!.isNotEmpty) {
+      return shopIds.contains(station.shop);
+    }
+    if (station.gym != null && station.gym!.isNotEmpty) {
+      return gymIds.contains(station.gym);
+    }
+    return false;
+  }).toList();
+}
+
 /// Best-effort human message for a failed station call.
 String stationsErrorMessage(Object error,
     {String fallback = 'Something went wrong.'}) =>

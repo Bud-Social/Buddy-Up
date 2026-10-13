@@ -76,6 +76,13 @@ const OrderHistory = lazy(() => import('@/pages/app/OrderHistory'));
 const OrderDetail = lazy(() => import('@/pages/app/OrderDetail'));
 const CreatorStudio = lazy(() => import('@/pages/app/CreatorStudio'));
 const DiscountCodes = lazy(() => import('@/pages/app/DiscountCodes'));
+const MyShops = lazy(() => import('@/pages/app/MyShops'));
+const CreateShop = lazy(() => import('@/pages/app/CreateShop'));
+const EventOrganiser = lazy(() => import('@/pages/app/EventOrganiser'));
+const StationManage = lazy(() => import('@/pages/app/StationManage'));
+const CourierDashboard = lazy(() => import('@/pages/app/CourierDashboard'));
+const CourierRegister = lazy(() => import('@/pages/app/CourierRegister'));
+const GymManage = lazy(() => import('@/pages/app/GymManage'));
 
 const DiscountCodeAnalyticsPage = lazy(() => import('@/pages/app/DiscountCodeAnalytics'));
 const ShopDetail = lazy(() => import('@/pages/app/ShopDetail'));
@@ -209,6 +216,7 @@ export const router = createBrowserRouter([
           { path: '/lives/:category', element: <SWrapper><Lives /></SWrapper> },
           { path: '/gyms', element: <SWrapper><Gyms /></SWrapper> },
           { path: '/gyms/create', element: <SWrapper><CreateGymPage /></SWrapper> },
+          { path: '/gyms/:slug/manage', element: <SWrapper><GymManage /></SWrapper> },
           { path: '/gyms/:slug', element: <SWrapper><GymDetail /></SWrapper> },
           { path: '/trainers', element: <SWrapper><Trainers /></SWrapper> },
           { path: '/trainers/:slug', element: <SWrapper><TrainerProfile /></SWrapper> },
@@ -221,9 +229,20 @@ export const router = createBrowserRouter([
           { path: '/marketplace/checkout', element: <SWrapper><CheckoutPage /></SWrapper> },
           { path: '/marketplace/orders', element: <SWrapper><OrderHistory /></SWrapper> },
           { path: '/marketplace/orders/:orderId', element: <SWrapper><OrderDetail /></SWrapper> },
+          // Seller shop management. `CreatorStudio` navigated to
+          // `/marketplace/shops/create`, which had no route at all — both of
+          // these pages existed but were unreachable.
+          { path: '/marketplace/shops', element: <SWrapper><MyShops /></SWrapper> },
+          { path: '/marketplace/shops/create', element: <SWrapper><CreateShop /></SWrapper> },
+          // Role dashboards. Declared before the `:eventId` sibling so the
+          // organiser hub is never swallowed by the event detail route.
+          { path: '/marketplace/events', element: <SWrapper><EventOrganiser /></SWrapper> },
           { path: '/marketplace/events/create', element: <SWrapper><CreateEvent /></SWrapper> },
           { path: '/marketplace/events/my-tickets', element: <SWrapper><MyEventTickets /></SWrapper> },
           { path: '/marketplace/events/:eventId', element: <SWrapper><EventDetail /></SWrapper> },
+          { path: '/marketplace/stations', element: <SWrapper><StationManage /></SWrapper> },
+          { path: '/marketplace/delivery', element: <SWrapper><CourierDashboard /></SWrapper> },
+          { path: '/marketplace/delivery/register', element: <SWrapper><CourierRegister /></SWrapper> },
           { path: '/marketplace/meal-plans/create', element: <SWrapper><CreateMealPlan /></SWrapper> },
           { path: '/marketplace/meal-plans/:planId', element: <SWrapper><MealPlanDetail /></SWrapper> },
           { path: '/marketplace/programmes/create', element: <SWrapper><CreateProgramme /></SWrapper> },

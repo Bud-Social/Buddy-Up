@@ -197,3 +197,60 @@ final gymCategoriesProvider = FutureProvider<List<GymCategory>>((ref) async {
   final raw = await repo.getCategories();
   return _parseCategoryList(raw['data']);
 });
+
+// ── Ownership ───────────────────────────────────────────────────────────────
+//
+// Gym memberships that may *edit the business*, as opposed to merely being in
+// it. Mirrors `GYM_STATION_ROLES` in `backend/apps/marketplace/views.py` and
+// the owner/co-owner check in `GymManage.tsx`: a `staff` or `trainer`
+// membership manages people, not the gym itself.
+
+const Set<String> kGymOwnerRoles = {'owner', 'co_owner'};
+
+/// Roles that may approve join requests. A moderator can, which is why this is
+/// deliberately wider than [kGymOwnerRoles].
+const Set<String> kGymAdminRoles = {'owner', 'co_owner', 'moderator'};
+
+bool isGymOwnerRole(String? role) => kGymOwnerRoles.contains(role);
+
+bool isGymAdminRole(String? role) => kGymAdminRoles.contains(role);
+
+/// A gym the caller owns or co-owns.
+class OwnedGym {
+  final String id;
+  final String handle;
+  final String name;
+
+  const OwnedGym({required this.id, required this.handle, required this.name});
+}
+
+/// The gyms the caller owns, derived from `GET /gyms/?my=true`.
+///
+/// `my: true` returns every gym the caller *belongs to* — membership alone is
+/// not ownership — so the `membership_role` the caller already holds is the
+/// filter. There is no "gyms I own" endpoint, so this is a derivation rather
+/// than a separate call.
+final ownedGymsProvider = FutureProvider<List<OwnedGym>>((ref) async {
+  final repo = ref.watch(gymRepositoryProvider);
+  final raw = await repo.getGyms(my: true);
+  final data = raw['data'];
+  final rows = <Map<String, dynamic>>[];
+  if (data is List) {
+    rows.addAll(data.whereType<Map<String, dynamic>>());
+  } else if (data is Map) {
+    final results = data['results'];
+    if (results is List) rows.addAll(results.whereType<Map<String, dynamic>>());
+  }
+
+  final owned = <OwnedGym>[];
+  for (final row in rows) {
+    final role = '${row['membership_role'] ?? ''}'.trim();
+    if (!kGymOwnerRoles.contains(role)) continue;
+    final id = '${row['id'] ?? ''}'.trim();
+    final handle = '${row['handle'] ?? ''}'.trim();
+    if (id.isEmpty || handle.isEmpty) continue;
+    final name = '${row['name'] ?? ''}'.trim();
+    owned.add(OwnedGym(id: id, handle: handle, name: name.isEmpty ? handle : name));
+  }
+  return owned;
+});

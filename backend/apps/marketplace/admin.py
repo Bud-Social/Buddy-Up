@@ -3,6 +3,7 @@ from .models import (
     PickupStation, StationApplication, DeliveryPersonnel, DeliveryPersonnelApplication,
     PaymentIntent,
     Order, OrderCase, OrderFulfillment, Product, Shop,
+    MarketplaceEvent, EventTicket,
 )
 
 
@@ -84,6 +85,74 @@ class OrderCaseAdmin(admin.ModelAdmin):
 
 
 # ---------------------------------------------------------------------------
+# Event organisers
+# ---------------------------------------------------------------------------
+
+
+@admin.register(MarketplaceEvent)
+class MarketplaceEventAdmin(admin.ModelAdmin):
+    """Staff read-only view of an event and its organiser workload.
+
+    `attendee_count` is the counter checkout maintains and `tickets_sold` counts
+    every non-cancelled, non-refunded ticket live; staff investigating "the
+    organiser says the dashboard is wrong" need to see both, because those two
+    numbers diverge whenever a ticket is cancelled outside checkout. The
+    organiser API (``/events/mine``, ``/events/<id>/attendees``,
+    ``/events/<id>/stats``) is where the writes live — capacity and ticket
+    definitions stay editable here because they are set up before publication.
+    """
+    list_display = ['title', 'organiser', 'host_shop', 'start_datetime', 'is_published',
+                    'is_cancelled', 'attendee_count', 'tickets_sold', 'checked_in']
+    list_filter = ['is_published', 'is_cancelled', 'is_draft', 'is_free', 'event_type']
+    search_fields = ['title', 'location', 'creator__username', 'shop__handle']
+    list_select_related = ['creator', 'shop']
+    date_hierarchy = 'start_datetime'
+
+    @admin.display(description='Organiser')
+    def organiser(self, obj):
+        return obj.creator.username
+
+    @admin.display(description='Shop')
+    def host_shop(self, obj):
+        return obj.shop.handle if obj.shop_id else '—'
+
+    @admin.display(description='Tickets sold')
+    def tickets_sold(self, obj):
+        return self._sold(obj).count()
+
+    @admin.display(description='Checked in')
+    def checked_in(self, obj):
+        return self._sold(obj).filter(is_checked_in=True).count()
+
+    @staticmethod
+    def _sold(obj):
+        # Mirrors SOLD_TICKET_STATUSES: a cancelled/refunded ticket is not a sale.
+        return obj.tickets.exclude(status__in=('cancelled', 'refunded'))
+
+
+@admin.register(EventTicket)
+class EventTicketAdmin(admin.ModelAdmin):
+    """The door list, for when an organiser phones support mid-event.
+
+    ``is_checked_in`` / ``checked_in_at`` are written by the organiser's
+    check-in and check-out endpoints and are read-only here so a staff fix
+    cannot invent a check-in that no scan recorded (and so it cannot leave
+    ``checked_in_at`` set on a ticket that is not checked in).
+    """
+    list_display = ['ticket_code', 'event', 'holder', 'tier', 'status',
+                    'is_checked_in', 'checked_in_at', 'price_paid_artifacts']
+    list_filter = ['status', 'is_checked_in', 'tier', 'event']
+    search_fields = ['ticket_code', 'holder__username', 'holder__display_name', 'event__title']
+    list_select_related = ['event', 'holder']
+    readonly_fields = ['is_checked_in', 'checked_in_at', 'price_paid_artifacts',
+                       'created_at', 'updated_at']
+
+    def has_add_permission(self, request):
+        # Tickets are minted by checkout, never typed in by hand.
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Fulfillment logistics (added in migration 0016)
 # ---------------------------------------------------------------------------
 
@@ -118,7 +187,13 @@ class StationApplicationAdmin(admin.ModelAdmin):
 
 @admin.register(DeliveryPersonnel)
 class DeliveryPersonnelAdmin(admin.ModelAdmin):
-    list_display = ['profile', 'vehicle_type', 'is_active', 'rating', 'service_zones']
+    """``commission_rate`` is editable here and nowhere else: it is a negotiated
+    commercial term between the platform and the courier, so no client endpoint
+    may write it (the courier self-service POST filters to vehicle/zones/active
+    /bio). The 0..1 bound is a database CHECK, so a hand-typed 99.99 fails at
+    the database rather than silently becoming a rate."""
+    list_display = ['profile', 'vehicle_type', 'is_active', 'rating',
+                    'commission_rate', 'service_zones']
     list_filter = ['vehicle_type', 'is_active']
     search_fields = ['profile__username', 'profile__display_name']
     list_select_related = ['profile']

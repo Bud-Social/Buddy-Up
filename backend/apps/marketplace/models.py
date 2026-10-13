@@ -1,6 +1,8 @@
+from decimal import Decimal
 from uuid import uuid4
 
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -561,6 +563,12 @@ class EventTicket(TimestampedModel):
         return f'Ticket {self.ticket_code} for {self.event.title}'
 
 
+# A ticket in one of these states represents a sale that stands. A cancelled or
+# refunded ticket does not: the attendee has no right to be at the door, so
+# every "sold"/"checked in" count an organiser sees excludes them.
+SOLD_TICKET_STATUSES = ('active', 'used')
+
+
 # ---------------------------------------------------------------------------
 # Event carousel media
 # ---------------------------------------------------------------------------
@@ -885,6 +893,14 @@ class DeliveryPersonnel(TimestampedModel):
     Created from an approved DeliveryPersonnelApplication — one row per person,
     hence the OneToOne. ``service_zones`` are free-text area names so new
     neighbourhoods do not need a migration.
+
+    ``commission_rate`` is the *displayed* share of an order's artifacts that the
+    courier dashboard estimates for a completed delivery. It is not money:
+    nothing in the wallet ledger pays it out, and it is read only by the
+    informational earnings endpoint. It lives on the row (rather than in a
+    settings constant) so it can be negotiated per courier, and it is a
+    fraction — ``0.15`` means 15% — with ``0 <= rate <= 1`` enforced by a
+    database CHECK as well as the validators.
     """
 
     VEHICLE_TYPE_CHOICES = DELIVERY_VEHICLE_TYPES
@@ -896,10 +912,22 @@ class DeliveryPersonnel(TimestampedModel):
     service_zones = models.JSONField(default=list)   # ['Westlands', 'Kilimani', ...]
     is_active = models.BooleanField(default=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
+    commission_rate = models.DecimalField(
+        max_digits=4, decimal_places=2, default=Decimal('0.15'),
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('1'))],
+    )
     bio = models.TextField(blank=True)
 
     class Meta:
         db_table = 'marketplace_delivery_personnel'
+        constraints = [
+            # max_digits=4 / decimal_places=2 admits 99.99, so the upper bound is
+            # a genuine constraint rather than something the column width implies.
+            models.CheckConstraint(
+                check=Q(commission_rate__gte=Decimal('0')) & Q(commission_rate__lte=Decimal('1')),
+                name='mkt_deliverypers_commission_rate_range',
+            ),
+        ]
         indexes = [
             models.Index(fields=['is_active', 'vehicle_type'], name='mkt_deliverypers_active_idx'),
         ]
@@ -1053,6 +1081,42 @@ class Order(TimestampedModel):
             return self.fulfillment_record
         except OrderFulfillment.DoesNotExist:
             return None
+
+
+# ---------------------------------------------------------------------------
+# Courier-facing order vocabulary
+# ---------------------------------------------------------------------------
+# `Order.status` is a shared vocabulary: sellers pack, couriers ride, buyers
+# confirm. The courier map below is *narrower* than what a seller may do (see
+# `ORDER_TRANSITIONS_BY_FULFILLMENT` in views.py) in two ways.
+#
+#   1. It omits most of what a seller can do. A courier is on the road, not in
+#      the warehouse. They pick an order up ("out_for_delivery") and drop it off
+#      ("delivered"); they do not decide that a payment cleared, that a parcel
+#      was packed, or that an order is cancelled or completed.
+#   2. It adds exactly one move, which is the only backward edge in the whole
+#      system: `out_for_delivery -> processing`, the parcel that could not be
+#      handed over going back to the shop, where it legitimately restarts. It
+#      terminates in a state the seller owns.
+COURIER_TRANSITIONS = {
+    'processing': ('out_for_delivery',),
+    'shipped': ('out_for_delivery',),
+    'out_for_delivery': ('delivered', 'processing'),
+}
+
+# The courier's own vocabulary, projected out of `Order.status`. A courier app
+# branches on what to *do* — wait for the shop, collect the parcel, deliver it,
+# it's done — which the shared seller/buyer status does not say.
+COURIER_FULFILLMENT_STATUS = {
+    'pending': 'awaiting_payment',
+    'paid': 'awaiting_shop',
+    'processing': 'ready_to_collect',
+    'shipped': 'ready_to_collect',
+    'out_for_delivery': 'out_for_delivery',
+    'delivered': 'delivered',
+    'completed': 'completed',
+    'cancelled': 'cancelled',
+}
 
 
 class OrderItem(TimestampedModel):

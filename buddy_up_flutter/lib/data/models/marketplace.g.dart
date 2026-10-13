@@ -1341,6 +1341,301 @@ Map<String, dynamic> _$StationApplicationToJson(_StationApplication instance) =>
       'created_at': instance.createdAt,
     };
 
+_CourierProfile _$CourierProfileFromJson(Map<String, dynamic> json) =>
+    _CourierProfile(
+      id: json['id'] as String?,
+      vehicleType: json['vehicle_type'] as String? ?? '',
+      vehicleLabel: json['vehicle_label'] as String? ?? '',
+      serviceZones: json['service_zones'] == null
+          ? const <String>[]
+          : _stringList(json['service_zones']),
+      isActive: json['is_active'] as bool? ?? true,
+      rating: _optDouble(json['rating']),
+      bio: json['bio'] as String? ?? '',
+      commissionRate: _optDouble(json['commission_rate']),
+      counts: json['counts'] == null
+          ? const <String, int>{}
+          : _intMap(json['counts']),
+      totalAssigned: (json['total_assigned'] as num?)?.toInt() ?? 0,
+      active: json['active'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$CourierProfileToJson(_CourierProfile instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'vehicle_type': instance.vehicleType,
+      'vehicle_label': instance.vehicleLabel,
+      'service_zones': instance.serviceZones,
+      'is_active': instance.isActive,
+      'rating': instance.rating,
+      'bio': instance.bio,
+      'commission_rate': instance.commissionRate,
+      'counts': instance.counts,
+      'total_assigned': instance.totalAssigned,
+      'active': instance.active,
+    };
+
+_CourierOrderItem _$CourierOrderItemFromJson(Map<String, dynamic> json) =>
+    _CourierOrderItem(
+      id: json['id'] as String?,
+      title: json['title'] as String? ?? '',
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      itemType: json['item_type'] as String? ?? '',
+      creatorName: json['creator_name'] as String? ?? '',
+      priceArtifacts: json['price_artifacts'] == null
+          ? const <String, int>{}
+          : _intMap(json['price_artifacts']),
+      totalArtifacts: json['total_artifacts'] == null
+          ? const <String, int>{}
+          : _intMap(json['total_artifacts']),
+    );
+
+Map<String, dynamic> _$CourierOrderItemToJson(_CourierOrderItem instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'title': instance.title,
+      'quantity': instance.quantity,
+      'item_type': instance.itemType,
+      'creator_name': instance.creatorName,
+      'price_artifacts': instance.priceArtifacts,
+      'total_artifacts': instance.totalArtifacts,
+    };
+
+_CourierPickupPoint _$CourierPickupPointFromJson(Map<String, dynamic> json) =>
+    _CourierPickupPoint(
+      id: json['id'] as String,
+      name: json['name'] as String? ?? '',
+      address: json['address'] as String? ?? '',
+      city: json['city'] as String? ?? '',
+      distanceKm: _optDouble(json['distance_km']),
+    );
+
+Map<String, dynamic> _$CourierPickupPointToJson(_CourierPickupPoint instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'name': instance.name,
+      'address': instance.address,
+      'city': instance.city,
+      'distance_km': instance.distanceKm,
+    };
+
+_CourierOrder _$CourierOrderFromJson(Map<String, dynamic> json) =>
+    _CourierOrder(
+      id: json['id'] as String,
+      orderNumber: json['order_number'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      statusLabel: json['status_label'] as String? ?? '',
+      fulfillmentType: json['fulfillment_type'] as String? ?? 'delivery',
+      fulfillmentStatus: json['fulfillment_status'] as String? ?? '',
+      allowedTransitions: json['allowed_transitions'] == null
+          ? const <String>[]
+          : _stringList(json['allowed_transitions']),
+      items:
+          (json['items'] as List<dynamic>?)
+              ?.map((e) => CourierOrderItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <CourierOrderItem>[],
+      deliveryAddress: json['delivery_address'] == null
+          ? const <String, dynamic>{}
+          : _jsonMap(json['delivery_address']),
+      pickupStation: json['pickup_station'] == null
+          ? null
+          : CourierPickupPoint.fromJson(
+              json['pickup_station'] as Map<String, dynamic>,
+            ),
+      deliveryPersonnelName: json['delivery_personnel_name'] as String? ?? '',
+      commissionArtifacts: json['commission_artifacts'] == null
+          ? const <String, int>{}
+          : _intMap(json['commission_artifacts']),
+      totalArtifacts: json['total_artifacts'] == null
+          ? const <String, int>{}
+          : _intMap(json['total_artifacts']),
+      createdAt: json['created_at'] as String? ?? '',
+      paidAt: json['paid_at'] as String?,
+    );
+
+Map<String, dynamic> _$CourierOrderToJson(_CourierOrder instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'order_number': instance.orderNumber,
+      'status': instance.status,
+      'status_label': instance.statusLabel,
+      'fulfillment_type': instance.fulfillmentType,
+      'fulfillment_status': instance.fulfillmentStatus,
+      'allowed_transitions': instance.allowedTransitions,
+      'items': instance.items,
+      'delivery_address': instance.deliveryAddress,
+      'pickup_station': instance.pickupStation,
+      'delivery_personnel_name': instance.deliveryPersonnelName,
+      'commission_artifacts': instance.commissionArtifacts,
+      'total_artifacts': instance.totalArtifacts,
+      'created_at': instance.createdAt,
+      'paid_at': instance.paidAt,
+    };
+
+_CourierEarnings _$CourierEarningsFromJson(Map<String, dynamic> json) =>
+    _CourierEarnings(
+      deliveredCount: (json['delivered_count'] as num?)?.toInt() ?? 0,
+      deliveredValueArtifacts: json['delivered_value_artifacts'] == null
+          ? const <String, int>{}
+          : _intMap(json['delivered_value_artifacts']),
+      commissionRate: _optDouble(json['commission_rate']),
+      commissionArtifacts: json['commission_artifacts'] == null
+          ? const <String, int>{}
+          : _intMap(json['commission_artifacts']),
+      window: json['window'] == null
+          ? const <String, dynamic>{}
+          : _jsonMap(json['window']),
+      isPayout: json['is_payout'] as bool? ?? false,
+      note: json['note'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$CourierEarningsToJson(_CourierEarnings instance) =>
+    <String, dynamic>{
+      'delivered_count': instance.deliveredCount,
+      'delivered_value_artifacts': instance.deliveredValueArtifacts,
+      'commission_rate': instance.commissionRate,
+      'commission_artifacts': instance.commissionArtifacts,
+      'window': instance.window,
+      'is_payout': instance.isPayout,
+      'note': instance.note,
+    };
+
+_OrganiserEvent _$OrganiserEventFromJson(Map<String, dynamic> json) =>
+    _OrganiserEvent(
+      id: json['id'] as String,
+      title: json['title'] as String? ?? '',
+      eventType: json['event_type'] as String? ?? '',
+      location: json['location'] as String? ?? '',
+      onlineUrl: json['online_url'] as String? ?? '',
+      startDatetime: json['start_datetime'] as String? ?? '',
+      endDatetime: json['end_datetime'] as String? ?? '',
+      capacity: (json['capacity'] as num?)?.toInt() ?? 0,
+      attendeeCount: (json['attendee_count'] as num?)?.toInt() ?? 0,
+      ticketsSoldCount: (json['tickets_sold_count'] as num?)?.toInt() ?? 0,
+      ticketTiers:
+          (json['ticket_tiers'] as List<dynamic>?)
+              ?.map((e) => e as Map<String, dynamic>)
+              .toList() ??
+          const <Map<String, dynamic>>[],
+      isFree: json['is_free'] as bool? ?? false,
+      isPublished: json['is_published'] as bool? ?? false,
+      isCancelled: json['is_cancelled'] as bool? ?? false,
+      isOrganizer: json['is_organizer'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$OrganiserEventToJson(_OrganiserEvent instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'title': instance.title,
+      'event_type': instance.eventType,
+      'location': instance.location,
+      'online_url': instance.onlineUrl,
+      'start_datetime': instance.startDatetime,
+      'end_datetime': instance.endDatetime,
+      'capacity': instance.capacity,
+      'attendee_count': instance.attendeeCount,
+      'tickets_sold_count': instance.ticketsSoldCount,
+      'ticket_tiers': instance.ticketTiers,
+      'is_free': instance.isFree,
+      'is_published': instance.isPublished,
+      'is_cancelled': instance.isCancelled,
+      'is_organizer': instance.isOrganizer,
+    };
+
+_EventAttendee _$EventAttendeeFromJson(Map<String, dynamic> json) =>
+    _EventAttendee(
+      id: json['id'] as String,
+      ticketCode: json['ticket_code'] as String? ?? '',
+      tier: json['tier'] as String? ?? '',
+      status: json['status'] as String? ?? '',
+      isCheckedIn: json['is_checked_in'] as bool? ?? false,
+      checkedInAt: json['checked_in_at'] as String?,
+      pricePaidArtifacts: json['price_paid_artifacts'] == null
+          ? const <String, int>{}
+          : _intMap(json['price_paid_artifacts']),
+      displayName: json['display_name'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      createdAt: json['created_at'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$EventAttendeeToJson(_EventAttendee instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'ticket_code': instance.ticketCode,
+      'tier': instance.tier,
+      'status': instance.status,
+      'is_checked_in': instance.isCheckedIn,
+      'checked_in_at': instance.checkedInAt,
+      'price_paid_artifacts': instance.pricePaidArtifacts,
+      'display_name': instance.displayName,
+      'username': instance.username,
+      'created_at': instance.createdAt,
+    };
+
+_EventTierSales _$EventTierSalesFromJson(Map<String, dynamic> json) =>
+    _EventTierSales(
+      tier: json['tier'] as String? ?? '',
+      count: (json['count'] as num?)?.toInt() ?? 0,
+      grossArtifacts: json['gross_artifacts'] == null
+          ? const <String, int>{}
+          : _intMap(json['gross_artifacts']),
+    );
+
+Map<String, dynamic> _$EventTierSalesToJson(_EventTierSales instance) =>
+    <String, dynamic>{
+      'tier': instance.tier,
+      'count': instance.count,
+      'gross_artifacts': instance.grossArtifacts,
+    };
+
+_EventStats _$EventStatsFromJson(Map<String, dynamic> json) => _EventStats(
+  capacity: (json['capacity'] as num?)?.toInt() ?? 0,
+  capacityIsUnlimited: json['capacity_is_unlimited'] as bool? ?? false,
+  spotsRemaining: (json['spots_remaining'] as num?)?.toInt() ?? 0,
+  attendeeCount: (json['attendee_count'] as num?)?.toInt() ?? 0,
+  ticketsSold: (json['tickets_sold'] as num?)?.toInt() ?? 0,
+  checkedIn: (json['checked_in'] as num?)?.toInt() ?? 0,
+  grossArtifacts: json['gross_artifacts'] == null
+      ? const <String, int>{}
+      : _intMap(json['gross_artifacts']),
+  soldByTier:
+      (json['sold_by_tier'] as List<dynamic>?)
+          ?.map((e) => EventTierSales.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <EventTierSales>[],
+);
+
+Map<String, dynamic> _$EventStatsToJson(_EventStats instance) =>
+    <String, dynamic>{
+      'capacity': instance.capacity,
+      'capacity_is_unlimited': instance.capacityIsUnlimited,
+      'spots_remaining': instance.spotsRemaining,
+      'attendee_count': instance.attendeeCount,
+      'tickets_sold': instance.ticketsSold,
+      'checked_in': instance.checkedIn,
+      'gross_artifacts': instance.grossArtifacts,
+      'sold_by_tier': instance.soldByTier,
+    };
+
+_CheckInResult _$CheckInResultFromJson(Map<String, dynamic> json) =>
+    _CheckInResult(
+      attendee: json['attendee'] == null
+          ? null
+          : EventAttendee.fromJson(json['attendee'] as Map<String, dynamic>),
+      checkedInAt: json['checked_in_at'] as String?,
+      isCheckedIn: json['is_checked_in'] as bool?,
+      message: json['message'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$CheckInResultToJson(_CheckInResult instance) =>
+    <String, dynamic>{
+      'attendee': instance.attendee,
+      'checked_in_at': instance.checkedInAt,
+      'is_checked_in': instance.isCheckedIn,
+      'message': instance.message,
+    };
+
 _CheckoutReceiptItem _$CheckoutReceiptItemFromJson(Map<String, dynamic> json) =>
     _CheckoutReceiptItem(
       itemType: json['item_type'] as String? ?? '',

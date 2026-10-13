@@ -180,11 +180,80 @@ abstract class MarketplaceRepository {
   @POST('/marketplace/station-applications/')
   Future<dynamic> applyForStation(@Body() Map<String, dynamic> data);
 
+  // --- Courier dashboard ---
+  //
+  // All four are scoped to the *signed-in* courier rather than taking an id, so
+  // `getCourierSummary()` 404ing means the caller has no `DeliveryPersonnel` row
+  // at all — "not registered", not "no data". Callers must branch on that.
+  @GET('/marketplace/delivery/summary/')
+  Future<dynamic> getCourierSummary();
+
+  // `status` is validated server-side (a 400 naming the legal values), so a blank
+  // string is dropped rather than sent as a filter that matches nothing.
+  @GET('/marketplace/delivery/my-orders/')
+  Future<dynamic> getCourierOrders({
+    @Query('status') String? status,
+    @Query('page') int? page,
+  });
+
+  /// Only the four `COURIER_TRANSITIONS` moves are accepted; anything else is a
+  /// 400 that names the illegal move. Carrying carrier / tracking / pickup keys
+  /// is a 403 — shipping metadata stays with the seller.
+  @PATCH('/marketplace/delivery/my-orders/{id}/')
+  Future<dynamic> updateCourierOrderStatus(
+    @Path('id') String orderId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  /// An *estimate* from completed orders. Not a balance, not a payout.
+  @GET('/marketplace/delivery/earnings/')
+  Future<dynamic> getCourierEarnings({
+    @Query('from') String? from,
+    @Query('to') String? to,
+  });
+
   @POST('/marketplace/delivery-personnel/')
   Future<dynamic> saveDeliveryPersonnel(@Body() Map<String, dynamic> data);
 
   @POST('/marketplace/delivery-personnel-applications/')
   Future<dynamic> applyAsDeliveryPersonnel(@Body() Map<String, dynamic> data);
+
+  // --- Event organiser ---
+  //
+  // 403 for anyone who is not an organiser. That is an expected state (the nav
+  // only shows the entry when it resolves true), so callers turn it into a
+  // readable message rather than an empty list.
+  @GET('/marketplace/events/mine/')
+  Future<dynamic> getOrganisedEvents();
+
+  // Filters are validated, not ignored: an unknown `status` is a 400 rather than
+  // a silently unfiltered list.
+  @GET('/marketplace/events/{id}/attendees/')
+  Future<dynamic> getEventAttendees(
+    @Path('id') String eventId, {
+    @Query('checked_in') bool? checkedIn,
+    @Query('status') String? status,
+    @Query('tier') String? tier,
+    @Query('page') int? page,
+  });
+
+  /// 404 unknown code · 409 already checked in (message names the time) ·
+  /// 400 cancelled or refunded ticket.
+  @POST('/marketplace/events/{id}/check-in/')
+  Future<dynamic> checkInAttendee(
+    @Path('id') String eventId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  /// Reverses a mistaken check-in; 409 when the ticket was never checked in.
+  @POST('/marketplace/events/{id}/check-out/')
+  Future<dynamic> checkOutAttendee(
+    @Path('id') String eventId,
+    @Body() Map<String, dynamic> data,
+  );
+
+  @GET('/marketplace/events/{id}/stats/')
+  Future<dynamic> getEventStats(@Path('id') String eventId);
 
   // Real-money settlement for an order that already exists.
   @POST('/marketplace/orders/payment-intents/')

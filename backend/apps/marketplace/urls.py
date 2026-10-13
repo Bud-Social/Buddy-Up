@@ -41,6 +41,16 @@ urlpatterns = [
     # --- Events ---
     path('events/', views.EventListView.as_view(), name='events'),
     path('events/my-tickets/', views.MyEventTicketsView.as_view(), name='my_tickets'),
+    # --- Event organiser dashboard ---
+    path('events/mine/', views.OrganiserEventListView.as_view(), name='organiser_events'),
+    path('events/<uuid:event_id>/attendees/', views.OrganiserEventAttendeesView.as_view(),
+         name='event_attendees'),
+    path('events/<uuid:event_id>/check-in/', views.OrganiserEventCheckInView.as_view(),
+         name='event_check_in'),
+    path('events/<uuid:event_id>/check-out/', views.OrganiserEventCheckOutView.as_view(),
+         name='event_check_out'),
+    path('events/<uuid:event_id>/stats/', views.OrganiserEventStatsView.as_view(),
+         name='event_stats'),
     path('events/<uuid:event_id>/', views.EventDetailView.as_view(), name='event_detail'),
     path('events/<uuid:event_id>/tickets/', views.PurchaseEventTicketView.as_view(), name='purchase_ticket'),
     path('events/tickets/<uuid:ticket_id>/', views.EventTicketDetailView.as_view(), name='ticket_detail'),
@@ -66,6 +76,15 @@ urlpatterns = [
     path('delivery-personnel/', views.DeliveryPersonnelSelfView.as_view(), name='delivery_personnel'),
     path('delivery-personnel-applications/', views.DeliveryPersonnelApplicationView.as_view(),
          name='delivery_personnel_applications'),
+
+    # --- Courier dashboard ---
+    # Every path here requires the caller to have a DeliveryPersonnel row of
+    # their own; without one they get 404 and a link to register.
+    path('delivery/summary/', views.CourierSummaryView.as_view(), name='delivery_summary'),
+    path('delivery/my-orders/', views.CourierMyOrdersView.as_view(), name='delivery_my_orders'),
+    path('delivery/my-orders/<uuid:order_id>/', views.CourierOrderStatusView.as_view(),
+         name='delivery_my_order_detail'),
+    path('delivery/earnings/', views.CourierEarningsView.as_view(), name='delivery_earnings'),
 
     # --- Orders & Tracking ---
     path('orders/', views.OrderListView.as_view(), name='orders'),

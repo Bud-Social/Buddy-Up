@@ -1,5 +1,6 @@
+import datetime
 import os
-from uuid import uuid4
+from uuid import UUID, uuid4
 from django.conf import settings
 from django.core.cache import cache
 from django.core.files.base import ContentFile
@@ -7,6 +8,7 @@ from django.core.files.storage import default_storage
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from rest_framework import views, permissions, status
@@ -31,6 +33,7 @@ from .models import (
     PickupStation, StationApplication,
     DeliveryPersonnel, DeliveryPersonnelApplication,
     PaymentIntent,
+    COURIER_TRANSITIONS, SOLD_TICKET_STATUSES,
 )
 from .serializers import (
     ShopSerializer, ShopDetailSerializer, ShopCreateSerializer,
@@ -50,12 +53,45 @@ from .serializers import (
     PickupStationSerializer, StationApplicationSerializer,
     DeliveryPersonnelSerializer, DeliveryPersonnelApplicationSerializer,
     PaymentIntentCreateSerializer, PaymentIntentSerializer,
+    CourierOrderSerializer,
+    OrganiserEventSerializer, EventAttendeeSerializer, OrganiserEventCheckInSerializer,
+    estimate_commission_artifacts,
     resolve_item_price,
 )
 from apps.wallet.utils import deduct_artifacts, credit_artifacts, credit_creator_artifacts, platform_cut
 from apps.wallet.models import ArtifactTransaction
 from apps.wallet.serializers import PLATFORM_CUTS, ARTIFACT_VALUES
 from apps.ai.client import ai_post
+
+
+# ---------------------------------------------------------------------------
+# Response envelope
+# ---------------------------------------------------------------------------
+# The house shape every endpoint in this app returns:
+#   {success, data, message, errors, pagination}
+# Older views below spell this dict out inline at each return; these three
+# helpers exist so the courier and organiser dashboards — which are almost all
+# error paths — do not have to repeat it eight times per view.
+
+def _api_ok(data=None, message='OK', pagination=None):
+    return {'success': True, 'data': data, 'message': message,
+            'errors': None, 'pagination': pagination}
+
+
+def _api_error(message, http_status, errors=None):
+    """A failure in the house envelope. Always carries a message: a permission
+    error that returns an empty list is indistinguishable from "you have
+    nothing", and clients render both identically."""
+    return Response({'success': False, 'data': None, 'message': message,
+                     'errors': errors, 'pagination': None}, status=http_status)
+
+
+def _pagination_meta(paginator):
+    return {
+        'count': paginator.page.paginator.count,
+        'next': paginator.get_next_link(),
+        'previous': paginator.get_previous_link(),
+    }
 
 
 def _resolve_creator_shop(profile, shop_id=None):
@@ -2206,6 +2242,290 @@ class EventMediaManageView(views.APIView):
         return Response({'success': True, 'message': 'Media removed.'})
 
 
+# ===========================================================================
+# Event organiser dashboard (/events/mine, /events/<id>/attendees|check-in|
+# check-out|stats)
+# ===========================================================================
+# An organiser had no surface of their own: the only event views were the
+# public list, a detail page anyone could read, and ticket *purchase*. Even
+# `EventTicket.is_checked_in` / `checked_in_at` existed on the model and
+# nothing in the codebase ever wrote them, so a door list had to be kept on
+# paper.
+
+def _event_organiser_qs(profile):
+    """Events the profile administers: created by them, or hosted by a shop
+    they own/manage.
+
+    The shop leg reuses the same `ShopMembership` role vocabulary as every other
+    shop-scoped check in this file (`_resolve_creator_shop`,
+    `ShopDetailView.patch`): `owner` and `manager`. A `staff` membership is
+    deliberately not enough — staff operate a shop, they do not get to read
+    its attendee list.
+    """
+    managed_shop_ids = ShopMembership.objects.filter(
+        profile=profile, role__in=('owner', 'manager'),
+    ).values_list('shop_id', flat=True)
+    return MarketplaceEvent.objects.filter(
+        db_models.Q(creator=profile) | db_models.Q(shop_id__in=managed_shop_ids),
+    ).distinct()
+
+
+def _event_for_organiser(request, event_id):
+    """(event, error_response) — 404 for an unknown id, 403 for someone else's
+    event. Never a silent empty list."""
+    try:
+        event = MarketplaceEvent.objects.select_related('shop', 'creator').get(id=event_id)
+    except (MarketplaceEvent.DoesNotExist, ValueError, TypeError):
+        return None, _api_error('Event not found.', 404)
+    if not _event_organiser_qs(request.user.profile).filter(pk=event.pk).exists():
+        return None, _api_error(
+            'Only this event\'s organiser, or an owner/manager of the shop hosting '
+            'it, can do that.', 403,
+        )
+    return event, None
+
+
+class OrganiserEventListView(views.APIView):
+    """Events the caller created or whose hosting shop they operate.
+
+    `tickets_sold_count` is computed live (active + used tickets) while
+    `attendee_count` is the counter checkout maintains (active tickets only).
+    They disagree whenever a ticket is cancelled or used outside checkout, and
+    a dashboard that shows only the cached one silently under-reports a sold-out
+    event, so both are sent and the live one is named for what it is.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        profile = request.user.profile
+        qs = (
+            _event_organiser_qs(profile)
+            .annotate(
+                is_organizer=db_models.Case(
+                    db_models.When(creator=profile, then=db_models.Value(True)),
+                    default=db_models.Value(False),
+                    output_field=db_models.BooleanField(),
+                ),
+                tickets_sold_count=db_models.Count(
+                    'tickets', filter=db_models.Q(tickets__status__in=SOLD_TICKET_STATUSES),
+                ),
+            )
+            .select_related('shop', 'gym')
+            .order_by('-start_datetime')
+        )
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(qs, request)
+        return Response(_api_ok(
+            OrganiserEventSerializer(page, many=True, context={'request': request, 'viewer': profile}).data,
+            'OK', _pagination_meta(paginator),
+        ))
+
+
+class OrganiserEventAttendeesView(views.APIView):
+    """The door list for one of the organiser's events.
+
+    Filters are validated rather than ignored: an unknown `status` silently
+    matches nothing, and a dashboard whose "checked in only" toggle quietly
+    returns the unfiltered list is worse than an error.
+
+    `tier` is matched case-insensitively against the ticket's own `tier` column
+    and is NOT validated against `event.ticket_tiers`. A tier-less event still
+    mints tickets (defaulting to `Standard`), so validating against the event's
+    tier list would reject the only tier such an event has.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, event_id):
+        event, error = _event_for_organiser(request, event_id)
+        if error:
+            return error
+
+        qs = event.tickets.select_related('holder')
+
+        raw_code = (request.query_params.get('ticket_code') or '').strip()
+        if raw_code:
+            try:
+                qs = qs.filter(ticket_code=UUID(raw_code))
+            except (ValueError, AttributeError, TypeError):
+                return _api_error(f"'{raw_code}' is not a valid ticket code.", 400)
+
+        raw_checked_in = (request.query_params.get('checked_in') or '').strip().lower()
+        if raw_checked_in:
+            if raw_checked_in not in ('true', 'false'):
+                return _api_error("checked_in must be 'true' or 'false'.", 400)
+            qs = qs.filter(is_checked_in=(raw_checked_in == 'true'))
+
+        status_filter = (request.query_params.get('status') or '').strip()
+        if status_filter:
+            if status_filter not in dict(EventTicket.STATUS_CHOICES):
+                return _api_error(
+                    f'status must be one of: '
+                    f'{[c[0] for c in EventTicket.STATUS_CHOICES]}.', 400,
+                )
+            qs = qs.filter(status=status_filter)
+
+        tier = (request.query_params.get('tier') or '').strip()
+        if tier:
+            qs = qs.filter(tier__iexact=tier)
+
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(qs.order_by('-created_at', '-id'), request)
+        return Response(_api_ok(
+            EventAttendeeSerializer(page, many=True, context={'request': request}).data,
+            'OK', _pagination_meta(paginator),
+        ))
+
+
+class OrganiserEventCheckInView(views.APIView):
+    """Scan a ticket at the door.
+
+    The lookup is scoped to *this* event's tickets, so a code from another
+    event is a 404 rather than a check-in at the wrong venue. A ticket that was
+    cancelled or refunded is refused outright (400) — the attendee has no right
+    to be there. A second scan of a ticket already in is a 409 naming when it
+    happened, which is what the organiser needs to resolve a "I scanned twice"
+    dispute.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, event_id):
+        event, error = _event_for_organiser(request, event_id)
+        if error:
+            return error
+        ticket, error = _attendee_ticket_for(event, request.data.get('ticket_code'))
+        if error:
+            return error
+        if ticket.status in ('cancelled', 'refunded'):
+            return _api_error(
+                f'This ticket is {ticket.status}, so it cannot be checked in.', 400,
+            )
+        if ticket.is_checked_in:
+            return _api_error(
+                f'This ticket was already checked in'
+                f'{" at " + ticket.checked_in_at.isoformat() if ticket.checked_in_at else ""}. '
+                'Use check-out to undo a mistaken check-in.', 409,
+            )
+
+        ticket.is_checked_in = True
+        ticket.checked_in_at = timezone.now()
+        ticket.save(update_fields=['is_checked_in', 'checked_in_at', 'updated_at'])
+        return Response(_api_ok(
+            OrganiserEventCheckInSerializer(ticket).data,
+            f'Checked in {ticket.holder.display_name or ticket.holder.username}.',
+        ))
+
+
+class OrganiserEventCheckOutView(views.APIView):
+    """Undo a mistaken check-in.
+
+    Door scanners double-tap and attendees get scanned at the wrong queue, so
+    reversing has to be as easy as checking in. `checked_in_at` is cleared
+    rather than kept: a stale timestamp on a ticket that is not checked in
+    would make the attendee's history a lie.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, event_id):
+        event, error = _event_for_organiser(request, event_id)
+        if error:
+            return error
+        ticket, error = _attendee_ticket_for(event, request.data.get('ticket_code'))
+        if error:
+            return error
+        if not ticket.is_checked_in:
+            return _api_error('This ticket is not checked in, so there is nothing to undo.', 409)
+
+        ticket.is_checked_in = False
+        ticket.checked_in_at = None
+        ticket.save(update_fields=['is_checked_in', 'checked_in_at', 'updated_at'])
+        return Response(_api_ok(
+            OrganiserEventCheckInSerializer(ticket).data,
+            f'Check-in reversed for {ticket.holder.display_name or ticket.holder.username}.',
+        ))
+
+
+def _attendee_ticket_for(event, raw_code):
+    """The caller's ticket for THIS event, or an error Response."""
+    raw_code = str(raw_code or '').strip()
+    if not raw_code:
+        return None, _api_error('ticket_code is required.', 400)
+    try:
+        code = UUID(raw_code)
+    except (ValueError, AttributeError, TypeError):
+        return None, _api_error(f"'{raw_code}' is not a valid ticket code.", 400)
+    ticket = event.tickets.select_related('holder').filter(ticket_code=code).first()
+    if ticket is None:
+        return None, _api_error('No ticket with that code exists for this event.', 404)
+    return ticket, None
+
+
+class OrganiserEventStatsView(views.APIView):
+    """Headline numbers for one of the organiser's events.
+
+    "Sold" means a ticket in `SOLD_TICKET_STATUSES` (`active` or `used`) —
+    a cancelled or refunded ticket is not a sale, so it is excluded from every
+    count and from the gross.
+
+    `sold_by_tier` groups by the ticket's own `tier` column rather than by the
+    event's `ticket_tiers` definition, so an event with a single base price and
+    no tiers at all reports one `Standard` row rather than crashing or
+    reporting nothing. The gross is summed in Python because artifacts live in
+    a JSON column the database cannot aggregate.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, event_id):
+        event, error = _event_for_organiser(request, event_id)
+        if error:
+            return error
+
+        sold = event.tickets.filter(status__in=SOLD_TICKET_STATUSES).values(
+            'tier', 'price_paid_artifacts', 'is_checked_in',
+        )
+
+        gross = {}
+        sold_by_tier = {}
+        tickets_sold = 0
+        checked_in = 0
+        for row in sold:
+            tickets_sold += 1
+            if row['is_checked_in']:
+                checked_in += 1
+            paid = row['price_paid_artifacts'] or {}
+            for artifact_type, qty in paid.items():
+                gross[artifact_type] = gross.get(artifact_type, 0) + qty
+            # A ticket always has a tier (the column defaults to 'Standard'),
+            # but never trust a free-text column with a user's data in it.
+            tier_name = (row['tier'] or '').strip() or 'Standard'
+            entry = sold_by_tier.setdefault(
+                tier_name, {'tier': tier_name, 'count': 0, 'gross_artifacts': {}},
+            )
+            entry['count'] += 1
+            for artifact_type, qty in paid.items():
+                entry['gross_artifacts'][artifact_type] = (
+                    entry['gross_artifacts'].get(artifact_type, 0) + qty
+                )
+
+        capacity = event.capacity or 0
+        return Response(_api_ok({
+            'event_id': str(event.id),
+            'capacity': capacity,
+            'capacity_is_unlimited': capacity == 0,
+            'spots_remaining': (max(0, capacity - tickets_sold) if capacity else None),
+            'attendee_count': event.attendee_count,
+            'tickets_sold': tickets_sold,
+            'checked_in': checked_in,
+            'gross_artifacts': gross,
+            'sold_by_tier': sorted(sold_by_tier.values(), key=lambda row: row['tier']),
+            'is_cancelled': event.is_cancelled,
+        }, 'OK'))
+
+
 class FoodRecognizeView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
@@ -3324,6 +3644,349 @@ class OrderCourierListView(views.APIView):
             },
             'message': 'OK', 'errors': None, 'pagination': None,
         })
+
+
+# ===========================================================================
+# Courier dashboard (/delivery/*)
+# ===========================================================================
+# `DeliveryPersonnel` existed with an `Order.delivery_personnel` FK and
+# nothing ever queried it: a courier was assigned by a seller and then had no
+# way to find out. These four endpoints are the whole courier-facing surface.
+#
+# They deliberately do NOT reuse `OrderFulfillmentView`. That endpoint is the
+# seller/buyer surface and its permission model is "buyer or seller", which a
+# courier satisfies for the wrong reason (a courier is often neither). Here the
+# caller must be *the assigned courier*, and the legal moves are
+# `COURIER_TRANSITIONS`, which omits most of what a seller may do.
+
+# Shipping metadata is the seller's record of what was handed to the carrier.
+# A courier standing in a shop knows where the parcel is going, not who the
+# carrier is, so writing any of it would let them forge a tracking trail.
+_COURIER_FORBIDDEN_FIELDS = (
+    'carrier', 'tracking_number', 'tracking_url', 'pickup_location',
+    'pickup_station_id', 'delivery_personnel_id',
+)
+
+# Orders that mean "this parcel reached the buyer". `completed` is the shared
+# close-out of `delivered` in the status machine, so counting only `delivered`
+# would silently drop earnings as soon as a seller closed the order out.
+_DELIVERED_ORDER_STATUSES = ('delivered', 'completed')
+
+
+def _courier_for(request):
+    """The caller's own courier record, or a 404 telling them to register.
+
+    Every /delivery/* endpoint needs this, and "you are not a courier yet" is
+    a missing resource from that caller's point of view — not a permission
+    failure of an existing one.
+    """
+    personnel = DeliveryPersonnel.objects.select_related('profile').filter(
+        profile=request.user.profile,
+    ).first()
+    if personnel is None:
+        return None, _api_error(
+            'You are not registered as delivery personnel yet. Register first with '
+            'POST /api/v1/marketplace/delivery-personnel/.',
+            404,
+        )
+    return personnel, None
+
+
+class CourierSummaryView(views.APIView):
+    """The caller's own courier record plus their current workload.
+
+    ``counts`` is a zero-filled map of every `Order.STATUS_CHOICES` value so a
+    dashboard can render a fixed set of tiles without having to handle absent
+    keys, and it counts exactly the orders `my-orders` returns — delivery ones
+    assigned to this courier, and nothing else.
+
+    ``active`` means "there is an order here that is not finished", mirroring
+    the seller's terminal-state rule (`_ORDER_TERMINAL_STATES`) rather than
+    inventing a courier-specific definition of busy.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        personnel, error = _courier_for(request)
+        if error:
+            return error
+
+        orders = Order.objects.filter(
+            delivery_personnel=personnel, fulfillment_type='delivery',
+        )
+        counts = dict.fromkeys(dict(Order.STATUS_CHOICES), 0)
+        for value, total in orders.values_list('status').annotate(total=db_models.Count('id')):
+            counts[value] = total
+
+        return Response(_api_ok({
+            'id': str(personnel.id),
+            'vehicle_type': personnel.vehicle_type,
+            'vehicle_label': personnel.get_vehicle_type_display(),
+            'service_zones': personnel.service_zones or [],
+            'is_active': personnel.is_active,
+            'rating': personnel.rating,
+            'bio': personnel.bio,
+            # A plain JSON number, not DRF's default string for Decimal, because
+            # both clients render it as a percentage.
+            'commission_rate': float(personnel.commission_rate),
+            'counts': counts,
+            'total_assigned': sum(counts.values()),
+            'active': orders.exclude(status__in=_ORDER_TERMINAL_STATES).exists(),
+        }, 'OK'))
+
+
+class CourierMyOrdersView(views.APIView):
+    """Orders assigned to the caller, newest first.
+
+    Scoped twice on purpose: by `delivery_personnel` (only the caller's own
+    parcels) and by `fulfillment_type='delivery'` (a courier has nothing to do
+    with a digital download, and a pickup order is collected by the buyer).
+    The second filter also keeps this endpoint consistent with what the PATCH
+    below will accept.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        personnel, error = _courier_for(request)
+        if error:
+            return error
+
+        qs = (
+            Order.objects.filter(delivery_personnel=personnel, fulfillment_type='delivery')
+            .select_related('pickup_station', 'delivery_personnel__profile')
+            .prefetch_related('items__creator')
+        )
+        status_filter = (request.query_params.get('status') or '').strip()
+        if status_filter:
+            if status_filter not in dict(Order.STATUS_CHOICES):
+                return _api_error(
+                    f'status must be one of: {[c[0] for c in Order.STATUS_CHOICES]}.', 400,
+                )
+            qs = qs.filter(status=status_filter)
+
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(qs.order_by('-created_at'), request)
+        return Response(_api_ok(
+            CourierOrderSerializer(page, many=True, context={'request': request}).data,
+            'OK', _pagination_meta(paginator),
+        ))
+
+
+class CourierOrderStatusView(views.APIView):
+    """A courier moves one of *their* orders along, within a narrow vocabulary.
+
+    Routed through `_apply_fulfillment_status` — the same helper the seller
+    endpoint uses — so `status_history`, the fulfillment timeline and the
+    milestone timestamps stay exactly as consistent as they are for a seller,
+    and the buyer/sellers are notified once per real transition by
+    `_notify_order_status_change`.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    @transaction.atomic
+    def patch(self, request, order_id):
+        personnel, error = _courier_for(request)
+        if error:
+            return error
+
+        try:
+            order = Order.objects.get(id=order_id)
+        except (Order.DoesNotExist, ValueError, TypeError):
+            return _api_error('Order not found.', 404)
+
+        if order.delivery_personnel_id != personnel.id:
+            return _api_error(
+                'This order is not assigned to you, so you cannot change its status.', 403,
+            )
+        if any(field in request.data for field in _COURIER_FORBIDDEN_FIELDS):
+            return _api_error(
+                'Couriers cannot edit shipping details: carrier, tracking and pickup '
+                'station stay with the seller.', 403,
+            )
+        if order.fulfillment_type != 'delivery':
+            return _api_error(
+                f'Couriers only handle delivery orders; this one is '
+                f'{order.fulfillment_type}.', 400,
+            )
+
+        new_status = (request.data.get('status') or '').strip()
+        if not new_status:
+            return _api_error('status is required.', 400)
+        if new_status not in dict(Order.STATUS_CHOICES):
+            return _api_error(
+                f'status must be one of: {[c[0] for c in Order.STATUS_CHOICES]}.', 400,
+            )
+
+        allowed = COURIER_TRANSITIONS.get(order.status, ())
+        if new_status not in allowed:
+            legal = list(allowed) or ['none']
+            return _api_error(
+                f'A courier cannot move an order from {order.status} to {new_status}. '
+                f'From {order.status} a courier may only set: {legal}.', 400,
+            )
+
+        note = request.data.get('note', '') or ''
+        fulfillment, _ = OrderFulfillment.objects.get_or_create(order=order)
+        _apply_fulfillment_status(order, fulfillment, new_status, note)
+        fulfillment.save()
+        order.refresh_from_db()
+        _notify_order_status_change(order, new_status)
+
+        return Response(_api_ok(
+            CourierOrderSerializer(order, context={'request': request}).data,
+            f'Order #{order.order_number} is now {dict(Order.STATUS_CHOICES).get(new_status, new_status)}.',
+        ))
+
+
+class CourierEarningsView(views.APIView):
+    """An informational commission estimate over completed deliveries.
+
+    READ THIS BEFORE BUILDING A PAYOUT UI: this endpoint is an estimate, not
+    money. It sums `Order.total_artifacts` over the orders the caller delivered
+    inside the requested window and multiplies by their `commission_rate`,
+    floored per artifact bucket. There is no courier ledger, no wallet posting
+    and no payout here — nothing in `apps.wallet` credits a courier, and this
+    figure must not be presented as a payable balance.
+
+    The window filters on when the parcel was delivered:
+    `OrderFulfillment.delivered_at`, falling back to `Order.updated_at` (when
+    the status last changed) for orders delivered without a fulfillment
+    milestone. Both bounds are echoed back in `data.window` so the client never
+    has to guess what it is looking at.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    #: Also the text sent to clients, so the two can never drift apart.
+    ESTIMATE_NOTICE = (
+        'Informational estimate only: the sum of delivered order values times your '
+        'commission rate. This is NOT a payable balance and NOT a payout — no '
+        'commission ledger or payout machinery exists in this service.'
+    )
+
+    def get(self, request):
+        personnel, error = _courier_for(request)
+        if error:
+            return error
+
+        start, end, window_error = _parse_report_window(request)
+        if window_error:
+            return _api_error(window_error, 400)
+
+        orders = _delivered_orders_with_timestamp(personnel)
+        if start:
+            orders = orders.filter(delivered_on__gte=start)
+        if end:
+            orders = orders.filter(delivered_on__lte=end)
+
+        delivered_value = {}
+        delivered_count = 0
+        earliest = None
+        for row in orders.order_by('delivered_on').values('total_artifacts', 'delivered_on'):
+            delivered_count += 1
+            if earliest is None:
+                earliest = row['delivered_on']
+            for artifact_type, qty in (row['total_artifacts'] or {}).items():
+                delivered_value[artifact_type] = delivered_value.get(artifact_type, 0) + qty
+
+        window_from = start or earliest
+        window_to = end or timezone.now()
+
+        return Response(_api_ok({
+            'delivered_count': delivered_count,
+            'delivered_value_artifacts': delivered_value,
+            'commission_rate': float(personnel.commission_rate),
+            'commission_artifacts': estimate_commission_artifacts(
+                delivered_value, personnel.commission_rate,
+            ),
+            'window': {
+                'from': window_from.isoformat() if window_from else None,
+                'to': window_to.isoformat(),
+                'delivery_timestamp': 'fulfillment.delivered_at',
+                'fallback_timestamp': 'order.updated_at',
+                'from_supplied': start is not None,
+                'to_supplied': end is not None,
+            },
+            'is_payout': False,
+            'note': self.ESTIMATE_NOTICE,
+        }, 'OK'))
+
+
+def _delivered_orders_with_timestamp(personnel):
+    """Delivered orders for a courier, annotated with when they were delivered.
+
+    JSON artifact columns cannot be summed by the database, so the caller sums
+    them in Python either way; annotating the timestamp is what makes the
+    ``?from=``/``?to=`` filter possible at all. The Coalesce fallback covers
+    the order whose status was set to `delivered` by something other than
+    `_apply_fulfillment_status` and therefore has no `delivered_at` milestone.
+    """
+    return (
+        Order.objects.filter(
+            delivery_personnel=personnel,
+            fulfillment_type='delivery',
+            status__in=_DELIVERED_ORDER_STATUSES,
+        )
+        .annotate(
+            delivered_on=Coalesce(
+                db_models.Subquery(
+                    OrderFulfillment.objects.filter(order=db_models.OuterRef('pk'))
+                    .values('delivered_at')[:1]
+                ),
+                db_models.F('updated_at'),
+                output_field=db_models.DateTimeField(),
+            ),
+        )
+    )
+
+
+def _parse_report_window(request):
+    """``(from, to, error)`` for ``?from=`` / ``?to=``.
+
+    Both accept a bare ``YYYY-MM-DD`` or a full ISO timestamp. A bare date in
+    ``to`` means the end of that day, because "up to 3 March" plainly includes
+    the evening of 3 March and a dashboard that dropped it would under-report.
+    Unparseable input is a 400 rather than a silently ignored filter — the same
+    lesson as `SellerOrdersView`'s validated ``status`` filter.
+    """
+    start = end = None
+    try:
+        raw_from = (request.query_params.get('from') or '').strip()
+        raw_to = (request.query_params.get('to') or '').strip()
+        if raw_from:
+            start = _parse_report_boundary(raw_from, end_of_day=False)
+        if raw_to:
+            end = _parse_report_boundary(raw_to, end_of_day=True)
+    except ValueError as exc:
+        return None, None, str(exc)
+    if start and end and start > end:
+        return None, None, 'from must not be later than to.'
+    return start, end, None
+
+
+def _parse_report_boundary(raw, end_of_day):
+    naive = None
+    try:
+        day = datetime.date.fromisoformat(raw)
+    except ValueError:
+        day = None
+    if day is not None:
+        naive = datetime.datetime.combine(
+            day, datetime.time.max if end_of_day else datetime.time.min,
+        )
+    else:
+        try:
+            naive = datetime.datetime.fromisoformat(raw.replace('Z', '+00:00'))
+        except ValueError:
+            raise ValueError(
+                f"'{raw}' is not a date (YYYY-MM-DD) or an ISO-8601 timestamp."
+            ) from None
+    if timezone.is_naive(naive):
+        naive = timezone.make_aware(naive, datetime.timezone.utc)
+    return naive
 
 
 class OrderPaymentIntentView(views.APIView):

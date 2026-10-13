@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../providers/settings_providers.dart';
+import '../../../shared/navigation/business_roles.dart';
+import '../../../shared/navigation/business_roles_provider.dart';
 import '../../../shared/widgets/toast.dart';
 
 /// Settings hub. Each section lives in its own sub-screen under
@@ -94,10 +96,59 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
+  /// The role switcher: every destination this operator holds, in one list.
+  ///
+  /// Built from the same [businessEntries] list the "Your business" tiles use, so
+  /// a destination can never be reachable from one and missing from the other.
+  void _showBusinessSwitcher(BuildContext context, List<BusinessEntry> entries) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+              child: Row(
+                children: [
+                  Icon(Icons.swap_horiz, color: BuddyColors.green, size: 20),
+                  SizedBox(width: 10),
+                  Text('Your business',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 15)),
+                ],
+              ),
+            ),
+            for (final entry in entries)
+              ListTile(
+                leading: Icon(_businessIcon(entry.key), color: BuddyColors.green),
+                title: Text(entry.label,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(entry.subtitle,
+                    style: const TextStyle(
+                        fontSize: 11, color: BuddyColors.textSecondary)),
+                trailing: const Icon(Icons.chevron_right,
+                    color: BuddyColors.textSecondary, size: 20),
+                onTap: () {
+                  Navigator.pop(sheetCtx);
+                  context.push(entry.route);
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(authProvider).profile;
     final user = ref.watch(authProvider).user;
+    final entries = ref.watch(businessEntriesProvider);
     final displayName = profile?.displayName.isNotEmpty == true
         ? profile!.displayName
         : (user?.email ?? 'BuddyUp user');
@@ -160,11 +211,39 @@ class SettingsScreen extends ConsumerWidget {
               'Policies and guidelines', () => _showHelpSheet(context)),
           _tile(context, tileColor, Icons.block_outlined, 'Blocked Accounts',
               'People you have blocked', () => context.push('/settings/blocked')),
+          // Role-driven group. Every entry is derived from real ownership data by
+          // `businessRolesProvider`, and each of those probes resolves false on
+          // failure — so this group can only ever *hide* an entry for a
+          // half-rolled-out backend, never show one the user does not hold.
+          // Nothing is rendered until every probe has settled, so the list does
+          // not flicker as they land.
+          if (entries.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            _groupLabel(context, 'Your business'),
+            for (final entry in entries)
+              _tile(
+                context,
+                tileColor,
+                _businessIcon(entry.key),
+                entry.label,
+                entry.subtitle,
+                () => context.push(entry.route),
+              ),
+            _tile(
+              context,
+              tileColor,
+              Icons.swap_horiz,
+              'Switch role',
+              'Everything you run, in one list',
+              () => _showBusinessSwitcher(context, entries),
+            ),
+          ],
           // Staff-only surfaces. The tile is hidden entirely for non-staff, the
           // same way the web sidebar hides the admin link, and the console screen
           // re-checks `is_staff` because a deep link must not bypass it.
           if (user?.isStaff ?? false) ...[
             const SizedBox(height: 4),
+            _groupLabel(context, 'Staff'),
             _tile(context, tileColor, Icons.admin_panel_settings_outlined,
                 'Admin Console',
                 'Staff only · users, orders, moderation, approvals, audit',
@@ -181,6 +260,21 @@ class SettingsScreen extends ConsumerWidget {
             destructive: true,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _groupLabel(BuildContext context, String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 12, 4, 6),
+      child: Text(
+        label.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+          color: BuddyColors.textSecondary,
+        ),
       ),
     );
   }
@@ -217,5 +311,21 @@ class SettingsScreen extends ConsumerWidget {
         onTap: onTap,
       ),
     );
+  }
+}
+
+/// Icon for a business role entry.
+IconData _businessIcon(BusinessRoleKey key) {
+  switch (key) {
+    case BusinessRoleKey.shop:
+      return Icons.storefront_outlined;
+    case BusinessRoleKey.events:
+      return Icons.calendar_month_outlined;
+    case BusinessRoleKey.gym:
+      return Icons.fitness_center_outlined;
+    case BusinessRoleKey.stations:
+      return Icons.store_outlined;
+    case BusinessRoleKey.courier:
+      return Icons.pedal_bike_outlined;
   }
 }

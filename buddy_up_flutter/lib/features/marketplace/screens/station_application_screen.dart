@@ -8,6 +8,7 @@ import '../../../data/models/marketplace.dart';
 import '../../../shared/widgets/input.dart';
 import '../../../shared/widgets/wizard_widgets.dart';
 import '../providers/marketplace_provider.dart';
+import '../providers/station_application_provider.dart';
 import '../../../data/models/gym.dart';
 import '../../../features/gym/providers/gym_provider.dart';
 import '../utils/stations.dart';
@@ -157,9 +158,7 @@ class _StationApplicationScreenState
       _serverError = null;
     });
     try {
-      final raw = await ref
-          .read(marketplaceRepositoryProvider)
-          .applyForStation({
+      final application = await submitStationApplication(ref, {
         if (_shopId != null) 'shop': _shopId,
         if (_gymId != null) 'gym': _gymId,
         'business_registration_number': _registrationController.text.trim(),
@@ -172,12 +171,10 @@ class _StationApplicationScreenState
         'submit': true,
       });
       if (!mounted) return;
-      setState(() {
-        _application = StationApplication.fromJson(
-            raw['data'] as Map<String, dynamic>);
-      });
+      setState(() => _application = application);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(raw['message'] as String? ?? 'Application submitted.')),
+        SnackBar(
+            content: Text('${application.status.replaceAll('_', ' ')} submitted.')),
       );
     } catch (e) {
       if (mounted) {

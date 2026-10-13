@@ -13,11 +13,12 @@ import {
 } from '@/api/stations';
 
 vi.mock('@/api/client', () => ({
-  apiClient: { get: vi.fn(), post: vi.fn() },
+  apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn() },
 }));
 
 const getMock = apiClient.get as unknown as ReturnType<typeof vi.fn>;
 const postMock = apiClient.post as unknown as ReturnType<typeof vi.fn>;
+const patchMock = apiClient.patch as unknown as ReturnType<typeof vi.fn>;
 
 const ok = <T,>(data: T) => ({
   data: { success: true, data, message: '', errors: null, pagination: null },
@@ -45,6 +46,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   getMock.mockResolvedValue(ok([]));
   postMock.mockResolvedValue(ok({ id: 'pi-1' }));
+  patchMock.mockResolvedValue(ok({ id: 'st-1' }));
 });
 
 describe('stationsApi.list — request shape', () => {
@@ -252,5 +254,42 @@ describe('stations failure handling', () => {
       .toContain('name: This field is required.');
     expect(stationsErrorMessage(new Error('boom'), 'Fallback.')).toBe('Fallback.');
     expect(stationsErrorMessage(null, 'Fallback.')).toBe('Fallback.');
+  });
+});
+
+describe('stationsApi — owner-only writes', () => {
+  it('POSTs a new station to the collection endpoint', async () => {
+    const payload = {
+      name: 'Westlands Hub',
+      address: 'Sarita Centre',
+      city: 'Nairobi',
+      country: 'KE',
+      latitude: -1.2676,
+      longitude: 36.8119,
+      phone: '+254700000000',
+      opening_hours: { monday: { open: '08:00', close: '20:00' } },
+      is_primary: true,
+      owner_type: 'shop' as const,
+    };
+    await stationsApi.create(payload);
+    expect(postMock).toHaveBeenCalledWith('/marketplace/stations/', payload);
+  });
+
+  it('PATCHes an existing station by id, partial payload and all', async () => {
+    await stationsApi.update('st-1', { is_primary: true });
+    expect(patchMock).toHaveBeenCalledWith('/marketplace/stations/st-1/', { is_primary: true });
+
+    await stationsApi.update('st-1', { name: 'Renamed', city: 'Nakuru' });
+    expect(patchMock).toHaveBeenLastCalledWith('/marketplace/stations/st-1/', { name: 'Renamed', city: 'Nakuru' });
+  });
+
+  it('POSTs a station application and returns its review status', async () => {
+    postMock.mockResolvedValueOnce(ok({ id: 'app-1', status: 'pending' }));
+    const res = await stationsApi.apply({ station_name: 'Kilimani Hub', notes: 'Ground floor, busy market area.' });
+    expect(postMock).toHaveBeenCalledWith('/marketplace/station-applications/', {
+      station_name: 'Kilimani Hub',
+      notes: 'Ground floor, busy market area.',
+    });
+    expect(res.data.status).toBe('pending');
   });
 });

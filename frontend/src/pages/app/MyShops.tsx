@@ -54,7 +54,7 @@ export default function MyShops() {
                   <p className="text-xs text-buddy-text-secondary">@{shop.handle}</p>
                 </div>
               </div>
-              <Button size="sm" variant="outline" onClick={() => navigate(`/marketplace/shops/${shop.handle}`)}>View</Button>
+              <Button size="sm" variant="outline" onClick={() => navigate(`/shops/${shop.handle}`)}>View</Button>
             </Card>
           ))}
         </div>
