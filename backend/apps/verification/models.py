@@ -78,12 +78,23 @@ class VerificationDocumentAccess(TimestampedModel):
 
 
 class VerificationSubmission(TimestampedModel):
+    # The auditable vehicle for every claim of professional standing.
+    #
+    # The first five predate the category-application flow: `id` is identity,
+    # `trainer`/`practitioner` are professional certifications, and `shop`/`gym`
+    # are business verifications. The last three were missing while the platform
+    # already had gym owners, shop owners and delivery partners as real
+    # participants — they had no route to be verified at all, so they were
+    # either unverified or, worse, self-declared.
     VERIFICATION_TYPES = [
         ('id', 'ID Verification'),
         ('trainer', 'Trainer Certification'),
         ('practitioner', 'Health Practitioner'),
         ('shop', 'Shop / Seller Verification'),
         ('gym', 'Gym Verification'),
+        ('gym_owner', 'Gym Owner'),
+        ('shop_owner', 'Shop Owner'),
+        ('delivery_partner', 'Delivery Partner'),
     ]
     STATUS_CHOICES = [
         ('draft', 'Draft'),

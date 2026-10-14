@@ -233,6 +233,14 @@ def _hard_delete_user(user):
 
         Message.objects.filter(sender=profile).delete()
 
+        # AnalyticsEvent.actor is SET_NULL, so deleting the profile would
+        # orphan every behavioural event this person ever generated — leaving
+        # their anonymous_id, session_id and properties intact. Retention is
+        # not erasure, so this has to be an explicit delete.
+        from apps.analytics.models import AnalyticsEvent as _AnalyticsEvent
+
+        _AnalyticsEvent.objects.filter(actor=profile).delete()
+
         profile.delete()
 
     user.delete()
@@ -288,7 +296,7 @@ def export_user_data(user_id: str):
     from apps.wallet.models import ArtifactTransaction
     from apps.sessions.models import BookingSession
     from apps.notifications.models import Notification, NotificationPreference
-    from apps.analytics.models import ActivityRecord, WorkoutLog, BodyMetric
+    from apps.analytics.models import AnalyticsEvent, ActivityRecord, WorkoutLog, BodyMetric
     from apps.gamification.models import UserAchievement
 
     try:
@@ -339,6 +347,17 @@ def export_user_data(user_id: str):
                 'activity_records': list(ActivityRecord.objects.filter(user=profile).values()),
                 'workout_logs': list(WorkoutLog.objects.filter(user=profile).values()),
                 'body_metrics': list(BodyMetric.objects.filter(user=profile).values()),
+                # Behavioural telemetry is personal data under the same export
+                # request as everything else. `id`, `consent` and `actor_id` are
+                # omitted — they are not the person's data to receive back.
+                'behavioral_events': list(AnalyticsEvent.objects.filter(actor=profile)
+                                          .order_by('-received_at')
+                                          .values('event_name', 'event_version',
+                                                  'occurred_at', 'received_at',
+                                                  'platform', 'surface',
+                                                  'object_type', 'object_id',
+                                                  'anonymous_id', 'session_id',
+                                                  'properties')),
             },
             'achievements': list(UserAchievement.objects.filter(profile=profile).values(
                 'progress', 'earned_at',

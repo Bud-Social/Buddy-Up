@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 
+import { Link } from 'react-router-dom';
 import { Shield, CheckCircle, Clock, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -130,6 +131,15 @@ export default function Verification() {
             <h3 className="font-heading font-semibold text-sm">Why verify?</h3>
             <p className="text-xs text-buddy-text-secondary mt-1">
               Verification badges help build trust in the community. Verify your identity, trainer certifications, or practitioner credentials to unlock special badges and features.
+            </p>
+            <p className="text-xs text-buddy-text-secondary mt-2">
+              Looking to work as a{' '}
+              <span className="font-medium text-buddy-text-primary">trainer, practitioner, gym or shop owner</span>?
+              {' '}Those roles are granted after a review by two members of staff rather than chosen at sign-up.{' '}
+              <Link to="/verification/categories" className="text-buddy-green font-medium hover:underline">
+                Apply for a category
+              </Link>{' '}
+              and track it under &ldquo;My applications&rdquo;.
             </p>
           </div>
         </div>

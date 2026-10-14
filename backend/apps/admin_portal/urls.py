@@ -9,6 +9,8 @@ would leave the second unreachable behind a 405.
 """
 from django.urls import path
 
+from apps.analytics import platform_views as analytics_views
+
 from . import views
 
 app_name = 'admin_portal'
@@ -77,4 +79,23 @@ urlpatterns = [
          name='transaction_detail'),
     path('wallet/reconciliation/', views.WalletReconciliationView.as_view(),
          name='wallet_reconciliation'),
+
+    # --- Platform analytics ---
+    #
+    # The views live in apps.analytics (the metric registry and the rollup
+    # reader belong to the app that owns the data); only the routes are
+    # registered here, so this app stays the single place the portal's URL
+    # surface is written down.
+    path('analytics/overview/', analytics_views.AnalyticsOverviewView.as_view(),
+         name='analytics_overview'),
+    path('analytics/timeseries/', analytics_views.AnalyticsTimeseriesView.as_view(),
+         name='analytics_timeseries'),
+    path('analytics/trending/', analytics_views.AnalyticsTrendingView.as_view(),
+         name='analytics_trending'),
+    path('analytics/ai-quality/', analytics_views.AnalyticsAIQualityView.as_view(),
+         name='analytics_ai_quality'),
+    path('analytics/predictive/', analytics_views.AnalyticsPredictiveView.as_view(),
+         name='analytics_predictive'),
+    path('analytics/export/', analytics_views.AnalyticsExportView.as_view(),
+         name='analytics_export'),
 ]

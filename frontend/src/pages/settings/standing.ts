@@ -66,14 +66,18 @@ function asNumber(value: unknown): number | null {
  * - **Reversal.** A lifted ban must stop showing "your account has been banned"
  *   and must not offer an appeal button for an action that no longer exists.
  *   The reversal notice carries the *original* action's id under
- *   `original_action_id`, so it is collected in a first pass.
+ *   `original_action_id` — and, per
+ *   `apps.moderation.services.notify_action_reversed`, it carries **no**
+ *   `moderation_action_id` at all (it has `reversal_action_id`). Reversals are
+ *   therefore collected from every standing notification before the action list
+ *   is built. Requiring `moderation_action_id` first would drop every reversal
+ *   the server actually sends, and a lifted ban would stay on the account
+ *   forever.
  * - **Reversals are not themselves listable.** A reversal is not something to
  *   appeal, so only punitive notification types survive the final filter.
  */
 export function buildStanding(notifications: Notification[]): StandingEntry[] {
-  const moderation = notifications.filter(
-    (n) => STANDING_NOTIFICATION_TYPES.has(n.notification_type) && asString(n.metadata?.moderation_action_id),
-  );
+  const moderation = notifications.filter((n) => STANDING_NOTIFICATION_TYPES.has(n.notification_type));
   const reversedIds = new Set(
     moderation
       .filter((n) => n.notification_type === 'moderation_action_reversed')
@@ -84,11 +88,11 @@ export function buildStanding(notifications: Notification[]): StandingEntry[] {
   const byAction = new Map<string, StandingEntry>();
   for (const n of moderation) {
     const actionId = asString(n.metadata?.moderation_action_id);
-    if (!actionId) continue;
-    const isReversal = n.notification_type === 'moderation_action_reversed';
+    // A reversal notice names the action it undoes, not an action of its own.
+    if (!actionId || n.notification_type === 'moderation_action_reversed') continue;
     const entry: StandingEntry = {
       actionId,
-      action: asString(n.metadata?.action) || (isReversal ? 'action_reversed' : n.notification_type),
+      action: asString(n.metadata?.action) || n.notification_type,
       notificationType: n.notification_type,
       title: n.title,
       reason: asString(n.metadata?.reason) || n.body || '',

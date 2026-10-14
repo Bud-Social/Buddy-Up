@@ -61,6 +61,18 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.wallet.tasks.process_pending_withdrawals',
         'schedule': crontab(minute='*/15'),
     },
+    # Analytics. Duplicate of the settings entries on purpose: celery.py is the
+    # file an operator reads to see what the worker actually runs, and the merge
+    # at the bottom already treats these two as one schedule with these keys
+    # winning on collision.
+    'analytics-daily-rollup': {
+        'task': 'apps.analytics.tasks.rollup_daily_platform_metrics',
+        'schedule': crontab(hour='4', minute='20'),
+    },
+    'analytics-event-retention': {
+        'task': 'apps.analytics.tasks.purge_expired_analytics_events',
+        'schedule': crontab(hour='4', minute='40'),
+    },
 }
 
 # Merge rather than replace: settings.CELERY_BEAT_SCHEDULE carries entries

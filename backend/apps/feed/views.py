@@ -1177,6 +1177,17 @@ class CreatePostView(views.APIView):
         except Exception:  # noqa: BLE001
             pass
 
+        # Hashtags: supplied in `tags[]` and parsed out of the body both become
+        # feed.Tag / feed.PostTag rows. `Post.tags` itself is untouched, so the
+        # create contract is unchanged — a client that sends tags still gets them
+        # echoed back exactly as sent. Best-effort by design: a post that is
+        # already written must not 500 because a hashtag could not be parsed.
+        try:
+            from .tags import sync_post_tags
+            sync_post_tags(post)
+        except Exception:  # noqa: BLE001
+            logger.exception('post_tag_sync_failed post_id=%s', post.id)
+
         output = PostSerializer(post, context={'request': request})
         return Response({
             'success': True,

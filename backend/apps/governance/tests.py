@@ -210,19 +210,36 @@ class ScopeDefinitionTests(TestCase):
         Collected from the view classes, not by grepping the source: for_scope()
         builds an anonymous subclass per call, so the scope is only visible on the
         ``permission_classes`` attribute of a view.
+
+        Scans both modules that serve ``/api/v1/portal/``. The platform
+        analytics routes are portal routes but live in ``apps.analytics``
+        (they own the models and the query code), so reading only
+        ``admin_portal`` would report the analytics scopes as undeclared and
+        flag them as the dead privilege this test exists to catch.
         """
         import apps.admin_portal.views as portal_views
+        import apps.analytics.platform_views as analytics_views
 
         declared = set()
-        for name in dir(portal_views):
-            view = getattr(portal_views, name)
+        for module in (portal_views, analytics_views):
+          for name in dir(module):
+            view = getattr(module, name)
             if not isinstance(view, type):
                 continue
             for permission in getattr(view, 'permission_classes', ()):
                 # permission_classes holds classes, so walk the class's own mro.
-                for klass in getattr(permission, '__mro__', ()):
-                    if klass.__name__.startswith('ScopedPlatformAdmin['):
-                        declared.add(klass.required_scope)
+                # Match structurally rather than by class name: for_scope()
+                # mints an anonymous subclass whose name embeds the declaring
+                # class, so a subclass of ScopedPlatformAdmin that renames
+                # itself would otherwise read as undeclared.
+                if not any(
+                    getattr(klass, '__name__', '') == 'ScopedPlatformAdmin'
+                    for klass in getattr(permission, '__mro__', ())
+                ):
+                    continue
+                scope = getattr(permission, 'required_scope', None)
+                if scope:
+                    declared.add(scope)
         return declared
 
     def test_every_route_scope_is_in_all_scopes(self):

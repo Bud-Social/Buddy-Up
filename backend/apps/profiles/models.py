@@ -17,7 +17,26 @@ class Profile(TimestampedModel):
         ('practitioner', 'Health Practitioner'),
         ('shop', 'Verified Shop'),
         ('gym', 'Verified Gym'),
+        # Category-application outcomes. These are verifications of a *person*,
+        # not of a business, so they do not map onto a ROLE_CHOICES value — a
+        # gym owner is still role='user' with a verified 'gym_owner' status.
+        ('gym_owner', 'Verified Gym Owner'),
+        ('shop_owner', 'Verified Shop Owner'),
+        ('delivery_partner', 'Verified Delivery Partner'),
     ]
+
+    # The verification_status that certifies each elevated role, read from what
+    # ``apps.verification`` actually writes on approval: approving a
+    # ``trainer``/``practitioner`` submission sets ``Profile.role`` *and*
+    # ``Profile.verification_status`` to the same value.
+    #
+    # A role with no entry here can never be "verified" — it has no verification
+    # vocabulary of its own, and treating it as verified by default would be
+    # exactly the self-declaration hole this map exists to close.
+    ROLE_VERIFICATION_STATUSES = {
+        'trainer': 'trainer',
+        'practitioner': 'practitioner',
+    }
     PRIVACY_CHOICES = [
         ('public', 'Public'),
         ('private', 'Private'),
@@ -69,6 +88,29 @@ class Profile(TimestampedModel):
 
     def __str__(self):
         return f'@{self.username}'
+
+    def is_verified_role(self):
+        """True only when this profile's elevated role has actually been verified.
+
+        ``role`` on its own proves nothing and must never be treated as proof.
+        It was client-declared at registration until the self-declared-role hole
+        was closed, so on a row that predates that fix it is an unverified
+        claim. ``verification_status`` is the other half of the pair, and it is
+        only ever written by an approved two-person verification decision.
+
+        So the rule is a conjunction: an elevated role *and* the verification
+        status that certifies it. Anything else — ``role='user'``, a blank
+        status, a status that certifies a different role, or a role this map
+        does not know — is False.
+
+        This is the single definition of "verified"; ``apps.verification``
+        permissions classes call it rather than re-deriving the comparison.
+        """
+        expected_status = self.ROLE_VERIFICATION_STATUSES.get(self.role)
+        if expected_status is None:
+            # role == 'user', or a role with no verification vocabulary.
+            return False
+        return self.verification_status == expected_status
 
 
 class BuddyRelationship(TimestampedModel):

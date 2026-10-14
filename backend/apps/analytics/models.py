@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from django.db import models
+from django.utils import timezone
 from common.models import TimestampedModel
 
 # Single source of truth for the workout taxonomy. Clients read this from
@@ -266,6 +267,81 @@ class AnalyticsReport(TimestampedModel):
 
     def __str__(self):
         return f'Report {self.period} @ {self.created_at:%Y-%m-%d}'
+
+
+class DailyPlatformMetric(TimestampedModel):
+    """One row per (metric, day) — the pre-aggregated platform counters.
+
+    Why this exists
+    ---------------
+    Every "how many posts were there last Tuesday" question was answered by a
+    ``TruncDate(created_at)`` aggregate over the live table. That is a sequential
+    scan of every row ever written, per request, on a table with no index on
+    ``created_at`` (the ``accounts``/``marketplace``/``profiles`` models this app
+    reads are owned elsewhere, so this app cannot add the index itself). The
+    answer was correct and increasingly expensive.
+
+    Why EAV and not one wide row per day
+    ------------------------------------
+    A single ``DailyPlatformRollup(date unique, posts_new, orders_gross, ...)``
+    row is the faster read, and it was the first design. It was rejected because
+    the metric catalogue is expected to grow: the registry lives in code
+    (:mod:`apps.analytics.platform_metrics`), the units are heterogeneous
+    (counts and money in one table), and a wide table turns every new metric into
+    a migration plus a backfill of every historical day. Here, adding
+    ``orders.gross_kes`` is one dict entry and one night of backfill — no schema
+    change, no data rewrite.
+
+    The costs are accepted knowingly: ``value`` is a ``Decimal`` so integer
+    counts arrive as ``Decimal('12.000000')`` (the API layer normalises to
+    ``int``/``float``), and there is no per-metric column constraint. The row
+    count is small — ``metrics x days``, roughly 16 x 365 = ~5.8k rows/year.
+
+    ``dimensions`` / ``dimension_key``
+    ----------------------------------
+    Base rows carry ``dimensions = {}`` and ``dimension_key = ''`` — the
+    "unbroken" series every chart reads. ``dimension_key`` is a stable hash of
+    ``dimensions``, and the uniqueness constraint is on
+    ``(metric, date, dimension_key)``, so a future per-dimension rollup (wallet
+    transactions split by ``direction``, orders split by ``payment_status``) is
+    additive: the same table and index serve it, no migration.
+
+    Idempotency
+    -----------
+    The writer is ``update_or_create`` on that constraint keyed by the *whole*
+    day, never an increment. Re-running a day recomputes it from the source
+    tables and overwrites the row, so a re-run, a late-arriving row and a
+    corrected backfill all converge on the same numbers instead of double
+    counting. See :mod:`apps.analytics.tasks`.
+    """
+
+    id = models.BigAutoField(primary_key=True)
+    metric = models.CharField(max_length=64)
+    date = models.DateField()
+    value = models.DecimalField(max_digits=20, decimal_places=6, default=0)
+    # Rows scanned to produce the value. Diagnostics only — it makes "why is
+    # this number lower than the chart" answerable from the table itself.
+    source_count = models.PositiveIntegerField(default=0)
+    dimensions = models.JSONField(default=dict, blank=True)
+    dimension_key = models.CharField(max_length=64, blank=True, default='')
+    computed_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'analytics_daily_platform_metric'
+        ordering = ['date', 'metric']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['metric', 'date', 'dimension_key'],
+                name='analytics_daily_metric_unique',
+            ),
+        ]
+        indexes = [
+            # The only read shape the timeseries endpoint issues.
+            models.Index(fields=['metric', 'date'], name='analytics_daily_metric_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.metric} {self.date} = {self.value}'
 
 
 class AnalyticsEvent(TimestampedModel):

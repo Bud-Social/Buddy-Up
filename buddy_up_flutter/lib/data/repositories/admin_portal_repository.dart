@@ -231,6 +231,93 @@ abstract class AdminPortalRepository {
   Future<dynamic> getReconciliation();
 
   // -------------------------------------------------------------------------
+  // `/portal/analytics/**` — the platform reports.
+  //
+  // Separate block because these six read a different thing than anything else
+  // in this file: the portal half reads *rows*, and these read *aggregates* of
+  // rows the portal cannot see. Each one returns the server's own payload with
+  // its own per-figure window attached; nothing here composes a number the
+  // server did not send.
+  //
+  // `from`/`to` are passed through unvalidated on purpose. The server owns the
+  // window grammar (YYYY-MM-DD, UTC calendar days, never in the future, bounded
+  // by ANALYTICS_MAX_RANGE_DAYS) and answers a bad range with a 400 naming the
+  // limit — a message better than any guess made here.
+  //
+  // Every response also carries a `table` block, which is the *same* rows the
+  // export writer renders. That is the property that makes "export what I am
+  // looking at" true rather than aspirational.
+  // -------------------------------------------------------------------------
+
+  @GET('/portal/analytics/overview/')
+  Future<dynamic> getAnalyticsOverview({
+    @Query('from') String? from,
+    @Query('to') String? to,
+  });
+
+  /// `metric` is required by the server (400 naming the allowed set) and
+  /// `granularity` is `day` or `week`. Metric keys are namespaced
+  /// (`analytics.orders.count` style on the web; here exactly the keys
+  /// `METRIC_SPECS` holds) — the catalogue in the response is the picker
+  /// source, so a key can never be hardcoded and stale.
+  @GET('/portal/analytics/timeseries/')
+  Future<dynamic> getAnalyticsTimeseries({
+    @Query('metric') String? metric,
+    @Query('granularity') String? granularity,
+    @Query('from') String? from,
+    @Query('to') String? to,
+  });
+
+  /// `kind` is one of posts / services / events / hashtags / pages. `pages`
+  /// answers `{available: false, reason}` — a refusal with a reason, not an
+  /// empty list, and the screen renders it as such.
+  @GET('/portal/analytics/trending/')
+  Future<dynamic> getAnalyticsTrending({
+    @Query('kind') String? kind,
+    @Query('limit') int? limit,
+    @Query('from') String? from,
+    @Query('to') String? to,
+  });
+
+  @GET('/portal/analytics/ai-quality/')
+  Future<dynamic> getAnalyticsAiQuality({
+    @Query('from') String? from,
+    @Query('to') String? to,
+  });
+
+  @GET('/portal/analytics/predictive/')
+  Future<dynamic> getAnalyticsPredictive({
+    @Query('from') String? from,
+    @Query('to') String? to,
+  });
+
+  /// CSV / XLSX bytes for one report, with the same filters the screen used.
+  ///
+  /// Bytes rather than a URL handed straight to a browser, for the same reason
+  /// `exportAuditLog` is: the route is staff-scoped and the app authenticates
+  /// with a Bearer token, so a browser opened at the address would answer 401
+  /// rather than a file. Returning `HttpResponse` also hands back the headers,
+  /// which is the only place `X-Analytics-Rows`, `X-Analytics-From` /
+  /// `-To` and the `Content-Disposition` filename exist — and the row count is
+  /// what the screen needs in order not to present a short file as a complete
+  /// one.
+  ///
+  /// `@DioResponseType(ResponseType.bytes)` keeps Dio from trying to parse a
+  /// spreadsheet as JSON.
+  @GET('/portal/analytics/export/')
+  @DioResponseType(ResponseType.bytes)
+  Future<HttpResponse<dynamic>> exportAnalyticsReport({
+    @Query('report') String? report,
+    @Query('format') String? format,
+    @Query('from') String? from,
+    @Query('to') String? to,
+    @Query('metric') String? metric,
+    @Query('granularity') String? granularity,
+    @Query('kind') String? kind,
+    @Query('limit') int? limit,
+  });
+
+  // -------------------------------------------------------------------------
   // `/governance/**` — two-person approvals, the audit trail, staff email.
   //
   // Separate from `/portal/**` because that is how the server splits it: the

@@ -678,3 +678,134 @@ class InterestDiscoveryFlagsTests(TestCase):
         response = self.client.get('/api/v1/profiles/liker/search-profile/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data['data']['can_message'])
+
+
+class RoleEscalationTests(TestCase):
+    """Onboarding must not be a second way in to an elevated role."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='esc@example.com', password='TestPass123!')
+        self.user.dob_hash = hash_dob(date(2000, 6, 15))
+        self.user.is_adult = True
+        self.user.save()
+        self.profile = Profile.objects.create(
+            user=self.user, username='escuser', display_name='Esc User',
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+        self.url = '/api/v1/profiles/onboarding/'
+
+    def _payload(self, **overrides):
+        return {
+            'primary_goal': ['weight_loss'],
+            'activity_level': 'moderately_active',
+            'preferred_workouts': ['running'],
+            'dietary_preference': 'none',
+            'preferred_time': 'morning',
+            'terms_version': '2026-08-v1',
+            **overrides,
+        }
+
+    def test_onboarding_cannot_escalate_a_role(self):
+        for role in ('trainer', 'practitioner'):
+            with self.subTest(role=role):
+                response = self.client.post(self.url, self._payload(role=role), format='json')
+                # 200 (the rest of onboarding is valid) or 400 (role rejected as an
+                # unknown field) — either is acceptable; the profile must not move.
+                self.assertIn(response.status_code, (
+                    status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST,
+                ))
+                self.profile.refresh_from_db()
+                self.assertEqual(self.profile.role, 'user')
+                self.assertFalse(self.profile.is_verified_role())
+
+    def test_onboarding_cannot_write_verification_status(self):
+        self.client.post(
+            self.url, self._payload(verification_status='trainer'), format='json',
+        )
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.verification_status, 'none')
+
+    def test_profile_patch_cannot_escalate_a_role(self):
+        response = self.client.patch(
+            f'/api/v1/profiles/me/',
+            {'role': 'trainer', 'verification_status': 'trainer'},
+            format='json',
+        )
+        self.profile.refresh_from_db()
+        self.assertNotEqual(self.profile.role, 'trainer')
+        self.assertEqual(self.profile.verification_status, 'none')
+        self.assertFalse(self.profile.is_verified_role())
+        # Whether the unknown fields are refused or ignored is a serializer
+        # decision; what matters is that neither one grants the role.
+        self.assertIn(response.status_code, (
+            status.HTTP_200_OK, status.HTTP_400_BAD_REQUEST,
+        ))
+
+
+class IsVerifiedRoleTests(TestCase):
+    """Profile.is_verified_role() is the single definition of 'verified'."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='ivr@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(
+            user=self.user, username='ivruser', display_name='IVR User',
+        )
+
+    def _assert_flag(self, role, status, expected):
+        self.profile.role = role
+        self.profile.verification_status = status
+        self.profile.save()
+        self.assertEqual(self.profile.is_verified_role(), expected, f'{role}/{status}')
+
+    def test_flag_matrix(self):
+        # role, verification_status, expected
+        self._assert_flag('user', 'none', False)
+        self._assert_flag('user', 'email', False)
+        self._assert_flag('user', 'trainer', False)
+        self._assert_flag('trainer', 'none', False)
+        self._assert_flag('trainer', 'email', False)
+        self._assert_flag('trainer', 'trainer', True)
+        self._assert_flag('trainer', 'practitioner', False)
+        self._assert_flag('practitioner', 'practitioner', True)
+        self._assert_flag('practitioner', 'trainer', False)
+
+    def test_new_category_statuses_are_never_a_verified_role(self):
+        """A verified gym owner is still role='user' — verification is not a role."""
+        for status in ('gym_owner', 'shop_owner', 'delivery_partner'):
+            with self.subTest(status=status):
+                self._assert_flag('user', status, False)
+
+    def test_role_with_no_verification_vocabulary_is_never_verified(self):
+        self.profile.role = 'librarian'
+        self.profile.verification_status = 'librarian'
+        self.profile.save()
+        self.assertFalse(self.profile.is_verified_role())
+
+
+class SelfDeclaredRoleMigrationTests(TestCase):
+    """The defensive migration reports; it must never demote anyone."""
+
+    def test_migration_touches_no_rows(self):
+        import importlib
+
+        from django.apps import apps as global_apps
+
+        migration = importlib.import_module(
+            'apps.profiles.migrations.0014_audit_self_declared_roles',
+        )
+        # A state that still has the damage in it.
+        trainer = Profile.objects.create(
+            user=User.objects.create_user(email='legacy-trainer@example.com', password='TestPass123!'),
+            username='legacytrainer', display_name='Legacy Trainer',
+            role='trainer', verification_status='none',
+        )
+
+        # `None` for the schema editor: this migration has no schema operation,
+        # and a data function that did would be a bug worth failing on.
+        migration.report_self_declared_roles(global_apps, None)
+
+        trainer.refresh_from_db()
+        self.assertEqual(trainer.role, 'trainer', 'the migration must not demote')
+        self.assertEqual(trainer.verification_status, 'none')
+        self.assertEqual(Profile.objects.filter(role='trainer').count(), 1)

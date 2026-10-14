@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
+import { StandingBanner } from './StandingBanner';
 import { IncomingCallOverlay } from '@/components/chat/IncomingCallOverlay';
 import { UploadPill } from './UploadPill';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -57,6 +58,7 @@ export function AppShell() {
           </header>
         )}
         <main className={`flex-1 pb-20 md:pb-0 transition-all duration-300 ${sidebarMargin}`}>
+          <StandingBanner />
           <Outlet />
         </main>
       </div>

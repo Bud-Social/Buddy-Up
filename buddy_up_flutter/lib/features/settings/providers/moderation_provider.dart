@@ -36,6 +36,19 @@ const Set<String> kModerationNoticeTypes = {
   'moderation_ban',
 };
 
+/// Notification types that describe *current* standing, reversals included.
+///
+/// A reversal is collected here but is not itself standing: `notify_action_
+/// reversed` names the action it undoes under `original_action_id` and carries
+/// **no** `moderation_action_id` at all (it has `reversal_action_id`). So a
+/// reversal has to be gathered before the action list is built — filtering for
+/// `moderation_action_id` first would drop every reversal the server actually
+/// sends, and a lifted ban would sit on the account forever.
+const Set<String> kStandingNotificationTypes = {
+  ...kModerationNoticeTypes,
+  'moderation_action_reversed',
+};
+
 /// How a notice reads to the person who received it.
 enum ModerationNoticeKind { warning, contentRemoved, suspension, ban }
 
@@ -57,6 +70,13 @@ class MyModerationNotice {
   final int? durationDays;
   final String createdAt;
 
+  /// True when a later notification reversed this action.
+  ///
+  /// History, not standing: a reversed row must stop being shown as a live
+  /// restriction and must not offer an appeal button for something that no
+  /// longer exists.
+  final bool reversed;
+
   const MyModerationNotice({
     required this.notificationId,
     required this.actionId,
@@ -66,6 +86,7 @@ class MyModerationNotice {
     this.suspendedUntil,
     this.permanent = false,
     this.durationDays,
+    this.reversed = false,
   });
 
   ModerationNoticeKind get kind {
@@ -104,9 +125,14 @@ class MyModerationNotice {
       };
 
   bool get restrictsAccess =>
-      kind == ModerationNoticeKind.suspension || kind == ModerationNoticeKind.ban;
+      !reversed &&
+      (kind == ModerationNoticeKind.suspension || kind == ModerationNoticeKind.ban);
 
-  bool get isAppealable => actionId.isNotEmpty;
+  /// A reversal is not appealable — there is nothing left to challenge.
+  bool get isAppealable => actionId.isNotEmpty && !reversed;
+
+  /// True while this action still governs the account.
+  bool get isActive => !reversed;
 
   static String _humanDate(String iso) {
     final parsed = DateTime.tryParse(iso);
@@ -164,14 +190,91 @@ String _actionFromType(String notificationType) => switch (notificationType) {
       _ => 'warning',
     };
 
-/// Every moderation action taken against this account, newest first.
+/// True when [a] is strictly older than [b].
+///
+/// `_compareTo`, not `<`: the operator is not defined on `String`, and the feed
+/// is ISO-8601 so lexicographic order is chronological order.
+bool _olderThan(String a, String b) => a.compareTo(b) < 0;
+
+/// Every moderation action taken against this account, newest first, with
+/// reversals resolved across the whole feed.
+///
+/// One row per `moderation_action_id` rather than one per notification: a
+/// repeated action on the same row would otherwise show twice, and the app-wide
+/// standing banner below takes the first entry as *the* current standing.
 final myModerationNoticesProvider =
     FutureProvider<List<MyModerationNotice>>((ref) async {
   final notifications = await ref.watch(notificationsProvider.future);
-  return notifications
-      .map(moderationNoticeFrom)
-      .whereType<MyModerationNotice>()
+  return buildStanding(notifications);
+});
+
+/// Fold this account's moderation notifications into one row per action.
+///
+/// Pure and separate from the provider so it is directly testable against
+/// fixtures rather than only through the screen — the reversal rule is the part
+/// that is easy to get subtly wrong and impossible to notice in a widget test.
+///
+/// Two things this has to get right, both of which are user-facing mistakes
+/// rather than crashes:
+///
+/// * **Reversal.** A lifted ban must stop showing "your account was banned"
+///   and must stop offering an appeal for it.
+/// * **Reversals are not themselves listable.** A reversal is not something to
+///   appeal, so only the punitive notification types survive the final filter.
+List<MyModerationNotice> buildStanding(List<BuddyNotification> notifications) {
+  final standing = notifications
+      .where((n) => kStandingNotificationTypes.contains(n.notificationType))
       .toList();
+
+  final reversedIds = <String>{
+    for (final n in standing)
+      if (n.notificationType == 'moderation_action_reversed')
+        if (n.metadata?['original_action_id'] is String)
+          (n.metadata!['original_action_id'] as String).trim(),
+  }..removeWhere((id) => id.isEmpty);
+
+  final byAction = <String, MyModerationNotice>{};
+  for (final n in standing) {
+    final notice = moderationNoticeFrom(n);
+    if (notice == null) continue;
+    // A reversal notice names the action it undoes, not an action of its own.
+    if (!kModerationNoticeTypes.contains(n.notificationType)) continue;
+    if (notice.actionId.isEmpty) continue;
+    final entry = MyModerationNotice(
+      notificationId: notice.notificationId,
+      actionId: notice.actionId,
+      action: notice.action,
+      reason: notice.reason.isEmpty ? n.body : notice.reason,
+      createdAt: notice.createdAt,
+      suspendedUntil: notice.suspendedUntil,
+      permanent: notice.permanent,
+      durationDays: notice.durationDays,
+      reversed: reversedIds.contains(notice.actionId),
+    );
+    final existing = byAction[notice.actionId];
+    // The feed is newest-first, so an existing row is the older one.
+    if (existing == null || _olderThan(existing.createdAt, entry.createdAt)) {
+      byAction[notice.actionId] = entry;
+    }
+  }
+  final rows = byAction.values.toList()
+    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  return rows.reversed.toList();
+}
+
+/// The one row the app-wide standing banner shows: the newest action still in
+/// force, or null when there is none.
+///
+/// Null rather than an empty list, and the banner renders nothing at all for
+/// it — a failed or empty load must never put an alarming banner in front of an
+/// account with nothing on it.
+final currentStandingProvider =
+    FutureProvider<MyModerationNotice?>((ref) async {
+  final notices = await ref.watch(myModerationNoticesProvider.future);
+  for (final notice in notices) {
+    if (notice.isActive && notice.restrictsAccess) return notice;
+  }
+  return null;
 });
 
 /// Appeals this account has raised.

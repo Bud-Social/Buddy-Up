@@ -3,7 +3,16 @@ import type { ApiResponse, User, Profile } from '@/types';
 
 export interface RegisterPayload {
   email: string; phone?: string; password: string; dob: string;
-  username?: string; display_name?: string; role?: string;
+  username?: string; display_name?: string;
+  /**
+   * `role` is deliberately absent and must stay absent.
+   *
+   * `RegisterSerializer.validate_role` refuses anything but `user`, so a
+   * professional role cannot be self-declared at signup any more. Trainer and
+   * practitioner standing is granted when a verification decision is approved
+   * by two members of staff, and the route that starts it is
+   * `POST /verification/category-applications/`.
+   */
   accepted_terms: boolean; accepted_privacy: boolean; accepted_guidelines: boolean; is_16_plus: boolean;
   guardian_name?: string; guardian_email?: string; guardian_phone?: string;
 }

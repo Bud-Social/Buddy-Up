@@ -113,6 +113,53 @@ class AdminConsoleScreen extends ConsumerWidget {
       blurb: 'Message a user, and read what was sent',
       icon: Icons.outbox_outlined
     ),
+    (
+      route: '/admin/verification',
+      label: 'Verification',
+      blurb: 'Identity and professional reviews — a decision needs two people',
+      icon: Icons.badge_outlined
+    ),
+  ];
+
+  /// The `/portal/analytics/**` reports.
+  ///
+  /// A group of its own because these read differently from every other tile on
+  /// this screen: they are aggregates over tables the portal never exposes,
+  /// each figure carries its own window, and several of them decline to answer
+  /// at all (`trending?kind=pages`). Filing them under "Users" or "Orders"
+  /// would make them look like another queue to work.
+  static const List<({String route, String label, String blurb, IconData icon})>
+      analyticsSections = [
+    (
+      route: '/admin/analytics',
+      label: 'Platform overview',
+      blurb: 'KPIs, each labelled with the window it was measured over',
+      icon: Icons.query_stats_outlined
+    ),
+    (
+      route: '/admin/analytics/trends',
+      label: 'Trends',
+      blurb: 'One metric over time, bucketed and zero-filled',
+      icon: Icons.timeline_outlined
+    ),
+    (
+      route: '/admin/analytics/trending',
+      label: 'Trending',
+      blurb: 'Top posts, services, events and hashtags in the window',
+      icon: Icons.local_fire_department_outlined
+    ),
+    (
+      route: '/admin/analytics/ai-quality',
+      label: 'AI quality',
+      blurb: 'Fallback rate, correction proxy, latency and cost per model',
+      icon: Icons.smart_toy_outlined
+    ),
+    (
+      route: '/admin/analytics/predictive',
+      label: 'Recommendation signals',
+      blurb: 'Observed feedback and impressions — no forecast',
+      icon: Icons.insights_outlined
+    ),
   ];
 
   static Widget _sectionTile(
@@ -207,6 +254,24 @@ class AdminConsoleScreen extends ConsumerWidget {
             ),
           ),
           for (final section in governanceSections)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _sectionTile(context, cs, section),
+            ),
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(2, 0, 2, 8),
+            child: Text(
+              'PLATFORM ANALYTICS',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.1,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
+          for (final section in analyticsSections)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: _sectionTile(context, cs, section),

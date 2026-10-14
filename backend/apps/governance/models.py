@@ -100,6 +100,11 @@ ALL_SCOPES = frozenset({
     # Wallet
     'wallet.read',
     'wallet.reconcile',
+    # Analytics — the platform-wide staff console at /api/v1/portal/analytics/.
+    # `analytics.read` views; `analytics.export` moves data off-platform, so it
+    # is deliberately a separate scope from reading it on screen.
+    'analytics.read',
+    'analytics.export',
 })
 
 # Scopes that are defined and grantable but are not (yet) declared on any route.
@@ -216,8 +221,10 @@ DEFAULT_SCOPES_BY_ROLE = {
         'users.read',
         'orders.read',
         # A support agent can freeze a session, correct a profile field and read
-        # an order — not ban, not pay, not approve money.
+        # an order — not ban, not pay, not approve money. Read-only analytics
+        # helps them answer "is this account active?" without granting export.
         'users.write-lite',
+        'analytics.read',
     },
 
     'gym_relations': {
@@ -246,6 +253,8 @@ DEFAULT_SCOPES_BY_ROLE = {
         'wallet.reconcile',
         'orders.read',
         'orders.write',
+        'analytics.read',
+        'analytics.export',
     },
 
     # Certifies shops. Note it gets ``shops.certifications`` (the deciding scope)

@@ -39,7 +39,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   bool _acceptedPrivacy = false;
   bool _acceptedGuidelines = false;
   DateTime? _dob;
-  String _role = 'user';
   late AuthRepository _authRepo;
 
   @override
@@ -120,7 +119,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           dob: _formatDob(dob),
           username: _usernameController.text.trim(),
           displayName: _displayNameController.text.trim(),
-          role: _role,
           acceptedTerms: _acceptedTerms,
           acceptedPrivacy: _acceptedPrivacy,
           acceptedGuidelines: _acceptedGuidelines,
@@ -398,21 +396,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                const Text(
-                  'I am a...',
-                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 13),
-                ),
+                const _RoleApplyNotice(),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _roleChip('user', 'User'),
-                    const SizedBox(width: 8),
-                    _roleChip('trainer', 'Trainer'),
-                    const SizedBox(width: 8),
-                    _roleChip('practitioner', 'Practitioner'),
-                  ],
-                ),
-                const SizedBox(height: 16),
                 CheckboxListTile(
                   value: _acceptedTerms,
                   onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
@@ -510,16 +495,67 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
     );
   }
+}
+/// Replaces the "I am a… Trainer / Practitioner" chips that used to sit here.
+///
+/// **Why the chips are gone.** `Profile.role` used to be self-declared: the
+/// register form set it and the server wrote it straight onto the profile, so a
+/// `{"role": "trainer"}` POST produced a trainer and every permission class
+/// gated on `role` alone then treated them as one. `RegisterSerializer` now
+/// refuses anything but `"user"` and names the route that actually grants a
+/// role.
+///
+/// Leaving the chips would have been worse than either option: the form would
+/// show a control the server rejects, and the 400 would arrive as a raw
+/// validation error at the bottom of a long sign-up form. So the choice is
+/// replaced by a pointer to the application flow — which is the only thing a
+/// person who wants to be a trainer can actually do, and which still takes two
+/// members of staff to settle.
+class _RoleApplyNotice extends StatelessWidget {
+  const _RoleApplyNotice();
 
-  Widget _roleChip(String value, String label) {
-    final selected = _role == value;
-    return ChoiceChip(
-      label: Text(label, style: TextStyle(fontSize: 13, color: selected ? BuddyColors.green : BuddyColors.textSecondary)),
-      selected: selected,
-      onSelected: (v) => setState(() => _role = value),
-      selectedColor: BuddyColors.green.withValues(alpha: 0.2),
-      backgroundColor: BuddyColors.surface,
-      side: BorderSide(color: selected ? BuddyColors.green : BuddyColors.surfaceRaised),
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: const BoxDecoration(
+        color: BuddyColors.surface,
+        borderRadius: BorderRadius.all(Radius.circular(12)),
+        border: Border.fromBorderSide(
+          BorderSide(color: BuddyColors.surfaceRaised),
+        ),
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.how_to_reg_outlined, size: 15, color: BuddyColors.green),
+              SizedBox(width: 8),
+              Text(
+                'Trainer, practitioner or business owner?',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: BuddyColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Those are applied for and reviewed — they cannot be chosen at '
+            'sign-up. Create your account as a member, then submit an '
+            'application from Settings → Verification. It still needs two '
+            'members of staff to approve before it takes effect.',
+            style: TextStyle(
+              fontSize: 11,
+              color: BuddyColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

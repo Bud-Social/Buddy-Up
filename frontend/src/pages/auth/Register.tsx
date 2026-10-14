@@ -48,6 +48,13 @@ function GoogleSignUpButton({ onError }: { onError: (msg: string) => void }) {
  * Email/password sign-up. Profile details (username, display name, bio, goals)
  * are collected by the shared /onboarding pipeline — the same one Google
  * sign-ups use — so registration only gathers credentials and age.
+ *
+ * There is no role selector here any more, and there must not be one added back.
+ * `POST /auth/register/` rejects any `role` other than `user`, so a form that
+ * offered "Trainer" here would either fail the whole sign-up or, worse, show a
+ * 201 and leave a member believing they had applied. Professional standing is
+ * granted by a two-person verification decision; the entry point is
+ * `/verification/categories`, reachable as soon as the account exists.
  */
 export default function Register() {
   const navigate = useNavigate();
@@ -59,10 +66,6 @@ export default function Register() {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState(() => {
-    const preset = searchParams.get('role');
-    return preset === 'trainer' || preset === 'practitioner' ? preset : 'user';
-  });
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [accepted16, setAccepted16] = useState(false);
   const [dobDay, setDobDay] = useState('');
@@ -79,6 +82,11 @@ export default function Register() {
   /** Google credential returned from the OAuth redirect — held until the user
    * grants explicit data-access consent; never exchanged automatically. */
   const [googleConsentToken, setGoogleConsentToken] = useState<string | null>(null);
+
+  // A person arriving from an old "sign up as a trainer" link. Registration can
+  // no longer grant the role, so rather than silently dropping their intent we
+  // say where it moved to.
+  const requestedRole = searchParams.get('role');
 
   // Drop any stale session (e.g. a half-onboarded social account) so the
   // register request goes out anonymous and cannot hit consent gates —
@@ -149,7 +157,7 @@ export default function Register() {
       const d = parseInt(dobDay), m = parseInt(dobMonth), y = parseInt(dobYear);
       const dob = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const res = await authApi.register({
-        email, password, dob, role,
+        email, password, dob,
         accepted_terms: acceptedTerms, accepted_privacy: true, accepted_guidelines: true, is_16_plus: true,
         ...(computedAge < 18 && {
           guardian_name: guardianName,
@@ -195,6 +203,19 @@ export default function Register() {
         )}
         {ageError && <div className="bg-buddy-red/10 border border-buddy-red/30 text-buddy-red rounded-xl p-3 text-sm mb-4">{ageError}</div>}
 
+        {requestedRole && (
+          <div className="bg-buddy-orange/10 border border-buddy-orange/30 text-buddy-orange rounded-xl p-3 text-sm mb-4">
+            <p className="font-medium">
+              &ldquo;{requestedRole}&rdquo; can no longer be chosen at sign-up.
+            </p>
+            <p className="mt-1 text-buddy-text-secondary text-xs">
+              Professional roles are granted after review rather than self-declared. Create your member
+              account below, then apply for {requestedRole} from Verification — the review is done by two
+              people, not one.
+            </p>
+          </div>
+        )}
+
         <div className="space-y-3 mb-6">
           {GOOGLE_CLIENT_ID && <GoogleSignUpButton onError={setError} />}
           <div className="relative flex items-center gap-3">
@@ -218,25 +239,16 @@ export default function Register() {
                 </div>
               )}
             </div>
-            <div>
-              <p className="text-sm font-medium text-buddy-text-primary mb-2">I&apos;m joining as</p>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { value: 'user', label: 'Member' },
-                  { value: 'trainer', label: 'Trainer' },
-                  { value: 'practitioner', label: 'Practitioner' },
-                ].map((r) => (
-                  <button key={r.value} type="button" onClick={() => setRole(r.value)}
-                    className={`px-3 py-2 rounded-xl border text-sm transition-colors ${role === r.value ? 'border-buddy-green bg-buddy-green/10 text-buddy-text-primary font-medium' : 'border-buddy-surface-raised text-buddy-text-secondary hover:border-buddy-green/40'}`}>
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-              {role !== 'user' && (
-                <p className="text-xs text-buddy-text-secondary mt-1.5">
-                  Trainers and practitioners verify credentials after signup to unlock bookings and payouts.
-                </p>
-              )}
+            <div className="rounded-xl border border-buddy-surface-raised p-3">
+              <p className="text-sm font-medium text-buddy-text-primary">Joining as a member</p>
+              <p className="text-xs text-buddy-text-secondary mt-1">
+                Trainer and practitioner roles are granted after a credentials review by two people, not
+                chosen here. Create your account, then submit an application from{' '}
+                <Link to="/verification/categories" className="text-buddy-green hover:underline">
+                  Verification &rarr; Apply for a category
+                </Link>{' '}
+                once your certification is in hand.
+              </p>
             </div>
             <label className="flex items-start gap-2 text-sm text-buddy-text-secondary cursor-pointer">
               <input type="checkbox" checked={acceptedTerms} onChange={(e) => setAcceptedTerms(e.target.checked)} className="mt-1 rounded accent-buddy-green" />

@@ -18,9 +18,14 @@ from django.shortcuts import get_object_or_404
 from .models import (
     VerificationDocument, VerificationDocumentAccess, VerificationSubmission,
 )
+from .decisions import (
+    CATEGORY_APPLICATION_PATH, CATEGORY_APPLICATION_TYPES, DecisionError,
+    apply_decision, raise_decision_request,
+)
 from .serializers import (
-    VerificationDocumentSerializer, VerificationSubmissionSerializer,
-    VerificationReviewSerializer,
+    CategoryApplicationSerializer, VerificationDocumentSerializer,
+    VerificationSubmissionSerializer, VerificationReviewSerializer,
+    VerificationDecisionSerializer,
 )
 from .services import run_face_match
 
@@ -306,57 +311,164 @@ class VerificationSubmissionViewSet(
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def review(self, request, pk=None):
+        """Ask for a decision on this submission. Applies nothing.
+
+        This used to approve in one call — one staff member decided, wrote
+        ``Profile.verification_status``, flipped ``Gym.is_verified``, and could
+        be the applicant. It now only raises
+        ``AccountActionRequest(action='verification_decision')`` and returns 202:
+        a *different* member of staff must call :meth:`decide` before anything
+        changes. Two-person only; there is deliberately no single-approver
+        bypass, because the setting that would gate one lives in
+        ``config/settings.py`` which this app does not own.
+
+        Staff with no ``StaffRole`` row still resolve to every scope
+        (``apps.governance.services.effective_scopes`` branch 5), so the
+        existing single staff account can still raise and approve requests — it
+        simply cannot do both on the same submission.
+        """
         submission = self.get_object()
         serializer = VerificationReviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-        action = serializer.validated_data['action']
-        now = timezone.now()
-
-        if action == 'approve':
-            submission.status = 'approved'
-            profile = submission.profile
-            if submission.verification_type == 'id':
-                profile.verification_status = 'id'
-            elif submission.verification_type == 'trainer':
-                profile.verification_status = 'trainer'
-            elif submission.verification_type == 'practitioner':
-                profile.verification_status = 'practitioner'
-            elif submission.verification_type == 'shop':
-                profile.verification_status = 'shop'
-            elif submission.verification_type == 'gym':
-                profile.verification_status = 'gym'
-                if submission.gym_id:
-                    from apps.gyms.models import Gym
-                    Gym.objects.filter(id=submission.gym_id).update(is_verified=True)
-            profile.save(update_fields=['verification_status'])
-
-            doc_ids = serializer.validated_data.get('document_ids', [])
-            docs = submission.documents.all()
-            if doc_ids:
-                docs = docs.filter(id__in=doc_ids)
-            docs.update(status='approved', reviewed_by=request.user, reviewed_at=now)
-
-        elif action == 'reject':
-            submission.status = 'rejected'
-            rejection_reason = serializer.validated_data.get('rejection_reason', '')
-            doc_ids = serializer.validated_data.get('document_ids', [])
-            docs = submission.documents.all()
-            if doc_ids:
-                docs = docs.filter(id__in=doc_ids)
-            docs.update(
-                status='rejected', rejection_reason=rejection_reason,
-                reviewed_by=request.user, reviewed_at=now,
+        try:
+            approval = raise_decision_request(
+                submission=submission,
+                decision=data['action'],
+                actor=request.user,
+                rejection_reason=data.get('rejection_reason', ''),
+                document_ids=data.get('document_ids') or [],
             )
+        except DecisionError as exc:
+            return Response({'detail': exc.message}, status=exc.status_code)
 
-        submission.reviewed_by = request.user
-        submission.reviewed_at = now
-        submission.save(update_fields=['status', 'reviewed_by', 'reviewed_at'])
+        # `under_review` says "a decision is with an approver", which is true and
+        # is not the same claim as `reviewed_by`/`reviewed_at`. Those two fields
+        # stay empty until the second person decides — the reviewer who raised
+        # the request has reviewed nothing.
+        submission.status = 'under_review'
+        submission.save(update_fields=['status', 'updated_at'])
 
-        # Start a shorter post-decision retention clock if policy asks for it.
-        retention_days = int(os.environ.get('VERIFICATION_POST_REVIEW_RETENTION_DAYS', '30'))
-        submission.documents.filter(purged_at__isnull=True).update(
-            purge_after=now + timezone.timedelta(days=retention_days),
+        return Response(
+            {
+                **VerificationSubmissionSerializer(submission).data,
+                'approval_request': {
+                    'id': str(approval.id),
+                    'status': approval.status,
+                    'requested_by_profile': approval.requested_by_profile,
+                    'required_scope': approval.requires_scope,
+                    'created_at': approval.created_at,
+                },
+            },
+            status=status.HTTP_202_ACCEPTED,
         )
 
-        return Response(VerificationSubmissionSerializer(submission).data)
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def decide(self, request, pk=None):
+        """The second, independent approver settles the pending request.
+
+        Mirrors ``apps.governance.views.ApprovalApproveView`` rule for rule, and
+        applies the effect inside the same transaction as the settle. Only this
+        endpoint applies anything — see the "Known gap" note in
+        ``apps.verification.decisions``.
+        """
+        submission = self.get_object()
+
+        from apps.governance.models import AccountActionRequest
+
+        approval = (
+            AccountActionRequest.objects
+            .filter(action='verification_decision')
+            .filter(**{'payload__submission_id': str(submission.id)})
+            .order_by('-created_at')
+            .first()
+        )
+        if approval is None:
+            return Response(
+                {'detail': (
+                    'No verification decision has been requested for this '
+                    'application. Call review/ first.'
+                )},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = VerificationDecisionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            settled, effect = apply_decision(
+                request_row=approval,
+                actor=request.user,
+                note=serializer.validated_data.get('note') or '',
+            )
+        except DecisionError as exc:
+            return Response({'detail': exc.message}, status=exc.status_code)
+
+        submission.refresh_from_db()
+        return Response({
+            **VerificationSubmissionSerializer(submission).data,
+            'approval': {
+                'id': str(settled.id),
+                'status': settled.status,
+                'decision_note': settled.decision_note,
+                'decided_by': request.user.email,
+                'decided_at': settled.decided_at,
+                'applied_at': settled.applied_at,
+                'effect': effect,
+            },
+        })
+
+
+class CategoryApplicationView(views.APIView):
+    """Apply for an elevated role: POST here, then track it in "my applications".
+
+    The route that ``RegisterSerializer`` points an elevated-role registration
+    at, so the message it rejects with is a working path rather than a dead end.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = CategoryApplicationSerializer(
+            data=request.data, context={'request': request, 'profile': request.user.profile},
+        )
+        serializer.is_valid(raise_exception=True)
+        submission = serializer.save()
+        return Response(
+            serializer.to_representation(submission),
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class MyApplicationsView(views.APIView):
+    """This applicant's own applications, with the decision and the reviewer's note.
+
+    Scoped to ``request.user.profile`` unconditionally — including for staff,
+    who get their own applications here rather than the whole queue (that is
+    the review endpoint, gated on ``IsAdminUser``).
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        queryset = (
+            VerificationSubmission.objects
+            .filter(profile__user=request.user)
+            .prefetch_related('documents')
+            .order_by('-created_at')
+        )
+        category = (request.query_params.get('category') or '').strip()
+        if category:
+            if category not in CATEGORY_APPLICATION_TYPES:
+                return Response(
+                    {'detail': (
+                        f'Unknown category: {category!r}. Must be one of: '
+                        f'{sorted(CATEGORY_APPLICATION_TYPES)}.'
+                    )},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            queryset = queryset.filter(verification_type=category)
+
+        data = VerificationSubmissionSerializer(queryset, many=True).data
+        return Response({'count': len(data), 'results': data})

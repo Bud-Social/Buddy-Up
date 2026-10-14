@@ -33,3 +33,7 @@ google-auth>=2.30
 livekit-api>=1.1
 python-dotenv>=1.0
 requests>=2.32
+# XLSX export for the staff analytics console (apps/analytics/exports.py).
+# CSV needs nothing from the stdlib beyond `csv`; xlsx does. Absent at runtime
+# the export endpoint answers 503 naming this package rather than 500.
+openpyxl>=3.1

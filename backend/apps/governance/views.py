@@ -758,6 +758,22 @@ class ApprovalApproveView(_DecisionView):
             )
             return f'The {role} role is now active for {approval.target_user.email}.'
 
+        if approval.action == 'verification_decision':
+            # Without this branch an approval stamped `applied_at` while doing
+            # nothing, and the submission's own decide endpoint then refused it
+            # as already applied. The effect has to happen exactly where the
+            # stamp does.
+            from apps.verification import decisions as verification_decisions
+
+            apply_decision = getattr(verification_decisions, 'apply_decision', None)
+            if apply_decision is None:
+                raise RuntimeError('apps.verification.decisions.apply_decision is unavailable.')
+
+            settled, effect = apply_decision(
+                request_row=approval, actor=request.user, note=note,
+            )
+            return f'{effect}'
+
         return (
             'The approval is recorded. This action is carried out in the owning '
             'app by the operator; no automatic change was made.'

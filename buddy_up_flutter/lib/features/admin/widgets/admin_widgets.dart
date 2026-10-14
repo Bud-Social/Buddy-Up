@@ -1014,3 +1014,440 @@ class _AdminReviewPromptState extends State<AdminReviewPrompt> {
     );
   }
 }
+// ---------------------------------------------------------------------------
+// Analytics vocabulary
+//
+// Added for `/portal/analytics/**`, where one rule shapes every widget here:
+// **every figure carries its own window.** `users.total` is a lifetime gauge
+// and `users.new` is a delta inside the window, and the server labels them
+// "All time" and "Window" on the same page. A grid of identical tiles would
+// force the reader to assume they share a period, which is the assumption the
+// whole endpoint exists to prevent.
+// ---------------------------------------------------------------------------
+
+/// A KPI tile that shows the window it was measured over.
+///
+/// Two visual differences between the kinds, both carrying meaning rather than
+/// decoration:
+///
+/// * **A gauge gets a solid rule under the value; a flow gets a dashed one.** A
+///   flow is a delta inside a period and a gauge is a running total, and at a
+///   glance the border style is what tells them apart without reading the
+///   caption.
+/// * **The caption is always present and always the KPI's own window** — never
+///   the page's. There is no version of this widget that omits it, because the
+///   omission is the failure mode: a lifetime number with no "All time" under
+///   it is read as this month's number.
+class AdminKpiTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final String windowLabel;
+  final bool isGauge;
+
+  /// `source` is printed under the tile. `indexed == false` adds the
+  /// "no index" mark, because a figure that costs a sequential scan should say
+  /// so where it is read rather than only in a note at the bottom of the page.
+  final String? source;
+  final bool indexed;
+  final String? note;
+
+  const AdminKpiTile({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.windowLabel,
+    required this.isGauge,
+    this.source,
+    this.indexed = true,
+    this.note,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tint = isGauge ? BuddyColors.green : BuddyColors.gold;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outline.withValues(alpha: 0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: tint.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(
+                  isGauge ? 'GAUGE' : 'FLOW',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                    color: tint,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: cs.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          // Solid for a gauge, dashed for a flow: the same distinction the
+          // GAUGE/FLOW pill makes, repeated at the caption where it is read.
+          Container(
+            height: 2,
+            decoration: BoxDecoration(
+              border: isGauge
+                  ? null
+                  : Border.all(
+                      color: cs.outline.withValues(alpha: 0.5),
+                      width: 1,
+                    ),
+              color: isGauge ? cs.outline.withValues(alpha: 0.25) : null,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            windowLabel,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: tint,
+            ),
+          ),
+          if (!indexed)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                'No index on this column — reads cost a sequential scan.',
+                style: TextStyle(fontSize: 10, color: BuddyColors.gold),
+              ),
+            ),
+          if (source != null && source!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                source!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+              ),
+            ),
+          if (note != null && note!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                note!,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: cs.onSurfaceVariant,
+                  height: 1.35,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A panel for a report that declined to produce a list, and said why.
+///
+/// This is the `trending?kind=pages` case and it is the reason the widget
+/// exists. The server answers `{available: false, reason, items: []}`, and the
+/// two empty lists in that response mean completely different things: "we have
+/// no page views" versus "nothing on any client emits a page view, so there is
+/// nothing to count". Rendering the second as an empty list would report a
+/// measurement failure as a quiet period, which is the exact confusion the
+/// endpoint's long `reason` string is written to prevent.
+///
+/// So the reason is printed in full, the kind is named, and there is no list
+/// underneath it to be mistaken for one.
+class AdminUnavailablePanel extends StatelessWidget {
+  final String title;
+  final String reason;
+  final IconData icon;
+
+  const AdminUnavailablePanel({
+    super.key,
+    required this.title,
+    required this.reason,
+    this.icon = Icons.help_outline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: BuddyColors.gold.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BuddyColors.gold.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: BuddyColors.gold),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            reason,
+            style: TextStyle(fontSize: 12, color: cs.onSurface, height: 1.45),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This is a missing measurement, not a period with no activity. '
+            'Nothing above this panel should be read as a trend.',
+            style: TextStyle(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: cs.onSurfaceVariant,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Marks a number as counted rather than inferred.
+///
+/// The predictive report's `observed` flag, and the same distinction the
+/// `accuracy_proxy` caveat insists on: a ratio of two counted sets is not a
+/// measurement of the thing you want to measure.
+class AdminProvenanceBadge extends StatelessWidget {
+  final bool observed;
+  final String? label;
+
+  const AdminProvenanceBadge({
+    super.key,
+    required this.observed,
+    this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = observed ? BuddyColors.green : BuddyColors.gold;
+    final text = label ?? (observed ? 'COUNTED' : 'DERIVED');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(5),
+        border: Border.all(color: tint.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.4,
+          color: tint,
+        ),
+      ),
+    );
+  }
+}
+
+/// Provenance strip: where a series came from and how complete it is.
+///
+/// `data_source.path` is `rollup` (cheap: a batch table read) or `live` (the
+/// server aggregated the source table because the rollup had gaps). The two
+/// cost very different amounts and answer the window at different freshness,
+/// so the path is stated rather than left for the reader to assume the cheap
+/// one.
+class AdminDataSourceNote extends StatelessWidget {
+  final String path;
+  final bool rollupComplete;
+  final List<String> missingDays;
+  final String note;
+
+  const AdminDataSourceNote({
+    super.key,
+    required this.path,
+    required this.rollupComplete,
+    required this.missingDays,
+    required this.note,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isRollup = path == 'rollup';
+    final tint = isRollup ? BuddyColors.green : BuddyColors.gold;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: tint.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isRollup ? Icons.bolt_outlined : Icons.storage_outlined,
+                size: 15,
+                color: tint,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isRollup
+                      ? 'Served from the daily rollup table'
+                      : 'Served by aggregating the source table (live)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onSurface,
+                  ),
+                ),
+              ),
+              AdminStatusBadge(
+                status: isRollup ? 'rollup complete' : 'rollup incomplete',
+                upper: false,
+              ),
+            ],
+          ),
+          if (note.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              note,
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant, height: 1.4),
+            ),
+          ],
+          if (missingDays.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              'No rollup row for ${missingDays.length} day(s) in this window: '
+              '${_summariseDays(missingDays)}. Those buckets were counted live, '
+              'so they can differ from a later rollup run.',
+              style: const TextStyle(
+                fontSize: 11,
+                color: BuddyColors.gold,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Name the days, or the range they sit in when there are many.
+  ///
+  /// Thirty missing days printed as thirty dates is noise; "2026-02-01 →
+  /// 2026-03-02 (30 days)" is the same information and is readable.
+  static String _summariseDays(List<String> days) {
+    if (days.length <= 6) return days.join(', ');
+    return '${days.first} → ${days.last} (${days.length} days)';
+  }
+}
+
+/// Quick window chips for the analytics reports.
+///
+/// The server owns the window grammar and bounds it by
+/// `ANALYTICS_MAX_RANGE_DAYS`; these chips only name spans the server has
+/// always accepted (7/30/90 days ending today) and the caller can still type
+/// exact dates. `last 30 days` is the server's own `DEFAULT_WINDOW_DAYS`, so
+/// the default chip and the unfiltered default agree.
+class AdminWindowChips extends StatelessWidget {
+  final int? days;
+  final ValueChanged<int?> onChanged;
+
+  const AdminWindowChips({super.key, required this.days, required this.onChanged});
+
+  static const List<({int? days, String label})> _options = [
+    (days: null, label: 'Server default'),
+    (days: 7, label: 'Last 7 days'),
+    (days: 30, label: 'Last 30 days'),
+    (days: 90, label: 'Last 90 days'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cs.outline.withValues(alpha: 0.15)),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(
+        children: [
+          for (final option in _options)
+            Expanded(
+              child: InkWell(
+                onTap: () => onChanged(option.days),
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: days == option.days
+                        ? BuddyColors.green.withValues(alpha: 0.15)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    option.label,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight:
+                          days == option.days ? FontWeight.w700 : FontWeight.w400,
+                      color: days == option.days
+                          ? BuddyColors.green
+                          : cs.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

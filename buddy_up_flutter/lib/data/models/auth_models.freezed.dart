@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$RegisterPayload {
 
- String get email; String? get phone; String get password; String get dob; String get username;@JsonKey(name: 'display_name') String get displayName; String get role;@JsonKey(name: 'accepted_terms') bool get acceptedTerms;@JsonKey(name: 'accepted_privacy') bool get acceptedPrivacy;@JsonKey(name: 'accepted_guidelines') bool get acceptedGuidelines;@JsonKey(name: 'is_16_plus') bool get is16Plus;@JsonKey(name: 'guardian_name') String? get guardianName;@JsonKey(name: 'guardian_email') String? get guardianEmail;@JsonKey(name: 'guardian_phone') String? get guardianPhone;
+ String get email; String? get phone; String get password; String get dob; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'accepted_terms') bool get acceptedTerms;@JsonKey(name: 'accepted_privacy') bool get acceptedPrivacy;@JsonKey(name: 'accepted_guidelines') bool get acceptedGuidelines;@JsonKey(name: 'is_16_plus') bool get is16Plus;@JsonKey(name: 'guardian_name') String? get guardianName;@JsonKey(name: 'guardian_email') String? get guardianEmail;@JsonKey(name: 'guardian_phone') String? get guardianPhone;
 /// Create a copy of RegisterPayload
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $RegisterPayloadCopyWith<RegisterPayload> get copyWith => _$RegisterPayloadCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is RegisterPayload&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.password, password) || other.password == password)&&(identical(other.dob, dob) || other.dob == dob)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.role, role) || other.role == role)&&(identical(other.acceptedTerms, acceptedTerms) || other.acceptedTerms == acceptedTerms)&&(identical(other.acceptedPrivacy, acceptedPrivacy) || other.acceptedPrivacy == acceptedPrivacy)&&(identical(other.acceptedGuidelines, acceptedGuidelines) || other.acceptedGuidelines == acceptedGuidelines)&&(identical(other.is16Plus, is16Plus) || other.is16Plus == is16Plus)&&(identical(other.guardianName, guardianName) || other.guardianName == guardianName)&&(identical(other.guardianEmail, guardianEmail) || other.guardianEmail == guardianEmail)&&(identical(other.guardianPhone, guardianPhone) || other.guardianPhone == guardianPhone));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is RegisterPayload&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.password, password) || other.password == password)&&(identical(other.dob, dob) || other.dob == dob)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.acceptedTerms, acceptedTerms) || other.acceptedTerms == acceptedTerms)&&(identical(other.acceptedPrivacy, acceptedPrivacy) || other.acceptedPrivacy == acceptedPrivacy)&&(identical(other.acceptedGuidelines, acceptedGuidelines) || other.acceptedGuidelines == acceptedGuidelines)&&(identical(other.is16Plus, is16Plus) || other.is16Plus == is16Plus)&&(identical(other.guardianName, guardianName) || other.guardianName == guardianName)&&(identical(other.guardianEmail, guardianEmail) || other.guardianEmail == guardianEmail)&&(identical(other.guardianPhone, guardianPhone) || other.guardianPhone == guardianPhone));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,email,phone,password,dob,username,displayName,role,acceptedTerms,acceptedPrivacy,acceptedGuidelines,is16Plus,guardianName,guardianEmail,guardianPhone);
+int get hashCode => Object.hash(runtimeType,email,phone,password,dob,username,displayName,acceptedTerms,acceptedPrivacy,acceptedGuidelines,is16Plus,guardianName,guardianEmail,guardianPhone);
 
 @override
 String toString() {
-  return 'RegisterPayload(email: $email, phone: $phone, password: $password, dob: $dob, username: $username, displayName: $displayName, role: $role, acceptedTerms: $acceptedTerms, acceptedPrivacy: $acceptedPrivacy, acceptedGuidelines: $acceptedGuidelines, is16Plus: $is16Plus, guardianName: $guardianName, guardianEmail: $guardianEmail, guardianPhone: $guardianPhone)';
+  return 'RegisterPayload(email: $email, phone: $phone, password: $password, dob: $dob, username: $username, displayName: $displayName, acceptedTerms: $acceptedTerms, acceptedPrivacy: $acceptedPrivacy, acceptedGuidelines: $acceptedGuidelines, is16Plus: $is16Plus, guardianName: $guardianName, guardianEmail: $guardianEmail, guardianPhone: $guardianPhone)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $RegisterPayloadCopyWith<$Res>  {
   factory $RegisterPayloadCopyWith(RegisterPayload value, $Res Function(RegisterPayload) _then) = _$RegisterPayloadCopyWithImpl;
 @useResult
 $Res call({
- String email, String? phone, String password, String dob, String username,@JsonKey(name: 'display_name') String displayName, String role,@JsonKey(name: 'accepted_terms') bool acceptedTerms,@JsonKey(name: 'accepted_privacy') bool acceptedPrivacy,@JsonKey(name: 'accepted_guidelines') bool acceptedGuidelines,@JsonKey(name: 'is_16_plus') bool is16Plus,@JsonKey(name: 'guardian_name') String? guardianName,@JsonKey(name: 'guardian_email') String? guardianEmail,@JsonKey(name: 'guardian_phone') String? guardianPhone
+ String email, String? phone, String password, String dob, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'accepted_terms') bool acceptedTerms,@JsonKey(name: 'accepted_privacy') bool acceptedPrivacy,@JsonKey(name: 'accepted_guidelines') bool acceptedGuidelines,@JsonKey(name: 'is_16_plus') bool is16Plus,@JsonKey(name: 'guardian_name') String? guardianName,@JsonKey(name: 'guardian_email') String? guardianEmail,@JsonKey(name: 'guardian_phone') String? guardianPhone
 });
 
 
@@ -65,7 +65,7 @@ class _$RegisterPayloadCopyWithImpl<$Res>
 
 /// Create a copy of RegisterPayload
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? email = null,Object? phone = freezed,Object? password = null,Object? dob = null,Object? username = null,Object? displayName = null,Object? role = null,Object? acceptedTerms = null,Object? acceptedPrivacy = null,Object? acceptedGuidelines = null,Object? is16Plus = null,Object? guardianName = freezed,Object? guardianEmail = freezed,Object? guardianPhone = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? email = null,Object? phone = freezed,Object? password = null,Object? dob = null,Object? username = null,Object? displayName = null,Object? acceptedTerms = null,Object? acceptedPrivacy = null,Object? acceptedGuidelines = null,Object? is16Plus = null,Object? guardianName = freezed,Object? guardianEmail = freezed,Object? guardianPhone = freezed,}) {
   return _then(_self.copyWith(
 email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
@@ -73,7 +73,6 @@ as String?,password: null == password ? _self.password : password // ignore: cas
 as String,dob: null == dob ? _self.dob : dob // ignore: cast_nullable_to_non_nullable
 as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
-as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String,acceptedTerms: null == acceptedTerms ? _self.acceptedTerms : acceptedTerms // ignore: cast_nullable_to_non_nullable
 as bool,acceptedPrivacy: null == acceptedPrivacy ? _self.acceptedPrivacy : acceptedPrivacy // ignore: cast_nullable_to_non_nullable
 as bool,acceptedGuidelines: null == acceptedGuidelines ? _self.acceptedGuidelines : acceptedGuidelines // ignore: cast_nullable_to_non_nullable
@@ -166,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String? phone,  String password,  String dob,  String username, @JsonKey(name: 'display_name')  String displayName,  String role, @JsonKey(name: 'accepted_terms')  bool acceptedTerms, @JsonKey(name: 'accepted_privacy')  bool acceptedPrivacy, @JsonKey(name: 'accepted_guidelines')  bool acceptedGuidelines, @JsonKey(name: 'is_16_plus')  bool is16Plus, @JsonKey(name: 'guardian_name')  String? guardianName, @JsonKey(name: 'guardian_email')  String? guardianEmail, @JsonKey(name: 'guardian_phone')  String? guardianPhone)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String email,  String? phone,  String password,  String dob,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'accepted_terms')  bool acceptedTerms, @JsonKey(name: 'accepted_privacy')  bool acceptedPrivacy, @JsonKey(name: 'accepted_guidelines')  bool acceptedGuidelines, @JsonKey(name: 'is_16_plus')  bool is16Plus, @JsonKey(name: 'guardian_name')  String? guardianName, @JsonKey(name: 'guardian_email')  String? guardianEmail, @JsonKey(name: 'guardian_phone')  String? guardianPhone)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _RegisterPayload() when $default != null:
-return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,_that.displayName,_that.role,_that.acceptedTerms,_that.acceptedPrivacy,_that.acceptedGuidelines,_that.is16Plus,_that.guardianName,_that.guardianEmail,_that.guardianPhone);case _:
+return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,_that.displayName,_that.acceptedTerms,_that.acceptedPrivacy,_that.acceptedGuidelines,_that.is16Plus,_that.guardianName,_that.guardianEmail,_that.guardianPhone);case _:
   return orElse();
 
 }
@@ -187,10 +186,10 @@ return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String? phone,  String password,  String dob,  String username, @JsonKey(name: 'display_name')  String displayName,  String role, @JsonKey(name: 'accepted_terms')  bool acceptedTerms, @JsonKey(name: 'accepted_privacy')  bool acceptedPrivacy, @JsonKey(name: 'accepted_guidelines')  bool acceptedGuidelines, @JsonKey(name: 'is_16_plus')  bool is16Plus, @JsonKey(name: 'guardian_name')  String? guardianName, @JsonKey(name: 'guardian_email')  String? guardianEmail, @JsonKey(name: 'guardian_phone')  String? guardianPhone)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String email,  String? phone,  String password,  String dob,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'accepted_terms')  bool acceptedTerms, @JsonKey(name: 'accepted_privacy')  bool acceptedPrivacy, @JsonKey(name: 'accepted_guidelines')  bool acceptedGuidelines, @JsonKey(name: 'is_16_plus')  bool is16Plus, @JsonKey(name: 'guardian_name')  String? guardianName, @JsonKey(name: 'guardian_email')  String? guardianEmail, @JsonKey(name: 'guardian_phone')  String? guardianPhone)  $default,) {final _that = this;
 switch (_that) {
 case _RegisterPayload():
-return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,_that.displayName,_that.role,_that.acceptedTerms,_that.acceptedPrivacy,_that.acceptedGuidelines,_that.is16Plus,_that.guardianName,_that.guardianEmail,_that.guardianPhone);case _:
+return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,_that.displayName,_that.acceptedTerms,_that.acceptedPrivacy,_that.acceptedGuidelines,_that.is16Plus,_that.guardianName,_that.guardianEmail,_that.guardianPhone);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -207,10 +206,10 @@ return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String? phone,  String password,  String dob,  String username, @JsonKey(name: 'display_name')  String displayName,  String role, @JsonKey(name: 'accepted_terms')  bool acceptedTerms, @JsonKey(name: 'accepted_privacy')  bool acceptedPrivacy, @JsonKey(name: 'accepted_guidelines')  bool acceptedGuidelines, @JsonKey(name: 'is_16_plus')  bool is16Plus, @JsonKey(name: 'guardian_name')  String? guardianName, @JsonKey(name: 'guardian_email')  String? guardianEmail, @JsonKey(name: 'guardian_phone')  String? guardianPhone)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String email,  String? phone,  String password,  String dob,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'accepted_terms')  bool acceptedTerms, @JsonKey(name: 'accepted_privacy')  bool acceptedPrivacy, @JsonKey(name: 'accepted_guidelines')  bool acceptedGuidelines, @JsonKey(name: 'is_16_plus')  bool is16Plus, @JsonKey(name: 'guardian_name')  String? guardianName, @JsonKey(name: 'guardian_email')  String? guardianEmail, @JsonKey(name: 'guardian_phone')  String? guardianPhone)?  $default,) {final _that = this;
 switch (_that) {
 case _RegisterPayload() when $default != null:
-return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,_that.displayName,_that.role,_that.acceptedTerms,_that.acceptedPrivacy,_that.acceptedGuidelines,_that.is16Plus,_that.guardianName,_that.guardianEmail,_that.guardianPhone);case _:
+return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,_that.displayName,_that.acceptedTerms,_that.acceptedPrivacy,_that.acceptedGuidelines,_that.is16Plus,_that.guardianName,_that.guardianEmail,_that.guardianPhone);case _:
   return null;
 
 }
@@ -222,7 +221,7 @@ return $default(_that.email,_that.phone,_that.password,_that.dob,_that.username,
 @JsonSerializable()
 
 class _RegisterPayload implements RegisterPayload {
-  const _RegisterPayload({required this.email, this.phone, required this.password, required this.dob, required this.username, @JsonKey(name: 'display_name') required this.displayName, required this.role, @JsonKey(name: 'accepted_terms') required this.acceptedTerms, @JsonKey(name: 'accepted_privacy') required this.acceptedPrivacy, @JsonKey(name: 'accepted_guidelines') required this.acceptedGuidelines, @JsonKey(name: 'is_16_plus') required this.is16Plus, @JsonKey(name: 'guardian_name') this.guardianName, @JsonKey(name: 'guardian_email') this.guardianEmail, @JsonKey(name: 'guardian_phone') this.guardianPhone});
+  const _RegisterPayload({required this.email, this.phone, required this.password, required this.dob, required this.username, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'accepted_terms') required this.acceptedTerms, @JsonKey(name: 'accepted_privacy') required this.acceptedPrivacy, @JsonKey(name: 'accepted_guidelines') required this.acceptedGuidelines, @JsonKey(name: 'is_16_plus') required this.is16Plus, @JsonKey(name: 'guardian_name') this.guardianName, @JsonKey(name: 'guardian_email') this.guardianEmail, @JsonKey(name: 'guardian_phone') this.guardianPhone});
   factory _RegisterPayload.fromJson(Map<String, dynamic> json) => _$RegisterPayloadFromJson(json);
 
 @override final  String email;
@@ -231,7 +230,6 @@ class _RegisterPayload implements RegisterPayload {
 @override final  String dob;
 @override final  String username;
 @override@JsonKey(name: 'display_name') final  String displayName;
-@override final  String role;
 @override@JsonKey(name: 'accepted_terms') final  bool acceptedTerms;
 @override@JsonKey(name: 'accepted_privacy') final  bool acceptedPrivacy;
 @override@JsonKey(name: 'accepted_guidelines') final  bool acceptedGuidelines;
@@ -253,16 +251,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RegisterPayload&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.password, password) || other.password == password)&&(identical(other.dob, dob) || other.dob == dob)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.role, role) || other.role == role)&&(identical(other.acceptedTerms, acceptedTerms) || other.acceptedTerms == acceptedTerms)&&(identical(other.acceptedPrivacy, acceptedPrivacy) || other.acceptedPrivacy == acceptedPrivacy)&&(identical(other.acceptedGuidelines, acceptedGuidelines) || other.acceptedGuidelines == acceptedGuidelines)&&(identical(other.is16Plus, is16Plus) || other.is16Plus == is16Plus)&&(identical(other.guardianName, guardianName) || other.guardianName == guardianName)&&(identical(other.guardianEmail, guardianEmail) || other.guardianEmail == guardianEmail)&&(identical(other.guardianPhone, guardianPhone) || other.guardianPhone == guardianPhone));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _RegisterPayload&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.password, password) || other.password == password)&&(identical(other.dob, dob) || other.dob == dob)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.acceptedTerms, acceptedTerms) || other.acceptedTerms == acceptedTerms)&&(identical(other.acceptedPrivacy, acceptedPrivacy) || other.acceptedPrivacy == acceptedPrivacy)&&(identical(other.acceptedGuidelines, acceptedGuidelines) || other.acceptedGuidelines == acceptedGuidelines)&&(identical(other.is16Plus, is16Plus) || other.is16Plus == is16Plus)&&(identical(other.guardianName, guardianName) || other.guardianName == guardianName)&&(identical(other.guardianEmail, guardianEmail) || other.guardianEmail == guardianEmail)&&(identical(other.guardianPhone, guardianPhone) || other.guardianPhone == guardianPhone));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,email,phone,password,dob,username,displayName,role,acceptedTerms,acceptedPrivacy,acceptedGuidelines,is16Plus,guardianName,guardianEmail,guardianPhone);
+int get hashCode => Object.hash(runtimeType,email,phone,password,dob,username,displayName,acceptedTerms,acceptedPrivacy,acceptedGuidelines,is16Plus,guardianName,guardianEmail,guardianPhone);
 
 @override
 String toString() {
-  return 'RegisterPayload(email: $email, phone: $phone, password: $password, dob: $dob, username: $username, displayName: $displayName, role: $role, acceptedTerms: $acceptedTerms, acceptedPrivacy: $acceptedPrivacy, acceptedGuidelines: $acceptedGuidelines, is16Plus: $is16Plus, guardianName: $guardianName, guardianEmail: $guardianEmail, guardianPhone: $guardianPhone)';
+  return 'RegisterPayload(email: $email, phone: $phone, password: $password, dob: $dob, username: $username, displayName: $displayName, acceptedTerms: $acceptedTerms, acceptedPrivacy: $acceptedPrivacy, acceptedGuidelines: $acceptedGuidelines, is16Plus: $is16Plus, guardianName: $guardianName, guardianEmail: $guardianEmail, guardianPhone: $guardianPhone)';
 }
 
 
@@ -273,7 +271,7 @@ abstract mixin class _$RegisterPayloadCopyWith<$Res> implements $RegisterPayload
   factory _$RegisterPayloadCopyWith(_RegisterPayload value, $Res Function(_RegisterPayload) _then) = __$RegisterPayloadCopyWithImpl;
 @override @useResult
 $Res call({
- String email, String? phone, String password, String dob, String username,@JsonKey(name: 'display_name') String displayName, String role,@JsonKey(name: 'accepted_terms') bool acceptedTerms,@JsonKey(name: 'accepted_privacy') bool acceptedPrivacy,@JsonKey(name: 'accepted_guidelines') bool acceptedGuidelines,@JsonKey(name: 'is_16_plus') bool is16Plus,@JsonKey(name: 'guardian_name') String? guardianName,@JsonKey(name: 'guardian_email') String? guardianEmail,@JsonKey(name: 'guardian_phone') String? guardianPhone
+ String email, String? phone, String password, String dob, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'accepted_terms') bool acceptedTerms,@JsonKey(name: 'accepted_privacy') bool acceptedPrivacy,@JsonKey(name: 'accepted_guidelines') bool acceptedGuidelines,@JsonKey(name: 'is_16_plus') bool is16Plus,@JsonKey(name: 'guardian_name') String? guardianName,@JsonKey(name: 'guardian_email') String? guardianEmail,@JsonKey(name: 'guardian_phone') String? guardianPhone
 });
 
 
@@ -290,7 +288,7 @@ class __$RegisterPayloadCopyWithImpl<$Res>
 
 /// Create a copy of RegisterPayload
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? email = null,Object? phone = freezed,Object? password = null,Object? dob = null,Object? username = null,Object? displayName = null,Object? role = null,Object? acceptedTerms = null,Object? acceptedPrivacy = null,Object? acceptedGuidelines = null,Object? is16Plus = null,Object? guardianName = freezed,Object? guardianEmail = freezed,Object? guardianPhone = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? email = null,Object? phone = freezed,Object? password = null,Object? dob = null,Object? username = null,Object? displayName = null,Object? acceptedTerms = null,Object? acceptedPrivacy = null,Object? acceptedGuidelines = null,Object? is16Plus = null,Object? guardianName = freezed,Object? guardianEmail = freezed,Object? guardianPhone = freezed,}) {
   return _then(_RegisterPayload(
 email: null == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
@@ -298,7 +296,6 @@ as String?,password: null == password ? _self.password : password // ignore: cas
 as String,dob: null == dob ? _self.dob : dob // ignore: cast_nullable_to_non_nullable
 as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
-as String,role: null == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
 as String,acceptedTerms: null == acceptedTerms ? _self.acceptedTerms : acceptedTerms // ignore: cast_nullable_to_non_nullable
 as bool,acceptedPrivacy: null == acceptedPrivacy ? _self.acceptedPrivacy : acceptedPrivacy // ignore: cast_nullable_to_non_nullable
 as bool,acceptedGuidelines: null == acceptedGuidelines ? _self.acceptedGuidelines : acceptedGuidelines // ignore: cast_nullable_to_non_nullable

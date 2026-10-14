@@ -5,6 +5,20 @@ import 'profile.dart';
 part 'auth_models.freezed.dart';
 part 'auth_models.g.dart';
 
+/// `POST /auth/register/`.
+///
+/// **There is no `role` member, and that is the contract now.**
+/// `RegisterSerializer.role` used to be a `ChoiceField` over
+/// `Profile.ROLE_CHOICES`, so `{"role": "trainer"}` at sign-up produced a
+/// trainer and `IsVerifiedTrainer` — which checks the role and nothing else —
+/// then admitted them everywhere a trainer is admitted. The server replaced it
+/// with a rejecting `validate_role`: only `user` is accepted, anything else is
+/// a 400 naming `CATEGORY_APPLICATION_PATH`.
+///
+/// So the field is gone from the payload rather than pinned to `"user"`. Sending
+/// it would be dead weight the server has to validate and normalise, and a
+/// field on this class is an invitation for the next form to put a chip on it
+/// again. `CATEGORY_APPLICATION_PATH` below is the replacement route.
 @freezed
 abstract class RegisterPayload with _$RegisterPayload {
   const factory RegisterPayload({
@@ -14,7 +28,6 @@ abstract class RegisterPayload with _$RegisterPayload {
     required String dob,
     required String username,
     @JsonKey(name: 'display_name') required String displayName,
-    required String role,
     @JsonKey(name: 'accepted_terms') required bool acceptedTerms,
     @JsonKey(name: 'accepted_privacy') required bool acceptedPrivacy,
     @JsonKey(name: 'accepted_guidelines') required bool acceptedGuidelines,
@@ -27,6 +40,14 @@ abstract class RegisterPayload with _$RegisterPayload {
   factory RegisterPayload.fromJson(Map<String, dynamic> json) =>
       _$RegisterPayloadFromJson(json);
 }
+
+/// Where an elevated role actually comes from, named here so the register form
+/// can point at a working path instead of a dead end.
+///
+/// The same string `RegisterSerializer.CATEGORY_APPLICATION_PATH` puts in its
+/// own refusal, so the guidance a rejected caller reads and the guidance on the
+/// form agree.
+const String kCategoryApplicationPath = '/api/v1/verification/category-applications/';
 
 @freezed
 abstract class LoginPayload with _$LoginPayload {

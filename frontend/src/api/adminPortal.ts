@@ -731,6 +731,363 @@ export interface CreateCommendationPayload {
 }
 
 /* ------------------------------------------------------------------ */
+/* Platform analytics — /api/v1/portal/analytics/                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Every figure on this surface declares its own window.
+ *
+ * This is the single most important thing to get right when rendering these
+ * reports, so the type models it explicitly rather than letting a page read the
+ * page-level `window` and apply it to everything:
+ *
+ * - `kind: 'gauge'` (`label: 'All time'`) is cumulative — "how many exist up to
+ *   the end of the window".
+ * - `kind: 'flow'` (`label: 'Window'`) is a delta over the window — "how many
+ *   happened inside it".
+ *
+ * Rendering a gauge as a period figure, or a flow as a stock level, is the
+ * failure mode these windows exist to prevent.
+ */
+export interface AnalyticsWindow {
+  from?: string | null;
+  to?: string | null;
+  days?: number | null;
+  basis?: string | null;
+  timezone?: string | null;
+  /** `'All time'` for a gauge, `'Window'` for a flow, or the explicit range. */
+  label?: string | null;
+}
+
+export interface AnalyticsWindowParams {
+  /** `YYYY-MM-DD`, UTC calendar days. Omit to let the server pick 30 days. */
+  from?: string;
+  to?: string;
+}
+
+export type AnalyticsKpiKind = 'gauge' | 'flow';
+
+export interface AnalyticsKpi {
+  key?: string;
+  label?: string;
+  group?: string;
+  /** `count` or `usd`. */
+  unit?: string;
+  value?: number | null;
+  kind?: AnalyticsKpiKind;
+  /** This KPI's own window — never the page-level one. */
+  window?: AnalyticsWindow;
+  /** The model column the figure reads, e.g. `accounts.User.created_at`. */
+  source?: string | null;
+  /** False when the read costs a sequential scan (see `performance_notes`). */
+  indexed?: boolean;
+  note?: string;
+  source_count?: number | null;
+}
+
+export interface AnalyticsPerformanceNote {
+  source?: string;
+  issue?: string;
+  suggested_migration?: string;
+  owner?: string;
+}
+
+export interface AnalyticsBreakdown {
+  title?: string;
+  window?: AnalyticsWindow;
+  basis?: string;
+  note?: string;
+  rows?: Array<Record<string, unknown>>;
+}
+
+/** The exportable/tabular twin every report carries. */
+export interface AnalyticsReportTable {
+  columns?: string[];
+  rows?: unknown[][];
+}
+
+export interface AnalyticsOverview {
+  window?: AnalyticsWindow;
+  generated_at?: string | null;
+  kpis?: AnalyticsKpi[];
+  breakdowns?: AnalyticsBreakdown[];
+  groups?: string[];
+  /** Discloses that several tables have no `created_at` index. */
+  performance_notes?: AnalyticsPerformanceNote[];
+  table?: AnalyticsReportTable;
+}
+
+export interface AnalyticsMetricMeta {
+  key?: string;
+  label?: string;
+  group?: string;
+  unit?: string;
+  source?: string | null;
+  description?: string;
+}
+
+/** One row of `metric_catalogue`, the server's own allow-list for a picker. */
+export interface AnalyticsMetricCatalogueEntry extends AnalyticsMetricMeta {
+  additive?: boolean;
+  /** False for a gauge, which has no meaningful series. */
+  windowed?: boolean;
+}
+
+/**
+ * `rollup` = read from `analytics_daily_platform_metric`; `live` = the rollup
+ * had gaps so the source table was aggregated instead.
+ *
+ * A `live` chart is correct but slow. The UI must say so rather than let an
+ * operator assume every chart is the cheap pre-computed one.
+ */
+export interface AnalyticsDataSource {
+  path?: 'rollup' | 'live' | string;
+  rollup_complete?: boolean;
+  /** Days the rollup is missing inside this window; non-empty implies live. */
+  missing_days?: string[];
+  note?: string;
+}
+
+export interface AnalyticsTimeseriesBucket {
+  bucket?: string;
+  value?: number | null;
+}
+
+export interface AnalyticsTimeseries {
+  window?: AnalyticsWindow;
+  metric?: AnalyticsMetricMeta;
+  granularity?: 'day' | 'week' | string;
+  /** Zero-filled by the server: a gap means zero, not "no data". */
+  series?: AnalyticsTimeseriesBucket[];
+  totals?: { sum?: number | null; non_zero_buckets?: number | null };
+  data_source?: AnalyticsDataSource;
+  /** Flat key list the endpoint accepts — additive, windowed metrics only. */
+  available_metrics?: string[];
+  metric_catalogue?: AnalyticsMetricCatalogueEntry[];
+  table?: AnalyticsReportTable;
+}
+
+export type AnalyticsTrendingKind = 'posts' | 'services' | 'events' | 'hashtags' | 'pages';
+
+export type AnalyticsTrendingParams = AnalyticsWindowParams & {
+  kind?: AnalyticsTrendingKind;
+  limit?: number;
+};
+
+/** Item fields differ per kind — read these off `kind`, not off the list. */
+export interface AnalyticsTrendingItem {
+  rank?: number;
+
+  /* posts */
+  post_id?: string;
+  author_username?: string | null;
+  post_type?: string | null;
+  body_excerpt?: string;
+  created_at?: string | null;
+  reactions?: number | null;
+  comments?: number | null;
+  view_count?: number | null;
+  share_count?: number | null;
+  engagement?: number | null;
+
+  /* services */
+  kind?: string;
+  id?: string;
+  title?: string | null;
+  creator?: string | null;
+  purchases_in_window?: number | null;
+  purchase_count_total?: number | null;
+  average_rating?: number | null;
+  review_count?: number | null;
+  is_published?: boolean | null;
+
+  /* events */
+  category?: string | null;
+  event_type?: string | null;
+  starts_at?: string | null;
+  shop?: string | null;
+  gym?: string | null;
+  tickets_in_window?: number | null;
+  sold_tickets_in_window?: number | null;
+  attendee_count?: number | null;
+  is_cancelled?: boolean | null;
+
+  /* hashtags */
+  tag?: string;
+  tag_id?: string;
+  posts_in_window?: number | null;
+  posts_in_previous_window?: number | null;
+  delta?: number | null;
+  /** null when the previous window was zero — a percentage of nothing. */
+  pct_change?: number | null;
+  total_posts_ever?: number | null;
+}
+
+export interface AnalyticsTrending {
+  kind?: AnalyticsTrendingKind;
+  /** `false` for `pages`: the endpoint has no data and says why. */
+  available?: boolean;
+  /** Only ever set when `available` is false. Render it; never chart around it. */
+  reason?: string;
+  rank_basis?: string;
+  window?: AnalyticsWindow;
+  items?: AnalyticsTrendingItem[];
+  table?: AnalyticsReportTable;
+}
+
+export interface AnalyticsConfidenceBucket {
+  bucket?: string;
+  low?: number;
+  high?: number;
+  count?: number;
+}
+
+export interface AnalyticsModelRow {
+  model?: string;
+  task?: string | null;
+  model_version?: string | null;
+  calls?: number | null;
+  completed?: number | null;
+  failed?: number | null;
+  success_rate?: number | null;
+  fallbacks?: number | null;
+  fallback_rate?: number | null;
+  corrections?: number | null;
+  /**
+   * NOT accuracy. `AIPredictionJob` has no ground-truth column; this is
+   * corrections over completed jobs. It must never be relabelled "accuracy".
+   */
+  accuracy_proxy?: number | null;
+  mean_confidence?: number | null;
+  cost_usd?: number | null;
+  cost_per_call_usd?: number | null;
+}
+
+export interface AnalyticsAIQuality {
+  window?: AnalyticsWindow;
+  totals?: {
+    calls?: number | null;
+    fallbacks?: number | null;
+    fallback_rate?: number | null;
+    corrections?: number | null;
+    accuracy_proxy?: number | null;
+    cost_usd?: number | null;
+    cost_per_call_usd?: number | null;
+    cumulative_cost_usd?: number | null;
+    cumulative_calls?: number | null;
+    cumulative_cost_per_call_usd?: number | null;
+  };
+  latency_ms?: {
+    samples?: number | null;
+    sampled?: boolean;
+    sample_limit?: number | null;
+    p50?: number | null;
+    p95?: number | null;
+    min?: number | null;
+    max?: number | null;
+  };
+  confidence_distribution?: {
+    window?: AnalyticsWindow;
+    with_confidence?: number | null;
+    buckets?: AnalyticsConfidenceBucket[];
+  };
+  fallback_reasons?: Array<{ reason?: string; count?: number | null }>;
+  models?: AnalyticsModelRow[];
+  /** Always carries the "this is a proxy, not accuracy" caveat. */
+  caveats?: string[];
+  table?: AnalyticsReportTable;
+}
+
+export interface AnalyticsPredictiveSignal {
+  key?: string;
+  label?: string;
+  /** false = derived from observed counts, not itself counted. */
+  observed?: boolean;
+  derivation?: string;
+  basis?: string;
+  value?: number | null;
+  note?: string;
+}
+
+export interface AnalyticsPredictive {
+  window?: AnalyticsWindow;
+  /** "This endpoint reports observed signals only. It does not forecast." */
+  disclaimer?: string;
+  signals?: AnalyticsPredictiveSignal[];
+  observed?: Record<
+    string,
+    {
+      window?: AnalyticsWindow;
+      source?: string;
+      total?: number | null;
+      rows?: Array<Record<string, unknown>>;
+      negative?: number | null;
+      positive?: number | null;
+      ai?: number | null;
+      fallback?: number | null;
+      unlabelled?: number | null;
+      corrected?: number | null;
+      completed?: number | null;
+    }
+  >;
+  table?: AnalyticsReportTable;
+}
+
+/* Export ---------------------------------------------------------------- */
+
+export type AnalyticsReportKey =
+  | 'overview'
+  | 'timeseries'
+  | 'trending'
+  | 'ai_quality'
+  | 'predictive';
+
+export type AnalyticsExportFormat = 'csv' | 'xlsx';
+
+export interface AnalyticsExportParams extends AnalyticsWindowParams {
+  report: AnalyticsReportKey;
+  format: AnalyticsExportFormat;
+  /** Required for `timeseries`, honoured by `trending`. */
+  metric?: string;
+  granularity?: 'day' | 'week';
+  kind?: AnalyticsTrendingKind;
+  limit?: number;
+}
+
+export interface AnalyticsExportFile {
+  blob: Blob;
+  /** From `Content-Disposition`, so the operator sees the server's own name. */
+  filename: string;
+  report?: string;
+  rows?: number | null;
+  from?: string;
+  to?: string;
+  dataSource?: string;
+}
+
+export type AnalyticsExportRefusalReason = 'row_cap' | 'xlsx_unavailable' | 'error';
+
+/**
+ * The export endpoint resolves a union rather than throwing.
+ *
+ * Its interesting outcomes are refusals, not transports: a **400** naming the
+ * 50k row cap means the file was refused rather than truncated, and a **503**
+ * means `openpyxl` is not installed server-side. A thrown `AxiosError` would
+ * make the caller reconstruct both from a status code, which is exactly the
+ * place this console has to be precise — so the message is handed back
+ * untouched and the caller decides what to say about it.
+ */
+export type AnalyticsExportOutcome =
+  | { ok: true; file: AnalyticsExportFile }
+  | {
+      ok: false;
+      status: number;
+      reason: AnalyticsExportRefusalReason;
+      /** The server's message, verbatim. Never paraphrased. */
+      message: string;
+    };
+
+/* ------------------------------------------------------------------ */
 /* Error handling                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -850,6 +1207,123 @@ export function auditExportUrl(params?: AuditFilters): string {
     ? `?${new URLSearchParams(Object.entries(query).map(([k, v]) => [k, String(v)])).toString()}`
     : '';
   return `${base}/governance/audit/export/${qs}`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Analytics export plumbing                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Read an error body that axios handed back as a `Blob` (which is what happens
+ * whenever `responseType: 'blob'`).
+ *
+ * A blob's `text()` is async, so the refusal path has to await it — that is why
+ * `exportAnalytics` resolves rather than throwing.
+ */
+async function readBlobError(data: unknown): Promise<ErrorPayload | null> {
+  if (data instanceof Blob) {
+    try {
+      const text = await data.text();
+      return text ? (JSON.parse(text) as ErrorPayload) : null;
+    } catch {
+      return null;
+    }
+  }
+  return data && typeof data === 'object' ? (data as ErrorPayload) : null;
+}
+
+function refusalMessage(payload: ErrorPayload | null, fallback: string): string {
+  if (!payload) return fallback;
+  const detail = flattenErrors(payload.errors);
+  return [payload.message, payload.detail, detail.join(' ')].filter(Boolean).join(' — ') || fallback;
+}
+
+function filenameFromDisposition(header: unknown, report: string): string {
+  const value = typeof header === 'string' ? header : '';
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(value);
+  if (match?.[1]) return decodeURIComponent(match[1]);
+  return `analytics-${report}.csv`;
+}
+
+/** The 400 that names the row cap. `to` is the field the server blames. */
+function isRowCapRefusal(payload: ErrorPayload | null): boolean {
+  return /row cap|above the .* row|Narrow the date range/i.test(refusalMessage(payload, ''));
+}
+
+/** The 503 that means openpyxl is missing server-side. CSV is unaffected. */
+function isXlsxUnavailable(payload: ErrorPayload | null): boolean {
+  return /openpyxl/i.test(refusalMessage(payload, ''));
+}
+
+/**
+ * Download one analytics report as CSV or XLSX.
+ *
+ * Streamed as a blob rather than followed as a plain URL because the two
+ * failure modes this endpoint has (row cap, missing xlsx dependency) are JSON
+ * errors the browser would otherwise save to disk as a broken file. Reading the
+ * body here is what lets the UI say "refused, narrow the range" instead of
+ * handing the operator a 3 KB file named `.xlsx`.
+ */
+export async function exportAnalyticsReport(params: AnalyticsExportParams): Promise<AnalyticsExportOutcome> {
+  try {
+    const response = await apiClient.get('/portal/analytics/export/', {
+      params: clean(params as unknown as Record<string, unknown>),
+      responseType: 'blob',
+    });
+
+    const headers = response.headers as unknown as Record<string, string>;
+    return {
+      ok: true,
+      file: {
+        blob: response.data as Blob,
+        filename: filenameFromDisposition(headers['content-disposition'], params.report),
+        report: headers['x-analytics-report'],
+        rows: headers['x-analytics-rows'] != null ? Number(headers['x-analytics-rows']) : null,
+        from: headers['x-analytics-from'],
+        to: headers['x-analytics-to'],
+        dataSource: headers['x-analytics-data-source'],
+      },
+    };
+  } catch (error) {
+    const status = (error as AxiosError | undefined)?.response?.status ?? 0;
+    const payload = await readBlobError((error as AxiosError<unknown> | undefined)?.response?.data);
+    const message = refusalMessage(
+      payload,
+      status === 0
+        ? 'The export could not be requested — the network request failed.'
+        : `The export was refused (HTTP ${status}).`,
+    );
+    const reason: AnalyticsExportRefusalReason =
+      status === 400 ? 'row_cap'
+        : status === 503 ? 'xlsx_unavailable'
+          : 'error';
+    return {
+      ok: false,
+      status,
+      reason: isRowCapRefusal(payload) || reason === 'row_cap' ? 'row_cap'
+        : isXlsxUnavailable(payload) || reason === 'xlsx_unavailable' ? 'xlsx_unavailable'
+          : 'error',
+      message,
+    };
+  }
+}
+
+/**
+ * Save a downloaded report through a temporary object URL.
+ *
+ * The blob has to be handed to the browser rather than written by us: the file
+ * is a spreadsheet, and a `data:` URL long enough to hold one gets truncated by
+ * some browsers.
+ */
+export function saveAnalyticsFile(file: AnalyticsExportFile): void {
+  const url = URL.createObjectURL(file.blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = file.filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1067,6 +1541,48 @@ export const adminPortalApi = {
   /** Withdraws from the recipient's view but keeps the row. Failed ones 409. */
   revokeCommendation: (id: string, payload: { reason?: string } = {}) =>
     apiClient.post<ApiResponse<Commendation>>(`/moderation/commendations/${id}/revoke/`, payload).then((r) => r.data),
+
+  /* Platform analytics ------------------------------------------------- */
+
+  /** Headline KPIs. Each one carries its own `window` and `kind`. */
+  getAnalyticsOverview: (params?: AnalyticsWindowParams) =>
+    apiClient
+      .get<ApiResponse<AnalyticsOverview>>('/portal/analytics/overview/', {
+        params: clean(params as Record<string, unknown>),
+      })
+      .then((r) => r.data),
+
+  /** One metric over time, zero-filled, with its `data_source` provenance. */
+  getAnalyticsTimeseries: (params: AnalyticsWindowParams & { metric: string; granularity?: 'day' | 'week' }) =>
+    apiClient
+      .get<ApiResponse<AnalyticsTimeseries>>('/portal/analytics/timeseries/', {
+        params: clean(params as unknown as Record<string, unknown>),
+      })
+      .then((r) => r.data),
+
+  /** `kind=pages` answers `available:false` with a reason instead of a series. */
+  getAnalyticsTrending: (params?: AnalyticsTrendingParams) =>
+    apiClient
+      .get<ApiResponse<AnalyticsTrending>>('/portal/analytics/trending/', {
+        params: clean(params as Record<string, unknown>),
+      })
+      .then((r) => r.data),
+
+  /** `accuracy_proxy` is a correction rate. It is never labelled accuracy. */
+  getAnalyticsAIQuality: (params?: AnalyticsWindowParams) =>
+    apiClient
+      .get<ApiResponse<AnalyticsAIQuality>>('/portal/analytics/ai-quality/', {
+        params: clean(params as Record<string, unknown>),
+      })
+      .then((r) => r.data),
+
+  /** Observed signals only. The endpoint produces no forecast and says so. */
+  getAnalyticsPredictive: (params?: AnalyticsWindowParams) =>
+    apiClient
+      .get<ApiResponse<AnalyticsPredictive>>('/portal/analytics/predictive/', {
+        params: clean(params as Record<string, unknown>),
+      })
+      .then((r) => r.data),
 };
 
 export type AdminPortalApi = typeof adminPortalApi;

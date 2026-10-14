@@ -243,7 +243,49 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.ai.tasks.embed_and_index_images',
         'schedule': 604800.0,  # Weekly marketplace image index rebuild
     },
+    # Daily rollups for the staff analytics console. 04:20 UTC — after the
+    # account/session/verification sweeps (03:15-04:00) so the day's numbers
+    # include anything they cleaned up, and before the working day starts.
+    'analytics-daily-rollup': {
+        'task': 'apps.analytics.tasks.rollup_daily_platform_metrics',
+        'schedule': crontab(hour='4', minute='20'),
+    },
+    # Behavioral-event retention. AnalyticsEvent grew forever until this entry
+    # existed; it is the fastest-growing table in the platform and no other
+    # beat entry touched it.
+    'analytics-event-retention': {
+        'task': 'apps.analytics.tasks.purge_expired_analytics_events',
+        'schedule': crontab(hour='4', minute='40'),
+    },
 }
+
+# ---------------------------------------------------------------------------
+# Platform analytics (staff console at /api/v1/portal/analytics/)
+# ---------------------------------------------------------------------------
+
+#: Longest window a single analytics query may cover. Above this the aggregates
+#: degrade into full scans of every source table.
+ANALYTICS_MAX_RANGE_DAYS = int(os.environ.get('ANALYTICS_MAX_RANGE_DAYS', '366'))
+
+#: How many days back the daily rollup recomputes on every run. The overlap is
+#: deliberate: it repairs a missed beat and picks up rows written late, so there
+#: is no separate catch-up path.
+ANALYTICS_ROLLUP_LOOKBACK_DAYS = int(
+    os.environ.get('ANALYTICS_ROLLUP_LOOKBACK_DAYS', '7'))
+
+#: Behavioral events older than this are hard-deleted by the retention task.
+#: Behavioral events are not the durable record of anything — orders, posts,
+#: sessions and notifications each have their own table — so ageing them out
+#: costs a ranking signal and nothing else. This is retention, not GDPR
+#: erasure: erasure on request is apps.accounts' job.
+ANALYTICS_EVENT_RETENTION_DAYS = int(
+    os.environ.get('ANALYTICS_EVENT_RETENTION_DAYS', '180'))
+ANALYTICS_EVENT_PURGE_BATCH = int(os.environ.get('ANALYTICS_EVENT_PURGE_BATCH', '5000'))
+
+#: Row cap for a single CSV/XLSX export. Over the cap is a 400 naming the row
+#: count — never a silently truncated file, which would differ from the report
+#: the user was looking at.
+ANALYTICS_EXPORT_MAX_ROWS = int(os.environ.get('ANALYTICS_EXPORT_MAX_ROWS', '50000'))
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [

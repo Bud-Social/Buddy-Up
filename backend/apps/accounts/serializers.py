@@ -6,6 +6,11 @@ from apps.profiles.models import Profile
 
 
 class RegisterSerializer(serializers.Serializer):
+    # Where an elevated role is actually obtained. Named in the error message
+    # below so a caller who sent role="trainer" is told the real path rather
+    # than left guessing.
+    CATEGORY_APPLICATION_PATH = '/api/v1/verification/category-applications/'
+
     email = serializers.EmailField()
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=8)
@@ -15,7 +20,23 @@ class RegisterSerializer(serializers.Serializer):
     # email (same strategy as social sign-up).
     username = serializers.CharField(min_length=3, max_length=30, required=False, allow_blank=True)
     display_name = serializers.CharField(min_length=1, max_length=50, required=False, allow_blank=True)
-    role = serializers.ChoiceField(choices=Profile.ROLE_CHOICES, default='user')
+    # NOT a ChoiceField over ROLE_CHOICES.
+    #
+    # This used to be `ChoiceField(choices=Profile.ROLE_CHOICES, default='user')`,
+    # which validated the value and then let ``accounts.views.RegisterView``
+    # write it straight onto ``Profile.role``. That made a professional role
+    # self-declared: POST /auth/register/ with {"role": "trainer"} produced a
+    # trainer, and ``IsVerifiedTrainer`` — which checks role and nothing else —
+    # then treated them as one.
+    #
+    # It is a plain CharField with a rejecting ``validate_role`` instead of a
+    # ChoiceField because a ChoiceField's failure message is "not a valid
+    # choice", which tells the caller nothing. Every registration now creates a
+    # plain `user`; `trainer` / `practitioner` are granted only when a
+    # verification decision is approved by two members of staff. Accepting the
+    # key and dropping it silently would be worse still — the caller would see a
+    # 201 and believe they had applied.
+    role = serializers.CharField(required=False, default='user')
     accepted_terms = serializers.BooleanField()
     accepted_privacy = serializers.BooleanField()
     accepted_guidelines = serializers.BooleanField()
@@ -47,6 +68,23 @@ class RegisterSerializer(serializers.Serializer):
         if not value:
             raise serializers.ValidationError('You must confirm you are 16 or older.')
         return value
+
+    def validate_role(self, value):
+        """Registration cannot grant a professional role.
+
+        ``user`` (or an omitted/blank value) is accepted and normalised, because
+        the web and Flutter clients both still send ``role: "user"`` explicitly
+        and breaking them would be gratuitous. Anything else is refused with the
+        route that actually grants the role.
+        """
+        if value in (None, '', 'user'):
+            return 'user'
+        raise serializers.ValidationError(
+            f'"{value}" cannot be chosen at registration. Trainer and practitioner '
+            f'roles are granted after review, not self-declared: register with '
+            f'role "user", then submit an application to '
+            f'{self.CATEGORY_APPLICATION_PATH}.',
+        )
 
     def validate(self, data):
         age = calculate_age(data['dob'])

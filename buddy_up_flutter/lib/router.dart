@@ -55,6 +55,7 @@ import 'features/marketplace/screens/programme_activity_focus_screen.dart';
 import 'features/wallet/screens/wallet_screen.dart';
 import 'features/notifications/screens/notifications_screen.dart';
 import 'features/verification/screens/verification_screen.dart';
+import 'features/verification/screens/category_application_screen.dart';
 import 'features/settings/screens/settings_screen.dart';
 import 'features/settings/screens/account_screen.dart';
 import 'features/settings/screens/security_screen.dart';
@@ -97,7 +98,14 @@ import 'features/admin/screens/admin_approvals_screen.dart';
 import 'features/admin/screens/admin_audit_screen.dart';
 import 'features/admin/screens/admin_email_screen.dart';
 import 'features/admin/screens/admin_staff_screen.dart';
+import 'features/admin/screens/admin_verification_screen.dart';
+import 'features/admin/screens/admin_analytics_overview_screen.dart';
+import 'features/admin/screens/admin_analytics_trends_screen.dart';
+import 'features/admin/screens/admin_analytics_trending_screen.dart';
+import 'features/admin/screens/admin_analytics_ai_quality_screen.dart';
+import 'features/admin/screens/admin_analytics_predictive_screen.dart';
 import 'features/settings/screens/moderation_screen.dart';
+import 'features/settings/widgets/standing_banner.dart';
 import 'shared/navigation/app_nav.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -695,6 +703,50 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const AdminStaffScreen(),
       ),
+      // Verification review. Two-person: `review/` queues a decision and
+      // applies nothing, `decide/` is the only call that writes a status, a
+      // role or a gym verification.
+      GoRoute(
+        path: '/admin/verification',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminVerificationScreen(),
+      ),
+      // Platform analytics. Five reports under `/portal/analytics/**`; the
+      // screens are staff-gated in build the same way as the rest of the
+      // console, so a deep link cannot bypass `is_staff`.
+      GoRoute(
+        path: '/admin/analytics',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminAnalyticsOverviewScreen(),
+      ),
+      GoRoute(
+        path: '/admin/analytics/trends',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminAnalyticsTrendsScreen(),
+      ),
+      GoRoute(
+        path: '/admin/analytics/trending',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminAnalyticsTrendingScreen(),
+      ),
+      GoRoute(
+        path: '/admin/analytics/ai-quality',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminAnalyticsAiQualityScreen(),
+      ),
+      GoRoute(
+        path: '/admin/analytics/predictive',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AdminAnalyticsPredictiveScreen(),
+      ),
+      // Applying for an elevated role. Not staff-gated — registration refuses
+      // an elevated role now, so this is the only route to trainer or
+      // practitioner and it belongs to the applicant, not the console.
+      GoRoute(
+        path: '/verification/apply',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const CategoryApplicationScreen(),
+      ),
       // User-side moderation: their own record, appeals and commendations.
       // Not staff-gated — an action a user cannot see is one they cannot
       // appeal. `?action=` deep-links from the notification that raised the
@@ -945,7 +997,18 @@ class _AppShellState extends State<_AppShell> {
                   )
                   .toList(),
             ),
-            Expanded(child: widget.child),
+            // The standing notice sits above the shell content on both
+            // layouts. A suspension that only exists on a Settings sub-page is
+            // one the user finds out about by failing to post, so it has to be
+            // in front of them wherever they are.
+            Expanded(
+              child: Column(
+                children: [
+                  const StandingBanner(),
+                  Expanded(child: widget.child),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -954,7 +1017,12 @@ class _AppShellState extends State<_AppShell> {
     return Scaffold(
       key: appShellScaffoldKey,
       drawer: const AppNavDrawer(),
-      body: widget.child,
+      body: Column(
+        children: [
+          const StandingBanner(),
+          Expanded(child: widget.child),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _calculateIndex(context, _phoneDestinations),
         onTap: (i) => context.go(_phoneDestinations[i].route),

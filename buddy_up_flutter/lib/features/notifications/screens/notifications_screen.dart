@@ -9,6 +9,7 @@ import '../../../data/models/notification.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/shimmer_loader.dart';
+import '../../settings/providers/moderation_provider.dart' show kModerationNoticeTypes;
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -245,6 +246,26 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
 
     if (type == 'session_booked' || type == 'session_reminder') {
       context.push('/sessions');
+      return;
+    }
+
+    // A moderation action is the one notification whose tap must not fall
+    // through to the feed: the user is being told their account was warned,
+    // suspended or banned, and the only place that explains the reason, the end
+    // date and the appeal route is Settings -> Help & Safety -> Moderation &
+    // appeals. `?action=<moderation_action_id>` opens that screen with the
+    // appeal form pre-targeted, so the first thing they can do with the notice
+    // is challenge it.
+    //
+    // Without this the notice was decorative: it said "your account was
+    // banned" and tapping it opened the feed.
+    if (kModerationNoticeTypes.contains(type)) {
+      final actionId = meta['moderation_action_id']?.toString() ?? '';
+      context.push(
+        actionId.isEmpty
+            ? '/settings/moderation'
+            : '/settings/moderation?action=$actionId',
+      );
       return;
     }
 

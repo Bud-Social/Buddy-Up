@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import ActivityRecord, WorkoutLog, BodyMetric, AnalyticsReport, AnalyticsEvent
+from .models import (
+    ActivityRecord, WorkoutLog, BodyMetric, AnalyticsReport, AnalyticsEvent,
+    DailyPlatformMetric,
+)
 
 
 @admin.register(ActivityRecord)
@@ -35,3 +38,25 @@ class AnalyticsEventAdmin(admin.ModelAdmin):
     list_filter = ('event_name', 'platform', 'surface')
     search_fields = ('object_id', 'anonymous_id', 'session_id')
     readonly_fields = [f.name for f in AnalyticsEvent._meta.fields]
+
+
+@admin.register(DailyPlatformMetric)
+class DailyPlatformMetricAdmin(admin.ModelAdmin):
+    """Read-only: the rollup task owns this table.
+
+    Exposed so an operator can answer "why is this number what it is" — the
+    per-day value and the source_count that produced it — without shell access.
+    Deliberately not editable: a hand-edited rollup silently diverges from the
+    source tables and the next task run overwrites it anyway.
+    """
+
+    list_display = ('metric', 'date', 'value', 'dimension_key', 'source_count', 'computed_at')
+    list_filter = ('metric',)
+    date_hierarchy = 'date'
+    readonly_fields = [f.name for f in DailyPlatformMetric._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

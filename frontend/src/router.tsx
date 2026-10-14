@@ -116,11 +116,13 @@ const LiveRoom = lazy(() => import('@/pages/app/LiveRoom'));
 const HealthInsights = lazy(() => import('@/pages/app/HealthInsights'));
 const WorkoutForm = lazy(() => import('@/pages/app/WorkoutForm'));
 const Verification = lazy(() => import('@/pages/app/Verification'));
+const CategoryApplication = lazy(() => import('@/pages/app/CategoryApplication'));
 const AnalyticsPage = lazy(() => import('@/pages/app/AnalyticsPage'));
 const AdminDashboard = lazy(() => import('@/pages/app/AdminDashboard'));
 const ModerationQueue = lazy(() => import('@/pages/app/ModerationQueue'));
 const AdminVerification = lazy(() => import('@/pages/app/AdminVerification'));
 const AdminHome = lazy(() => import('@/pages/admin/AdminHome'));
+const AdminAnalytics = lazy(() => import('@/pages/admin/AdminAnalytics'));
 const AdminUsers = lazy(() => import('@/pages/admin/AdminUsers'));
 const AdminShops = lazy(() => import('@/pages/admin/AdminShops'));
 const AdminOrders = lazy(() => import('@/pages/admin/AdminOrders'));
@@ -272,6 +274,9 @@ export const router = createBrowserRouter([
           { path: '/health-insights', element: <SWrapper><HealthInsights /></SWrapper> },
           { path: '/workout-form', element: <SWrapper><WorkoutForm /></SWrapper> },
           { path: '/verification', element: <SWrapper><Verification /></SWrapper> },
+          // Where "sign up as a trainer" moved: a professional role is granted
+          // by a two-person verification decision, not chosen at registration.
+          { path: '/verification/categories', element: <SWrapper><CategoryApplication /></SWrapper> },
           { path: '/analytics', element: <SWrapper><AnalyticsPage /></SWrapper> },
           // Canonical share deep-link for workout/activity rows.
           { path: '/app/analytics', element: <Navigate to="/analytics" replace /> },
@@ -290,6 +295,7 @@ export const router = createBrowserRouter([
             children: [
               { path: '/admin', element: <SWrapper><AdminDashboard /></SWrapper> },
               { path: '/admin/overview', element: <SWrapper><AdminHome /></SWrapper> },
+              { path: '/admin/analytics', element: <SWrapper><AdminAnalytics /></SWrapper> },
               { path: '/admin/users', element: <SWrapper><AdminUsers /></SWrapper> },
               { path: '/admin/shops', element: <SWrapper><AdminShops /></SWrapper> },
               { path: '/admin/orders', element: <SWrapper><AdminOrders /></SWrapper> },

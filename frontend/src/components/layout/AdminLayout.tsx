@@ -1,6 +1,6 @@
 import { Outlet, Link, NavLink } from 'react-router-dom';
 import {
-  ArrowLeft, BrainCircuit, Building2, CreditCard, Dumbbell, LayoutDashboard,
+  ArrowLeft, BarChart3, BrainCircuit, Building2, CreditCard, Dumbbell, LayoutDashboard,
   RadioTower, ShieldCheck, BadgeCheck, ShoppingCart, Users, UsersRound, Bike,
   Gavel, ScrollText, Mail, KeyRound, UserCheck,
 } from 'lucide-react';
@@ -29,6 +29,7 @@ interface NavItem {
 /** Domains first, then the pre-existing operational tools. */
 const PRIMARY_NAV: NavItem[] = [
   { to: '/admin', label: 'Models', icon: BrainCircuit, end: true },
+  { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/admin/users', label: 'Users', icon: Users },
   { to: '/admin/shops', label: 'Shops', icon: Building2 },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingCart },

@@ -161,7 +161,14 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
 
   Widget _noticeCard(MyModerationNotice notice) {
     final cs = Theme.of(context).colorScheme;
-    final tint = notice.restrictsAccess ? BuddyColors.red : BuddyColors.gold;
+    // A reversed action is history, not a live restriction, so it is greyed
+    // rather than tinted as one. Without this a lifted ban keeps looking like
+    // an active ban on the account's record.
+    final tint = notice.reversed
+        ? BuddyColors.textSecondary
+        : notice.restrictsAccess
+            ? BuddyColors.red
+            : BuddyColors.gold;
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -225,31 +232,43 @@ class _ModerationScreenState extends ConsumerState<ModerationScreen> {
               style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
             ),
           ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: notice.isAppealable
-                  ? () => _openAppealSheet(context, notice.actionId)
-                  : null,
-              style: TextButton.styleFrom(
-                foregroundColor: BuddyColors.green,
-                visualDensity: VisualDensity.compact,
-              ),
-              icon: const Icon(Icons.balance_outlined, size: 14),
-              label: const Text('Appeal this decision',
-                  style: TextStyle(fontSize: 12)),
-            ),
-          ),
-          if (!notice.isAppealable)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
+          if (notice.reversed)
+            const Padding(
+              padding: EdgeInsets.only(top: 10),
               child: Text(
-                'This action cannot be appealed from the app. Contact support '
-                'and quote the date above.',
-                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                'This decision was reversed and no longer applies to your '
+                'account. It stays here for your record — there is nothing to '
+                'appeal.',
+                style: TextStyle(fontSize: 11, height: 1.4),
+              ),
+            )
+          else ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: notice.isAppealable
+                    ? () => _openAppealSheet(context, notice.actionId)
+                    : null,
+                style: TextButton.styleFrom(
+                  foregroundColor: BuddyColors.green,
+                  visualDensity: VisualDensity.compact,
+                ),
+                icon: const Icon(Icons.balance_outlined, size: 14),
+                label: const Text('Appeal this decision',
+                    style: TextStyle(fontSize: 12)),
               ),
             ),
+            if (!notice.isAppealable)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'This action cannot be appealed from the app. Contact '
+                  'support and quote the date above.',
+                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                ),
+              ),
+          ],
         ],
       ),
     );

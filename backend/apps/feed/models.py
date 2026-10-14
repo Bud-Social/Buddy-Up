@@ -387,3 +387,73 @@ class PostView(TimestampedModel):
 
     def __str__(self):
         return f'{self.viewer_id} viewed {self.post_id} x{self.views}'
+
+
+class Tag(TimestampedModel):
+    """A normalised hashtag.
+
+    ``Post.tags`` is a ``JSONField`` that predates any query surface: the web
+    composer never populates it, and typed hashtags are only text inside
+    ``Post.body``, so "which hashtags are trending" had no data source at all.
+    This table is that source.
+
+    Normalisation is the whole point, so it happens on write in exactly one
+    place (:func:`apps.feed.tags.normalise_tag`) and the database enforces the
+    invariant: ``name`` is stored lowercased with a leading ``#`` stripped, and
+    is unique. So ``#Gym``, ``gym`` and ``#GYM`` are one row, not three, and a
+    trending query cannot be defeated by casing.
+
+    ``Post.tags`` is deliberately *not* removed. It stays as-is for the existing
+    API contract and for historical rows the backfill has not reached yet; the
+    join table is written alongside it. See ``apps.feed.tasks.sync_post_tags``.
+    """
+
+    # 50 chars is generous for a hashtag and leaves room for a normalisation
+    # suffix (see apps.feed.tags) without a silent truncation.
+    name = models.CharField(max_length=64, unique=True)
+
+    class Meta:
+        db_table = 'feed_tag'
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
+
+    def __str__(self):
+        return f'#{self.name}'
+
+
+class PostTag(TimestampedModel):
+    """Join row: one hashtag applied to one post.
+
+    ``source`` records where the association came from (``field`` = supplied in
+    ``tags[]``, ``body`` = parsed out of the post text, ``backfill`` = one of the
+    two above but recovered historically). Without it, a backfill that later
+    disagrees with the composer would be indistinguishable from a user having
+    typed the tag.
+
+    ``unique(post, tag)`` makes the write idempotent, so the backfill can be
+    re-run over a million rows without creating duplicates.
+    """
+
+    SOURCE_CHOICES = [
+        ('field', 'Supplied in tags[]'),
+        ('body', 'Parsed from post body'),
+        ('backfill', 'Backfilled from tags[]'),
+        ('backfill_body', 'Backfilled from post body'),
+    ]
+
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='tag_links')
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name='post_links')
+    source = models.CharField(max_length=20, choices=SOURCE_CHOICES, default='field')
+
+    class Meta:
+        db_table = 'feed_post_tag'
+        unique_together = ('post', 'tag')
+        indexes = [
+            # "posts tagged X, newest first" — the trending query.
+            models.Index(fields=['tag', '-created_at'], name='feed_post_tag_trend_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.post_id} #{self.tag_id}'
