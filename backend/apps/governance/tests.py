@@ -23,7 +23,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APIRequestFactory
 
 from apps.accounts.models import User
 from apps.profiles.models import Profile
@@ -1837,3 +1837,452 @@ class StaffRoleRevokeReasonTests(TestCase):
         )
         from apps.governance.services import effective_scopes
         self.assertEqual(effective_scopes(self.holder.user), set())
+
+
+class ApprovalApplyBranchSafetyTests(TestCase):
+    """No branch of ``ApprovalApproveView._apply`` may raise NameError.
+
+    A bare undefined name in this method is a 500 that fires *after* the
+    approval row is stamped applied, so the decision is unrecoverable and the
+    two-person trail is corrupted. One branch (verification_decision) already
+    shipped exactly that way, so every branch is now swept on purpose.
+    """
+
+    ACTIONS = [
+        'verification_decision',
+        'staff_role_grant',
+        'platform_suspend',
+        'unknown_future_action',
+    ]
+
+    def setUp(self):
+        self.requester = User.objects.create_user(
+            email='branch-requester@example.com', password='TestPass123!', is_staff=True,
+        )
+        self.approver = User.objects.create_user(
+            email='branch-approver@example.com', password='TestPass123!', is_staff=True,
+        )
+        self.target = User.objects.create_user(
+            email='branch-target@example.com', password='TestPass123!',
+        )
+
+    def _apply(self, action):
+        from apps.governance.models import AccountActionRequest
+        from apps.governance.views import ApprovalApproveView
+
+        approval = AccountActionRequest.objects.create(
+            action=action,
+            target_user=self.target,
+            payload={'reason': 'swept by the branch-safety test'},
+            requested_by=self.requester,
+            decision_note='second approver signed off',
+        )
+        request = APIRequestFactory().post('/')
+        request.user = self.approver
+
+        try:
+            return ApprovalApproveView()._apply(request, approval)
+        except NameError as exc:  # pragma: no cover - the regression itself
+            self.fail(f'_apply raised NameError on action={action!r}: {exc}')
+        except Exception as exc:  # noqa: BLE001 - domain errors are fine here
+            # The point of the sweep is name resolution, not the domain result.
+            self.assertNotIsInstance(exc, NameError)
+
+    def test_no_action_branch_raises_name_error(self):
+        for action in self.ACTIONS:
+            with self.subTest(action=action):
+                self._apply(action)
+
+    def test_verification_decision_uses_the_approvers_own_note(self):
+        """The effect must carry the approval's decision_note, never a stray local."""
+        from apps.governance.models import AccountActionRequest
+        from apps.governance.views import ApprovalApproveView
+
+        seen = {}
+
+        class _Recorder:
+            @staticmethod
+            def apply_decision(request_row, actor, note):
+                seen['note'] = note
+                seen['actor'] = actor
+                return True, 'verification approved'
+
+        with mock.patch(
+            'apps.verification.decisions.apply_decision',
+            _Recorder.apply_decision,
+            create=True,
+        ):
+            approval = AccountActionRequest.objects.create(
+                action='verification_decision',
+                target_user=self.target,
+                payload={},
+                requested_by=self.requester,
+                decision_note='documents looked legitimate',
+            )
+            request = APIRequestFactory().post('/')
+            request.user = self.approver
+
+            result = ApprovalApproveView()._apply(request, approval)
+
+        self.assertIn('verification approved', result)
+        self.assertEqual(seen['note'], 'documents looked legitimate')
+        self.assertEqual(seen['actor'], self.approver)
+
+
+class StaffRoleNotificationTests(GovernanceTestBase):
+    """A staff authority change must reach the person it happened to.
+
+    Governance's only other signal is the audit log, which the holder has no
+    reason to read. These tests exist because every grant/revoke path wrote the
+    row and notified nobody.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_authenticate(self.approver)
+
+    def _notifications_for(self, user, notification_type):
+        from apps.notifications.models import Notification
+
+        return list(
+            Notification.objects.filter(
+                recipient__user=user, notification_type=notification_type,
+            ).order_by('created_at')
+        )
+
+    def test_direct_grant_notifies_the_holder(self):
+        self.client.post(
+            f'{PREFIX}/staff-roles/',
+            {'user': str(self.requester.id), 'role': 'logistics', 'requires_second': False},
+            format='json',
+        )
+        notes = self._notifications_for(self.requester, 'staff_role_granted')
+        self.assertEqual(len(notes), 1, [n.title for n in notes])
+        self.assertEqual(notes[0].metadata['role'], 'logistics')
+        self.assertEqual(notes[0].metadata['previous_role'], 'support')
+        self.assertIn('logistics', notes[0].title)
+
+    def test_approval_applied_grant_notifies_with_the_before_role(self):
+        self.client.post(
+            f'{PREFIX}/staff-roles/',
+            {'user': str(self.requester.id), 'role': 'finance', 'requires_second': True},
+            format='json',
+        )
+        approval = AccountActionRequest.objects.get()
+
+        self.client.force_authenticate(self.superuser)
+        self.client.post(
+            f'{PREFIX}/approvals/{approval.id}/approve/', {'note': 'Approved'}, format='json'
+        )
+
+        notes = self._notifications_for(self.requester, 'staff_role_granted')
+        self.assertEqual(len(notes), 1, [n.title for n in notes])
+        self.assertEqual(notes[0].metadata['role'], 'finance')
+        self.assertEqual(notes[0].metadata['previous_role'], 'support')
+
+    def test_requesting_a_grant_notifies_nobody_yet(self):
+        """202 means nothing has happened. Announcing it would be a lie."""
+        self.client.post(
+            f'{PREFIX}/staff-roles/',
+            {'user': str(self.requester.id), 'role': 'finance', 'requires_second': True},
+            format='json',
+        )
+        self.assertEqual(self._notifications_for(self.requester, 'staff_role_granted'), [])
+
+    def test_revoke_notifies_the_holder_with_the_reason(self):
+        row = StaffRole.objects.get(user=self.requester)
+        response = self.client.delete(
+            f'{PREFIX}/staff-roles/{row.id}/',
+            {'notes': 'Left the operations team.'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        notes = self._notifications_for(self.requester, 'staff_role_revoked')
+        self.assertEqual(len(notes), 1, [n.title for n in notes])
+        self.assertIn('Left the operations team.', notes[0].body)
+
+    def test_narrowing_a_role_notifies_the_holder(self):
+        row = StaffRole.objects.get(user=self.requester)
+        response = self.client.patch(
+            f'{PREFIX}/staff-roles/{row.id}/', {'role': 'support'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        notes = self._notifications_for(self.requester, 'staff_role_granted')
+        self.assertEqual(len(notes), 1, [n.title for n in notes])
+        self.assertEqual(notes[0].metadata['previous_role'], 'support')
+
+    def test_a_refused_self_revoke_notifies_nobody(self):
+        """The guard must fire before anything is written or announced."""
+        row = StaffRole.objects.get(user=self.approver)
+        response = self.client.delete(f'{PREFIX}/staff-roles/{row.id}/', format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self._notifications_for(self.approver, 'staff_role_revoked'), [])
+
+
+class StaffInvitationTests(TestCase):
+    """Invitation -> accept -> working staff account.
+
+    This is the path that did not exist. ``StaffRole`` could not be granted to
+    anybody who was not already ``is_staff``, and nothing set ``is_staff``, so
+    staff onboarding required editing the database by hand. The one real staff
+    account is still the evidence: ``is_superuser`` with no ``StaffRole`` row.
+    """
+
+    PREFIX = '/api/v1/governance'
+
+    def setUp(self):
+        from apps.accounts.models import User
+        from apps.profiles.models import Profile
+
+        self.User = User
+        self.Profile = Profile
+        self.inviter = _make_user('inviter@example.com', 'inviter', is_staff=True, is_superuser=True)
+        _grant(self.inviter, 'admin')
+        self.approver = _make_user('second@example.com', 'second', is_staff=True)
+        _grant(self.approver, 'admin')
+        self.client = APIClient()
+        self.client.force_authenticate(self.inviter)
+
+    def _make_invitee(self, email='newhire@example.com'):
+        user = _make_user(email, 'newhire')
+        self.assertFalse(user.is_staff, 'fixture must start as a non-staff account')
+        return user
+
+    def _invite(self, email='newhire@example.com', **overrides):
+        payload = {'email': email, 'role': 'support'}
+        payload.update(overrides)
+        return self.client.post(f'{self.PREFIX}/staff-invitations/', payload, format='json')
+
+    def _accept(self, token, user):
+        accept = APIClient()
+        accept.force_authenticate(user)
+        return accept.post(f'{self.PREFIX}/staff-invitations/accept/{token}/', {}, format='json')
+
+    # --- creating ---
+
+    def test_invite_with_second_approval_sends_nothing(self):
+        response = self._invite()
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED, response.data)
+
+        from apps.governance.models import StaffInvitation
+
+        invitation = StaffInvitation.objects.get()
+        self.assertEqual(invitation.status, 'pending')
+        self.assertEqual(invitation.role, 'support')
+        self.assertTrue(AccountActionRequest.objects.filter(
+            action='staff_invitation', status='pending').exists())
+
+    def test_second_approver_is_what_releases_the_email(self):
+        self._invite()
+        from apps.governance.models import StaffInvitation
+
+        approval = AccountActionRequest.objects.get(action='staff_invitation')
+
+        self.client.force_authenticate(self.approver)
+        response = self.client.post(
+            f'{self.PREFIX}/approvals/{approval.id}/approve/', {'note': 'ok'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertIn('emailed', response.data['message'])
+
+        # Still pending: nobody is staff until the invitee accepts.
+        self.assertEqual(StaffInvitation.objects.get().status, 'pending')
+
+    def test_direct_invite_skips_the_queue_when_asked(self):
+        response = self._invite(requires_second=False)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+        self.assertEqual(AccountActionRequest.objects.count(), 0)
+
+    def test_you_cannot_invite_yourself(self):
+        response = self._invite(email='inviter@example.com', requires_second=False)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_two_pending_invitations_for_one_address_are_refused(self):
+        self.assertEqual(self._invite(requires_second=False).status_code, status.HTTP_201_CREATED)
+        second = self._invite(requires_second=False)
+        self.assertEqual(second.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_an_existing_staff_address_is_refused_with_the_right_pointer(self):
+        response = self._invite(email='second@example.com', requires_second=False)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('already has a staff account', str(response.data).lower())
+
+    def test_unknown_scopes_are_refused(self):
+        response = self._invite(requires_second=False, scopes=['not.a.scope'])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    # --- accepting ---
+
+    def test_accepting_sets_is_staff_and_creates_the_role(self):
+        """The two writes that make the account usable."""
+        self._invite(requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        invitation = StaffInvitation.objects.get()
+        invitee = self._make_invitee()
+
+        response = self._accept(invitation.token, invitee)
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+        invitee.refresh_from_db()
+        self.assertTrue(invitee.is_staff, 'accepting an invitation is what sets is_staff')
+
+        role = StaffRole.objects.get(user=invitee)
+        self.assertEqual(role.role, 'support')
+        self.assertIsNone(role.revoked_at)
+
+        invitation.refresh_from_db()
+        self.assertEqual(invitation.status, 'accepted')
+        self.assertEqual(invitation.accepted_by, invitee)
+
+    def test_accepting_notifies_the_new_staff_member(self):
+        self._invite(requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        invitation = StaffInvitation.objects.get()
+        invitee = self._make_invitee()
+        self._accept(invitation.token, invitee)
+
+        from apps.notifications.models import Notification
+
+        notes = list(Notification.objects.filter(
+            recipient__user=invitee, notification_type='staff_role_granted'))
+        self.assertEqual(len(notes), 1, [n.title for n in notes])
+        self.assertEqual(notes[0].metadata['role'], 'support')
+        self.assertEqual(notes[0].metadata['via'], 'staff_invitation')
+
+    def test_the_token_alone_cannot_mint_an_administrator(self):
+        """The security property. A leaked link must not be a credential."""
+        self._invite(email='newhire@example.com', role='admin', requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        invitation = StaffInvitation.objects.get()
+        attacker = _make_user('attacker@evil.com', 'attacker')
+
+        response = self._accept(invitation.token, attacker)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        attacker.refresh_from_db()
+        self.assertFalse(attacker.is_staff)
+        self.assertFalse(StaffRole.objects.filter(user=attacker).exists())
+        self.assertEqual(StaffInvitation.objects.get().status, 'pending')
+
+    def test_accepting_requires_authentication(self):
+        self._invite(requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        token = StaffInvitation.objects.get().token
+        response = APIClient().post(
+            f'{self.PREFIX}/staff-invitations/accept/{token}/', {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_an_invitation_cannot_be_accepted_twice(self):
+        self._invite(requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        invitation = StaffInvitation.objects.get()
+        invitee = self._make_invitee()
+        self.assertEqual(self._accept(invitation.token, invitee).status_code, status.HTTP_200_OK)
+
+        again = self._accept(invitation.token, invitee)
+        self.assertEqual(again.status_code, status.HTTP_409_CONFLICT)
+
+    def test_a_revoked_invitation_is_refused(self):
+        self._invite(requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        invitation = StaffInvitation.objects.get()
+        self.client.delete(f'{self.PREFIX}/staff-invitations/{invitation.id}/')
+
+        invitee = self._make_invitee()
+        response = self._accept(invitation.token, invitee)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+
+        invitee.refresh_from_db()
+        self.assertFalse(invitee.is_staff)
+
+    def test_an_expired_invitation_is_refused(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.governance.models import StaffInvitation
+
+        self._invite(requires_second=False)
+        invitation = StaffInvitation.objects.get()
+        StaffInvitation.objects.filter(pk=invitation.pk).update(
+            expires_at=timezone.now() - timedelta(days=1))
+
+        invitee = self._make_invitee()
+        response = self._accept(invitation.token, invitee)
+        self.assertEqual(response.status_code, status.HTTP_410_GONE)
+        invitee.refresh_from_db()
+        self.assertFalse(invitee.is_staff)
+
+    def test_the_public_read_says_why_without_granting_anything(self):
+        self._invite(requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        invitation = StaffInvitation.objects.get()
+        response = APIClient().get(
+            f'{self.PREFIX}/staff-invitations/accept/{invitation.token}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['data']['email'], 'newhire@example.com')
+        self.assertTrue(response.data['data']['is_live'])
+        # Critically: the read never hands back the role row or a usable token.
+        self.assertNotIn('token', response.data['data'])
+
+    def test_the_public_read_never_exposes_whether_an_account_exists(self):
+        self._invite(requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        token = StaffInvitation.objects.get().token
+        response = APIClient().get(f'{self.PREFIX}/staff-invitations/accept/{token}/')
+        self.assertNotIn('has_account', response.data['data'])
+
+    def test_an_unknown_token_is_a_404(self):
+        response = APIClient().get(
+            f'{self.PREFIX}/staff-invitations/accept/'
+            '11111111-1111-1111-1111-111111111111/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    # --- staff-side management ---
+
+    def test_staff_can_list_invitations_without_the_token(self):
+        self._invite(requires_second=False)
+        response = self.client.get(f'{self.PREFIX}/staff-invitations/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn('token', response.data['data'][0])
+
+    def test_a_non_staff_user_cannot_list_or_invite(self):
+        self.client.force_authenticate(_make_user('nobody@example.com', 'nobody'))
+        self.assertEqual(
+            self.client.get(f'{self.PREFIX}/staff-invitations/').status_code,
+            status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self._invite().status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_revoking_an_accepted_invitation_refuses_and_says_why(self):
+        """Accepting granted access; pretending a revoke undoes it would be a lie."""
+        self._invite(requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        invitation = StaffInvitation.objects.get()
+        self._accept(invitation.token, self._make_invitee())
+
+        response = self.client.delete(f'{self.PREFIX}/staff-invitations/{invitation.id}/')
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn('staff role', str(response.data).lower())
+
+    def test_regranting_a_staff_user_changes_the_role_not_a_second_link(self):
+        """A re-promotion goes through the staff-role endpoint, not a new invite."""
+        self._invite(requires_second=False)
+        from apps.governance.models import StaffInvitation
+
+        invitation = StaffInvitation.objects.get()
+        invitee = self._make_invitee()
+        self._accept(invitation.token, invitee)
+
+        response = self._invite(email='newhire@example.com', requires_second=False)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('already has a staff account', str(response.data).lower())

@@ -31,6 +31,7 @@ inside ``apps.governance.emails.send_templated_email`` instead, because the
 audit row has to exist for sends that never came through HTTP.
 """
 import csv
+import logging
 from datetime import timedelta
 
 from django.db import transaction
@@ -45,7 +46,7 @@ from common.pagination import PageNumberPagination
 
 from .audit import GovernanceAuditMixin
 from .emails import resolve_template, send_templated_email
-from .models import AccountActionRequest, AdminActionLog, EmailLog, StaffRole
+from .models import AccountActionRequest, AdminActionLog, EmailLog, StaffInvitation, StaffRole
 from .permissions import ScopedPlatformAdmin
 from .serializers import (
     AccountActionRequestCreateSerializer,
@@ -54,6 +55,9 @@ from .serializers import (
     DecisionSerializer,
     EmailLogSerializer,
     StaffEmailSendSerializer,
+    StaffInvitationAcceptSerializer,
+    StaffInvitationCreateSerializer,
+    StaffInvitationSerializer,
     StaffRoleSerializer,
     StaffRoleUpdateSerializer,
     StaffRoleWriteSerializer,
@@ -71,6 +75,8 @@ import re as _re
 ACTION_VERB_RE = _re.compile(r'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$')
 TARGET_TYPE_RE = _re.compile(r'^[a-z][a-z0-9_]*$')
 _BARE_DATE_RE = _re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
+logger = logging.getLogger(__name__)
 
 # Per-staff ceiling on queued/sent emails, per rolling hour. Separate from, and
 # much tighter than, the ``otp`` DRF throttle scope: the throttle is per-IP and
@@ -129,6 +135,56 @@ def _staff_role_queryset():
         StaffRole.objects
         .select_related('user', 'user__profile', 'granted_by')
         .order_by('-created_at')
+    )
+
+
+def _notify_staff_role(target_user, role, scopes, actor, *, previous_role=None):
+    """Tell the holder their staff authority changed.
+
+    Governance's only other signal is the audit log, which the affected person
+    has no reason to read. A silent grant is something they discover by seeing a
+    screen they could not previously see; a silent revoke is worse -- they keep
+    acting as staff and get 403s with no explanation.
+    """
+    from apps.notifications.tasks import create_notification
+
+    scope_list = list(scopes or [])
+    create_notification.delay(
+        recipient_id=str(target_user.pk),
+        notification_type='staff_role_granted',
+        title=f'You now have the {role} role on Buddy Up',
+        body=(
+            f'{actor.email} gave you the {role} role'
+            + (f' (previously {previous_role})' if previous_role else '')
+            + '.'
+        ),
+        metadata={
+            'role': role,
+            'scopes': scope_list,
+            'previous_role': previous_role,
+            'granted_by': str(getattr(actor, 'pk', '')),
+        },
+        dedupe_key=f'staff-role-granted-{target_user.pk}-{role}-{actor.pk}',
+    )
+
+
+def _notify_staff_revoked(target_user, role, actor, reason=''):
+    from apps.notifications.tasks import create_notification
+
+    create_notification.delay(
+        recipient_id=str(target_user.pk),
+        notification_type='staff_role_revoked',
+        title=f'Your {role} role on Buddy Up has ended',
+        body=(
+            f'{actor.email} revoked your {role} role'
+            + (f': {reason}' if reason else '.')
+        ),
+        metadata={
+            'role': role,
+            'revoked_by': str(getattr(actor, 'pk', '')),
+            'reason': reason,
+        },
+        dedupe_key=f'staff-role-revoked-{target_user.pk}-{actor.pk}',
     )
 
 
@@ -232,6 +288,9 @@ class StaffRoleListCreateView(GovernanceAuditMixin, GovernanceView):
 
     @transaction.atomic
     def _apply_grant(self, request, target, data, existing):
+        # Read before the write: the holder is told what changed, and "you are
+        # now logistics" is only meaningful next to what it replaced.
+        previous_role = existing.role if existing else None
         if existing:
             existing.role = data['role']
             existing.scopes = data.get('scopes') or []
@@ -251,6 +310,10 @@ class StaffRoleListCreateView(GovernanceAuditMixin, GovernanceView):
                 granted_at=timezone.now(),
             )
             message = 'Staff role granted.'
+        _notify_staff_role(
+            target, existing.role, existing.scopes, request.user,
+            previous_role=previous_role,
+        )
         return self.ok(
             StaffRoleSerializer(existing).data,
             message=message,
@@ -334,6 +397,7 @@ class StaffRoleDetailView(GovernanceAuditMixin, GovernanceView):
                 status_code=status.HTTP_409_CONFLICT,
             )
 
+        previous_role = role_row.role
         fields = []
         for field in ('role', 'scopes', 'notes'):
             if field in data:
@@ -342,6 +406,10 @@ class StaffRoleDetailView(GovernanceAuditMixin, GovernanceView):
         if fields:
             role_row.save(update_fields=fields + ['updated_at'])
         role_row.refresh_from_db()
+        _notify_staff_role(
+            role_row.user, role_row.role, role_row.scopes, request.user,
+            previous_role=previous_role,
+        )
         return self.ok(StaffRoleSerializer(role_row).data, message='Staff role updated.')
 
     def delete(self, request, pk):
@@ -364,6 +432,7 @@ class StaffRoleDetailView(GovernanceAuditMixin, GovernanceView):
         role_row.revoked_at = timezone.now()
         role_row.save(update_fields=['revoked_at', 'updated_at'] + (['notes'] if reason else []))
         role_row.refresh_from_db()
+        _notify_staff_revoked(role_row.user, role_row.role, request.user, reason)
         return self.ok(
             StaffRoleSerializer(role_row).data,
             message='Staff role revoked. The holder now has no scopes until re-granted.',
@@ -745,6 +814,10 @@ class ApprovalApproveView(_DecisionView):
             # records the *effect*. A role change is the single most
             # consequential thing governance does, and "approved" is not an
             # answer to "who now has payout access".
+            _notify_staff_role(
+                approval.target_user, role, scopes, request.user,
+                previous_role=before['role'] if before else None,
+            )
             record_admin_action(
                 actor=request.user,
                 action='staff_roles.grant',
@@ -758,6 +831,40 @@ class ApprovalApproveView(_DecisionView):
             )
             return f'The {role} role is now active for {approval.target_user.email}.'
 
+        if approval.action == 'staff_invitation':
+            # The two-person rule is satisfied *here*, at invite time. Sending
+            # the accept link is the effect of this approval -- doing it any
+            # earlier would put a live staff credential in an inbox that a
+            # second administrator has not yet agreed to.
+            from .onboarding import InvitationError  # noqa: F401 - documents intent
+
+            invitation = StaffInvitation.objects.filter(
+                pk=payload.get('invitation_id')
+            ).first()
+            if invitation is None:
+                raise RuntimeError('The invitation this approval refers to no longer exists.')
+            if invitation.status != 'pending':
+                return (
+                    f'The invitation for {invitation.email} is already '
+                    f'{invitation.status}; nothing was sent.'
+                )
+
+            sent = send_staff_invitation_email(invitation)
+            record_admin_action(
+                actor=request.user,
+                action='staff_invitations.send',
+                summary=f'Emailed the staff invitation to {invitation.email}.',
+                target_type='staff_invitation',
+                target_id=str(invitation.id),
+                request=request,
+            )
+            return (
+                f'The invitation to {invitation.email} has been emailed.'
+                if sent else
+                f'The invitation to {invitation.email} was approved but the '
+                f'email could not be sent. Resend it from the invitations list.'
+            )
+
         if approval.action == 'verification_decision':
             # Without this branch an approval stamped `applied_at` while doing
             # nothing, and the submission's own decide endpoint then refused it
@@ -770,7 +877,8 @@ class ApprovalApproveView(_DecisionView):
                 raise RuntimeError('apps.verification.decisions.apply_decision is unavailable.')
 
             settled, effect = apply_decision(
-                request_row=approval, actor=request.user, note=note,
+                request_row=approval, actor=request.user,
+                note=approval.decision_note or '',
             )
             return f'{effect}'
 
@@ -1194,3 +1302,297 @@ class EmailResendView(GovernanceView):
             message='Requeued for delivery.',
             status_code=status.HTTP_202_ACCEPTED,
         )
+
+
+# ---------------------------------------------------------------------------
+# Staff onboarding
+# ---------------------------------------------------------------------------
+
+def send_staff_invitation_email(invitation):
+    """Email the accept link. Never raises into the request.
+
+    A mail failure must not roll back an invitation that was validly created:
+    the operator can resend, and losing the row would lose the audit of who
+    asked. Returns True when the message was handed to the mailer.
+    """
+    from django.conf import settings as django_settings
+
+    # Never falls back to EMAIL_HOST any more: that would put a `smtp.gmail.com`
+    # link in a new hire's inbox. FRONTEND_BASE_URL already defaults to the
+    # canonical web host in settings, so this only has to handle an operator
+    # having overridden it with something empty.
+    frontend = (getattr(django_settings, 'FRONTEND_BASE_URL', '') or '').rstrip('/')
+    accept_url = f'{frontend}/staff-invite/{invitation.token}'
+
+    try:
+        send_templated_email(
+            template_key='staff_invitation',
+            to_email=invitation.email,
+            subject='You have been invited to administer Buddy Up',
+            context={
+                'role_display': invitation.get_role_display(),
+                'scopes': invitation.scopes or [],
+                'accept_url': accept_url,
+                'invited_by': invitation.invited_by_email or 'the Buddy Up team',
+                'expires_at': invitation.expires_at,
+                'notes': invitation.notes,
+            },
+            related_object_type='staff_invitation',
+            related_object_id=str(invitation.id),
+            dedupe_key=f'staff-invite-{invitation.id}',
+        )
+        return True
+    except Exception:  # noqa: BLE001 - mail must never break the caller
+        logger.exception('could not send staff invitation %s', invitation.id)
+        return False
+
+
+class StaffInvitationListCreateView(GovernanceView):
+    """Offer staff access to an email address.
+
+    Requires the ``users`` scope: this is staff administration, and it is the
+    act that mints administrators, so it sits behind the same two-person queue
+    as everything else here. With ``requires_second`` (the default) the row is
+    created and an approval is raised, but **no email is sent** until a second
+    approver settles it.
+    """
+
+    permission_classes = [ScopedPlatformAdmin.for_scope('users')]
+
+    audit_action = 'staff_invitations.create'
+    audit_target_type = 'staff_invitation'
+
+    def get(self, request):
+        queryset = StaffInvitation.objects.select_related('invited_by', 'accepted_by')
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        email = request.query_params.get('email')
+        if email:
+            queryset = queryset.filter(email__icontains=email)
+
+        for row in queryset:
+            row.mark_expired_if_stale()
+
+        return self.ok(
+            StaffInvitationSerializer(queryset, many=True).data,
+            pagination={'count': queryset.count()},
+        )
+
+    def post(self, request):
+        # Checked before validation, deliberately. The serializer refuses an
+        # address that already has a staff account, and the inviter certainly
+        # does -- so validating first would answer every self-invite with a 400
+        # about duplication and never reach the rule that matters.
+        target_email = str(request.data.get('email') or '').strip().lower()
+        if target_email and target_email == (request.user.email or '').strip().lower():
+            # Same rule the staff-role endpoint enforces: nobody may invite
+            # themselves, because an administrator who can also issue the
+            # invitation has collapsed the two-person rule to one.
+            return self.fail(
+                'You cannot invite yourself. Ask another administrator to raise it.',
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = StaffInvitationCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        invitation = StaffInvitation.objects.create(
+            email=target_email,
+            role=data['role'],
+            scopes=list(data['scopes']),
+            notes=data['notes'],
+            invited_by=request.user,
+            invited_by_email=request.user.email,
+            expires_at=timezone.now() + timedelta(days=data['expires_in_days']),
+            requires_second=data['requires_second'],
+        )
+
+        if data['requires_second']:
+            AccountActionRequest.objects.create(
+                action='staff_invitation',
+                target_user=None,
+                payload={
+                    'invitation_id': str(invitation.id),
+                    'email': invitation.email,
+                    'role': invitation.role,
+                    'scopes': invitation.scopes,
+                    'notes': invitation.notes,
+                },
+                requested_by=request.user,
+                requested_by_profile=display_name_of(request.user),
+                requires_second=True,
+            )
+            record_admin_action(
+                actor=request.user,
+                action='staff_invitations.create',
+                summary=(
+                    f'Invited {invitation.email} as {invitation.role}. '
+                    'Waiting on a second approver; no email sent yet.'
+                ),
+                target_type='staff_invitation',
+                target_id=str(invitation.id),
+                after={'email': invitation.email, 'role': invitation.role},
+                request=request,
+            )
+            return self.ok(
+                StaffInvitationSerializer(invitation).data,
+                message=(
+                    'Invitation requires a second approver. Nothing has been '
+                    'emailed and no access exists yet.'
+                ),
+                status_code=status.HTTP_202_ACCEPTED,
+            )
+
+        emailed = send_staff_invitation_email(invitation)
+        record_admin_action(
+            actor=request.user,
+            action='staff_invitations.create',
+            summary=f'Invited {invitation.email} as {invitation.role}.',
+            target_type='staff_invitation',
+            target_id=str(invitation.id),
+            after={'email': invitation.email, 'role': invitation.role},
+            request=request,
+        )
+        return self.ok(
+            StaffInvitationSerializer(invitation).data,
+            message=(
+                'Invitation sent.' if emailed
+                else 'Invitation created, but the email could not be sent. '
+                     'Revoke it and issue a new one, or send the link manually.'
+            ),
+            status_code=status.HTTP_201_CREATED,
+        )
+
+
+class StaffInvitationDetailView(GovernanceAuditMixin, GovernanceView):
+    """Read or revoke one invitation. Revoke, never delete.
+
+    The row is the record that staff access was offered to this address and by
+    whom. Deleting it would answer "did we ever invite this person?" with
+    silence, which is the same reasoning that keeps ``StaffRole`` rows around
+    after a revoke.
+    """
+
+    permission_classes = [ScopedPlatformAdmin.for_scope('users')]
+
+    audit_action = 'staff_invitations.revoke'
+    audit_target_type = 'staff_invitation'
+
+    def _get(self, pk):
+        return get_object_or_404(StaffInvitation, pk=pk)
+
+    def get(self, request, pk):
+        invitation = self._get(pk)
+        invitation.mark_expired_if_stale()
+        return self.ok(StaffInvitationSerializer(invitation).data)
+
+    def post(self, request, pk):
+        """Resend the accept link. The common case after a mail hiccup."""
+        invitation = self._get(pk)
+        if not invitation.is_live:
+            return self.fail('This invitation is no longer live and cannot be resent.')
+        emailed = send_staff_invitation_email(invitation)
+        return self.ok(
+            StaffInvitationSerializer(invitation).data,
+            message='Invitation resent.' if emailed else 'The email could not be sent.',
+            status_code=status.HTTP_200_OK if emailed else status.HTTP_502_BAD_GATEWAY,
+        )
+
+    def delete(self, request, pk):
+        invitation = self._get(pk)
+        if invitation.status == 'accepted':
+            # Accepting already granted access; revoking the invitation does not
+            # take it away, and pretending otherwise would be a false assurance.
+            return self.fail(
+                'This invitation was already accepted. Revoke the staff role '
+                'instead if the access should end.',
+                status_code=status.HTTP_409_CONFLICT,
+            )
+        invitation.status = 'revoked'
+        invitation.save(update_fields=['status', 'updated_at'])
+        return self.ok(
+            StaffInvitationSerializer(invitation).data,
+            message='Invitation revoked. The link no longer works.',
+        )
+
+
+class StaffInvitationAcceptView(views.APIView):
+    """The public half of onboarding: read the offer, then claim it.
+
+    ``GET`` is unauthenticated on purpose -- the person following the emailed
+    link is not signed in yet, and the screen has to be able to say "this
+    invitation expired" rather than bouncing them to a login page that will
+    not help. It discloses only what the token already implies.
+
+    ``POST`` *does* require authentication, and requires the signed-in address
+    to be the one invited. Without that check the token alone would be a
+    credential: anyone it leaked to could register a fresh address and mint
+    themselves an administrator.
+    """
+
+    permission_classes = []
+
+    def get(self, request, token):
+        from .onboarding import InvitationError, invitation_state
+
+        try:
+            state = invitation_state(token)
+        except InvitationError as exc:
+            return Response(
+                {'success': False, 'data': None, 'message': exc.message,
+                 'errors': None, 'pagination': None},
+                status=exc.status_code,
+            )
+
+        invitation = state['invitation']
+        return Response({
+            'success': True,
+            'data': {
+                'email': invitation.email,
+                'role': invitation.role,
+                'role_display': invitation.get_role_display(),
+                'scopes': invitation.scopes or [],
+                'status': state['status'],
+                'is_live': state['is_live'],
+                'expires_at': invitation.expires_at,
+                'invited_by': invitation.invited_by_email,
+            },
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+    def post(self, request, token):
+        from .onboarding import InvitationError, accept_invitation
+
+        # Validates to an empty dict by design: see StaffInvitationAcceptSerializer.
+        StaffInvitationAcceptSerializer(data=request.data).is_valid(raise_exception=True)
+
+        # Enforced here rather than in permission_classes so that GET can stay
+        # open while POST is closed -- one view, two audiences.
+        if not request.user or not request.user.is_authenticated:
+            return Response(
+                {'success': False, 'data': None,
+                 'message': 'Sign in as the invited address to accept.',
+                 'errors': None, 'pagination': None},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        try:
+            role = accept_invitation(token, request.user)
+        except InvitationError as exc:
+            return Response(
+                {'success': False, 'data': None, 'message': exc.message,
+                 'errors': None, 'pagination': None},
+                status=exc.status_code,
+            )
+
+        return Response({
+            'success': True,
+            'data': StaffRoleSerializer(role).data,
+            'message': 'You are now staff. The admin console is available to you.',
+            'errors': None,
+            'pagination': None,
+        })

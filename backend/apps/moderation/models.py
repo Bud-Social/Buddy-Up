@@ -84,6 +84,18 @@ class ContentFlag(TimestampedModel):
     content_type = models.CharField(max_length=50)
     content_id = models.CharField(max_length=100)
     content_preview = models.TextField(blank=True, max_length=500)
+    # The model's own account of why it flagged this. Persisted rather than
+    # recomputed on read, for two reasons: the checkpoint can be retrained
+    # between the flag and the review (so a re-read would silently change the
+    # justification under the moderator), and a flag with no stated reason is
+    # one a reviewer cannot act on without re-deriving it by hand.
+    ai_explanation = models.TextField(blank=True, default='')
+    # Which model produced the decision. Reviewers need to know whether they
+    # are reading a classifier's reasoning or a keyword rule's.
+    ai_method = models.CharField(max_length=50, blank=True, default='')
+    # False when no bias model was deployed. Distinct from "no bias found",
+    # which is what a reviewer would otherwise assume from an empty field.
+    bias_assessed = models.BooleanField(default=False)
     is_actioned = models.BooleanField(default=False)
     action_taken = models.CharField(max_length=50, blank=True)
 

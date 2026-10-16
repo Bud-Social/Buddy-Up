@@ -251,6 +251,11 @@ class _AdminModerationScreenState extends ConsumerState<AdminModerationScreen> {
         children: [
           AdminDataRow(label: 'Flag ID', value: flag.id ?? '—'),
           AdminDataRow(label: 'Content ID', value: flag.contentId.isEmpty ? '—' : flag.contentId),
+          // The model's own reasoning, plus an explicit note on what it did
+          // *not* assess. A reviewer reading only "82% confidence" cannot act;
+          // and an empty bias field would otherwise read as "nothing biased
+          // found" when the truth is that no bias model is deployed.
+          _FlagExplanation(flag: flag),
           if (guidance != null) ...[
             const SizedBox(height: 6),
             AdminRuleNote(text: 'Guidance: $guidance'),
@@ -1313,6 +1318,74 @@ class _CommendationSheetState extends State<_CommendationSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// What the model said about a flag, and what it did not look at.
+class _FlagExplanation extends StatelessWidget {
+  final ContentFlag flag;
+
+  const _FlagExplanation({required this.flag});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final hasExplanation = flag.aiExplanation.trim().isNotEmpty;
+
+    if (!hasExplanation) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Text(
+          flag.aiMethod.isEmpty
+              ? 'No model explanation was recorded for this flag.'
+              : 'This flag was raised by a ${flag.aiMethod} rule with no recorded explanation.',
+          style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: cs.onSurfaceVariant),
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 12, color: cs.onSurfaceVariant),
+              const SizedBox(width: 4),
+              Text(
+                flag.aiMethod.isEmpty
+                    ? 'Why this was flagged'
+                    : 'Why this was flagged · ${flag.aiMethod}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            flag.aiExplanation,
+            style: TextStyle(fontSize: 12, height: 1.45, color: cs.onSurface),
+          ),
+          if (!flag.biasAssessed) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Bias was not assessed for this flag — no bias model is deployed.',
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+            ),
+          ],
+        ],
       ),
     );
   }

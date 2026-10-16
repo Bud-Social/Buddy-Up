@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 
-from ..moderation_engine import analyze_image, analyze_text
+from ..moderation_engine import analyze_image, analyze_text, explain_text_decision
 
 router = APIRouter()
 
@@ -21,6 +21,13 @@ class TextModerationResult(BaseModel):
     label: str = 'not_toxic'
     action: str = 'approve'
     method: str = 'model'
+    # Grounded prose for the moderator queue. Always populated: the router
+    # falls back to a deterministic reading when no model ran, because a flag
+    # with no explanation is a flag nobody can act on confidently.
+    explanation: str = ''
+    # Whether a bias model was actually deployed and run. The console shows
+    # this so "no bias signal" is never mistaken for "no bias found".
+    bias_assessed: bool = False
 
 
 @router.post('/image', response_model=ModerationResult)
@@ -51,4 +58,6 @@ async def moderate_text(text: str = Form(...)):
         label=result.get('label', 'not_toxic'),
         action=result['action'],
         method=result.get('method', 'model'),
+        explanation=result.get('explanation') or explain_text_decision(text, result),
+        bias_assessed=bool(result.get('bias_assessed', False)),
     )

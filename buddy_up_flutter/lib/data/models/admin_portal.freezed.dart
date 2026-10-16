@@ -6739,7 +6739,14 @@ $GovernanceUserRefCopyWith<$Res>? get sender {
 /// @nodoc
 mixin _$ContentFlag {
 
- String? get id;@JsonKey(name: 'flag_reason') String get flagReason; String get severity;@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) double get confidence; String get source;@JsonKey(name: 'content_type') String get contentType;@JsonKey(name: 'content_id') String get contentId;@JsonKey(name: 'content_preview') String get contentPreview;@JsonKey(name: 'is_actioned') bool get isActioned;@JsonKey(name: 'action_taken') String get actionTaken;@JsonKey(name: 'created_at') String? get createdAt;
+ String? get id;@JsonKey(name: 'flag_reason') String get flagReason; String get severity;@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) double get confidence; String get source;@JsonKey(name: 'content_type') String get contentType;@JsonKey(name: 'content_id') String get contentId;@JsonKey(name: 'content_preview') String get contentPreview;/// The model's own account of why it flagged this, captured at flag time.
+/// Empty for flags raised by hand, and for rows written before the field
+/// existed -- so the UI must render the absence honestly rather than
+/// implying every flag carries a rationale.
+@JsonKey(name: 'ai_explanation') String get aiExplanation;/// Which layer decided: a classifier, or a keyword rule.
+@JsonKey(name: 'ai_method') String get aiMethod;/// Whether a bias model actually ran. False means "not assessed", which is
+/// NOT the same as "nothing biased was found".
+@JsonKey(name: 'bias_assessed') bool get biasAssessed;@JsonKey(name: 'is_actioned') bool get isActioned;@JsonKey(name: 'action_taken') String get actionTaken;@JsonKey(name: 'created_at') String? get createdAt;
 /// Create a copy of ContentFlag
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -6752,16 +6759,16 @@ $ContentFlagCopyWith<ContentFlag> get copyWith => _$ContentFlagCopyWithImpl<Cont
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ContentFlag&&(identical(other.id, id) || other.id == id)&&(identical(other.flagReason, flagReason) || other.flagReason == flagReason)&&(identical(other.severity, severity) || other.severity == severity)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.source, source) || other.source == source)&&(identical(other.contentType, contentType) || other.contentType == contentType)&&(identical(other.contentId, contentId) || other.contentId == contentId)&&(identical(other.contentPreview, contentPreview) || other.contentPreview == contentPreview)&&(identical(other.isActioned, isActioned) || other.isActioned == isActioned)&&(identical(other.actionTaken, actionTaken) || other.actionTaken == actionTaken)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ContentFlag&&(identical(other.id, id) || other.id == id)&&(identical(other.flagReason, flagReason) || other.flagReason == flagReason)&&(identical(other.severity, severity) || other.severity == severity)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.source, source) || other.source == source)&&(identical(other.contentType, contentType) || other.contentType == contentType)&&(identical(other.contentId, contentId) || other.contentId == contentId)&&(identical(other.contentPreview, contentPreview) || other.contentPreview == contentPreview)&&(identical(other.aiExplanation, aiExplanation) || other.aiExplanation == aiExplanation)&&(identical(other.aiMethod, aiMethod) || other.aiMethod == aiMethod)&&(identical(other.biasAssessed, biasAssessed) || other.biasAssessed == biasAssessed)&&(identical(other.isActioned, isActioned) || other.isActioned == isActioned)&&(identical(other.actionTaken, actionTaken) || other.actionTaken == actionTaken)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,flagReason,severity,confidence,source,contentType,contentId,contentPreview,isActioned,actionTaken,createdAt);
+int get hashCode => Object.hash(runtimeType,id,flagReason,severity,confidence,source,contentType,contentId,contentPreview,aiExplanation,aiMethod,biasAssessed,isActioned,actionTaken,createdAt);
 
 @override
 String toString() {
-  return 'ContentFlag(id: $id, flagReason: $flagReason, severity: $severity, confidence: $confidence, source: $source, contentType: $contentType, contentId: $contentId, contentPreview: $contentPreview, isActioned: $isActioned, actionTaken: $actionTaken, createdAt: $createdAt)';
+  return 'ContentFlag(id: $id, flagReason: $flagReason, severity: $severity, confidence: $confidence, source: $source, contentType: $contentType, contentId: $contentId, contentPreview: $contentPreview, aiExplanation: $aiExplanation, aiMethod: $aiMethod, biasAssessed: $biasAssessed, isActioned: $isActioned, actionTaken: $actionTaken, createdAt: $createdAt)';
 }
 
 
@@ -6772,7 +6779,7 @@ abstract mixin class $ContentFlagCopyWith<$Res>  {
   factory $ContentFlagCopyWith(ContentFlag value, $Res Function(ContentFlag) _then) = _$ContentFlagCopyWithImpl;
 @useResult
 $Res call({
- String? id,@JsonKey(name: 'flag_reason') String flagReason, String severity,@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) double confidence, String source,@JsonKey(name: 'content_type') String contentType,@JsonKey(name: 'content_id') String contentId,@JsonKey(name: 'content_preview') String contentPreview,@JsonKey(name: 'is_actioned') bool isActioned,@JsonKey(name: 'action_taken') String actionTaken,@JsonKey(name: 'created_at') String? createdAt
+ String? id,@JsonKey(name: 'flag_reason') String flagReason, String severity,@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) double confidence, String source,@JsonKey(name: 'content_type') String contentType,@JsonKey(name: 'content_id') String contentId,@JsonKey(name: 'content_preview') String contentPreview,@JsonKey(name: 'ai_explanation') String aiExplanation,@JsonKey(name: 'ai_method') String aiMethod,@JsonKey(name: 'bias_assessed') bool biasAssessed,@JsonKey(name: 'is_actioned') bool isActioned,@JsonKey(name: 'action_taken') String actionTaken,@JsonKey(name: 'created_at') String? createdAt
 });
 
 
@@ -6789,7 +6796,7 @@ class _$ContentFlagCopyWithImpl<$Res>
 
 /// Create a copy of ContentFlag
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? flagReason = null,Object? severity = null,Object? confidence = null,Object? source = null,Object? contentType = null,Object? contentId = null,Object? contentPreview = null,Object? isActioned = null,Object? actionTaken = null,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? flagReason = null,Object? severity = null,Object? confidence = null,Object? source = null,Object? contentType = null,Object? contentId = null,Object? contentPreview = null,Object? aiExplanation = null,Object? aiMethod = null,Object? biasAssessed = null,Object? isActioned = null,Object? actionTaken = null,Object? createdAt = freezed,}) {
   return _then(_self.copyWith(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,flagReason: null == flagReason ? _self.flagReason : flagReason // ignore: cast_nullable_to_non_nullable
@@ -6799,7 +6806,10 @@ as double,source: null == source ? _self.source : source // ignore: cast_nullabl
 as String,contentType: null == contentType ? _self.contentType : contentType // ignore: cast_nullable_to_non_nullable
 as String,contentId: null == contentId ? _self.contentId : contentId // ignore: cast_nullable_to_non_nullable
 as String,contentPreview: null == contentPreview ? _self.contentPreview : contentPreview // ignore: cast_nullable_to_non_nullable
-as String,isActioned: null == isActioned ? _self.isActioned : isActioned // ignore: cast_nullable_to_non_nullable
+as String,aiExplanation: null == aiExplanation ? _self.aiExplanation : aiExplanation // ignore: cast_nullable_to_non_nullable
+as String,aiMethod: null == aiMethod ? _self.aiMethod : aiMethod // ignore: cast_nullable_to_non_nullable
+as String,biasAssessed: null == biasAssessed ? _self.biasAssessed : biasAssessed // ignore: cast_nullable_to_non_nullable
+as bool,isActioned: null == isActioned ? _self.isActioned : isActioned // ignore: cast_nullable_to_non_nullable
 as bool,actionTaken: null == actionTaken ? _self.actionTaken : actionTaken // ignore: cast_nullable_to_non_nullable
 as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String?,
@@ -6887,10 +6897,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'flag_reason')  String flagReason,  String severity, @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero)  double confidence,  String source, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'content_preview')  String contentPreview, @JsonKey(name: 'is_actioned')  bool isActioned, @JsonKey(name: 'action_taken')  String actionTaken, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'flag_reason')  String flagReason,  String severity, @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero)  double confidence,  String source, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'content_preview')  String contentPreview, @JsonKey(name: 'ai_explanation')  String aiExplanation, @JsonKey(name: 'ai_method')  String aiMethod, @JsonKey(name: 'bias_assessed')  bool biasAssessed, @JsonKey(name: 'is_actioned')  bool isActioned, @JsonKey(name: 'action_taken')  String actionTaken, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ContentFlag() when $default != null:
-return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.source,_that.contentType,_that.contentId,_that.contentPreview,_that.isActioned,_that.actionTaken,_that.createdAt);case _:
+return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.source,_that.contentType,_that.contentId,_that.contentPreview,_that.aiExplanation,_that.aiMethod,_that.biasAssessed,_that.isActioned,_that.actionTaken,_that.createdAt);case _:
   return orElse();
 
 }
@@ -6908,10 +6918,10 @@ return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'flag_reason')  String flagReason,  String severity, @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero)  double confidence,  String source, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'content_preview')  String contentPreview, @JsonKey(name: 'is_actioned')  bool isActioned, @JsonKey(name: 'action_taken')  String actionTaken, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id, @JsonKey(name: 'flag_reason')  String flagReason,  String severity, @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero)  double confidence,  String source, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'content_preview')  String contentPreview, @JsonKey(name: 'ai_explanation')  String aiExplanation, @JsonKey(name: 'ai_method')  String aiMethod, @JsonKey(name: 'bias_assessed')  bool biasAssessed, @JsonKey(name: 'is_actioned')  bool isActioned, @JsonKey(name: 'action_taken')  String actionTaken, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _ContentFlag():
-return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.source,_that.contentType,_that.contentId,_that.contentPreview,_that.isActioned,_that.actionTaken,_that.createdAt);case _:
+return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.source,_that.contentType,_that.contentId,_that.contentPreview,_that.aiExplanation,_that.aiMethod,_that.biasAssessed,_that.isActioned,_that.actionTaken,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -6928,10 +6938,10 @@ return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'flag_reason')  String flagReason,  String severity, @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero)  double confidence,  String source, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'content_preview')  String contentPreview, @JsonKey(name: 'is_actioned')  bool isActioned, @JsonKey(name: 'action_taken')  String actionTaken, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id, @JsonKey(name: 'flag_reason')  String flagReason,  String severity, @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero)  double confidence,  String source, @JsonKey(name: 'content_type')  String contentType, @JsonKey(name: 'content_id')  String contentId, @JsonKey(name: 'content_preview')  String contentPreview, @JsonKey(name: 'ai_explanation')  String aiExplanation, @JsonKey(name: 'ai_method')  String aiMethod, @JsonKey(name: 'bias_assessed')  bool biasAssessed, @JsonKey(name: 'is_actioned')  bool isActioned, @JsonKey(name: 'action_taken')  String actionTaken, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _ContentFlag() when $default != null:
-return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.source,_that.contentType,_that.contentId,_that.contentPreview,_that.isActioned,_that.actionTaken,_that.createdAt);case _:
+return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.source,_that.contentType,_that.contentId,_that.contentPreview,_that.aiExplanation,_that.aiMethod,_that.biasAssessed,_that.isActioned,_that.actionTaken,_that.createdAt);case _:
   return null;
 
 }
@@ -6943,7 +6953,7 @@ return $default(_that.id,_that.flagReason,_that.severity,_that.confidence,_that.
 @JsonSerializable()
 
 class _ContentFlag implements ContentFlag {
-  const _ContentFlag({this.id, @JsonKey(name: 'flag_reason') this.flagReason = '', this.severity = '', @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) this.confidence = 0.0, this.source = 'auto', @JsonKey(name: 'content_type') this.contentType = '', @JsonKey(name: 'content_id') this.contentId = '', @JsonKey(name: 'content_preview') this.contentPreview = '', @JsonKey(name: 'is_actioned') this.isActioned = false, @JsonKey(name: 'action_taken') this.actionTaken = '', @JsonKey(name: 'created_at') this.createdAt});
+  const _ContentFlag({this.id, @JsonKey(name: 'flag_reason') this.flagReason = '', this.severity = '', @JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) this.confidence = 0.0, this.source = 'auto', @JsonKey(name: 'content_type') this.contentType = '', @JsonKey(name: 'content_id') this.contentId = '', @JsonKey(name: 'content_preview') this.contentPreview = '', @JsonKey(name: 'ai_explanation') this.aiExplanation = '', @JsonKey(name: 'ai_method') this.aiMethod = '', @JsonKey(name: 'bias_assessed') this.biasAssessed = false, @JsonKey(name: 'is_actioned') this.isActioned = false, @JsonKey(name: 'action_taken') this.actionTaken = '', @JsonKey(name: 'created_at') this.createdAt});
   factory _ContentFlag.fromJson(Map<String, dynamic> json) => _$ContentFlagFromJson(json);
 
 @override final  String? id;
@@ -6954,6 +6964,16 @@ class _ContentFlag implements ContentFlag {
 @override@JsonKey(name: 'content_type') final  String contentType;
 @override@JsonKey(name: 'content_id') final  String contentId;
 @override@JsonKey(name: 'content_preview') final  String contentPreview;
+/// The model's own account of why it flagged this, captured at flag time.
+/// Empty for flags raised by hand, and for rows written before the field
+/// existed -- so the UI must render the absence honestly rather than
+/// implying every flag carries a rationale.
+@override@JsonKey(name: 'ai_explanation') final  String aiExplanation;
+/// Which layer decided: a classifier, or a keyword rule.
+@override@JsonKey(name: 'ai_method') final  String aiMethod;
+/// Whether a bias model actually ran. False means "not assessed", which is
+/// NOT the same as "nothing biased was found".
+@override@JsonKey(name: 'bias_assessed') final  bool biasAssessed;
 @override@JsonKey(name: 'is_actioned') final  bool isActioned;
 @override@JsonKey(name: 'action_taken') final  String actionTaken;
 @override@JsonKey(name: 'created_at') final  String? createdAt;
@@ -6971,16 +6991,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ContentFlag&&(identical(other.id, id) || other.id == id)&&(identical(other.flagReason, flagReason) || other.flagReason == flagReason)&&(identical(other.severity, severity) || other.severity == severity)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.source, source) || other.source == source)&&(identical(other.contentType, contentType) || other.contentType == contentType)&&(identical(other.contentId, contentId) || other.contentId == contentId)&&(identical(other.contentPreview, contentPreview) || other.contentPreview == contentPreview)&&(identical(other.isActioned, isActioned) || other.isActioned == isActioned)&&(identical(other.actionTaken, actionTaken) || other.actionTaken == actionTaken)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ContentFlag&&(identical(other.id, id) || other.id == id)&&(identical(other.flagReason, flagReason) || other.flagReason == flagReason)&&(identical(other.severity, severity) || other.severity == severity)&&(identical(other.confidence, confidence) || other.confidence == confidence)&&(identical(other.source, source) || other.source == source)&&(identical(other.contentType, contentType) || other.contentType == contentType)&&(identical(other.contentId, contentId) || other.contentId == contentId)&&(identical(other.contentPreview, contentPreview) || other.contentPreview == contentPreview)&&(identical(other.aiExplanation, aiExplanation) || other.aiExplanation == aiExplanation)&&(identical(other.aiMethod, aiMethod) || other.aiMethod == aiMethod)&&(identical(other.biasAssessed, biasAssessed) || other.biasAssessed == biasAssessed)&&(identical(other.isActioned, isActioned) || other.isActioned == isActioned)&&(identical(other.actionTaken, actionTaken) || other.actionTaken == actionTaken)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,flagReason,severity,confidence,source,contentType,contentId,contentPreview,isActioned,actionTaken,createdAt);
+int get hashCode => Object.hash(runtimeType,id,flagReason,severity,confidence,source,contentType,contentId,contentPreview,aiExplanation,aiMethod,biasAssessed,isActioned,actionTaken,createdAt);
 
 @override
 String toString() {
-  return 'ContentFlag(id: $id, flagReason: $flagReason, severity: $severity, confidence: $confidence, source: $source, contentType: $contentType, contentId: $contentId, contentPreview: $contentPreview, isActioned: $isActioned, actionTaken: $actionTaken, createdAt: $createdAt)';
+  return 'ContentFlag(id: $id, flagReason: $flagReason, severity: $severity, confidence: $confidence, source: $source, contentType: $contentType, contentId: $contentId, contentPreview: $contentPreview, aiExplanation: $aiExplanation, aiMethod: $aiMethod, biasAssessed: $biasAssessed, isActioned: $isActioned, actionTaken: $actionTaken, createdAt: $createdAt)';
 }
 
 
@@ -6991,7 +7011,7 @@ abstract mixin class _$ContentFlagCopyWith<$Res> implements $ContentFlagCopyWith
   factory _$ContentFlagCopyWith(_ContentFlag value, $Res Function(_ContentFlag) _then) = __$ContentFlagCopyWithImpl;
 @override @useResult
 $Res call({
- String? id,@JsonKey(name: 'flag_reason') String flagReason, String severity,@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) double confidence, String source,@JsonKey(name: 'content_type') String contentType,@JsonKey(name: 'content_id') String contentId,@JsonKey(name: 'content_preview') String contentPreview,@JsonKey(name: 'is_actioned') bool isActioned,@JsonKey(name: 'action_taken') String actionTaken,@JsonKey(name: 'created_at') String? createdAt
+ String? id,@JsonKey(name: 'flag_reason') String flagReason, String severity,@JsonKey(name: 'confidence', fromJson: _optDoubleOrZero) double confidence, String source,@JsonKey(name: 'content_type') String contentType,@JsonKey(name: 'content_id') String contentId,@JsonKey(name: 'content_preview') String contentPreview,@JsonKey(name: 'ai_explanation') String aiExplanation,@JsonKey(name: 'ai_method') String aiMethod,@JsonKey(name: 'bias_assessed') bool biasAssessed,@JsonKey(name: 'is_actioned') bool isActioned,@JsonKey(name: 'action_taken') String actionTaken,@JsonKey(name: 'created_at') String? createdAt
 });
 
 
@@ -7008,7 +7028,7 @@ class __$ContentFlagCopyWithImpl<$Res>
 
 /// Create a copy of ContentFlag
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? flagReason = null,Object? severity = null,Object? confidence = null,Object? source = null,Object? contentType = null,Object? contentId = null,Object? contentPreview = null,Object? isActioned = null,Object? actionTaken = null,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? flagReason = null,Object? severity = null,Object? confidence = null,Object? source = null,Object? contentType = null,Object? contentId = null,Object? contentPreview = null,Object? aiExplanation = null,Object? aiMethod = null,Object? biasAssessed = null,Object? isActioned = null,Object? actionTaken = null,Object? createdAt = freezed,}) {
   return _then(_ContentFlag(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,flagReason: null == flagReason ? _self.flagReason : flagReason // ignore: cast_nullable_to_non_nullable
@@ -7018,7 +7038,10 @@ as double,source: null == source ? _self.source : source // ignore: cast_nullabl
 as String,contentType: null == contentType ? _self.contentType : contentType // ignore: cast_nullable_to_non_nullable
 as String,contentId: null == contentId ? _self.contentId : contentId // ignore: cast_nullable_to_non_nullable
 as String,contentPreview: null == contentPreview ? _self.contentPreview : contentPreview // ignore: cast_nullable_to_non_nullable
-as String,isActioned: null == isActioned ? _self.isActioned : isActioned // ignore: cast_nullable_to_non_nullable
+as String,aiExplanation: null == aiExplanation ? _self.aiExplanation : aiExplanation // ignore: cast_nullable_to_non_nullable
+as String,aiMethod: null == aiMethod ? _self.aiMethod : aiMethod // ignore: cast_nullable_to_non_nullable
+as String,biasAssessed: null == biasAssessed ? _self.biasAssessed : biasAssessed // ignore: cast_nullable_to_non_nullable
+as bool,isActioned: null == isActioned ? _self.isActioned : isActioned // ignore: cast_nullable_to_non_nullable
 as bool,actionTaken: null == actionTaken ? _self.actionTaken : actionTaken // ignore: cast_nullable_to_non_nullable
 as String,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String?,

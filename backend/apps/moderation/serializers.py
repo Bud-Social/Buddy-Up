@@ -83,8 +83,12 @@ class ContentFlagSerializer(serializers.ModelSerializer):
         model = ContentFlag
         fields = ['id', 'flag_reason', 'severity', 'confidence', 'source',
                    'content_type', 'content_id', 'content_preview',
+                   # What the model said, and what it did *not* look at. The
+                   # console renders both; `bias_assessed: false` is the field
+                   # that stops "no bias signal" reading as "no bias found".
+                   'ai_explanation', 'ai_method', 'bias_assessed',
                    'is_actioned', 'action_taken', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'ai_explanation', 'ai_method', 'bias_assessed']
 
 
 class ContentFlagActionSerializer(serializers.Serializer):

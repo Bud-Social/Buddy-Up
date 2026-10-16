@@ -104,9 +104,21 @@ class VerificationReviewTests(TestCase):
         self.profile = Profile.objects.create(user=self.user, username='verifyuser', display_name='Verify User')
         self.admin = User.objects.create_superuser(email='vadmin@example.com', password='TestPass123!')
 
+    def _second_staff(self, email):
+        """A distinct staff account. Two-person rule needs two real people."""
+        other = User.objects.create_superuser(email=email, password='TestPass123!')
+        client = APIClient()
+        client.force_authenticate(other)
+        return client
+
+    def _settle(self, sub, client, action='approve', **extra):
+        return client.post(
+            f'/api/v1/verification/submissions/{sub.id}/decide/',
+            {'action': action, **extra}, format='json',
+        )
+
     def test_trainer_review_sets_profile_status(self):
-        user_client = APIClient()
-        user_client.force_authenticate(self.user)
+        """review/ only raises the request; decide/ is what lands the effect."""
         doc = VerificationDocument.objects.create(
             profile=self.profile, document_type='certification', file_url='https://example.com/cert.pdf')
         sub = VerificationSubmission.objects.create(
@@ -119,12 +131,58 @@ class VerificationReviewTests(TestCase):
         admin_client.force_authenticate(self.admin)
         resp = admin_client.post(f'/api/v1/verification/submissions/{sub.id}/review/',
             {'action': 'approve'}, format='json')
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
+
+        # review() moves it to under_review and writes nothing else -- that is
+        # the whole point of splitting the two calls.
+        sub.refresh_from_db()
+        self.profile.refresh_from_db()
+        doc.refresh_from_db()
+        self.assertEqual(sub.status, 'under_review')
+        self.assertEqual(self.profile.verification_status, 'none')
+        self.assertNotEqual(doc.status, 'approved')
+
+        second = self._second_staff('vadmin2@example.com')
+        decided = self._settle(sub, second)
+        self.assertEqual(decided.status_code, status.HTTP_200_OK)
+
+        sub.refresh_from_db()
+        self.profile.refresh_from_db()
+        doc.refresh_from_db()
+        self.assertEqual(sub.status, 'approved')
+        self.assertEqual(self.profile.verification_status, 'trainer')
+        self.assertEqual(doc.status, 'approved')
+
+    def test_one_staff_cannot_approve_their_own_review(self):
+        """The requester settling their own request must be refused."""
+        doc = VerificationDocument.objects.create(
+            profile=self.profile, document_type='certification', file_url='https://example.com/cert.pdf')
+        sub = VerificationSubmission.objects.create(
+            profile=self.profile, verification_type='trainer', status='submitted',
+            credential_title='Certified Personal Trainer', credential_issuer='REPs Kenya',
+            credential_id='REP-12345', scope_of_practice='general_fitness')
+        sub.documents.add(doc)
+
+        admin_client = APIClient()
+        admin_client.force_authenticate(self.admin)
+        admin_client.post(f'/api/v1/verification/submissions/{sub.id}/review/',
+                          {'action': 'approve'}, format='json')
+
+        resp = self._settle(sub, admin_client)
+        self.assertNotEqual(resp.status_code, status.HTTP_200_OK)
+
+        sub.refresh_from_db()
+        self.profile.refresh_from_db()
+        self.assertNotEqual(sub.status, 'approved')
+        self.assertEqual(self.profile.verification_status, 'none')
+
+        # ...and a genuinely independent approver can still settle it.
+        second = self._second_staff('vadmin3@example.com')
+        self.assertEqual(self._settle(sub, second).status_code, status.HTTP_200_OK)
         sub.refresh_from_db()
         self.profile.refresh_from_db()
         self.assertEqual(sub.status, 'approved')
         self.assertEqual(self.profile.verification_status, 'trainer')
-        self.assertEqual(sub.documents.first().status, 'approved')
 
     def test_shop_review_sets_shop_status(self):
         doc = VerificationDocument.objects.create(
@@ -139,7 +197,17 @@ class VerificationReviewTests(TestCase):
         admin_client.force_authenticate(self.admin)
         resp = admin_client.post(f'/api/v1/verification/submissions/{sub.id}/review/',
             {'action': 'approve'}, format='json')
-        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
+
+        sub.refresh_from_db()
+        self.profile.refresh_from_db()
+        self.assertEqual(sub.status, 'under_review')
+        self.assertEqual(self.profile.verification_status, 'none')
+
+        second = self._second_staff('shopadmin2@example.com')
+        decided = self._settle(sub, second)
+        self.assertEqual(decided.status_code, status.HTTP_200_OK)
+
         sub.refresh_from_db()
         self.profile.refresh_from_db()
         self.assertEqual(sub.status, 'approved')
@@ -370,7 +438,7 @@ class TwoPersonApprovalTests(ModerationActionEnforcementBase):
         row = ModerationAction.objects.get(action='user_banned')
         self.assertEqual(row.target_user_id, self.target.pk)
         # ...and a pending governance request exists...
-        approval_id = response.data['data']['approval']['id']
+        self.assertTrue(response.data['data']['approval']['id'])
         # ...but nothing about the account changed.
         self.assertFalse(AccountStanding.objects.filter(user=self.target).exists())
         self.target.refresh_from_db()
@@ -565,7 +633,6 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
         )
 
     def test_feed_post_takedown(self):
-        from apps.feed.models import Post
         post = self._make_post()
         response = self._remove(self._flag('feed.post', post.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
@@ -667,7 +734,6 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
     def test_an_unexpected_error_also_leaves_the_flag_open(self):
         from unittest import mock
 
-        from apps.feed.models import Post
         post = self._make_post()
         flag = self._flag('feed.post', post.id)
         with mock.patch(
@@ -734,7 +800,6 @@ class ModerationReversalTests(ModerationActionEnforcementBase):
         return post
 
     def test_reversal_restores_content_and_stamps_the_reversal_fields(self):
-        from apps.feed.models import Post
 
         post = self._removed_post()
         post.refresh_from_db()
@@ -771,7 +836,7 @@ class ModerationReversalTests(ModerationActionEnforcementBase):
         self.assertEqual(notes[0].metadata['reason'], 'Flagged by mistake.')
 
     def test_reversing_twice_is_a_conflict(self):
-        post = self._removed_post()
+        self._removed_post()
         row = ModerationAction.objects.get(action='content_removed')
         first = self.mod_client.post(
             f'/api/v1/moderation/actions/{row.id}/reverse/',

@@ -96,6 +96,12 @@ def moderate_text_content(self, content_type: str, content_id: str, text: str):
             content_type=content_type,
             content_id=content_id,
             content_preview=text[:500],
+            # The model's own account of the decision. Stored, not recomputed:
+            # a reviewer must see the reasoning that applied *at flag time*, and
+            # the checkpoint may be retrained before they get to it.
+            ai_explanation=result.get('explanation') or '',
+            ai_method=result.get('method') or '',
+            bias_assessed=bool(result.get('bias_assessed', False)),
             is_actioned=False,
         )
         logger.info('Flagged %s %s as toxic (score=%.2f)', content_type, content_id, result['toxicity_score'])

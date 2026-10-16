@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2, Flag, RefreshCw, Search, ShieldAlert,
-  ShieldCheck, Trash2, ArrowUpRight, Clock,
+  ShieldCheck, Trash2, ArrowUpRight, Clock, Sparkles,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -41,6 +41,43 @@ function SeverityBadge({ severity }: { severity: ContentFlag['severity'] }) {
     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize ${styles[severity]}`}>
       {severity}
     </span>
+  );
+}
+
+/**
+ * What the model said, and — just as important — what it did not look at.
+ *
+ * A flag whose justification is only "78% confidence" tells a reviewer nothing
+ * they can act on. And `bias_assessed: false` is called out separately on
+ * purpose: an empty bias field reads as "nothing biased was found", when the
+ * truth is that no bias model is deployed. Those are different sentences and the
+ * reviewer is the one who has to know which one they are reading.
+ */
+function ModelExplanation({ flag }: { flag: ContentFlag }) {
+  if (!flag.ai_explanation) {
+    return flag.ai_method ? null : (
+      <p className="text-[11px] text-buddy-text-secondary mt-2 italic">
+        No model explanation was recorded for this flag.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-2 rounded-lg border border-buddy-surface-raised bg-buddy-surface-raised/40 p-2.5">
+      <p className="text-[11px] font-semibold text-buddy-text-secondary flex items-center gap-1.5">
+        <Sparkles size={11} aria-hidden />
+        Why this was flagged
+        {flag.ai_method && <span className="font-mono font-normal">· {flag.ai_method}</span>}
+      </p>
+      <p className="text-xs mt-1 leading-relaxed text-buddy-text-primary">
+        {flag.ai_explanation}
+      </p>
+      {!flag.bias_assessed && (
+        <p className="text-[11px] text-buddy-text-secondary mt-1.5">
+          Bias was not assessed for this flag — no bias model is deployed.
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -413,6 +450,7 @@ export default function ModerationQueue() {
                     <span className="text-[11px] text-buddy-text-secondary">· {flag.source}</span>
                   </div>
                   <p className="text-sm mt-2 line-clamp-3 break-words">{flag.content_preview || 'No preview available.'}</p>
+                  <ModelExplanation flag={flag} />
                   {REASON_HELP[flag.flag_reason] && (
                     <p className="text-[11px] text-buddy-orange mt-1.5">
                       <span className="font-semibold">Guidance:</span> {REASON_HELP[flag.flag_reason]}

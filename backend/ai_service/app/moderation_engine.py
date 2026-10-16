@@ -295,6 +295,43 @@ def _keyword_toxicity(text: str) -> dict:
     }
 
 
+def _colab_safety_reading(text: str) -> dict | None:
+    """The Colab checkpoint's reading, or None when it is not deployed.
+
+    Deliberately advisory: it does not decide `action` on its own. The deployed
+    checkpoint has an uncalibrated third class, and letting an uncalibrated model
+    drive enforcement would be a worse failure than not using it. It feeds the
+    explanation and the evidence trail.
+    """
+    try:
+        from .colab_moderation import classify_bias, classify_safety
+
+        return {
+            'safety': classify_safety(text),
+            'bias': classify_bias(text),
+        }
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Colab safety classifier unavailable: %s', exc)
+        return None
+
+
+def _attach_colab(result: dict, text: str) -> dict:
+    """Add the Colab reading and a grounded explanation to a chain result."""
+    reading = _colab_safety_reading(text)
+    result['colab_safety'] = reading['safety'] if reading else None
+    result['bias_assessed'] = bool(reading and reading.get('bias'))
+    try:
+        from .colab_moderation import build_explanation
+
+        result['explanation'] = build_explanation(
+            text, result['colab_safety'], (reading or {}).get('bias'),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('could not build an explanation: %s', exc)
+        result['explanation'] = explain_text_decision(text, result)
+    return result
+
+
 async def analyze_text(text: str) -> dict:
     if not text or not text.strip():
         return {
@@ -304,15 +341,16 @@ async def analyze_text(text: str) -> dict:
             'label': 'not_toxic',
             'action': 'approve',
             'method': 'empty',
+            'explanation': 'There was no text to assess.',
         }
 
     openai_result = await _openai_moderate(text)
     if openai_result is not None:
-        return openai_result
+        return _attach_colab(openai_result, text)
 
     onnx_result = _onnx_toxicity(text)
     if onnx_result is not None and onnx_result['is_toxic']:
-        return onnx_result
+        return _attach_colab(onnx_result, text)
     # Weak-model safety: a clean ONNX vote must not suppress the keyword
     # fallback (2.0.0 misses e.g. "you are an idiot" that keywords catch).
     # Fall through so HF/keyword can still flag; keep the ONNX score for
@@ -324,11 +362,11 @@ async def analyze_text(text: str) -> dict:
                 **keyword_result['categories'],
                 'onnx_2.0.0': onnx_result['toxicity_score'],
             }
-        return keyword_result
+        return _attach_colab(keyword_result, text)
 
     if onnx_result is not None:
         # ONNX + keyword agree: clean. Skip the heavy HF pipeline.
-        return onnx_result
+        return _attach_colab(onnx_result, text)
 
     classifier = ModelRegistry.get('toxicity_classifier')
     if classifier is None:
@@ -352,18 +390,36 @@ async def analyze_text(text: str) -> dict:
             label = result['label']
             score = result['score']
             is_toxic = score > TOXICITY_THRESHOLD and label.lower() != 'not_toxic'
-            return {
+            return _attach_colab({
                 'is_toxic': is_toxic,
                 'toxicity_score': round(score, 4),
                 'categories': {label.lower(): score},
                 'label': label,
                 'action': 'flag' if is_toxic else 'approve',
                 'method': 'model',
-            }
+            }, text)
         except Exception as exc:  # noqa: BLE001
             logger.warning('Toxicity inference failed: %s — using keyword fallback', exc)
 
     if onnx_result is not None:
         # ONNX ran and was clean, keyword was clean: report the ONNX score.
-        return onnx_result
-    return _keyword_toxicity(text)
+        return _attach_colab(onnx_result, text)
+    return _attach_colab(_keyword_toxicity(text), text)
+
+
+def explain_text_decision(text: str, result: dict) -> str:
+    """Return a bounded, evidence-grounded explanation for a moderation decision.
+
+    The local Colab checkpoint is a classifier, not a text-generation model.  A
+    deterministic explanation prevents us from inventing a rationale that the
+    model did not actually produce.  If a future classifier emits a bias label,
+    it is surfaced in exactly the same evidence list.
+    """
+    categories = result.get('categories') or {}
+    evidence = [str(name).replace('_', ' ') for name, score in categories.items() if score]
+    label = str(result.get('label') or 'content').replace('_', ' ')
+    if result.get('action') != 'flag':
+        return 'No unsafe or biased-content signal crossed the review threshold. This is an automated assessment, not a guarantee.'
+    if evidence:
+        return f'Flagged for review because the {result.get("method", "moderation")} classifier detected {", ".join(evidence[:4])} ({label}).'
+    return f'Flagged for review because the classifier assigned the label “{label}”.'

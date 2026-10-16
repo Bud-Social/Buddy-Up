@@ -10,6 +10,22 @@ export interface ContentFlag {
   content_type: string;
   content_id: string;
   content_preview: string;
+  /**
+   * The model's own account of why it flagged this, captured at flag time.
+   *
+   * Optional on purpose: flags raised by hand (and rows written before the
+   * field existed) have none, and the UI has to render those without pretending
+   * they have a rationale.
+   */
+  ai_explanation?: string;
+  /** Which layer decided — a classifier, or a keyword rule. */
+  ai_method?: string;
+  /**
+   * Whether a bias model was actually run. `false` means "not assessed", which
+   * is *not* the same as "nothing biased found" — the console says so rather
+   * than leaving a reviewer to assume the flag covered bias.
+   */
+  bias_assessed?: boolean;
   is_actioned: boolean;
   action_taken: string;
   created_at: string;

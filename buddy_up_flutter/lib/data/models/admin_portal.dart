@@ -744,6 +744,16 @@ abstract class ContentFlag with _$ContentFlag {
     @JsonKey(name: 'content_type') @Default('') String contentType,
     @JsonKey(name: 'content_id') @Default('') String contentId,
     @JsonKey(name: 'content_preview') @Default('') String contentPreview,
+    /// The model's own account of why it flagged this, captured at flag time.
+    /// Empty for flags raised by hand, and for rows written before the field
+    /// existed -- so the UI must render the absence honestly rather than
+    /// implying every flag carries a rationale.
+    @JsonKey(name: 'ai_explanation') @Default('') String aiExplanation,
+    /// Which layer decided: a classifier, or a keyword rule.
+    @JsonKey(name: 'ai_method') @Default('') String aiMethod,
+    /// Whether a bias model actually ran. False means "not assessed", which is
+    /// NOT the same as "nothing biased was found".
+    @JsonKey(name: 'bias_assessed') @Default(false) bool biasAssessed,
     @JsonKey(name: 'is_actioned') @Default(false) bool isActioned,
     @JsonKey(name: 'action_taken') @Default('') String actionTaken,
     @JsonKey(name: 'created_at') String? createdAt,
