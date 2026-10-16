@@ -16,6 +16,7 @@ import '../../shared/widgets/toast.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 import 'verify_registration_otp_screen.dart';
+import 'totp_enrolment_state.dart';
 
 enum LoginStep { credentials, otp, totp }
 
@@ -155,6 +156,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (mounted) context.go('/feed');
       }
     } catch (e) {
+      // Staff must have two-factor authentication. The email OTP was only just
+      // verified -- that is the identity proof enrolment needs -- so the server
+      // answers 403 `mfa_enrolment_required` with a short-lived enrolment
+      // credential instead of tokens. Without this branch the operator sees a
+      // generic failure and is stuck: the console 403s and /totp-setup would
+      // 401 with no session to present.
+      final enrolment = totpEnrolmentTokenFrom(e);
+      if (enrolment != null) {
+        ref.read(totpEnrolmentProvider.notifier).setToken(enrolment);
+        if (mounted) context.go('/totp-setup');
+        return;
+      }
       if (mounted) showToast(context, 'Invalid OTP. Try again.', type: ToastType.error);
     } finally {
       if (mounted) setState(() => _isLoading = false);

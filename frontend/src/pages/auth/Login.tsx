@@ -37,6 +37,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loginToken, setLoginToken] = useState('');
+  const setTotpEnrolmentToken = useAuthStore((s) => s.setTotpEnrolmentToken);
+
   const [tempToken, setTempToken] = useState('');
   const [maskedEmail, setMaskedEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -122,8 +124,19 @@ export default function Login() {
         goNext();
       }
     } catch (err: unknown) {
-      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
-      setError(data?.message || 'Verification failed.');
+      const body = (err as { response?: { data?: { message?: string; data?: { code?: string; enrolment_token?: string } } } })?.response?.data;
+
+      // Staff are required to have two-factor authentication. The email OTP was
+      // only just verified, which is the identity proof this needs, so the server
+      // hands back a short-lived enrolment credential instead of a session.
+      // Without handling it here the operator is dropped on a dead end: the
+      // console 403s and /totp/setup would 401 with no session to present.
+      if (body?.data?.code === 'mfa_enrolment_required' && body.data.enrolment_token) {
+        setTotpEnrolmentToken(body.data.enrolment_token);
+        navigate('/totp-setup?enrolment=1', { replace: true });
+        return;
+      }
+      setError(body?.message || 'Verification failed.');
     } finally {
       setIsLoading(false);
     }

@@ -19,6 +19,16 @@ const api = moderationApi as unknown as Record<string, ReturnType<typeof vi.fn>>
 
 const envelope = (data: unknown) => ({ data, success: true });
 
+/**
+ * `waitFor` defaults to a 1s timeout, which is fine on a workstation and flaky
+ * on a loaded CI runner rendering the whole suite in parallel. Every assertion
+ * here waits on a promise chain (mock resolves -> state update -> re-render),
+ * so the budget is explicit rather than inherited.
+ */
+const WAIT = { timeout: 5000 };
+
+const waitUntil = (fn: () => void) => waitFor(fn, WAIT);
+
 function flag(overrides: Partial<ContentFlag> = {}): ContentFlag {
   return {
     id: 'f1',
@@ -71,7 +81,7 @@ describe('moderation queue — model explanations', () => {
     );
     renderQueue();
 
-    await waitFor(() => expect(screen.getByText('Why this was flagged')).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByText('Why this was flagged')).toBeInTheDocument());
     expect(
       screen.getByText(/flagged this as unsafe or abusive \(LABEL_1, 78% confidence\)/),
     ).toBeInTheDocument();
@@ -83,7 +93,7 @@ describe('moderation queue — model explanations', () => {
     );
     renderQueue();
 
-    await waitFor(() => expect(screen.getByText('Why this was flagged')).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByText('Why this was flagged')).toBeInTheDocument());
     // The layer is named next to the heading, so a reviewer can tell a model's
     // judgement from a fixed rule's match.
     expect(screen.getByText(/keyword_rules/)).toBeInTheDocument();
@@ -95,7 +105,7 @@ describe('moderation queue — model explanations', () => {
     );
     renderQueue();
 
-    await waitFor(() => expect(screen.getByText(/Bias was not assessed/i)).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByText(/Bias was not assessed/i)).toBeInTheDocument());
   });
 
   it('omits the bias caveat once a bias model has actually run', async () => {
@@ -104,7 +114,7 @@ describe('moderation queue — model explanations', () => {
     );
     renderQueue();
 
-    await waitFor(() => expect(screen.getByText('Why this was flagged')).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByText('Why this was flagged')).toBeInTheDocument());
     expect(screen.queryByText(/Bias was not assessed/i)).not.toBeInTheDocument();
   });
 
@@ -114,7 +124,7 @@ describe('moderation queue — model explanations', () => {
     api.getQueue.mockResolvedValue(envelope([flag({ ai_explanation: undefined })]));
     renderQueue();
 
-    await waitFor(() =>
+    await waitUntil(() =>
       expect(screen.getByText(/No model explanation was recorded/i)).toBeInTheDocument(),
     );
   });

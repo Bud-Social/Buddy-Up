@@ -5,9 +5,12 @@ import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { Shield, KeyRound } from 'lucide-react';
 import { authApi } from '@/api';
+import { useAuthStore } from '@/store/authStore';
 
 export default function TotpSetup() {
   const navigate = useNavigate();
+  const setTotpEnrolmentToken = useAuthStore((st) => st.setTotpEnrolmentToken);
+  const enrolledViaLogin = useAuthStore((st) => st.isAuthenticated);
   const [step, setStep] = useState<'loading' | 'show_qr' | 'verify' | 'done'>('loading');
   const [qrCode, setQrCode] = useState('');
   const [secret, setSecret] = useState('');
@@ -34,6 +37,9 @@ export default function TotpSetup() {
     setIsLoading(true);
     try {
       await authApi.verifyTotp(secret, code);
+      // Spent. The server refuses it from here on, and leaving it in memory
+      // would mean a stale credential sitting in the tab for no reason.
+      setTotpEnrolmentToken(null);
       setStep('done');
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
@@ -49,8 +55,24 @@ export default function TotpSetup() {
         <Card className="w-full max-w-md p-8 text-center bg-buddy-surface">
           <Shield size={48} className="text-buddy-green mx-auto mb-4" />
           <h1 className="font-display text-2xl font-extrabold mb-2 text-buddy-green">2FA Enabled</h1>
-          <p className="text-buddy-text-secondary mb-6">Your account is now protected with two-factor authentication.</p>
-          <Button onClick={() => navigate('/settings')} className="w-full">Back to Settings</Button>
+          <p className="text-buddy-text-secondary mb-6">
+            Your account is now protected with two-factor authentication.
+          </p>
+          {enrolledViaLogin ? (
+            <Button onClick={() => navigate('/settings')} className="w-full">Back to Settings</Button>
+          ) : (
+            // They arrived here *because* they could not be given a session, so
+            // "Back to Settings" would be a dead end of its own. Sign in again
+            // and the ordinary challenge path takes over.
+            <>
+              <p className="text-buddy-text-secondary mb-4 text-sm">
+                Sign in once more with your authenticator code to finish.
+              </p>
+              <Button onClick={() => navigate('/login', { replace: true })} className="w-full">
+                Continue to sign in
+              </Button>
+            </>
+          )}
         </Card>
       </div>
     );

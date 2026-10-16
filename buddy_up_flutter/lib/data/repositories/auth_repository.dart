@@ -56,11 +56,18 @@ abstract class AuthRepository {
   @POST('/auth/resend-registration-otp/')
   Future<void> resendRegistrationOtp(@Body() Map<String, dynamic> body);
 
+  /// A staff member who cannot yet hold a session enrols with this credential.
+  ///
+  /// Null in the ordinary case: an already-signed-in operator enrolling a second
+  /// device sends nothing and authenticates with the normal access token. The
+  /// server accepts it only on these two endpoints and only before TOTP is on.
   @POST('/auth/totp/setup/')
-  Future<TOTPSetupResponse> totpSetup();
+  Future<TOTPSetupResponse> totpSetup(
+      {@Header('X-TOTP-Enrolment-Token') String? enrolmentToken});
 
   @POST('/auth/totp/verify/')
-  Future<void> totpVerify(@Body() Map<String, dynamic> body);
+  Future<void> totpVerify(@Body() Map<String, dynamic> body,
+      {@Header('X-TOTP-Enrolment-Token') String? enrolmentToken});
 
   @POST('/auth/totp/disable/')
   Future<void> totpDisable(@Body() Map<String, dynamic> body);

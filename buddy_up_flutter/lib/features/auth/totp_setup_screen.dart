@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:convert';
 import '../../core/api/api_client.dart';
 import '../../core/theme/app_theme.dart';
@@ -6,15 +7,16 @@ import '../../data/repositories/auth_repository.dart';
 import '../../shared/widgets/button.dart';
 import '../../shared/widgets/otp_input.dart';
 import '../../shared/widgets/toast.dart';
+import 'totp_enrolment_state.dart';
 
-class TotpSetupScreen extends StatefulWidget {
+class TotpSetupScreen extends ConsumerStatefulWidget {
   const TotpSetupScreen({super.key});
 
   @override
-  State<TotpSetupScreen> createState() => _TotpSetupScreenState();
+  ConsumerState<TotpSetupScreen> createState() => _TotpSetupScreenState();
 }
 
-class _TotpSetupScreenState extends State<TotpSetupScreen> {
+class _TotpSetupScreenState extends ConsumerState<TotpSetupScreen> {
   bool _isLoading = false;
   bool _setupDone = false;
   String _secret = '';
@@ -31,7 +33,9 @@ class _TotpSetupScreenState extends State<TotpSetupScreen> {
   Future<void> _loadSetup() async {
     setState(() => _isLoading = true);
     try {
-      final response = await _authRepo.totpSetup();
+      final response = await _authRepo.totpSetup(
+        enrolmentToken: ref.read(totpEnrolmentProvider).token,
+      );
       setState(() {
         _secret = response.secret;
         _qrCode = response.qrCode;
@@ -46,7 +50,13 @@ class _TotpSetupScreenState extends State<TotpSetupScreen> {
   Future<void> _verifyTotp(String code) async {
     setState(() => _isLoading = true);
     try {
-      await _authRepo.totpVerify({'code': code, 'secret': _secret});
+      await _authRepo.totpVerify(
+        {'code': code, 'secret': _secret},
+        enrolmentToken: ref.read(totpEnrolmentProvider).token,
+      );
+      // Spent. The server refuses it from here on, so do not leave it lying
+      // around in memory.
+      ref.read(totpEnrolmentProvider.notifier).clear();
       setState(() => _setupDone = true);
       if (mounted) showToast(context, 'Two-factor authentication enabled!', type: ToastType.success);
     } catch (e) {

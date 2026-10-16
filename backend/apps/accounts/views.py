@@ -25,6 +25,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from common.authentication import (
+    SafeJWTAuthentication,
+    TOTP_ENROLMENT_HEADER as TOTP_ENROLMENT_HEADER_HTTP,
+    TOTP_ENROLMENT_PURPOSE,
+    TotpEnrolmentAuthentication,
+)
 from common.utils import hash_dob, calculate_age
 from common.observability import prometheus_metrics
 from common.pagination import CursorPagination
@@ -295,16 +301,28 @@ def _check_standing(user):
     return None
 
 
-def _check_staff_mfa(user):
-    """403 for staff without TOTP, so the client can route them to enrolment.
+def _check_staff_mfa(user, issue_enrolment_token=False):
+    """403 for staff without TOTP, plus a way forward.
 
     Enforced at login and refresh, deliberately NOT in
-    ``SafeJWTAuthentication``: enforcing it in DRF auth would lock a staff
-    member out of the very endpoints that enrol TOTP (``/totp/setup``,
-    ``/totp/verify`` are IsAuthenticated), leaving no path back in except a
-    password reset. At login and refresh the block is complete — no session
-    and no refresh — while the enrolment window stays reachable for an
-    already-authenticated operator.
+    ``SafeJWTAuthentication``: enforcing it there would lock a staff member out
+    of the very endpoints that enrol TOTP (``/totp/setup``, ``/totp/verify`` are
+    IsAuthenticated). At login and refresh the block is complete — no session
+    and no refresh is minted.
+
+    ``issue_enrolment_token`` is the difference between a dead end and a flow.
+    Without it, a staff account predating the 2FA requirement has no way in at
+    all: not the console, not the enrolment screen, and the only remaining route
+    is a password reset, which does not enrol anything. Callers that run *after*
+    an email OTP has been verified pass ``True``, because by then the person has
+    proven they hold the password and can read mail at the account's address —
+    the same bar a password reset sets. The token authorises the two enrolment
+    endpoints and nothing else (see
+    ``common.authentication.TotpEnrolmentAuthentication``).
+
+    Token refresh must NOT pass it: a refresh means a session already exists, so
+    there is nothing to bootstrap, and issuing one would be a standing bypass
+    for any staff session minted before the requirement existed.
     """
     if user.totp_enabled:
         return None
@@ -312,14 +330,27 @@ def _check_staff_mfa(user):
         return None
     from .services import require_totp_enrolment
     require_totp_enrolment(user=user, reason='login')
+
+    payload = {
+        'code': 'mfa_enrolment_required',
+        'email': user.email,
+        'enrolment_path': '/api/v1/auth/totp/setup/',
+        # Header name the client must send the token back on. Named in the
+        # response so the client never has to hard-code it and drift.
+        'enrolment_header': TOTP_ENROLMENT_HEADER_HTTP,
+    }
+    if issue_enrolment_token:
+        # Ten minutes: long enough to install an authenticator app, read a QR
+        # code and type a six-digit code — and short enough that a token
+        # shoulder-surfed off one screen is worthless by the next morning.
+        payload['enrolment_token'] = _generate_temp_token(
+            user, TOTP_ENROLMENT_PURPOSE, expiry_minutes=10,
+        )
+
     return Response({
         'success': False,
         'code': 'mfa_enrolment_required',
-        'data': {
-            'code': 'mfa_enrolment_required',
-            'email': user.email,
-            'enrolment_path': '/api/v1/auth/totp/setup/',
-        },
+        'data': payload,
         'message': (
             'Two-factor authentication is required for staff accounts. '
             'Set up an authenticator app to continue.'
@@ -841,9 +872,12 @@ class VerifyLoginOTPView(views.APIView):
                 'errors': None, 'pagination': None,
             })
 
-        # Staff without a second factor get no token at all — see
-        # _check_staff_mfa for why this is not enforced in DRF auth.
-        mfa_required = _check_staff_mfa(user)
+        # Staff without a second factor get no session at all — see
+        # _check_staff_mfa for why this is not enforced in DRF auth. Reaching
+        # this line means the email OTP was just verified, so the identity proof
+        # enrolment needs has already happened; issue the scoped credential that
+        # lets them enrol, then sign in properly.
+        mfa_required = _check_staff_mfa(user, issue_enrolment_token=True)
         if mfa_required is not None:
             return mfa_required
 
@@ -892,6 +926,10 @@ class VerifyLoginOTPView(views.APIView):
 
 
 class TOTPSetupView(views.APIView):
+    # Enrolment credential first: a staff member blocked from a session needs
+    # this pair, and nothing else, to get set up. SafeJWTAuthentication follows
+    # so an already-signed-in operator can still add a second device.
+    authentication_classes = [TotpEnrolmentAuthentication, SafeJWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     # 'otp' is the closest existing scope: these are second-factor endpoints
     # with the same brute-force profile as an OTP challenge. A dedicated
@@ -933,6 +971,7 @@ class TOTPSetupView(views.APIView):
 
 
 class TOTPVerifyView(views.APIView):
+    authentication_classes = [TotpEnrolmentAuthentication, SafeJWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     throttle_scope = 'otp'
 

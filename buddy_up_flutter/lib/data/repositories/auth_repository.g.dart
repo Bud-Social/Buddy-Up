@@ -365,10 +365,14 @@ class _AuthRepository implements AuthRepository {
   }
 
   @override
-  Future<TOTPSetupResponse> totpSetup() async {
+  Future<TOTPSetupResponse> totpSetup({String? enrolmentToken}) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{
+      r'X-TOTP-Enrolment-Token': enrolmentToken,
+    };
+    _headers.removeWhere((k, v) => v == null);
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<TOTPSetupResponse>(
       Options(method: 'POST', headers: _headers, extra: _extra)
@@ -392,10 +396,17 @@ class _AuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> totpVerify(Map<String, dynamic> body) async {
+  Future<void> totpVerify(
+    Map<String, dynamic> body, {
+    String? enrolmentToken,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
-    final _headers = <String, dynamic>{};
+    queryParameters.removeWhere((k, v) => v == null);
+    final _headers = <String, dynamic>{
+      r'X-TOTP-Enrolment-Token': enrolmentToken,
+    };
+    _headers.removeWhere((k, v) => v == null);
     final _data = <String, dynamic>{};
     _data.addAll(body);
     final _options = _setStreamType<void>(

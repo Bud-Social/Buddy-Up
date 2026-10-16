@@ -12,7 +12,18 @@ interface AuthState {
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
+  /**
+   * Short-lived credential that lets a staff member who cannot yet hold a
+   * session enrol two-factor authentication.
+   *
+   * Held in memory only -- never persisted. It is not a session, it is good for
+   * ten minutes, and it authorises exactly two endpoints, so putting it in
+   * localStorage would be storing a credential with no benefit and a real cost
+   * if the origin is ever compromised.
+   */
+  totpEnrolmentToken: string | null;
   setTokens: (access: string, refresh: string | null) => void;
+  setTotpEnrolmentToken: (token: string | null) => void;
   setAccessToken: (access: string) => void;
   setUser: (user: User, profile: Profile) => void;
   setProfile: (profile: Profile) => void;
@@ -24,6 +35,8 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       isAuthenticated: false, accessToken: null, refreshToken: null, user: null, profile: null, isLoading: true,
+      totpEnrolmentToken: null,
+      setTotpEnrolmentToken: (token) => set({ totpEnrolmentToken: token }),
       setTokens: (access, refresh) => {
         wsManager.setAccessToken(access);
         set({ accessToken: access, refreshToken: refresh, isAuthenticated: true });
@@ -36,6 +49,7 @@ export const useAuthStore = create<AuthState>()(
       setProfile: (profile) => set({ profile }),
       logout: () => {
         wsManager.setAccessToken(null);
+        set({ totpEnrolmentToken: null });
         wsManager.disconnectAll();
         // Server side: deactivate the device session and clear the httpOnly
         // refresh cookie. Fire-and-forget plain fetch (no custom headers, so

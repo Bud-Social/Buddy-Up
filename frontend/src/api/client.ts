@@ -63,9 +63,27 @@ export const isAuthRefreshRejection = (e: unknown): boolean => {
   return !!status && status >= 400 && status < 500;
 };
 
+/**
+ * The only two endpoints a staff 2FA enrolment credential may be sent to.
+ *
+ * Matched on the full request URL rather than trusting the caller to remember,
+ * so the credential cannot ride along on an unrelated request even if a future
+ * call site forgets. It is a scoped credential with a ten-minute life; the whole
+ * value of scoping it is that the scoping is enforced here as well as on the
+ * server.
+ */
+const TOTP_ENROLMENT_PATHS = ['/auth/totp/setup/', '/auth/totp/verify/'];
+
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  const { accessToken, totpEnrolmentToken } = useAuthStore.getState();
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`;
+
+  if (totpEnrolmentToken && !accessToken) {
+    const url = config.url || '';
+    if (TOTP_ENROLMENT_PATHS.some((path) => url.includes(path))) {
+      config.headers['X-TOTP-Enrolment-Token'] = totpEnrolmentToken;
+    }
+  }
   return config;
 });
 
