@@ -139,6 +139,7 @@ const AdminApprovals = lazy(() => import('@/pages/admin/AdminApprovals'));
 const AdminAudit = lazy(() => import('@/pages/admin/AdminAudit'));
 const AdminEmail = lazy(() => import('@/pages/admin/AdminEmail'));
 const AdminStaff = lazy(() => import('@/pages/admin/AdminStaff'));
+const AcceptStaffInvite = lazy(() => import('@/pages/app/AcceptStaffInvite'));
 
 const Terms = lazy(() => import('@/pages/legal/Terms'));
 const Privacy = lazy(() => import('@/pages/legal/Privacy'));
@@ -189,6 +190,12 @@ export const router = createBrowserRouter([
   { path: '/reset-password', element: <SWrapper><ResetPasswordConfirm /></SWrapper> },
   { path: '/totp-setup', element: <SWrapper><TotpSetup /></SWrapper> },
   { path: '/totp-challenge', element: <SWrapper><TotpChallenge /></SWrapper> },
+  // Public and outside the authenticated shell on purpose: the person
+  // following an emailed invitation link may have no account yet, and sending
+  // them to a login wall before they can even read what they were offered is
+  // the wrong first impression of a platform asking them to run it.
+  { path: '/staff-invite/:token', element: <AcceptStaffInvite /> },
+
   { path: '/terms', element: <SWrapper><Terms /></SWrapper> },
   { path: '/privacy', element: <SWrapper><Privacy /></SWrapper> },
   { path: '/community-guidelines', element: <SWrapper><CommunityGuidelines /></SWrapper> },
@@ -293,8 +300,12 @@ export const router = createBrowserRouter([
           {
             element: <AdminLayout />,
             children: [
-              { path: '/admin', element: <SWrapper><AdminDashboard /></SWrapper> },
+              // `/admin` is the console's front door and now lands on the
+              // overview. The platform-model console moved to /admin/models;
+              // /admin/overview is kept because Sidebar deep-links to it.
+              { path: '/admin', element: <SWrapper><AdminHome /></SWrapper> },
               { path: '/admin/overview', element: <SWrapper><AdminHome /></SWrapper> },
+              { path: '/admin/models', element: <SWrapper><AdminDashboard /></SWrapper> },
               { path: '/admin/analytics', element: <SWrapper><AdminAnalytics /></SWrapper> },
               { path: '/admin/users', element: <SWrapper><AdminUsers /></SWrapper> },
               { path: '/admin/shops', element: <SWrapper><AdminShops /></SWrapper> },

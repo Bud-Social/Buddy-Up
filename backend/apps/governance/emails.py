@@ -58,6 +58,9 @@ logger = logging.getLogger(__name__)
 # template means adding an entry here, which is also the place a reviewer looks.
 EMAIL_TEMPLATES = {
     'staff_message': 'emails/staff_message.html',
+    # Carries the one-time accept link, so this template is the only place a
+    # staff credential is ever rendered.
+    'staff_invitation': 'emails/staff_invitation.html',
 }
 
 # Where a reply to a staff message goes. Falls back to DEFAULT_FROM_EMAIL so the

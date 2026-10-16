@@ -19,7 +19,9 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 
-from .models import AccountActionRequest, AdminActionLog, EmailLog, StaffRole
+from .models import (
+    ALL_SCOPES, AccountActionRequest, AdminActionLog, EmailLog, StaffInvitation, StaffRole,
+)
 
 User = get_user_model()
 
@@ -488,3 +490,115 @@ class EmailLogSerializer(serializers.ModelSerializer):
             'created_at',
         ]
         read_only_fields = fields
+
+
+# ---------------------------------------------------------------------------
+# Staff invitations (onboarding)
+# ---------------------------------------------------------------------------
+
+class StaffInvitationSerializer(serializers.ModelSerializer):
+    """Read shape for an invitation.
+
+    ``token`` is never included. Staff lists are read by people who are already
+    staff, and a list that can hand out a live accept link is a list that can
+    mint administrators. The accept URL is emailed to the addressee instead.
+    """
+
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    invited_by = UserRefField(read_only=True)
+    accepted_by = UserRefField(read_only=True)
+    is_live = serializers.BooleanField(read_only=True)
+    has_account = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StaffInvitation
+        fields = [
+            'id',
+            'email',
+            'role',
+            'role_display',
+            'scopes',
+            'notes',
+            'status',
+            'status_display',
+            'is_live',
+            'has_account',
+            'invited_by',
+            'invited_by_email',
+            'expires_at',
+            'accepted_at',
+            'accepted_by',
+            'accepted_user_email',
+            'requires_second',
+            'created_at',
+        ]
+        read_only_fields = fields
+
+    def get_has_account(self, obj):
+        """Whether the address already has a registered account.
+
+        The operator needs this to tell the invitee "sign in" versus "register
+        first" when they phone. It is deliberately not on the public accept
+        endpoint.
+        """
+        from apps.accounts.models import User
+
+        return User.objects.filter(email__iexact=obj.email).exists()
+
+
+class StaffInvitationCreateSerializer(serializers.Serializer):
+    """Input for offering staff access to an email address."""
+
+    email = serializers.EmailField(max_length=254)
+    role = serializers.ChoiceField(choices=StaffRole.ROLE_CHOICES)
+    scopes = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+    notes = serializers.CharField(required=False, allow_blank=True, default='', max_length=1000)
+    requires_second = serializers.BooleanField(required=False, default=True)
+    expires_in_days = serializers.IntegerField(required=False, default=7, min_value=1, max_value=90)
+
+    def validate_email(self, value):
+        """Refuse an offer to somebody who is already staff.
+
+        Not a judgement about the invitee -- an existing staff member's access
+        is *changed* through the staff-role endpoint, not re-offered. Silently
+        creating a second live invitation would make two links both able to set
+        the same role, with no record of which was the real one.
+        """
+        from apps.accounts.models import User
+
+        email = value.strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            user = User.objects.filter(email__iexact=email).first()
+            if user.is_staff:
+                raise serializers.ValidationError(
+                    'This address already has a staff account. Change their role '
+                    'from the staff roles list instead of inviting them again.'
+                )
+        return email
+
+    def validate_scopes(self, value):
+        """Only known scopes, so the row cannot promise authority it lacks."""
+        unknown = [s for s in (value or []) if s not in ALL_SCOPES]
+        if unknown:
+            raise serializers.ValidationError(f'Unknown scopes: {sorted(unknown)}')
+        return list(value or [])
+
+    def validate(self, attrs):
+        email = attrs['email']
+        if StaffInvitation.objects.filter(email=email, status='pending').exists():
+            raise serializers.ValidationError({
+                'email': 'There is already a pending invitation for this address. '
+                         'Revoke it first if it needs reissuing.',
+            })
+        return attrs
+
+
+class StaffInvitationAcceptSerializer(serializers.Serializer):
+    """Input for accepting. Deliberately empty.
+
+    There is nothing to submit: the token in the URL identifies the offer, and
+    the caller's authenticated email must match it. A form here would be one
+    more place for a role to be typed, which is the mistake this whole flow
+    exists to make impossible.
+    """

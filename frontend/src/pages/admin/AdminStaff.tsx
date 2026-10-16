@@ -1,12 +1,14 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyRound, ShieldOff, UserPlus } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import {
   adminPortalApi,
   adminPortalErrorMessage,
   type GovernanceApproval,
+  type StaffInvitation,
   type StaffRoleAssignment,
 } from '@/api/adminPortal';
 import {
@@ -145,6 +147,8 @@ export default function AdminStaff() {
         onRefresh={() => reload()}
         refreshing={loading}
       />
+
+      <InviteForm onInvited={() => reload(true)} />
 
       <GrantForm onGranted={() => reload(true)} />
 
@@ -407,6 +411,189 @@ function GrantForm({ onGranted }: { onGranted: () => void }) {
         </div>
       )}
       {error && <AdminErrorBanner message={error} />}
+    </Card>
+  );
+}
+
+
+/**
+ * Onboarding by invitation — the path for somebody who does not have an account
+ * yet.
+ *
+ * `GrantForm` above needs a user id, so it cannot onboard anyone: a new hire has
+ * no row to point at. This form takes an email, and the link it sends is the
+ * only thing that creates their staff access. The two-person queue is applied
+ * here exactly as it is there, so the default is "request" rather than "send".
+ */
+function InviteForm({ onInvited }: { onInvited: () => void }) {
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState('support');
+  const [notes, setNotes] = useState('');
+  const [requiresSecond, setRequiresSecond] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [rows, setRows] = useState<StaffInvitation[]>([]);
+  const [loadingRows, setLoadingRows] = useState(true);
+
+  const loadRows = useCallback(async () => {
+    setLoadingRows(true);
+    try {
+      const res = await adminPortalApi.getStaffInvitations();
+      setRows(res.data || []);
+      setError(null);
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Could not load invitations.');
+    } finally {
+      setLoadingRows(false);
+    }
+  }, []);
+
+  useEffect(() => { loadRows(); }, [loadRows]);
+
+  const submit = async () => {
+    if (!email.trim()) return;
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await adminPortalApi.createStaffInvitation({
+        email: email.trim(),
+        role,
+        notes: notes.trim(),
+        requires_second: requiresSecond,
+      });
+      setNotice(res.message || '');
+      setEmail('');
+      setNotes('');
+      await loadRows();
+      onInvited();
+    } catch (e: any) {
+      const data = e?.response?.data;
+      setError(data?.message || 'Could not create that invitation.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const revoke = async (row: StaffInvitation) => {
+    try {
+      await adminPortalApi.revokeStaffInvitation(row.id);
+      await loadRows();
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Could not revoke that invitation.');
+    }
+  };
+
+  const resend = async (row: StaffInvitation) => {
+    try {
+      const res = await adminPortalApi.resendStaffInvitation(row.id);
+      setNotice(res.message || 'Invitation resent.');
+    } catch (e: any) {
+      setError(e?.response?.data?.message || 'Could not resend that invitation.');
+    }
+  };
+
+  const live = rows.filter((r) => r.is_live);
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div>
+        <h3 className="font-semibold text-sm">Invite a new staff member</h3>
+        <p className="text-xs text-buddy-text-secondary mt-0.5">
+          For somebody who does not have an account yet. They register, then the
+          link they receive sets their access.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+          placeholder="new.staff@example.com"
+        />
+        <div>
+          <span className="block text-xs font-medium mb-1">Role</span>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full bg-buddy-surface border border-buddy-surface-raised rounded-xl p-2.5 text-sm"
+          >
+            {ROLE_OPTIONS.filter((r) => r.value !== 'all').map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+        <Input
+          label="Note (optional)"
+          value={notes}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNotes(e.target.value)}
+          placeholder="Why they are being added"
+        />
+      </div>
+
+      <label className="flex items-start gap-2 text-xs">
+        <input
+          type="checkbox"
+          checked={requiresSecond}
+          onChange={(e) => setRequiresSecond(e.target.checked)}
+          className="mt-0.5"
+        />
+        <span className="text-buddy-text-secondary">
+          Require a second approver (recommended).
+          {!requiresSecond && (
+            <span className="block text-buddy-orange mt-0.5">
+              The link is emailed immediately and nobody else has agreed to it.
+              Only do this for someone you have already cleared.
+            </span>
+          )}
+        </span>
+      </label>
+
+      <div className="flex items-center gap-2">
+        <Button size="sm" disabled={!email.trim()} isLoading={busy} onClick={submit}>
+          {requiresSecond ? 'Request invitation' : 'Invite now'}
+        </Button>
+      </div>
+
+      {notice && (
+        <div className="bg-buddy-green/10 border border-buddy-green/20 text-buddy-green text-xs rounded-xl px-3 py-2">
+          {notice}
+        </div>
+      )}
+      {error && <AdminErrorBanner message={error} onRetry={() => loadRows()} />}
+
+      {live.length > 0 && (
+        <div className="pt-2 border-t border-buddy-surface-raised">
+          <p className="text-xs font-semibold mb-2">Outstanding invitations</p>
+          <div className="space-y-1.5">
+            {live.map((row) => (
+              <div
+                key={row.id}
+                className="flex flex-wrap items-center gap-2 text-xs bg-buddy-surface-raised/40 rounded-lg px-3 py-2"
+              >
+                <span className="font-medium">{row.email}</span>
+                <Badge variant="silver" size="sm" label={row.role_display || row.role} />
+                {row.has_account && (
+                  <span className="text-buddy-text-secondary">
+                    has an account — they sign in, then accept
+                  </span>
+                )}
+                <span className="flex-1" />
+                <Button size="sm" variant="ghost" onClick={() => resend(row)}>Resend</Button>
+                <Button size="sm" variant="ghost" onClick={() => revoke(row)}>Revoke</Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {!loadingRows && live.length === 0 && (
+        <p className="text-[11px] text-buddy-text-secondary">
+          No outstanding invitations.
+        </p>
+      )}
     </Card>
   );
 }

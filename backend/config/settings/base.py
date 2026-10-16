@@ -287,6 +287,15 @@ ANALYTICS_EVENT_PURGE_BATCH = int(os.environ.get('ANALYTICS_EVENT_PURGE_BATCH', 
 #: the user was looking at.
 ANALYTICS_EXPORT_MAX_ROWS = int(os.environ.get('ANALYTICS_EXPORT_MAX_ROWS', '50000'))
 
+# Where the emailed links point.
+#
+# This defaults to the canonical production host rather than to nothing: the
+# staff-invitation email builds its accept URL from this, and a new hire who
+# receives a link to localhost has been onboarded to nothing. Override it when
+# staging on a different domain.
+PUBLIC_FRONTEND_URL = os.environ.get('PUBLIC_FRONTEND_URL') or 'https://buddyup.app'
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL') or PUBLIC_FRONTEND_URL
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

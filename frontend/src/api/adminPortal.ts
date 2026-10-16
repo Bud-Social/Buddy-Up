@@ -449,6 +449,57 @@ export interface StaffRoleUpdatePayload {
   notes?: string;
 }
 
+/**
+ * An outstanding offer of staff access.
+ *
+ * `status` is the thing to render, not `is_active`: a revoked invitation is
+ * still a row, and a list that filtered on the boolean would quietly drop the
+ * evidence that access was offered and then withdrawn.
+ */
+export interface StaffInvitation {
+  id: string;
+  email: string;
+  role: string;
+  role_display?: string | null;
+  scopes?: string[] | null;
+  notes?: string | null;
+  status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  status_display?: string | null;
+  is_live: boolean;
+  /** Whether the address already registered — decides "sign in" vs "register". */
+  has_account: boolean;
+  invited_by?: GovernanceUserRef | null;
+  invited_by_email?: string | null;
+  expires_at?: string | null;
+  accepted_at?: string | null;
+  accepted_by?: GovernanceUserRef | null;
+  accepted_user_email?: string | null;
+  requires_second: boolean;
+  created_at?: string | null;
+}
+
+/** What the public accept screen needs, before anybody is signed in. */
+export interface StaffInvitationPreview {
+  email: string;
+  role: string;
+  role_display?: string | null;
+  scopes?: string[];
+  status: StaffInvitation['status'];
+  is_live: boolean;
+  expires_at?: string | null;
+  invited_by?: string | null;
+}
+
+export interface StaffInvitationCreatePayload {
+  email: string;
+  role: string;
+  scopes?: string[];
+  notes?: string;
+  /** Defaults to true. False emails the link immediately. */
+  requires_second?: boolean;
+  expires_in_days?: number;
+}
+
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export type ApprovalAction =
@@ -1432,6 +1483,33 @@ export const adminPortalApi = {
 
   updateStaffRole: (id: string, payload: StaffRoleUpdatePayload) =>
     apiClient.patch<ApiResponse<StaffRoleAssignment>>(`/governance/staff-roles/${id}/`, payload).then((r) => r.data),
+
+  /* Governance — staff onboarding ---------------------------------- */
+  getStaffInvitations: (params?: { status?: string; email?: string }) =>
+    apiClient.get<ApiResponse<StaffInvitation[]>>('/governance/staff-invitations/', { params }).then((r) => r.data),
+
+  /**
+   * Offer staff access to an email address.
+   *
+   * Returns **202** when `requires_second` is left default: the invitation
+   * exists but nothing has been emailed until a second approver settles it.
+   */
+  createStaffInvitation: (payload: StaffInvitationCreatePayload) =>
+    apiClient.post<ApiResponse<StaffInvitation>>('/governance/staff-invitations/', payload).then((r) => r.data),
+
+  revokeStaffInvitation: (id: string) =>
+    apiClient.delete<ApiResponse<StaffInvitation>>(`/governance/staff-invitations/${id}/`).then((r) => r.data),
+
+  resendStaffInvitation: (id: string) =>
+    apiClient.post<ApiResponse<StaffInvitation>>(`/governance/staff-invitations/${id}/`, {}).then((r) => r.data),
+
+  /** Unauthenticated read so the accept screen can explain a dead link. */
+  getStaffInvitationPreview: (token: string) =>
+    apiClient.get<ApiResponse<StaffInvitationPreview>>(`/governance/staff-invitations/accept/${token}/`).then((r) => r.data),
+
+  /** Requires the caller to be signed in *as the invited address*. */
+  acceptStaffInvitation: (token: string) =>
+    apiClient.post<ApiResponse<StaffRoleAssignment>>(`/governance/staff-invitations/accept/${token}/`, {}).then((r) => r.data),
 
   /** Revokes rather than deletes — the row is the audit trail. */
   revokeStaffRole: (id: string, notes?: string) =>

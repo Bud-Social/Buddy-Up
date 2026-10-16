@@ -45,6 +45,17 @@ urlpatterns = [
     path('audit/timeline/', views.AuditTimelineView.as_view(), name='audit_timeline'),
     path('audit/<uuid:pk>/', views.AuditDetailView.as_view(), name='audit_detail'),
 
+    # --- Staff onboarding ---
+    # Listed before the detail route for readability only. There is no real
+    # ambiguity: `accept` is not a UUID, so `staff-invitations/<uuid:pk>/`
+    # could never match this path.
+    path('staff-invitations/accept/<uuid:token>/',
+         views.StaffInvitationAcceptView.as_view(), name='staff_invitation_accept'),
+    path('staff-invitations/', views.StaffInvitationListCreateView.as_view(),
+         name='staff_invitation_list'),
+    path('staff-invitations/<uuid:pk>/', views.StaffInvitationDetailView.as_view(),
+         name='staff_invitation_detail'),
+
     # --- Assistance console ---
     path('emails/send/', views.StaffEmailSendView.as_view(), name='email_send'),
     path('emails/log/', views.EmailLogListView.as_view(), name='email_log'),

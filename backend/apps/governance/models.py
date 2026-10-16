@@ -310,10 +310,18 @@ class AccountActionRequest(TimestampedModel):
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     action = models.CharField(max_length=32, choices=ACTION_CHOICES)
+    # Nullable, and deliberately so: a staff *invitation* is addressed to an
+    # email address, which may not have an account yet. Every other action this
+    # queue carries acts on an existing user, so for those it stays required.
+    # The email an approval concerns always lives in ``payload['email']``, so
+    # the audit record does not lose the "who is this about" answer that
+    # ``requested_by_profile`` already preserves for a deleted requester.
     target_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='governance_action_requests',
+        null=True,
+        blank=True,
     )
     payload = models.JSONField(default=dict, blank=True)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='pending')
@@ -532,3 +540,120 @@ class EmailLog(TimestampedModel):
 
     def __str__(self):
         return f'{self.status} -> {self.recipient_email}'
+
+
+class StaffInvitation(TimestampedModel):
+    """An offer of staff access to an email address, before they have an account.
+
+    Why this table exists
+    --------------------
+    ``StaffRole`` could never be the onboarding path. Its serializer refuses any
+    role for a user who is not already ``is_staff`` ("Staff roles apply to staff
+    accounts only"), and nothing in the codebase ever *set* ``is_staff``. So the
+    only way to reach a usable staff account was to edit the database by hand --
+    which is exactly what happened, and it left the one real staff account
+    holding ``is_superuser`` with no ``StaffRole`` row at all. That is not
+    onboarding, and it is not auditable.
+
+    So the invitation is the act that grants ``is_staff``. It is deliberately a
+    separate, expiring, revocable object rather than a flag on the user:
+
+    * the offer is addressed to an *email*, and may exist before any account does;
+    * it carries the role and scopes that were approved, so accepting does not
+      re-decide anything;
+    * it can be revoked or allowed to lapse, which is a meaningful outcome that
+      "no row was created" cannot express;
+    * accepting is idempotent-ish and auditable in a way a bare boolean is not.
+
+    Separation of duties
+    --------------------
+    Creating an invitation is itself a privileged act, so it goes through the
+    same two-person queue as any other grant: with ``requires_second`` (the
+    default) nothing is emailed until a second approver settles it. The
+    two-person requirement is satisfied *at invite time*, which is why accepting
+    applies the role directly rather than raising a second approval -- otherwise
+    the second approver would be the invitee.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('revoked', 'Revoked'),
+        ('expired', 'Expired'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    email = models.EmailField(max_length=254, db_index=True)
+    role = models.CharField(max_length=32, choices=StaffRole.ROLE_CHOICES)
+    scopes = models.JSONField(default=list, blank=True)
+    notes = models.TextField(blank=True)
+
+    # The accept secret. UUID rather than a short code so the link cannot be
+    # guessed; it is emailed to the addressee and never rendered in staff lists.
+    token = models.UUIDField(default=uuid4, unique=True, editable=False)
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='pending')
+
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='staff_invitations_sent',
+    )
+    invited_by_email = models.CharField(max_length=254, blank=True)
+
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    accepted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='staff_invitations_accepted',
+    )
+    accepted_user_email = models.CharField(max_length=254, blank=True)
+
+    requires_second = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'governance_staff_invitation'
+        ordering = ['-created_at']
+        constraints = [
+            # One live offer per address. Two pending invitations to the same
+            # email means two staff can accept and the second one wins, which is
+            # not a race anybody wants to lose.
+            models.UniqueConstraint(
+                fields=['email'],
+                condition=models.Q(status='pending'),
+                name='gov_staff_invite_one_pending_per_email',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['email', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.email} -> {self.role} ({self.status})'
+
+    @property
+    def is_live(self):
+        """Pending *and* not past its expiry. The only state worth emailing."""
+        from django.utils import timezone
+
+        return self.status == 'pending' and self.expires_at > timezone.now()
+
+    def mark_expired_if_stale(self):
+        """Flip a lapsed pending row to ``expired``.
+
+        Read-side rather than a scheduled job: the rows are few, and the only
+        question anyone asks of them is "is this still good?", so answering it
+        correctly at read time is enough. Idempotent.
+        """
+        from django.utils import timezone
+
+        if self.status == 'pending' and self.expires_at <= timezone.now():
+            self.status = 'expired'
+            self.save(update_fields=['status', 'updated_at'])
+            return True
+        return False
