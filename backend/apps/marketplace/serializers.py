@@ -18,6 +18,7 @@ from .models import (
     PaymentIntent,
 )
 from .models import APPLICATION_STATUS_CHOICES
+from apps.gyms.models import Gym
 from .models import COURIER_FULFILLMENT_STATUS, COURIER_TRANSITIONS, SOLD_TICKET_STATUSES
 
 ARTIFACT_TYPES = ['dumbbell', 'barbell', 'burpee', 'squat', 'sprint', 'pr', 'champion']
@@ -1153,12 +1154,73 @@ class PickupStationSerializer(serializers.ModelSerializer):
         gym = data.get('gym', getattr(self.instance, 'gym', None))
         return shop, gym
 
+    def _owner_for_primary_check(self):
+        """The owner this station belongs to, from either side of validation.
+
+        Field-level validation runs before object-level, so `is_primary` is
+        checked before `shop` has been turned into a model instance. Reading the
+        raw incoming value is what makes the field-level check possible at all.
+        """
+        shop = gym = None
+        initial = getattr(self, 'initial_data', None)
+        if isinstance(initial, dict):
+            raw_shop = initial.get('shop')
+            raw_gym = initial.get('gym')
+            if raw_shop:
+                shop = Shop.objects.filter(pk=raw_shop).first()
+            if raw_gym:
+                gym = Gym.objects.filter(pk=raw_gym).first()
+        if shop is None and gym is None and self.instance is not None:
+            shop = getattr(self.instance, 'shop', None)
+            gym = getattr(self.instance, 'gym', None)
+        return shop, gym
+
+    def validate_is_primary(self, value):
+        """Report a second primary station on `is_primary`, deterministically.
+
+        Why this is a field validator and not only the object-level check
+        below: the model carries partial unique constraints
+        (``mkt_pickstation_pri_shop_uniq`` and its gym twin), and depending on the
+        DRF version in the environment DRF synthesises its own
+        ``UniqueTogetherValidator`` from those. When it does, it fires during
+        *field* validation, ahead of ``validate()``, and the caller gets
+        ``non_field_errors: "The fields shop must make a unique set."`` -- an
+        error that names ``shop`` for a rule about ``is_primary``, and tells the
+        person who submitted it nothing about what they did wrong.
+
+        Since ``is_primary`` is declared before ``shop`` in ``Meta.fields``, a
+        check here runs first, so the actionable message is always present
+        regardless of which DRF is installed. The database constraint is still
+        the backstop for concurrent writes.
+        """
+        if not value:
+            return value
+        shop, gym = self._owner_for_primary_check()
+        # Owner not resolvable yet (or the caller named both/neither): leave it
+        # to validate(), which owns those rules and can report them properly.
+        if not shop and not gym:
+            return value
+
+        clashes = PickupStation.objects.filter(is_primary=True)
+        if self.instance is not None:
+            clashes = clashes.exclude(pk=self.instance.pk)
+        clashes = clashes.filter(shop=shop) if shop else clashes.filter(gym=gym)
+        if clashes.exists():
+            owner = 'shop' if shop else 'gym'
+            raise serializers.ValidationError(
+                f'This {owner} already has a primary pickup station.'
+            )
+        return value
+
     def validate(self, data):
         shop, gym = self._resolved_owner(data)
         if bool(shop) == bool(gym):
             raise serializers.ValidationError(
                 'A station must belong to exactly one owner: provide a shop or a gym, not both.'
             )
+        # Kept even though validate_is_primary normally fires first: a partial
+        # update that changes the owner *and* leaves is_primary true would
+        # otherwise slip past the field check, which ran against the old owner.
         if data.get('is_primary'):
             clashes = PickupStation.objects.filter(is_primary=True)
             if self.instance is not None:

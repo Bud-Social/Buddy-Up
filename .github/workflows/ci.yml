@@ -34,6 +34,18 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
+          # The lock, not the ranges. requirements/development.txt floats every
+          # dependency (`djangorestframework>=3.15,<4` and friends), and pip will
+          # happily leave an already-installed version in place when a range is
+          # satisfied -- so CI and local machines silently ran different
+          # versions of the same libraries. That is not theoretical: the DRF
+          # minor version decides which validators get synthesised from a
+          # model's unique constraints, which changed the API's error shape
+          # between CI and local and broke a test that passes in both on its own.
+          #
+          # development.txt is layered on top so the test/lint tooling is still
+          # installed; the application dependencies come from the lock.
+          pip install -r requirements/requirements-lock.txt
           pip install -r requirements/development.txt
       - name: Lint
         run: |

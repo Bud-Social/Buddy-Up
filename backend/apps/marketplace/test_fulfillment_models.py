@@ -450,6 +450,55 @@ class PickupStationSerializerTests(FulfillmentTestBase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('is_primary', serializer.errors)
 
+    def test_the_refusal_names_the_owner_not_the_shop_field(self):
+        """The message has to be about what the caller actually got wrong.
+
+        The model carries partial unique constraints for one-primary-per-owner,
+        and some DRF versions synthesise a UniqueTogetherValidator from them.
+        When that fires first the caller gets
+        ``non_field_errors: "The fields shop must make a unique set."`` -- which
+        names `shop` for a rule about `is_primary` and explains nothing. Pin the
+        wording so the actionable message is the one that survives.
+        """
+        PickupStation.objects.create(shop=self.shop, name='Main', is_primary=True)
+        serializer = PickupStationSerializer(
+            data={'name': 'Second', 'shop': str(self.shop.id), 'is_primary': True},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('already has a primary pickup station',
+                      str(serializer.errors['is_primary']))
+
+    def test_gym_primary_refusal_is_reported_on_is_primary(self):
+        PickupStation.objects.create(gym=self.gym, name='Main', is_primary=True)
+        serializer = PickupStationSerializer(
+            data={'name': 'Second', 'gym': str(self.gym.id), 'is_primary': True},
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('gym already has a primary', str(serializer.errors['is_primary']))
+
+    def test_is_primary_is_validated_before_shop(self):
+        """The ordering the field-level check depends on, made explicit.
+
+        `validate_is_primary` runs during field validation, and the synthesised
+        constraint validator (when a DRF version adds one) attaches to `shop`.
+        `is_primary` therefore has to be declared first, or the confusing error
+        wins again. This test fails loudly if someone reorders `Meta.fields`.
+        """
+        fields = list(PickupStationSerializer.Meta.fields)
+        self.assertLess(
+            fields.index('is_primary'), fields.index('shop'),
+            'is_primary must be declared before shop, or a DRF-synthesised '
+            'UniqueTogetherValidator on shop preempts the actionable message.',
+        )
+
+    def test_a_secondary_station_is_always_allowed(self):
+        """The rule is about *primary*, not about station count."""
+        PickupStation.objects.create(shop=self.shop, name='Main', is_primary=True)
+        serializer = PickupStationSerializer(
+            data={'name': 'Back Door', 'shop': str(self.shop.id), 'is_primary': False},
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_distance_km_is_absent_without_an_explicit_origin(self):
         station = PickupStation.objects.create(shop=self.shop, name='Counter',
                                                latitude=Decimal('-1.286389'),
