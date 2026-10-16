@@ -240,7 +240,14 @@ class ProgrammeSchedulePersistenceTests(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(email='creator@example.com', password='TestPass123!')
-        self.creator = Profile.objects.create(user=self.user, username='creator', display_name='Creator')
+        # A verified trainer, not just a shop owner: meal-plan creation is
+        # gated on professional nutrition authority, and this class is about
+        # the rich payload surviving the round-trip, not about who may post.
+        # The shop membership below still covers the programme endpoints.
+        self.creator = Profile.objects.create(
+            user=self.user, username='creator', display_name='Creator',
+            role='trainer', verification_status='trainer',
+        )
         self.shop = Shop.objects.create(name='Creator Shop', handle='creatorshop', verification_status='verified')
         ShopMembership.objects.create(shop=self.shop, profile=self.creator, role='owner')
         CreatorPayoutSetup.objects.create(

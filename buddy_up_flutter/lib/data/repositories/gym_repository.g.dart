@@ -253,6 +253,27 @@ class _GymRepository implements GymRepository {
   }
 
   @override
+  Future<dynamic> getPartnerMetrics(String slug) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<dynamic>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/gyms/${slug}/partner-metrics/',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
   Future<dynamic> checkHandle(String candidate) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{r'candidate': candidate};

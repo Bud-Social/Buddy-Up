@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, Check, MessageCircle, Send, Star, Users, X, Plus } from 'lucide-react';
+import { Calendar, Check, MessageCircle, Send, Star, Users, X, Plus, UserMinus, UserCog } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -8,14 +8,17 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { gymsApi } from '@/api/gyms';
-import type { Gym, GymMembership, GymSchedulePost, GymReview, JoinRequest } from '@/types';
+import type { Gym, GymMembership, GymSchedulePost, GymReview, JoinRequest, GymPartnerMetrics } from '@/types';
 import { RoleDashboardShell, RoleSectionTitle } from './roles/RoleShell';
 
-type Tab = 'members' | 'requests' | 'schedule' | 'reviews';
+type Tab = 'overview' | 'members' | 'requests' | 'schedule' | 'reviews';
 
+// Labels are kept short on purpose: the console wraps these into a tab strip,
+// and "Join requests" next to "Analytics" used to push the strip to two rows.
 const TABS: { key: Tab; label: string }[] = [
+  { key: 'overview', label: 'Overview' },
   { key: 'members', label: 'Members' },
-  { key: 'requests', label: 'Join requests' },
+  { key: 'requests', label: 'Requests' },
   { key: 'schedule', label: 'Schedule' },
   { key: 'reviews', label: 'Reviews' },
 ];
@@ -35,6 +38,23 @@ const toISO = (val: string) => {
  * invites. The existing "Manage" button in `GymDetail` pointed here at a route
  * that did not exist, which sent owners into their own profile.
  */
+/**
+ * One number with the window it covers spelled out.
+ *
+ * The window lives on the tile rather than in the tab header because these
+ * numbers are not comparable: active members is a gauge, check-ins is a delta.
+ * Showing them under one bare "Overview" heading is how a dashboard starts
+ * lying to the person reading it.
+ */
+function MetricTile({ label, value }: { label: string; value: number }) {
+  return (
+    <Card className="p-4">
+      <p className="text-xs text-buddy-text-secondary">{label}</p>
+      <p className="text-2xl font-extrabold font-display">{value ?? 0}</p>
+    </Card>
+  );
+}
+
 export default function GymManage() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -45,7 +65,7 @@ export default function GymManage() {
   const [schedulePosts, setSchedulePosts] = useState<GymSchedulePost[]>([]);
   const [reviews, setReviews] = useState<GymReview[]>([]);
 
-  const [tab, setTab] = useState<Tab>('members');
+  const [tab, setTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -63,6 +83,12 @@ export default function GymManage() {
   const [scheduleEnd, setScheduleEnd] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
 
+  const [metrics, setMetrics] = useState<GymPartnerMetrics | null>(null);
+  const [memberBusyId, setMemberBusyId] = useState<string | null>(null);
+  const [roleTarget, setRoleTarget] = useState<GymMembership | null>(null);
+  const [roleChoice, setRoleChoice] = useState<'member' | 'trainer' | 'moderator'>('member');
+  const [removeTarget, setRemoveTarget] = useState<GymMembership | null>(null);
+
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   const [replyBusy, setReplyBusy] = useState(false);
@@ -76,16 +102,18 @@ export default function GymManage() {
       setGym(detail.data);
       // Each panel degrades on its own — a missing join-requests endpoint must
       // not blank the member list.
-      const [membersRes, requestsRes, postsRes, reviewsRes] = await Promise.all([
+      const [membersRes, requestsRes, postsRes, reviewsRes, metricsRes] = await Promise.all([
         gymsApi.getMembers(slug).catch(() => ({ data: [] as GymMembership[] })),
         gymsApi.getJoinRequests(slug, 'pending').catch(() => ({ data: [] as JoinRequest[] })),
         gymsApi.getSchedulePosts(slug).catch(() => ({ data: [] as GymSchedulePost[] })),
         gymsApi.getReviews(slug).catch(() => ({ data: [] as GymReview[] })),
+        gymsApi.getPartnerMetrics(slug).catch(() => ({ data: null as GymPartnerMetrics | null })),
       ]);
       setMembers(membersRes.data || []);
       setRequests(requestsRes.data || []);
       setSchedulePosts(postsRes.data || []);
       setReviews(reviewsRes.data || []);
+      setMetrics(metricsRes.data || null);
     } catch (e: any) {
       setError(e?.response?.data?.message || "Could not load this gym.");
     } finally {
@@ -171,6 +199,42 @@ export default function GymManage() {
 
   const isAdmin = gym?.membership_role === 'owner' || gym?.membership_role === 'co_owner' || gym?.membership_role === 'moderator';
 
+  /** Owners and co-owners are out of reach for role edits, by server rule. */
+  const canManageMember = (membership: GymMembership) =>
+    isAdmin && !['owner', 'co_owner'].includes(membership.role);
+
+  const changeMemberRole = async (membership: GymMembership, role: 'member' | 'trainer' | 'moderator') => {
+    if (!slug || !membership.member_id) return;
+    setMemberBusyId(membership.id);
+    setActionError(null);
+    try {
+      await gymsApi.manageMember(slug, membership.member_id, 'change_role', role);
+      // Update in place: a full reload would close the tab and lose scroll.
+      setMembers((prev) => prev.map((m) => (m.id === membership.id ? { ...m, role } : m)));
+      setRoleTarget(null);
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message || 'Could not change that role.');
+    } finally {
+      setMemberBusyId(null);
+    }
+  };
+
+  const removeMember = async (membership: GymMembership) => {
+    if (!slug || !membership.member_id) return;
+    setMemberBusyId(membership.id);
+    setActionError(null);
+    try {
+      await gymsApi.removeMember(slug, membership.member_id);
+      setMembers((prev) => prev.filter((m) => m.id !== membership.id));
+      setRemoveTarget(null);
+    } catch (e: any) {
+      setActionError(e?.response?.data?.message || 'Could not remove that member.');
+    } finally {
+      setMemberBusyId(null);
+    }
+  };
+
+
   if (loading) {
     return (
       <RoleDashboardShell title="Manage gym" backTo={gym ? `/gyms/${gym.handle}` : '/gyms'}>
@@ -222,6 +286,43 @@ export default function GymManage() {
         ))}
       </div>
 
+      {/* Overview — the operator's own analytics. Partner-only upstream, so it
+          degrades to an explanation instead of an empty shell. */}
+      {tab === 'overview' && (
+        <section className="space-y-3">
+          <RoleSectionTitle>Overview</RoleSectionTitle>
+          {!isAdmin ? (
+            <Card className="p-8 text-center text-buddy-text-secondary text-sm">
+              Gym analytics are available to owners, co-owners and moderators.
+            </Card>
+          ) : !metrics ? (
+            <Card className="p-8 text-center text-buddy-text-secondary text-sm">
+              Could not load gym analytics.
+            </Card>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <MetricTile label="Active members" value={metrics.active_members} />
+                <MetricTile label="Check-ins (30d)" value={metrics.check_ins_30d} />
+                <MetricTile label="Unique attendees (30d)" value={metrics.unique_attendees_30d} />
+                <MetricTile label="Activities (30d)" value={metrics.scheduled_activities_30d} />
+              </div>
+              <Card className="p-4">
+                <p className="text-xs text-buddy-text-secondary">
+                  Activation rate, last 30 days
+                </p>
+                <p className="text-2xl font-extrabold font-display">
+                  {Math.round((metrics.activation_rate_30d ?? 0) * 100)}%
+                </p>
+                <p className="text-xs text-buddy-text-secondary mt-1">
+                  Members with at least one check-in in the window.
+                </p>
+              </Card>
+            </>
+          )}
+        </section>
+      )}
+
       {/* Members */}
       {tab === 'members' && (
         <section className="space-y-2">
@@ -244,6 +345,33 @@ export default function GymManage() {
                     label={m.role.replace('_', ' ')}
                     size="sm"
                   />
+                  {canManageMember(m) && (
+                    <div
+                      className="flex items-center gap-1"
+                      // The row navigates to the profile, so the controls have
+                      // to stop the click or they select the wrong member.
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`Change role for ${m.member_data?.display_name || 'member'}`}
+                        disabled={memberBusyId === m.id}
+                        onClick={() => { setRoleChoice(m.role === 'member' ? 'trainer' : 'member'); setRoleTarget(m); }}
+                      >
+                        <UserCog size={14} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`Remove ${m.member_data?.display_name || 'member'}`}
+                        disabled={memberBusyId === m.id}
+                        onClick={() => setRemoveTarget(m)}
+                      >
+                        <UserMinus size={14} />
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>
@@ -430,6 +558,62 @@ export default function GymManage() {
           <div className="flex gap-2">
             <Button className="flex-1" isLoading={scheduleBusy} onClick={postSchedule}>Post</Button>
             <Button variant="ghost" onClick={() => setScheduleOpen(false)}>Cancel</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Change role */}
+      <Modal isOpen={!!roleTarget} onClose={() => setRoleTarget(null)} title="Change member role">
+        <div className="space-y-3">
+          <p className="text-sm text-buddy-text-secondary">
+            {roleTarget?.member_data?.display_name} is currently{' '}
+            <strong>{roleTarget?.role.replace('_', ' ')}</strong>.
+          </p>
+          <div className="flex gap-2">
+            {(['member', 'trainer', 'moderator'] as const).map((r) => (
+              <Button
+                key={r}
+                variant={roleChoice === r ? 'primary' : 'ghost'}
+                onClick={() => setRoleChoice(r)}
+              >
+                {r}
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-buddy-text-secondary">
+            The member is notified when their role changes. Owners and co-owners
+            can only be changed by transferring ownership.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              isLoading={memberBusyId === roleTarget?.id}
+              onClick={() => roleTarget && changeMemberRole(roleTarget, roleChoice)}
+            >
+              Save role
+            </Button>
+            <Button variant="ghost" onClick={() => setRoleTarget(null)}>Cancel</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Remove member */}
+      <Modal isOpen={!!removeTarget} onClose={() => setRemoveTarget(null)} title="Remove member">
+        <div className="space-y-3">
+          <p className="text-sm text-buddy-text-secondary">
+            Remove {removeTarget?.member_data?.display_name} from this gym? Their
+            access ends immediately and they are notified.
+          </p>
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              variant="destructive"
+              isLoading={memberBusyId === removeTarget?.id}
+              onClick={() => removeTarget && removeMember(removeTarget)}
+            >
+              Remove
+            </Button>
+            <Button variant="ghost" onClick={() => setRemoveTarget(null)}>Cancel</Button>
           </div>
         </div>
       </Modal>

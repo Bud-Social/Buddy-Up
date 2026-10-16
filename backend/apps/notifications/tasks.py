@@ -6,6 +6,10 @@ from zoneinfo import ZoneInfo
 PRIORITY_BY_TYPE = {
     'new_device_login': 'critical', 'payment_received': 'high',
     'session_reminder': 'high', 'live_starting': 'high',
+    # Authority is high: a revocation the user does not notice is an
+    # operational problem, and a grant is something they may act on at once.
+    'staff_role_granted': 'high', 'staff_role_revoked': 'critical',
+    'gym_role_changed': 'high', 'gym_removed': 'high',
 }
 
 

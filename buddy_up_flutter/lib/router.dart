@@ -112,61 +112,84 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _rootNavigatorKey = rootNavigatorKey;
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Routes that may be reached without a signed-in session.
+const publicRoutes = <String>[
+  '/login',
+  '/signup',
+  '/verify-registration-otp',
+  '/verify-age',
+  '/forgot-password',
+  '/reset-password',
+  '/totp-setup',
+  '/totp-challenge',
+  '/onboarding',
+  '/terms',
+  '/privacy',
+  '/cookie-policy',
+  '/community-guidelines',
+  '/medical-disclaimer',
+  '/sponsorship-policy',
+  '/adult-content-policy',
+];
+
+/// Where navigation to [location] should actually land, or null to allow it.
+///
+/// Split out of `buildRouter` so the rules can be tested as a pure function.
+/// go_router's `redirect` closes over the router and a `GoRouterState`, and
+/// asserting on it meant constructing a whole app -- which is how the admin
+/// gate below went missing in the first place.
+String? redirectFor(String location, AuthState authState) {
+  final isAuthenticated = authState.isAuthenticated;
+
+  if (authState.isLoading) return null;
+
+  if (!isAuthenticated && !publicRoutes.contains(location)) {
+    return '/login';
+  }
+
+  // Required-once onboarding: incomplete accounts (new Google/Apple sign-ups,
+  // or fresh registrations) are routed through the onboarding pipeline --
+  // consent first, then preferences -- before anything else. Mirrors the web
+  // router guard. profile can be null right after a cold start before it
+  // loads; skip the gate until it arrives.
+  final profile = authState.profile;
+  if (isAuthenticated &&
+      profile != null &&
+      !profile.onboardingCompleted &&
+      location != '/onboarding') {
+    return '/onboarding';
+  }
+
+  if (isAuthenticated &&
+      publicRoutes.contains(location) &&
+      location != '/onboarding') {
+    return '/feed';
+  }
+
+  // Admin console gate. `AdminConsoleScreen` refuses to render for a non-staff
+  // user, but that only protects the index: the console is a set of
+  // deep-linkable routes, and a number of the screens behind it never re-check
+  // `isStaff` in build. Deep-linking straight to /admin/wallet therefore
+  // rendered the screen for anyone signed in and relied on the server's 403 to
+  // be the thing that stopped them. Mirrors the web `AdminGuard`, which wraps
+  // every /admin/* route.
+  //
+  // `startsWith('/admin')` would also swallow a future `/administration`, so
+  // the prefix has to end at a segment boundary.
+  final isAdminPath = location == '/admin' || location.startsWith('/admin/');
+  if (isAdminPath && !(authState.user?.isStaff ?? false)) {
+    return '/feed';
+  }
+
+  return null;
+}
+
 GoRouter buildRouter(WidgetRef ref, AuthState authState) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/feed',
-    redirect: (context, state) {
-      final isAuthenticated = authState.isAuthenticated;
-      final isLoading = authState.isLoading;
-      final location = state.matchedLocation;
-
-      if (isLoading) return null;
-
-      final publicRoutes = [
-        '/login',
-        '/signup',
-        '/verify-registration-otp',
-        '/verify-age',
-        '/forgot-password',
-        '/reset-password',
-        '/totp-setup',
-        '/totp-challenge',
-        '/onboarding',
-        '/terms',
-        '/privacy',
-        '/cookie-policy',
-        '/community-guidelines',
-        '/medical-disclaimer',
-        '/sponsorship-policy',
-        '/adult-content-policy',
-      ];
-
-      if (!isAuthenticated && !publicRoutes.contains(location)) {
-        return '/login';
-      }
-
-      // Required-once onboarding: incomplete accounts (new Google/Apple
-      // sign-ups, or fresh registrations) are routed through the onboarding
-      // pipeline — consent first, then preferences — before anything else.
-      // Mirrors the web router guard. profile can be null right after a cold
-      // start before it loads; skip the gate until it arrives.
-      final profile = authState.profile;
-      if (isAuthenticated &&
-          profile != null &&
-          !profile.onboardingCompleted &&
-          location != '/onboarding') {
-        return '/onboarding';
-      }
-
-      if (isAuthenticated &&
-          publicRoutes.contains(location) &&
-          location != '/onboarding') {
-        return '/feed';
-      }
-
-      return null;
-    },
+    redirect: (context, state) =>
+        redirectFor(state.matchedLocation, authState),
     routes: [
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/signup', builder: (_, _) => const RegisterScreen()),
@@ -675,9 +698,10 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const AdminWalletScreen(),
       ),
-      // Governance: the two-person surface. Every screen re-checks `is_staff`
-      // in build, so a deep link cannot bypass the gate the way the server's
-      // 403 alone would be a poor experience.
+      // Governance: the two-person surface. Gated by the `/admin` redirect
+      // above, not by per-screen checks: several of these screens do not test
+      // `isStaff` themselves, so the guard has to live in the router to be
+      // true for a deep link as well as for navigation from the console.
       GoRoute(
         path: '/admin/moderation',
         parentNavigatorKey: _rootNavigatorKey,
@@ -711,9 +735,9 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const AdminVerificationScreen(),
       ),
-      // Platform analytics. Five reports under `/portal/analytics/**`; the
-      // screens are staff-gated in build the same way as the rest of the
-      // console, so a deep link cannot bypass `is_staff`.
+      // Platform analytics. Five reports under `/portal/analytics/**`.
+      // Staff-gated by the `/admin` redirect above; the analytics screens do
+      // not each re-check `isStaff`.
       GoRoute(
         path: '/admin/analytics',
         parentNavigatorKey: _rootNavigatorKey,

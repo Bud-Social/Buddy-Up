@@ -12,7 +12,7 @@ from .models import (
     MealPlan, MealPlanPurchase, MealPlanReview,
     TrainingProgramme, TrainingProgrammePurchase, TrainingProgrammeReview,
     ProgrammeActivityProgress,
-    Product, MarketplaceEvent, EventMedia, EventTicket, Cart, CartItem, DiscountCode, DiscountUsage,
+    Product, ProductReview, MarketplaceEvent, EventMedia, EventTicket, Cart, CartItem, DiscountCode, DiscountUsage,
     Order, OrderItem, OrderFulfillment, OrderCase, CreatorPayoutSetup,
     PickupStation, StationApplication, DeliveryPersonnel, DeliveryPersonnelApplication,
     PaymentIntent,
@@ -342,6 +342,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'brand', 'description', 'category', 'content_rating',
                    'image_url', 'affiliate_url', 'price_display',
                    'recommended_by', 'recommender_data', 'shop_data', 'click_count',
+                   'average_rating', 'review_count',
                    'stock_quantity', 'stock_tracking_enabled', 'supplement_registration_number',
                    'supplement_registration_expiry', 'supplement_claims_reviewed',
                    'supplement_label_url', 'delivery_modes', 'fulfillment_details',
@@ -366,6 +367,21 @@ class ProductSerializer(serializers.ModelSerializer):
             return None
         return {'id': str(obj.shop.id), 'name': obj.shop.name, 'handle': obj.shop.handle,
                 'verification_status': obj.shop.verification_status}
+
+
+class ProductReviewSerializer(serializers.ModelSerializer):
+    buyer_data = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductReview
+        fields = ['id', 'rating', 'body', 'buyer_data', 'created_at']
+
+    def get_buyer_data(self, obj):
+        return {
+            'username': obj.buyer.username,
+            'display_name': obj.buyer.display_name,
+            'avatar_url': obj.buyer.avatar_url,
+        }
 
 
 class CreateMealPlanSerializer(serializers.Serializer):
@@ -474,6 +490,7 @@ class CreateProductSerializer(serializers.Serializer):
         required=False, default=list,
     )
     fulfillment_details = serializers.DictField(required=False, default=dict)
+    shop_id = serializers.UUIDField(required=False, allow_null=True)
 
 
 class UpdateProductSerializer(serializers.Serializer):

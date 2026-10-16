@@ -1031,6 +1031,47 @@ class GymMembersView(views.APIView):
         })
 
 
+def _notify_gym_role_change(gym, membership, previous_role, actor):
+    from apps.notifications.tasks import create_notification
+
+    label = dict(GymMembership.ROLE_CHOICES).get(membership.role, membership.role)
+    create_notification.delay(
+        recipient_id=str(membership.member.user_id),
+        notification_type='gym_role_changed',
+        title=f'You are now a {label} at {gym.name}',
+        body=(
+            f'{actor.display_name} changed your role at {gym.name} '
+            f'from {previous_role} to {membership.role}.'
+        ),
+        metadata={
+            'gym_handle': gym.handle,
+            'gym_name': gym.name,
+            'previous_role': previous_role,
+            'new_role': membership.role,
+            'changed_by': str(actor.user_id),
+        },
+        # One row per role change, not one per repeated click.
+        dedupe_key=f'gym-role-{membership.id}-{previous_role}-{membership.role}',
+    )
+
+
+def _notify_gym_removal(gym, membership, actor):
+    from apps.notifications.tasks import create_notification
+
+    create_notification.delay(
+        recipient_id=str(membership.member.user_id),
+        notification_type='gym_removed',
+        title=f'You were removed from {gym.name}',
+        body=f'{actor.display_name} removed you from {gym.name}.',
+        metadata={
+            'gym_handle': gym.handle,
+            'gym_name': gym.name,
+            'removed_by': str(actor.user_id),
+        },
+        dedupe_key=f'gym-removed-{membership.id}-{membership.id}',
+    )
+
+
 class ManageMemberView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1043,6 +1084,20 @@ class ManageMemberView(views.APIView):
         serializer.is_valid(raise_exception=True)
         new_role = serializer.validated_data.get('role')
 
+        # Symmetric with the removal guard below. Without it the lowest tier of
+        # gym staff could demote the owner, and an owner demoted to 'member'
+        # can no longer restore themselves -- a permanent lockout of the gym.
+        if target.role in ['owner', 'co_owner']:
+            return Response({
+                'success': False, 'data': None,
+                'message': (
+                    'Cannot change the role of an owner or co-owner. '
+                    'Transfer ownership first.'
+                ),
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        previous_role = target.role
         if new_role and new_role in dict(GymMembership.ROLE_CHOICES):
             if new_role in ['owner', 'co_owner']:
                 return Response({
@@ -1052,6 +1107,9 @@ class ManageMemberView(views.APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
             target.role = new_role
             target.save(update_fields=['role'])
+            # Silent demotions are the failure mode here: the member keeps
+            # showing a moderator badge and quietly loses the permissions.
+            _notify_gym_role_change(gym, target, previous_role, request.user.profile)
 
         return Response({
             'success': True, 'data': None,
@@ -1078,6 +1136,8 @@ class ManageMemberView(views.APIView):
 
         gym.member_count = db_models.F('member_count') - 1
         gym.save(update_fields=['member_count'])
+
+        _notify_gym_removal(gym, target, request.user.profile)
 
         return Response({
             'success': True, 'data': None,
@@ -1146,6 +1206,25 @@ class ManageJoinRequestView(views.APIView):
                 )
             Gym.objects.filter(id=gym.id).update(
                 member_count=db_models.F('member_count') + 1
+            )
+            # The applicant is waiting on this; approving silently leaves them
+            # refreshing a page that never says yes.
+            from apps.notifications.tasks import create_notification
+
+            create_notification.delay(
+                recipient_id=str(join_request.requester.user_id),
+                notification_type='gym_joined',
+                title=f'Welcome to {gym.name}',
+                body=(
+                    f'{request.user.profile.display_name} approved your request to '
+                    f'join {gym.name}.'
+                ),
+                metadata={
+                    'gym_handle': gym.handle,
+                    'gym_name': gym.name,
+                    'approved_by': str(request.user.profile.user_id),
+                },
+                dedupe_key=f'gym-joined-{join_request.id}-approved',
             )
 
         return Response({
@@ -1378,10 +1457,18 @@ class GymSchedulePostDetailView(views.APIView):
             GymMembership, gym=gym, member=request.user.profile,
             role__in=['owner', 'co_owner', 'trainer', 'moderator'],
         )
-        if post.author != request.user.profile and membership.role not in ('owner', 'co_owner'):
+        # PATCH above already lets the same roles edit anybody's schedule post,
+        # so DELETE being narrower meant a moderator could rewrite a member's
+        # post and then could not remove it. Deletion authority now matches the
+        # other gym moderation surfaces: the author, or a partner-staff member.
+        # `trainer` keeps edit-but-not-delete, which is the deliberate gap.
+        if post.author != request.user.profile and membership.role not in PARTNER_ROLES:
             return Response({
                 'success': False, 'data': None,
-                'message': 'Only the author or gym owner can delete schedule posts.',
+                'message': (
+                    'Only the author or a gym owner, co-owner or moderator can '
+                    'delete schedule posts.'
+                ),
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_403_FORBIDDEN)
         post.delete()

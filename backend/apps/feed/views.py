@@ -913,6 +913,29 @@ class FeedView(views.APIView):
         })
 
 
+# Roles that moderate a gym's own feed. Kept as one tuple because pinning and
+# deleting a gym post are the same authority question, and they had drifted:
+# `PostPinView` allowed owner/co_owner/moderator while `PostDetailView.delete`
+# allowed the author only, so a gym moderator could pin a member's post and
+# then had no way to remove it.
+GYM_FEED_MODERATOR_ROLES = ('owner', 'co_owner', 'moderator')
+
+
+def _gym_moderator_can_remove(post, user):
+    """True when `user` moderates the gym this post is filed under.
+
+    A post with no gym is never moderated by anyone but its author, so this
+    deliberately returns False rather than granting platform-wide power.
+    """
+    if not post.gym_tag:
+        return False
+    from apps.gyms.models import GymMembership
+    return GymMembership.objects.filter(
+        gym=post.gym_tag, member=user.profile,
+        role__in=GYM_FEED_MODERATOR_ROLES,
+    ).exists()
+
+
 class PostDetailView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -960,7 +983,7 @@ class PostDetailView(views.APIView):
             return Response(status=status.HTTP_401_UNAUTHORIZED)
 
         post = get_object_or_404(Post, id=post_id)
-        if post.author_id != request.user.profile.user_id:
+        if post.author_id != request.user.profile.user_id and not _gym_moderator_can_remove(post, request.user):
             return Response({
                 'success': False, 'data': None,
                 'message': 'You can only delete your own posts.',
@@ -1547,12 +1570,7 @@ class PostPinView(views.APIView):
     def post(self, request, post_id):
         post = get_object_or_404(Post, id=post_id)
         if post.gym_tag:
-            from apps.gyms.models import GymMembership
-            is_admin = GymMembership.objects.filter(
-                gym=post.gym_tag, member=request.user.profile,
-                role__in=['owner', 'co_owner', 'moderator']
-            ).exists()
-            if not is_admin and post.author != request.user.profile:
+            if not _gym_moderator_can_remove(post, request.user) and post.author != request.user.profile:
                 return Response({'success': False, 'message': 'Not authorized to pin this post.'}, status=403)
         else:
             if post.author != request.user.profile:

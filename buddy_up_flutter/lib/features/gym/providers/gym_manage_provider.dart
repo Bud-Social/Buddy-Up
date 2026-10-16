@@ -27,6 +27,49 @@ final gymManageMembersProvider =
   return _rows(raw).map(GymMembership.fromJson).toList();
 });
 
+/// The gym's own numbers, for the Overview tab.
+///
+/// Decoding is defensive on purpose: this is the one panel that is partner-only,
+/// so an ordinary member requesting it gets a 403 and the tab has to show an
+/// explanation rather than an empty shell or a thrown decode error.
+final gymPartnerMetricsProvider =
+    FutureProvider.family<GymPartnerMetrics, String>((ref, slug) async {
+  final raw = await ref.read(gymRepositoryProvider).getPartnerMetrics(slug);
+  return GymPartnerMetrics.fromJson(_payload(raw));
+});
+
+/// The gym's operator analytics, with the window each figure covers.
+class GymPartnerMetrics {
+  final int activeMembers;
+  final int checkIns30d;
+  final int uniqueAttendees30d;
+  final double activationRate30d;
+  final int scheduledActivities30d;
+
+  const GymPartnerMetrics({
+    required this.activeMembers,
+    required this.checkIns30d,
+    required this.uniqueAttendees30d,
+    required this.activationRate30d,
+    required this.scheduledActivities30d,
+  });
+
+  factory GymPartnerMetrics.fromJson(Map<String, dynamic> json) {
+    int asInt(dynamic value) =>
+        value is num ? value.toInt() : int.tryParse('$value') ?? 0;
+    double asDouble(dynamic value) =>
+        value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+
+    return GymPartnerMetrics(
+      activeMembers: asInt(json['active_members']),
+      checkIns30d: asInt(json['check_ins_30d']),
+      uniqueAttendees30d: asInt(json['unique_attendees_30d']),
+      activationRate30d: asDouble(json['activation_rate_30d']),
+      scheduledActivities30d: asInt(json['scheduled_activities_30d']),
+    );
+  }
+}
+
 /// Pending join requests, which is the queue an owner actually works through.
 final gymManageJoinRequestsProvider =
     FutureProvider.family<List<JoinRequest>, String>((ref, slug) async {
@@ -47,6 +90,13 @@ final gymManageReviewsProvider =
   final raw = await ref.read(gymRepositoryProvider).getReviews(slug);
   return _rows(raw).map(GymReview.fromJson).toList();
 });
+
+/// The single object inside the standard `{success, data}` envelope.
+Map<String, dynamic> _payload(dynamic body) {
+  final data = body is Map ? body['data'] : body;
+  if (data is Map<String, dynamic>) return data;
+  return const {};
+}
 
 List<Map<String, dynamic>> _rows(dynamic body) {
   final data = body is Map ? body['data'] : body;

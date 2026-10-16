@@ -25,6 +25,16 @@ class AdminConsoleScreen extends ConsumerWidget {
 
   static const List<({String route, String label, String blurb, IconData icon})>
       sections = [
+    // Leads the console. It used to be filed third, under PLATFORM ANALYTICS,
+    // as "Platform overview" -- so a staff user tapping into the console saw
+    // fourteen tiles before the word overview, and the console's own front door
+    // showed an index instead of a summary. Same destination, listed first.
+    (
+      route: '/admin/analytics',
+      label: 'Overview',
+      blurb: 'Platform health, with every figure labelled by its window',
+      icon: Icons.query_stats_outlined
+    ),
     (
       route: '/admin/users',
       label: 'Users',
@@ -130,12 +140,8 @@ class AdminConsoleScreen extends ConsumerWidget {
   /// would make them look like another queue to work.
   static const List<({String route, String label, String blurb, IconData icon})>
       analyticsSections = [
-    (
-      route: '/admin/analytics',
-      label: 'Platform overview',
-      blurb: 'KPIs, each labelled with the window it was measured over',
-      icon: Icons.query_stats_outlined
-    ),
+    // "Overview" lives at the top of the console now; repeating it here gave
+    // one destination two names depending on which group you found it in.
     (
       route: '/admin/analytics/trends',
       label: 'Trends',

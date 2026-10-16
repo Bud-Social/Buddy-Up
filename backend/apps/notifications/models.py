@@ -20,6 +20,14 @@ class Notification(TimestampedModel):
         ('live_starting', 'Live Starting'),
         ('live_reminder', 'Live Reminder'),
         ('gym_invite', 'Gym Invite'),
+        # Authority changes. A user has to be told when their access changes --
+        # otherwise a demotion is silent and an elevation is a surprise they
+        # discover by seeing a screen they could not see before.
+        ('gym_role_changed', 'Gym Role Changed'),
+        ('gym_removed', 'Gym Membership Removed'),
+        ('gym_joined', 'Gym Membership Approved'),
+        ('staff_role_granted', 'Staff Role Granted'),
+        ('staff_role_revoked', 'Staff Role Revoked'),
         ('session_booked', 'Session Booked'),
         ('session_reminder', 'Session Reminder'),
         ('session_cancelled', 'Session Cancelled'),

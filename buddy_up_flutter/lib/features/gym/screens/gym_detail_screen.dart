@@ -26,6 +26,83 @@ class GymDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<GymDetailScreen> createState() => _GymDetailScreenState();
 }
 
+/// Roles the server treats as gym partner staff (`PARTNER_ROLES` in
+/// `backend/apps/gyms/views.py`). Mirrored rather than imported so the client
+/// can hide controls it knows would be refused.
+const _partnerRoles = {'owner', 'co_owner', 'moderator'};
+
+/// Roles nobody may edit in place -- ownership changes go through transfer,
+/// and the endpoint refuses them outright.
+const _unmanageableRoles = {'owner', 'co_owner'};
+
+/// The roles a member can be moved between.
+const _assignableRoles = ['member', 'trainer', 'moderator'];
+
+Future<String?> _pickRole(BuildContext context, String current) {
+  return showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: BuddyColors.surface,
+    builder: (sheetContext) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              'Change role',
+              style: TextStyle(
+                color: BuddyColors.textPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          for (final role in _assignableRoles)
+            ListTile(
+              key: Key('gym-role-$role'),
+              // The current role stays selectable but is marked, so the sheet
+              // does not silently discard the member's existing assignment.
+              trailing: role == current
+                  ? const Icon(Icons.check, size: 18, color: BuddyColors.green)
+                  : null,
+              title: Text(
+                role.replaceAll('_', ' '),
+                style: const TextStyle(color: BuddyColors.textPrimary),
+              ),
+              onTap: () => Navigator.of(sheetContext).pop(role),
+            ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<bool?> _confirmRemove(BuildContext context, String userId) {
+  return showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      backgroundColor: BuddyColors.surface,
+      title: const Text('Remove member', style: TextStyle(color: BuddyColors.textPrimary)),
+      content: const Text(
+        'They lose access to this gym immediately and are notified.',
+        style: TextStyle(color: BuddyColors.textSecondary),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: const Text('Cancel', style: TextStyle(color: BuddyColors.textSecondary)),
+        ),
+        TextButton(
+          key: const Key('gym-remove-confirm'),
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: const Text('Remove', style: TextStyle(color: BuddyColors.red)),
+        ),
+      ],
+    ),
+  );
+}
+
 class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
   int _tabIndex = 0;
   final _reviewController = TextEditingController();
@@ -79,6 +156,36 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
         await repo.save(postId, const SavePayload());
       }
       _updateGymPost(post.copyWith(isSaved: !post.isSaved));
+    } catch (_) {}
+  }
+
+  /// Pin or unpin a post on this gym's feed.
+  ///
+  /// The widget supported `onPin` all along but this tab never passed it, so
+  /// the moderation control existed on community feeds and was absent here.
+  Future<void> _handleGymPin(String postId) async {
+    final posts = _gymFeedPosts;
+    if (posts == null || !posts.any((p) => p.id == postId)) return;
+    try {
+      final raw = await ref.read(feedRepositoryProvider).pin(postId);
+      final updated = Post.fromJson(raw['data'] as Map<String, dynamic>);
+      _updateGymPost(updated);
+    } catch (_) {
+      // Leave the row as it was; a failed pin is not worth an error dialog.
+    }
+  }
+
+  /// Remove a post from this gym's feed.
+  ///
+  /// Gym owners, co-owners and moderators can do this to anybody's post; every
+  /// other user can only do it to their own, which the server decides.
+  Future<void> _handleGymDelete(String postId) async {
+    try {
+      await ref.read(feedRepositoryProvider).deletePost(postId);
+      final remaining =
+          (_gymFeedPosts ?? const <Post>[]).where((p) => p.id != postId).toList();
+      _gymFeedPosts = remaining;
+      if (mounted) setState(() {});
     } catch (_) {}
   }
 
@@ -279,6 +386,16 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
             onComment: (id) => context.push('/feed/$id'),
             onReact: _handleGymReact,
             onSave: _handleGymSave,
+            // Gated on the same partner roles the server accepts, so the
+            // control is offered exactly where it would succeed.
+            onPin: isGymAdminRole(gym.membershipRole)
+                ? (id) => _handleGymPin(id)
+                : null,
+            // Managers only, matching the community feed: a member removes
+            // their own post from the post detail screen instead.
+            onDelete: isGymAdminRole(gym.membershipRole)
+                ? (id) => _handleGymDelete(id)
+                : null,
           ),
         );
       },
@@ -361,13 +478,29 @@ class _GymDetailScreenState extends ConsumerState<GymDetailScreen> {
           itemCount: list.length,
           itemBuilder: (_, i) => MemberTile(
             membership: list[i],
-            isOwner: gym.membershipRole == 'owner',
+            // Partner staff, not "owner": the server lets co-owners and
+            // moderators manage members too, and gating the UI to owners
+            // hid actions that would have succeeded.
+            canManage: _partnerRoles.contains(gym.membershipRole) &&
+                !_unmanageableRoles.contains(list[i].role),
             onManage: (uid, action) async {
               final repo = ref.read(gymRepositoryProvider);
               if (action == 'remove') {
+                final ok = await _confirmRemove(context, uid);
+                if (ok != true) return;
                 await repo.removeMember(widget.slug, uid);
+                ref.invalidate(membersProvider(widget.slug));
+                return;
               }
-              ref.invalidate(membersProvider(widget.slug));
+              if (action == 'change_role') {
+                // This branch used to be missing: the menu offered "Change
+                // role" and the handler fell through it, so tapping it did
+                // nothing at all.
+                final role = await _pickRole(context, list[i].role);
+                if (role == null) return;
+                await repo.manageMember(widget.slug, uid, {'role': role});
+                ref.invalidate(membersProvider(widget.slug));
+              }
             },
           ),
         );

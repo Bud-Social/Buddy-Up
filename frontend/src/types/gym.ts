@@ -84,6 +84,21 @@ export interface GymMembership {
   created_at: string;
 }
 
+/**
+ * `GET /gyms/<handle>/partner-metrics/` — the operator's own numbers.
+ *
+ * Every field is declared with its own window rather than inheriting an
+ * ambient "current period", so the UI never has to guess what a delta is
+ * relative to. Mirrors `backend/apps/gyms/views.py:PartnerMetricsView`.
+ */
+export interface GymPartnerMetrics {
+  active_members: number;
+  check_ins_30d: number;
+  unique_attendees_30d: number;
+  activation_rate_30d: number;
+  scheduled_activities_30d: number;
+}
+
 export interface JoinRequest {
   id: string;
   gym_id: string;

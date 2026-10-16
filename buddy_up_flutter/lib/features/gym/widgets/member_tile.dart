@@ -5,13 +5,16 @@ import '../../../core/theme/app_theme.dart';
 
 class MemberTile extends StatelessWidget {
   final GymMembership membership;
-  final bool isOwner;
+  /// Whether to offer the member-management menu. Renamed from `isOwner`
+  /// because the server also lets co-owners and moderators manage members;
+  /// the old name made the caller look wrong rather than the flag.
+  final bool canManage;
   final void Function(String userId, String action)? onManage;
 
   const MemberTile({
     super.key,
     required this.membership,
-    this.isOwner = false,
+    this.canManage = false,
     this.onManage,
   });
 
@@ -55,7 +58,7 @@ class MemberTile extends StatelessWidget {
               style: TextStyle(color: _roleColor, fontSize: 11, fontWeight: FontWeight.w500),
             ),
           ),
-          if (isOwner && membership.role != 'owner')
+          if (canManage)
             PopupMenuButton<String>(
               color: BuddyColors.surface,
               icon: const Icon(Icons.more_horiz, color: BuddyColors.textSecondary, size: 18),

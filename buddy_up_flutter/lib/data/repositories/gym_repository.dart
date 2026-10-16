@@ -66,6 +66,12 @@ abstract class GymRepository {
     @Path('userId') String userId,
   );
 
+  /// Operator-facing analytics. Partner-only upstream (owner / co-owner /
+  /// moderator); every figure carries its own window because there is no
+  /// ambient "current period" to inherit. See `PartnerMetricsView`.
+  @GET('/gyms/{slug}/partner-metrics/')
+  Future<dynamic> getPartnerMetrics(@Path('slug') String slug);
+
   @GET('/gyms/check-handle/')
   Future<dynamic> checkHandle(@Query('candidate') String candidate);
 

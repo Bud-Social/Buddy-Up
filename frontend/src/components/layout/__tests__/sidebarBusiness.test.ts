@@ -52,6 +52,6 @@ describe('businessEntries', () => {
   it('shortens the two labels that would otherwise wrap in the switcher', () => {
     const entries = businessEntries({ ...NONE, hasShop: true, hasEvents: true, gymSlug: 'g', hasStation: true });
     expect(entries.map((e) => e.shortLabel)).toEqual(['Shop', 'Events', 'Gym', 'Stations']);
-    expect(entries.map((e) => e.label)).toEqual(['Creator Studio', 'My Events', 'My Gym', 'My Stations']);
+    expect(entries.map((e) => e.label)).toEqual(['Shop', 'My Events', 'My Gym', 'My Stations']);
   });
 });

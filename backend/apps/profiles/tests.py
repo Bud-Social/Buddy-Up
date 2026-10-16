@@ -728,7 +728,7 @@ class RoleEscalationTests(TestCase):
 
     def test_profile_patch_cannot_escalate_a_role(self):
         response = self.client.patch(
-            f'/api/v1/profiles/me/',
+            '/api/v1/profiles/me/',
             {'role': 'trainer', 'verification_status': 'trainer'},
             format='json',
         )
@@ -772,15 +772,58 @@ class IsVerifiedRoleTests(TestCase):
 
     def test_new_category_statuses_are_never_a_verified_role(self):
         """A verified gym owner is still role='user' — verification is not a role."""
-        for status in ('gym_owner', 'shop_owner', 'delivery_partner'):
-            with self.subTest(status=status):
-                self._assert_flag('user', status, False)
+        for category_status in ('gym_owner', 'shop_owner', 'delivery_partner'):
+            with self.subTest(status=category_status):
+                self._assert_flag('user', category_status, False)
 
     def test_role_with_no_verification_vocabulary_is_never_verified(self):
         self.profile.role = 'librarian'
         self.profile.verification_status = 'librarian'
         self.profile.save()
         self.assertFalse(self.profile.is_verified_role())
+
+
+class ProfileChoiceLengthTests(TestCase):
+    """Every choice value must fit its own column, and be a plain string.
+
+    A non-string value (an imported module, a lazy proxy) reaches a CharField
+    without complaint at assignment time and only explodes at the database
+    layer, far from the line that caused it. These checks make that loud and
+    local instead.
+    """
+
+    def _check(self, field_name):
+        field = Profile._meta.get_field(field_name)
+        self.assertIsInstance(field.max_length, int, f'{field_name} has no max_length')
+
+        for value, _label in field.choices:
+            with self.subTest(field=field_name, value=value):
+                self.assertIsInstance(value, str, f'{field_name} choice {value!r} is not a str')
+                self.assertLessEqual(
+                    len(value), field.max_length,
+                    f'{field_name} choice {value!r} exceeds max_length={field.max_length}',
+                )
+
+    def test_role_choices_fit(self):
+        self._check('role')
+
+    def test_verification_status_choices_fit(self):
+        self._check('verification_status')
+
+    def test_privacy_choices_fit(self):
+        self._check('privacy_level')
+
+    def test_every_verification_status_round_trips_through_the_database(self):
+        """Not just long enough — actually storable as written."""
+        for value, _label in Profile._meta.get_field('verification_status').choices:
+            with self.subTest(value=value):
+                user = User.objects.create_user(email=f'rt-{value}@example.com')
+                profile = Profile.objects.create(
+                    user=user, username=f'rt_{value}', display_name='RT',
+                    verification_status=value,
+                )
+                profile.refresh_from_db()
+                self.assertEqual(profile.verification_status, value)
 
 
 class SelfDeclaredRoleMigrationTests(TestCase):

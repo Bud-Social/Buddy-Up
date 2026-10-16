@@ -443,6 +443,8 @@ class Product(TimestampedModel):
         on_delete=models.SET_NULL, related_name='recommended_products')
     is_active = models.BooleanField(default=True)
     click_count = models.IntegerField(default=0)
+    average_rating = models.FloatField(default=0.0)
+    review_count = models.PositiveIntegerField(default=0)
     stock_quantity = models.PositiveIntegerField(default=0)
     stock_tracking_enabled = models.BooleanField(default=False)
     # Fulfillment: allowed modes subset of digital|pickup|delivery (+ details).
@@ -461,6 +463,19 @@ class Product(TimestampedModel):
             models.Index(fields=['shop']),
             models.Index(fields=['is_active']),
         ]
+
+
+class ProductReview(TimestampedModel):
+    """One review from a buyer for each purchased product line."""
+    purchase = models.OneToOneField('OrderItem', on_delete=models.CASCADE, related_name='product_review')
+    buyer = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='product_reviews')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews_list')
+    rating = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    body = models.TextField(blank=True, max_length=500)
+
+    class Meta:
+        db_table = 'marketplace_product_review'
+        unique_together = ('purchase', 'buyer')
 
 
 # ---------------------------------------------------------------------------
@@ -1307,4 +1322,3 @@ class PaymentIntent(TimestampedModel):
             self.raw_response = raw_response
         if commit:
             self.save(update_fields=['status', 'provider_reference', 'raw_response', 'updated_at'])
-

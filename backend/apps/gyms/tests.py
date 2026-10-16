@@ -661,3 +661,259 @@ class GymRosterPrivacyTests(TestCase):
         item = self._list_item('roster-public', self.outsider)
         self.assertEqual([o['username'] for o in item['owner_data']], ['rosterowner'])
         self.assertEqual(item['member_count'], 2)
+
+
+class GymAuthorityNotificationTests(TestCase):
+    """A change to someone's standing at a gym must reach them.
+
+    These paths wrote the row and announced nothing, so a demotion left the
+    member still showing a moderator badge while holding none of the powers.
+    """
+
+    def setUp(self):
+        from apps.notifications.models import Notification
+
+        self.Notification = Notification
+        self.client = APIClient()
+        self.owner_user = User.objects.create_user(email='owner@t.com', password='TestPass123!')
+        self.owner_user.dob_hash = hash_dob(date(2000, 6, 15))
+        self.owner_user.email_verified = True
+        self.owner_user.save()
+        self.owner_profile = Profile.objects.create(
+            user=self.owner_user, username='gymowner', display_name='Gym Owner',
+        )
+        self.gym = Gym.objects.create(
+            name='Notify Gym', handle='notifygym', category='fitness', access_type='private',
+        )
+        GymMembership.objects.create(gym=self.gym, member=self.owner_profile, role='owner')
+
+        self.member_user = User.objects.create_user(email='member@t.com', password='TestPass123!')
+        self.member_user.dob_hash = hash_dob(date(2000, 6, 15))
+        self.member_user.email_verified = True
+        self.member_user.save()
+        self.member_profile = Profile.objects.create(
+            user=self.member_user, username='gymmember', display_name='Gym Member',
+        )
+        self.membership = GymMembership.objects.create(
+            gym=self.gym, member=self.member_profile, role='member',
+        )
+
+    def _auth_as_owner(self):
+        refresh = RefreshToken.for_user(self.owner_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+
+    def _notes(self, notification_type):
+        return list(self.Notification.objects.filter(
+            recipient=self.member_profile, notification_type=notification_type,
+        ))
+
+    def test_promotion_notifies_with_the_previous_role(self):
+        self._auth_as_owner()
+        response = self.client.post(
+            f'/api/v1/gyms/notifygym/members/{self.member_profile.user_id}/',
+            {'role': 'moderator'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        notes = self._notes('gym_role_changed')
+        self.assertEqual(len(notes), 1, [n.title for n in notes])
+        self.assertEqual(notes[0].metadata['previous_role'], 'member')
+        self.assertEqual(notes[0].metadata['new_role'], 'moderator')
+        self.assertEqual(notes[0].metadata['gym_handle'], 'notifygym')
+        self.assertIn('moderator', notes[0].title.lower())
+
+    def test_demotion_notifies_too(self):
+        self.membership.role = 'moderator'
+        self.membership.save(update_fields=['role'])
+
+        self._auth_as_owner()
+        self.client.post(
+            f'/api/v1/gyms/notifygym/members/{self.member_profile.user_id}/',
+            {'role': 'member'}, format='json',
+        )
+
+        notes = self._notes('gym_role_changed')
+        self.assertEqual(len(notes), 1)
+        self.assertEqual(notes[0].metadata['previous_role'], 'moderator')
+        self.assertEqual(notes[0].metadata['new_role'], 'member')
+
+    def test_removal_notifies(self):
+        self._auth_as_owner()
+        response = self.client.delete(
+            f'/api/v1/gyms/notifygym/members/{self.member_profile.user_id}/',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        notes = self._notes('gym_removed')
+        self.assertEqual(len(notes), 1, [n.title for n in notes])
+        self.assertEqual(notes[0].metadata['gym_handle'], 'notifygym')
+
+    def test_an_owner_cannot_be_demoted(self):
+        """Regression: the removal path refused owners but the role-change path
+        did not, so a moderator could demote the owner -- who then could not
+        restore themselves."""
+        self._auth_as_owner()
+        response = self.client.post(
+            f'/api/v1/gyms/notifygym/members/{self.owner_profile.user_id}/',
+            {'role': 'member'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            GymMembership.objects.get(gym=self.gym, member=self.owner_profile).role, 'owner',
+        )
+        self.assertEqual(self._notes('gym_role_changed'), [])
+
+    def test_a_moderator_cannot_demote_the_owner(self):
+        mod_user = User.objects.create_user(email='mod@t.com', password='TestPass123!')
+        mod_user.dob_hash = hash_dob(date(2000, 6, 15))
+        mod_user.email_verified = True
+        mod_user.save()
+        mod_profile = Profile.objects.create(
+            user=mod_user, username='gymmod', display_name='Gym Mod',
+        )
+        GymMembership.objects.create(gym=self.gym, member=mod_profile, role='moderator')
+
+        refresh = RefreshToken.for_user(mod_user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+        response = self.client.post(
+            f'/api/v1/gyms/notifygym/members/{self.owner_profile.user_id}/',
+            {'role': 'member'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            GymMembership.objects.get(gym=self.gym, member=self.owner_profile).role, 'owner',
+        )
+
+    def test_approving_a_join_request_notifies_the_applicant(self):
+        JoinRequest.objects.create(
+            gym=self.gym, requester=self.member_profile, status='pending',
+        )
+        request_row = JoinRequest.objects.get()
+
+        self._auth_as_owner()
+        response = self.client.patch(
+            f'/api/v1/gyms/notifygym/join-requests/{request_row.id}/',
+            {'status': 'approved'}, format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        notes = self._notes('gym_joined')
+        self.assertEqual(len(notes), 1, [n.title for n in notes])
+        self.assertIn('Notify Gym', notes[0].title)
+
+    def test_rejecting_a_join_request_sends_no_membership_notice(self):
+        JoinRequest.objects.create(
+            gym=self.gym, requester=self.member_profile, status='pending',
+        )
+        request_row = JoinRequest.objects.get()
+
+        self._auth_as_owner()
+        self.client.patch(
+            f'/api/v1/gyms/notifygym/join-requests/{request_row.id}/',
+            {'status': 'rejected', 'reason': 'Full for now'}, format='json',
+        )
+
+        self.assertEqual(self._notes('gym_joined'), [])
+
+
+class GymSchedulePostModerationTests(TestCase):
+    """Who may delete a schedule post somebody else wrote.
+
+    PATCH has always let owner / co-owner / trainer / moderator edit anyone's
+    post. DELETE was narrower -- author, owner or co-owner only -- so a
+    moderator could rewrite a member's class listing and then had no way to take
+    it down. Trainer deliberately keeps edit-without-delete.
+    """
+
+    URL = '/api/v1/gyms/schedulegym/schedule-posts/'
+
+    def setUp(self):
+        self.client = APIClient()
+        self.gym = Gym.objects.create(
+            name='Moderated Schedule', handle='schedulegym',
+            category='fitness', access_type='public',
+        )
+
+        def make(username, role):
+            user = User.objects.create_user(
+                email=f'{username}@test.com', password='TestPass123!')
+            user.dob_hash = hash_dob(date(2000, 6, 15))
+            user.email_verified = True
+            user.save()
+            profile = Profile.objects.create(
+                user=user, username=username, display_name=username.title())
+            GymMembership.objects.create(gym=self.gym, member=profile, role=role)
+            return user
+
+        self.author_user = make('author', 'trainer')
+        self.author = Profile.objects.get(username='author')
+        make('schedowner', 'owner')
+        make('schedcoowner', 'co_owner')
+        make('schedmod', 'moderator')
+        make('schedtrainer', 'trainer')
+        make('schedplain', 'member')
+        self.plain = Profile.objects.get(username='schedplain')
+
+    def _auth(self, username):
+        # `username` lives on Profile; the User is keyed by email.
+        user = User.objects.get(email=f'{username}@test.com')
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+        return user
+
+    def _post(self, author=None):
+        return GymSchedulePost.objects.create(
+            gym=self.gym, author=author or self.plain, title='Someone elses class',
+            activity_type='yoga', location_mode='in_house',
+        )
+
+    def _delete(self, post):
+        return self.client.delete(f'{self.URL}{post.id}/')
+
+    def test_moderator_can_delete_someone_elses_post(self):
+        self._auth('schedmod')
+        post = self._post()
+        self.assertEqual(self._delete(post).status_code, status.HTTP_200_OK)
+        self.assertFalse(GymSchedulePost.objects.filter(id=post.id).exists())
+
+    def test_owner_and_co_owner_can_delete_someone_elses_post(self):
+        for username in ('schedowner', 'schedcoowner'):
+            with self.subTest(username=username):
+                post = self._post()
+                self._auth(username)
+                self.assertEqual(self._delete(post).status_code, status.HTTP_200_OK)
+
+    def test_a_plain_member_cannot_delete_someone_elses_post(self):
+        self._auth('schedplain')
+        post = self._post(author=self.author)
+        # 404, not 403: the caller holds no partner-staff membership at all, so
+        # the lookup never resolves. Answering 403 would confirm that the post
+        # exists to someone with no business knowing either way.
+        self.assertEqual(self._delete(post).status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(GymSchedulePost.objects.filter(id=post.id).exists())
+
+    def test_an_author_can_delete_their_own_post(self):
+        self._auth('author')
+        post = self._post(author=self.author)
+        self.assertEqual(self._delete(post).status_code, status.HTTP_200_OK)
+
+    def test_a_trainer_edits_but_does_not_delete(self):
+        """The one asymmetry that is deliberate rather than a drift."""
+        post = self._post()
+        self._auth('schedtrainer')
+
+        patched = self.client.patch(
+            f'{self.URL}{post.id}/', {'title': 'Rewritten'}, format='json')
+        self.assertEqual(patched.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self._delete(post).status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_gym_authority_does_not_reach_another_gyms_post(self):
+        other = Gym.objects.create(
+            name='Other', handle='othergym', category='fitness', access_type='public')
+        GymSchedulePost.objects.create(
+            gym=other, author=self.plain, title='Elsewhere',
+            activity_type='yoga', location_mode='in_house')
+        self._auth('schedowner')
+        response = self.client.delete(f'{self.URL}{GymSchedulePost.objects.get(gym=other).id}/')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

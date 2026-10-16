@@ -32,7 +32,9 @@ class GymManageScreen extends ConsumerWidget {
 
   const GymManageScreen({super.key, required this.slug});
 
-  static const _tabs = ['Members', 'Requests', 'Schedule', 'Reviews'];
+  /// Overview leads: it is the operator's own numbers, and it is the answer to
+  /// "how is my gym doing" that a management surface should open on.
+  static const tabs = ['Overview', 'Members', 'Requests', 'Schedule', 'Reviews'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -53,7 +55,7 @@ class GymManageScreen extends ConsumerWidget {
       data: (gym) => _ManageBody(
         slug: slug,
         gym: gym,
-        tabs: _tabs,
+        tabs: tabs,
       ),
     );
   }
@@ -138,14 +140,74 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
             ),
             const SizedBox(height: 16),
             switch (_tabIndex) {
-              0 => _membersTab(),
-              1 => _requestsTab(),
-              2 => _scheduleTab(),
+              0 => _overviewTab(),
+              1 => _membersTab(),
+              2 => _requestsTab(),
+              3 => _scheduleTab(),
               _ => _reviewsTab(),
             },
           ],
         ),
       ),
+    );
+  }
+
+  Widget _overviewTab() {
+    if (!isAdmin) {
+      return const Column(
+        children: [
+          RoleSectionTitle('Overview'),
+          _PanelEmpty('Gym analytics are available to owners, co-owners and moderators.'),
+        ],
+      );
+    }
+
+    final metricsAsync = ref.watch(gymPartnerMetricsProvider(widget.slug));
+    return Column(
+      children: [
+        const RoleSectionTitle('Overview'),
+        metricsAsync.when(
+          loading: () => const PageLoader(fullScreen: false),
+          error: (error, _) => RoleNotice(
+            message: gymManageErrorMessage(
+              error,
+              fallback: 'Could not load gym analytics.',
+            ),
+            isError: true,
+          ),
+          data: (metrics) => Column(
+            children: [
+              // Each tile names its window. Active members is a gauge and
+              // check-ins is a delta; putting them under one bare "Overview"
+              // heading is how a dashboard starts lying to whoever reads it.
+              Row(
+                children: [
+                  Expanded(child: _MetricTile(label: 'Active members', value: '${metrics.activeMembers}')),
+                  const SizedBox(width: 10),
+                  Expanded(child: _MetricTile(label: 'Check-ins (30d)', value: '${metrics.checkIns30d}')),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                      child: _MetricTile(
+                          label: 'Attendees (30d)', value: '${metrics.uniqueAttendees30d}')),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: _MetricTile(
+                          label: 'Activities (30d)', value: '${metrics.scheduledActivities30d}')),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _MetricTile(
+                label: 'Activation rate (30d)',
+                value: '${(metrics.activationRate30d * 100).round()}%',
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -178,7 +240,14 @@ class _ManageBodyState extends ConsumerState<_ManageBody> {
               : Column(
                   children: [
                     for (final membership in members)
-                      _MemberCard(membership: membership, isOwner: isAdmin),
+                      _MemberCard(
+                        membership: membership,
+                        slug: widget.slug,
+                        // Owner/co-owner rows are out of reach: the endpoint
+                        // refuses them and ownership moves by transfer.
+                        canManage: isAdmin &&
+                            !const {'owner', 'co_owner'}.contains(membership.role),
+                      ),
                   ],
                 ),
         ),
@@ -404,11 +473,105 @@ class _PanelEmpty extends StatelessWidget {
   }
 }
 
-class _MemberCard extends StatelessWidget {
+class _MemberCard extends ConsumerWidget {
   final GymMembership membership;
-  final bool isOwner;
+  final String slug;
 
-  const _MemberCard({required this.membership, required this.isOwner});
+  /// Whether the viewer may act on this member at all.
+  final bool canManage;
+
+  const _MemberCard(
+      {required this.membership, required this.slug, required this.canManage});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _MemberCardBody(
+      membership: membership,
+      canManage: canManage,
+      onRemove: canManage ? () => _remove(context, ref) : null,
+      onChangeRole: canManage ? () => _changeRole(context, ref) : null,
+    );
+  }
+
+  Future<void> _remove(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: BuddyColors.surface,
+        title: const Text('Remove member',
+            style: TextStyle(color: BuddyColors.textPrimary)),
+        content: const Text(
+          'They lose access to this gym immediately and are notified.',
+          style: TextStyle(color: BuddyColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel',
+                style: TextStyle(color: BuddyColors.textSecondary)),
+          ),
+          TextButton(
+            key: const Key('manage-remove-confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Remove', style: TextStyle(color: BuddyColors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    await ref.read(gymRepositoryProvider).removeMember(slug, membership.memberId);
+    ref.invalidate(gymManageMembersProvider(slug));
+  }
+
+  Future<void> _changeRole(BuildContext context, WidgetRef ref) async {
+    final role = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: BuddyColors.surface,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text('Change role',
+                  style: TextStyle(
+                      color: BuddyColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15)),
+            ),
+            for (final option in const ['member', 'trainer', 'moderator'])
+              ListTile(
+                key: Key('manage-role-$option'),
+                title: Text(option.replaceAll('_', ' '),
+                    style: const TextStyle(color: BuddyColors.textPrimary)),
+                onTap: () => Navigator.of(sheetContext).pop(option),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (role == null || !context.mounted) return;
+
+    await ref
+        .read(gymRepositoryProvider)
+        .manageMember(slug, membership.memberId, {'role': role});
+    ref.invalidate(gymManageMembersProvider(slug));
+  }
+}
+
+class _MemberCardBody extends StatelessWidget {
+  final GymMembership membership;
+  final bool canManage;
+  final VoidCallback? onRemove;
+  final VoidCallback? onChangeRole;
+
+  const _MemberCardBody(
+      {required this.membership,
+      required this.canManage,
+      this.onRemove,
+      this.onChangeRole});
 
   @override
   Widget build(BuildContext context) {
@@ -447,6 +610,56 @@ class _MemberCard extends StatelessWidget {
           BuddyBadge(
             label: membership.role.replaceAll('_', ' '),
             color: _roleColor(membership.role),
+          ),
+          if (canManage)
+            PopupMenuButton<String>(
+              key: Key('manage-member-menu-${membership.memberId}'),
+              color: BuddyColors.surface,
+              icon: const Icon(Icons.more_horiz,
+                  color: BuddyColors.textSecondary, size: 18),
+              onSelected: (action) {
+                if (action == 'remove') onRemove?.call();
+                if (action == 'change_role') onChangeRole?.call();
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                    value: 'change_role',
+                    child: Text('Change role',
+                        style: TextStyle(color: BuddyColors.textPrimary))),
+                PopupMenuItem(
+                    value: 'remove',
+                    child:
+                        Text('Remove', style: TextStyle(color: BuddyColors.red))),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One figure with the window it covers spelled out on the tile itself.
+class _MetricTile extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _MetricTile({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return RoleCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 11, color: BuddyColors.textSecondary)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+                fontSize: 22, fontWeight: FontWeight.w800),
           ),
         ],
       ),

@@ -359,7 +359,8 @@ export default function GymDetail() {
               <div className="space-y-3">
                 {feedPosts.map((post) => (
                   <GymDiscoursePost key={post.id} post={post} isAdmin={isAdmin} gymName={gym.name}
-                    onPin={(id, pinned) => setFeedPosts(prev => prev.map(p => p.id === id ? { ...p, is_pinned: pinned } : p).sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)))} />
+                    onPin={(id, pinned) => setFeedPosts(prev => prev.map(p => p.id === id ? { ...p, is_pinned: pinned } : p).sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0)))}
+                    onDelete={(id) => setFeedPosts(prev => prev.filter(p => p.id !== id))} />
                 ))}
               </div>
             )}

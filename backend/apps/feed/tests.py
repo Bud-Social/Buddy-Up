@@ -192,3 +192,112 @@ class RankedPaginationTests(TestCase):
     def test_stale_cursor_is_terminal_error(self):
         with self.assertRaisesMessage(ValueError, 'Invalid or expired feed cursor.'):
             paginate_ranked([{'post_id': 'current'}], 'stale', 20)
+
+
+class GymFeedModerationTests(TestCase):
+    """Pinning and deleting a gym-feed post are the same authority question.
+
+    They shipped as two different answers -- pin accepted owner/co_owner/
+    moderator, delete accepted the author only -- so a gym moderator could pin
+    a member's post and then had no way to remove it. This pins one matrix
+    against both verbs.
+    """
+
+    URL_DELETE = '/api/v1/feed/{post_id}/'
+    URL_PIN = '/api/v1/feed/{post_id}/pin/'
+
+    def setUp(self):
+        from apps.gyms.models import Gym, GymMembership
+        self.GymMembership = GymMembership
+        self.gym = Gym.objects.create(name='Moderated Gym', handle='moderatedgym', category='fitness')
+        self.author = _make_user('feedauthor')
+        self.owner = _make_user('gymowner')
+        self.co_owner = _make_user('gymcoowner')
+        self.moderator = _make_user('gymmod')
+        self.ordinary_member = _make_user('gymplain')
+        self.bystander = _make_user('nobody')
+
+        # `_make_user` hands back the User; memberships hang off the Profile.
+        for user, role in (
+            (self.owner, 'owner'),
+            (self.co_owner, 'co_owner'),
+            (self.moderator, 'moderator'),
+            (self.ordinary_member, 'member'),
+        ):
+            GymMembership.objects.create(
+                gym=self.gym, member=user.profile, role=role, subscription_active=True,
+            )
+
+        self.gym_post = Post.objects.create(
+            author=self.author.profile, post_type='text', body='Gym feed post', gym_tag=self.gym,
+        )
+        self.public_post = Post.objects.create(
+            author=self.author.profile, post_type='text', body='No gym here')
+
+    def _delete(self, post, actor):
+        return _client_for(actor).delete(self.URL_DELETE.format(post_id=post.id))
+
+    def _pin(self, post, actor):
+        return _client_for(actor).post(self.URL_PIN.format(post_id=post.id))
+
+    def test_moderator_can_delete_a_members_gym_post(self):
+        res = self._delete(self.gym_post, self.moderator)
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        self.gym_post.refresh_from_db()
+        self.assertTrue(self.gym_post.is_deleted)
+
+    def test_owner_and_co_owner_can_delete_a_members_gym_post(self):
+        for actor in (self.owner, self.co_owner):
+            with self.subTest(actor=actor.email):
+                post = Post.objects.create(
+            author=self.author.profile, post_type='text', body=f'for {actor.email}', gym_tag=self.gym,
+                )
+                res = self._delete(post, actor)
+                self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+
+    def test_ordinary_member_cannot_delete_someone_elses_gym_post(self):
+        res = self._delete(self.gym_post, self.ordinary_member)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+        self.gym_post.refresh_from_db()
+        self.assertFalse(self.gym_post.is_deleted)
+
+    def test_a_non_member_cannot_delete_a_gym_post(self):
+        res = self._delete(self.gym_post, self.bystander)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+
+    def test_gym_authority_does_not_leak_to_the_whole_platform(self):
+        """A gym moderator has power over their gym's feed only."""
+        res = self._delete(self.public_post, self.moderator)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+
+        res = self._delete(self.public_post, self.owner)
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+
+    def test_author_can_always_delete_their_own_post(self):
+        res = self._delete(self.gym_post, self.author)
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+
+    def test_pin_and_delete_agree_on_who_may_act(self):
+        """The regression this class exists for: the two verbs must not drift."""
+        for actor in (self.owner, self.co_owner, self.moderator, self.author):
+            with self.subTest(actor=actor.email):
+                post = Post.objects.create(
+            author=self.author.profile, post_type='text', body=f'agreement {actor.email}', gym_tag=self.gym,
+                )
+                pin = self._pin(post, actor)
+                delete = self._delete(post, actor)
+                self.assertEqual(
+                    pin.status_code, delete.status_code,
+                    f'pin and delete disagree for {actor.email}',
+                )
+                self.assertEqual(pin.status_code, status.HTTP_200_OK)
+
+        for actor in (self.ordinary_member, self.bystander):
+            with self.subTest(actor=actor.email):
+                post = Post.objects.create(
+            author=self.author.profile, post_type='text', body=f'refusal {actor.email}', gym_tag=self.gym,
+                )
+                pin = self._pin(post, actor)
+                delete = self._delete(post, actor)
+                self.assertEqual(pin.status_code, status.HTTP_403_FORBIDDEN)
+                self.assertEqual(delete.status_code, status.HTTP_403_FORBIDDEN)

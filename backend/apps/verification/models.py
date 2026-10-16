@@ -90,6 +90,7 @@ class VerificationSubmission(TimestampedModel):
         ('id', 'ID Verification'),
         ('trainer', 'Trainer Certification'),
         ('practitioner', 'Health Practitioner'),
+        ('distributor', 'Product Distributor'),
         ('shop', 'Shop / Seller Verification'),
         ('gym', 'Gym Verification'),
         ('gym_owner', 'Gym Owner'),

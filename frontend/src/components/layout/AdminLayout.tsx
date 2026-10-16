@@ -28,7 +28,11 @@ interface NavItem {
 
 /** Domains first, then the pre-existing operational tools. */
 const PRIMARY_NAV: NavItem[] = [
-  { to: '/admin', label: 'Models', icon: BrainCircuit, end: true },
+  // Overview leads: it is the platform-health probe and the page a staff user
+  // should land on. It was reachable only by a Sidebar deep link, so the
+  // console's front door used to open the model registry instead.
+  { to: '/admin', label: 'Overview', icon: LayoutDashboard, end: true },
+  { to: '/admin/models', label: 'Models', icon: BrainCircuit },
   { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/admin/users', label: 'Users', icon: Users },
   { to: '/admin/shops', label: 'Shops', icon: Building2 },

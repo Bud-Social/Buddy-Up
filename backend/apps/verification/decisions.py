@@ -59,7 +59,7 @@ DECISION_ACTION = 'verification_decision'
 # at the wrong endpoint would strand a business verification in a queue meant
 # for personal certifications.
 CATEGORY_APPLICATION_TYPES = (
-    'trainer', 'practitioner', 'gym_owner', 'shop_owner', 'delivery_partner',
+    'trainer', 'practitioner', 'distributor', 'gym_owner', 'shop_owner', 'delivery_partner',
 )
 
 CATEGORY_APPLICATION_PATH = '/api/v1/verification/category-applications/'
@@ -80,6 +80,7 @@ REQUIRED_FIELDS_BY_TYPE = {
         'credential_title', 'credential_issuer', 'credential_id',
         'issued_date', 'scope_of_practice',
     ),
+    'distributor': ('credential_title', 'credential_issuer', 'credential_id'),
     'gym_owner': ('credential_title', 'credential_issuer', 'credential_id'),
     'shop_owner': ('credential_title', 'credential_issuer', 'credential_id'),
     'delivery_partner': ('credential_title', 'credential_issuer', 'credential_id'),
@@ -100,6 +101,7 @@ VERIFICATION_STATUS_BY_TYPE = {
     'id': 'id',
     'trainer': 'trainer',
     'practitioner': 'practitioner',
+    'distributor': 'distributor',
     'shop': 'shop',
     'gym': 'gym',
     'gym_owner': 'gym_owner',
@@ -114,6 +116,7 @@ VERIFICATION_STATUS_BY_TYPE = {
 ROLE_ON_APPROVAL = {
     'trainer': 'trainer',
     'practitioner': 'practitioner',
+    'distributor': 'distributor',
 }
 
 # Submission states a decision may be requested from. `draft` is excluded: a

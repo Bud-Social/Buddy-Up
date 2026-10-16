@@ -307,7 +307,6 @@ class BuddySearchProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'custom_intent': 'Describe what you are looking for.'})
         dob = attrs.pop('dob', None)
         if dob is not None:
-            from datetime import date as _date
             from common.utils import age_band_label, calculate_age, hash_dob
             age = calculate_age(dob)
             if age < 16:

@@ -19,7 +19,7 @@ from .models import (
     VerificationDocument, VerificationDocumentAccess, VerificationSubmission,
 )
 from .decisions import (
-    CATEGORY_APPLICATION_PATH, CATEGORY_APPLICATION_TYPES, DecisionError,
+    CATEGORY_APPLICATION_TYPES, DecisionError,
     apply_decision, raise_decision_request,
 )
 from .serializers import (

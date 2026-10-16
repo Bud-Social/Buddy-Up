@@ -4,7 +4,7 @@ from django.utils import timezone
 
 from apps.gyms.models import Gym
 from .decisions import (
-    CATEGORY_APPLICATION_PATH, CATEGORY_APPLICATION_TYPES,
+    CATEGORY_APPLICATION_TYPES,
     REQUIRES_DOCUMENT_TYPES, REQUIRES_GYM_TYPES, REQUIRED_FIELDS_BY_TYPE,
 )
 from .models import VerificationDocument, VerificationSubmission

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  Share2, Pin, MoreHorizontal, Dumbbell,
+  Share2, Pin, MoreHorizontal, Trash2, Dumbbell,
   MapPin, Smile, CornerDownRight, ArrowUp, CornerUpRight
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
@@ -17,6 +17,7 @@ interface GymDiscoursePostProps {
   isAdmin?: boolean;
   gymName?: string;
   onPin?: (postId: string, pinned: boolean) => void;
+  onDelete?: (postId: string) => void;
 }
 
 function MediaGallery({ urls }: { urls: string[] }) {
@@ -80,7 +81,7 @@ function ReplyCard({ reply, onReact }: { reply: Comment; onReact: (id: string) =
   );
 }
 
-export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin }: GymDiscoursePostProps) {
+export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin, onDelete }: GymDiscoursePostProps) {
   const [post, setPost] = useState<Post>(initialPost);
   const [replies, setReplies] = useState<Comment[]>([]);
   const [showReplies, setShowReplies] = useState(false);
@@ -169,6 +170,20 @@ export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin }:
     } catch {}
   };
 
+  const handleDelete = async () => {
+    // A gym post is removable by its author and by that gym's owner /
+    // co-owner / moderator. Confirm first: it is not undoable from the feed.
+    if (!window.confirm('Remove this post from the gym feed?')) return;
+    try {
+      await feedApi.deletePost(post.id);
+      setActionLoading(true);
+      setPost((prev) => ({ ...prev, is_deleted: true, body: '' }));
+      onDelete?.(post.id);
+    } catch {
+      setActionLoading(false);
+    }
+  };
+
   const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const emoji = '💪';
     if (userReaction !== emoji) {
@@ -222,9 +237,16 @@ export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin }:
                 <Pin size={14} />
               </button>
             )}
-            <button className="p-1 rounded-full text-buddy-text-secondary hover:bg-buddy-surface-raised transition-colors">
-              <MoreHorizontal size={16} />
-            </button>
+            {/* This control rendered for every reader but had no handler, so
+                a gym moderator could pin a post and never remove one. */}
+            {isAdmin && (
+              <button onClick={handleDelete}
+                aria-label="Remove post"
+                title="Remove post"
+                className="p-1.5 rounded-full text-buddy-text-secondary hover:text-buddy-red hover:bg-buddy-surface-raised transition-colors">
+                <Trash2 size={14} />
+              </button>
+            )}
           </div>
         </div>
 

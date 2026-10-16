@@ -26,7 +26,7 @@ from .models import (
     MealPlan, MealPlanPurchase, MealPlanReview,
     TrainingProgramme, TrainingProgrammePurchase, TrainingProgrammeReview,
     ProgrammeActivityProgress,
-    Product, MarketplaceEvent, EventMedia, EventTicket,
+    Product, ProductReview, MarketplaceEvent, EventMedia, EventTicket,
     Cart, CartItem, DiscountCode, DiscountUsage,
     Order, OrderItem, OrderFulfillment, InventoryReservation,
     CreatorPayoutSetup,
@@ -43,7 +43,7 @@ from .serializers import (
     MealPlanSerializer, MealPlanFullSerializer, MealPlanReviewSerializer,
     TrainingProgrammeSerializer, TrainingProgrammeReviewSerializer,
     UpdateTrainingProgrammeSerializer, UpdateMealPlanSerializer,
-    ProductSerializer, UpdateProductSerializer, CreateProductSerializer,
+    ProductSerializer, ProductReviewSerializer, UpdateProductSerializer, CreateProductSerializer,
     MarketplaceEventSerializer, EventMediaSerializer,
     EventTicketSerializer, CreateMealPlanSerializer, CreateTrainingProgrammeSerializer,
     CreateEventSerializer, ReviewInputSerializer,
@@ -130,6 +130,43 @@ def _resolve_creator_shop(profile, shop_id=None):
     if not payout_ready:
         return None, 'Complete payout setup and accept the creator terms before publishing.'
     return membership_shop, None
+
+
+def _is_gym_operator(profile):
+    """Gym owners/co-owners may publish their gym's meal plans."""
+    from apps.gyms.models import GymMembership
+    return GymMembership.objects.filter(member=profile, role__in=('owner', 'co_owner')).exists()
+
+
+def _can_create_meal_plan(profile):
+    """Professional meal-plan authority is independent of Shop ownership."""
+    return (
+        (profile.is_verified_role() and profile.role in ('trainer', 'practitioner'))
+        or _is_gym_operator(profile)
+    )
+
+
+def _resolve_optional_owned_shop(profile, shop_id):
+    """Meal-plan authors may attach, but do not need, a Shop."""
+    if not shop_id:
+        return None, None
+    try:
+        shop = Shop.objects.get(id=shop_id)
+    except Shop.DoesNotExist:
+        return None, 'The shop no longer exists.'
+    if not ShopMembership.objects.filter(shop=shop, profile=profile, role__in=('owner', 'manager')).exists():
+        return None, 'You do not have permission to publish under this shop.'
+    return shop, None
+
+
+def _resolve_commerce_publisher(profile, shop_id=None):
+    """Products/events require an approved Shop or a verified distributor."""
+    shop, error = _resolve_creator_shop(profile, shop_id)
+    if shop:
+        return shop, None
+    if profile.role == 'distributor' and profile.is_verified_role() and not shop_id:
+        return None, None
+    return None, error or 'Only verified distributors and approved shops can publish products or events.'
 
 
 def _order_seller_profiles(order):
@@ -1307,7 +1344,12 @@ class MealPlanListView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         shop_id = data.pop('shop_id', None)
-        shop, error = _resolve_creator_shop(request.user.profile, shop_id)
+        if not _can_create_meal_plan(request.user.profile):
+            return _api_error(
+                'Only verified trainers, practitioners, and gym owners can create meal plans.',
+                status.HTTP_403_FORBIDDEN,
+            )
+        shop, error = _resolve_optional_owned_shop(request.user.profile, shop_id)
         if error:
             return Response({
                 'success': False, 'data': None, 'message': error,
@@ -1773,7 +1815,7 @@ class ProductListView(views.APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         shop_id = data.pop('shop_id', None)
-        shop, error = _resolve_creator_shop(request.user.profile, shop_id)
+        shop, error = _resolve_commerce_publisher(request.user.profile, shop_id)
         if error:
             return Response({
                 'success': False, 'data': None, 'message': error,
@@ -1864,6 +1906,35 @@ class ProductClickView(views.APIView):
             'message': 'Click tracked.',
             'errors': None, 'pagination': None,
         })
+
+
+class ProductReviewView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, product_id):
+        get_object_or_404(Product, id=product_id)
+        reviews = ProductReview.objects.filter(product_id=product_id).select_related('buyer').order_by('-created_at')
+        return Response(_api_ok(ProductReviewSerializer(reviews, many=True).data))
+
+    def post(self, request, product_id):
+        purchase = get_object_or_404(
+            OrderItem.objects.select_related('product'),
+            product_id=product_id, item_type='product', order__buyer=request.user.profile,
+        )
+        if ProductReview.objects.filter(purchase=purchase).exists():
+            return _api_error('You already reviewed this product.', status.HTTP_400_BAD_REQUEST)
+        serializer = ReviewInputSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        review = ProductReview.objects.create(
+            purchase=purchase, buyer=request.user.profile, product=purchase.product,
+            rating=serializer.validated_data['rating'], body=serializer.validated_data.get('body', '')[:500],
+        )
+        product = purchase.product
+        average = ProductReview.objects.filter(product=product).aggregate(avg=db_models.Avg('rating'))['avg'] or 0
+        product.average_rating = round(average, 1)
+        product.review_count = ProductReview.objects.filter(product=product).count()
+        product.save(update_fields=['average_rating', 'review_count'])
+        return Response(_api_ok(ProductReviewSerializer(review).data, 'Review submitted!'), status=status.HTTP_201_CREATED)
 
 
 class EventListView(views.APIView):
@@ -2007,13 +2078,17 @@ class EventListView(views.APIView):
         gym_id = data.pop('gym_id', None)
         if gym_id:
             try:
-                from apps.gyms.models import Gym
+                from apps.gyms.models import Gym, GymMembership
                 gym = Gym.objects.get(id=gym_id)
-            except Exception:  # noqa: BLE001
-                pass
+            except Gym.DoesNotExist:
+                return _api_error('Gym not found.', status.HTTP_404_NOT_FOUND)
+            if not GymMembership.objects.filter(
+                gym=gym, member=request.user.profile, role__in=('owner', 'co_owner'),
+            ).exists():
+                return _api_error('Only a gym owner can attach an event to that gym.', status.HTTP_403_FORBIDDEN)
         
         shop_id = data.pop('shop_id', None)
-        shop, error = _resolve_creator_shop(request.user.profile, shop_id)
+        shop, error = _resolve_commerce_publisher(request.user.profile, shop_id)
         if error:
             return Response({'success': False, 'data': None, 'message': error,
                              'errors': None, 'pagination': None}, status=403)
@@ -2623,6 +2698,7 @@ class CreatorAnalyticsView(views.APIView):
         meal_plans = MealPlan.objects.filter(creator=profile)
         programmes = TrainingProgramme.objects.filter(creator=profile)
         events = MarketplaceEvent.objects.filter(creator=profile)
+        products = Product.objects.filter(recommended_by=profile)
 
         total_sales = 0
         total_revenue = 0.0
@@ -2656,6 +2732,27 @@ class CreatorAnalyticsView(views.APIView):
                 category_sales['event'] += cnt
                 category_revenue['event'] += rev
 
+        product_performance = []
+        for product in products:
+            lines = OrderItem.objects.filter(product=product, item_type='product')
+            units = sum(line.quantity for line in lines)
+            revenue = sum(
+                sum(ARTIFACT_VALUES.get(kind, 0) * amount for kind, amount in (line.paid_artifacts or {}).items())
+                for line in lines
+            )
+            total_sales += units
+            total_revenue += revenue
+            category_sales['product'] += units
+            category_revenue['product'] += revenue
+            product_performance.append({
+                'id': str(product.id), 'title': product.name, 'clicks': product.click_count,
+                'units_sold': units, 'revenue_usd': round(revenue, 2),
+                'conversion_rate': round((units / product.click_count * 100) if product.click_count else 0, 1),
+                'average_rating': product.average_rating, 'review_count': product.review_count,
+                'stock_quantity': product.stock_quantity,
+                'stock_tracking_enabled': product.stock_tracking_enabled,
+            })
+
         from apps.wallet.models import ArtifactTransaction
         revenue_txs = ArtifactTransaction.objects.filter(
             user=profile,
@@ -2680,7 +2777,10 @@ class CreatorAnalyticsView(views.APIView):
             + [{'id': str(p.id), 'title': p.title, 'type': 'programme', 'sales': p.purchase_count}
                for p in programmes if p.purchase_count > 0]
             + [{'id': str(e.id), 'title': e.title, 'type': 'event', 'sales': e.attendee_count}
-               for e in events if e.attendee_count > 0],
+               for e in events if e.attendee_count > 0]
+            + [{'id': str(p.id), 'title': p.name, 'type': 'product', 'sales': next(
+                (row['units_sold'] for row in product_performance if row['id'] == str(p.id)), 0,
+            )} for p in products],
             key=lambda x: x['sales'], reverse=True
         )[:10]
 
@@ -2692,10 +2792,9 @@ class CreatorAnalyticsView(views.APIView):
                 'category_sales': dict(category_sales),
                 'category_revenue': {k: round(v, 2) for k, v in category_revenue.items()},
                 'revenue_over_time': revenue_over_time,
-                'total_views': sum(mp.purchase_count for mp in meal_plans)
-                             + sum(p.purchase_count for p in programmes)
-                             + sum(e.attendee_count for e in events),
+                'total_views': sum(product.click_count for product in products),
                 'top_services': top_services,
+                'product_performance': sorted(product_performance, key=lambda row: (row['revenue_usd'], row['clicks']), reverse=True),
             },
             'message': 'Creator analytics fetched.',
         })

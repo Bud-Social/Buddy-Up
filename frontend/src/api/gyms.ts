@@ -3,6 +3,7 @@ import type {
   ApiResponse, Gym, GymMembership, GymCategory,
   JoinRequest, GymInvite, CityResult, GymCategoryPricing,
   GymSchedulePost, GymReview, GymDonation, GymMembershipException, MembershipCheckoutResult,
+  GymPartnerMetrics,
 } from '@/types';
 
 export interface CreateGymPayload {
@@ -78,6 +79,13 @@ export const gymsApi = {
 
   removeMember: (slug: string, userId: string) =>
     apiClient.delete(`/gyms/${slug}/members/${userId}/`).then((r) => r.data),
+
+  // Partner-facing analytics. Partner-only on the server (owner/co-owner/
+  // moderator); the UI hides the tab rather than relying on a 403.
+  getPartnerMetrics: (slug: string) =>
+    apiClient
+      .get<ApiResponse<GymPartnerMetrics>>(`/gyms/${slug}/partner-metrics/`)
+      .then((r) => r.data),
 
   checkHandle: (candidate: string) =>
     apiClient.get<ApiResponse<{ available: boolean; suggested: string | null }>>('/gyms/check-handle/', {

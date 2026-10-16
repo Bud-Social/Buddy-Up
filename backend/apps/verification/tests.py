@@ -704,7 +704,7 @@ class MyApplicationsTests(TestCase):
         self.assertEqual(other_client.get(self.url).data['count'], 0)
 
     def test_staff_get_their_own_applications_here_not_the_queue(self):
-        staff = _make_staff('staffer@test.com')
+        _make_staff('staffer@test.com')
         staff_client = APIClient()
         refresh = RefreshToken.for_user(User.objects.get(email='staffer@test.com'))
         staff_client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')

@@ -37,6 +37,7 @@ urlpatterns = [
     path('products/', views.ProductListView.as_view(), name='products'),
     path('products/<uuid:product_id>/', views.ProductDetailView.as_view(), name='product_detail'),
     path('products/<uuid:product_id>/click/', views.ProductClickView.as_view(), name='product_click'),
+    path('products/<uuid:product_id>/reviews/', views.ProductReviewView.as_view(), name='product_reviews'),
 
     # --- Events ---
     path('events/', views.EventListView.as_view(), name='events'),

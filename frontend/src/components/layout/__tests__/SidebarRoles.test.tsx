@@ -98,21 +98,21 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
     expect(screen.getByText('Main')).toBeInTheDocument();
   });
 
-  it('shows Creator Studio when the user owns a shop', async () => {
+  it('shows Shop when the user owns a shop', async () => {
     defaultProbes({ getMyShops: envelope([{ id: 's1', handle: 'fitgear' }]) });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Creator Studio' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Shop' })).toBeInTheDocument());
     expect(hrefs().filter((h) => h && isBusinessHref(h))).toEqual(['/marketplace/creator']);
   });
 
-  it('shows Creator Studio when the user has sold but owns no shop', async () => {
+  it('shows Shop when the user has sold but owns no shop', async () => {
     defaultProbes({
       getMyServices: envelope({ meal_plans: [], programmes: [{ id: 'p1' }], events: [], products: [] }),
     });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Creator Studio' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Shop' })).toBeInTheDocument());
   });
 
   it('shows My Events when the user has created events', async () => {
@@ -205,7 +205,7 @@ describe('Sidebar — business entries are gated on real ownership data', () => 
       '/marketplace/events',
       '/marketplace/stations',
     ]);
-    for (const label of ['Creator Studio', 'My Events', 'My Gym', 'My Stations', 'Courier']) {
+    for (const label of ['Shop', 'My Events', 'My Gym', 'My Stations', 'Courier']) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument();
     }
   });
@@ -270,7 +270,7 @@ describe('Sidebar — role switcher', () => {
     defaultProbes({ getMyShops: envelope([{ id: 's1' }]) });
     renderSidebar();
 
-    await waitFor(() => expect(screen.getByRole('link', { name: 'Creator Studio' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('link', { name: 'Shop' })).toBeInTheDocument());
     expect(screen.queryByLabelText('Switch between your roles')).not.toBeInTheDocument();
   });
 

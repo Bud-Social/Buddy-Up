@@ -8,6 +8,7 @@ class Profile(TimestampedModel):
         ('user', 'Regular User'),
         ('trainer', 'Personal Trainer'),
         ('practitioner', 'Health Practitioner'),
+        ('distributor', 'Product Distributor'),
     ]
     VERIFICATION_CHOICES = [
         ('none', 'None'),
@@ -15,6 +16,7 @@ class Profile(TimestampedModel):
         ('id', 'ID Verified'),
         ('trainer', 'Certified Trainer'),
         ('practitioner', 'Health Practitioner'),
+        ('distributor', 'Verified Distributor'),
         ('shop', 'Verified Shop'),
         ('gym', 'Verified Gym'),
         # Category-application outcomes. These are verifications of a *person*,
@@ -36,6 +38,7 @@ class Profile(TimestampedModel):
     ROLE_VERIFICATION_STATUSES = {
         'trainer': 'trainer',
         'practitioner': 'practitioner',
+        'distributor': 'distributor',
     }
     PRIVACY_CHOICES = [
         ('public', 'Public'),
