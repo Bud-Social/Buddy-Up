@@ -964,7 +964,6 @@ class AccountStandingEnforcementTests(_CacheClearingMixin, TestCase):
 
     def test_social_login_funnel_refuses_a_suspended_user(self):
         """_finalize_social_login is the shared Google/Apple/passkey funnel."""
-        from unittest import mock
 
         from . import views as accounts_views
 

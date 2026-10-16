@@ -40,7 +40,7 @@ import logging
 
 from rest_framework.exceptions import PermissionDenied
 
-from apps.admin_portal.permissions import IsPlatformAdmin, ScopedPlatformAdmin
+from apps.admin_portal.permissions import ScopedPlatformAdmin
 from apps.governance.services import effective_scopes
 
 logger = logging.getLogger(__name__)
