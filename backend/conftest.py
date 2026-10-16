@@ -31,6 +31,13 @@ def pytest_configure(config):
     os.environ['CLOUDINARY_URL'] = ''
     from django.conf import settings
 
+    # Django >=5.0 dropped the automatic cheap-hasher override for tests, and
+    # the container exports DJANGO_SETTINGS_MODULE=config.settings.development,
+    # which -- being an env var -- takes precedence over pytest.ini's
+    # config.settings.test. So the fast hasher cannot be left to settings
+    # selection: pin it here, where no entry point can skip it.
+    settings.PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
+
     settings.CLOUDINARY_CLOUD_NAME = ''
     settings.CLOUDINARY_API_KEY = ''
     settings.CLOUDINARY_API_SECRET = ''

@@ -1,6 +1,8 @@
 # Settings modules extend the base with `from .base import *`, which is the
 # standard Django composition pattern; ruff can't statically resolve those.
 # ruff: noqa: F403, F405
+import sys as _sys
+
 from .base import *
 
 DEBUG = True
@@ -14,15 +16,23 @@ CSRF_TRUSTED_ORIGINS = list(set(CSRF_TRUSTED_ORIGINS + ['http://localhost:3002']
 SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-prod')
 
 # django-debug-toolbar renders its own panel when a view raises, and its
-# rendering path raises `KeyError` on the URL namespace. Under the test
-# runner that masks the real traceback and turns a readable failure into an
-# opaque one, so keep the toolbar out of test runs entirely.
-import sys as _sys
-
+# rendering path reverse-resolves the `djdt` namespace. Under a test runner
+# that namespace is not wired, so the panel turns a readable 500 into
+# `NoReverseMatch: 'djdt' is not a registered namespace` and masks the real
+# failure entirely. Keep the toolbar out of test runs completely.
+#
+# `'pytest' in sys.argv` is NOT the test for this. `sys.argv` is a list of
+# arguments and `in` on a list tests exact membership, so under a console
+# script the first element is `/usr/local/bin/pytest` -- never the bare string
+# `'pytest'` -- and the toolbar stayed enabled for the whole pytest run. It
+# happened to hide because `manage.py test` *does* pass a literal `'test'`
+# argument, so the two runners disagreed about whether tests were running.
+# That is how three marketplace tests could pass under `manage.py test` and
+# fail under pytest with an error in a template rather than in the code.
 _TOOLBAR_DISABLED = (
     os.environ.get('DISABLE_DEBUG_TOOLBAR') == '1'
-    or 'test' in _sys.argv
-    or 'pytest' in _sys.argv
+    or any(arg == 'test' for arg in _sys.argv)
+    or any('pytest' in arg for arg in _sys.argv)
 )
 if not _TOOLBAR_DISABLED:
     INSTALLED_APPS += [

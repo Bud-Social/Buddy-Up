@@ -93,4 +93,6 @@ docs/BuddyUp_Security_Posture_*.docx
 
 # Generated ML training/synthetic datasets (224MB+, reproducible from
 # backend/ai_service/training/). Never commit these.
-data/
+# MUST stay root-anchored: a bare `data/` also matches buddy_up_flutter/lib/data,
+# which silently left every new Flutter data model untracked and broke CI.
+/data/

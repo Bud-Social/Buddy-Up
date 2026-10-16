@@ -45,7 +45,7 @@ jobs:
           SECRET_KEY: ci-test-secret
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
-          DJANGO_SETTINGS_MODULE: config.settings.development
+          DJANGO_SETTINGS_MODULE: config.settings.test
         run: |
           cd backend
           python manage.py migrate --noinput
@@ -57,7 +57,7 @@ jobs:
           SECRET_KEY: ci-test-secret-with-enough-length-123456
           REDIS_URL: redis://localhost:6379/0
           DEBUG: 'True'
-          DJANGO_SETTINGS_MODULE: config.settings.development
+          DJANGO_SETTINGS_MODULE: config.settings.test
         run: |
           ./scripts/check_openapi.sh
           python scripts/check_api_contract.py
