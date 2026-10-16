@@ -96,3 +96,9 @@ docs/BuddyUp_Security_Posture_*.docx
 # MUST stay root-anchored: a bare `data/` also matches buddy_up_flutter/lib/data,
 # which silently left every new Flutter data model untracked and broke CI.
 /data/
+
+# Keystores. buddy_up_flutter/android/.gitignore already covers
+# `key.properties` itself; this catches a keystore generated anywhere else on the
+# machine, which is the common way one ends up committed.
+*.jks
+*.keystore

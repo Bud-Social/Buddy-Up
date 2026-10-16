@@ -116,16 +116,64 @@ bias model that has actually been validated.** Until then the console states
 
 ---
 
-## 7. Before you publish — the non-environment checklist
+## 7. Mobile build configuration (`buddy_up_flutter/.env`)
+
+`flutter_dotenv` bundles `.env` **verbatim into the APK/AAB**. Every value in it
+ships to every user and can be extracted in seconds. That is unavoidable and
+also correct for the values that live here — an Agora app id, a Google *client*
+id, a LiveKit URL and a Cloudinary cloud name are public identifiers, and a
+mobile app cannot hide them. What matters is the rule:
+
+> Never put a secret in `buddy_up_flutter/.env`. No API secret, no private key,
+> no service-account JSON with a private key. It is a shipped artifact, not a
+> config file.
+
+CI does `cp .env.example .env`, so **the release artifact GitHub builds is
+configured entirely from `.env.example`.** That file is currently correct where
+it matters most — `API_BASE_URL`, `WS_BASE_URL` and `LIVEKIT_URL` all have
+hardcoded production fallbacks in `lib/core/env/env.dart`, so an empty value
+degrades to production rather than to localhost. Good.
+
+Five keys have **no fallback and are empty in `.env.example`**, so a CI-built
+release currently ships with these features non-functional:
+
+| Key | Consequence when empty |
+|---|---|
+| `AGORA_APP_ID` | Voice and video calls do not start |
+| `GOOGLE_SERVER_CLIENT_ID` | Google sign-in fails on Android (no `google-services.json` in CI) |
+| `CLOUDINARY_CLOUD_NAME` | Media uploads fail |
+| `FIREBASE_CONFIG` | Push notifications never register |
+| `GOOGLE_MAPS_KEY` | Maps render blank |
+
+All five are public client identifiers, so they belong in CI as repository
+variables and can be committed to `.env.example` without exposing anything.
+This is the single highest-value thing left to fix before a store submission.
+
+Note `FIREBASE_CONFIG` in the local `.env` is redacted placeholder JSON
+(`{"apiKey":"...", ...}`) — replace it with the real config, not the literal
+ellipses.
+
+---
+
+## 8. Before you publish — the non-environment checklist
 
 These are not env vars and no amount of configuration substitutes for them.
 
-1. **iOS signing.** The build was fixed to not require a team, so CI passes, but
-   an actual App Store build needs `DEVELOPMENT_TEAM` and a provisioning
-   profile in `ios/Runner.xcodeproj/project.pbxproj` (or set in Xcode).
-2. **Android release signing.** `flutter build apk --release` uses the debug
-   keystore unless you provide a release key. A Play Store upload needs a real
-   one, and `android/key.properties` must not be committed.
+1. **Android release signing — the only thing left before a store upload.**
+   `flutter build apk --release` and `flutter build appbundle --release` both
+   build and verify, but with no `android/key.properties` the Gradle config
+   falls back to the **debug keystore** (`CN=Android Debug`, verified with
+   apksigner). Google Play rejects that. Create a keystore, write
+   `android/key.properties` with `storeFile` / `storePassword` / `keyAlias` /
+   `keyPassword`, and **do not commit it** — add it to `.gitignore` if it is not
+   already there. `keystore.properties` is already gated behind a
+   `hasSigningConfig()` check, so no code change is needed.
+2. **iOS signing — cannot be checked from Linux at all.** The project is
+   configured to build without a team so CI passes, but there is no Xcode here,
+   so nothing about a real archive has been verified. On a Mac you still need
+   `DEVELOPMENT_TEAM` and a provisioning profile in
+   `ios/Runner.xcodeproj/project.pbxproj` (or set in Xcode). Treat the iOS
+   release path as unverified until someone runs it on macOS.
 3. **The two-person approval queue.** Now workable — four administrator accounts
    exist. Verify two *different* people can actually raise and approve, because
    with a single person holding all four accounts the rule is satisfied only on
