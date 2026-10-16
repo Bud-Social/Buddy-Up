@@ -1,5 +1,5 @@
-export type UserRole = 'user' | 'trainer' | 'practitioner';
-export type VerificationStatus = 'none' | 'email' | 'id' | 'trainer' | 'practitioner';
+export type UserRole = 'user' | 'trainer' | 'practitioner' | 'distributor';
+export type VerificationStatus = 'none' | 'email' | 'id' | 'trainer' | 'practitioner' | 'distributor' | 'shop' | 'gym' | 'gym_owner' | 'shop_owner' | 'delivery_partner';
 export type PrivacyLevel = 'public' | 'private';
 export type ContentRating = 'general' | 'mature';
 

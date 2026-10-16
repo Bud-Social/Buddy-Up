@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
-import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/marketplace.dart';
 import '../utils/event_categories.dart';
+// `StockBadge` lives with the detail screen so the grid and the detail page read
+// the product's stock through one set of thresholds.
+import 'product_detail_screen.dart';
 
 class MarketplaceScreen extends ConsumerStatefulWidget {
   const MarketplaceScreen({super.key});
@@ -33,13 +35,6 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Creator gating parity (web P6): existing creators see 'Creator',
-    // everyone else sees 'Become a Creator'.
-    final profile = ref.watch(authProvider).profile;
-    final isCreator =
-        profile != null && profile.role != 'user' && profile.role.isNotEmpty;
-    final creatorLabel = isCreator ? 'Creator' : 'Become a Creator';
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Marketplace', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -58,11 +53,6 @@ class _MarketplaceScreenState extends ConsumerState<MarketplaceScreen>
             icon: const Icon(Icons.local_shipping_outlined),
             tooltip: 'Become a courier',
             onPressed: () => context.push('/marketplace/delivery-personnel'),
-          ),
-          TextButton.icon(
-            onPressed: () => context.push('/marketplace/creator-studio'),
-            icon: const Icon(Icons.storefront_outlined, size: 18),
-            label: Text(creatorLabel),
           ),
         ],
       ),
@@ -129,6 +119,13 @@ class _GridCard extends StatelessWidget {
   final bool isPast;
   final String? distanceLabel;
 
+  /// Stock state for products only. Null hides it entirely, which is what every
+  /// non-product listing and every untracked product wants.
+  final Widget? stockBadge;
+
+  /// Pre-formatted rating summary, e.g. "4.5 (12)". Null when unrated.
+  final String? ratingLabel;
+
   const _GridCard({
     required this.imageUrl,
     required this.title,
@@ -140,6 +137,8 @@ class _GridCard extends StatelessWidget {
     this.onAddToCart,
     this.isPast = false,
     this.distanceLabel,
+    this.stockBadge,
+    this.ratingLabel,
   });
 
   @override
@@ -257,6 +256,25 @@ class _GridCard extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 11, color: BuddyColors.textSecondary)),
                   ],
+                  if (ratingLabel != null) ...[
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      const Icon(Icons.star, size: 12, color: BuddyColors.gold),
+                      const SizedBox(width: 3),
+                      Text(ratingLabel!,
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: BuddyColors.gold)),
+                    ]),
+                  ],
+                  if (stockBadge != null) ...[
+                    const SizedBox(height: 4),
+                    stockBadge!,
+                  ],
+                  // A sold-out product gets no button at all rather than a
+                  // disabled one: a control that can never fire is noise, and
+                  // the badge above already says why.
                   if (onAddToCart != null) ...[
                     const SizedBox(height: 8),
                     SizedBox(
@@ -378,10 +396,6 @@ class _EventsTabState extends ConsumerState<_EventsTab> {
               TextButton(
                 onPressed: () => context.push('/marketplace/tickets'),
                 child: const Text('My Tickets', style: TextStyle(fontSize: 12)),
-              ),
-              TextButton(
-                onPressed: () => context.push('/marketplace/events/create'),
-                child: const Text('Host', style: TextStyle(fontSize: 12)),
               ),
               TextButton.icon(
                 onPressed: () {
@@ -663,14 +677,23 @@ class _ProductsTab extends ConsumerWidget {
                 ),
                 itemBuilder: (_, i) {
                   final p = products[i];
+                  // Only a tracked product can be sold out — an untracked one
+                  // has a meaningless stock_quantity of 0.
+                  final soldOut = p.stockTrackingEnabled && p.stockQuantity == 0;
                   return _GridCard(
                     imageUrl: p.imageUrl,
                     title: p.name,
                     subtitle: p.brand,
                     badgeLabel: p.category,
                     priceLabel: p.priceDisplay,
+                    stockBadge: p.stockTrackingEnabled
+                        ? StockBadge(quantity: p.stockQuantity, soldOut: soldOut)
+                        : null,
+                    ratingLabel: p.reviewCount > 0
+                        ? '${p.averageRating.toStringAsFixed(1)} (${p.reviewCount})'
+                        : null,
                     onTap: () => context.push('/marketplace/products/${p.id}'),
-                    onAddToCart: () => _addToCart(ref, context, p),
+                    onAddToCart: soldOut ? null : () => _addToCart(ref, context, p),
                   );
                 },
               ),

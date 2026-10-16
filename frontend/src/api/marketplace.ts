@@ -101,12 +101,24 @@ export interface ProductMP {
   recommended_by: string | null;
   recommender_data: { username: string; display_name: string } | null;
   click_count: number;
+  average_rating: number;
+  review_count: number;
+  stock_quantity: number;
+  stock_tracking_enabled: boolean;
   is_active?: boolean;
   is_draft?: boolean;
   abandoned_cart_count?: number;
   shop_data?: { id: string; name: string; handle: string; verification_status: string };
   delivery_modes?: string[];
   fulfillment_details?: Record<string, string>;
+  created_at: string;
+}
+
+export interface ProductReview {
+  id: string;
+  rating: number;
+  body: string;
+  buyer_data: { username: string; display_name: string; avatar_url: string };
   created_at: string;
 }
 
@@ -273,6 +285,11 @@ export interface CreatorAnalytics {
   category_revenue: Record<string, number>;
   revenue_over_time: { month: string; total: number }[];
   top_services: { id: string; title: string; type: string; sales: number }[];
+  product_performance: {
+    id: string; title: string; clicks: number; units_sold: number; revenue_usd: number;
+    conversion_rate: number; average_rating: number; review_count: number;
+    stock_quantity: number; stock_tracking_enabled: boolean;
+  }[];
 }
 
 export interface OrderItem {
@@ -672,6 +689,12 @@ export const marketplaceApi = {
 
   clickProduct: (productId: string) =>
     apiClient.post<ApiResponse<null>>(`/marketplace/products/${productId}/click/`).then((r) => r.data),
+
+  getProductReviews: (productId: string) =>
+    apiClient.get<ApiResponse<ProductReview[]>>(`/marketplace/products/${productId}/reviews/`).then((r) => r.data),
+
+  reviewProduct: (productId: string, rating: number, body?: string) =>
+    apiClient.post<ApiResponse<ProductReview>>(`/marketplace/products/${productId}/reviews/`, { rating, body }).then((r) => r.data),
 
   createMealPlan: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<MealPlan>>('/marketplace/meal-plans/', data).then((r) => r.data),

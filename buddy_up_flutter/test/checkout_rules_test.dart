@@ -221,7 +221,7 @@ void main() {
 
   group('discountLabel', () {
     test('a percentage discount names the percentage', () {
-      final label = discountLabel(DiscountCode(
+      final label = discountLabel(const DiscountCode(
         id: 'c',
         creator: 'me',
         code: 'BUY10',
@@ -232,7 +232,7 @@ void main() {
     });
 
     test('a fixed artifact discount says so', () {
-      final label = discountLabel(DiscountCode(
+      final label = discountLabel(const DiscountCode(
         id: 'c',
         creator: 'me',
         code: 'SAVE5',

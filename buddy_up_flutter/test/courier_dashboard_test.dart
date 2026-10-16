@@ -59,7 +59,7 @@ void main() {
             'postal_code': '00100',
             'country': 'Kenya',
           },
-      if (pickupStation != null) 'pickup_station': pickupStation,
+      'pickup_station': ?pickupStation,
       'delivery_personnel_name': 'Peter',
       'commission_artifacts': {'dumbbell': 240, 'squat': 8},
       'total_artifacts': {'dumbbell': 2000, 'squat': 80},

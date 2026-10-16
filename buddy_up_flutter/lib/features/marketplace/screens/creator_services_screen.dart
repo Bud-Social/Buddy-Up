@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
+import '../providers/commerce_permissions_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
 
@@ -14,6 +15,16 @@ class CreatorServicesScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final cardBg = isDark ? BuddyColors.surface : theme.colorScheme.surface;
+
+    // The create affordances are gated on what the *server* will accept, not on
+    // what looks reasonable: a verified trainer/practitioner or a gym operator may
+    // write a meal plan, and only a verified distributor or an owner/manager of a
+    // shop may write a product or an event. Hiding a button the server refuses is
+    // the whole point — see utils/commerce_permissions.dart.
+    final canMealPlan =
+        ref.watch(canCreateMealPlanProvider).value ?? false;
+    final canCommerce =
+        ref.watch(canPublishCommerceProvider).value ?? false;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -30,7 +41,7 @@ class CreatorServicesScreen extends ConsumerWidget {
                   title: 'Meal Plans (${services.mealPlans.length})',
                   icon: Icons.restaurant,
                   color: BuddyColors.green,
-                  onCreate: () => context.push('/marketplace/meal-plans/create'),
+                  onCreate: canMealPlan ? () => context.push('/marketplace/meal-plans/create') : null,
                   children: services.mealPlans.map((p) => _ServiceTile(
                     title: p.title,
                     subtitle: '${p.purchaseCount} sold · ~\$${_artifactUsd(p.priceArtifacts).toStringAsFixed(2)}',
@@ -68,7 +79,7 @@ class CreatorServicesScreen extends ConsumerWidget {
                   title: 'Events (${services.events.length})',
                   icon: Icons.event,
                   color: const Color(0xFFFBBF24),
-                  onCreate: () => context.push('/marketplace/events/create'),
+                  onCreate: canCommerce ? () => context.push('/marketplace/events/create') : null,
                   children: services.events.map((e) => _ServiceTile(
                     title: e.title,
                     subtitle: '${e.attendeeCount} attendees · ${e.startDatetime.length >= 10 ? e.startDatetime.substring(0, 10) : e.startDatetime}',
@@ -87,7 +98,7 @@ class CreatorServicesScreen extends ConsumerWidget {
                   title: 'Products (${services.products.length})',
                   icon: Icons.shopping_bag,
                   color: const Color(0xFFF97316),
-                  onCreate: () => context.push('/marketplace/products/create'),
+                  onCreate: canCommerce ? () => context.push('/marketplace/products/create') : null,
                   children: services.products.map((p) => _ServiceTile(
                     title: p.name,
                     subtitle: '${p.clickCount} clicks',
@@ -120,17 +131,24 @@ class CreatorServicesScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddServiceSheet(context),
-        backgroundColor: BuddyColors.green,
-        foregroundColor: Colors.black,
-        icon: const Icon(Icons.add),
-        label: const Text('Add Service', style: TextStyle(fontWeight: FontWeight.bold)),
-      ),
+      // A programme is the one listing anyone may create, so this button is only
+      // hidden when the caller cannot create *anything* at all.
+      floatingActionButton: canMealPlan || canCommerce
+          ? FloatingActionButton.extended(
+              onPressed: () => _showAddServiceSheet(context, canMealPlan, canCommerce),
+              backgroundColor: BuddyColors.green,
+              foregroundColor: Colors.black,
+              icon: const Icon(Icons.add),
+              label: const Text('Add Service', style: TextStyle(fontWeight: FontWeight.bold)),
+            )
+          : null,
     );
   }
 
-  void _showAddServiceSheet(BuildContext context) {
+  /// Only the kinds the caller's permissions allow are offered. A hidden row is
+  /// better than a disabled one here: a greyed-out "Product" reads as "not right
+  /// now", when the truth is "not ever, for you".
+  void _showAddServiceSheet(BuildContext context, bool canMealPlan, bool canCommerce) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -143,17 +161,18 @@ class CreatorServicesScreen extends ConsumerWidget {
           children: [
             const Text('Create New Service', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            _serviceOption(
-              context,
-              icon: Icons.restaurant,
-              title: 'Meal Plan',
-              subtitle: 'Nutrition guide with meal templates',
-              color: BuddyColors.green,
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/marketplace/meal-plans/create');
-              },
-            ),
+            if (canMealPlan)
+              _serviceOption(
+                context,
+                icon: Icons.restaurant,
+                title: 'Meal Plan',
+                subtitle: 'Nutrition guide with meal templates',
+                color: BuddyColors.green,
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/marketplace/meal-plans/create');
+                },
+              ),
             _serviceOption(
               context,
               icon: Icons.fitness_center,
@@ -165,28 +184,30 @@ class CreatorServicesScreen extends ConsumerWidget {
                 context.push('/marketplace/programmes/create');
               },
             ),
-            _serviceOption(
-              context,
-              icon: Icons.event,
-              title: 'Event / Ticket',
-              subtitle: 'Online or in-person session event',
-              color: const Color(0xFFFBBF24),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/marketplace/events/create');
-              },
-            ),
-            _serviceOption(
-              context,
-              icon: Icons.shopping_bag,
-              title: 'Product',
-              subtitle: 'Affiliate or direct gear and supplements',
-              color: const Color(0xFFF97316),
-              onTap: () {
-                Navigator.pop(context);
-                context.push('/marketplace/products/create');
-              },
-            ),
+            if (canCommerce)
+              _serviceOption(
+                context,
+                icon: Icons.event,
+                title: 'Event / Ticket',
+                subtitle: 'Online or in-person session event',
+                color: const Color(0xFFFBBF24),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/marketplace/events/create');
+                },
+              ),
+            if (canCommerce)
+              _serviceOption(
+                context,
+                icon: Icons.shopping_bag,
+                title: 'Product',
+                subtitle: 'Affiliate or direct gear and supplements',
+                color: const Color(0xFFF97316),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push('/marketplace/products/create');
+                },
+              ),
           ],
         ),
       ),

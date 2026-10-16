@@ -91,6 +91,19 @@ abstract class MarketplaceRepository {
   @POST('/marketplace/products/{id}/click/')
   Future<void> clickProduct(@Path('id') String productId);
 
+  /// Verified purchases only, and that is enforced by the shape of the write:
+  /// a review hangs off an `OrderItem`, so a non-buyer has nothing to post
+  /// against and gets a 404. The server also refuses a second review of the
+  /// same order line, so there is no edit or delete to model here.
+  @GET('/marketplace/products/{id}/reviews/')
+  Future<dynamic> getProductReviews(@Path('id') String productId);
+
+  @POST('/marketplace/products/{id}/reviews/')
+  Future<dynamic> reviewProduct(
+    @Path('id') String productId,
+    @Body() Map<String, dynamic> data,
+  );
+
   @GET('/marketplace/events/')
   Future<dynamic> getEvents({
     @Query('upcoming') bool? upcoming,

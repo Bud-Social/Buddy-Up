@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:buddy_up_flutter/data/models/marketplace.dart';
 import 'package:buddy_up_flutter/features/marketplace/utils/delivery_vehicles.dart';
 import 'package:buddy_up_flutter/features/marketplace/utils/stations.dart';
 
@@ -43,7 +42,7 @@ void main() {
       'owner_type': 'shop',
       'owner_name': 'Iron Foundry',
       'shop': '11111111-1111-1111-1111-111111111111',
-      if (distanceKm != null) 'distance_km': distanceKm,
+      'distance_km': ?distanceKm,
       'created_at': '2026-03-01T00:00:00Z',
     };
   }

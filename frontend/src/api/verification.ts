@@ -106,6 +106,7 @@ export interface VerificationDecided extends VerificationSubmission {
 export type CategoryApplicationType =
   | 'trainer'
   | 'practitioner'
+  | 'distributor'
   | 'gym_owner'
   | 'shop_owner'
   | 'delivery_partner';

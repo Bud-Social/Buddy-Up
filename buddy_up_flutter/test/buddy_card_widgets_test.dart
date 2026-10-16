@@ -6,7 +6,6 @@ import 'package:buddy_up_flutter/core/analytics/analytics_service.dart';
 import 'package:buddy_up_flutter/core/auth/auth_provider.dart';
 import 'package:buddy_up_flutter/core/theme/app_theme.dart';
 import 'package:buddy_up_flutter/data/models/profile.dart';
-import 'package:buddy_up_flutter/data/repositories/profile_repository.dart';
 import 'package:buddy_up_flutter/features/buddies/buddy_nearby_provider.dart';
 import 'package:buddy_up_flutter/features/buddies/widgets/buddy_discovery_card.dart';
 

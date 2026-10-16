@@ -287,7 +287,7 @@ as String,
 /// @nodoc
 mixin _$Shop {
 
- String get id; String get handle; String get name; String get description;@JsonKey(name: 'logo_url') String? get logoUrl;@JsonKey(name: 'banner_url') String? get bannerUrl;@JsonKey(name: 'accent_color') String get accentColor;@JsonKey(name: 'contact_email') String get contactEmail;@JsonKey(name: 'contact_phone') String get contactPhone;@JsonKey(name: 'website_url') String get websiteUrl;@JsonKey(name: 'social_links') Map<String, String> get socialLinks; String get category;@JsonKey(name: 'verification_status') String get verificationStatus;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'created_at') String get createdAt;
+ String get id; String get handle; String get name; String get description;@JsonKey(name: 'logo_url') String? get logoUrl;@JsonKey(name: 'banner_url') String? get bannerUrl;@JsonKey(name: 'accent_color') String get accentColor;@JsonKey(name: 'contact_email') String get contactEmail;@JsonKey(name: 'contact_phone') String get contactPhone;@JsonKey(name: 'website_url') String get websiteUrl;@JsonKey(name: 'social_links') Map<String, String> get socialLinks; String get category;@JsonKey(name: 'verification_status') String get verificationStatus;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'my_role') String get myRole;
 /// Create a copy of Shop
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -300,16 +300,16 @@ $ShopCopyWith<Shop> get copyWith => _$ShopCopyWithImpl<Shop>(this as Shop, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Shop&&(identical(other.id, id) || other.id == id)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.accentColor, accentColor) || other.accentColor == accentColor)&&(identical(other.contactEmail, contactEmail) || other.contactEmail == contactEmail)&&(identical(other.contactPhone, contactPhone) || other.contactPhone == contactPhone)&&(identical(other.websiteUrl, websiteUrl) || other.websiteUrl == websiteUrl)&&const DeepCollectionEquality().equals(other.socialLinks, socialLinks)&&(identical(other.category, category) || other.category == category)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Shop&&(identical(other.id, id) || other.id == id)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.accentColor, accentColor) || other.accentColor == accentColor)&&(identical(other.contactEmail, contactEmail) || other.contactEmail == contactEmail)&&(identical(other.contactPhone, contactPhone) || other.contactPhone == contactPhone)&&(identical(other.websiteUrl, websiteUrl) || other.websiteUrl == websiteUrl)&&const DeepCollectionEquality().equals(other.socialLinks, socialLinks)&&(identical(other.category, category) || other.category == category)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.myRole, myRole) || other.myRole == myRole));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,handle,name,description,logoUrl,bannerUrl,accentColor,contactEmail,contactPhone,websiteUrl,const DeepCollectionEquality().hash(socialLinks),category,verificationStatus,isActive,createdAt);
+int get hashCode => Object.hash(runtimeType,id,handle,name,description,logoUrl,bannerUrl,accentColor,contactEmail,contactPhone,websiteUrl,const DeepCollectionEquality().hash(socialLinks),category,verificationStatus,isActive,createdAt,myRole);
 
 @override
 String toString() {
-  return 'Shop(id: $id, handle: $handle, name: $name, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, accentColor: $accentColor, contactEmail: $contactEmail, contactPhone: $contactPhone, websiteUrl: $websiteUrl, socialLinks: $socialLinks, category: $category, verificationStatus: $verificationStatus, isActive: $isActive, createdAt: $createdAt)';
+  return 'Shop(id: $id, handle: $handle, name: $name, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, accentColor: $accentColor, contactEmail: $contactEmail, contactPhone: $contactPhone, websiteUrl: $websiteUrl, socialLinks: $socialLinks, category: $category, verificationStatus: $verificationStatus, isActive: $isActive, createdAt: $createdAt, myRole: $myRole)';
 }
 
 
@@ -320,7 +320,7 @@ abstract mixin class $ShopCopyWith<$Res>  {
   factory $ShopCopyWith(Shop value, $Res Function(Shop) _then) = _$ShopCopyWithImpl;
 @useResult
 $Res call({
- String id, String handle, String name, String description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'accent_color') String accentColor,@JsonKey(name: 'contact_email') String contactEmail,@JsonKey(name: 'contact_phone') String contactPhone,@JsonKey(name: 'website_url') String websiteUrl,@JsonKey(name: 'social_links') Map<String, String> socialLinks, String category,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') String createdAt
+ String id, String handle, String name, String description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'accent_color') String accentColor,@JsonKey(name: 'contact_email') String contactEmail,@JsonKey(name: 'contact_phone') String contactPhone,@JsonKey(name: 'website_url') String websiteUrl,@JsonKey(name: 'social_links') Map<String, String> socialLinks, String category,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'my_role') String myRole
 });
 
 
@@ -337,7 +337,7 @@ class _$ShopCopyWithImpl<$Res>
 
 /// Create a copy of Shop
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? handle = null,Object? name = null,Object? description = null,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? accentColor = null,Object? contactEmail = null,Object? contactPhone = null,Object? websiteUrl = null,Object? socialLinks = null,Object? category = null,Object? verificationStatus = null,Object? isActive = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? handle = null,Object? name = null,Object? description = null,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? accentColor = null,Object? contactEmail = null,Object? contactPhone = null,Object? websiteUrl = null,Object? socialLinks = null,Object? category = null,Object? verificationStatus = null,Object? isActive = null,Object? createdAt = null,Object? myRole = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,handle: null == handle ? _self.handle : handle // ignore: cast_nullable_to_non_nullable
@@ -354,6 +354,7 @@ as Map<String, String>,category: null == category ? _self.category : category //
 as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
 as String,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,myRole: null == myRole ? _self.myRole : myRole // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -439,10 +440,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String handle,  String name,  String description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'accent_color')  String accentColor, @JsonKey(name: 'contact_email')  String contactEmail, @JsonKey(name: 'contact_phone')  String contactPhone, @JsonKey(name: 'website_url')  String websiteUrl, @JsonKey(name: 'social_links')  Map<String, String> socialLinks,  String category, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String handle,  String name,  String description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'accent_color')  String accentColor, @JsonKey(name: 'contact_email')  String contactEmail, @JsonKey(name: 'contact_phone')  String contactPhone, @JsonKey(name: 'website_url')  String websiteUrl, @JsonKey(name: 'social_links')  Map<String, String> socialLinks,  String category, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'my_role')  String myRole)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Shop() when $default != null:
-return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl,_that.bannerUrl,_that.accentColor,_that.contactEmail,_that.contactPhone,_that.websiteUrl,_that.socialLinks,_that.category,_that.verificationStatus,_that.isActive,_that.createdAt);case _:
+return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl,_that.bannerUrl,_that.accentColor,_that.contactEmail,_that.contactPhone,_that.websiteUrl,_that.socialLinks,_that.category,_that.verificationStatus,_that.isActive,_that.createdAt,_that.myRole);case _:
   return orElse();
 
 }
@@ -460,10 +461,10 @@ return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String handle,  String name,  String description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'accent_color')  String accentColor, @JsonKey(name: 'contact_email')  String contactEmail, @JsonKey(name: 'contact_phone')  String contactPhone, @JsonKey(name: 'website_url')  String websiteUrl, @JsonKey(name: 'social_links')  Map<String, String> socialLinks,  String category, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String handle,  String name,  String description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'accent_color')  String accentColor, @JsonKey(name: 'contact_email')  String contactEmail, @JsonKey(name: 'contact_phone')  String contactPhone, @JsonKey(name: 'website_url')  String websiteUrl, @JsonKey(name: 'social_links')  Map<String, String> socialLinks,  String category, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'my_role')  String myRole)  $default,) {final _that = this;
 switch (_that) {
 case _Shop():
-return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl,_that.bannerUrl,_that.accentColor,_that.contactEmail,_that.contactPhone,_that.websiteUrl,_that.socialLinks,_that.category,_that.verificationStatus,_that.isActive,_that.createdAt);case _:
+return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl,_that.bannerUrl,_that.accentColor,_that.contactEmail,_that.contactPhone,_that.websiteUrl,_that.socialLinks,_that.category,_that.verificationStatus,_that.isActive,_that.createdAt,_that.myRole);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -480,10 +481,10 @@ return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String handle,  String name,  String description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'accent_color')  String accentColor, @JsonKey(name: 'contact_email')  String contactEmail, @JsonKey(name: 'contact_phone')  String contactPhone, @JsonKey(name: 'website_url')  String websiteUrl, @JsonKey(name: 'social_links')  Map<String, String> socialLinks,  String category, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String handle,  String name,  String description, @JsonKey(name: 'logo_url')  String? logoUrl, @JsonKey(name: 'banner_url')  String? bannerUrl, @JsonKey(name: 'accent_color')  String accentColor, @JsonKey(name: 'contact_email')  String contactEmail, @JsonKey(name: 'contact_phone')  String contactPhone, @JsonKey(name: 'website_url')  String websiteUrl, @JsonKey(name: 'social_links')  Map<String, String> socialLinks,  String category, @JsonKey(name: 'verification_status')  String verificationStatus, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'my_role')  String myRole)?  $default,) {final _that = this;
 switch (_that) {
 case _Shop() when $default != null:
-return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl,_that.bannerUrl,_that.accentColor,_that.contactEmail,_that.contactPhone,_that.websiteUrl,_that.socialLinks,_that.category,_that.verificationStatus,_that.isActive,_that.createdAt);case _:
+return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl,_that.bannerUrl,_that.accentColor,_that.contactEmail,_that.contactPhone,_that.websiteUrl,_that.socialLinks,_that.category,_that.verificationStatus,_that.isActive,_that.createdAt,_that.myRole);case _:
   return null;
 
 }
@@ -495,7 +496,7 @@ return $default(_that.id,_that.handle,_that.name,_that.description,_that.logoUrl
 @JsonSerializable()
 
 class _Shop implements Shop {
-  const _Shop({required this.id, this.handle = '', this.name = '', this.description = '', @JsonKey(name: 'logo_url') this.logoUrl, @JsonKey(name: 'banner_url') this.bannerUrl, @JsonKey(name: 'accent_color') this.accentColor = '#6366f1', @JsonKey(name: 'contact_email') this.contactEmail = '', @JsonKey(name: 'contact_phone') this.contactPhone = '', @JsonKey(name: 'website_url') this.websiteUrl = '', @JsonKey(name: 'social_links') final  Map<String, String> socialLinks = const <String, String>{}, this.category = '', @JsonKey(name: 'verification_status') this.verificationStatus = 'unverified', @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'created_at') this.createdAt = ''}): _socialLinks = socialLinks;
+  const _Shop({required this.id, this.handle = '', this.name = '', this.description = '', @JsonKey(name: 'logo_url') this.logoUrl, @JsonKey(name: 'banner_url') this.bannerUrl, @JsonKey(name: 'accent_color') this.accentColor = '#6366f1', @JsonKey(name: 'contact_email') this.contactEmail = '', @JsonKey(name: 'contact_phone') this.contactPhone = '', @JsonKey(name: 'website_url') this.websiteUrl = '', @JsonKey(name: 'social_links') final  Map<String, String> socialLinks = const <String, String>{}, this.category = '', @JsonKey(name: 'verification_status') this.verificationStatus = 'unverified', @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'created_at') this.createdAt = '', @JsonKey(name: 'my_role') this.myRole = ''}): _socialLinks = socialLinks;
   factory _Shop.fromJson(Map<String, dynamic> json) => _$ShopFromJson(json);
 
 @override final  String id;
@@ -519,6 +520,7 @@ class _Shop implements Shop {
 @override@JsonKey(name: 'verification_status') final  String verificationStatus;
 @override@JsonKey(name: 'is_active') final  bool isActive;
 @override@JsonKey(name: 'created_at') final  String createdAt;
+@override@JsonKey(name: 'my_role') final  String myRole;
 
 /// Create a copy of Shop
 /// with the given fields replaced by the non-null parameter values.
@@ -533,16 +535,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Shop&&(identical(other.id, id) || other.id == id)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.accentColor, accentColor) || other.accentColor == accentColor)&&(identical(other.contactEmail, contactEmail) || other.contactEmail == contactEmail)&&(identical(other.contactPhone, contactPhone) || other.contactPhone == contactPhone)&&(identical(other.websiteUrl, websiteUrl) || other.websiteUrl == websiteUrl)&&const DeepCollectionEquality().equals(other._socialLinks, _socialLinks)&&(identical(other.category, category) || other.category == category)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Shop&&(identical(other.id, id) || other.id == id)&&(identical(other.handle, handle) || other.handle == handle)&&(identical(other.name, name) || other.name == name)&&(identical(other.description, description) || other.description == description)&&(identical(other.logoUrl, logoUrl) || other.logoUrl == logoUrl)&&(identical(other.bannerUrl, bannerUrl) || other.bannerUrl == bannerUrl)&&(identical(other.accentColor, accentColor) || other.accentColor == accentColor)&&(identical(other.contactEmail, contactEmail) || other.contactEmail == contactEmail)&&(identical(other.contactPhone, contactPhone) || other.contactPhone == contactPhone)&&(identical(other.websiteUrl, websiteUrl) || other.websiteUrl == websiteUrl)&&const DeepCollectionEquality().equals(other._socialLinks, _socialLinks)&&(identical(other.category, category) || other.category == category)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.myRole, myRole) || other.myRole == myRole));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,handle,name,description,logoUrl,bannerUrl,accentColor,contactEmail,contactPhone,websiteUrl,const DeepCollectionEquality().hash(_socialLinks),category,verificationStatus,isActive,createdAt);
+int get hashCode => Object.hash(runtimeType,id,handle,name,description,logoUrl,bannerUrl,accentColor,contactEmail,contactPhone,websiteUrl,const DeepCollectionEquality().hash(_socialLinks),category,verificationStatus,isActive,createdAt,myRole);
 
 @override
 String toString() {
-  return 'Shop(id: $id, handle: $handle, name: $name, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, accentColor: $accentColor, contactEmail: $contactEmail, contactPhone: $contactPhone, websiteUrl: $websiteUrl, socialLinks: $socialLinks, category: $category, verificationStatus: $verificationStatus, isActive: $isActive, createdAt: $createdAt)';
+  return 'Shop(id: $id, handle: $handle, name: $name, description: $description, logoUrl: $logoUrl, bannerUrl: $bannerUrl, accentColor: $accentColor, contactEmail: $contactEmail, contactPhone: $contactPhone, websiteUrl: $websiteUrl, socialLinks: $socialLinks, category: $category, verificationStatus: $verificationStatus, isActive: $isActive, createdAt: $createdAt, myRole: $myRole)';
 }
 
 
@@ -553,7 +555,7 @@ abstract mixin class _$ShopCopyWith<$Res> implements $ShopCopyWith<$Res> {
   factory _$ShopCopyWith(_Shop value, $Res Function(_Shop) _then) = __$ShopCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String handle, String name, String description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'accent_color') String accentColor,@JsonKey(name: 'contact_email') String contactEmail,@JsonKey(name: 'contact_phone') String contactPhone,@JsonKey(name: 'website_url') String websiteUrl,@JsonKey(name: 'social_links') Map<String, String> socialLinks, String category,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') String createdAt
+ String id, String handle, String name, String description,@JsonKey(name: 'logo_url') String? logoUrl,@JsonKey(name: 'banner_url') String? bannerUrl,@JsonKey(name: 'accent_color') String accentColor,@JsonKey(name: 'contact_email') String contactEmail,@JsonKey(name: 'contact_phone') String contactPhone,@JsonKey(name: 'website_url') String websiteUrl,@JsonKey(name: 'social_links') Map<String, String> socialLinks, String category,@JsonKey(name: 'verification_status') String verificationStatus,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'my_role') String myRole
 });
 
 
@@ -570,7 +572,7 @@ class __$ShopCopyWithImpl<$Res>
 
 /// Create a copy of Shop
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? handle = null,Object? name = null,Object? description = null,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? accentColor = null,Object? contactEmail = null,Object? contactPhone = null,Object? websiteUrl = null,Object? socialLinks = null,Object? category = null,Object? verificationStatus = null,Object? isActive = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? handle = null,Object? name = null,Object? description = null,Object? logoUrl = freezed,Object? bannerUrl = freezed,Object? accentColor = null,Object? contactEmail = null,Object? contactPhone = null,Object? websiteUrl = null,Object? socialLinks = null,Object? category = null,Object? verificationStatus = null,Object? isActive = null,Object? createdAt = null,Object? myRole = null,}) {
   return _then(_Shop(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,handle: null == handle ? _self.handle : handle // ignore: cast_nullable_to_non_nullable
@@ -587,6 +589,7 @@ as Map<String, String>,category: null == category ? _self.category : category //
 as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
 as String,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,myRole: null == myRole ? _self.myRole : myRole // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }
@@ -1187,7 +1190,7 @@ as String?,
 /// @nodoc
 mixin _$BuyerData {
 
- String get username; String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;
+ String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;
 /// Create a copy of BuyerData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1220,7 +1223,7 @@ abstract mixin class $BuyerDataCopyWith<$Res>  {
   factory $BuyerDataCopyWith(BuyerData value, $Res Function(BuyerData) _then) = _$BuyerDataCopyWithImpl;
 @useResult
 $Res call({
- String username, String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
+ String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
 });
 
 
@@ -1327,7 +1330,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String username,  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BuyerData() when $default != null:
 return $default(_that.username,_that.displayName,_that.avatarUrl);case _:
@@ -1348,7 +1351,7 @@ return $default(_that.username,_that.displayName,_that.avatarUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String username,  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)  $default,) {final _that = this;
 switch (_that) {
 case _BuyerData():
 return $default(_that.username,_that.displayName,_that.avatarUrl);case _:
@@ -1368,7 +1371,7 @@ return $default(_that.username,_that.displayName,_that.avatarUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String username,  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _BuyerData() when $default != null:
 return $default(_that.username,_that.displayName,_that.avatarUrl);case _:
@@ -1383,11 +1386,11 @@ return $default(_that.username,_that.displayName,_that.avatarUrl);case _:
 @JsonSerializable()
 
 class _BuyerData implements BuyerData {
-  const _BuyerData({required this.username, required this.displayName, @JsonKey(name: 'avatar_url') required this.avatarUrl});
+  const _BuyerData({required this.username, @JsonKey(name: 'display_name') required this.displayName, @JsonKey(name: 'avatar_url') required this.avatarUrl});
   factory _BuyerData.fromJson(Map<String, dynamic> json) => _$BuyerDataFromJson(json);
 
 @override final  String username;
-@override final  String displayName;
+@override@JsonKey(name: 'display_name') final  String displayName;
 @override@JsonKey(name: 'avatar_url') final  String avatarUrl;
 
 /// Create a copy of BuyerData
@@ -1423,7 +1426,7 @@ abstract mixin class _$BuyerDataCopyWith<$Res> implements $BuyerDataCopyWith<$Re
   factory _$BuyerDataCopyWith(_BuyerData value, $Res Function(_BuyerData) _then) = __$BuyerDataCopyWithImpl;
 @override @useResult
 $Res call({
- String username, String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
+ String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
 });
 
 
@@ -2786,7 +2789,7 @@ $BuyerDataCopyWith<$Res> get buyerData {
 /// @nodoc
 mixin _$MarketplaceProduct {
 
- String get id; String get name; String get brand; String get description; String get category;@JsonKey(name: 'image_url') String get imageUrl;@JsonKey(name: 'affiliate_url') String get affiliateUrl;@JsonKey(name: 'price_display') String get priceDisplay;@JsonKey(name: 'content_rating') String get contentRating;@JsonKey(name: 'recommended_by') String? get recommendedBy;@JsonKey(name: 'recommender_data') Map<String, dynamic>? get recommenderData;@JsonKey(name: 'click_count') int get clickCount;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'shop_data') Shop? get shopData;@JsonKey(name: 'delivery_modes') List<String> get deliveryModes;@JsonKey(name: 'fulfillment_details') Map<String, dynamic> get fulfillmentDetails;@JsonKey(name: 'created_at') String get createdAt;
+ String get id; String get name; String get brand; String get description; String get category;@JsonKey(name: 'image_url') String get imageUrl;@JsonKey(name: 'affiliate_url') String get affiliateUrl;@JsonKey(name: 'price_display') String get priceDisplay;@JsonKey(name: 'content_rating') String get contentRating;@JsonKey(name: 'recommended_by') String? get recommendedBy;@JsonKey(name: 'recommender_data') Map<String, dynamic>? get recommenderData;@JsonKey(name: 'click_count') int get clickCount;@JsonKey(name: 'average_rating') double get averageRating;@JsonKey(name: 'review_count') int get reviewCount;@JsonKey(name: 'stock_quantity') int get stockQuantity;@JsonKey(name: 'stock_tracking_enabled') bool get stockTrackingEnabled;@JsonKey(name: 'is_active') bool get isActive;@JsonKey(name: 'shop_data') Shop? get shopData;@JsonKey(name: 'delivery_modes') List<String> get deliveryModes;@JsonKey(name: 'fulfillment_details') Map<String, dynamic> get fulfillmentDetails;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of MarketplaceProduct
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2799,16 +2802,16 @@ $MarketplaceProductCopyWith<MarketplaceProduct> get copyWith => _$MarketplacePro
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other.recommenderData, recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&const DeepCollectionEquality().equals(other.deliveryModes, deliveryModes)&&const DeepCollectionEquality().equals(other.fulfillmentDetails, fulfillmentDetails)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other.recommenderData, recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&(identical(other.stockQuantity, stockQuantity) || other.stockQuantity == stockQuantity)&&(identical(other.stockTrackingEnabled, stockTrackingEnabled) || other.stockTrackingEnabled == stockTrackingEnabled)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&const DeepCollectionEquality().equals(other.deliveryModes, deliveryModes)&&const DeepCollectionEquality().equals(other.fulfillmentDetails, fulfillmentDetails)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,contentRating,recommendedBy,const DeepCollectionEquality().hash(recommenderData),clickCount,isActive,shopData,const DeepCollectionEquality().hash(deliveryModes),const DeepCollectionEquality().hash(fulfillmentDetails),createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,contentRating,recommendedBy,const DeepCollectionEquality().hash(recommenderData),clickCount,averageRating,reviewCount,stockQuantity,stockTrackingEnabled,isActive,shopData,const DeepCollectionEquality().hash(deliveryModes),const DeepCollectionEquality().hash(fulfillmentDetails),createdAt]);
 
 @override
 String toString() {
-  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, contentRating: $contentRating, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, isActive: $isActive, shopData: $shopData, deliveryModes: $deliveryModes, fulfillmentDetails: $fulfillmentDetails, createdAt: $createdAt)';
+  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, contentRating: $contentRating, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, averageRating: $averageRating, reviewCount: $reviewCount, stockQuantity: $stockQuantity, stockTrackingEnabled: $stockTrackingEnabled, isActive: $isActive, shopData: $shopData, deliveryModes: $deliveryModes, fulfillmentDetails: $fulfillmentDetails, createdAt: $createdAt)';
 }
 
 
@@ -2819,7 +2822,7 @@ abstract mixin class $MarketplaceProductCopyWith<$Res>  {
   factory $MarketplaceProductCopyWith(MarketplaceProduct value, $Res Function(MarketplaceProduct) _then) = _$MarketplaceProductCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'fulfillment_details') Map<String, dynamic> fulfillmentDetails,@JsonKey(name: 'created_at') String createdAt
+ String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'average_rating') double averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'stock_quantity') int stockQuantity,@JsonKey(name: 'stock_tracking_enabled') bool stockTrackingEnabled,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'fulfillment_details') Map<String, dynamic> fulfillmentDetails,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -2836,7 +2839,7 @@ class _$MarketplaceProductCopyWithImpl<$Res>
 
 /// Create a copy of MarketplaceProduct
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? contentRating = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? isActive = null,Object? shopData = freezed,Object? deliveryModes = null,Object? fulfillmentDetails = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? contentRating = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? averageRating = null,Object? reviewCount = null,Object? stockQuantity = null,Object? stockTrackingEnabled = null,Object? isActive = null,Object? shopData = freezed,Object? deliveryModes = null,Object? fulfillmentDetails = null,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -2850,7 +2853,11 @@ as String,contentRating: null == contentRating ? _self.contentRating : contentRa
 as String,recommendedBy: freezed == recommendedBy ? _self.recommendedBy : recommendedBy // ignore: cast_nullable_to_non_nullable
 as String?,recommenderData: freezed == recommenderData ? _self.recommenderData : recommenderData // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,clickCount: null == clickCount ? _self.clickCount : clickCount // ignore: cast_nullable_to_non_nullable
-as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as int,averageRating: null == averageRating ? _self.averageRating : averageRating // ignore: cast_nullable_to_non_nullable
+as double,reviewCount: null == reviewCount ? _self.reviewCount : reviewCount // ignore: cast_nullable_to_non_nullable
+as int,stockQuantity: null == stockQuantity ? _self.stockQuantity : stockQuantity // ignore: cast_nullable_to_non_nullable
+as int,stockTrackingEnabled: null == stockTrackingEnabled ? _self.stockTrackingEnabled : stockTrackingEnabled // ignore: cast_nullable_to_non_nullable
+as bool,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
 as Shop?,deliveryModes: null == deliveryModes ? _self.deliveryModes : deliveryModes // ignore: cast_nullable_to_non_nullable
 as List<String>,fulfillmentDetails: null == fulfillmentDetails ? _self.fulfillmentDetails : fulfillmentDetails // ignore: cast_nullable_to_non_nullable
@@ -2952,10 +2959,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'fulfillment_details')  Map<String, dynamic> fulfillmentDetails, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'average_rating')  double averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'stock_quantity')  int stockQuantity, @JsonKey(name: 'stock_tracking_enabled')  bool stockTrackingEnabled, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'fulfillment_details')  Map<String, dynamic> fulfillmentDetails, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MarketplaceProduct() when $default != null:
-return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.deliveryModes,_that.fulfillmentDetails,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.averageRating,_that.reviewCount,_that.stockQuantity,_that.stockTrackingEnabled,_that.isActive,_that.shopData,_that.deliveryModes,_that.fulfillmentDetails,_that.createdAt);case _:
   return orElse();
 
 }
@@ -2973,10 +2980,10 @@ return $default(_that.id,_that.name,_that.brand,_that.description,_that.category
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'fulfillment_details')  Map<String, dynamic> fulfillmentDetails, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'average_rating')  double averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'stock_quantity')  int stockQuantity, @JsonKey(name: 'stock_tracking_enabled')  bool stockTrackingEnabled, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'fulfillment_details')  Map<String, dynamic> fulfillmentDetails, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _MarketplaceProduct():
-return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.deliveryModes,_that.fulfillmentDetails,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.averageRating,_that.reviewCount,_that.stockQuantity,_that.stockTrackingEnabled,_that.isActive,_that.shopData,_that.deliveryModes,_that.fulfillmentDetails,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2993,10 +3000,10 @@ return $default(_that.id,_that.name,_that.brand,_that.description,_that.category
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'fulfillment_details')  Map<String, dynamic> fulfillmentDetails, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String brand,  String description,  String category, @JsonKey(name: 'image_url')  String imageUrl, @JsonKey(name: 'affiliate_url')  String affiliateUrl, @JsonKey(name: 'price_display')  String priceDisplay, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'recommended_by')  String? recommendedBy, @JsonKey(name: 'recommender_data')  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count')  int clickCount, @JsonKey(name: 'average_rating')  double averageRating, @JsonKey(name: 'review_count')  int reviewCount, @JsonKey(name: 'stock_quantity')  int stockQuantity, @JsonKey(name: 'stock_tracking_enabled')  bool stockTrackingEnabled, @JsonKey(name: 'is_active')  bool isActive, @JsonKey(name: 'shop_data')  Shop? shopData, @JsonKey(name: 'delivery_modes')  List<String> deliveryModes, @JsonKey(name: 'fulfillment_details')  Map<String, dynamic> fulfillmentDetails, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _MarketplaceProduct() when $default != null:
-return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.isActive,_that.shopData,_that.deliveryModes,_that.fulfillmentDetails,_that.createdAt);case _:
+return $default(_that.id,_that.name,_that.brand,_that.description,_that.category,_that.imageUrl,_that.affiliateUrl,_that.priceDisplay,_that.contentRating,_that.recommendedBy,_that.recommenderData,_that.clickCount,_that.averageRating,_that.reviewCount,_that.stockQuantity,_that.stockTrackingEnabled,_that.isActive,_that.shopData,_that.deliveryModes,_that.fulfillmentDetails,_that.createdAt);case _:
   return null;
 
 }
@@ -3008,7 +3015,7 @@ return $default(_that.id,_that.name,_that.brand,_that.description,_that.category
 @JsonSerializable()
 
 class _MarketplaceProduct implements MarketplaceProduct {
-  const _MarketplaceProduct({required this.id, required this.name, required this.brand, required this.description, required this.category, @JsonKey(name: 'image_url') required this.imageUrl, @JsonKey(name: 'affiliate_url') required this.affiliateUrl, @JsonKey(name: 'price_display') required this.priceDisplay, @JsonKey(name: 'content_rating') this.contentRating = 'general', @JsonKey(name: 'recommended_by') this.recommendedBy, @JsonKey(name: 'recommender_data') final  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count') this.clickCount = 0, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'shop_data') this.shopData, @JsonKey(name: 'delivery_modes') final  List<String> deliveryModes = const <String>[], @JsonKey(name: 'fulfillment_details') final  Map<String, dynamic> fulfillmentDetails = const <String, dynamic>{}, @JsonKey(name: 'created_at') required this.createdAt}): _recommenderData = recommenderData,_deliveryModes = deliveryModes,_fulfillmentDetails = fulfillmentDetails;
+  const _MarketplaceProduct({required this.id, required this.name, required this.brand, required this.description, required this.category, @JsonKey(name: 'image_url') required this.imageUrl, @JsonKey(name: 'affiliate_url') required this.affiliateUrl, @JsonKey(name: 'price_display') required this.priceDisplay, @JsonKey(name: 'content_rating') this.contentRating = 'general', @JsonKey(name: 'recommended_by') this.recommendedBy, @JsonKey(name: 'recommender_data') final  Map<String, dynamic>? recommenderData, @JsonKey(name: 'click_count') this.clickCount = 0, @JsonKey(name: 'average_rating') this.averageRating = 0.0, @JsonKey(name: 'review_count') this.reviewCount = 0, @JsonKey(name: 'stock_quantity') this.stockQuantity = 0, @JsonKey(name: 'stock_tracking_enabled') this.stockTrackingEnabled = false, @JsonKey(name: 'is_active') this.isActive = true, @JsonKey(name: 'shop_data') this.shopData, @JsonKey(name: 'delivery_modes') final  List<String> deliveryModes = const <String>[], @JsonKey(name: 'fulfillment_details') final  Map<String, dynamic> fulfillmentDetails = const <String, dynamic>{}, @JsonKey(name: 'created_at') required this.createdAt}): _recommenderData = recommenderData,_deliveryModes = deliveryModes,_fulfillmentDetails = fulfillmentDetails;
   factory _MarketplaceProduct.fromJson(Map<String, dynamic> json) => _$MarketplaceProductFromJson(json);
 
 @override final  String id;
@@ -3031,6 +3038,10 @@ class _MarketplaceProduct implements MarketplaceProduct {
 }
 
 @override@JsonKey(name: 'click_count') final  int clickCount;
+@override@JsonKey(name: 'average_rating') final  double averageRating;
+@override@JsonKey(name: 'review_count') final  int reviewCount;
+@override@JsonKey(name: 'stock_quantity') final  int stockQuantity;
+@override@JsonKey(name: 'stock_tracking_enabled') final  bool stockTrackingEnabled;
 @override@JsonKey(name: 'is_active') final  bool isActive;
 @override@JsonKey(name: 'shop_data') final  Shop? shopData;
  final  List<String> _deliveryModes;
@@ -3062,16 +3073,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other._recommenderData, _recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&const DeepCollectionEquality().equals(other._deliveryModes, _deliveryModes)&&const DeepCollectionEquality().equals(other._fulfillmentDetails, _fulfillmentDetails)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MarketplaceProduct&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.brand, brand) || other.brand == brand)&&(identical(other.description, description) || other.description == description)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.affiliateUrl, affiliateUrl) || other.affiliateUrl == affiliateUrl)&&(identical(other.priceDisplay, priceDisplay) || other.priceDisplay == priceDisplay)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.recommendedBy, recommendedBy) || other.recommendedBy == recommendedBy)&&const DeepCollectionEquality().equals(other._recommenderData, _recommenderData)&&(identical(other.clickCount, clickCount) || other.clickCount == clickCount)&&(identical(other.averageRating, averageRating) || other.averageRating == averageRating)&&(identical(other.reviewCount, reviewCount) || other.reviewCount == reviewCount)&&(identical(other.stockQuantity, stockQuantity) || other.stockQuantity == stockQuantity)&&(identical(other.stockTrackingEnabled, stockTrackingEnabled) || other.stockTrackingEnabled == stockTrackingEnabled)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.shopData, shopData) || other.shopData == shopData)&&const DeepCollectionEquality().equals(other._deliveryModes, _deliveryModes)&&const DeepCollectionEquality().equals(other._fulfillmentDetails, _fulfillmentDetails)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,contentRating,recommendedBy,const DeepCollectionEquality().hash(_recommenderData),clickCount,isActive,shopData,const DeepCollectionEquality().hash(_deliveryModes),const DeepCollectionEquality().hash(_fulfillmentDetails),createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,name,brand,description,category,imageUrl,affiliateUrl,priceDisplay,contentRating,recommendedBy,const DeepCollectionEquality().hash(_recommenderData),clickCount,averageRating,reviewCount,stockQuantity,stockTrackingEnabled,isActive,shopData,const DeepCollectionEquality().hash(_deliveryModes),const DeepCollectionEquality().hash(_fulfillmentDetails),createdAt]);
 
 @override
 String toString() {
-  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, contentRating: $contentRating, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, isActive: $isActive, shopData: $shopData, deliveryModes: $deliveryModes, fulfillmentDetails: $fulfillmentDetails, createdAt: $createdAt)';
+  return 'MarketplaceProduct(id: $id, name: $name, brand: $brand, description: $description, category: $category, imageUrl: $imageUrl, affiliateUrl: $affiliateUrl, priceDisplay: $priceDisplay, contentRating: $contentRating, recommendedBy: $recommendedBy, recommenderData: $recommenderData, clickCount: $clickCount, averageRating: $averageRating, reviewCount: $reviewCount, stockQuantity: $stockQuantity, stockTrackingEnabled: $stockTrackingEnabled, isActive: $isActive, shopData: $shopData, deliveryModes: $deliveryModes, fulfillmentDetails: $fulfillmentDetails, createdAt: $createdAt)';
 }
 
 
@@ -3082,7 +3093,7 @@ abstract mixin class _$MarketplaceProductCopyWith<$Res> implements $MarketplaceP
   factory _$MarketplaceProductCopyWith(_MarketplaceProduct value, $Res Function(_MarketplaceProduct) _then) = __$MarketplaceProductCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'fulfillment_details') Map<String, dynamic> fulfillmentDetails,@JsonKey(name: 'created_at') String createdAt
+ String id, String name, String brand, String description, String category,@JsonKey(name: 'image_url') String imageUrl,@JsonKey(name: 'affiliate_url') String affiliateUrl,@JsonKey(name: 'price_display') String priceDisplay,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'recommended_by') String? recommendedBy,@JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,@JsonKey(name: 'click_count') int clickCount,@JsonKey(name: 'average_rating') double averageRating,@JsonKey(name: 'review_count') int reviewCount,@JsonKey(name: 'stock_quantity') int stockQuantity,@JsonKey(name: 'stock_tracking_enabled') bool stockTrackingEnabled,@JsonKey(name: 'is_active') bool isActive,@JsonKey(name: 'shop_data') Shop? shopData,@JsonKey(name: 'delivery_modes') List<String> deliveryModes,@JsonKey(name: 'fulfillment_details') Map<String, dynamic> fulfillmentDetails,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -3099,7 +3110,7 @@ class __$MarketplaceProductCopyWithImpl<$Res>
 
 /// Create a copy of MarketplaceProduct
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? contentRating = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? isActive = null,Object? shopData = freezed,Object? deliveryModes = null,Object? fulfillmentDetails = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? brand = null,Object? description = null,Object? category = null,Object? imageUrl = null,Object? affiliateUrl = null,Object? priceDisplay = null,Object? contentRating = null,Object? recommendedBy = freezed,Object? recommenderData = freezed,Object? clickCount = null,Object? averageRating = null,Object? reviewCount = null,Object? stockQuantity = null,Object? stockTrackingEnabled = null,Object? isActive = null,Object? shopData = freezed,Object? deliveryModes = null,Object? fulfillmentDetails = null,Object? createdAt = null,}) {
   return _then(_MarketplaceProduct(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -3113,7 +3124,11 @@ as String,contentRating: null == contentRating ? _self.contentRating : contentRa
 as String,recommendedBy: freezed == recommendedBy ? _self.recommendedBy : recommendedBy // ignore: cast_nullable_to_non_nullable
 as String?,recommenderData: freezed == recommenderData ? _self._recommenderData : recommenderData // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,clickCount: null == clickCount ? _self.clickCount : clickCount // ignore: cast_nullable_to_non_nullable
-as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as int,averageRating: null == averageRating ? _self.averageRating : averageRating // ignore: cast_nullable_to_non_nullable
+as double,reviewCount: null == reviewCount ? _self.reviewCount : reviewCount // ignore: cast_nullable_to_non_nullable
+as int,stockQuantity: null == stockQuantity ? _self.stockQuantity : stockQuantity // ignore: cast_nullable_to_non_nullable
+as int,stockTrackingEnabled: null == stockTrackingEnabled ? _self.stockTrackingEnabled : stockTrackingEnabled // ignore: cast_nullable_to_non_nullable
+as bool,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,shopData: freezed == shopData ? _self.shopData : shopData // ignore: cast_nullable_to_non_nullable
 as Shop?,deliveryModes: null == deliveryModes ? _self._deliveryModes : deliveryModes // ignore: cast_nullable_to_non_nullable
 as List<String>,fulfillmentDetails: null == fulfillmentDetails ? _self._fulfillmentDetails : fulfillmentDetails // ignore: cast_nullable_to_non_nullable
@@ -3133,6 +3148,299 @@ $ShopCopyWith<$Res>? get shopData {
 
   return $ShopCopyWith<$Res>(_self.shopData!, (value) {
     return _then(_self.copyWith(shopData: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$ProductReview {
+
+ String get id; int get rating; String get body;@JsonKey(name: 'buyer_data') BuyerData get buyerData;@JsonKey(name: 'created_at') String get createdAt;
+/// Create a copy of ProductReview
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ProductReviewCopyWith<ProductReview> get copyWith => _$ProductReviewCopyWithImpl<ProductReview>(this as ProductReview, _$identity);
+
+  /// Serializes this ProductReview to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProductReview&&(identical(other.id, id) || other.id == id)&&(identical(other.rating, rating) || other.rating == rating)&&(identical(other.body, body) || other.body == body)&&(identical(other.buyerData, buyerData) || other.buyerData == buyerData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,rating,body,buyerData,createdAt);
+
+@override
+String toString() {
+  return 'ProductReview(id: $id, rating: $rating, body: $body, buyerData: $buyerData, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ProductReviewCopyWith<$Res>  {
+  factory $ProductReviewCopyWith(ProductReview value, $Res Function(ProductReview) _then) = _$ProductReviewCopyWithImpl;
+@useResult
+$Res call({
+ String id, int rating, String body,@JsonKey(name: 'buyer_data') BuyerData buyerData,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+$BuyerDataCopyWith<$Res> get buyerData;
+
+}
+/// @nodoc
+class _$ProductReviewCopyWithImpl<$Res>
+    implements $ProductReviewCopyWith<$Res> {
+  _$ProductReviewCopyWithImpl(this._self, this._then);
+
+  final ProductReview _self;
+  final $Res Function(ProductReview) _then;
+
+/// Create a copy of ProductReview
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? rating = null,Object? body = null,Object? buyerData = null,Object? createdAt = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,rating: null == rating ? _self.rating : rating // ignore: cast_nullable_to_non_nullable
+as int,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,buyerData: null == buyerData ? _self.buyerData : buyerData // ignore: cast_nullable_to_non_nullable
+as BuyerData,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+/// Create a copy of ProductReview
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$BuyerDataCopyWith<$Res> get buyerData {
+  
+  return $BuyerDataCopyWith<$Res>(_self.buyerData, (value) {
+    return _then(_self.copyWith(buyerData: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [ProductReview].
+extension ProductReviewPatterns on ProductReview {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ProductReview value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ProductReview() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ProductReview value)  $default,){
+final _that = this;
+switch (_that) {
+case _ProductReview():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ProductReview value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ProductReview() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  int rating,  String body, @JsonKey(name: 'buyer_data')  BuyerData buyerData, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ProductReview() when $default != null:
+return $default(_that.id,_that.rating,_that.body,_that.buyerData,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  int rating,  String body, @JsonKey(name: 'buyer_data')  BuyerData buyerData, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _ProductReview():
+return $default(_that.id,_that.rating,_that.body,_that.buyerData,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  int rating,  String body, @JsonKey(name: 'buyer_data')  BuyerData buyerData, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _ProductReview() when $default != null:
+return $default(_that.id,_that.rating,_that.body,_that.buyerData,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _ProductReview implements ProductReview {
+  const _ProductReview({required this.id, required this.rating, this.body = '', @JsonKey(name: 'buyer_data') required this.buyerData, @JsonKey(name: 'created_at') required this.createdAt});
+  factory _ProductReview.fromJson(Map<String, dynamic> json) => _$ProductReviewFromJson(json);
+
+@override final  String id;
+@override final  int rating;
+@override@JsonKey() final  String body;
+@override@JsonKey(name: 'buyer_data') final  BuyerData buyerData;
+@override@JsonKey(name: 'created_at') final  String createdAt;
+
+/// Create a copy of ProductReview
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ProductReviewCopyWith<_ProductReview> get copyWith => __$ProductReviewCopyWithImpl<_ProductReview>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$ProductReviewToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProductReview&&(identical(other.id, id) || other.id == id)&&(identical(other.rating, rating) || other.rating == rating)&&(identical(other.body, body) || other.body == body)&&(identical(other.buyerData, buyerData) || other.buyerData == buyerData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,rating,body,buyerData,createdAt);
+
+@override
+String toString() {
+  return 'ProductReview(id: $id, rating: $rating, body: $body, buyerData: $buyerData, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ProductReviewCopyWith<$Res> implements $ProductReviewCopyWith<$Res> {
+  factory _$ProductReviewCopyWith(_ProductReview value, $Res Function(_ProductReview) _then) = __$ProductReviewCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, int rating, String body,@JsonKey(name: 'buyer_data') BuyerData buyerData,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+@override $BuyerDataCopyWith<$Res> get buyerData;
+
+}
+/// @nodoc
+class __$ProductReviewCopyWithImpl<$Res>
+    implements _$ProductReviewCopyWith<$Res> {
+  __$ProductReviewCopyWithImpl(this._self, this._then);
+
+  final _ProductReview _self;
+  final $Res Function(_ProductReview) _then;
+
+/// Create a copy of ProductReview
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? rating = null,Object? body = null,Object? buyerData = null,Object? createdAt = null,}) {
+  return _then(_ProductReview(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,rating: null == rating ? _self.rating : rating // ignore: cast_nullable_to_non_nullable
+as int,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,buyerData: null == buyerData ? _self.buyerData : buyerData // ignore: cast_nullable_to_non_nullable
+as BuyerData,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+/// Create a copy of ProductReview
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$BuyerDataCopyWith<$Res> get buyerData {
+  
+  return $BuyerDataCopyWith<$Res>(_self.buyerData, (value) {
+    return _then(_self.copyWith(buyerData: value));
   });
 }
 }

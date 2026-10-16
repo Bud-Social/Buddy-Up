@@ -30,11 +30,17 @@ void main() {
   });
 
   group('entries appear only when the signal is true', () {
-    test('a shop owner sees the Creator Studio', () {
+    test('a shop owner sees Shop', () {
       final entries = businessEntries(
           const BusinessRoleFlags(hasShop: true));
       expect(entries.map((e) => e.key), [BusinessRoleKey.shop]);
       expect(entries.single.route, '/marketplace/creator-studio');
+      // Renamed from "Creator Studio": the screen sells things, and a trainer
+      // who only writes meal plans should not land here expecting an audience.
+      // The route is unchanged so deep links and the settings group both still
+      // resolve.
+      expect(entries.single.label, 'Shop');
+      expect(entries.single.shortLabel, 'Shop');
     });
 
     test('an organiser sees My Events', () {
@@ -116,8 +122,8 @@ void main() {
         'id': id,
         'name': 'Karura Fitness',
         'owner_type': ownerType,
-        if (shop != null) 'shop': shop,
-        if (gym != null) 'gym': gym,
+        'shop': ?shop,
+        'gym': ?gym,
       });
     }
 

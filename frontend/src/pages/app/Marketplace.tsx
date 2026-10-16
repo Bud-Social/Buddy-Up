@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Plus, Calendar, Clock, Users, BarChart2, Package, LocateFixed, Loader2, MapPin } from 'lucide-react';
+import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Calendar, Clock, Users, Package, LocateFixed, Loader2, MapPin } from 'lucide-react';
 import { NearbyNotice } from '@/components/ui/NearbyNotice';
 import { requestLocation, formatDistance, type GeoMeta } from '@/lib/geo';
 import { Button } from '@/components/ui/Button';
@@ -40,7 +40,6 @@ export default function Marketplace() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>('events');
   const [cartCount, setCartCount] = useState(0);
-  const [hasShop, setHasShop] = useState(false);
 
   const fetchCartCount = useCallback(() => {
     marketplaceApi.getCart().then(res => {
@@ -48,19 +47,12 @@ export default function Marketplace() {
     }).catch(() => {});
   }, []);
 
-  const fetchMyShops = useCallback(() => {
-    marketplaceApi.getMyShops().then(res => {
-      setHasShop((res.data || []).length > 0);
-    }).catch(() => {});
-  }, []);
-
   useEffect(() => {
     fetchCartCount();
-    fetchMyShops();
     const handler = () => fetchCartCount();
     window.addEventListener('cart-updated', handler);
     return () => window.removeEventListener('cart-updated', handler);
-  }, [fetchCartCount, fetchMyShops]);
+  }, [fetchCartCount]);
 
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto pb-20">
@@ -69,10 +61,6 @@ export default function Marketplace() {
         <div className="flex items-center justify-between mb-4">
           <h1 className="font-display text-2xl font-extrabold">Marketplace</h1>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => navigate('/marketplace/creator')} className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1">
-              <BarChart2 size={14} />
-              <span className="text-[10px] sm:text-xs leading-none">{hasShop ? 'Creator' : 'Become a Creator'}</span>
-            </Button>
             <Button variant="secondary" size="sm" onClick={() => navigate('/marketplace/orders')} className="flex items-center gap-1">
               <Package size={14} />
               <span className="hidden sm:inline">Orders</span>
@@ -108,10 +96,10 @@ export default function Marketplace() {
       </div>
 
       <div className="p-4 pt-4">
-        {tab === 'events' && <EventsTab hasShop={hasShop} />}
-        {tab === 'meal_plans' && <MealPlansTab hasShop={hasShop} />}
-        {tab === 'programmes' && <ProgrammesTab hasShop={hasShop} />}
-        {tab === 'products' && <ProductsTab hasShop={hasShop} />}
+        {tab === 'events' && <EventsTab />}
+        {tab === 'meal_plans' && <MealPlansTab />}
+        {tab === 'programmes' && <ProgrammesTab />}
+        {tab === 'products' && <ProductsTab />}
       </div>
     </div>
   );
@@ -124,12 +112,13 @@ const CART_ID_KEYS: Record<'meal_plan' | 'programme' | 'event_ticket' | 'product
   event_ticket: 'event_id',
 };
 
-function AddToCartButton({ type, id }: { type: 'meal_plan' | 'programme' | 'event_ticket' | 'product', id: string }) {
+function AddToCartButton({ type, id, unavailable = false }: { type: 'meal_plan' | 'programme' | 'event_ticket' | 'product', id: string, unavailable?: boolean }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (unavailable) return;
     setLoading(true);
     try {
       await marketplaceApi.addToCart(type, { [CART_ID_KEYS[type]]: id }, 1);
@@ -143,13 +132,13 @@ function AddToCartButton({ type, id }: { type: 'meal_plan' | 'programme' | 'even
   };
 
   return (
-    <Button size="sm" variant="primary" className="w-full text-xs py-1 h-7 mt-2" onClick={handleAdd} disabled={loading}>
-      {loading ? 'Adding...' : 'Add to Cart'}
+    <Button size="sm" variant="primary" className="w-full text-xs py-1 h-7 mt-2" onClick={handleAdd} disabled={loading || unavailable}>
+      {unavailable ? 'Out of Stock' : loading ? 'Adding...' : 'Add to Cart'}
     </Button>
   );
 }
 
-function MealPlansTab({ hasShop }: { hasShop: boolean }) {
+function MealPlansTab() {
   const navigate = useNavigate();
   const [plans, setPlans] = useState<MealPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -181,12 +170,6 @@ function MealPlansTab({ hasShop }: { hasShop: boolean }) {
           <button key={d} onClick={() => setDietFilter(d)} className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs whitespace-nowrap capitalize transition-colors snap-start ${dietFilter === d ? 'bg-buddy-green text-buddy-black font-medium' : 'border border-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{d.replace('_', ' ')}</button>
         ))}
       </div>
-
-      {hasShop && (
-        <div className="flex justify-end mb-2">
-          <button onClick={() => navigate('/marketplace/meal-plans/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
-        </div>
-      )}
 
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -243,7 +226,7 @@ function MealPlansTab({ hasShop }: { hasShop: boolean }) {
   );
 }
 
-function ProgrammesTab({ hasShop }: { hasShop: boolean }) {
+function ProgrammesTab() {
   const navigate = useNavigate();
   const [programmes, setProgrammes] = useState<TrainingProgrammeMP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -268,11 +251,6 @@ function ProgrammesTab({ hasShop }: { hasShop: boolean }) {
 
   return (
     <div className="space-y-3">
-      {hasShop && (
-        <div className="flex justify-end mb-2">
-          <button onClick={() => navigate('/marketplace/programmes/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Create</button>
-        </div>
-      )}
       {error && <ErrorBanner message={error} onRetry={fetchProgrammes} />}
       {programmes.length === 0 ? (
         error ? null : (
@@ -315,7 +293,7 @@ function ProgrammesTab({ hasShop }: { hasShop: boolean }) {
   );
 }
 
-function ProductsTab({ hasShop }: { hasShop: boolean }) {
+function ProductsTab() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductMP[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -348,12 +326,6 @@ function ProductsTab({ hasShop }: { hasShop: boolean }) {
         ))}
       </div>
 
-      {hasShop && (
-        <div className="flex justify-end mb-2">
-          <button onClick={() => navigate('/marketplace/products/create')} className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"><Plus size={14} /> Recommend</button>
-        </div>
-      )}
-
       {isLoading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -379,13 +351,19 @@ function ProductsTab({ hasShop }: { hasShop: boolean }) {
                 <p className="text-sm font-medium truncate">{p.name}</p>
                 <p className="text-xs text-buddy-text-secondary">{p.brand}</p>
                 {p.recommender_data && <p className="text-xs text-buddy-electric mt-0.5">Rec. by {p.recommender_data.display_name}</p>}
+                {p.stock_tracking_enabled && (
+                  <p className={`text-[10px] font-bold mt-1 ${p.stock_quantity === 0 ? 'text-buddy-red' : p.stock_quantity <= 5 ? 'text-buddy-gold' : 'text-buddy-green'}`}>
+                    {p.stock_quantity === 0 ? 'Out of stock' : p.stock_quantity <= 5 ? `Only ${p.stock_quantity} left` : 'In stock'}
+                  </p>
+                )}
+                {p.review_count > 0 && <p className="text-[10px] text-buddy-gold flex items-center gap-1 mt-1"><Star size={10} className="fill-buddy-gold" /> {p.average_rating} ({p.review_count})</p>}
                 <div className="flex items-center justify-between mt-2">
                   <div>
                     {p.price_display && <span className="text-xs font-coin font-bold text-buddy-green">{p.price_display}</span>}
                   </div>
                 </div>
               </div>
-              <AddToCartButton type="product" id={p.id} />
+              <AddToCartButton type="product" id={p.id} unavailable={Boolean(p.stock_tracking_enabled && p.stock_quantity === 0)} />
             </Card>
           ))}
           </div>
@@ -395,7 +373,7 @@ function ProductsTab({ hasShop }: { hasShop: boolean }) {
   );
 }
 
-function EventsTab({ hasShop }: { hasShop: boolean }) {
+function EventsTab() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<any[]>([]);
   const [scope, setScope] = useState<'upcoming' | 'past' | 'all'>('upcoming');
@@ -475,7 +453,6 @@ function EventsTab({ hasShop }: { hasShop: boolean }) {
         </div>
         <div className="flex gap-2 ml-auto">
           <button onClick={() => navigate('/marketplace/events/my-tickets')} className="text-xs font-medium text-buddy-electric hover:underline">My Tickets</button>
-          <button onClick={() => navigate(hasShop ? '/marketplace/events/create' : '/marketplace/creator')} className="text-xs font-medium text-buddy-green hover:underline">{hasShop ? 'Host' : 'Become Host'}</button>
         </div>
       </div>
 

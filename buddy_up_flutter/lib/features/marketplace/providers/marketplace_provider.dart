@@ -71,6 +71,28 @@ final productDetailProvider = FutureProvider.family<MarketplaceProduct, String>(
   return MarketplaceProduct.fromJson(raw['data'] as Map<String, dynamic>);
 });
 
+final productReviewsProvider = FutureProvider.family<List<ProductReview>, String>((ref, productId) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getProductReviews(productId);
+  return (raw['data'] as List)
+      .map((e) => ProductReview.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
+
+/// Post a review for a product the caller bought.
+///
+/// Invalidates both the review list and the product itself, because the product
+/// row carries the denormalised `average_rating` / `review_count` the detail
+/// screen renders, and the server recomputes those on every accepted review.
+final postProductReviewProvider = Provider((ref) => (String productId, int rating, {String body = ''}) async {
+  final repo = ref.read(marketplaceRepositoryProvider);
+  final result = await repo.reviewProduct(productId, {'rating': rating, 'body': body});
+  ref.invalidate(productReviewsProvider(productId));
+  ref.invalidate(productDetailProvider(productId));
+  ref.invalidate(productsProvider);
+  return result;
+});
+
 // -- Event Providers --
 class EventsScopeNotifier extends Notifier<String> {
   @override

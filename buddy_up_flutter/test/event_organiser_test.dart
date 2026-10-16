@@ -22,7 +22,7 @@ void main() {
       'is_checked_in': checkedIn,
       'checked_in_at': checkedIn ? '2026-04-01T06:41:00Z' : null,
       'price_paid_artifacts': {'dumbbell': 50},
-      if (displayName != null) 'display_name': displayName,
+      'display_name': ?displayName,
       'username': username,
       'created_at': '2026-03-20T11:00:00Z',
     };

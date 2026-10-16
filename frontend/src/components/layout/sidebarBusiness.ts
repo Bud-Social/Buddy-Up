@@ -36,7 +36,7 @@ export interface BusinessEntry {
  */
 export function businessEntries(flags: BusinessRoleFlags): BusinessEntry[] {
   const entries: BusinessEntry[] = [];
-  if (flags.hasShop) entries.push({ key: 'shop', to: '/marketplace/creator', label: 'Creator Studio', shortLabel: 'Shop' });
+  if (flags.hasShop) entries.push({ key: 'shop', to: '/marketplace/creator', label: 'Shop', shortLabel: 'Shop' });
   if (flags.hasEvents) entries.push({ key: 'events', to: '/marketplace/events', label: 'My Events', shortLabel: 'Events' });
   if (flags.gymSlug) entries.push({ key: 'gym', to: `/gyms/${flags.gymSlug}/manage`, label: 'My Gym', shortLabel: 'Gym' });
   if (flags.hasStation) entries.push({ key: 'stations', to: '/marketplace/stations', label: 'My Stations', shortLabel: 'Stations' });

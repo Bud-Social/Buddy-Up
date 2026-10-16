@@ -91,6 +91,11 @@ abstract class Shop with _$Shop {
     @JsonKey(name: 'verification_status') @Default('unverified') String verificationStatus,
     @JsonKey(name: 'is_active') @Default(true) bool isActive,
     @JsonKey(name: 'created_at') @Default('') String createdAt,
+    // Only `GET /marketplace/shops/my/` sends this, and it is the one place the
+    // client learns what it may do inside the shop: the backend counts only
+    // owner/manager as a publisher, so a staff membership is not enough. Absent
+    // everywhere else, hence the empty-string default rather than a nullable.
+    @JsonKey(name: 'my_role') @Default('') String myRole,
   }) = _Shop;
 
   factory Shop.fromJson(Map<String, dynamic> json) => _$ShopFromJson(json);
@@ -130,7 +135,12 @@ abstract class BuddyUpCertification with _$BuddyUpCertification {
 abstract class BuyerData with _$BuyerData {
   const factory BuyerData({
     required String username,
-    required String displayName,
+    // Every review serializer builds this dict by hand and spells it
+    // `display_name` — `CreatorData` right above it has always had the explicit
+    // key for the same reason. Without it, json_serializable looks for a literal
+    // `displayName`, finds null, and the whole review list throws on its first
+    // row rather than merely losing the name.
+    @JsonKey(name: 'display_name') required String displayName,
     @JsonKey(name: 'avatar_url') required String avatarUrl,
   }) = _BuyerData;
 
@@ -239,6 +249,16 @@ abstract class MarketplaceProduct with _$MarketplaceProduct {
     @JsonKey(name: 'recommended_by') String? recommendedBy,
     @JsonKey(name: 'recommender_data') Map<String, dynamic>? recommenderData,
     @JsonKey(name: 'click_count') @Default(0) int clickCount,
+    // Only buyers who actually bought the product can review it, so these are
+    // the whole of the social proof on a product and are recomputed server-side
+    // on every accepted review. Defaults matter: an older server that sends
+    // neither must still parse as "unrated, unlimited stock".
+    @JsonKey(name: 'average_rating') @Default(0.0) double averageRating,
+    @JsonKey(name: 'review_count') @Default(0) int reviewCount,
+    // `stock_tracking_enabled` is the real switch: a product that does not track
+    // stock ignores `stock_quantity` entirely and must never show a badge.
+    @JsonKey(name: 'stock_quantity') @Default(0) int stockQuantity,
+    @JsonKey(name: 'stock_tracking_enabled') @Default(false) bool stockTrackingEnabled,
     @JsonKey(name: 'is_active') @Default(true) bool isActive,
     @JsonKey(name: 'shop_data') Shop? shopData,
     @JsonKey(name: 'delivery_modes') @Default(<String>[]) List<String> deliveryModes,
@@ -248,6 +268,25 @@ abstract class MarketplaceProduct with _$MarketplaceProduct {
 
   factory MarketplaceProduct.fromJson(Map<String, dynamic> json) =>
       _$MarketplaceProductFromJson(json);
+}
+
+/// One review from a buyer for one purchased product line.
+///
+/// The backend ties a review to an `OrderItem`, so a non-buyer has nothing to
+/// review against: the write is a 404 for them rather than a 403, and the server
+/// owns the "one review per purchase" rule.
+@freezed
+abstract class ProductReview with _$ProductReview {
+  const factory ProductReview({
+    required String id,
+    required int rating,
+    @Default('') String body,
+    @JsonKey(name: 'buyer_data') required BuyerData buyerData,
+    @JsonKey(name: 'created_at') required String createdAt,
+  }) = _ProductReview;
+
+  factory ProductReview.fromJson(Map<String, dynamic> json) =>
+      _$ProductReviewFromJson(json);
 }
 
 @freezed
@@ -591,6 +630,13 @@ class CreatorAnalytics {
   final List<RevenuePoint> revenueOverTime;
   final List<TopService> topServices;
 
+  /// Per-product rows from `analytics.product_performance`.
+  ///
+  /// Not freezed, like the rest of this class: it is hand-parsed because the
+  /// endpoint returns a hand-built envelope. Absent on a server that predates the
+  /// block, so the default is empty and the Shop hides the card entirely.
+  final List<ProductPerformance> productPerformance;
+
   CreatorAnalytics({
     this.totalRevenueUsd = 0.0,
     this.totalSales = 0,
@@ -599,6 +645,7 @@ class CreatorAnalytics {
     this.categoryRevenue = const {},
     this.revenueOverTime = const [],
     this.topServices = const [],
+    this.productPerformance = const [],
   });
 
   factory CreatorAnalytics.fromJson(Map<String, dynamic> json) {
@@ -606,6 +653,7 @@ class CreatorAnalytics {
     final revenue = json['category_revenue'] as Map<String, dynamic>? ?? {};
     final rot = (json['revenue_over_time'] as List?) ?? [];
     final top = (json['top_services'] as List?) ?? [];
+    final perf = (json['product_performance'] as List?) ?? [];
     return CreatorAnalytics(
       totalRevenueUsd: (json['total_revenue_usd'] ?? 0.0).toDouble(),
       totalSales: (json['total_sales'] ?? 0) as int,
@@ -614,8 +662,60 @@ class CreatorAnalytics {
       categoryRevenue: revenue.map((k, v) => MapEntry(k, (v ?? 0.0).toDouble())),
       revenueOverTime: rot.map((e) => RevenuePoint.fromJson(e as Map<String, dynamic>)).toList(),
       topServices: top.map((e) => TopService.fromJson(e as Map<String, dynamic>)).toList(),
+      productPerformance:
+          perf.map((e) => ProductPerformance.fromJson(e as Map<String, dynamic>)).toList(),
     );
   }
+}
+
+/// One row of the Shop's Product performance block.
+///
+/// A product the caller has recommended, with its funnel: clicks at the top,
+/// units sold and revenue at the bottom, and the two things that explain the gap
+/// between them — conversion rate, and whether anyone has reviewed it or is
+/// about to be unable to buy it.
+class ProductPerformance {
+  final String id;
+  final String title;
+  final int clicks;
+  final int unitsSold;
+  final double revenueUsd;
+  final double conversionRate;
+  final double averageRating;
+  final int reviewCount;
+  final int stockQuantity;
+  final bool stockTrackingEnabled;
+
+  ProductPerformance({
+    this.id = '',
+    this.title = '',
+    this.clicks = 0,
+    this.unitsSold = 0,
+    this.revenueUsd = 0.0,
+    this.conversionRate = 0.0,
+    this.averageRating = 0.0,
+    this.reviewCount = 0,
+    this.stockQuantity = 0,
+    this.stockTrackingEnabled = false,
+  });
+
+  factory ProductPerformance.fromJson(Map<String, dynamic> json) {
+    return ProductPerformance(
+      id: (json['id'] ?? '') as String,
+      title: (json['title'] ?? '') as String,
+      clicks: (json['clicks'] ?? 0) as int,
+      unitsSold: (json['units_sold'] ?? 0) as int,
+      revenueUsd: (json['revenue_usd'] ?? 0.0).toDouble(),
+      conversionRate: (json['conversion_rate'] ?? 0.0).toDouble(),
+      averageRating: (json['average_rating'] ?? 0.0).toDouble(),
+      reviewCount: (json['review_count'] ?? 0) as int,
+      stockQuantity: (json['stock_quantity'] ?? 0) as int,
+      stockTrackingEnabled: (json['stock_tracking_enabled'] ?? false) as bool,
+    );
+  }
+
+  /// Mirrors the product-detail badge: only a tracked product can be sold out.
+  bool get isSoldOut => stockTrackingEnabled && stockQuantity == 0;
 }
 
 class RevenuePoint {

@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useToast } from '@/components/ui/Toast';
 import { marketplaceApi } from '@/api/marketplace';
-import type { ProductMP } from '@/api/marketplace';
+import type { ProductMP, ProductReview } from '@/api/marketplace';
 
 export default function ProductDetail() {
   const { productId } = useParams<{ productId: string }>();
@@ -15,6 +15,7 @@ export default function ProductDetail() {
   const [product, setProduct] = useState<ProductMP | null>(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
 
   useEffect(() => {
     if (!productId) return;
@@ -23,10 +24,11 @@ export default function ProductDetail() {
       .then((res) => setProduct(res.data))
       .catch(() => navigate('/marketplace'))
       .finally(() => setLoading(false));
+    marketplaceApi.getProductReviews(productId).then((res) => setReviews(res.data || [])).catch(() => {});
   }, [productId, navigate]);
 
   const handleAddToCart = async () => {
-    if (!productId) return;
+    if (!productId || (product?.stock_tracking_enabled && product.stock_quantity === 0)) return;
     setAdding(true);
     try {
       await marketplaceApi.addToCart('product', { product_id: productId }, 1);
@@ -109,6 +111,11 @@ export default function ProductDetail() {
             </div>
           )}
 
+          <div className="flex items-center gap-2">
+            {product.stock_tracking_enabled && <Badge variant={product.stock_quantity === 0 ? 'red' : product.stock_quantity <= 5 ? 'gold' : 'green'} label={product.stock_quantity === 0 ? 'Out of stock' : product.stock_quantity <= 5 ? `Only ${product.stock_quantity} left` : 'In stock'} size="sm" />}
+            {product.review_count > 0 && <span className="text-sm font-semibold text-buddy-gold flex items-center gap-1"><Star size={15} className="fill-buddy-gold" /> {product.average_rating} · {product.review_count} review{product.review_count === 1 ? '' : 's'}</span>}
+          </div>
+
           <div>
             <h3 className="font-bold text-lg mb-2">Description</h3>
             <p className="text-sm text-buddy-text-secondary leading-relaxed whitespace-pre-wrap">{product.description || 'No description available.'}</p>
@@ -124,6 +131,18 @@ export default function ProductDetail() {
             </div>
           )}
 
+          {reviews.length > 0 && (
+            <div>
+              <h3 className="font-bold text-lg mb-2">Customer reviews</h3>
+              <div className="space-y-2">
+                {reviews.slice(0, 5).map((review) => <div key={review.id} className="rounded-xl bg-buddy-surface p-3 text-sm">
+                  <p className="font-semibold flex items-center gap-1"><Star size={13} className="text-buddy-gold fill-buddy-gold" /> {review.rating} · {review.buyer_data.display_name}</p>
+                  {review.body && <p className="text-buddy-text-secondary mt-1">{review.body}</p>}
+                </div>)}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-4 text-xs font-semibold text-buddy-text-secondary border-t border-buddy-surface-raised pt-4">
             <span className="flex items-center gap-1"><Clock size={14} /> Listed {new Date(product.created_at).toLocaleDateString()}</span>
             <span className="flex items-center gap-1"><ExternalLink size={14} /> {product.click_count} clicks</span>
@@ -133,8 +152,8 @@ export default function ProductDetail() {
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-buddy-black/95 backdrop-blur-xl border-t border-buddy-surface flex justify-center z-50">
         <div className="w-full max-w-xl flex gap-3">
-          <Button className="flex-1 h-12 shadow-[0_0_15px_rgba(23,248,154,0.3)] bg-buddy-green text-buddy-black font-bold text-base hover:bg-buddy-green/90" onClick={handleAddToCart} isLoading={adding} disabled={adding}>
-            <ShoppingCart size={18} className="mr-2" /> Add to Cart
+          <Button className="flex-1 h-12 shadow-[0_0_15px_rgba(23,248,154,0.3)] bg-buddy-green text-buddy-black font-bold text-base hover:bg-buddy-green/90" onClick={handleAddToCart} isLoading={adding} disabled={adding || Boolean(product.stock_tracking_enabled && product.stock_quantity === 0)}>
+            <ShoppingCart size={18} className="mr-2" /> {product.stock_tracking_enabled && product.stock_quantity === 0 ? 'Out of Stock' : 'Add to Cart'}
           </Button>
           {product.affiliate_url && (
             <Button variant="outline" className="flex-shrink-0 h-12 px-6 border-buddy-electric text-buddy-electric hover:bg-buddy-electric/10" onClick={handleAffiliateClick}>

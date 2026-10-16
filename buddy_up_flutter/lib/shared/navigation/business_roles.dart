@@ -121,7 +121,7 @@ List<BusinessEntry> businessEntries(BusinessRoleFlags flags) {
     entries.add(const BusinessEntry(
       key: BusinessRoleKey.shop,
       route: '/marketplace/creator-studio',
-      label: 'Creator Studio',
+      label: 'Shop',
       shortLabel: 'Shop',
       subtitle: 'Listings, orders and payouts',
     ));

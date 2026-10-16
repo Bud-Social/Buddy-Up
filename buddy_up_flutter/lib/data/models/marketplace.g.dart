@@ -41,6 +41,7 @@ _Shop _$ShopFromJson(Map<String, dynamic> json) => _Shop(
   verificationStatus: json['verification_status'] as String? ?? 'unverified',
   isActive: json['is_active'] as bool? ?? true,
   createdAt: json['created_at'] as String? ?? '',
+  myRole: json['my_role'] as String? ?? '',
 );
 
 Map<String, dynamic> _$ShopToJson(_Shop instance) => <String, dynamic>{
@@ -59,6 +60,7 @@ Map<String, dynamic> _$ShopToJson(_Shop instance) => <String, dynamic>{
   'verification_status': instance.verificationStatus,
   'is_active': instance.isActive,
   'created_at': instance.createdAt,
+  'my_role': instance.myRole,
 };
 
 _UserShopResponse _$UserShopResponseFromJson(
@@ -116,14 +118,14 @@ Map<String, dynamic> _$BuddyUpCertificationToJson(
 
 _BuyerData _$BuyerDataFromJson(Map<String, dynamic> json) => _BuyerData(
   username: json['username'] as String,
-  displayName: json['displayName'] as String,
+  displayName: json['display_name'] as String,
   avatarUrl: json['avatar_url'] as String,
 );
 
 Map<String, dynamic> _$BuyerDataToJson(_BuyerData instance) =>
     <String, dynamic>{
       'username': instance.username,
-      'displayName': instance.displayName,
+      'display_name': instance.displayName,
       'avatar_url': instance.avatarUrl,
     };
 
@@ -277,6 +279,10 @@ _MarketplaceProduct _$MarketplaceProductFromJson(Map<String, dynamic> json) =>
       recommendedBy: json['recommended_by'] as String?,
       recommenderData: json['recommender_data'] as Map<String, dynamic>?,
       clickCount: (json['click_count'] as num?)?.toInt() ?? 0,
+      averageRating: (json['average_rating'] as num?)?.toDouble() ?? 0.0,
+      reviewCount: (json['review_count'] as num?)?.toInt() ?? 0,
+      stockQuantity: (json['stock_quantity'] as num?)?.toInt() ?? 0,
+      stockTrackingEnabled: json['stock_tracking_enabled'] as bool? ?? false,
       isActive: json['is_active'] as bool? ?? true,
       shopData: json['shop_data'] == null
           ? null
@@ -306,10 +312,32 @@ Map<String, dynamic> _$MarketplaceProductToJson(_MarketplaceProduct instance) =>
       'recommended_by': instance.recommendedBy,
       'recommender_data': instance.recommenderData,
       'click_count': instance.clickCount,
+      'average_rating': instance.averageRating,
+      'review_count': instance.reviewCount,
+      'stock_quantity': instance.stockQuantity,
+      'stock_tracking_enabled': instance.stockTrackingEnabled,
       'is_active': instance.isActive,
       'shop_data': instance.shopData,
       'delivery_modes': instance.deliveryModes,
       'fulfillment_details': instance.fulfillmentDetails,
+      'created_at': instance.createdAt,
+    };
+
+_ProductReview _$ProductReviewFromJson(Map<String, dynamic> json) =>
+    _ProductReview(
+      id: json['id'] as String,
+      rating: (json['rating'] as num).toInt(),
+      body: json['body'] as String? ?? '',
+      buyerData: BuyerData.fromJson(json['buyer_data'] as Map<String, dynamic>),
+      createdAt: json['created_at'] as String,
+    );
+
+Map<String, dynamic> _$ProductReviewToJson(_ProductReview instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'rating': instance.rating,
+      'body': instance.body,
+      'buyer_data': instance.buyerData,
       'created_at': instance.createdAt,
     };
 

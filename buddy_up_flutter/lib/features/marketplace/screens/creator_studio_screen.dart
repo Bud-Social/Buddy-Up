@@ -39,7 +39,7 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Creator Studio'),
+        title: const Text('Shop'),
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -82,6 +82,8 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
             const SizedBox(height: 16),
             if (analytics.categorySales.isNotEmpty) _categorySalesCard(analytics),
             if (analytics.topServices.isNotEmpty) _topServicesCard(analytics),
+            if (analytics.productPerformance.isNotEmpty)
+              _productPerformanceCard(analytics),
             if (analytics.revenueOverTime.isNotEmpty) _revenueOverTimeCard(analytics),
           ],
         ),
@@ -190,6 +192,76 @@ class _CreatorStudioScreenState extends ConsumerState<CreatorStudioScreen> with 
                     child: Text(s.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
                   ),
                   Text('${s.sales} sales', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: BuddyColors.textSecondary)),
+                ],
+              ),
+            )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Revenue, clicks, units sold and conversion rate per recommended product,
+  /// plus the two things that explain the gap between interest and sales: what
+  /// buyers thought of it, and whether there is any of it left.
+  Widget _productPerformanceCard(CreatorAnalytics analytics) {
+    return Card(
+      color: BuddyColors.surface,
+      margin: const EdgeInsets.only(top: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Product performance', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: BuddyColors.textSecondary)),
+            const SizedBox(height: 12),
+            ...analytics.productPerformance.map((p) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(p.title,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(width: 8),
+                      Text('\$${p.revenueUsd.toStringAsFixed(2)}',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: BuddyColors.green)),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${p.clicks} clicks · ${p.unitsSold} sold · ${p.conversionRate.toStringAsFixed(1)}% conversion',
+                      style: const TextStyle(fontSize: 11, color: BuddyColors.textSecondary)),
+                  // An unrated product shows nothing rather than "0.0 stars" —
+                  // and a product nobody has reviewed yet has no reputation to
+                  // defend, so the row stays out of the way.
+                  if (p.reviewCount > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      const Icon(Icons.star, size: 12, color: BuddyColors.gold),
+                      const SizedBox(width: 3),
+                      Text('${p.averageRating.toStringAsFixed(1)} (${p.reviewCount})',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: BuddyColors.gold)),
+                    ]),
+                  ],
+                  if (p.stockTrackingEnabled)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        p.isSoldOut
+                            ? 'Out of stock'
+                            : '${p.stockQuantity} in stock',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: p.isSoldOut ? BuddyColors.red : BuddyColors.green,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             )),

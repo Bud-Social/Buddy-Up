@@ -35,6 +35,7 @@ const CATEGORIES: Array<{ value: CategoryApplicationType; label: string; blurb: 
   { value: 'practitioner', label: 'Health practitioner', blurb: 'Licensed clinician. Your verified scope limits the guidance you may give.' },
   { value: 'gym_owner', label: 'Gym owner', blurb: 'Own or run a gym on the platform.' },
   { value: 'shop_owner', label: 'Shop owner', blurb: 'Sell products, meal plans or programmes through a shop.' },
+  { value: 'distributor', label: 'Distributor', blurb: 'Supply products and host marketplace events.' },
   { value: 'delivery_partner', label: 'Delivery partner', blurb: 'Deliver orders as an independent courier.' },
 ];
 
@@ -53,6 +54,7 @@ const TYPE_LABELS: Record<string, string> = {
   practitioner: 'Health practitioner',
   gym_owner: 'Gym owner',
   shop_owner: 'Shop owner',
+  distributor: 'Distributor',
   delivery_partner: 'Delivery partner',
   id: 'Identity',
   shop: 'Shop / seller',
@@ -65,6 +67,7 @@ const REQUIRED: Record<string, string[]> = {
   practitioner: ['credential_title', 'credential_issuer', 'credential_id', 'issued_date', 'scope_of_practice'],
   gym_owner: ['credential_title', 'credential_issuer', 'credential_id'],
   shop_owner: ['credential_title', 'credential_issuer', 'credential_id'],
+  distributor: ['credential_title', 'credential_issuer', 'credential_id'],
   delivery_partner: ['credential_title', 'credential_issuer', 'credential_id'],
 };
 

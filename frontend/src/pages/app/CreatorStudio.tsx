@@ -496,7 +496,7 @@ export default function CreatorStudio() {
           <button onClick={() => navigate('/marketplace')} className="p-2 rounded-full hover:bg-buddy-surface">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
           </button>
-          <h1 className="font-display text-2xl font-extrabold">Creator Studio</h1>
+          <h1 className="font-display text-2xl font-extrabold">Shop</h1>
         </div>
         <Button size="sm" onClick={() => setShowAddServiceModal(true)} className="bg-buddy-electric text-buddy-black font-bold">
           + Add Service
@@ -580,6 +580,26 @@ export default function CreatorStudio() {
                         <span className="truncate">{s.title}</span>
                       </div>
                       <span className="font-medium flex-shrink-0">{s.sales} sales</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {(analytics.product_performance ?? []).length > 0 && (
+              <Card className="p-4">
+                <p className="text-xs text-buddy-text-secondary font-medium mb-3">Product performance</p>
+                <div className="space-y-3">
+                  {(analytics.product_performance ?? []).map((product) => (
+                    <div key={product.id} className="border-b border-buddy-surface-raised pb-3 last:border-0 last:pb-0">
+                      <div className="flex justify-between gap-3 text-xs"><span className="font-semibold truncate">{product.title}</span><span className="text-buddy-green font-bold">${product.revenue_usd.toFixed(2)}</span></div>
+                      <p className="text-[10px] text-buddy-text-secondary mt-1">
+                        {product.clicks} clicks · {product.units_sold} sold · {product.conversion_rate}% conversion
+                        {product.review_count > 0 ? ` · ★ ${product.average_rating} (${product.review_count})` : ''}
+                      </p>
+                      {product.stock_tracking_enabled && <p className={`text-[10px] font-semibold mt-1 ${product.stock_quantity === 0 ? 'text-buddy-red' : product.stock_quantity <= 5 ? 'text-buddy-gold' : 'text-buddy-green'}`}>
+                        {product.stock_quantity === 0 ? 'Out of stock' : `${product.stock_quantity} in stock`}
+                      </p>}
                     </div>
                   ))}
                 </div>
