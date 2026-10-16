@@ -510,9 +510,12 @@ class VerifyRegistrationOTPView(views.APIView):
         if blocked is not None:
             return blocked
 
-        mfa_required = _check_staff_mfa(user)
-        if mfa_required is not None:
-            return mfa_required
+        # NOTE: the MFA gate is deliberately NOT here. It used to be, and that
+        # was wrong twice over. It fired before the OTP was even checked, so a
+        # staff member whose email was still unverified could not verify it --
+        # the one action that would have told us who they were. And it fired
+        # with no way forward, so it was a dead end as well as a block. It now
+        # runs after the address is proven, below.
 
         if user.email_verified:
             return Response({
@@ -564,6 +567,15 @@ class VerifyRegistrationOTPView(views.APIView):
         if profile.verification_status == 'none':
             profile.verification_status = 'email'
             profile.save(update_fields=['verification_status'])
+
+        # Both proofs are now in hand: the password from LoginView, and the
+        # address from the OTP just consumed. That is a stronger bar than the
+        # login path reaches, so a staff member without 2FA gets the enrolment
+        # credential rather than a bare refusal -- otherwise they could verify
+        # their email and then be stuck with no session and no way to enrol.
+        mfa_required = _check_staff_mfa(user, issue_enrolment_token=True)
+        if mfa_required is not None:
+            return mfa_required
 
         tokens = _get_tokens_for_user(user)
         _create_device_session(user, tokens['refresh'], request)

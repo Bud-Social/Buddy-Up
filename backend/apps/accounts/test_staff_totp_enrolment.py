@@ -19,9 +19,11 @@ credential proves the caller holds the password *and* can read mail at the
 account's address, which is the same bar the platform sets for a password reset.
 """
 import hashlib
+from datetime import timedelta
 
 import pyotp
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -302,3 +304,138 @@ class StaffEnrolmentFlowTests(_CacheClearingMixin, TestCase):
             TOTP_SETUP_URL, HTTP_X_TOTP_ENROLMENT_TOKEN='not-a-token-at-all')
 
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+class StaffEnrolmentAfterRegistrationTests(_CacheClearingMixin, TestCase):
+    """Staff who are still email-unverified must reach the enrolment screen too.
+
+    The MFA gate used to sit *before* the registration OTP was checked. That was
+    broken twice over: it fired before the one action that would have proved who
+    the caller was, and it fired with no way forward. A staff member who had
+    registered and never confirmed their address could not confirm it, and was
+    then stuck with neither a session nor a way to enrol.
+
+    Three of the four administrator accounts promoted this session were in
+    exactly that state, which is how it surfaced.
+
+    The flow driven here is the real one: register, get promoted to staff, then
+    confirm the address.
+    """
+
+    REGISTER_URL = '/api/v1/auth/register/'
+    REG_OTP_URL = '/api/v1/auth/verify-registration-otp/'
+    EMAIL = 'freshly-promoted@example.com'
+    PASSWORD = 'Str0ngPass!23'
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self.registration_token = self._register()
+
+    def _register(self):
+        res = self.client.post(self.REGISTER_URL, {
+            'email': self.EMAIL,
+            'password': self.PASSWORD,
+            'dob': '1990-04-02',
+            'accepted_terms': True,
+            'accepted_privacy': True,
+            'accepted_guidelines': True,
+            'is_16_plus': True,
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        return res.data['data']['registration_token']
+
+    def _promote_to_staff(self):
+        """The real sequence: a normal signup, promoted later."""
+        self.staff = User.objects.get(email__iexact=self.EMAIL)
+        self.staff.is_staff = True
+        self.staff.save(update_fields=['is_staff'])
+        return self.staff
+
+    def _otp(self):
+        return OTPToken.objects.filter(
+            user__email__iexact=self.EMAIL, channel='email', is_used=False,
+        ).latest('created_at').code
+
+    def _verify(self, otp=None):
+        return self.client.post(self.REG_OTP_URL, {
+            'registration_token': self.registration_token,
+            'otp': otp or self._otp(),
+        }, format='json')
+
+    def test_a_wrong_otp_does_not_reach_the_mfa_gate(self):
+        """Nothing about 2FA is offered until the address is actually proven."""
+        self._promote_to_staff()
+
+        res = self._verify(otp='000000')
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST, res.data)
+        self.assertNotIn('enrolment_token', str(res.data))
+        self.staff.refresh_from_db()
+        self.assertFalse(self.staff.email_verified)
+
+    def test_verifying_the_address_yields_the_enrolment_credential(self):
+        self._promote_to_staff()
+
+        res = self._verify()
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+        self.assertEqual(res.data['code'], 'mfa_enrolment_required')
+        self.assertIn('enrolment_token', res.data['data'])
+        self.assertNotIn('access', res.data['data'])
+
+    def test_the_address_is_still_marked_verified_before_the_block(self):
+        """The proof landed. Refusing a session must not undo it, or the operator
+        would have to re-enter the OTP on every attempt."""
+        self._promote_to_staff()
+
+        self._verify()
+
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.email_verified)
+
+    def test_the_credential_enrols_end_to_end_from_registration(self):
+        res = self._verify_after_promotion()
+        token = res.data['data']['enrolment_token']
+
+        setup = self.client.get(TOTP_SETUP_URL, HTTP_X_TOTP_ENROLMENT_TOKEN=token)
+        self.assertEqual(setup.status_code, status.HTTP_200_OK, setup.data)
+
+        secret = setup.data['data']['secret']
+        confirm = self.client.post(
+            TOTP_VERIFY_URL,
+            {'secret': secret, 'code': pyotp.TOTP(secret).now()},
+            format='json',
+            HTTP_X_TOTP_ENROLMENT_TOKEN=token,
+        )
+        self.assertEqual(confirm.status_code, status.HTTP_200_OK, confirm.data)
+
+        self.staff.refresh_from_db()
+        self.assertTrue(self.staff.totp_enabled)
+
+    def _verify_after_promotion(self):
+        self._promote_to_staff()
+        return self._verify()
+
+    def test_a_non_staff_unverified_user_still_gets_a_session(self):
+        """The move must not have cost ordinary signups their tokens."""
+        res = self._verify()
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK, res.data)
+        self.assertIn('access', res.data['data'])
+
+    def test_already_verified_is_still_refused(self):
+        self._promote_to_staff()
+        self._verify()
+        # Second attempt with a fresh OTP: the address is already proven, so the
+        # useful message is the pre-existing one, not an enrolment offer.
+        otp = OTPToken.objects.create(
+            user=self.staff, code='123456', channel='email',
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        res = self.client.post(self.REG_OTP_URL, {
+            'registration_token': self.registration_token, 'otp': otp.code,
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('already verified', str(res.data).lower())
