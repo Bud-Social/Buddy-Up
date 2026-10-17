@@ -1,4 +1,22 @@
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+
+/**
+ * Pin the OAuth client id for the whole suite.
+ *
+ * `Login.tsx` and `GoogleAuthButton` read `import.meta.env.VITE_GOOGLE_CLIENT_ID`
+ * at module scope and, when it is missing, render a *disabled* placeholder that
+ * still carries the "Continue with Google" accessible name. Any test that drives
+ * real Google sign-in therefore passed on a developer machine — where
+ * `frontend/.env` supplies the id — and failed in CI, where that untracked file
+ * does not exist: the placeholder was clicked, nothing happened, and the test
+ * waited out its budget for a consent dialog that could never open.
+ *
+ * Setup files run before any test module is imported, so this is in place before
+ * the module-scope reads happen. A test client id is enough: the flow is stubbed
+ * at `window.google`.
+ */
+vi.stubEnv('VITE_GOOGLE_CLIENT_ID', 'test-google-client-id.apps.googleusercontent.com');
 
 /**
  * jsdom implements neither `ResizeObserver` nor `matchMedia`.
