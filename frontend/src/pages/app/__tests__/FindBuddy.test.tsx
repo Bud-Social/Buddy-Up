@@ -28,7 +28,10 @@ vi.mock('@/api/profiles', () => ({
 }));
 
 vi.mock('@/api', () => ({
-  messagingApi: { startConversation: vi.fn() },
+  // Resolves like the real endpoint. Returning `undefined` made the component
+  // throw on `res.data` and swallow the navigation, so the behaviour under test
+  // depended on the mock being badly shaped rather than on the component.
+  messagingApi: { startConversation: vi.fn().mockResolvedValue({ data: { id: 'c1' } }) },
 }));
 
 vi.mock('@/api/feed', () => ({
@@ -146,7 +149,18 @@ describe('FindBuddy result cards', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Message @near' }));
     await userEvent.click(screen.getByRole('button', { name: 'Show interest in @near' }));
 
-    expect(navigateMock).not.toHaveBeenCalled();
+    // Message *does* navigate -- once its awaited promise settles -- but to a
+    // conversation, never to the buddy profile the card body opens. This
+    // previously asserted `navigate` was never called, which only held while
+    // the assertion happened to win the race against that promise: under a
+    // shuffled order the settle arrived first and the test failed. Asserting
+    // the destination is what the test actually means.
+    await waitFor(() => expect(navigateMock).toHaveBeenCalled());
+    const destinations = navigateMock.mock.calls.map(([to]) => String(to));
+    expect(destinations).not.toContain('/buddies/find/near');
+    for (const to of destinations) {
+      expect(to).toMatch(/^\/messages/);
+    }
   });
 
   it('opens the card Message thread as a discovery chat', async () => {

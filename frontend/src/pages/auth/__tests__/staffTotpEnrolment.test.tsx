@@ -57,6 +57,27 @@ const WAIT = { timeout: 5000 };
 
 const waitUntil = (fn: () => void) => waitFor(fn, WAIT);
 
+/**
+ * Reset the whole auth store, not just the enrolment field.
+ *
+ * The store is a module-level singleton, so a test that calls `setTokens`
+ * leaves `accessToken` set for every later test in the file. Resetting only the
+ * field under test made the assertions order-dependent: they passed in the
+ * default file order and failed as soon as vitest shuffled -- which is exactly
+ * what CI does.
+ */
+function resetAuthStore() {
+  useAuthStore.setState({
+    totpEnrolmentToken: null,
+    accessToken: null,
+    refreshToken: null,
+    isAuthenticated: false,
+    isLoading: false,
+    user: null,
+    profile: null,
+  });
+}
+
 /** Password step only: stops at the OTP screen. */
 async function submitPassword(user = userEvent.setup()) {
   renderLogin();
@@ -80,7 +101,7 @@ async function completeLogin(user = userEvent.setup()) {
 describe('staff 2FA enrolment redirect', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useAuthStore.setState({ totpEnrolmentToken: null });
+    resetAuthStore();
     api.login.mockResolvedValue({
       success: true,
       data: { require_otp: true, login_token: 'lt', masked_email: 'sta***@example.com' },
@@ -179,7 +200,7 @@ describe('staff 2FA enrolment redirect', () => {
 describe('staff 2FA enrolment after social sign-in', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useAuthStore.setState({ totpEnrolmentToken: null });
+    resetAuthStore();
     api.googleLogin.mockReset();
   });
 
