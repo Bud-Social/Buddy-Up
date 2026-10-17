@@ -90,7 +90,30 @@ jobs:
       - name: Type check
         run: cd frontend && npm run type-check
       - name: Test
-        run: cd frontend && npm run test -- --reporter=verbose
+        run: |
+          cd frontend
+          # Two reporters: the human-readable one on stdout, plus a machine-
+          # readable file. The file is uploaded on failure below so a red run
+          # can be diagnosed without needing Actions log access.
+          npm run test -- --reporter=verbose --reporter=json \
+            --outputFile=vitest-report.json || true
+          if [ -f vitest-report.json ]; then
+            node -e "const r=require('./vitest-report.json');
+              const bad=[...(r.testResults||[])].flatMap(f=>(f.assertionResults||[])
+                .filter(a=>a.status==='failed').map(a=>(f.name||f.testFilePath)+' :: '+a.fullName));
+              console.log(bad.length?'FAILED:\n'+bad.join('\n'):'no failed assertions recorded');"
+          else
+            echo "vitest produced no report -- the run failed before the tests started"
+          fi
+          test -f vitest-report.json || exit 1
+          node -e "process.exit(require('./vitest-report.json').numFailedTests ? 1 : 0)"
+      - name: Upload test report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-vitest-report
+          path: frontend/vitest-report.json
+          if-no-files-found: ignore
       - name: Build
         run: cd frontend && npm run build
 
