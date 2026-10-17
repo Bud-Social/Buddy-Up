@@ -44,15 +44,28 @@ function renderLogin() {
 
 const EMAIL = 'staff@example.com';
 
+/**
+ * Explicit wait budgets.
+ *
+ * Testing Library defaults to a 1s timeout, which is comfortable on a
+ * workstation and flaky on a CI runner rendering the whole suite in parallel.
+ * Every assertion here waits on a chain -- mock resolves, state updates,
+ * component re-renders, sometimes through a consent modal -- so the budget is
+ * stated once here rather than inherited and occasionally lost.
+ */
+const WAIT = { timeout: 5000 };
+
+const waitUntil = (fn: () => void) => waitFor(fn, WAIT);
+
 /** Password step only: stops at the OTP screen. */
 async function submitPassword(user = userEvent.setup()) {
   renderLogin();
-  await waitFor(() => expect(screen.getByLabelText(/email/i)).toBeInTheDocument());
+  await waitUntil(() => expect(screen.getByLabelText(/email/i)).toBeInTheDocument());
   await user.type(screen.getByLabelText(/email/i), EMAIL);
   await user.type(screen.getByLabelText(/password/i), 'TestPass123!');
   await user.click(screen.getByRole('button', { name: /sign in|log in/i }));
-  await waitFor(() => expect(api.login).toHaveBeenCalled());
-  await waitFor(() => expect(screen.getByLabelText(/code/i)).toBeInTheDocument());
+  await waitUntil(() => expect(api.login).toHaveBeenCalled());
+  await waitUntil(() => expect(screen.getByLabelText(/code/i)).toBeInTheDocument());
   return user;
 }
 
@@ -99,7 +112,7 @@ describe('staff 2FA enrolment redirect', () => {
 
     await completeLogin();
 
-    await waitFor(() => expect(screen.getByTestId('totp-setup-screen')).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByTestId('totp-setup-screen')).toBeInTheDocument());
   });
 
   it('stores the enrolment credential so setup can send it', async () => {
@@ -114,7 +127,7 @@ describe('staff 2FA enrolment redirect', () => {
 
     await completeLogin();
 
-    await waitFor(() =>
+    await waitUntil(() =>
       expect(useAuthStore.getState().totpEnrolmentToken).toBe('enrol-abc'),
     );
   });
@@ -130,7 +143,7 @@ describe('staff 2FA enrolment redirect', () => {
     });
 
     await completeLogin();
-    await waitFor(() => expect(screen.getByTestId('totp-setup-screen')).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByTestId('totp-setup-screen')).toBeInTheDocument());
 
     // Still anonymous. The credential enrols a device; it is not a login.
     expect(useAuthStore.getState().accessToken).toBeNull();
@@ -145,7 +158,7 @@ describe('staff 2FA enrolment redirect', () => {
     await completeLogin();
 
     // A plain failure stays on the page and does not navigate anywhere.
-    await waitFor(() => expect(screen.getByText(/invalid otp/i)).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByText(/invalid otp/i)).toBeInTheDocument());
     expect(screen.queryByTestId('totp-setup-screen')).not.toBeInTheDocument();
   });
 
@@ -158,7 +171,7 @@ describe('staff 2FA enrolment redirect', () => {
 
     await completeLogin();
 
-    await waitFor(() => expect(screen.getByText(/something went wrong/i)).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByText(/something went wrong/i)).toBeInTheDocument());
     expect(screen.queryByTestId('totp-setup-screen')).not.toBeInTheDocument();
   });
 });
@@ -206,12 +219,12 @@ describe('staff 2FA enrolment after social sign-in', () => {
     stubGoogle();
     renderLoginWithGoogle();
     const user = userEvent.setup();
-    const button = await screen.findByRole('button', { name: /continue with google/i });
+    const button = await screen.findByRole('button', { name: /continue with google/i }, WAIT);
     await user.click(button);
     // Google hands over a credential, but a consent gate stands between that
     // and the login call. Approving it is part of the flow, not a test detail.
-    await user.click(await screen.findByRole('button', { name: /allow & continue/i }));
-    await waitFor(() => expect(api.googleLogin).toHaveBeenCalled());
+    await user.click(await screen.findByRole('button', { name: /allow & continue/i }, WAIT));
+    await waitUntil(() => expect(api.googleLogin).toHaveBeenCalled());
     return user;
   }
 
@@ -248,7 +261,7 @@ describe('staff 2FA enrolment after social sign-in', () => {
 
     await signInWithGoogle();
 
-    await waitFor(() => expect(screen.getByLabelText(/otp code/i)).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByLabelText(/otp code/i)).toBeInTheDocument());
     expect(screen.queryByTestId('feed')).not.toBeInTheDocument();
   });
 
@@ -265,8 +278,8 @@ describe('staff 2FA enrolment after social sign-in', () => {
 
     await signInWithGoogle();
 
-    await waitFor(() => expect(useAuthStore.getState().isAuthenticated).toBe(true));
-    await waitFor(() => expect(screen.getByTestId('feed')).toBeInTheDocument());
+    await waitUntil(() => expect(useAuthStore.getState().isAuthenticated).toBe(true));
+    await waitUntil(() => expect(screen.getByTestId('feed')).toBeInTheDocument());
   });
 
   it('a social login that still has TOTP asks for the authenticator code', async () => {
@@ -278,6 +291,6 @@ describe('staff 2FA enrolment after social sign-in', () => {
     await signInWithGoogle();
 
     // A different step from the emailed OTP one.
-    await waitFor(() => expect(screen.getByLabelText(/authenticator code/i)).toBeInTheDocument());
+    await waitUntil(() => expect(screen.getByLabelText(/authenticator code/i)).toBeInTheDocument());
   });
 });
