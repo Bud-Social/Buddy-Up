@@ -855,7 +855,7 @@ as String,
 /// @nodoc
 mixin _$LoginOTPResponse {
 
- String get access; String get refresh; User get user; Profile get profile;@JsonKey(name: 'new_device') bool get newDevice;
+ String? get access; String? get refresh; User? get user; Profile? get profile;@JsonKey(name: 'new_device') bool get newDevice;@JsonKey(name: 'require_totp') bool get requireTotp;@JsonKey(name: 'temp_token') String? get tempToken;@JsonKey(name: 'require_otp') bool get requireOtp;@JsonKey(name: 'login_token') String? get loginToken;@JsonKey(name: 'masked_email') String? get maskedEmail;@JsonKey(name: 'mfa_enrolment_pending') bool get mfaEnrolmentPending;@JsonKey(name: 'require_age_setup') bool get requireAgeSetup;@JsonKey(name: 'onboarding_required') bool get onboardingRequired;
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -868,16 +868,16 @@ $LoginOTPResponseCopyWith<LoginOTPResponse> get copyWith => _$LoginOTPResponseCo
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoginOTPResponse&&(identical(other.access, access) || other.access == access)&&(identical(other.refresh, refresh) || other.refresh == refresh)&&(identical(other.user, user) || other.user == user)&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.newDevice, newDevice) || other.newDevice == newDevice));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LoginOTPResponse&&(identical(other.access, access) || other.access == access)&&(identical(other.refresh, refresh) || other.refresh == refresh)&&(identical(other.user, user) || other.user == user)&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.newDevice, newDevice) || other.newDevice == newDevice)&&(identical(other.requireTotp, requireTotp) || other.requireTotp == requireTotp)&&(identical(other.tempToken, tempToken) || other.tempToken == tempToken)&&(identical(other.requireOtp, requireOtp) || other.requireOtp == requireOtp)&&(identical(other.loginToken, loginToken) || other.loginToken == loginToken)&&(identical(other.maskedEmail, maskedEmail) || other.maskedEmail == maskedEmail)&&(identical(other.mfaEnrolmentPending, mfaEnrolmentPending) || other.mfaEnrolmentPending == mfaEnrolmentPending)&&(identical(other.requireAgeSetup, requireAgeSetup) || other.requireAgeSetup == requireAgeSetup)&&(identical(other.onboardingRequired, onboardingRequired) || other.onboardingRequired == onboardingRequired));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,access,refresh,user,profile,newDevice);
+int get hashCode => Object.hash(runtimeType,access,refresh,user,profile,newDevice,requireTotp,tempToken,requireOtp,loginToken,maskedEmail,mfaEnrolmentPending,requireAgeSetup,onboardingRequired);
 
 @override
 String toString() {
-  return 'LoginOTPResponse(access: $access, refresh: $refresh, user: $user, profile: $profile, newDevice: $newDevice)';
+  return 'LoginOTPResponse(access: $access, refresh: $refresh, user: $user, profile: $profile, newDevice: $newDevice, requireTotp: $requireTotp, tempToken: $tempToken, requireOtp: $requireOtp, loginToken: $loginToken, maskedEmail: $maskedEmail, mfaEnrolmentPending: $mfaEnrolmentPending, requireAgeSetup: $requireAgeSetup, onboardingRequired: $onboardingRequired)';
 }
 
 
@@ -888,11 +888,11 @@ abstract mixin class $LoginOTPResponseCopyWith<$Res>  {
   factory $LoginOTPResponseCopyWith(LoginOTPResponse value, $Res Function(LoginOTPResponse) _then) = _$LoginOTPResponseCopyWithImpl;
 @useResult
 $Res call({
- String access, String refresh, User user, Profile profile,@JsonKey(name: 'new_device') bool newDevice
+ String? access, String? refresh, User? user, Profile? profile,@JsonKey(name: 'new_device') bool newDevice,@JsonKey(name: 'require_totp') bool requireTotp,@JsonKey(name: 'temp_token') String? tempToken,@JsonKey(name: 'require_otp') bool requireOtp,@JsonKey(name: 'login_token') String? loginToken,@JsonKey(name: 'masked_email') String? maskedEmail,@JsonKey(name: 'mfa_enrolment_pending') bool mfaEnrolmentPending,@JsonKey(name: 'require_age_setup') bool requireAgeSetup,@JsonKey(name: 'onboarding_required') bool onboardingRequired
 });
 
 
-$UserCopyWith<$Res> get user;$ProfileCopyWith<$Res> get profile;
+$UserCopyWith<$Res>? get user;$ProfileCopyWith<$Res>? get profile;
 
 }
 /// @nodoc
@@ -905,13 +905,21 @@ class _$LoginOTPResponseCopyWithImpl<$Res>
 
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? access = null,Object? refresh = null,Object? user = null,Object? profile = null,Object? newDevice = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? access = freezed,Object? refresh = freezed,Object? user = freezed,Object? profile = freezed,Object? newDevice = null,Object? requireTotp = null,Object? tempToken = freezed,Object? requireOtp = null,Object? loginToken = freezed,Object? maskedEmail = freezed,Object? mfaEnrolmentPending = null,Object? requireAgeSetup = null,Object? onboardingRequired = null,}) {
   return _then(_self.copyWith(
-access: null == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
-as String,refresh: null == refresh ? _self.refresh : refresh // ignore: cast_nullable_to_non_nullable
-as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
-as User,profile: null == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
-as Profile,newDevice: null == newDevice ? _self.newDevice : newDevice // ignore: cast_nullable_to_non_nullable
+access: freezed == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
+as String?,refresh: freezed == refresh ? _self.refresh : refresh // ignore: cast_nullable_to_non_nullable
+as String?,user: freezed == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
+as User?,profile: freezed == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
+as Profile?,newDevice: null == newDevice ? _self.newDevice : newDevice // ignore: cast_nullable_to_non_nullable
+as bool,requireTotp: null == requireTotp ? _self.requireTotp : requireTotp // ignore: cast_nullable_to_non_nullable
+as bool,tempToken: freezed == tempToken ? _self.tempToken : tempToken // ignore: cast_nullable_to_non_nullable
+as String?,requireOtp: null == requireOtp ? _self.requireOtp : requireOtp // ignore: cast_nullable_to_non_nullable
+as bool,loginToken: freezed == loginToken ? _self.loginToken : loginToken // ignore: cast_nullable_to_non_nullable
+as String?,maskedEmail: freezed == maskedEmail ? _self.maskedEmail : maskedEmail // ignore: cast_nullable_to_non_nullable
+as String?,mfaEnrolmentPending: null == mfaEnrolmentPending ? _self.mfaEnrolmentPending : mfaEnrolmentPending // ignore: cast_nullable_to_non_nullable
+as bool,requireAgeSetup: null == requireAgeSetup ? _self.requireAgeSetup : requireAgeSetup // ignore: cast_nullable_to_non_nullable
+as bool,onboardingRequired: null == onboardingRequired ? _self.onboardingRequired : onboardingRequired // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -919,18 +927,24 @@ as bool,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$UserCopyWith<$Res> get user {
-  
-  return $UserCopyWith<$Res>(_self.user, (value) {
+$UserCopyWith<$Res>? get user {
+    if (_self.user == null) {
+    return null;
+  }
+
+  return $UserCopyWith<$Res>(_self.user!, (value) {
     return _then(_self.copyWith(user: value));
   });
 }/// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$ProfileCopyWith<$Res> get profile {
-  
-  return $ProfileCopyWith<$Res>(_self.profile, (value) {
+$ProfileCopyWith<$Res>? get profile {
+    if (_self.profile == null) {
+    return null;
+  }
+
+  return $ProfileCopyWith<$Res>(_self.profile!, (value) {
     return _then(_self.copyWith(profile: value));
   });
 }
@@ -1015,10 +1029,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String access,  String refresh,  User user,  Profile profile, @JsonKey(name: 'new_device')  bool newDevice)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? access,  String? refresh,  User? user,  Profile? profile, @JsonKey(name: 'new_device')  bool newDevice, @JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String? tempToken, @JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String? loginToken, @JsonKey(name: 'masked_email')  String? maskedEmail, @JsonKey(name: 'mfa_enrolment_pending')  bool mfaEnrolmentPending, @JsonKey(name: 'require_age_setup')  bool requireAgeSetup, @JsonKey(name: 'onboarding_required')  bool onboardingRequired)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LoginOTPResponse() when $default != null:
-return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice);case _:
+return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice,_that.requireTotp,_that.tempToken,_that.requireOtp,_that.loginToken,_that.maskedEmail,_that.mfaEnrolmentPending,_that.requireAgeSetup,_that.onboardingRequired);case _:
   return orElse();
 
 }
@@ -1036,10 +1050,10 @@ return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDev
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String access,  String refresh,  User user,  Profile profile, @JsonKey(name: 'new_device')  bool newDevice)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? access,  String? refresh,  User? user,  Profile? profile, @JsonKey(name: 'new_device')  bool newDevice, @JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String? tempToken, @JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String? loginToken, @JsonKey(name: 'masked_email')  String? maskedEmail, @JsonKey(name: 'mfa_enrolment_pending')  bool mfaEnrolmentPending, @JsonKey(name: 'require_age_setup')  bool requireAgeSetup, @JsonKey(name: 'onboarding_required')  bool onboardingRequired)  $default,) {final _that = this;
 switch (_that) {
 case _LoginOTPResponse():
-return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice);case _:
+return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice,_that.requireTotp,_that.tempToken,_that.requireOtp,_that.loginToken,_that.maskedEmail,_that.mfaEnrolmentPending,_that.requireAgeSetup,_that.onboardingRequired);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1056,10 +1070,10 @@ return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDev
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String access,  String refresh,  User user,  Profile profile, @JsonKey(name: 'new_device')  bool newDevice)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? access,  String? refresh,  User? user,  Profile? profile, @JsonKey(name: 'new_device')  bool newDevice, @JsonKey(name: 'require_totp')  bool requireTotp, @JsonKey(name: 'temp_token')  String? tempToken, @JsonKey(name: 'require_otp')  bool requireOtp, @JsonKey(name: 'login_token')  String? loginToken, @JsonKey(name: 'masked_email')  String? maskedEmail, @JsonKey(name: 'mfa_enrolment_pending')  bool mfaEnrolmentPending, @JsonKey(name: 'require_age_setup')  bool requireAgeSetup, @JsonKey(name: 'onboarding_required')  bool onboardingRequired)?  $default,) {final _that = this;
 switch (_that) {
 case _LoginOTPResponse() when $default != null:
-return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice);case _:
+return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDevice,_that.requireTotp,_that.tempToken,_that.requireOtp,_that.loginToken,_that.maskedEmail,_that.mfaEnrolmentPending,_that.requireAgeSetup,_that.onboardingRequired);case _:
   return null;
 
 }
@@ -1071,14 +1085,22 @@ return $default(_that.access,_that.refresh,_that.user,_that.profile,_that.newDev
 @JsonSerializable()
 
 class _LoginOTPResponse implements LoginOTPResponse {
-  const _LoginOTPResponse({required this.access, required this.refresh, required this.user, required this.profile, @JsonKey(name: 'new_device') this.newDevice = false});
+  const _LoginOTPResponse({this.access, this.refresh, this.user, this.profile, @JsonKey(name: 'new_device') this.newDevice = false, @JsonKey(name: 'require_totp') this.requireTotp = false, @JsonKey(name: 'temp_token') this.tempToken, @JsonKey(name: 'require_otp') this.requireOtp = false, @JsonKey(name: 'login_token') this.loginToken, @JsonKey(name: 'masked_email') this.maskedEmail, @JsonKey(name: 'mfa_enrolment_pending') this.mfaEnrolmentPending = false, @JsonKey(name: 'require_age_setup') this.requireAgeSetup = false, @JsonKey(name: 'onboarding_required') this.onboardingRequired = false});
   factory _LoginOTPResponse.fromJson(Map<String, dynamic> json) => _$LoginOTPResponseFromJson(json);
 
-@override final  String access;
-@override final  String refresh;
-@override final  User user;
-@override final  Profile profile;
+@override final  String? access;
+@override final  String? refresh;
+@override final  User? user;
+@override final  Profile? profile;
 @override@JsonKey(name: 'new_device') final  bool newDevice;
+@override@JsonKey(name: 'require_totp') final  bool requireTotp;
+@override@JsonKey(name: 'temp_token') final  String? tempToken;
+@override@JsonKey(name: 'require_otp') final  bool requireOtp;
+@override@JsonKey(name: 'login_token') final  String? loginToken;
+@override@JsonKey(name: 'masked_email') final  String? maskedEmail;
+@override@JsonKey(name: 'mfa_enrolment_pending') final  bool mfaEnrolmentPending;
+@override@JsonKey(name: 'require_age_setup') final  bool requireAgeSetup;
+@override@JsonKey(name: 'onboarding_required') final  bool onboardingRequired;
 
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -1093,16 +1115,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoginOTPResponse&&(identical(other.access, access) || other.access == access)&&(identical(other.refresh, refresh) || other.refresh == refresh)&&(identical(other.user, user) || other.user == user)&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.newDevice, newDevice) || other.newDevice == newDevice));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LoginOTPResponse&&(identical(other.access, access) || other.access == access)&&(identical(other.refresh, refresh) || other.refresh == refresh)&&(identical(other.user, user) || other.user == user)&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.newDevice, newDevice) || other.newDevice == newDevice)&&(identical(other.requireTotp, requireTotp) || other.requireTotp == requireTotp)&&(identical(other.tempToken, tempToken) || other.tempToken == tempToken)&&(identical(other.requireOtp, requireOtp) || other.requireOtp == requireOtp)&&(identical(other.loginToken, loginToken) || other.loginToken == loginToken)&&(identical(other.maskedEmail, maskedEmail) || other.maskedEmail == maskedEmail)&&(identical(other.mfaEnrolmentPending, mfaEnrolmentPending) || other.mfaEnrolmentPending == mfaEnrolmentPending)&&(identical(other.requireAgeSetup, requireAgeSetup) || other.requireAgeSetup == requireAgeSetup)&&(identical(other.onboardingRequired, onboardingRequired) || other.onboardingRequired == onboardingRequired));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,access,refresh,user,profile,newDevice);
+int get hashCode => Object.hash(runtimeType,access,refresh,user,profile,newDevice,requireTotp,tempToken,requireOtp,loginToken,maskedEmail,mfaEnrolmentPending,requireAgeSetup,onboardingRequired);
 
 @override
 String toString() {
-  return 'LoginOTPResponse(access: $access, refresh: $refresh, user: $user, profile: $profile, newDevice: $newDevice)';
+  return 'LoginOTPResponse(access: $access, refresh: $refresh, user: $user, profile: $profile, newDevice: $newDevice, requireTotp: $requireTotp, tempToken: $tempToken, requireOtp: $requireOtp, loginToken: $loginToken, maskedEmail: $maskedEmail, mfaEnrolmentPending: $mfaEnrolmentPending, requireAgeSetup: $requireAgeSetup, onboardingRequired: $onboardingRequired)';
 }
 
 
@@ -1113,11 +1135,11 @@ abstract mixin class _$LoginOTPResponseCopyWith<$Res> implements $LoginOTPRespon
   factory _$LoginOTPResponseCopyWith(_LoginOTPResponse value, $Res Function(_LoginOTPResponse) _then) = __$LoginOTPResponseCopyWithImpl;
 @override @useResult
 $Res call({
- String access, String refresh, User user, Profile profile,@JsonKey(name: 'new_device') bool newDevice
+ String? access, String? refresh, User? user, Profile? profile,@JsonKey(name: 'new_device') bool newDevice,@JsonKey(name: 'require_totp') bool requireTotp,@JsonKey(name: 'temp_token') String? tempToken,@JsonKey(name: 'require_otp') bool requireOtp,@JsonKey(name: 'login_token') String? loginToken,@JsonKey(name: 'masked_email') String? maskedEmail,@JsonKey(name: 'mfa_enrolment_pending') bool mfaEnrolmentPending,@JsonKey(name: 'require_age_setup') bool requireAgeSetup,@JsonKey(name: 'onboarding_required') bool onboardingRequired
 });
 
 
-@override $UserCopyWith<$Res> get user;@override $ProfileCopyWith<$Res> get profile;
+@override $UserCopyWith<$Res>? get user;@override $ProfileCopyWith<$Res>? get profile;
 
 }
 /// @nodoc
@@ -1130,13 +1152,21 @@ class __$LoginOTPResponseCopyWithImpl<$Res>
 
 /// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? access = null,Object? refresh = null,Object? user = null,Object? profile = null,Object? newDevice = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? access = freezed,Object? refresh = freezed,Object? user = freezed,Object? profile = freezed,Object? newDevice = null,Object? requireTotp = null,Object? tempToken = freezed,Object? requireOtp = null,Object? loginToken = freezed,Object? maskedEmail = freezed,Object? mfaEnrolmentPending = null,Object? requireAgeSetup = null,Object? onboardingRequired = null,}) {
   return _then(_LoginOTPResponse(
-access: null == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
-as String,refresh: null == refresh ? _self.refresh : refresh // ignore: cast_nullable_to_non_nullable
-as String,user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
-as User,profile: null == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
-as Profile,newDevice: null == newDevice ? _self.newDevice : newDevice // ignore: cast_nullable_to_non_nullable
+access: freezed == access ? _self.access : access // ignore: cast_nullable_to_non_nullable
+as String?,refresh: freezed == refresh ? _self.refresh : refresh // ignore: cast_nullable_to_non_nullable
+as String?,user: freezed == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
+as User?,profile: freezed == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
+as Profile?,newDevice: null == newDevice ? _self.newDevice : newDevice // ignore: cast_nullable_to_non_nullable
+as bool,requireTotp: null == requireTotp ? _self.requireTotp : requireTotp // ignore: cast_nullable_to_non_nullable
+as bool,tempToken: freezed == tempToken ? _self.tempToken : tempToken // ignore: cast_nullable_to_non_nullable
+as String?,requireOtp: null == requireOtp ? _self.requireOtp : requireOtp // ignore: cast_nullable_to_non_nullable
+as bool,loginToken: freezed == loginToken ? _self.loginToken : loginToken // ignore: cast_nullable_to_non_nullable
+as String?,maskedEmail: freezed == maskedEmail ? _self.maskedEmail : maskedEmail // ignore: cast_nullable_to_non_nullable
+as String?,mfaEnrolmentPending: null == mfaEnrolmentPending ? _self.mfaEnrolmentPending : mfaEnrolmentPending // ignore: cast_nullable_to_non_nullable
+as bool,requireAgeSetup: null == requireAgeSetup ? _self.requireAgeSetup : requireAgeSetup // ignore: cast_nullable_to_non_nullable
+as bool,onboardingRequired: null == onboardingRequired ? _self.onboardingRequired : onboardingRequired // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -1145,18 +1175,24 @@ as bool,
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$UserCopyWith<$Res> get user {
-  
-  return $UserCopyWith<$Res>(_self.user, (value) {
+$UserCopyWith<$Res>? get user {
+    if (_self.user == null) {
+    return null;
+  }
+
+  return $UserCopyWith<$Res>(_self.user!, (value) {
     return _then(_self.copyWith(user: value));
   });
 }/// Create a copy of LoginOTPResponse
 /// with the given fields replaced by the non-null parameter values.
 @override
 @pragma('vm:prefer-inline')
-$ProfileCopyWith<$Res> get profile {
-  
-  return $ProfileCopyWith<$Res>(_self.profile, (value) {
+$ProfileCopyWith<$Res>? get profile {
+    if (_self.profile == null) {
+    return null;
+  }
+
+  return $ProfileCopyWith<$Res>(_self.profile!, (value) {
     return _then(_self.copyWith(profile: value));
   });
 }

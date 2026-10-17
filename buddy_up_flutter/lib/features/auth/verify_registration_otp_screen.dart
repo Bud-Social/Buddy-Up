@@ -7,6 +7,7 @@ import '../../data/models/auth_models.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../shared/widgets/otp_input.dart';
 import '../../shared/widgets/toast.dart';
+import 'totp_enrolment_state.dart';
 
 class VerifyRegistrationOtpScreen extends ConsumerStatefulWidget {
   final String registrationToken;
@@ -49,12 +50,31 @@ class _VerifyRegistrationOtpScreenState
           otp: otp,
         ),
       );
-      await ref.read(authProvider.notifier).setTokens(response.access, response.refresh);
-      await ref.read(authProvider.notifier).setUserAndProfile(response.user, response.profile);
+      if (response.isComplete) {
+        await ref.read(authProvider.notifier).setTokens(response.access!, response.refresh!);
+        await ref.read(authProvider.notifier).setUserAndProfile(response.user!, response.profile!);
+        if (mounted) {
+          Navigator.of(context).pushNamedAndRemoveUntil('/onboarding', (_) => false);
+        }
+        return;
+      }
+      // A challenge rather than a session, and not the enrolment one. The
+      // staff-enrolment gate answers 403 and is handled in the catch below, so
+      // landing here means something else -- a challenge this screen does not
+      // know how to continue. Say so rather than pretending the code was wrong.
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/onboarding', (_) => false);
+        showToast(context, 'Sign in again to continue.', type: ToastType.error);
       }
     } catch (e) {
+      // `mfa_enrolment_required` arrives here rather than as a 200: the gate
+      // refuses before any token is minted, and it carries the credential that
+      // opens the enrolment screen.
+      final enrolment = totpEnrolmentTokenFrom(e);
+      if (enrolment != null && mounted) {
+        ref.read(totpEnrolmentProvider.notifier).setToken(enrolment);
+        Navigator.of(context).pushNamedAndRemoveUntil('/totp-setup', (_) => false);
+        return;
+      }
       if (mounted) showToast(context, 'Invalid code. Try again.', type: ToastType.error);
     } finally {
       if (mounted) setState(() => _isLoading = false);

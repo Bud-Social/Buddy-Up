@@ -145,15 +145,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final response = await _authRepo.verifyLoginOtp(
         LoginOTPSerializer(loginToken: _loginToken, otp: otp),
       );
-      await ref.read(authProvider.notifier).setTokens(response.access, response.refresh);
-      await ref.read(authProvider.notifier).setUserAndProfile(response.user, response.profile);
-      if (response.user.totpEnabled) {
-        setState(() {
-          _step = LoginStep.totp;
-          _isLoading = false;
-        });
-      } else {
-        if (mounted) context.go('/feed');
+      if (response.isComplete) {
+        await ref
+            .read(authProvider.notifier)
+            .setTokens(response.access!, response.refresh!);
+        await ref
+            .read(authProvider.notifier)
+            .setUserAndProfile(response.user!, response.profile!);
+        if (response.user!.totpEnabled) {
+          setState(() {
+            _step = LoginStep.totp;
+            _isLoading = false;
+          });
+        } else {
+          if (mounted) context.go('/feed');
+        }
+        return;
+      }
+      // Not complete and not the enrolment challenge: this screen has nothing
+      // to continue with, so say so instead of storing null tokens.
+      if (mounted) {
+        showToast(context, 'Sign in again to continue.', type: ToastType.error);
       }
     } catch (e) {
       // Staff must have two-factor authentication. The email OTP was only just
@@ -200,6 +212,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       }
 
       final res = await _authRepo.googleLogin({'credential': credential});
+
+      // A challenge, not a session. Handle it before touching auth state --
+      // handleLoginSuccess deliberately refuses these.
+      if (res.requireTotp && res.tempToken != null) {
+        setState(() {
+          _loginToken = res.tempToken!;
+          _step = LoginStep.totp;
+          _isLoading = false;
+        });
+        return;
+      }
+      // Staff who have not enrolled 2FA yet get an email OTP even though they
+      // just authenticated with Google: the IdP vouches for them to Google, not
+      // to us. The OTP is the proof, and it is what unlocks the enrolment.
+      if (res.requireOtp && res.loginToken != null) {
+        setState(() {
+          _loginToken = res.loginToken!;
+          _step = LoginStep.otp;
+          _isLoading = false;
+        });
+        return;
+      }
+
       await ref.read(authProvider.notifier).handleLoginSuccess(res);
       // New Google emails are auto-registered by the backend; GoRouter sends
       // onboarding-incomplete accounts to /onboarding (consent first).

@@ -439,3 +439,126 @@ class StaffEnrolmentAfterRegistrationTests(_CacheClearingMixin, TestCase):
 
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('already verified', str(res.data).lower())
+
+
+class StaffSocialLoginEnrolmentTests(_CacheClearingMixin, TestCase):
+    """Social sign-in must reach the enrolment screen too, and only via OTP.
+
+    Google and Apple sign in with no password and, before this, no OTP either --
+    so staff hit the raw MFA rejection with no way forward. The fix routes them
+    through the same email OTP the password path uses, so the enrolment
+    credential is still behind proof of the address rather than behind an IdP
+    assertion alone.
+    """
+
+    GOOGLE_URL = '/api/v1/auth/google/'
+
+    def setUp(self):
+        super().setUp()
+        self.client = APIClient()
+        self.staff = User.objects.create_user(
+            email='social-staff@example.com', password='Str0ngPass!23',
+            is_staff=True, email_verified=True, is_adult=True, dob_hash='z' * 64,
+        )
+        self.staff.set_unusable_password()
+        self.staff.save()
+
+    def _decision(self, user=None):
+        """Call the shared funnel directly: the point is the decision, not the
+        IdP handshake, which has its own tests upstream."""
+        from django.test import RequestFactory
+
+        from apps.accounts.views import _finalize_social_login
+
+        request = RequestFactory().post('/api/v1/auth/google/')
+        request.META['REMOTE_ADDR'] = '127.0.0.1'
+        return _finalize_social_login(user or self.staff, 'google', request)
+
+    def test_social_login_sends_an_otp_instead_of_refusing(self):
+        data, challenged = self._decision()
+
+        self.assertTrue(challenged)
+        self.assertTrue(data['require_otp'])
+        self.assertIn('login_token', data)
+        self.assertIn('masked_email', data)
+        self.assertNotIn('access', data)
+        self.assertNotIn('enrolment_token', data,
+                         'the credential comes after the OTP, not before it')
+
+    def test_the_otp_is_a_real_pending_token(self):
+        self._decision()
+
+        otp = OTPToken.objects.filter(
+            user=self.staff, channel='email', is_used=False).latest('created_at')
+        self.assertTrue(otp.is_valid())
+
+    def test_no_session_is_created(self):
+        self._decision()
+
+        self.assertFalse(DeviceSession.objects.filter(user=self.staff).exists())
+
+    def test_the_otp_then_yields_the_enrolment_credential(self):
+        """The whole point: social -> OTP -> enrol -> session."""
+        data, _ = self._decision()
+
+        res = self.client.post(VERIFY_LOGIN_OTP_URL, {
+            'login_token': data['login_token'],
+            'otp': OTPToken.objects.filter(
+                user=self.staff, channel='email', is_used=False,
+            ).latest('created_at').code,
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN, res.data)
+        self.assertEqual(res.data['code'], 'mfa_enrolment_required')
+        self.assertIn('enrolment_token', res.data['data'])
+
+        token = res.data['data']['enrolment_token']
+        setup = self.client.get(TOTP_SETUP_URL, HTTP_X_TOTP_ENROLMENT_TOKEN=token)
+        self.assertEqual(setup.status_code, status.HTTP_200_OK, setup.data)
+
+        secret = setup.data['data']['secret']
+        confirm = self.client.post(
+            TOTP_VERIFY_URL,
+            {'secret': secret, 'code': pyotp.TOTP(secret).now()},
+            format='json', HTTP_X_TOTP_ENROLMENT_TOKEN=token,
+        )
+        self.assertEqual(confirm.status_code, status.HTTP_200_OK, confirm.data)
+
+    def test_staff_with_totp_still_gets_the_normal_challenge(self):
+        self.staff.totp_enabled = True
+        self.staff.totp_secret = pyotp.random_base32()
+        self.staff.save()
+
+        data, challenged = self._decision()
+
+        self.assertTrue(challenged)
+        self.assertTrue(data['require_totp'])
+        self.assertNotIn('require_otp', data)
+
+    def test_an_ordinary_social_user_is_untouched(self):
+        user = User.objects.create_user(
+            email='social-plain@example.com', password='Str0ngPass!23',
+            email_verified=True, is_adult=True, dob_hash='q' * 64,
+        )
+        user.set_unusable_password()
+        user.save()
+
+        data, challenged = self._decision(user)
+
+        self.assertFalse(challenged)
+        self.assertIn('access', data)
+        self.assertNotIn('require_otp', data)
+
+    def test_a_suspended_staff_member_is_still_rejected_outright(self):
+        """An OTP step must never become a way around a suspension."""
+        from apps.accounts.models import AccountStanding
+
+        AccountStanding.objects.create(
+            user=self.staff, state=AccountStanding.STATE_SUSPENDED,
+            reason='under review', is_moderation_action=True,
+        )
+
+        from apps.accounts.views import _StandingBlocked
+
+        with self.assertRaises(_StandingBlocked):
+            self._decision()

@@ -76,16 +76,41 @@ abstract class LoginInitResponse with _$LoginInitResponse {
 
 @freezed
 abstract class LoginOTPResponse with _$LoginOTPResponse {
+  /// Null when the login was *challenged* rather than completed.
+  ///
+  /// The same endpoint family answers in two shapes: a finished login carries
+  /// tokens, while a challenge carries only what is needed for the next step --
+  /// `require_totp` with a `temp_token`, or `require_otp` with a `login_token`
+  /// for staff who still have to enrol a second factor. Declaring the tokens
+  /// required made every challenge payload fail to deserialize, so the TOTP
+  /// challenge could never be reached from a social sign-in.
   const factory LoginOTPResponse({
-    required String access,
-    required String refresh,
-    required User user,
-    required Profile profile,
+    String? access,
+    String? refresh,
+    User? user,
+    Profile? profile,
     @JsonKey(name: 'new_device') @Default(false) bool newDevice,
+    @JsonKey(name: 'require_totp') @Default(false) bool requireTotp,
+    @JsonKey(name: 'temp_token') String? tempToken,
+    @JsonKey(name: 'require_otp') @Default(false) bool requireOtp,
+    @JsonKey(name: 'login_token') String? loginToken,
+    @JsonKey(name: 'masked_email') String? maskedEmail,
+    @JsonKey(name: 'mfa_enrolment_pending') @Default(false) bool mfaEnrolmentPending,
+    @JsonKey(name: 'require_age_setup') @Default(false) bool requireAgeSetup,
+    @JsonKey(name: 'onboarding_required') @Default(false) bool onboardingRequired,
   }) = _LoginOTPResponse;
 
   factory LoginOTPResponse.fromJson(Map<String, dynamic> json) =>
       _$LoginOTPResponseFromJson(json);
+}
+
+/// True when this response hands over a session rather than a challenge.
+///
+/// An extension rather than a getter on the class: freezed's abstract class
+/// may only declare fields, and a body here is a compile error.
+extension LoginOTPResponseX on LoginOTPResponse {
+  bool get isComplete =>
+      access != null && refresh != null && user != null && profile != null;
 }
 
 @freezed

@@ -1278,9 +1278,40 @@ def _finalize_social_login(user, method, request):
     if blocked is not None:
         raise _StandingBlocked(blocked)
 
-    mfa_required = _check_staff_mfa(user)
-    if mfa_required is not None:
-        raise _StandingBlocked(mfa_required)
+    # Staff must have two-factor authentication. On a social sign-in there is no
+    # password and no OTP yet, so raising here was a dead end -- the same one
+    # the password path had. Send an email OTP and continue down the *same* path
+    # a password login takes: the client prompts for the code, VerifyLoginOTPView
+    # verifies it, and only then issues the enrolment credential. One
+    # verification story for every way into the account, and the credential is
+    # always behind proof of the address rather than behind an IdP assertion.
+    #
+    # Standing and suspension still raise above: those are rejections, not steps.
+    if _check_staff_mfa(user) is not None:
+        otp = _generate_otp()
+        OTPToken.objects.create(
+            user=user,
+            code=otp,
+            channel='email',
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+        send_otp_email.delay(str(user.id), otp, 'login')
+        login_token = _generate_temp_token(user, 'login', expiry_minutes=5)
+        _log_event(
+            user, 'login_staff_mfa_otp', request,
+            metadata={'method': method},
+        )
+        return ({
+            'require_otp': True,
+            'login_token': login_token,
+            'masked_email': (
+                f'{user.email[:3]}***@{user.email.split("@")[1]}'
+                if '@' in user.email else user.email
+            ),
+            # Lets a client say why there is an OTP when social sign-in is
+            # normally password-free, instead of looking like a second factor.
+            'mfa_enrolment_pending': True,
+        }, True)
 
     if _is_locked_out(user):
         raise _StandingBlocked(_locked_out_response(user))

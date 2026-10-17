@@ -72,11 +72,23 @@ Map<String, dynamic> _$LoginInitResponseToJson(_LoginInitResponse instance) =>
 
 _LoginOTPResponse _$LoginOTPResponseFromJson(Map<String, dynamic> json) =>
     _LoginOTPResponse(
-      access: json['access'] as String,
-      refresh: json['refresh'] as String,
-      user: User.fromJson(json['user'] as Map<String, dynamic>),
-      profile: Profile.fromJson(json['profile'] as Map<String, dynamic>),
+      access: json['access'] as String?,
+      refresh: json['refresh'] as String?,
+      user: json['user'] == null
+          ? null
+          : User.fromJson(json['user'] as Map<String, dynamic>),
+      profile: json['profile'] == null
+          ? null
+          : Profile.fromJson(json['profile'] as Map<String, dynamic>),
       newDevice: json['new_device'] as bool? ?? false,
+      requireTotp: json['require_totp'] as bool? ?? false,
+      tempToken: json['temp_token'] as String?,
+      requireOtp: json['require_otp'] as bool? ?? false,
+      loginToken: json['login_token'] as String?,
+      maskedEmail: json['masked_email'] as String?,
+      mfaEnrolmentPending: json['mfa_enrolment_pending'] as bool? ?? false,
+      requireAgeSetup: json['require_age_setup'] as bool? ?? false,
+      onboardingRequired: json['onboarding_required'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$LoginOTPResponseToJson(_LoginOTPResponse instance) =>
@@ -86,6 +98,14 @@ Map<String, dynamic> _$LoginOTPResponseToJson(_LoginOTPResponse instance) =>
       'user': instance.user,
       'profile': instance.profile,
       'new_device': instance.newDevice,
+      'require_totp': instance.requireTotp,
+      'temp_token': instance.tempToken,
+      'require_otp': instance.requireOtp,
+      'login_token': instance.loginToken,
+      'masked_email': instance.maskedEmail,
+      'mfa_enrolment_pending': instance.mfaEnrolmentPending,
+      'require_age_setup': instance.requireAgeSetup,
+      'onboarding_required': instance.onboardingRequired,
     };
 
 _RegisterResponse _$RegisterResponseFromJson(Map<String, dynamic> json) =>

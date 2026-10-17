@@ -69,8 +69,17 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> handleLoginSuccess(LoginOTPResponse res) async {
-    await setTokens(res.access, res.refresh);
-    await setUserAndProfile(res.user, res.profile);
+    // A challenge payload carries no session. Refusing it here keeps every
+    // caller from having to remember to check, rather than storing null tokens
+    // and pretending the user is signed in.
+    if (!res.isComplete) {
+      throw StateError(
+        'handleLoginSuccess called with a challenged login '
+        '(requireTotp=${res.requireTotp}, requireOtp=${res.requireOtp}).',
+      );
+    }
+    await setTokens(res.access!, res.refresh!);
+    await setUserAndProfile(res.user!, res.profile!);
   }
 
   Future<void> logout() async {

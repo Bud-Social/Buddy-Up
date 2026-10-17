@@ -164,10 +164,28 @@ export default function Login() {
     setIsLoading(true);
     try {
       const res = await authApi.googleLogin(credential, true);
-      const data = res.data as typeof res.data & { require_totp?: boolean; temp_token?: string; require_age_setup?: boolean };
+      const data = res.data as typeof res.data & {
+        require_totp?: boolean;
+        temp_token?: string;
+        require_age_setup?: boolean;
+        require_otp?: boolean;
+        login_token?: string;
+        masked_email?: string;
+        mfa_enrolment_pending?: boolean;
+      };
       if (data.require_totp && data.temp_token) {
         setTempToken(data.temp_token);
         setStep('totp');
+        return;
+      }
+      // Staff without 2FA get an email OTP even though they just authenticated
+      // with Google: the IdP proves who they are to Google, not to us. The OTP
+      // is the proof, and it is what unlocks the enrolment credential.
+      if (data.require_otp && data.login_token) {
+        setLoginToken(data.login_token);
+        setMaskedEmail(data.masked_email || '');
+        setStep('otp');
+        setError('');
         return;
       }
       setTokens(res.data.access, res.data.refresh);
