@@ -79,7 +79,7 @@ function resetAuthStore() {
 }
 
 /** Password step only: stops at the OTP screen. */
-async function submitPassword(user = userEvent.setup()) {
+async function submitPassword(user = userEvent.setup({ delay: null })) {
   renderLogin();
   await waitUntil(() => expect(screen.getByLabelText(/email/i)).toBeInTheDocument());
   await user.type(screen.getByLabelText(/email/i), EMAIL);
@@ -91,7 +91,7 @@ async function submitPassword(user = userEvent.setup()) {
 }
 
 /** Password step, then the email OTP. */
-async function completeLogin(user = userEvent.setup()) {
+async function completeLogin(user = userEvent.setup({ delay: null })) {
   await submitPassword(user);
   await user.type(screen.getByLabelText(/code/i), '123456');
   await user.click(screen.getByRole('button', { name: /verify|continue/i }));
@@ -236,10 +236,17 @@ describe('staff 2FA enrolment after social sign-in', () => {
     };
   }
 
-  async function signInWithGoogle() {
+  /**
+ * These drive a Google credential handoff, a consent gate and an email OTP
+ * behind jsdom's user-event. Comfortably slower on a CI runner than the
+ * 5s vitest default, which is why they timed out there while passing locally.
+ */
+const SOCIAL_TIMEOUT = 10000;
+
+async function signInWithGoogle() {
     stubGoogle();
     renderLoginWithGoogle();
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     const button = await screen.findByRole('button', { name: /continue with google/i }, WAIT);
     await user.click(button);
     // Google hands over a credential, but a consent gate stands between that
@@ -267,7 +274,7 @@ describe('staff 2FA enrolment after social sign-in', () => {
     // No session was accepted, and the user is still anonymous.
     expect(useAuthStore.getState().accessToken).toBeNull();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
-  });
+  }, SOCIAL_TIMEOUT);
 
   it('prompts for the emailed code rather than going to the feed', async () => {
     api.googleLogin.mockResolvedValue({
@@ -284,7 +291,7 @@ describe('staff 2FA enrolment after social sign-in', () => {
 
     await waitUntil(() => expect(screen.getByLabelText(/otp code/i)).toBeInTheDocument());
     expect(screen.queryByTestId('feed')).not.toBeInTheDocument();
-  });
+  }, SOCIAL_TIMEOUT);
 
   it('an ordinary social login still opens the app', async () => {
     api.googleLogin.mockResolvedValue({
@@ -301,7 +308,7 @@ describe('staff 2FA enrolment after social sign-in', () => {
 
     await waitUntil(() => expect(useAuthStore.getState().isAuthenticated).toBe(true));
     await waitUntil(() => expect(screen.getByTestId('feed')).toBeInTheDocument());
-  });
+  }, SOCIAL_TIMEOUT);
 
   it('a social login that still has TOTP asks for the authenticator code', async () => {
     api.googleLogin.mockResolvedValue({
@@ -313,5 +320,5 @@ describe('staff 2FA enrolment after social sign-in', () => {
 
     // A different step from the emailed OTP one.
     await waitUntil(() => expect(screen.getByLabelText(/authenticator code/i)).toBeInTheDocument());
-  });
+  }, SOCIAL_TIMEOUT);
 });
