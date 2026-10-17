@@ -79,9 +79,18 @@ MIDDLEWARE = [
 # 'idempotency-key' here, video/media uploads fail CORS preflight entirely.
 # Without 'x-device-id' here, every client request (auth included) fails
 # preflight because both web and Flutter clients send it on all calls.
+# Without 'x-totp-enrolment-token' here, /auth/totp/setup/ and /auth/totp/verify/
+# fail preflight: the browser gets a 200 on OPTIONS, decides the header is not
+# allowed, and silently never sends the GET or POST. The 2FA page then renders,
+# its setup fetch rejects, and the user is bounced to /login with no way in.
 from corsheaders.defaults import default_headers  # noqa: E402
 
-CORS_ALLOW_HEADERS = [*default_headers, 'idempotency-key', 'x-device-id']
+CORS_ALLOW_HEADERS = [
+    *default_headers,
+    'idempotency-key',
+    'x-device-id',
+    'x-totp-enrolment-token',
+]
 
 # The web client (buddyupfit.com) calls this API (api.buddyup.app) with
 # credentials: the httpOnly refresh cookie set by the auth endpoints. Exact
