@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { authApi } from '@/api';
@@ -224,15 +224,14 @@ describe('staff 2FA enrolment after social sign-in', () => {
    * click.
    */
   function stubGoogle(credential = 'gid-token') {
+    stubInitTokenClient = vi.fn(
+      (cfg: { callback: (r: { id_token?: string }) => void }) => ({
+        requestAccessToken: () => cfg.callback({ id_token: credential }),
+      }),
+    );
     const win = window as unknown as { google?: unknown };
     win.google = {
-      accounts: {
-        oauth2: {
-          initTokenClient: (cfg: { callback: (r: { id_token?: string }) => void }) => ({
-            requestAccessToken: () => cfg.callback({ id_token: credential }),
-          }),
-        },
-      },
+      accounts: { oauth2: { initTokenClient: stubInitTokenClient } },
     };
   }
 
@@ -243,15 +242,26 @@ describe('staff 2FA enrolment after social sign-in', () => {
  */
 const SOCIAL_TIMEOUT = 10000;
 
+/** Spy on the Google stub so a broken handoff names itself (see signInWithGoogle). */
+let stubInitTokenClient = vi.fn();
+
 async function signInWithGoogle() {
     stubGoogle();
     renderLoginWithGoogle();
     const user = userEvent.setup({ delay: null });
-    const button = await screen.findByRole('button', { name: /continue with google/i }, WAIT);
-    await user.click(button);
-    // Google hands over a credential, but a consent gate stands between that
-    // and the login call. Approving it is part of the flow, not a test detail.
-    await user.click(await screen.findByRole('button', { name: /allow & continue/i }, WAIT));
+
+    // `fireEvent` rather than `user.click` for the two buttons. There is no
+    // pointer behaviour worth simulating here: what matters is that Google's
+    // `requestAccessToken` stub runs and that the state update it triggers is
+    // flushed inside act(). user-event dispatches a pointer sequence whose
+    // async resolution left the gate unrendered on CI, so these tests spent
+    // their whole budget waiting for a dialog that never appeared.
+    fireEvent.click(await screen.findByRole('button', { name: /continue with google/i }, WAIT));
+    // Assert the stub was actually driven before waiting on the gate, so a
+    // future break reports "the Google stub was never called" instead of an
+    // opaque 5s dialog timeout.
+    expect(stubInitTokenClient).toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: /allow & continue/i }, WAIT));
     await waitUntil(() => expect(api.googleLogin).toHaveBeenCalled());
     return user;
   }
