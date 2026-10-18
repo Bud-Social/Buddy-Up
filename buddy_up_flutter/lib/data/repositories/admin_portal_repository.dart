@@ -508,7 +508,16 @@ abstract class AdminPortalRepository {
   Future<dynamic> getContentFlagQueue({
     @Query('flag_reason') String? flagReason,
     @Query('severity') String? severity,
+    /// Comma-separated; the endpoint also accepts a repeated param.
+    @Query('content_type') String? contentType,
   });
+
+  /// Resolve a flagged object into something viewable, staff-only.
+  @GET('/moderation/content-flags/resolve/')
+  Future<dynamic> resolveModerationContent(
+    @Query('content_type') String contentType,
+    @Query('content_id') String contentId,
+  );
 
   @GET('/moderation/content-flags/stats/')
   Future<dynamic> getContentFlagStats();

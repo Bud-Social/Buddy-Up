@@ -49,6 +49,10 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
         error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.invalidate(postDetailProvider(widget.postId))),
         data: (post) => Column(
           children: [
+            // A taken-down post used to 410 with no body and no explanation.
+            // The creator could not read why their post was gone, and staff
+            // could not review what they had just hidden.
+            if (post.tombstone != null) _TombstoneBanner(tombstone: post.tombstone!),
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -179,5 +183,70 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       _commentController.clear();
       ref.invalidate(commentsProvider(widget.postId));
     } catch (_) {}
+  }
+}
+
+/// Why something is hidden, and how long it can still be appealed.
+class _TombstoneBanner extends StatelessWidget {
+  final PostTombstone tombstone;
+
+  const _TombstoneBanner({required this.tombstone});
+
+  @override
+  Widget build(BuildContext context) {
+    final days = tombstone.appealWindowDays;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: BuddyColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: BuddyColors.gold.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.visibility_off_outlined,
+                  size: 16, color: BuddyColors.gold),
+              SizedBox(width: 8),
+              Text(
+                'Taken down by moderators',
+                style: TextStyle(
+                  color: BuddyColors.gold,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          if (tombstone.reason.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Reason: ${tombstone.reason.replaceAll('_', ' ')}',
+              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 12),
+            ),
+          ],
+          if (tombstone.note.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              tombstone.note,
+              style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 12),
+            ),
+          ],
+          if (days != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              days > 0
+                  ? 'You can appeal this for another $days days.'
+                  : 'The appeal window has closed.',
+              style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

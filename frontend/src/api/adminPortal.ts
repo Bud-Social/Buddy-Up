@@ -638,6 +638,29 @@ export interface ContentFlagRow {
   created_at?: string | null;
 }
 
+/** What the resolve endpoint hands back for one flagged object. */
+export interface ResolvedContent {
+  label?: string;
+  title?: string;
+  body?: string;
+  route?: string;
+  created_at?: string | null;
+  author?: { username?: string; display_name?: string; avatar_url?: string } | null;
+  fields?: Record<string, unknown> | null;
+  context?: { post_id?: string; post_body?: string } | null;
+  stats?: Record<string, number> | null;
+  media_urls?: string[];
+  /** Present only while a takedown is standing. Carries no content. */
+  takedown?: {
+    taken_down?: boolean;
+    reason?: string;
+    note?: string;
+    taken_down_at?: string | null;
+    purge_after?: string | null;
+    appeal_window_days?: number | null;
+  } | null;
+}
+
 export interface ModerationStatsRow {
   total?: number;
   unactioned?: number;
@@ -653,6 +676,10 @@ export interface ModerationReportRow {
   reason?: string | null;
   description?: string | null;
   content_url?: string | null;
+  /** Structured pointer to the reported object. Replaces content_url as the
+      only way to know *what* was reported. */
+  content_type?: string | null;
+  content_id?: string | null;
   status?: string | null;
   assigned_to?: string | null;
   resolved_at?: string | null;
@@ -1615,11 +1642,24 @@ export const adminPortalApi = {
     apiClient.post<ApiResponse<ModerationReportRow>>(`/moderation/reports/${id}/handle/`, { action, resolution_note }).then((r) => r.data),
 
   /* Moderation — flags ---------------------------------------------- */
-  getContentFlags: (params?: { flag_reason?: string; severity?: string; is_actioned?: boolean }) =>
+  getContentFlags: (params?: { flag_reason?: string; severity?: string; is_actioned?: boolean; content_type?: string }) =>
     apiClient.get<unknown>('/moderation/content-flags/', { params: clean(params as Record<string, unknown>) }).then((r) => envelopeList<ContentFlagRow>(r.data)),
 
   actOnContentFlag: (id: string, action: 'approve' | 'remove' | 'escalate', note = '') =>
     apiClient.post<ApiResponse<{ flag?: ContentFlagRow; effect?: string }>>(`/moderation/content-flags/${id}/act/`, { action, note }).then((r) => r.data),
+
+  /**
+   * Resolve a flagged/reported object into something viewable.
+   *
+   * Staff-only and deliberately returns the content in full: this is the surface
+   * where a moderator has to see what they are about to act on.
+   */
+  resolveModerationContent: (contentType: string, contentId: string) =>
+    apiClient
+      .get<ApiResponse<ResolvedContent>>('/moderation/content-flags/resolve/', {
+        params: { content_type: contentType, content_id: contentId },
+      })
+      .then((r) => r.data),
 
   getContentFlagStats: () =>
     apiClient.get<ApiResponse<ModerationStatsRow>>('/moderation/content-flags/stats/').then((r) => r.data),

@@ -2103,7 +2103,10 @@ $PollCopyWith<$Res>? get poll {
 /// @nodoc
 mixin _$Post {
 
- String get id;@JsonKey(name: 'author_data') AuthorData get authorData;@JsonKey(name: 'post_type') String get postType; String get body;@JsonKey(name: 'is_anonymous') bool get isAnonymous;@JsonKey(name: 'media_urls') List<String> get mediaUrls; List<PostMedia> get media;@JsonKey(readValue: _readCommentsDisabled) bool get commentsDisabled; List<String> get tags;@JsonKey(name: 'workout_log_data') Map<String, dynamic>? get workoutLogData;@JsonKey(name: 'location_label') String get locationLabel;@JsonKey(name: 'view_count') int get viewCount;@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts;@JsonKey(name: 'user_reaction') String? get userReaction;@JsonKey(name: 'comment_count') int get commentCount;@JsonKey(name: 'repost_count') int get repostCount;@JsonKey(name: 'save_count') int get saveCount;@JsonKey(name: 'share_count') int get shareCount;@JsonKey(name: 'is_repost') bool get isRepost;@JsonKey(name: 'is_reposted_by_me') bool get isRepostedByMe;@JsonKey(name: 'original_post_id') String? get originalPostId;@JsonKey(name: 'quote_body') String get quoteBody; List<ReposterData> get reposters;@JsonKey(name: 'is_saved') bool get isSaved;@JsonKey(name: 'is_pinned') bool get isPinned; String get visibility;@JsonKey(name: 'content_rating') String get contentRating;@JsonKey(name: 'moderation_status') String get moderationStatus;@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? get aiAnalysis;@JsonKey(name: 'gym_tag_id') String? get gymTagId;@JsonKey(name: 'gym_tag_name') String? get gymTagName; Poll? get poll;@JsonKey(name: 'original_post_data') OriginalPostData? get originalPostData;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
+ String get id;@JsonKey(name: 'author_data') AuthorData get authorData;@JsonKey(name: 'post_type') String get postType; String get body;@JsonKey(name: 'is_anonymous') bool get isAnonymous;@JsonKey(name: 'media_urls') List<String> get mediaUrls; List<PostMedia> get media;@JsonKey(readValue: _readCommentsDisabled) bool get commentsDisabled; List<String> get tags;@JsonKey(name: 'workout_log_data') Map<String, dynamic>? get workoutLogData;@JsonKey(name: 'location_label') String get locationLabel;@JsonKey(name: 'view_count') int get viewCount;@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts;@JsonKey(name: 'user_reaction') String? get userReaction;@JsonKey(name: 'comment_count') int get commentCount;@JsonKey(name: 'repost_count') int get repostCount;@JsonKey(name: 'save_count') int get saveCount;@JsonKey(name: 'share_count') int get shareCount;@JsonKey(name: 'is_repost') bool get isRepost;@JsonKey(name: 'is_reposted_by_me') bool get isRepostedByMe;@JsonKey(name: 'original_post_id') String? get originalPostId;@JsonKey(name: 'quote_body') String get quoteBody; List<ReposterData> get reposters;@JsonKey(name: 'is_saved') bool get isSaved;@JsonKey(name: 'is_pinned') bool get isPinned; String get visibility;@JsonKey(name: 'content_rating') String get contentRating;@JsonKey(name: 'moderation_status') String get moderationStatus;/// Present when this post is taken down. Carries no content -- only that it
+/// happened, why, and how long an appeal is still open. Sent to the author
+/// and to staff; other viewers get a 410 carrying the same shape.
+@JsonKey(name: 'tombstone') PostTombstone? get tombstone;@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? get aiAnalysis;@JsonKey(name: 'gym_tag_id') String? get gymTagId;@JsonKey(name: 'gym_tag_name') String? get gymTagName; Poll? get poll;@JsonKey(name: 'original_post_data') OriginalPostData? get originalPostData;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2116,16 +2119,16 @@ $PostCopyWith<Post> get copyWith => _$PostCopyWithImpl<Post>(this as Post, _$ide
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Post&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.body, body) || other.body == body)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&const DeepCollectionEquality().equals(other.mediaUrls, mediaUrls)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.commentsDisabled, commentsDisabled) || other.commentsDisabled == commentsDisabled)&&const DeepCollectionEquality().equals(other.tags, tags)&&const DeepCollectionEquality().equals(other.workoutLogData, workoutLogData)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&const DeepCollectionEquality().equals(other.reactionCounts, reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isRepostedByMe, isRepostedByMe) || other.isRepostedByMe == isRepostedByMe)&&(identical(other.originalPostId, originalPostId) || other.originalPostId == originalPostId)&&(identical(other.quoteBody, quoteBody) || other.quoteBody == quoteBody)&&const DeepCollectionEquality().equals(other.reposters, reposters)&&(identical(other.isSaved, isSaved) || other.isSaved == isSaved)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.moderationStatus, moderationStatus) || other.moderationStatus == moderationStatus)&&const DeepCollectionEquality().equals(other.aiAnalysis, aiAnalysis)&&(identical(other.gymTagId, gymTagId) || other.gymTagId == gymTagId)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.originalPostData, originalPostData) || other.originalPostData == originalPostData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Post&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.body, body) || other.body == body)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&const DeepCollectionEquality().equals(other.mediaUrls, mediaUrls)&&const DeepCollectionEquality().equals(other.media, media)&&(identical(other.commentsDisabled, commentsDisabled) || other.commentsDisabled == commentsDisabled)&&const DeepCollectionEquality().equals(other.tags, tags)&&const DeepCollectionEquality().equals(other.workoutLogData, workoutLogData)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&const DeepCollectionEquality().equals(other.reactionCounts, reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isRepostedByMe, isRepostedByMe) || other.isRepostedByMe == isRepostedByMe)&&(identical(other.originalPostId, originalPostId) || other.originalPostId == originalPostId)&&(identical(other.quoteBody, quoteBody) || other.quoteBody == quoteBody)&&const DeepCollectionEquality().equals(other.reposters, reposters)&&(identical(other.isSaved, isSaved) || other.isSaved == isSaved)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.moderationStatus, moderationStatus) || other.moderationStatus == moderationStatus)&&(identical(other.tombstone, tombstone) || other.tombstone == tombstone)&&const DeepCollectionEquality().equals(other.aiAnalysis, aiAnalysis)&&(identical(other.gymTagId, gymTagId) || other.gymTagId == gymTagId)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.originalPostData, originalPostData) || other.originalPostData == originalPostData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,authorData,postType,body,isAnonymous,const DeepCollectionEquality().hash(mediaUrls),const DeepCollectionEquality().hash(media),commentsDisabled,const DeepCollectionEquality().hash(tags),const DeepCollectionEquality().hash(workoutLogData),locationLabel,viewCount,const DeepCollectionEquality().hash(reactionCounts),userReaction,commentCount,repostCount,saveCount,shareCount,isRepost,isRepostedByMe,originalPostId,quoteBody,const DeepCollectionEquality().hash(reposters),isSaved,isPinned,visibility,contentRating,moderationStatus,const DeepCollectionEquality().hash(aiAnalysis),gymTagId,gymTagName,poll,originalPostData,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,authorData,postType,body,isAnonymous,const DeepCollectionEquality().hash(mediaUrls),const DeepCollectionEquality().hash(media),commentsDisabled,const DeepCollectionEquality().hash(tags),const DeepCollectionEquality().hash(workoutLogData),locationLabel,viewCount,const DeepCollectionEquality().hash(reactionCounts),userReaction,commentCount,repostCount,saveCount,shareCount,isRepost,isRepostedByMe,originalPostId,quoteBody,const DeepCollectionEquality().hash(reposters),isSaved,isPinned,visibility,contentRating,moderationStatus,tombstone,const DeepCollectionEquality().hash(aiAnalysis),gymTagId,gymTagName,poll,originalPostData,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'Post(id: $id, authorData: $authorData, postType: $postType, body: $body, isAnonymous: $isAnonymous, mediaUrls: $mediaUrls, media: $media, commentsDisabled: $commentsDisabled, tags: $tags, workoutLogData: $workoutLogData, locationLabel: $locationLabel, viewCount: $viewCount, reactionCounts: $reactionCounts, userReaction: $userReaction, commentCount: $commentCount, repostCount: $repostCount, saveCount: $saveCount, shareCount: $shareCount, isRepost: $isRepost, isRepostedByMe: $isRepostedByMe, originalPostId: $originalPostId, quoteBody: $quoteBody, reposters: $reposters, isSaved: $isSaved, isPinned: $isPinned, visibility: $visibility, contentRating: $contentRating, moderationStatus: $moderationStatus, aiAnalysis: $aiAnalysis, gymTagId: $gymTagId, gymTagName: $gymTagName, poll: $poll, originalPostData: $originalPostData, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Post(id: $id, authorData: $authorData, postType: $postType, body: $body, isAnonymous: $isAnonymous, mediaUrls: $mediaUrls, media: $media, commentsDisabled: $commentsDisabled, tags: $tags, workoutLogData: $workoutLogData, locationLabel: $locationLabel, viewCount: $viewCount, reactionCounts: $reactionCounts, userReaction: $userReaction, commentCount: $commentCount, repostCount: $repostCount, saveCount: $saveCount, shareCount: $shareCount, isRepost: $isRepost, isRepostedByMe: $isRepostedByMe, originalPostId: $originalPostId, quoteBody: $quoteBody, reposters: $reposters, isSaved: $isSaved, isPinned: $isPinned, visibility: $visibility, contentRating: $contentRating, moderationStatus: $moderationStatus, tombstone: $tombstone, aiAnalysis: $aiAnalysis, gymTagId: $gymTagId, gymTagName: $gymTagName, poll: $poll, originalPostData: $originalPostData, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -2136,11 +2139,11 @@ abstract mixin class $PostCopyWith<$Res>  {
   factory $PostCopyWith(Post value, $Res Function(Post) _then) = _$PostCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'author_data') AuthorData authorData,@JsonKey(name: 'post_type') String postType, String body,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(readValue: _readCommentsDisabled) bool commentsDisabled, List<String> tags,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'location_label') String locationLabel,@JsonKey(name: 'view_count') int viewCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'repost_count') int repostCount,@JsonKey(name: 'save_count') int saveCount,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'is_repost') bool isRepost,@JsonKey(name: 'is_reposted_by_me') bool isRepostedByMe,@JsonKey(name: 'original_post_id') String? originalPostId,@JsonKey(name: 'quote_body') String quoteBody, List<ReposterData> reposters,@JsonKey(name: 'is_saved') bool isSaved,@JsonKey(name: 'is_pinned') bool isPinned, String visibility,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'moderation_status') String moderationStatus,@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis,@JsonKey(name: 'gym_tag_id') String? gymTagId,@JsonKey(name: 'gym_tag_name') String? gymTagName, Poll? poll,@JsonKey(name: 'original_post_data') OriginalPostData? originalPostData,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+ String id,@JsonKey(name: 'author_data') AuthorData authorData,@JsonKey(name: 'post_type') String postType, String body,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(readValue: _readCommentsDisabled) bool commentsDisabled, List<String> tags,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'location_label') String locationLabel,@JsonKey(name: 'view_count') int viewCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'repost_count') int repostCount,@JsonKey(name: 'save_count') int saveCount,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'is_repost') bool isRepost,@JsonKey(name: 'is_reposted_by_me') bool isRepostedByMe,@JsonKey(name: 'original_post_id') String? originalPostId,@JsonKey(name: 'quote_body') String quoteBody, List<ReposterData> reposters,@JsonKey(name: 'is_saved') bool isSaved,@JsonKey(name: 'is_pinned') bool isPinned, String visibility,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'moderation_status') String moderationStatus,@JsonKey(name: 'tombstone') PostTombstone? tombstone,@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis,@JsonKey(name: 'gym_tag_id') String? gymTagId,@JsonKey(name: 'gym_tag_name') String? gymTagName, Poll? poll,@JsonKey(name: 'original_post_data') OriginalPostData? originalPostData,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
-$AuthorDataCopyWith<$Res> get authorData;$PollCopyWith<$Res>? get poll;$OriginalPostDataCopyWith<$Res>? get originalPostData;
+$AuthorDataCopyWith<$Res> get authorData;$PostTombstoneCopyWith<$Res>? get tombstone;$PollCopyWith<$Res>? get poll;$OriginalPostDataCopyWith<$Res>? get originalPostData;
 
 }
 /// @nodoc
@@ -2153,7 +2156,7 @@ class _$PostCopyWithImpl<$Res>
 
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? authorData = null,Object? postType = null,Object? body = null,Object? isAnonymous = null,Object? mediaUrls = null,Object? media = null,Object? commentsDisabled = null,Object? tags = null,Object? workoutLogData = freezed,Object? locationLabel = null,Object? viewCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? commentCount = null,Object? repostCount = null,Object? saveCount = null,Object? shareCount = null,Object? isRepost = null,Object? isRepostedByMe = null,Object? originalPostId = freezed,Object? quoteBody = null,Object? reposters = null,Object? isSaved = null,Object? isPinned = null,Object? visibility = null,Object? contentRating = null,Object? moderationStatus = null,Object? aiAnalysis = freezed,Object? gymTagId = freezed,Object? gymTagName = freezed,Object? poll = freezed,Object? originalPostData = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? authorData = null,Object? postType = null,Object? body = null,Object? isAnonymous = null,Object? mediaUrls = null,Object? media = null,Object? commentsDisabled = null,Object? tags = null,Object? workoutLogData = freezed,Object? locationLabel = null,Object? viewCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? commentCount = null,Object? repostCount = null,Object? saveCount = null,Object? shareCount = null,Object? isRepost = null,Object? isRepostedByMe = null,Object? originalPostId = freezed,Object? quoteBody = null,Object? reposters = null,Object? isSaved = null,Object? isPinned = null,Object? visibility = null,Object? contentRating = null,Object? moderationStatus = null,Object? tombstone = freezed,Object? aiAnalysis = freezed,Object? gymTagId = freezed,Object? gymTagName = freezed,Object? poll = freezed,Object? originalPostData = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
@@ -2183,7 +2186,8 @@ as bool,isPinned: null == isPinned ? _self.isPinned : isPinned // ignore: cast_n
 as bool,visibility: null == visibility ? _self.visibility : visibility // ignore: cast_nullable_to_non_nullable
 as String,contentRating: null == contentRating ? _self.contentRating : contentRating // ignore: cast_nullable_to_non_nullable
 as String,moderationStatus: null == moderationStatus ? _self.moderationStatus : moderationStatus // ignore: cast_nullable_to_non_nullable
-as String,aiAnalysis: freezed == aiAnalysis ? _self.aiAnalysis : aiAnalysis // ignore: cast_nullable_to_non_nullable
+as String,tombstone: freezed == tombstone ? _self.tombstone : tombstone // ignore: cast_nullable_to_non_nullable
+as PostTombstone?,aiAnalysis: freezed == aiAnalysis ? _self.aiAnalysis : aiAnalysis // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,gymTagId: freezed == gymTagId ? _self.gymTagId : gymTagId // ignore: cast_nullable_to_non_nullable
 as String?,gymTagName: freezed == gymTagName ? _self.gymTagName : gymTagName // ignore: cast_nullable_to_non_nullable
 as String?,poll: freezed == poll ? _self.poll : poll // ignore: cast_nullable_to_non_nullable
@@ -2201,6 +2205,18 @@ $AuthorDataCopyWith<$Res> get authorData {
   
   return $AuthorDataCopyWith<$Res>(_self.authorData, (value) {
     return _then(_self.copyWith(authorData: value));
+  });
+}/// Create a copy of Post
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$PostTombstoneCopyWith<$Res>? get tombstone {
+    if (_self.tombstone == null) {
+    return null;
+  }
+
+  return $PostTombstoneCopyWith<$Res>(_self.tombstone!, (value) {
+    return _then(_self.copyWith(tombstone: value));
   });
 }/// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
@@ -2308,10 +2324,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData, @JsonKey(name: 'post_type')  String postType,  String body, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'location_label')  String locationLabel, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'is_repost')  bool isRepost, @JsonKey(name: 'is_reposted_by_me')  bool isRepostedByMe, @JsonKey(name: 'original_post_id')  String? originalPostId, @JsonKey(name: 'quote_body')  String quoteBody,  List<ReposterData> reposters, @JsonKey(name: 'is_saved')  bool isSaved, @JsonKey(name: 'is_pinned')  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'moderation_status')  String moderationStatus, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id')  String? gymTagId, @JsonKey(name: 'gym_tag_name')  String? gymTagName,  Poll? poll, @JsonKey(name: 'original_post_data')  OriginalPostData? originalPostData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData, @JsonKey(name: 'post_type')  String postType,  String body, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'location_label')  String locationLabel, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'is_repost')  bool isRepost, @JsonKey(name: 'is_reposted_by_me')  bool isRepostedByMe, @JsonKey(name: 'original_post_id')  String? originalPostId, @JsonKey(name: 'quote_body')  String quoteBody,  List<ReposterData> reposters, @JsonKey(name: 'is_saved')  bool isSaved, @JsonKey(name: 'is_pinned')  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'moderation_status')  String moderationStatus, @JsonKey(name: 'tombstone')  PostTombstone? tombstone, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id')  String? gymTagId, @JsonKey(name: 'gym_tag_name')  String? gymTagName,  Poll? poll, @JsonKey(name: 'original_post_data')  OriginalPostData? originalPostData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Post() when $default != null:
-return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.saveCount,_that.shareCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.saveCount,_that.shareCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.tombstone,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -2329,10 +2345,10 @@ return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnon
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData, @JsonKey(name: 'post_type')  String postType,  String body, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'location_label')  String locationLabel, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'is_repost')  bool isRepost, @JsonKey(name: 'is_reposted_by_me')  bool isRepostedByMe, @JsonKey(name: 'original_post_id')  String? originalPostId, @JsonKey(name: 'quote_body')  String quoteBody,  List<ReposterData> reposters, @JsonKey(name: 'is_saved')  bool isSaved, @JsonKey(name: 'is_pinned')  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'moderation_status')  String moderationStatus, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id')  String? gymTagId, @JsonKey(name: 'gym_tag_name')  String? gymTagName,  Poll? poll, @JsonKey(name: 'original_post_data')  OriginalPostData? originalPostData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData, @JsonKey(name: 'post_type')  String postType,  String body, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'location_label')  String locationLabel, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'is_repost')  bool isRepost, @JsonKey(name: 'is_reposted_by_me')  bool isRepostedByMe, @JsonKey(name: 'original_post_id')  String? originalPostId, @JsonKey(name: 'quote_body')  String quoteBody,  List<ReposterData> reposters, @JsonKey(name: 'is_saved')  bool isSaved, @JsonKey(name: 'is_pinned')  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'moderation_status')  String moderationStatus, @JsonKey(name: 'tombstone')  PostTombstone? tombstone, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id')  String? gymTagId, @JsonKey(name: 'gym_tag_name')  String? gymTagName,  Poll? poll, @JsonKey(name: 'original_post_data')  OriginalPostData? originalPostData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Post():
-return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.saveCount,_that.shareCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.saveCount,_that.shareCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.tombstone,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2349,10 +2365,10 @@ return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnon
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData, @JsonKey(name: 'post_type')  String postType,  String body, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'location_label')  String locationLabel, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'is_repost')  bool isRepost, @JsonKey(name: 'is_reposted_by_me')  bool isRepostedByMe, @JsonKey(name: 'original_post_id')  String? originalPostId, @JsonKey(name: 'quote_body')  String quoteBody,  List<ReposterData> reposters, @JsonKey(name: 'is_saved')  bool isSaved, @JsonKey(name: 'is_pinned')  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'moderation_status')  String moderationStatus, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id')  String? gymTagId, @JsonKey(name: 'gym_tag_name')  String? gymTagName,  Poll? poll, @JsonKey(name: 'original_post_data')  OriginalPostData? originalPostData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'author_data')  AuthorData authorData, @JsonKey(name: 'post_type')  String postType,  String body, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  List<PostMedia> media, @JsonKey(readValue: _readCommentsDisabled)  bool commentsDisabled,  List<String> tags, @JsonKey(name: 'workout_log_data')  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'location_label')  String locationLabel, @JsonKey(name: 'view_count')  int viewCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'repost_count')  int repostCount, @JsonKey(name: 'save_count')  int saveCount, @JsonKey(name: 'share_count')  int shareCount, @JsonKey(name: 'is_repost')  bool isRepost, @JsonKey(name: 'is_reposted_by_me')  bool isRepostedByMe, @JsonKey(name: 'original_post_id')  String? originalPostId, @JsonKey(name: 'quote_body')  String quoteBody,  List<ReposterData> reposters, @JsonKey(name: 'is_saved')  bool isSaved, @JsonKey(name: 'is_pinned')  bool isPinned,  String visibility, @JsonKey(name: 'content_rating')  String contentRating, @JsonKey(name: 'moderation_status')  String moderationStatus, @JsonKey(name: 'tombstone')  PostTombstone? tombstone, @JsonKey(readValue: _readAiAnalysis)  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id')  String? gymTagId, @JsonKey(name: 'gym_tag_name')  String? gymTagName,  Poll? poll, @JsonKey(name: 'original_post_data')  OriginalPostData? originalPostData, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Post() when $default != null:
-return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.saveCount,_that.shareCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnonymous,_that.mediaUrls,_that.media,_that.commentsDisabled,_that.tags,_that.workoutLogData,_that.locationLabel,_that.viewCount,_that.reactionCounts,_that.userReaction,_that.commentCount,_that.repostCount,_that.saveCount,_that.shareCount,_that.isRepost,_that.isRepostedByMe,_that.originalPostId,_that.quoteBody,_that.reposters,_that.isSaved,_that.isPinned,_that.visibility,_that.contentRating,_that.moderationStatus,_that.tombstone,_that.aiAnalysis,_that.gymTagId,_that.gymTagName,_that.poll,_that.originalPostData,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -2364,7 +2380,7 @@ return $default(_that.id,_that.authorData,_that.postType,_that.body,_that.isAnon
 @JsonSerializable()
 
 class _Post implements Post {
-  const _Post({required this.id, @JsonKey(name: 'author_data') required this.authorData, @JsonKey(name: 'post_type') this.postType = 'text', this.body = '', @JsonKey(name: 'is_anonymous') this.isAnonymous = false, @JsonKey(name: 'media_urls') final  List<String> mediaUrls = const <String>[], final  List<PostMedia> media = const <PostMedia>[], @JsonKey(readValue: _readCommentsDisabled) this.commentsDisabled = false, final  List<String> tags = const <String>[], @JsonKey(name: 'workout_log_data') final  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'location_label') this.locationLabel = '', @JsonKey(name: 'view_count') this.viewCount = 0, @JsonKey(name: 'reaction_counts') final  Map<String, int> reactionCounts = const <String, int>{}, @JsonKey(name: 'user_reaction') this.userReaction, @JsonKey(name: 'comment_count') this.commentCount = 0, @JsonKey(name: 'repost_count') this.repostCount = 0, @JsonKey(name: 'save_count') this.saveCount = 0, @JsonKey(name: 'share_count') this.shareCount = 0, @JsonKey(name: 'is_repost') this.isRepost = false, @JsonKey(name: 'is_reposted_by_me') this.isRepostedByMe = false, @JsonKey(name: 'original_post_id') this.originalPostId, @JsonKey(name: 'quote_body') this.quoteBody = '', final  List<ReposterData> reposters = const <ReposterData>[], @JsonKey(name: 'is_saved') this.isSaved = false, @JsonKey(name: 'is_pinned') this.isPinned = false, this.visibility = 'public', @JsonKey(name: 'content_rating') this.contentRating = 'general', @JsonKey(name: 'moderation_status') this.moderationStatus = 'clean', @JsonKey(readValue: _readAiAnalysis) final  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id') this.gymTagId, @JsonKey(name: 'gym_tag_name') this.gymTagName, this.poll, @JsonKey(name: 'original_post_data') this.originalPostData, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _mediaUrls = mediaUrls,_media = media,_tags = tags,_workoutLogData = workoutLogData,_reactionCounts = reactionCounts,_reposters = reposters,_aiAnalysis = aiAnalysis;
+  const _Post({required this.id, @JsonKey(name: 'author_data') required this.authorData, @JsonKey(name: 'post_type') this.postType = 'text', this.body = '', @JsonKey(name: 'is_anonymous') this.isAnonymous = false, @JsonKey(name: 'media_urls') final  List<String> mediaUrls = const <String>[], final  List<PostMedia> media = const <PostMedia>[], @JsonKey(readValue: _readCommentsDisabled) this.commentsDisabled = false, final  List<String> tags = const <String>[], @JsonKey(name: 'workout_log_data') final  Map<String, dynamic>? workoutLogData, @JsonKey(name: 'location_label') this.locationLabel = '', @JsonKey(name: 'view_count') this.viewCount = 0, @JsonKey(name: 'reaction_counts') final  Map<String, int> reactionCounts = const <String, int>{}, @JsonKey(name: 'user_reaction') this.userReaction, @JsonKey(name: 'comment_count') this.commentCount = 0, @JsonKey(name: 'repost_count') this.repostCount = 0, @JsonKey(name: 'save_count') this.saveCount = 0, @JsonKey(name: 'share_count') this.shareCount = 0, @JsonKey(name: 'is_repost') this.isRepost = false, @JsonKey(name: 'is_reposted_by_me') this.isRepostedByMe = false, @JsonKey(name: 'original_post_id') this.originalPostId, @JsonKey(name: 'quote_body') this.quoteBody = '', final  List<ReposterData> reposters = const <ReposterData>[], @JsonKey(name: 'is_saved') this.isSaved = false, @JsonKey(name: 'is_pinned') this.isPinned = false, this.visibility = 'public', @JsonKey(name: 'content_rating') this.contentRating = 'general', @JsonKey(name: 'moderation_status') this.moderationStatus = 'clean', @JsonKey(name: 'tombstone') this.tombstone, @JsonKey(readValue: _readAiAnalysis) final  Map<String, dynamic>? aiAnalysis, @JsonKey(name: 'gym_tag_id') this.gymTagId, @JsonKey(name: 'gym_tag_name') this.gymTagName, this.poll, @JsonKey(name: 'original_post_data') this.originalPostData, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _mediaUrls = mediaUrls,_media = media,_tags = tags,_workoutLogData = workoutLogData,_reactionCounts = reactionCounts,_reposters = reposters,_aiAnalysis = aiAnalysis;
   factory _Post.fromJson(Map<String, dynamic> json) => _$PostFromJson(json);
 
 @override final  String id;
@@ -2433,6 +2449,10 @@ class _Post implements Post {
 @override@JsonKey() final  String visibility;
 @override@JsonKey(name: 'content_rating') final  String contentRating;
 @override@JsonKey(name: 'moderation_status') final  String moderationStatus;
+/// Present when this post is taken down. Carries no content -- only that it
+/// happened, why, and how long an appeal is still open. Sent to the author
+/// and to staff; other viewers get a 410 carrying the same shape.
+@override@JsonKey(name: 'tombstone') final  PostTombstone? tombstone;
  final  Map<String, dynamic>? _aiAnalysis;
 @override@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? get aiAnalysis {
   final value = _aiAnalysis;
@@ -2462,16 +2482,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Post&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.body, body) || other.body == body)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&const DeepCollectionEquality().equals(other._mediaUrls, _mediaUrls)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.commentsDisabled, commentsDisabled) || other.commentsDisabled == commentsDisabled)&&const DeepCollectionEquality().equals(other._tags, _tags)&&const DeepCollectionEquality().equals(other._workoutLogData, _workoutLogData)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&const DeepCollectionEquality().equals(other._reactionCounts, _reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isRepostedByMe, isRepostedByMe) || other.isRepostedByMe == isRepostedByMe)&&(identical(other.originalPostId, originalPostId) || other.originalPostId == originalPostId)&&(identical(other.quoteBody, quoteBody) || other.quoteBody == quoteBody)&&const DeepCollectionEquality().equals(other._reposters, _reposters)&&(identical(other.isSaved, isSaved) || other.isSaved == isSaved)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.moderationStatus, moderationStatus) || other.moderationStatus == moderationStatus)&&const DeepCollectionEquality().equals(other._aiAnalysis, _aiAnalysis)&&(identical(other.gymTagId, gymTagId) || other.gymTagId == gymTagId)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.originalPostData, originalPostData) || other.originalPostData == originalPostData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Post&&(identical(other.id, id) || other.id == id)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.postType, postType) || other.postType == postType)&&(identical(other.body, body) || other.body == body)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&const DeepCollectionEquality().equals(other._mediaUrls, _mediaUrls)&&const DeepCollectionEquality().equals(other._media, _media)&&(identical(other.commentsDisabled, commentsDisabled) || other.commentsDisabled == commentsDisabled)&&const DeepCollectionEquality().equals(other._tags, _tags)&&const DeepCollectionEquality().equals(other._workoutLogData, _workoutLogData)&&(identical(other.locationLabel, locationLabel) || other.locationLabel == locationLabel)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&const DeepCollectionEquality().equals(other._reactionCounts, _reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isRepostedByMe, isRepostedByMe) || other.isRepostedByMe == isRepostedByMe)&&(identical(other.originalPostId, originalPostId) || other.originalPostId == originalPostId)&&(identical(other.quoteBody, quoteBody) || other.quoteBody == quoteBody)&&const DeepCollectionEquality().equals(other._reposters, _reposters)&&(identical(other.isSaved, isSaved) || other.isSaved == isSaved)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.contentRating, contentRating) || other.contentRating == contentRating)&&(identical(other.moderationStatus, moderationStatus) || other.moderationStatus == moderationStatus)&&(identical(other.tombstone, tombstone) || other.tombstone == tombstone)&&const DeepCollectionEquality().equals(other._aiAnalysis, _aiAnalysis)&&(identical(other.gymTagId, gymTagId) || other.gymTagId == gymTagId)&&(identical(other.gymTagName, gymTagName) || other.gymTagName == gymTagName)&&(identical(other.poll, poll) || other.poll == poll)&&(identical(other.originalPostData, originalPostData) || other.originalPostData == originalPostData)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hashAll([runtimeType,id,authorData,postType,body,isAnonymous,const DeepCollectionEquality().hash(_mediaUrls),const DeepCollectionEquality().hash(_media),commentsDisabled,const DeepCollectionEquality().hash(_tags),const DeepCollectionEquality().hash(_workoutLogData),locationLabel,viewCount,const DeepCollectionEquality().hash(_reactionCounts),userReaction,commentCount,repostCount,saveCount,shareCount,isRepost,isRepostedByMe,originalPostId,quoteBody,const DeepCollectionEquality().hash(_reposters),isSaved,isPinned,visibility,contentRating,moderationStatus,const DeepCollectionEquality().hash(_aiAnalysis),gymTagId,gymTagName,poll,originalPostData,createdAt,updatedAt]);
+int get hashCode => Object.hashAll([runtimeType,id,authorData,postType,body,isAnonymous,const DeepCollectionEquality().hash(_mediaUrls),const DeepCollectionEquality().hash(_media),commentsDisabled,const DeepCollectionEquality().hash(_tags),const DeepCollectionEquality().hash(_workoutLogData),locationLabel,viewCount,const DeepCollectionEquality().hash(_reactionCounts),userReaction,commentCount,repostCount,saveCount,shareCount,isRepost,isRepostedByMe,originalPostId,quoteBody,const DeepCollectionEquality().hash(_reposters),isSaved,isPinned,visibility,contentRating,moderationStatus,tombstone,const DeepCollectionEquality().hash(_aiAnalysis),gymTagId,gymTagName,poll,originalPostData,createdAt,updatedAt]);
 
 @override
 String toString() {
-  return 'Post(id: $id, authorData: $authorData, postType: $postType, body: $body, isAnonymous: $isAnonymous, mediaUrls: $mediaUrls, media: $media, commentsDisabled: $commentsDisabled, tags: $tags, workoutLogData: $workoutLogData, locationLabel: $locationLabel, viewCount: $viewCount, reactionCounts: $reactionCounts, userReaction: $userReaction, commentCount: $commentCount, repostCount: $repostCount, saveCount: $saveCount, shareCount: $shareCount, isRepost: $isRepost, isRepostedByMe: $isRepostedByMe, originalPostId: $originalPostId, quoteBody: $quoteBody, reposters: $reposters, isSaved: $isSaved, isPinned: $isPinned, visibility: $visibility, contentRating: $contentRating, moderationStatus: $moderationStatus, aiAnalysis: $aiAnalysis, gymTagId: $gymTagId, gymTagName: $gymTagName, poll: $poll, originalPostData: $originalPostData, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Post(id: $id, authorData: $authorData, postType: $postType, body: $body, isAnonymous: $isAnonymous, mediaUrls: $mediaUrls, media: $media, commentsDisabled: $commentsDisabled, tags: $tags, workoutLogData: $workoutLogData, locationLabel: $locationLabel, viewCount: $viewCount, reactionCounts: $reactionCounts, userReaction: $userReaction, commentCount: $commentCount, repostCount: $repostCount, saveCount: $saveCount, shareCount: $shareCount, isRepost: $isRepost, isRepostedByMe: $isRepostedByMe, originalPostId: $originalPostId, quoteBody: $quoteBody, reposters: $reposters, isSaved: $isSaved, isPinned: $isPinned, visibility: $visibility, contentRating: $contentRating, moderationStatus: $moderationStatus, tombstone: $tombstone, aiAnalysis: $aiAnalysis, gymTagId: $gymTagId, gymTagName: $gymTagName, poll: $poll, originalPostData: $originalPostData, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -2482,11 +2502,11 @@ abstract mixin class _$PostCopyWith<$Res> implements $PostCopyWith<$Res> {
   factory _$PostCopyWith(_Post value, $Res Function(_Post) _then) = __$PostCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'author_data') AuthorData authorData,@JsonKey(name: 'post_type') String postType, String body,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(readValue: _readCommentsDisabled) bool commentsDisabled, List<String> tags,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'location_label') String locationLabel,@JsonKey(name: 'view_count') int viewCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'repost_count') int repostCount,@JsonKey(name: 'save_count') int saveCount,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'is_repost') bool isRepost,@JsonKey(name: 'is_reposted_by_me') bool isRepostedByMe,@JsonKey(name: 'original_post_id') String? originalPostId,@JsonKey(name: 'quote_body') String quoteBody, List<ReposterData> reposters,@JsonKey(name: 'is_saved') bool isSaved,@JsonKey(name: 'is_pinned') bool isPinned, String visibility,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'moderation_status') String moderationStatus,@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis,@JsonKey(name: 'gym_tag_id') String? gymTagId,@JsonKey(name: 'gym_tag_name') String? gymTagName, Poll? poll,@JsonKey(name: 'original_post_data') OriginalPostData? originalPostData,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+ String id,@JsonKey(name: 'author_data') AuthorData authorData,@JsonKey(name: 'post_type') String postType, String body,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'media_urls') List<String> mediaUrls, List<PostMedia> media,@JsonKey(readValue: _readCommentsDisabled) bool commentsDisabled, List<String> tags,@JsonKey(name: 'workout_log_data') Map<String, dynamic>? workoutLogData,@JsonKey(name: 'location_label') String locationLabel,@JsonKey(name: 'view_count') int viewCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'repost_count') int repostCount,@JsonKey(name: 'save_count') int saveCount,@JsonKey(name: 'share_count') int shareCount,@JsonKey(name: 'is_repost') bool isRepost,@JsonKey(name: 'is_reposted_by_me') bool isRepostedByMe,@JsonKey(name: 'original_post_id') String? originalPostId,@JsonKey(name: 'quote_body') String quoteBody, List<ReposterData> reposters,@JsonKey(name: 'is_saved') bool isSaved,@JsonKey(name: 'is_pinned') bool isPinned, String visibility,@JsonKey(name: 'content_rating') String contentRating,@JsonKey(name: 'moderation_status') String moderationStatus,@JsonKey(name: 'tombstone') PostTombstone? tombstone,@JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis,@JsonKey(name: 'gym_tag_id') String? gymTagId,@JsonKey(name: 'gym_tag_name') String? gymTagName, Poll? poll,@JsonKey(name: 'original_post_data') OriginalPostData? originalPostData,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
-@override $AuthorDataCopyWith<$Res> get authorData;@override $PollCopyWith<$Res>? get poll;@override $OriginalPostDataCopyWith<$Res>? get originalPostData;
+@override $AuthorDataCopyWith<$Res> get authorData;@override $PostTombstoneCopyWith<$Res>? get tombstone;@override $PollCopyWith<$Res>? get poll;@override $OriginalPostDataCopyWith<$Res>? get originalPostData;
 
 }
 /// @nodoc
@@ -2499,7 +2519,7 @@ class __$PostCopyWithImpl<$Res>
 
 /// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? authorData = null,Object? postType = null,Object? body = null,Object? isAnonymous = null,Object? mediaUrls = null,Object? media = null,Object? commentsDisabled = null,Object? tags = null,Object? workoutLogData = freezed,Object? locationLabel = null,Object? viewCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? commentCount = null,Object? repostCount = null,Object? saveCount = null,Object? shareCount = null,Object? isRepost = null,Object? isRepostedByMe = null,Object? originalPostId = freezed,Object? quoteBody = null,Object? reposters = null,Object? isSaved = null,Object? isPinned = null,Object? visibility = null,Object? contentRating = null,Object? moderationStatus = null,Object? aiAnalysis = freezed,Object? gymTagId = freezed,Object? gymTagName = freezed,Object? poll = freezed,Object? originalPostData = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? authorData = null,Object? postType = null,Object? body = null,Object? isAnonymous = null,Object? mediaUrls = null,Object? media = null,Object? commentsDisabled = null,Object? tags = null,Object? workoutLogData = freezed,Object? locationLabel = null,Object? viewCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? commentCount = null,Object? repostCount = null,Object? saveCount = null,Object? shareCount = null,Object? isRepost = null,Object? isRepostedByMe = null,Object? originalPostId = freezed,Object? quoteBody = null,Object? reposters = null,Object? isSaved = null,Object? isPinned = null,Object? visibility = null,Object? contentRating = null,Object? moderationStatus = null,Object? tombstone = freezed,Object? aiAnalysis = freezed,Object? gymTagId = freezed,Object? gymTagName = freezed,Object? poll = freezed,Object? originalPostData = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_Post(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
@@ -2529,7 +2549,8 @@ as bool,isPinned: null == isPinned ? _self.isPinned : isPinned // ignore: cast_n
 as bool,visibility: null == visibility ? _self.visibility : visibility // ignore: cast_nullable_to_non_nullable
 as String,contentRating: null == contentRating ? _self.contentRating : contentRating // ignore: cast_nullable_to_non_nullable
 as String,moderationStatus: null == moderationStatus ? _self.moderationStatus : moderationStatus // ignore: cast_nullable_to_non_nullable
-as String,aiAnalysis: freezed == aiAnalysis ? _self._aiAnalysis : aiAnalysis // ignore: cast_nullable_to_non_nullable
+as String,tombstone: freezed == tombstone ? _self.tombstone : tombstone // ignore: cast_nullable_to_non_nullable
+as PostTombstone?,aiAnalysis: freezed == aiAnalysis ? _self._aiAnalysis : aiAnalysis // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,gymTagId: freezed == gymTagId ? _self.gymTagId : gymTagId // ignore: cast_nullable_to_non_nullable
 as String?,gymTagName: freezed == gymTagName ? _self.gymTagName : gymTagName // ignore: cast_nullable_to_non_nullable
 as String?,poll: freezed == poll ? _self.poll : poll // ignore: cast_nullable_to_non_nullable
@@ -2548,6 +2569,18 @@ $AuthorDataCopyWith<$Res> get authorData {
   
   return $AuthorDataCopyWith<$Res>(_self.authorData, (value) {
     return _then(_self.copyWith(authorData: value));
+  });
+}/// Create a copy of Post
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$PostTombstoneCopyWith<$Res>? get tombstone {
+    if (_self.tombstone == null) {
+    return null;
+  }
+
+  return $PostTombstoneCopyWith<$Res>(_self.tombstone!, (value) {
+    return _then(_self.copyWith(tombstone: value));
   });
 }/// Create a copy of Post
 /// with the given fields replaced by the non-null parameter values.
@@ -4872,6 +4905,284 @@ as int,pollMaxSelections: null == pollMaxSelections ? _self.pollMaxSelections : 
 as int,mentionedUserIds: null == mentionedUserIds ? _self._mentionedUserIds : mentionedUserIds // ignore: cast_nullable_to_non_nullable
 as List<String>,isAnonymous: null == isAnonymous ? _self.isAnonymous : isAnonymous // ignore: cast_nullable_to_non_nullable
 as bool,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$PostTombstone {
+
+@JsonKey(name: 'taken_down') bool get takenDown;@JsonKey(name: 'reason') String get reason;@JsonKey(name: 'note') String get note;@JsonKey(name: 'taken_down_at') DateTime? get takenDownAt;@JsonKey(name: 'purge_after') DateTime? get purgeAfter;@JsonKey(name: 'appeal_window_days') int? get appealWindowDays;
+/// Create a copy of PostTombstone
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$PostTombstoneCopyWith<PostTombstone> get copyWith => _$PostTombstoneCopyWithImpl<PostTombstone>(this as PostTombstone, _$identity);
+
+  /// Serializes this PostTombstone to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PostTombstone&&(identical(other.takenDown, takenDown) || other.takenDown == takenDown)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.note, note) || other.note == note)&&(identical(other.takenDownAt, takenDownAt) || other.takenDownAt == takenDownAt)&&(identical(other.purgeAfter, purgeAfter) || other.purgeAfter == purgeAfter)&&(identical(other.appealWindowDays, appealWindowDays) || other.appealWindowDays == appealWindowDays));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,takenDown,reason,note,takenDownAt,purgeAfter,appealWindowDays);
+
+@override
+String toString() {
+  return 'PostTombstone(takenDown: $takenDown, reason: $reason, note: $note, takenDownAt: $takenDownAt, purgeAfter: $purgeAfter, appealWindowDays: $appealWindowDays)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $PostTombstoneCopyWith<$Res>  {
+  factory $PostTombstoneCopyWith(PostTombstone value, $Res Function(PostTombstone) _then) = _$PostTombstoneCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'taken_down') bool takenDown,@JsonKey(name: 'reason') String reason,@JsonKey(name: 'note') String note,@JsonKey(name: 'taken_down_at') DateTime? takenDownAt,@JsonKey(name: 'purge_after') DateTime? purgeAfter,@JsonKey(name: 'appeal_window_days') int? appealWindowDays
+});
+
+
+
+
+}
+/// @nodoc
+class _$PostTombstoneCopyWithImpl<$Res>
+    implements $PostTombstoneCopyWith<$Res> {
+  _$PostTombstoneCopyWithImpl(this._self, this._then);
+
+  final PostTombstone _self;
+  final $Res Function(PostTombstone) _then;
+
+/// Create a copy of PostTombstone
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? takenDown = null,Object? reason = null,Object? note = null,Object? takenDownAt = freezed,Object? purgeAfter = freezed,Object? appealWindowDays = freezed,}) {
+  return _then(_self.copyWith(
+takenDown: null == takenDown ? _self.takenDown : takenDown // ignore: cast_nullable_to_non_nullable
+as bool,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,note: null == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String,takenDownAt: freezed == takenDownAt ? _self.takenDownAt : takenDownAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,purgeAfter: freezed == purgeAfter ? _self.purgeAfter : purgeAfter // ignore: cast_nullable_to_non_nullable
+as DateTime?,appealWindowDays: freezed == appealWindowDays ? _self.appealWindowDays : appealWindowDays // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [PostTombstone].
+extension PostTombstonePatterns on PostTombstone {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _PostTombstone value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _PostTombstone() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _PostTombstone value)  $default,){
+final _that = this;
+switch (_that) {
+case _PostTombstone():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _PostTombstone value)?  $default,){
+final _that = this;
+switch (_that) {
+case _PostTombstone() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'taken_down')  bool takenDown, @JsonKey(name: 'reason')  String reason, @JsonKey(name: 'note')  String note, @JsonKey(name: 'taken_down_at')  DateTime? takenDownAt, @JsonKey(name: 'purge_after')  DateTime? purgeAfter, @JsonKey(name: 'appeal_window_days')  int? appealWindowDays)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _PostTombstone() when $default != null:
+return $default(_that.takenDown,_that.reason,_that.note,_that.takenDownAt,_that.purgeAfter,_that.appealWindowDays);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'taken_down')  bool takenDown, @JsonKey(name: 'reason')  String reason, @JsonKey(name: 'note')  String note, @JsonKey(name: 'taken_down_at')  DateTime? takenDownAt, @JsonKey(name: 'purge_after')  DateTime? purgeAfter, @JsonKey(name: 'appeal_window_days')  int? appealWindowDays)  $default,) {final _that = this;
+switch (_that) {
+case _PostTombstone():
+return $default(_that.takenDown,_that.reason,_that.note,_that.takenDownAt,_that.purgeAfter,_that.appealWindowDays);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'taken_down')  bool takenDown, @JsonKey(name: 'reason')  String reason, @JsonKey(name: 'note')  String note, @JsonKey(name: 'taken_down_at')  DateTime? takenDownAt, @JsonKey(name: 'purge_after')  DateTime? purgeAfter, @JsonKey(name: 'appeal_window_days')  int? appealWindowDays)?  $default,) {final _that = this;
+switch (_that) {
+case _PostTombstone() when $default != null:
+return $default(_that.takenDown,_that.reason,_that.note,_that.takenDownAt,_that.purgeAfter,_that.appealWindowDays);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _PostTombstone implements PostTombstone {
+  const _PostTombstone({@JsonKey(name: 'taken_down') this.takenDown = true, @JsonKey(name: 'reason') this.reason = '', @JsonKey(name: 'note') this.note = '', @JsonKey(name: 'taken_down_at') this.takenDownAt, @JsonKey(name: 'purge_after') this.purgeAfter, @JsonKey(name: 'appeal_window_days') this.appealWindowDays});
+  factory _PostTombstone.fromJson(Map<String, dynamic> json) => _$PostTombstoneFromJson(json);
+
+@override@JsonKey(name: 'taken_down') final  bool takenDown;
+@override@JsonKey(name: 'reason') final  String reason;
+@override@JsonKey(name: 'note') final  String note;
+@override@JsonKey(name: 'taken_down_at') final  DateTime? takenDownAt;
+@override@JsonKey(name: 'purge_after') final  DateTime? purgeAfter;
+@override@JsonKey(name: 'appeal_window_days') final  int? appealWindowDays;
+
+/// Create a copy of PostTombstone
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$PostTombstoneCopyWith<_PostTombstone> get copyWith => __$PostTombstoneCopyWithImpl<_PostTombstone>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$PostTombstoneToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PostTombstone&&(identical(other.takenDown, takenDown) || other.takenDown == takenDown)&&(identical(other.reason, reason) || other.reason == reason)&&(identical(other.note, note) || other.note == note)&&(identical(other.takenDownAt, takenDownAt) || other.takenDownAt == takenDownAt)&&(identical(other.purgeAfter, purgeAfter) || other.purgeAfter == purgeAfter)&&(identical(other.appealWindowDays, appealWindowDays) || other.appealWindowDays == appealWindowDays));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,takenDown,reason,note,takenDownAt,purgeAfter,appealWindowDays);
+
+@override
+String toString() {
+  return 'PostTombstone(takenDown: $takenDown, reason: $reason, note: $note, takenDownAt: $takenDownAt, purgeAfter: $purgeAfter, appealWindowDays: $appealWindowDays)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$PostTombstoneCopyWith<$Res> implements $PostTombstoneCopyWith<$Res> {
+  factory _$PostTombstoneCopyWith(_PostTombstone value, $Res Function(_PostTombstone) _then) = __$PostTombstoneCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'taken_down') bool takenDown,@JsonKey(name: 'reason') String reason,@JsonKey(name: 'note') String note,@JsonKey(name: 'taken_down_at') DateTime? takenDownAt,@JsonKey(name: 'purge_after') DateTime? purgeAfter,@JsonKey(name: 'appeal_window_days') int? appealWindowDays
+});
+
+
+
+
+}
+/// @nodoc
+class __$PostTombstoneCopyWithImpl<$Res>
+    implements _$PostTombstoneCopyWith<$Res> {
+  __$PostTombstoneCopyWithImpl(this._self, this._then);
+
+  final _PostTombstone _self;
+  final $Res Function(_PostTombstone) _then;
+
+/// Create a copy of PostTombstone
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? takenDown = null,Object? reason = null,Object? note = null,Object? takenDownAt = freezed,Object? purgeAfter = freezed,Object? appealWindowDays = freezed,}) {
+  return _then(_PostTombstone(
+takenDown: null == takenDown ? _self.takenDown : takenDown // ignore: cast_nullable_to_non_nullable
+as bool,reason: null == reason ? _self.reason : reason // ignore: cast_nullable_to_non_nullable
+as String,note: null == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String,takenDownAt: freezed == takenDownAt ? _self.takenDownAt : takenDownAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,purgeAfter: freezed == purgeAfter ? _self.purgeAfter : purgeAfter // ignore: cast_nullable_to_non_nullable
+as DateTime?,appealWindowDays: freezed == appealWindowDays ? _self.appealWindowDays : appealWindowDays // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

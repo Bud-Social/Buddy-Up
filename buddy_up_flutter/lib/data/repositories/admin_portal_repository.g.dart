@@ -1558,11 +1558,13 @@ class _AdminPortalRepository implements AdminPortalRepository {
   Future<dynamic> getContentFlagQueue({
     String? flagReason,
     String? severity,
+    String? contentType,
   }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'flag_reason': flagReason,
       r'severity': severity,
+      r'content_type': contentType,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
@@ -1572,6 +1574,33 @@ class _AdminPortalRepository implements AdminPortalRepository {
           .compose(
             _dio.options,
             '/moderation/content-flags/queue/',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
+  Future<dynamic> resolveModerationContent(
+    String contentType,
+    String contentId,
+  ) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'content_type': contentType,
+      r'content_id': contentId,
+    };
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<dynamic>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/moderation/content-flags/resolve/',
             queryParameters: queryParameters,
             data: _data,
           )

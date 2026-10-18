@@ -432,6 +432,28 @@ const List<({String value, String label})> kFlagReasonChoices = [
 ];
 
 /// `ContentFlag.SEVERITY_CHOICES`.
+/// Every takedown-able content type, mirroring the server registry. Modelled as
+/// a constant rather than read from `supported_content_types` so the chips are
+/// present before the queue responds, and so the labels are ours to write.
+const List<({String value, String label})> kContentTypeChoices = [
+  (value: 'feed.post', label: 'Posts'),
+  (value: 'feed.comment', label: 'Comments'),
+  (value: 'user.profile', label: 'Profiles'),
+  (value: 'profiles.buddy_search_profile', label: 'Find a buddy'),
+  (value: 'messaging.community', label: 'Communities'),
+  (value: 'messaging.community_post', label: 'Community posts'),
+  (value: 'marketplace.product', label: 'Products'),
+  (value: 'marketplace.meal_plan', label: 'Meal plans'),
+  (value: 'marketplace.programme', label: 'Programmes'),
+  (value: 'marketplace.event', label: 'Events'),
+  (value: 'gym', label: 'Gyms'),
+  (value: 'gyms.schedule_post', label: 'Schedules'),
+  (value: 'lives.buddy_live', label: 'Lives'),
+  (value: 'sessions.booking', label: 'Sessions'),
+  (value: 'sessions.trainer_profile', label: 'Trainer profiles'),
+  (value: 'sessions.availability', label: 'Availability'),
+];
+
 const List<({String value, String label})> kFlagSeverityChoices = [
   (value: 'critical', label: 'Critical'),
   (value: 'high', label: 'High'),
@@ -472,12 +494,13 @@ class FlagQueuePage extends PortalPage<ContentFlag> {
 }
 
 final flagQueueProvider = FutureProvider.family<FlagQueuePage,
-    ({String flagReason, String severity})>((ref, args) async {
+    ({String flagReason, String severity, String contentType})>((ref, args) async {
   final raw = await ref
       .watch(adminPortalRepositoryProvider)
       .getContentFlagQueue(
         flagReason: args.flagReason.isEmpty ? null : args.flagReason,
         severity: args.severity.isEmpty ? null : args.severity,
+        contentType: args.contentType.isEmpty ? null : args.contentType,
       );
   final rows = moderationRows(raw);
   final registry = <String, String>{};

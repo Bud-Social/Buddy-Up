@@ -35,6 +35,10 @@ class _AdminModerationScreenState extends ConsumerState<AdminModerationScreen> {
   // Flags
   String _flagReason = '';
   String _flagSeverity = '';
+  // Content type is a first-class filter, not a label you read. The queue
+  // returned every type in one list, so "what have we flagged in communities"
+  // had no query that could answer it.
+  String _flagContentType = '';
 
   // Reports
   String _assignment = 'all';
@@ -156,6 +160,7 @@ class _AdminModerationScreenState extends ConsumerState<AdminModerationScreen> {
     final queue = ref.watch(flagQueueProvider((
       flagReason: _flagReason,
       severity: _flagSeverity,
+      contentType: _flagContentType,
     )));
     final stats = ref.watch(contentFlagStatsProvider).asData?.value;
     final unactioned = stats?.unactioned ?? 0;
@@ -191,6 +196,15 @@ class _AdminModerationScreenState extends ConsumerState<AdminModerationScreen> {
             ...kFlagSeverityChoices,
           ],
           onChanged: (v) => _setFilter(() => _flagSeverity = v),
+        ),
+        const SizedBox(height: 8),
+        AdminFilterChips(
+          value: _flagContentType,
+          options: const [
+            (value: '', label: 'Any content type'),
+            ...kContentTypeChoices,
+          ],
+          onChanged: (v) => _setFilter(() => _flagContentType = v),
         ),
         const SizedBox(height: 12),
         ...queue.when(

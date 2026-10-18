@@ -208,6 +208,10 @@ abstract class Post with _$Post {
     @Default('public') String visibility,
     @JsonKey(name: 'content_rating') @Default('general') String contentRating,
     @JsonKey(name: 'moderation_status') @Default('clean') String moderationStatus,
+    /// Present when this post is taken down. Carries no content -- only that it
+    /// happened, why, and how long an appeal is still open. Sent to the author
+    /// and to staff; other viewers get a 410 carrying the same shape.
+    @JsonKey(name: 'tombstone') PostTombstone? tombstone,
     @JsonKey(readValue: _readAiAnalysis) Map<String, dynamic>? aiAnalysis,
     @JsonKey(name: 'gym_tag_id') String? gymTagId,
     @JsonKey(name: 'gym_tag_name') String? gymTagName,
@@ -339,4 +343,20 @@ abstract class Draft with _$Draft {
   }) = _Draft;
 
   factory Draft.fromJson(Map<String, dynamic> json) => _$DraftFromJson(json);
+}
+
+/// Why a post is hidden, and for how long it can still be appealed.
+@freezed
+abstract class PostTombstone with _$PostTombstone {
+  const factory PostTombstone({
+    @JsonKey(name: 'taken_down') @Default(true) bool takenDown,
+    @JsonKey(name: 'reason') @Default('') String reason,
+    @JsonKey(name: 'note') @Default('') String note,
+    @JsonKey(name: 'taken_down_at') DateTime? takenDownAt,
+    @JsonKey(name: 'purge_after') DateTime? purgeAfter,
+    @JsonKey(name: 'appeal_window_days') int? appealWindowDays,
+  }) = _PostTombstone;
+
+  factory PostTombstone.fromJson(Map<String, dynamic> json) =>
+      _$PostTombstoneFromJson(json);
 }

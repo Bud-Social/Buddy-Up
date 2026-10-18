@@ -16,6 +16,7 @@ import {
   type ModerationReportRow,
   type PendingApprovalRow,
   type PortalUser,
+  type ResolvedContent,
 } from '@/api/adminPortal';
 import {
   AdminEmptyState,
@@ -282,6 +283,20 @@ function ReportsTab({ onChanged }: { onChanged: () => void }) {
                     <p className="text-[11px] text-buddy-text-secondary mt-1">
                       {shortId(report.id)} · target {shortId(report.target_user)} · filed {formatDate(report.created_at)}
                     </p>
+                    {/* Reports used to carry only a free-text content_url, which
+                        this screen dropped entirely -- so a moderator could see
+                        that something was reported and not what. */}
+                    {report.content_type && (
+                      <p className="text-[11px] text-buddy-text-secondary mt-1 font-mono">
+                        {report.content_type}:{report.content_id || '—'}
+                      </p>
+                    )}
+                    {(report.content_type || report.content_url) && (
+                      <ContentPeek
+                        contentType={report.content_type || ''}
+                        contentId={report.content_id || ''}
+                      />
+                    )}
                     {report.resolution_note && (
                       <p className="text-[11px] text-buddy-text-secondary mt-1 break-words">Resolution: {report.resolution_note}</p>
                     )}
@@ -373,24 +388,140 @@ function ReportsTab({ onChanged }: { onChanged: () => void }) {
 /* AI flag queue                                                       */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Renders the live object behind a flag.
+ *
+ * The queue used to show a truncated id and a 500-character preview, which is
+ * enough to triage but not to act on: "is this a joke or an advert" needs the
+ * post in front of you. Collapsed by default so the queue stays scannable, and
+ * fetched on demand rather than sixteen extra calls on page load.
+ *
+ * Staff-only, and deliberately shows the content in full.
+ */
+function ContentPeek({ contentType, contentId }: { contentType: string; contentId: string }) {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<ResolvedContent | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError('');
+    adminPortalApi
+      .resolveModerationContent(contentType, contentId)
+      .then((res) => setData(res?.data ?? null))
+      .catch(() => setError('Could not load this content.'))
+      .finally(() => setLoading(false));
+  }, [contentType, contentId]);
+
+  if (!contentType || !contentId) return null;
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => { const next = !open; setOpen(next); if (next && !data && !loading) load(); }}
+        className="text-[11px] text-buddy-green hover:underline inline-flex items-center gap-1"
+      >
+        {open ? 'Hide content' : 'View content'}
+        <ArrowUpRight size={11} className={open ? 'rotate-90' : ''} />
+      </button>
+
+      {open && (
+        <div className="mt-2 rounded-lg border border-buddy-surface bg-buddy-surface-raised/40 p-3 space-y-2">
+          {loading && <p className="text-[11px] text-buddy-text-secondary">Loading…</p>}
+          {error && <p className="text-[11px] text-buddy-red">{error}</p>}
+          {!loading && !error && data && !data.label && (
+            <p className="text-[11px] text-buddy-text-secondary">
+              This content has already been deleted.
+            </p>
+          )}
+          {!loading && !error && data?.label && (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="electric" label={data.label} size="sm" />
+                {data.author?.display_name && (
+                  <span className="text-[11px] text-buddy-text-secondary">
+                    by {data.author.display_name}
+                  </span>
+                )}
+              </div>
+              {data.takedown?.taken_down && (
+                <p className="text-[11px] text-buddy-orange">
+                  Taken down ({data.takedown.reason}).
+                  {typeof data.takedown.appeal_window_days === 'number'
+                    ? ` Appealable for ${data.takedown.appeal_window_days} more days.`
+                    : ''}
+                </p>
+              )}
+              {data.title && (
+                typeof data.title === 'string'
+                  ? <p className="text-sm font-medium break-words">{data.title}</p>
+                  : null
+              )}
+              {typeof data.body === 'string' && data.body && (
+                <p className="text-xs text-buddy-text-primary whitespace-pre-wrap break-words line-clamp-12">
+                  {data.body}
+                </p>
+              )}
+              {data.context?.post_body && (
+                <p className="text-[11px] text-buddy-text-secondary italic break-words">
+                  on: {data.context.post_body}
+                </p>
+              )}
+              {data.fields && Object.keys(data.fields).length > 0 && (
+                <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-[11px]">
+                  {Object.entries(data.fields).map(([k, v]) => (
+                    <div key={k} className="contents">
+                      <dt className="text-buddy-text-secondary">{k.replace(/_/g, ' ')}</dt>
+                      <dd className="break-words">{v === '' || v === null ? '—' : String(v)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {data.route && (
+                <a
+                  href={data.route}
+                  className="inline-block text-[11px] text-buddy-green hover:underline"
+                >
+                  Open in app →
+                </a>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FlagsTab() {
   const [flags, setFlags] = useState<ContentFlagRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reasonFilter, setReasonFilter] = useState('all');
+  // Content type is a first-class filter, not a label you read. The queue used
+  // to return every type in one list, so "what have we flagged in communities"
+  // had no query that could answer it.
+  const [typeFilter, setTypeFilter] = useState('all');
   const [actingId, setActingId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
     setError('');
     Promise.all([
-      adminPortalApi.getContentFlags({ is_actioned: false, flag_reason: reasonFilter === 'all' ? undefined : reasonFilter }),
+      adminPortalApi.getContentFlags({
+        is_actioned: false,
+        flag_reason: reasonFilter === 'all' ? undefined : reasonFilter,
+        content_type: typeFilter === 'all' ? undefined : typeFilter,
+      }),
       adminPortalApi.getContentFlagStats(),
     ])
       .then(([flagsRes]) => setFlags(Array.isArray(flagsRes?.data) ? flagsRes.data : []))
       .catch(() => setError('Failed to load the flag queue. Staff access required.'))
       .finally(() => setLoading(false));
-  }, [reasonFilter]);
+  }, [reasonFilter, typeFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -401,7 +532,18 @@ function FlagsTab() {
       setActingId(id);
       setError('');
       try {
-        await adminPortalApi.actOnContentFlag(id, action);
+        const res = await adminPortalApi.actOnContentFlag(id, action);
+        // A takedown hides rather than deletes, and the appeal window is the
+        // difference between "removed" and "gone" in a moderator's head. Say so
+        // rather than leaving them to assume the content was destroyed.
+        const takedown = (res?.data as { takedown?: { appeal_window_days?: number } } | undefined)?.takedown;
+        if (action === 'remove' && takedown) {
+          setError('');
+          setSuccessMessage(
+            `Taken down. Hidden from members, still visible to you and the creator, ` +
+            `and reversible for ${takedown.appeal_window_days ?? 90} days.`,
+          );
+        }
         load();
       } catch {
         setError(`Failed to ${action} flag ${shortId(id)}. The flag is still open.`);
@@ -412,6 +554,27 @@ function FlagsTab() {
     [load],
   );
 
+  /** Mirrors the handler registry server-side; see `describe_registry()`. */
+  const CONTENT_TYPE_CHIPS = [
+    { value: 'all', label: 'All types' },
+    { value: 'feed.post', label: 'Posts' },
+    { value: 'feed.comment', label: 'Comments' },
+    { value: 'user.profile', label: 'Profiles' },
+    { value: 'profiles.buddy_search_profile', label: 'Find a buddy' },
+    { value: 'messaging.community', label: 'Communities' },
+    { value: 'messaging.community_post', label: 'Community posts' },
+    { value: 'marketplace.product', label: 'Products' },
+    { value: 'marketplace.meal_plan', label: 'Meal plans' },
+    { value: 'marketplace.programme', label: 'Programmes' },
+    { value: 'marketplace.event', label: 'Events' },
+    { value: 'gym', label: 'Gyms' },
+    { value: 'gyms.schedule_post', label: 'Schedules' },
+    { value: 'lives.buddy_live', label: 'Lives' },
+    { value: 'sessions.booking', label: 'Sessions' },
+    { value: 'sessions.trainer_profile', label: 'Trainer profiles' },
+    { value: 'sessions.availability', label: 'Availability' },
+  ];
+
   const REASON_CHIPS = ['all', 'nsfw', 'toxic', 'spam', 'misinfo', 'medical_claim', 'undisclosed_sponsor', 'adult_ungated'].map((r) => ({
     value: r,
     label: r === 'all' ? 'All' : r.replace(/_/g, ' '),
@@ -419,10 +582,19 @@ function FlagsTab() {
 
   return (
     <div className="space-y-4">
-      <Card className="p-4">
+      <Card className="p-4 space-y-3">
         <FilterChips options={REASON_CHIPS} value={reasonFilter} onChange={setReasonFilter} />
+        <div>
+          <p className="text-[11px] text-buddy-text-secondary mb-1.5 font-semibold uppercase tracking-wide">
+            Content type
+          </p>
+          <FilterChips options={CONTENT_TYPE_CHIPS} value={typeFilter} onChange={setTypeFilter} />
+        </div>
       </Card>
       {error && <AdminErrorBanner message={error} onRetry={load} />}
+      {successMessage && (
+        <p className="text-xs text-buddy-green">{successMessage}</p>
+      )}
       {loading && !flags.length ? (
         <AdminSkeleton rows={4} />
       ) : flags.length === 0 ? (
@@ -450,6 +622,7 @@ function FlagsTab() {
                     </p>
                   )}
                   <p className="text-[11px] text-buddy-text-secondary mt-1.5">{formatDate(flag.created_at)}</p>
+                  <ContentPeek contentType={flag.content_type || ''} contentId={flag.content_id || ''} />
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <Button variant="outline" size="sm" disabled={actingId === flag.id} onClick={() => act(flag, 'approve')}>

@@ -247,6 +247,9 @@ _Post _$PostFromJson(Map<String, dynamic> json) => _Post(
   visibility: json['visibility'] as String? ?? 'public',
   contentRating: json['content_rating'] as String? ?? 'general',
   moderationStatus: json['moderation_status'] as String? ?? 'clean',
+  tombstone: json['tombstone'] == null
+      ? null
+      : PostTombstone.fromJson(json['tombstone'] as Map<String, dynamic>),
   aiAnalysis: _readAiAnalysis(json, 'aiAnalysis') as Map<String, dynamic>?,
   gymTagId: json['gym_tag_id'] as String?,
   gymTagName: json['gym_tag_name'] as String?,
@@ -291,6 +294,7 @@ Map<String, dynamic> _$PostToJson(_Post instance) => <String, dynamic>{
   'visibility': instance.visibility,
   'content_rating': instance.contentRating,
   'moderation_status': instance.moderationStatus,
+  'tombstone': instance.tombstone,
   'aiAnalysis': instance.aiAnalysis,
   'gym_tag_id': instance.gymTagId,
   'gym_tag_name': instance.gymTagName,
@@ -475,3 +479,27 @@ Map<String, dynamic> _$DraftToJson(_Draft instance) => <String, dynamic>{
   'mentioned_user_ids': instance.mentionedUserIds,
   'is_anonymous': instance.isAnonymous,
 };
+
+_PostTombstone _$PostTombstoneFromJson(Map<String, dynamic> json) =>
+    _PostTombstone(
+      takenDown: json['taken_down'] as bool? ?? true,
+      reason: json['reason'] as String? ?? '',
+      note: json['note'] as String? ?? '',
+      takenDownAt: json['taken_down_at'] == null
+          ? null
+          : DateTime.parse(json['taken_down_at'] as String),
+      purgeAfter: json['purge_after'] == null
+          ? null
+          : DateTime.parse(json['purge_after'] as String),
+      appealWindowDays: (json['appeal_window_days'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$PostTombstoneToJson(_PostTombstone instance) =>
+    <String, dynamic>{
+      'taken_down': instance.takenDown,
+      'reason': instance.reason,
+      'note': instance.note,
+      'taken_down_at': instance.takenDownAt?.toIso8601String(),
+      'purge_after': instance.purgeAfter?.toIso8601String(),
+      'appeal_window_days': instance.appealWindowDays,
+    };

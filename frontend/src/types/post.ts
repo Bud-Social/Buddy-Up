@@ -163,6 +163,19 @@ export interface Post {
   is_pinned?: boolean;
   visibility: string;
   moderation_status: string;
+  /**
+   * Present when this post is taken down. Carries no content -- only that it
+   * happened, why, and how long an appeal is still open. Sent to the author and
+   * to staff; other viewers get a 410 with the same shape.
+   */
+  tombstone?: {
+    taken_down?: boolean;
+    reason?: string;
+    note?: string;
+    taken_down_at?: string | null;
+    purge_after?: string | null;
+    appeal_window_days?: number | null;
+  } | null;
   ai_analysis?: Record<string, unknown>;
   gym_tag_id: string | null;
   content_rating: 'general' | 'mature';
