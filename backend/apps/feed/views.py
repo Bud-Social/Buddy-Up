@@ -19,7 +19,9 @@ from rest_framework.response import Response
 from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
 from apps.moderation.takedown import active_takedown_for
-from apps.moderation.visibility import VIS_FULL, tombstone_payload, visibility_for
+from apps.moderation.visibility import (
+    VIS_FULL, VIS_HIDDEN, VIS_TOMBSTONE, takedown_map, tombstone_payload, visibility_for,
+)
 from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, PostShare, Sound, HiddenPost, MutedAuthor, PostView
 from .media_types import ALLOWED_EXTS, guess_media_type, url_extension
 from .serializers import (
@@ -1317,10 +1319,30 @@ class CommentsView(views.APIView):
         else:
             comments = comments.order_by('-created_at')
 
-        serializer = CommentSerializer(comments, many=True, context={'request': request})
+        # A takedown on a comment hides it. Previously a taken-down comment was
+        # deleted outright, so there was nothing left to gate -- now there is, and
+        # it has to be honoured here or the takedown is cosmetic.
+        viewer = request.user if request.user.is_authenticated else None
+        takedowns = takedown_map('feed.comment', [c.id for c in comments])
+
+        rows = []
+        for comment in comments:
+            takedown = takedowns.get(str(comment.id))
+            visibility = visibility_for(viewer=viewer, creator=comment.author, takedown=takedown)
+            if visibility == VIS_HIDDEN:
+                continue
+            data = CommentSerializer(comment, context={'request': request}).data
+            if visibility == VIS_TOMBSTONE:
+                data['body'] = ''
+                data['is_taken_down'] = True
+                data['tombstone'] = tombstone_payload(takedown)
+            else:
+                data['tombstone'] = tombstone_payload(takedown) if takedown else None
+            rows.append(data)
+
         return Response({
             'success': True,
-            'data': serializer.data,
+            'data': rows,
             'message': 'OK',
             'errors': None,
             'pagination': None,

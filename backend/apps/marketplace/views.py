@@ -1300,6 +1300,17 @@ class RegisterCreatorView(views.APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+def _hide_taken_down(qs, content_type, viewer):
+    """Thin wrapper so the import stays out of app-load time.
+
+    ``apps.moderation`` imports models from several of the apps that import this
+    one, so importing it at module scope would close a cycle.
+    """
+    from apps.moderation.visibility import hide_taken_down
+
+    return hide_taken_down(qs, content_type, viewer=viewer)
+
+
 class MealPlanListView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1307,6 +1318,10 @@ class MealPlanListView(views.APIView):
         diet_type = request.query_params.get('diet_type', '')
         profile = request.user.profile
         qs = MealPlan.objects.filter(is_published=True).select_related('creator')
+        # A takedown does not unpublish a meal plan -- `is_published` is the
+        # creator's own choice and overwriting it would let a takedown be
+        # undone by re-publishing. Hide it in the listing instead.
+        qs, _taken = _hide_taken_down(qs, 'marketplace.meal_plan', viewer=request.user)
         # Audience scope: public plans for discovery; buddies/private plans
         # only surface to their intended audience (creator sees their own).
         buddy_ids = set(
@@ -1585,7 +1600,8 @@ class TrainingProgrammeListView(views.APIView):
 
     def get(self, request):
         category = request.query_params.get('category', '')
-        qs = TrainingProgramme.objects.filter(is_published=True).select_related('creator')
+        qs = TrainingProgramme.objects.filter(is_published=True)
+        qs, _taken = _hide_taken_down(qs, 'marketplace.programme', viewer=request.user).select_related('creator')
         if category:
             qs = qs.filter(category=category)
         qs = gate_mature_queryset(request, qs)
@@ -1797,6 +1813,8 @@ class ProductListView(views.APIView):
                  db_models.Q(supplement_registration_expiry__gte=timezone.now().date()))
             )
         ).select_related('recommended_by')
+        # `is_active` is the shop's commercial switch, untouched by moderation.
+        qs, _taken = _hide_taken_down(qs, 'marketplace.product', viewer=request.user)
         if category:
             qs = qs.filter(category=category)
         qs = gate_mature_queryset(request, qs)
@@ -1942,6 +1960,7 @@ class EventListView(views.APIView):
 
     def get(self, request):
         qs = MarketplaceEvent.objects.filter(is_published=True, is_cancelled=False)
+        qs, _taken = _hide_taken_down(qs, 'marketplace.event', viewer=request.user)
         category = request.query_params.get('category')
         event_type = request.query_params.get('event_type')
         gym_id = request.query_params.get('gym_id')

@@ -109,6 +109,42 @@ def _appeal_days_remaining(takedown):
     return max(0, (takedown.purge_after - timezone.now()).days)
 
 
+def hide_taken_down(qs, content_type, *, viewer=None, creator_field='pk'):
+    """Drop standing takedowns out of a listing, unless the viewer may see them.
+
+    Returns ``(queryset, tombstones)`` where ``tombstones`` maps the stringified
+    id to its takedown row, so the caller can attach a placeholder rather than
+    leaving a silent gap.
+
+    List endpoints that filter only on their own business flags -- ``is_published``
+    for a meal plan, ``is_active`` for a product -- cannot see a takedown at all,
+    because a takedown deliberately does not touch those: unpublishing someone's
+    product as a side effect of moderation destroys a commercial signal that
+    means something else. Without this the takedown is cosmetic and the content
+    stays in the marketplace.
+    """
+    if is_staff_viewer(viewer):
+        return qs, {}
+
+    viewer_profile = _profile_of(viewer)
+    if viewer_profile is None:
+        return qs, {}
+
+    candidate_ids = [str(pk) for pk in qs.values_list(creator_field, flat=True)]
+    takedowns = takedown_map(content_type, candidate_ids)
+    if not takedowns:
+        return qs, {}
+
+    viewer_pk = str(viewer_profile.pk)
+    hidden_ids = [
+        content_id for content_id, takedown in takedowns.items()
+        if str(takedown.creator_id) != viewer_pk
+    ]
+    if not hidden_ids:
+        return qs, takedowns
+    return qs.exclude(**{f'{creator_field}__in': hidden_ids}), takedowns
+
+
 def tombstone_payload(takedown):
     """The public shape of a taken-down object.
 

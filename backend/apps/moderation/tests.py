@@ -1775,3 +1775,76 @@ class AutoModerationDispatchTests(TestCase):
             sorted(remaining),
             ['feed.post', 'sessions.availability', 'sessions.booking'],
         )
+
+
+class MarketplaceListingGatingTests(TestCase):
+    """A takedown has to hide something in the marketplace.
+
+    `is_active` and `is_published` are the creator's and the shop's own
+    switches, deliberately left untouched by moderation -- so a listing that
+    filters only on those would still show taken-down content and the takedown
+    would be cosmetic.
+    """
+
+    def setUp(self):
+        from apps.marketplace.models import MealPlan, Product
+
+        self.author, self.author_profile = _user('mkt-author@example.com', 'mktauthor')
+        self.viewer, _ = _user('mkt-viewer@example.com', 'mktviewer')
+        self.staff, _ = _user('mkt-staff@example.com', 'mktstaff', staff=True)
+        self.client = APIClient()
+        self.client.force_authenticate(self.viewer)
+
+        self.plan = MealPlan.objects.create(
+            creator=self.author_profile, title='Keto Reset', description='Burns fat',
+            is_published=True,
+        )
+        self.product = Product.objects.create(
+            name='Detox Tea', brand='Acme', category='supplement',
+            description='Cures disease', recommended_by=self.author_profile,
+        )
+
+    def _take_down(self, content_type, content_id):
+        takedown = ContentTakedown.objects.create(
+            content_type=content_type, content_id=str(content_id),
+            reason='medical_claim', taken_down_at=timezone.now(),
+            creator=self.author_profile,
+        )
+        takedown.schedule_purge()
+        takedown.save(update_fields=['purge_after'])
+        return takedown
+
+    def test_a_taken_down_meal_plan_leaves_the_listing(self):
+        self._take_down('marketplace.meal_plan', self.plan.id)
+        response = self.client.get('/api/v1/marketplace/meal-plans/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        titles = {row['title'] for row in response.data['data']}
+        self.assertNotIn('Keto Reset', titles)
+
+    def test_a_taken_down_product_leaves_the_listing(self):
+        self._take_down('marketplace.product', self.product.id)
+        response = self.client.get('/api/v1/marketplace/products/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        names = {row.get('name') for row in response.data['data']}
+        self.assertNotIn('Detox Tea', names)
+
+    def test_the_creator_still_sees_their_own_taken_down_plan(self):
+        """They cannot appeal what they cannot see."""
+        self._take_down('marketplace.meal_plan', self.plan.id)
+        self.client.force_authenticate(self.author)
+        response = self.client.get('/api/v1/marketplace/meal-plans/')
+        titles = {row['title'] for row in response.data['data']}
+        self.assertIn('Keto Reset', titles)
+
+    def test_staff_still_see_it(self):
+        self._take_down('marketplace.meal_plan', self.plan.id)
+        self.client.force_authenticate(self.staff)
+        response = self.client.get('/api/v1/marketplace/meal-plans/')
+        titles = {row['title'] for row in response.data['data']}
+        self.assertIn('Keto Reset', titles)
+
+    def test_takedown_does_not_touch_the_creators_own_publish_flag(self):
+        """Overwriting `is_published` would let a takedown be undone by re-publishing."""
+        self._take_down('marketplace.meal_plan', self.plan.id)
+        self.plan.refresh_from_db()
+        self.assertTrue(self.plan.is_published)
