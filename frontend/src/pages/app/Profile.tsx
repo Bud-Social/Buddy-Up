@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Radio, Play, Clock, Users, Camera, Settings, Moon, Sun, Monitor, Contrast, Loader, MessageCircle, Shield, BarChart3, Repeat } from 'lucide-react';
+import { Radio, Play, Clock, Users, Camera, Settings, Moon, Sun, Monitor, Contrast, Loader, MessageCircle, Shield, BarChart3, Repeat, Bookmark } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -20,10 +20,12 @@ import type { BuddyLive } from '@/types/live';
 import type { Post } from '@/types';
 import type { Gym } from '@/types';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { CreatorInsights } from '@/components/features/feed/CreatorInsights';
 import { AchievementsTab } from '@/components/profile/AchievementsTab';
+import { feedApi } from '@/api/feed';
 
-type ProfileTab = 'posts' | 'reposts' | 'lives' | 'gyms' | 'achievements';
+type ProfileTab = 'posts' | 'reposts' | 'saved' | 'lives' | 'gyms' | 'achievements';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -35,6 +37,9 @@ export default function Profile() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
+  const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
+  const [savedLoading, setSavedLoading] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editBio, setEditBio] = useState(profile?.bio || '');
@@ -98,10 +103,23 @@ export default function Profile() {
     }
   };
 
+  const fetchSavedPosts = async () => {
+    setSavedLoading(true);
+    try {
+      const res = await feedApi.getSaved();
+      setSavedPosts(res.data ?? []);
+    } catch {
+      toast('error', 'Failed to load saved posts');
+    } finally {
+      setSavedLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'lives') fetchLives();
     if (activeTab === 'posts' || activeTab === 'reposts') fetchPosts();
     if (activeTab === 'gyms') fetchGyms();
+    if (activeTab === 'saved') fetchSavedPosts();
   }, [activeTab]);
 
   const handleAvatarFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -280,7 +298,7 @@ export default function Profile() {
       )}
 
       <div className="flex border-b border-buddy-surface mb-4">
-        {(['posts', 'reposts', 'lives', 'gyms', 'achievements'] as ProfileTab[]).map((tab) => (
+        {(['posts', 'reposts', 'saved', 'lives', 'gyms', 'achievements'] as ProfileTab[]).map((tab) => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`flex-1 pb-3 text-sm font-medium capitalize ${activeTab === tab ? 'text-buddy-green border-b-2 border-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}
           >
@@ -288,6 +306,8 @@ export default function Profile() {
               ? `Posts (${posts.filter((p) => !p.is_repost).length})`
               : tab === 'reposts'
               ? `Reposts (${posts.filter((p) => p.is_repost).length})`
+              : tab === 'saved'
+              ? `Saved (${savedPosts.length})`
               : tab}
           </button>
         ))}
@@ -307,7 +327,7 @@ export default function Profile() {
           ) : (
             <div className="col-span-3 space-y-2">
               {posts.filter((p) => !p.is_repost).map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} post={post} onComment={setCommentPostId} />
               ))}
             </div>
           )
@@ -324,7 +344,27 @@ export default function Profile() {
           ) : (
             <div className="col-span-3 space-y-2">
               {posts.filter((p) => p.is_repost).map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} post={post} onComment={setCommentPostId} />
+              ))}
+            </div>
+          )
+        ) : activeTab === 'saved' ? (
+          savedLoading ? (
+            <div className="col-span-3 flex items-center justify-center py-20">
+              <Loader size={24} className="animate-spin text-buddy-text-secondary" />
+            </div>
+          ) : savedPosts.length === 0 ? (
+            <div className="col-span-3 text-center py-20">
+              <Bookmark size={40} className="mx-auto text-buddy-text-secondary/30 mb-3" />
+              <p className="text-buddy-text-secondary">No saved posts yet</p>
+              <p className="text-xs text-buddy-text-secondary/70 mt-1">
+                Tap the bookmark on any post to keep it here.
+              </p>
+            </div>
+          ) : (
+            <div className="col-span-3 space-y-2">
+              {savedPosts.map((post) => (
+                <PostCard key={post.id} post={post} onComment={setCommentPostId} />
               ))}
             </div>
           )
@@ -409,6 +449,17 @@ export default function Profile() {
           muxPlaybackId={replayLive.mux_playback_id}
           liveId={replayLive.id}
           onClose={() => setReplayLive(null)}
+        />
+      )}
+
+      {/* PostCard's onComment is optional and the handler ends in a silent
+          `onComment?.()` — without this the comment button on a profile post
+          fires analytics and appears to do nothing. */}
+      {commentPostId && (
+        <CommentSheet
+          postId={commentPostId}
+          isOpen
+          onClose={() => setCommentPostId(null)}
         />
       )}
 

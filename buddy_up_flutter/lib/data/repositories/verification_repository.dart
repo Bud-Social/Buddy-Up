@@ -38,6 +38,15 @@ abstract class VerificationRepository {
   @POST('/verification/documents/')
   Future<dynamic> uploadDocument(@Body() Map<String, dynamic> data);
 
+  /// Multipart upload that actually attaches the file.
+  ///
+  /// `file_url` on [uploadDocument] is a `SerializerMethodField`: posting a URL
+  /// there is silently discarded, so the document row is created with nothing
+  /// attached. Anything that needs real evidence has to go through this.
+  @MultiPart()
+  @POST('/verification/documents/upload/')
+  Future<dynamic> uploadCredentialFile(@Part() Map<String, dynamic> fields);
+
   @GET('/verification/documents/{id}/')
   Future<dynamic> getDocument(@Path('id') String documentId);
 

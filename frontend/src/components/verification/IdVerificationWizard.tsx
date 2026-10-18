@@ -39,6 +39,33 @@ export function IdVerificationWizard({ onDone }: IdVerificationWizardProps) {
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(false);
 
+  /**
+   * Retention disclosure, read from the server rather than written here.
+   *
+   * The copy used to be hardcoded and was simply wrong: it said documents were
+   * "stored securely and only visible to the verification team" and never
+   * mentioned deletion, while a daily purge task deletes the file 30 days after
+   * any decision. Numbers typed into the UI drift from the settings that drive
+   * the purge, so they are not typed into the UI any more.
+   */
+  const [policy, setPolicy] = useState<{
+    document_retention_days: number;
+    post_review_retention_days: number;
+    access?: string;
+    deletion?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    verificationApi
+      .getPolicy()
+      .then((res) => { if (!cancelled) setPolicy(res.data); })
+      // The wizard still works without it -- the user simply sees a generic
+      // retention line rather than the exact one.
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
+
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
@@ -178,8 +205,9 @@ export function IdVerificationWizard({ onDone }: IdVerificationWizardProps) {
             <li>Review and submit for approval.</li>
           </ol>
           <p className="text-[11px] text-buddy-text-secondary">
-            Your documents are stored securely and only visible to the verification team.
+            {policy?.deletion ?? 'Your documents are deleted automatically after a retention period.'}
           </p>
+          <p className="text-[11px] text-buddy-text-secondary mt-1">{policy?.access}</p>
           <div className="flex gap-2">
             {submissionId && (
               <Button variant="ghost" onClick={() => { setSubmissionId(null); onDone(); }}>Cancel</Button>

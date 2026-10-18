@@ -1223,6 +1223,44 @@ function clean(params?: Record<string, unknown>): Record<string, unknown> | unde
 }
 
 /**
+ * Normalise a moderation list response to the `ApiResponse` envelope.
+ *
+ * The moderation list endpoints (`/reports/`, `/content-flags/`, `/actions/`,
+ * `/appeals/`, `/commendations/`) return raw DRF pagination —
+ * `{count, next, previous, results}` — while `pending-approvals` returns the
+ * usual envelope. Callers are typed against `ApiResponse<T[]>` and read
+ * `res.data`, so on the raw endpoints that was always `undefined` and every one
+ * of those tabs silently rendered an empty list.
+ *
+ * Rather than let the inconsistency leak into each call site, accept both
+ * shapes here and hand back the envelope. Anything already enveloped passes
+ * through untouched.
+ */
+function envelopeList<T>(body: unknown): ApiResponse<T[]> {
+  const b = body as {
+    success?: boolean;
+    data?: T[];
+    results?: T[];
+    count?: number;
+    next?: string | null;
+    previous?: string | null;
+    message?: string;
+    errors?: Record<string, string[]> | null;
+    pagination?: Pagination | null;
+  };
+  if (Array.isArray(b?.results)) {
+    return {
+      success: true,
+      data: b.results,
+      message: b.message ?? '',
+      errors: b.errors ?? null,
+      pagination: { count: b.count ?? b.results.length, next: b.next ?? null, previous: b.previous ?? null },
+    };
+  }
+  return body as ApiResponse<T[]>;
+}
+
+/**
  * Whether a disciplinary action actually landed on the account.
  *
  * The discriminator is `applied`, not the HTTP status: axios resolves 2xx, so a
@@ -1568,7 +1606,7 @@ export const adminPortalApi = {
 
   /* Moderation — reports -------------------------------------------- */
   getModerationReports: (params?: ModerationReportFilters) =>
-    apiClient.get<ApiResponse<ModerationReportRow[]>>('/moderation/reports/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+    apiClient.get<unknown>('/moderation/reports/', { params: clean(params as Record<string, unknown>) }).then((r) => envelopeList<ModerationReportRow>(r.data)),
 
   assignModerationReport: (id: string, payload: AssignReportPayload) =>
     apiClient.post<ApiResponse<ModerationReportRow>>(`/moderation/reports/${id}/assign/`, payload).then((r) => r.data),
@@ -1578,7 +1616,7 @@ export const adminPortalApi = {
 
   /* Moderation — flags ---------------------------------------------- */
   getContentFlags: (params?: { flag_reason?: string; severity?: string; is_actioned?: boolean }) =>
-    apiClient.get<ApiResponse<ContentFlagRow[]>>('/moderation/content-flags/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+    apiClient.get<unknown>('/moderation/content-flags/', { params: clean(params as Record<string, unknown>) }).then((r) => envelopeList<ContentFlagRow>(r.data)),
 
   actOnContentFlag: (id: string, action: 'approve' | 'remove' | 'escalate', note = '') =>
     apiClient.post<ApiResponse<{ flag?: ContentFlagRow; effect?: string }>>(`/moderation/content-flags/${id}/act/`, { action, note }).then((r) => r.data),
@@ -1592,7 +1630,7 @@ export const adminPortalApi = {
 
   /* Moderation — disciplinary actions -------------------------------- */
   getModerationActions: (params?: ModerationActionFilters) =>
-    apiClient.get<ApiResponse<ModerationActionRow[]>>('/moderation/actions/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+    apiClient.get<unknown>('/moderation/actions/', { params: clean(params as Record<string, unknown>) }).then((r) => envelopeList<ModerationActionRow>(r.data)),
 
   /**
    * `warning` applies at once (**201**). `user_suspended` / `user_banned` are
@@ -1607,7 +1645,7 @@ export const adminPortalApi = {
 
   /* Moderation — commendations --------------------------------------- */
   getCommendations: (params?: CommendationFilters) =>
-    apiClient.get<ApiResponse<Commendation[]>>('/moderation/commendations/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+    apiClient.get<unknown>('/moderation/commendations/', { params: clean(params as Record<string, unknown>) }).then((r) => envelopeList<Commendation>(r.data)),
 
   createCommendation: (payload: CreateCommendationPayload) =>
     apiClient.post<ApiResponse<Commendation>>('/moderation/commendations/', payload).then((r) => r.data),

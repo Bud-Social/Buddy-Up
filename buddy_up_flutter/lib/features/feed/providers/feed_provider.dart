@@ -520,6 +520,23 @@ final postDetailProvider = FutureProvider.family<Post, String>((ref, postId) asy
   return Post.fromJson(raw['data'] as Map<String, dynamic>);
 });
 
+/// The signed-in user's saved posts.
+///
+/// The backend has had `GET /feed/saved/` and `is_saved` on every post payload
+/// since the Save model landed, and this client already had a `getSavedPosts`
+/// binding for it -- nothing ever called it, so the saved set was written on
+/// every bookmark tap and never readable anywhere in the app.
+final savedPostsProvider = FutureProvider<List<Post>>((ref) async {
+  final repo = ref.watch(feedRepositoryProvider);
+  final raw = await repo.getSavedPosts();
+  final data = raw is Map ? raw['data'] : raw;
+  if (data is! List) return const [];
+  return data
+      .whereType<Map>()
+      .map((e) => Post.fromJson(Map<String, dynamic>.from(e)))
+      .toList(growable: false);
+});
+
 final commentsProvider = FutureProvider.family<List<Comment>, String>((ref, postId) async {
   final repo = ref.watch(feedRepositoryProvider);
   final raw = await repo.getComments(postId);

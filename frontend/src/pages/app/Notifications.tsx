@@ -169,10 +169,22 @@ export default function Notifications() {
     if (type === 'event_ticket_purchased') {
       const eventId = meta.event_id;
       if (eventId) navigate(`/marketplace/events/${eventId}`);
+      else navigate('/marketplace/events/my-tickets');
       return;
     }
 
-    if (type === 'order_status_changed' || type === 'new_purchase') {
+    /* `order_status_changed` goes to BOTH the buyer (on creation) and every
+     * seller (on each transition), so it cannot share a destination with
+     * `new_purchase`: the buyer was being dropped on the seller-only Creator
+     * Studio, ignoring the `order_id` sitting in their own metadata. The order
+     * itself is the thing both sides want to see. */
+    if (type === 'order_status_changed') {
+      const orderId = meta.order_id;
+      navigate(orderId ? `/marketplace/orders/${orderId}` : '/marketplace/orders');
+      return;
+    }
+
+    if (type === 'new_purchase') {
       navigate('/marketplace/creator');
       return;
     }

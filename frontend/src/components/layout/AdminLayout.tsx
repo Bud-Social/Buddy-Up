@@ -17,7 +17,7 @@ import { Logo } from '@/components/ui/Logo';
  */
 
 const MODE_LINK_CLS =
-  'inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors';
+  'inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-colors';
 
 interface NavItem {
   to: string;
@@ -120,16 +120,38 @@ export function AdminLayout() {
             </span>
           </div>
         </div>
-        <nav className="flex items-center gap-1 px-4 max-w-6xl mx-auto pb-3 overflow-x-auto scrollbar-hide">
+        {/*
+          * Wraps rather than scrolls. Eighteen pills on one non-wrapping row
+          * overflowed past the viewport with the scrollbar deliberately hidden,
+          * so on a narrow screen the last several sections were simply
+          * unreachable — and the divider between the domain pages and the
+          * operational tools was usually off-screen too, quietly erasing the
+          * distinction the split exists to make.
+          *
+          * `gap-2` for the spacing, `flex-shrink-0` so a pill never compresses
+          * into an unreadable sliver, and `py-2` to bring the hit area up from
+          * ~28px. The wider `gap-4` around the divider keeps the two groups
+          * reading as separate surfaces rather than one long list.
+          */}
+        <nav className="flex flex-wrap items-center gap-2 px-4 max-w-6xl mx-auto pb-4 pt-1">
           {PRIMARY_NAV.map(({ to, label, icon: Icon, end }) => (
-            <NavLink key={to} to={to} end={end} className={({ isActive }) => navClass(isActive)}>
-              <Icon size={14} /> {label}
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) => `${navClass(isActive)} flex-shrink-0`}
+            >
+              <Icon size={14} className="flex-shrink-0" /> {label}
             </NavLink>
           ))}
-          <span className="w-px h-5 bg-buddy-surface-raised mx-1 flex-shrink-0" aria-hidden="true" />
+          <span className="w-px h-5 bg-buddy-surface-raised mx-2 flex-shrink-0" aria-hidden="true" />
           {OPS_NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink key={to} to={to} className={({ isActive }) => navClass(isActive)}>
-              <Icon size={14} /> {label}
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => `${navClass(isActive)} flex-shrink-0`}
+            >
+              <Icon size={14} className="flex-shrink-0" /> {label}
             </NavLink>
           ))}
         </nav>

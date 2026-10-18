@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -548,10 +549,14 @@ class VerificationScreen extends ConsumerWidget {
         throw const FormatException(
             'The upload service is unavailable right now. Try again shortly.');
       }
-      final uploaded = await uploader.upload(file: File(file.path), sign: sign);
-      await ref.read(verificationRepositoryProvider).uploadDocument({
+      // Send the bytes to the verification app itself. The old path uploaded
+      // via the signed uploader and then posted `file_url`, which is a
+      // `SerializerMethodField` -- DRF discarded it and the document was created
+      // with no file attached.
+      final bytes = await File(file.path).readAsBytes();
+      await ref.read(verificationRepositoryProvider).uploadCredentialFile({
         'document_type': type,
-        'file_url': uploaded.url,
+        'file': MultipartFile.fromBytes(bytes, filename: file.name),
       });
       ref.invalidate(verificationDocumentsProvider);
       ref.invalidate(attachableDocumentsProvider);

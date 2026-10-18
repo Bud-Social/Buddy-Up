@@ -63,6 +63,32 @@ class _VerificationRepository implements VerificationRepository {
   }
 
   @override
+  Future<dynamic> uploadCredentialFile(Map<String, dynamic> fields) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = FormData.fromMap(fields);
+    final _options = _setStreamType<dynamic>(
+      Options(
+            method: 'POST',
+            headers: _headers,
+            extra: _extra,
+            contentType: 'multipart/form-data',
+          )
+          .compose(
+            _dio.options,
+            '/verification/documents/upload/',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
   Future<dynamic> getDocument(String documentId) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};

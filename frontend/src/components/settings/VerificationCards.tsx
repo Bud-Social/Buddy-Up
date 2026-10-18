@@ -10,7 +10,6 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { useToast } from '@/components/ui/Toast';
 import { apiClient } from '@/api/client';
-import { messagingApi } from '@/api/messaging';
 import { verificationApi } from '@/api/verification';
 import type { ApiResponse } from '@/types';
 
@@ -99,9 +98,15 @@ export function BadgeApplicationForm() {
     }
     setSubmitting(true);
     try {
-      // 1) upload the file, 2) register the document, 3) create + submit.
-      const up = await messagingApi.uploadAttachment(file);
-      const doc = await verificationApi.uploadDocument(type, up.data!.url);
+      // Upload the file to the verification app itself. It used to be pushed to
+      // the messaging attachment endpoint and referenced by URL, but `file_url`
+      // is a read-only SerializerMethodField -- DRF dropped it, so the row was
+      // created with no file attached and the reviewer had nothing to open.
+      // `type` is the verification category the applicant is applying for; the
+      // upload endpoint validates a *document* type. A trainer proves it with a
+      // certificate, a practitioner with their professional registration.
+      const docType = type === 'practitioner' ? 'practitioner_id' : 'certificate';
+      const doc = await verificationApi.uploadCredential(docType, file);
       await verificationApi.createSubmission(
         type,
         [doc.data!.id],

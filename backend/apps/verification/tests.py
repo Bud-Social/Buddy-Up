@@ -954,3 +954,85 @@ class TwoPersonVerificationDecisionTests(TestCase):
         self.assertIn(response.status_code, (
             status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN,
         ))
+
+
+class CredentialDocumentUploadTests(TestCase):
+    """The professional-badge form's upload path.
+
+    Regression cover for the silent failure this replaced: the form uploaded the
+    bytes to the messaging attachment endpoint and then POSTed the URL as
+    `file_url`, which is a SerializerMethodField and therefore dropped by DRF.
+    The application was created and looked complete, but its document row had an
+    empty `file_url` and the reviewer had nothing to open.
+    """
+
+    def setUp(self):
+        self.profile = _make_user('credential-upload@example.com')
+        self.client = APIClient()
+        self.client.force_authenticate(self.profile.user)
+        self.url = '/api/v1/verification/documents/upload/'
+
+    def _png(self):
+        return SimpleUploadedFile('cert.png', b'\x89PNG\r\n\x1a\n' + b'0' * 32, content_type='image/png')
+
+    def test_upload_actually_stores_the_file(self):
+        with self.settings(MEDIA_ROOT='/tmp/verify-upload-test'):
+            response = self.client.post(
+                self.url,
+                {'file': self._png(), 'document_type': 'certificate'},
+                format='multipart',
+            )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+
+        doc = VerificationDocument.objects.get(id=response.data['data']['id'])
+        self.assertTrue(
+            doc.file_url,
+            'Document was created with an empty file_url -- the same silent '
+            'failure this endpoint exists to remove.',
+        )
+        self.assertTrue(doc.file_url.startswith('verification/'))
+        self.assertIsNotNone(doc.purge_after, 'Retention deadline must be set at upload.')
+
+    def test_rejects_an_unknown_document_type(self):
+        response = self.client.post(
+            self.url,
+            {'file': self._png(), 'document_type': 'not-a-real-type'},
+            format='multipart',
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_requires_authentication(self):
+        anon = APIClient()
+        response = anon.post(
+            self.url,
+            {'file': self._png(), 'document_type': 'certificate'},
+            format='multipart',
+        )
+        self.assertIn(response.status_code, (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+
+class VerificationPolicyTests(TestCase):
+    """The retention disclosure the upload screen reads.
+
+    It used to be hardcoded prose asserting documents were "only visible to the
+    verification team" with no mention of deletion, while a daily task deletes
+    the file 30 days after any decision. The numbers must come from the same
+    environment variables the purge reads, or the copy drifts again.
+    """
+
+    def test_policy_is_public_and_reflects_the_env(self):
+        with self.settings():
+            import os
+            os.environ['VERIFICATION_DOCUMENT_RETENTION_DAYS'] = '77'
+            os.environ['VERIFICATION_POST_REVIEW_RETENTION_DAYS'] = '11'
+            try:
+                response = APIClient().get('/api/v1/verification/policy/')
+            finally:
+                os.environ.pop('VERIFICATION_DOCUMENT_RETENTION_DAYS', None)
+                os.environ.pop('VERIFICATION_POST_REVIEW_RETENTION_DAYS', None)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['document_retention_days'], 77)
+        self.assertEqual(response.data['post_review_retention_days'], 11)
+        self.assertIn('77', response.data['deletion'])
+        self.assertIn('11', response.data['deletion'])

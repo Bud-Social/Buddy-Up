@@ -16,6 +16,7 @@ import '../../shared/widgets/avatar.dart';
 import '../../shared/widgets/button.dart';
 import '../../shared/widgets/error_view.dart';
 import '../../shared/widgets/page_loader.dart';
+import '../feed/providers/feed_provider.dart';
 import '../feed/widgets/post_card.dart';
 import 'edit_profile_screen.dart';
 
@@ -44,7 +45,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _profileRepo = ProfileRepository(ApiClient().dio);
     _loadProfile();
   }
@@ -114,6 +115,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     if (_profile == null) return const ErrorView(message: 'Profile not found');
 
     final p = _profile!;
+    // Watched here so the tab label carries a live count rather than a count
+    // that is only right on first build.
+    final savedAsync = ref.watch(savedPostsProvider);
     return Scaffold(
       backgroundColor: BuddyColors.black,
       body: NestedScrollView(
@@ -136,6 +140,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                 tabs: [
                   Tab(text: 'Posts (${_posts.length})'),
                   Tab(text: 'Reposts (${_reposts.length})'),
+                  Tab(text: 'Saved (${savedAsync.value?.length ?? 0})'),
                   const Tab(text: 'Interests'),
                   const Tab(text: 'Shortcuts'),
                 ],
@@ -148,6 +153,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
           children: [
             _buildPostsList(_posts, isReposts: false),
             _buildPostsList(_reposts, isReposts: true),
+            _buildSavedTab(),
             _buildInterestsTab(p),
             _buildQuickLinks(),
           ],
@@ -500,6 +506,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
       separatorBuilder: (_, _) => const Divider(color: BuddyColors.border, height: 1),
       itemBuilder: (_, i) => PostCard(
         post: posts[i],
+        // Both are optional on PostCard and their handlers end in `?.call()`.
+        // Without these the comment and bookmark buttons fire analytics and do
+        // nothing at all.
+        onComment: (id) => _openPostDetail(id),
         onProfileTap: (username) {
           if (username != null && username != _profile?.username) {
             context.push('/profile/$username');
@@ -640,6 +650,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   // ── Quick Links Tab ───────────────────────────────────────────────────────
+
+  void _openPostDetail(String postId) {
+    if (postId.isEmpty) return;
+    context.push('/feed/$postId');
+  }
+
+  /// Saved posts. Reads the endpoint that has always existed but was never
+  /// called, so the Saved set could be written and never surfaced.
+  Widget _buildSavedTab() {
+    final async = ref.watch(savedPostsProvider);
+    return async.when(
+      loading: () => const Center(child: PageLoader()),
+      error: (_, _) => const Center(child: ErrorView(message: 'Could not load saved posts.')),
+      data: (posts) {
+        if (posts.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bookmark_outline, size: 40, color: BuddyColors.textSecondary),
+                  SizedBox(height: 12),
+                  Text('No saved posts yet',
+                      style: TextStyle(color: BuddyColors.textSecondary)),
+                  SizedBox(height: 4),
+                  Text('Tap the bookmark on any post to keep it here.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12)),
+                ],
+              ),
+            ),
+          );
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          itemCount: posts.length,
+          separatorBuilder: (_, _) => const Divider(color: BuddyColors.border, height: 1),
+          itemBuilder: (_, i) => PostCard(
+            post: posts[i],
+            onComment: (id) => _openPostDetail(id),
+            onSave: (id) async {
+              await ref.read(feedProvider.notifier).toggleSaveById(id);
+              ref.invalidate(savedPostsProvider);
+            },
+            onProfileTap: (username) {
+              if (username != null && username != _profile?.username) {
+                context.push('/profile/$username');
+              }
+            },
+          ),
+        );
+      },
+    );
+  }
 
   Widget _buildQuickLinks() {
     return ListView(

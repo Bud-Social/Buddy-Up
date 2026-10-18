@@ -14,6 +14,7 @@ import { track } from '@/lib/analytics';
 import { rankByAffinity } from '@/lib/discoverRank';
 import { useAuthStore } from '@/store/authStore';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import type { DiscoverTrending } from '@/api/profiles';
 import type { Profile } from '@/types';
 import type { Gym } from '@/types';
@@ -30,6 +31,7 @@ export default function Discover() {
   const [trending, setTrending] = useState<DiscoverTrending | null>(null);
   const [buddyRequested, setBuddyRequested] = useState<Set<string>>(new Set());
   const [showAllPeople, setShowAllPeople] = useState(false);
+  const [commentPostId, setCommentPostId] = useState<string | null>(null);
 
   const handleBuddyUp = async (username: string) => {
     try {
@@ -238,7 +240,7 @@ export default function Discover() {
               </p>
               <div className="space-y-3">
                 {trending.posts.slice(0, 3).map((post) => (
-                  <PostCard key={post.id} post={post} />
+                  <PostCard key={post.id} post={post} onComment={setCommentPostId} />
                 ))}
               </div>
             </div>
@@ -251,7 +253,7 @@ export default function Discover() {
               </p>
               <div className="space-y-3">
                 {trending.discussions!.slice(0, 3).map((post) => (
-                  <PostCard key={post.id} post={post} />
+                  <PostCard key={post.id} post={post} onComment={setCommentPostId} />
                 ))}
               </div>
             </div>
@@ -628,6 +630,17 @@ export default function Discover() {
             </div>
           )}
         </div>
+      )}
+
+      {/* onComment is optional on PostCard and the handler ends in a silent
+          `onComment?.()`, so without this the comment button on a trending post
+          fires analytics and appears to do nothing. */}
+      {commentPostId && (
+        <CommentSheet
+          postId={commentPostId}
+          isOpen
+          onClose={() => setCommentPostId(null)}
+        />
       )}
 
       {!isSearching && query.length >= 2 && activeTab === 'people' && people.length === 0 && (

@@ -201,10 +201,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
       }
     }
 
-    // Both commerce order types land on the seller hub, matching the web client:
-    // the notification can be for a buyer or a seller, and Creator Studio is
-    // where an order that needs action is acted on.
-    if (type == 'order_status_changed' || type == 'new_purchase') {
+    // `order_status_changed` fires for the buyer on creation *and* for every
+    // seller on each transition, so it cannot share a destination with
+    // `new_purchase`. A buyer tapping their own confirmation was being sent to
+    // the seller-only Creator Studio, ignoring the `order_id` in their metadata.
+    if (type == 'order_status_changed') {
+      final orderId = meta['order_id']?.toString() ?? '';
+      context.push(orderId.isNotEmpty
+          ? '/marketplace/orders/$orderId'
+          : '/marketplace/orders');
+      return;
+    }
+
+    if (type == 'new_purchase') {
       context.push('/marketplace/creator-studio');
       return;
     }

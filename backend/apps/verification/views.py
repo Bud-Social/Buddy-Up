@@ -33,6 +33,9 @@ logger = logging.getLogger(__name__)
 
 ID_FLOW_STEPS = ['id_document', 'selfie_liveness', 'face_match', 'review']
 ID_DOC_TYPES = {'id_card', 'passport', 'drivers_license'}
+#: Credential evidence for the professional-badge path (trainer/practitioner),
+#: which has no wizard step to hang a multipart action on.
+CREDENTIAL_DOC_TYPES = {'certificate', 'practitioner_id', 'credential'}
 
 # Only these extensions are ever copied from a client-supplied upload name;
 # the stored filename itself is always server-generated (uuid-based).
@@ -144,6 +147,69 @@ class VerificationDocumentAccessView(views.APIView):
             # retrieve endpoint instead.
             file_url = _audited_document_url(document.id)
         return Response({'file_url': file_url, 'expires_in': 300})
+
+
+class VerificationDocumentUploadView(views.APIView):
+    """Multipart upload for a credential document that is not part of the ID wizard.
+
+    The wizard has its own multipart action (`submissions/<id>/upload_step/`),
+    but the professional-badge form has no submission to hang a step on yet. It
+    used to work around that by uploading the bytes to the messaging attachment
+    endpoint and then POSTing the resulting *URL* as `file_url` -- and
+    `file_url` is a SerializerMethodField on the document serializer, so DRF
+    discarded it. The result was a VerificationDocument row with an empty
+    `file_url` pointing at nothing, while the actual image sat in a separate
+    messaging storage prefix that no reviewer path ever reads. The application
+    looked complete and carried no evidence.
+
+    Storing here keeps the bytes on the same reviewed-and-purged path as every
+    other verification document.
+    """
+
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        upload = request.FILES.get('file')
+        if upload is None:
+            return Response({'detail': 'No file provided.'}, status=status.HTTP_400_BAD_REQUEST)
+        if upload.size > 10 * 1024 * 1024:
+            return Response({'detail': 'File too large (max 10 MB).'}, status=status.HTTP_400_BAD_REQUEST)
+
+        document_type = (request.data.get('document_type') or '').strip()
+        allowed = ID_DOC_TYPES | CREDENTIAL_DOC_TYPES
+        if document_type not in allowed:
+            return Response(
+                {'detail': f'Invalid document type. Must be one of: {sorted(allowed)}.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ext = os.path.splitext(upload.name)[1].lower()
+        if ext not in ALLOWED_UPLOAD_EXTENSIONS:
+            ext = '.jpg'
+
+        profile = request.user.profile
+        # Profile's primary key is the `user` OneToOne, not `id`.
+        filename = f'verification/{profile.user_id}/{document_type}/{uuid.uuid4().hex}{ext}'
+        try:
+            saved = default_storage.save(filename, ContentFile(upload.read()))
+        except Exception:
+            logger.exception('Failed to store verification credential upload')
+            return Response({'detail': 'Upload failed.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        doc = VerificationDocument.objects.create(
+            profile=profile,
+            document_type=document_type,
+            file_url=saved,
+            purge_after=timezone.now() + timezone.timedelta(
+                days=int(os.environ.get('VERIFICATION_DOCUMENT_RETENTION_DAYS', '90')),
+            ),
+        )
+        return Response(
+            {'success': True, 'data': VerificationDocumentSerializer(doc).data,
+             'message': 'Document uploaded.', 'errors': None, 'pagination': None},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class VerificationSubmissionViewSet(
@@ -472,3 +538,35 @@ class MyApplicationsView(views.APIView):
 
         data = VerificationSubmissionSerializer(queryset, many=True).data
         return Response({'count': len(data), 'results': data})
+
+
+class VerificationPolicyView(views.APIView):
+    """The retention policy a user is shown before they upload an ID.
+
+    Public and unauthenticated on purpose: the disclosure has to be readable on
+    the upload screen before anyone has an account or a submission to fetch.
+
+    The numbers are read from the same environment variables the purge task uses,
+    so the copy a user reads cannot drift from what actually happens to their
+    file. That drift is not hypothetical -- the UI previously asserted documents
+    are "stored securely and only visible to the verification team", with no
+    mention of deletion at all, while the purge task deleted the file 30 days
+    after every decision.
+    """
+
+    permission_classes = []
+
+    def get(self, request):
+        document_days = int(os.environ.get('VERIFICATION_DOCUMENT_RETENTION_DAYS', '90'))
+        post_review_days = int(os.environ.get('VERIFICATION_POST_REVIEW_RETENTION_DAYS', '30'))
+        return Response({
+            'document_retention_days': document_days,
+            'post_review_retention_days': post_review_days,
+            'storage': 'Uploaded files are stored on private storage, not in the app database.',
+            'access': 'Only staff reviewing the submission can open a document, and every open is written to an audit record.',
+            'deletion': (
+                f'The file is deleted {post_review_days} days after a decision is made on your '
+                f'application, or {document_days} days after upload if no decision is made. '
+                'Only non-identifying metadata is kept after deletion.'
+            ),
+        })

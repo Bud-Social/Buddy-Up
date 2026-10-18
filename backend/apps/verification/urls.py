@@ -18,5 +18,8 @@ urlpatterns = [
         name='category_applications',
     ),
     path('my-applications/', views.MyApplicationsView.as_view(), name='my_applications'),
+    # Public: the retention disclosure must render before upload, before login.
+    path('policy/', views.VerificationPolicyView.as_view(), name='policy'),
+    path('documents/upload/', views.VerificationDocumentUploadView.as_view(), name='document_upload'),
     path('', include(router.urls)),
 ]

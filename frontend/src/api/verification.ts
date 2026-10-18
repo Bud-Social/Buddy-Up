@@ -142,8 +142,42 @@ export interface MyApplicationsResponse {
 }
 
 export const verificationApi = {
+  /**
+   * What actually happens to an uploaded document, straight from the server's
+   * retention settings. Public and readable before login, so the disclosure can
+   * be shown on the upload screen itself rather than paraphrased in the UI.
+   */
+  getPolicy: () =>
+    apiClient
+      .get<ApiResponse<{
+        document_retention_days: number;
+        post_review_retention_days: number;
+        storage: string;
+        access: string;
+        deletion: string;
+      }>>('/verification/policy/')
+      .then((r) => r.data),
+
   uploadDocument: (documentType: string, fileUrl: string) =>
     apiClient.post<ApiResponse<VerificationDocument>>('/verification/documents/', { document_type: documentType, file_url: fileUrl }).then((r) => r.data),
+
+  /**
+   * Real multipart upload for a credential document.
+   *
+   * `uploadDocument` above cannot be used for the bytes: `file_url` is a
+   * SerializerMethodField, so DRF silently discards whatever is posted there.
+   * Anything that needs to actually attach a file has to go through this.
+   */
+  uploadCredential: (documentType: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('document_type', documentType);
+    return apiClient
+      .post<ApiResponse<VerificationDocument>>('/verification/documents/upload/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data);
+  },
 
   listDocuments: () =>
     apiClient.get<ApiResponse<VerificationDocument[]>>('/verification/documents/').then((r) => r.data),

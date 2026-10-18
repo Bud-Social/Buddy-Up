@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/api/api_client.dart';
+import '../../core/api/api_error.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/age_gating.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -32,7 +33,10 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
     final country = _country.trim().isEmpty ? null : _country.trim();
     try {
       await _authRepo.verifyAge({
-        'dob': _selectedDate!.toIso8601String().split('T')[0],
+        // The server reads `date_of_birth`. Sending `dob` meant the view always
+        // 400'd, and the catch below then told the user "You must be 16 or
+        // older" -- blaming their birthday for a payload key mismatch.
+        'date_of_birth': _selectedDate!.toIso8601String().split('T')[0],
         'location_country': ?country,
       });
       if (!mounted) return;
@@ -43,10 +47,29 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
         showToast(context, 'You must be 16 or older to use Buddy-Up.', type: ToastType.error);
       }
     } catch (e) {
-      if (mounted) showToast(context, 'You must be 16 or older to use Buddy-Up.', type: ToastType.error);
+      // Never tell someone their birthday is the problem when the request may
+      // simply have failed. A network error and a rejected age are very
+      // different messages and only one of them is the user's fault.
+      if (mounted) {
+        showToast(
+          context,
+          _isUnderageRejection(e)
+              ? 'You must be 16 or older to use Buddy-Up.'
+              : 'Could not verify your age just now. Please try again.',
+          type: ToastType.error,
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// True only when the server actually rejected the date of birth.
+  bool _isUnderageRejection(Object error) {
+    final status = apiStatusCode(error);
+    if (status != null && status != 400 && status != 403) return false;
+    final message = apiErrorMessage(error).toLowerCase();
+    return message.contains('16') || message.contains('older') || message.contains('age');
   }
 
   @override

@@ -974,6 +974,11 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           const Divider(color: BuddyColors.border, height: 1),
       itemBuilder: (_, i) => PostCard(
         post: posts[i],
+        // Optional on PostCard and the handler ends in `?.call()` -- without
+        // this the comment button on someone else's profile is a dead control.
+        onComment: (id) {
+          if (id.isNotEmpty) context.push('/feed/$id');
+        },
         onProfileTap: (username) {
           if (username != null) context.push('/profile/$username');
         },

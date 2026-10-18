@@ -218,7 +218,7 @@ class MealPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = MealPlan
         fields = [
-            'id', 'creator_id', 'shop_id', 'title', 'description', 'cover',
+            'id', 'creator_id', 'shop_id', 'title', 'description', 'cover', 'cover_image_url',
             'trailer_video_url', 'diet_type', 'duration_weeks', 'meals_per_day',
             'calorie_range', 'macro_targets', 'allergen_flags',
             'content_rating',
@@ -234,6 +234,18 @@ class MealPlanSerializer(serializers.ModelSerializer):
             except Exception:  # noqa: BLE001
                 pass
         return obj.cover_image_url or ''
+
+    def get_cover_image_url(self, obj):
+        """Alias for `cover`.
+
+        Both clients -- and the creator forms that pre-fill from a read -- ask
+        for `cover_image_url`, but the serialized field is `cover`, so every meal
+        plan and programme cover rendered blank on web and mobile. The model does
+        carry a `cover_image_url` column (the media fallback), which is what made
+        this easy to miss: it exists in the model, it is just not the name that
+        gets serialized. Exposing both keeps the two from drifting again.
+        """
+        return self.get_cover(obj)
 
     def get_creator_data(self, obj):
         return {
@@ -287,7 +299,7 @@ class TrainingProgrammeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TrainingProgramme
         fields = [
-            'id', 'creator_id', 'shop_id', 'title', 'description', 'cover',
+            'id', 'creator_id', 'shop_id', 'title', 'description', 'cover', 'cover_image_url',
             'trailer_video_url', 'category', 'difficulty', 'fitness_goals',
             'duration_weeks', 'sessions_per_week', 'equipment_list',
             'content_rating', 'schedule',
@@ -312,6 +324,18 @@ class TrainingProgrammeSerializer(serializers.ModelSerializer):
             except Exception:  # noqa: BLE001
                 pass
         return obj.cover_image_url or ''
+
+    def get_cover_image_url(self, obj):
+        """Alias for `cover`.
+
+        Both clients -- and the creator forms that pre-fill from a read -- ask
+        for `cover_image_url`, but the serialized field is `cover`, so every meal
+        plan and programme cover rendered blank on web and mobile. The model does
+        carry a `cover_image_url` column (the media fallback), which is what made
+        this easy to miss: it exists in the model, it is just not the name that
+        gets serialized. Exposing both keeps the two from drifting again.
+        """
+        return self.get_cover(obj)
 
     def get_creator_data(self, obj):
         return {

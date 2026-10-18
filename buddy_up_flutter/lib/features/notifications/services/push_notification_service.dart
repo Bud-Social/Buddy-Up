@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
 import '../../../router.dart';
 
@@ -101,7 +102,10 @@ class PushNotificationService {
       case 'order_status_changed':
       case 'new_purchase':
         final orderId = data['order_id']?.toString() ?? '';
-        route = orderId.isNotEmpty ? '/orders/$orderId' : '/orders';
+        // `/orders` has never existed; the order routes live under /marketplace.
+        route = orderId.isNotEmpty
+            ? '/marketplace/orders/$orderId'
+            : '/marketplace/orders';
 
       case 'payout_processed':
       case 'withdrawal_processed':
@@ -112,7 +116,8 @@ class PushNotificationService {
       case 'community_post':
       case 'community_comment':
         final commId = data['community_id']?.toString() ?? '';
-        if (commId.isNotEmpty) route = '/community/$commId';
+        // `/community/:id` has never existed -- the route is `/communities/:id`.
+        if (commId.isNotEmpty) route = '/communities/$commId';
 
       case 'repost':
       case 'post_repost':
@@ -121,11 +126,15 @@ class PushNotificationService {
       case 'comment':
       case 'comment_reply':
         final postId = data['post_id']?.toString() ?? '';
-        if (postId.isNotEmpty) route = '/feed/post/$postId';
+        // The post detail route is `/feed/:postId`; `/feed/post/:postId` was never
+        // registered, so tapping a post notification went nowhere.
+        if (postId.isNotEmpty) route = '/feed/$postId';
 
       case 'session_booked':
       case 'session_reminder':
-        route = '/sessions/my-sessions';
+        // `/sessions/my-sessions` was never registered; `/sessions` is the
+        // bookings list this was reaching for.
+        route = '/sessions';
 
       case 'follow':
       case 'new_follower':
@@ -139,15 +148,27 @@ class PushNotificationService {
     }
 
     if (route != null) {
-      navigator.pushNamed(route);
+      // Navigation must go through go_router, not the raw NavigatorState.
+      // `pushNamed` resolves names against the navigator's own route table,
+      // which a go_router app does not populate -- so every one of these
+      // notifications was a no-op even once the paths were correct.
+      final ctx = rootNavigatorKey.currentContext;
+      if (ctx != null) {
+        GoRouter.of(ctx).go(route);
+      }
     }
   }
 
   Future<void> _registerDeviceToken(String token) async {
     try {
-      await _apiClient.dio.post('/notifications/device-token/', data: {
+      // `/notifications/device-token/` does not exist. The push device registry
+      // is `POST /marketplace/push-devices/`, so every registration 404'd inside
+      // this bare `catch` and the app silently had no registered device -- no
+      // FCM delivery could ever be attempted for this user.
+      await _apiClient.dio.post('/marketplace/push-devices/', data: {
         'token': token,
-        'platform': 'flutter',
+        'platform': 'android', // the only mobile platform this app ships
+        'device_name': 'BuddyUp app',
       });
     } catch (_) {}
   }
