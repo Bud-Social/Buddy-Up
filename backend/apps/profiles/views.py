@@ -1578,14 +1578,45 @@ class UserPostsView(views.APIView):
         profile = get_object_or_404(Profile, username=username)
         from apps.feed.models import Post
         from apps.feed.serializers import PostSerializer
+        from apps.moderation.visibility import (
+            VIS_HIDDEN, VIS_TOMBSTONE, takedown_map, tombstone_payload, visibility_for,
+        )
 
         qs = Post.objects.filter(author=profile, is_deleted=False).order_by('-created_at')
+
+        # This endpoint filters `is_deleted` but never `moderation_status`, so a
+        # moderated-away post was still served here in full -- body and media --
+        # on the author's public profile. Moderation removed it from the feed and
+        # left it fully readable one page over.
+        #
+        # Now: staff and the author keep seeing it (with the tombstone attached),
+        # and everyone else gets an empty row in its place rather than nothing,
+        # so a viewer can tell "taken down" from "never existed".
+        viewer = request.user if request.user.is_authenticated else None
         page_size = int(request.query_params.get('limit', 20))
         qs = qs[:page_size]
 
-        serializer = PostSerializer(qs, many=True, context={'request': request})
+        rows = []
+        if qs:
+            takedowns = takedown_map('feed.post', [p.id for p in qs])
+            serializer = PostSerializer(qs, many=True, context={'request': request})
+            for post, data in zip(qs, serializer.data):
+                takedown = takedowns.get(str(post.id))
+                visibility = visibility_for(viewer=viewer, creator=profile, takedown=takedown)
+                if visibility == VIS_HIDDEN:
+                    continue
+                if visibility == VIS_TOMBSTONE:
+                    rows.append({
+                        'id': str(post.id),
+                        'is_taken_down': True,
+                        'tombstone': tombstone_payload(takedown),
+                    })
+                else:
+                    data['tombstone'] = tombstone_payload(takedown) if takedown else None
+                    rows.append(data)
+
         return Response({
-            'success': True, 'data': serializer.data,
+            'success': True, 'data': rows,
             'message': 'OK', 'errors': None, 'pagination': None,
         })
 

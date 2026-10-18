@@ -18,6 +18,8 @@ from rest_framework.response import Response
 
 from common.pagination import CursorPagination, PageNumberPagination
 from common.age_gating import gate_mature_queryset, can_view_content
+from apps.moderation.takedown import active_takedown_for
+from apps.moderation.visibility import VIS_FULL, tombstone_payload, visibility_for
 from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, PostShare, Sound, HiddenPost, MutedAuthor, PostView
 from .media_types import ALLOWED_EXTS, guess_media_type, url_extension
 from .serializers import (
@@ -942,11 +944,21 @@ class PostDetailView(views.APIView):
     def get(self, request, post_id):
         post = get_object_or_404(Post, id=post_id)
 
+        # A takedown is a visibility state, so this used to 410 for *everyone*
+        # -- staff included, who then could not review what they had just
+        # hidden, and the author, who could not read why their post was gone or
+        # appeal it. Now: staff and the author get the content, everyone else
+        # gets a tombstone that carries the reason and the appeal deadline.
         if post.moderation_status == 'removed':
-            return Response({
+            takedown = active_takedown_for('feed.post', post.id)
+            if visibility_for(viewer=request.user, creator=post.author,
+                               takedown=takedown) != VIS_FULL:
+                return Response({
                 'success': False, 'data': None,
-                'message': 'This post has been removed.',
-                'errors': None, 'pagination': None,
+                'message': 'This post has been taken down by moderators.',
+                'errors': None,
+                'pagination': None,
+                'tombstone': tombstone_payload(takedown),
             }, status=status.HTTP_410_GONE)
 
         viewer_profile = request.user.profile if request.user.is_authenticated else None
@@ -970,9 +982,15 @@ class PostDetailView(views.APIView):
             _record_post_view(post, request.user.profile)
 
         serializer = PostSerializer(post, context={'request': request})
+        data = dict(serializer.data)
+        if post.moderation_status == 'removed':
+            # Staff and the author see the content *and* that it is taken down,
+            # so the console and the author are never looking at content that
+            # looks live.
+            data['tombstone'] = tombstone_payload(active_takedown_for('feed.post', post.id))
         return Response({
             'success': True,
-            'data': serializer.data,
+            'data': data,
             'message': 'OK',
             'errors': None,
             'pagination': None,

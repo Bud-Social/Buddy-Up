@@ -1507,3 +1507,181 @@ class ReportContentTypeBackfillTests(TestCase):
         module = _backfill_module()
         self.assertEqual(module._split_path('/some/unknown/page'), (None, None))
         self.assertEqual(module._split_path(''), (None, None))
+
+
+class ContentResolutionTests(TestCase):
+    """A moderator has to be able to open what they are reviewing.
+
+    The queue used to show a truncated id and a preview and nothing else, which
+    is enough to triage but not to act on.
+    """
+
+    def setUp(self):
+        self.author, self.author_profile = _user('resolve-author@example.com', 'resolveauthor')
+        self.staff, _ = _user('resolve-staff@example.com', 'resolvestaff', staff=True)
+        self.client = APIClient()
+        self.client.force_authenticate(self.staff)
+
+    def test_every_registered_type_has_a_resolver(self):
+        from apps.moderation.resolve import RESOLVERS
+        from apps.moderation.takedown import CONTENT_HANDLERS
+
+        # A takedown-able type with no resolver means the console can take a
+        # takedown down but never show anyone what it acted on.
+        self.assertEqual(
+            sorted(set(CONTENT_HANDLERS) - set(RESOLVERS)), [],
+            'Every takedown-able content type needs a resolver.',
+        )
+
+    def test_resolves_a_post_to_something_readable(self):
+        from apps.moderation.resolve import resolve_content
+
+        post = Post.objects.create(
+            author=self.author_profile, body='SECRET-BODY', media_urls=[],
+        )
+        resolved = resolve_content('feed.post', str(post.id))
+        self.assertEqual(resolved['label'], 'Feed post')
+        self.assertEqual(resolved['body'], 'SECRET-BODY')
+        self.assertEqual(resolved['author']['username'], self.author_profile.username)
+        self.assertIn(str(post.id), resolved['route'])
+
+    def test_deleted_content_resolves_to_nothing_rather_than_erroring(self):
+        from apps.moderation.resolve import resolve_content
+
+        post = Post.objects.create(author=self.author_profile, body='bye', media_urls=[])
+        Post.objects.filter(id=post.id).delete()
+        self.assertIsNone(resolve_content('feed.post', str(post.id)))
+
+    def test_a_bad_id_is_treated_as_gone_not_as_a_server_error(self):
+        """Gym is keyed by an integer, so a UUID id raises at the filter."""
+        from apps.moderation.resolve import resolve_content
+
+        self.assertIsNone(resolve_content('gym', 'not-an-id'))
+
+    def test_endpoint_requires_both_parameters(self):
+        response = self.client.get('/api/v1/moderation/content-flags/resolve/?content_type=feed.post')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_endpoint_returns_the_takedown_state_alongside_the_content(self):
+        post = Post.objects.create(author=self.author_profile, body='spam', media_urls=[])
+        ContentTakedown.objects.create(
+            content_type='feed.post', content_id=str(post.id),
+            reason='toxic', taken_down_at=timezone.now(), creator=self.author_profile,
+        )
+        response = self.client.get(
+            f'/api/v1/moderation/content-flags/resolve/?content_type=feed.post&content_id={post.id}',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(response.data['data']['body'], 'spam')
+        self.assertTrue(response.data['data']['takedown']['taken_down'])
+        self.assertEqual(response.data['data']['takedown']['reason'], 'toxic')
+
+    def test_endpoint_is_staff_only(self):
+        response = APIClient().get(
+            '/api/v1/moderation/content-flags/resolve/?content_type=feed.post&content_id=x',
+        )
+        self.assertIn(response.status_code,
+                      (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN))
+
+
+class ContentTypeFilterTests(TestCase):
+    """'Show me everything flagged in communities' has to be answerable."""
+
+    def setUp(self):
+        self.staff, _ = _user('ct-filter-staff@example.com', 'ctfilterstaff', staff=True)
+        self.client = APIClient()
+        self.client.force_authenticate(self.staff)
+
+    def _flag(self, content_type, content_id='x'):
+        return ContentFlag.objects.create(
+            content_type=content_type, content_id=content_id,
+            flag_reason='toxic', severity='high', source='test',
+        )
+
+    def test_queue_filters_by_a_single_content_type(self):
+        self._flag('feed.post', '1')
+        self._flag('messaging.community', '2')
+        self._flag('marketplace.meal_plan', '3')
+
+        response = self.client.get(
+            '/api/v1/moderation/content-flags/queue/?content_type=messaging.community',
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        types = {row['content_type'] for row in response.data['data']}
+        self.assertEqual(types, {'messaging.community'})
+
+    def test_queue_filters_by_several_content_types(self):
+        self._flag('feed.post', '1')
+        self._flag('messaging.community', '2')
+        self._flag('marketplace.meal_plan', '3')
+
+        response = self.client.get(
+            '/api/v1/moderation/content-flags/queue/?content_type=feed.post,messaging.community',
+        )
+        self.assertEqual(status.HTTP_200_OK, response.status_code)
+        self.assertEqual(
+            {row['content_type'] for row in response.data['data']},
+            {'feed.post', 'messaging.community'},
+        )
+
+    def test_list_endpoint_filters_by_content_type(self):
+        self._flag('feed.post', '1')
+        self._flag('gym', '2')
+        response = self.client.get('/api/v1/moderation/content-flags/?content_type=gym')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual([r['content_type'] for r in response.data['results']], ['gym'])
+
+    def test_queue_advertises_the_types_it_can_resolve(self):
+        response = self.client.get('/api/v1/moderation/content-flags/queue/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        supported = response.data['supported_content_types']
+        self.assertIn('messaging.community', supported)
+        self.assertIn('marketplace.meal_plan', supported)
+        self.assertTrue(all(v['reversible'] for v in supported.values()),
+                        'Every type is reversible now that a takedown hides rather than deletes.')
+
+
+class AppealPostponesDeletionTests(TestCase):
+    """Filing an appeal must stop the content being deleted under it."""
+
+    def setUp(self):
+        self.moderator, _ = _user('appeal-mod@example.com', 'appealmod', staff=True)
+        self.target, self.target_profile = _user('appeal-target@example.com', 'appealtarget')
+        self.target_client = APIClient()
+        self.target_client.force_authenticate(self.target)
+        self.post = Post.objects.create(
+            author=self.target_profile, body='POST-BODY', media_urls=[],
+        )
+
+    def test_filing_an_appeal_pushes_the_purge_deadline_out(self):
+        from apps.moderation.tasks import appeal_window_days
+        from datetime import timedelta as dt
+
+        takedown = ContentTakedown.objects.create(
+            content_type='feed.post', content_id=str(self.post.id),
+            reason='toxic', taken_down_at=timezone.now() - dt(days=89),
+            creator=self.target_profile,
+        )
+        takedown.purge_after = timezone.now() - dt(hours=1)  # about to expire
+        takedown.save(update_fields=['purge_after'])
+
+        action = ModerationAction.objects.create(
+            action='content_removed', moderator=self.moderator,
+            target_user=self.target, reason='test', content_type='feed.post',
+            content_id=str(self.post.id),
+        )
+        takedown.action = action
+        takedown.save(update_fields=['action'])
+
+        response = self.target_client.post(
+            '/api/v1/moderation/appeals/', {'action': str(action.id), 'reason': 'joke'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+
+        takedown.refresh_from_db()
+        self.assertGreater(takedown.purge_after, timezone.now() + dt(days=appeal_window_days() - 2))
+        self.assertTrue(
+            Post.objects.filter(id=self.post.id).exists(),
+            'The post must still exist while the appeal is open.',
+        )

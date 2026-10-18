@@ -22,6 +22,8 @@ from .serializers import (
     ModerationReportAssignSerializer, ModerationReportSerializer,
 )
 from .takedown import ContentTakedownError, UnsupportedContentType, describe_registry
+from .tasks import extend_for_appeal
+from .visibility import tombstone_payload
 
 logger = logging.getLogger(__name__)
 
@@ -193,8 +195,11 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ContentFlag.objects.all()
     serializer_class = ContentFlagSerializer
     permission_classes = [IsAdminUser]
-    filterset_fields = ['flag_reason', 'severity', 'is_actioned']
-    search_fields = ['content_preview']
+    # content_type is filterable because without it a moderator cannot answer
+    # "what have we flagged in communities this week" -- it was a free-text
+    # column on a list endpoint that returned every type at once.
+    filterset_fields = ['flag_reason', 'severity', 'is_actioned', 'content_type']
+    search_fields = ['content_preview', 'content_id']
 
     @action(detail=False, methods=['get'], url_path='queue')
     def queue(self, request):
@@ -221,6 +226,17 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
         severity = request.query_params.get('severity')
         if severity:
             qs = qs.filter(severity=severity)
+        # Accepts a repeated param or a comma-separated list, so the console can
+        # send either `?content_type=a&content_type=b` or `?content_type=a,b`.
+        # Both shapes are accepted: `?content_type=a&content_type=b` and
+        # `?content_type=a,b`. The console sends the second.
+        raw = list(request.query_params.getlist('content_type'))
+        raw += request.query_params.get('content_types', '').split(',')
+        content_types = []
+        for value in raw:
+            content_types.extend(t.strip() for t in value.split(',') if t.strip())
+        if content_types:
+            qs = qs.filter(content_type__in=content_types)
 
         serializer = ContentFlagSerializer(qs[:100], many=True)
         return Response({
@@ -231,6 +247,53 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
             'errors': None,
             'pagination': None,
             'supported_content_types': describe_registry(),
+        })
+
+    @action(detail=False, methods=['get'], url_path='resolve')
+    def resolve(self, request):
+        """Resolve a `content_type`/`content_id` pair into something viewable.
+
+        The queue used to show moderators a truncated id and a 500-character
+        preview and then leave them to guess what they were looking at. This
+        returns the live object behind a flag or a report, plus the in-app route
+        that opens it, so "go and look at it" is one click.
+
+        Staff-only, and deliberately returns the content in full: this is the
+        surface where a moderator has to see what they are about to act on.
+        """
+        content_type = (request.query_params.get('content_type') or '').strip()
+        content_id = (request.query_params.get('content_id') or '').strip()
+        if not content_type or not content_id:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'content_type and content_id are both required.',
+                'errors': {'content_type': ['required'], 'content_id': ['required']},
+                'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        from .takedown import active_takedown_for
+        from .resolve import resolve_content
+
+        try:
+            resolved = resolve_content(content_type, content_id)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning('Could not resolve %s %s: %s', content_type, content_id, exc)
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Could not resolve {content_type} {content_id}: {exc}',
+                'errors': {'content_id': [str(exc)]},
+                'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        takedown = active_takedown_for(content_type, content_id)
+        payload = dict(resolved)
+        payload['takedown'] = tombstone_payload(takedown)
+        return Response({
+            'success': True,
+            'data': payload,
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
         })
 
     @action(detail=False, methods=['get'], url_path='stats')
@@ -602,6 +665,12 @@ class ModerationAppealViewSet(
         if action.target_user_id != self.request.user.id:
             raise PermissionDenied('You may only appeal actions applied to your account.')
         serializer.save(appellant=self.request.user)
+
+        # Filing an appeal postpones deletion. The content is deleted once the
+        # appeal window closes unappealed, so without this the purge could remove
+        # the exact evidence the appeal is being argued from.
+        for takedown in action.takedowns.filter(lifted_at__isnull=True, purged_at__isnull=True):
+            extend_for_appeal(takedown)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
     def review(self, request, pk=None):

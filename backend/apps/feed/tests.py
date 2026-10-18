@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -301,3 +302,89 @@ class GymFeedModerationTests(TestCase):
                 delete = self._delete(post, actor)
                 self.assertEqual(pin.status_code, status.HTTP_403_FORBIDDEN)
                 self.assertEqual(delete.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class TakedownReadPathTests(TestCase):
+    """Who can see a taken-down post, and in what form.
+
+    A takedown used to 410 for everyone on the detail endpoint -- including the
+    staff member who pressed Remove, and the author who needed to read why --
+    while the author's public profile kept serving the post in full.
+    """
+
+    def setUp(self):
+        self.author_user = _make_user('takedownauthor')
+        self.viewer_user = _make_user('takedownviewer')
+        self.staff_user = _make_user('takedownstaff')
+        self.staff_user.is_staff = True
+        self.staff_user.save()
+        self.author = self.author_user.profile
+        self.viewer = self.viewer_user.profile
+        self.staff = self.staff_user.profile
+        self.post = Post.objects.create(
+            author=self.author, body='POST-BODY-MUST-NOT-LEAK', media_urls=[],
+        )
+
+    def _take_down(self):
+        from apps.moderation.models import ContentTakedown
+        takedown = ContentTakedown.objects.create(
+            content_type='feed.post', content_id=str(self.post.id),
+            reason='toxic', taken_down_at=timezone.now(), creator=self.author,
+        )
+        takedown.schedule_purge()
+        takedown.save(update_fields=['purge_after'])
+        Post.objects.filter(id=self.post.id).update(moderation_status='removed')
+        return takedown
+
+    def test_bystander_gets_a_tombstone_and_no_content(self):
+        self._take_down()
+        response = self.client.get(f'/api/v1/feed/{self.post.id}/')
+        self.assertEqual(response.status_code, 410)
+        self.assertIsNone(response.json()['data'])
+        self.assertTrue(response.json()['tombstone']['taken_down'])
+        self.assertNotIn('POST-BODY-MUST-NOT-LEAK', response.content.decode())
+
+    def test_author_gets_the_content_plus_the_tombstone(self):
+        self._take_down()
+        self.client = _client_for(self.author_user)
+        response = self.client.get(f'/api/v1/feed/{self.post.id}/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['body'], 'POST-BODY-MUST-NOT-LEAK')
+        self.assertTrue(response.json()['data']['tombstone']['taken_down'])
+
+    def test_staff_gets_the_content_plus_the_tombstone(self):
+        """Staff must be able to see what they acted on."""
+        self._take_down()
+        self.client = _client_for(self.staff_user)
+        response = self.client.get(f'/api/v1/feed/{self.post.id}/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['data']['body'], 'POST-BODY-MUST-NOT-LEAK')
+        self.assertTrue(response.json()['data']['tombstone']['taken_down'])
+
+    def test_anonymous_gets_a_tombstone(self):
+        self._take_down()
+        response = self.client.get(f'/api/v1/feed/{self.post.id}/')
+        self.assertEqual(response.status_code, 410)
+
+    def test_profile_posts_do_not_leak_a_taken_down_post(self):
+        """The regression that made this worth fixing."""
+        self._take_down()
+        response = self.client.get(f'/api/v1/profiles/{self.author.username}/posts/')
+        self.assertEqual(response.status_code, 200)
+        row = response.json()['data'][0]
+        self.assertTrue(row['is_taken_down'])
+        self.assertNotIn('body', row, 'A taken-down post must not be served in full on the profile.')
+
+    def test_the_author_still_sees_their_own_post_on_their_profile(self):
+        self._take_down()
+        self.client = _client_for(self.author_user)
+        response = self.client.get(f'/api/v1/profiles/{self.author.username}/posts/')
+        row = response.json()['data'][0]
+        self.assertEqual(row['body'], 'POST-BODY-MUST-NOT-LEAK')
+        self.assertTrue(row['tombstone']['taken_down'])
+
+    def test_profile_row_is_a_tombstone_rather_than_a_gap(self):
+        """A viewer should be able to tell 'taken down' from 'never existed'."""
+        self._take_down()
+        response = self.client.get(f'/api/v1/profiles/{self.author.username}/posts/')
+        self.assertEqual(len(response.json()['data']), 1)
