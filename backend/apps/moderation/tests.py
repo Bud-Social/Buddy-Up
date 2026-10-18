@@ -1848,3 +1848,90 @@ class MarketplaceListingGatingTests(TestCase):
         self._take_down('marketplace.meal_plan', self.plan.id)
         self.plan.refresh_from_db()
         self.assertTrue(self.plan.is_published)
+
+
+class RemainingListingGatingTests(TestCase):
+    """Community posts, lives and trainer directories honour takedowns too.
+
+    These three had a takedown handler but no listing that consulted it, so a
+    moderator could remove content that kept being served.
+    """
+
+    def setUp(self):
+        self.author, self.author_profile = _user('gate-author@example.com', 'gateauthor')
+        self.viewer, _ = _user('gate-viewer@example.com', 'gateviewer')
+        self.staff, _ = _user('gate-staff@example.com', 'gatestaff', staff=True)
+
+    def _take_down(self, content_type, content_id):
+        takedown = ContentTakedown.objects.create(
+            content_type=content_type, content_id=str(content_id),
+            reason='toxic', taken_down_at=timezone.now(), creator=self.author_profile,
+        )
+        takedown.schedule_purge()
+        takedown.save(update_fields=['purge_after'])
+        return takedown
+
+    def test_a_taken_down_community_post_leaves_the_community(self):
+        from apps.messaging.models import CommunityPost, Conversation
+
+        conversation = Conversation.objects.create(
+            is_group=True, group_name='Gate Club', is_community=True,
+        )
+        post = CommunityPost.objects.create(
+            conversation=conversation, author=self.author_profile, body='scam',
+        )
+        self._take_down('messaging.community_post', post.id)
+
+        response = APIClient().get(f'/api/v1/messaging/communities/{conversation.pk}/posts/')
+        body = response.content.decode()
+        self.assertNotIn('scam', body)
+        # The row itself must survive: a takedown hides, it does not delete.
+        self.assertTrue(CommunityPost.objects.filter(id=post.id).exists())
+
+    def test_staff_still_see_a_taken_down_live_in_the_replay_tab(self):
+        """Moderation has to be able to review what it removed."""
+        from apps.lives.models import BuddyLive
+
+        live = BuddyLive.objects.create(
+            host=self.author_profile, title='Gate Live', status='ended',
+            replay_saved=True, replay_url='https://cdn.example/replay.m3u8',
+        )
+        self._take_down('lives.buddy_live', live.id)
+
+        as_viewer = APIClient()
+        as_viewer.force_authenticate(self.viewer)
+        self.assertNotIn(
+            'Gate Live',
+            as_viewer.get('/api/v1/lives/browse/?tab=replays').content.decode(),
+        )
+
+        as_staff = APIClient()
+        as_staff.force_authenticate(self.staff)
+        self.assertIn(
+            'Gate Live',
+            as_staff.get('/api/v1/lives/browse/?tab=replays').content.decode(),
+        )
+
+    def test_a_taken_down_trainer_leaves_the_directory(self):
+        from apps.sessions.models import TrainerProfile
+
+        # TrainerProfile holds no bio of its own; it inherits the Profile's.
+        self.author_profile.role = 'trainer'
+        self.author_profile.bio = 'Cures things'
+        self.author_profile.save(update_fields=['role', 'bio'])
+        trainer = TrainerProfile.objects.create(profile=self.author_profile)
+        self._take_down('sessions.trainer_profile', trainer.id)
+
+        as_viewer = APIClient()
+        as_viewer.force_authenticate(self.viewer)
+        self.assertNotIn(
+            self.author_profile.username,
+            as_viewer.get('/api/v1/sessions/trainers/').content.decode(),
+        )
+
+        as_staff = APIClient()
+        as_staff.force_authenticate(self.staff)
+        self.assertIn(
+            self.author_profile.username,
+            as_staff.get('/api/v1/sessions/trainers/').content.decode(),
+        )

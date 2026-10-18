@@ -8,6 +8,9 @@ from rest_framework import views, permissions, status
 from rest_framework.response import Response
 
 from common.pagination import CursorPagination
+from apps.moderation.visibility import hide_taken_down
+# Safe at module scope: apps.moderation.visibility imports no models, only
+# django.utils, so it cannot close an app-load cycle.
 from common.age_gating import gate_mature_queryset, can_view_content
 from .models import BuddyLive, LiveAttendee, LiveReplayView
 from .serializers import (
@@ -53,6 +56,14 @@ class LiveBrowserView(views.APIView):
 
         if category:
             queryset = queryset.filter(category=category)
+
+        # A taken-down live -- including its recording and replay -- must not sit
+        # in the browser or replays tab. `status` is the broadcast lifecycle
+        # (scheduled/live/ended) and deliberately not reused for moderation, so
+        # the exclusion is explicit.
+        queryset = hide_taken_down(
+            queryset, 'lives.buddy_live', viewer=request.user,
+        )[0]
 
         queryset = gate_mature_queryset(request, queryset)
 

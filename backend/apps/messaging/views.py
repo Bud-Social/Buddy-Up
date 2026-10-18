@@ -35,6 +35,16 @@ from apps.guardians.services import guardian_blocks_new_dms
 from apps.profiles.models import BuddyRelationship, Profile, BuddySearchProfile
 from .blocking import is_blocked_pair, is_conversation_blocked, other_participant
 
+
+def _hide_taken_down(qs, content_type, viewer):
+    """Local import keeps `apps.moderation` out of app-load time.
+
+    moderation imports models from several of the apps that import this one.
+    """
+    from apps.moderation.visibility import hide_taken_down
+
+    return hide_taken_down(qs, content_type, viewer=viewer)
+
 logger = logging.getLogger(__name__)
 
 
@@ -1529,6 +1539,11 @@ class CommunityPostListView(views.APIView):
         only_pinned = request.query_params.get('pinned') in ('true', '1')
         if only_pinned:
             posts = posts.filter(is_pinned=True)
+
+        # A community post takedown used to hard-delete the row, so there was
+        # nothing to gate. Now it is a visibility state and this listing has to
+        # honour it, or a moderator can remove a post that keeps being served.
+        posts, _taken = _hide_taken_down(posts, 'messaging.community_post', request.user)
         posts = posts[:50]
 
         serializer = CommunityPostSerializer(

@@ -7,6 +7,8 @@ from datetime import timedelta
 from rest_framework import views, permissions, status
 from rest_framework.response import Response
 
+# Safe at module scope: apps.moderation.visibility imports no models.
+from apps.moderation.visibility import hide_taken_down
 from common.pagination import CursorPagination
 from .models import (
     TrainerProfile, Availability, BookingSession, Review,
@@ -40,6 +42,9 @@ class TrainerListView(views.APIView):
         except (TypeError, ValueError):
             min_rating = 0
         qs = TrainerProfile.objects.filter(profile__role__in=['trainer', 'practitioner']).select_related('profile')
+        # A taken-down trainer profile -- an unverified practitioner advertising
+        # treatments they are not licensed for -- must leave the directory.
+        qs = hide_taken_down(qs, 'sessions.trainer_profile', viewer=request.user)[0]
         if location:
             qs = qs.filter(
                 db_models.Q(profile__location_city__icontains=location)
