@@ -240,6 +240,12 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'apps.verification.tasks.purge_expired_verification_documents',
         'schedule': 86400.0,
     },
+    # The only thing that deletes moderated content. A takedown hides; this is
+    # what destroys it once the appeal window has closed unappealed.
+    'moderation-takedown-purge': {
+        'task': 'apps.moderation.tasks.purge_expired_takedowns',
+        'schedule': 86400.0,
+    },
     'meal-plan-daily-reminders': {
         'task': 'apps.marketplace.tasks.send_meal_plan_daily_reminders',
         'schedule': 3600.0,  # Run every hour; task checks if current hour matches subscriber preference

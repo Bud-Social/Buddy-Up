@@ -36,6 +36,13 @@ class ModerationReport(TimestampedModel):
     )
     reason = models.CharField(max_length=30, choices=REPORT_REASONS)
     description = models.TextField(blank=True, max_length=1000)
+    #: What was reported. ``content_type``/``content_id`` are the structured form;
+    #: ``content_url`` is kept for rows that predate them and for report types
+    #: that genuinely have no single object to point at. It was previously the
+    #: *only* pointer, which made "show me every reported community" unexpressible
+    #: -- and clients were already posting relative paths into a URLField.
+    content_type = models.CharField(max_length=50, blank=True)
+    content_id = models.CharField(max_length=100, blank=True)
     content_url = models.URLField(blank=True)
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='open')
     assigned_to = models.ForeignKey(
@@ -50,6 +57,7 @@ class ModerationReport(TimestampedModel):
         indexes = [
             models.Index(fields=['status']),
             models.Index(fields=['reason']),
+            models.Index(fields=['content_type']),
             models.Index(fields=['-created_at']),
         ]
         ordering = ['-created_at']
@@ -111,6 +119,113 @@ class ContentFlag(TimestampedModel):
 
     def __str__(self):
         return f'{self.flag_reason} ({self.severity})'
+
+
+class ContentTakedown(TimestampedModel):
+    """A takedown as *visibility*, not deletion.
+
+    A takedown hides content from ordinary viewers. It does not destroy it:
+
+    - staff still see the content in full, because moderation has to be able to
+      judge what it acted on;
+    - the creator still sees it, so they can understand and appeal it;
+    - everyone else sees a tombstone saying it was taken down and why it can
+      still be appealed.
+
+    The row is deleted only after the appeal window closes -- ``purge_after``,
+    which ``apps.moderation.tasks.purge_expired_takedowns`` acts on daily. Filing
+    an appeal pushes the deadline out again, so a contested takedown can never be
+    deleted out from under the appeal.
+
+    This is a side table rather than a column on each of a dozen models on
+    purpose. The content types live in six different apps; a column-per-model
+    approach means a cross-app migration for every moderation change and, worse,
+    twelve slightly different implementations of "hidden" that drift apart. One
+    table gives every type identical semantics, and read paths ask the same
+    question through one helper.
+    """
+
+    REASON_CHOICES = [
+        ('policy_violation', 'Policy Violation'),
+        ('spam', 'Spam'),
+        ('nsfw', 'Adult Content'),
+        ('toxic', 'Abusive'),
+        ('misinfo', 'Misinformation'),
+        ('medical_claim', 'Unsubstantiated Medical Claim'),
+        ('undisclosed_sponsor', 'Undisclosed Sponsorship'),
+        ('impersonation', 'Impersonation'),
+        ('other', 'Other'),
+    ]
+
+    #: Days a takedown stays reversible before the content is deleted outright.
+    #: Matches the appeal window a user is shown when they are notified.
+    DEFAULT_APPEAL_DAYS = 90
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    content_type = models.CharField(max_length=50)
+    content_id = models.CharField(max_length=100)
+    #: Why it was taken down, in words the creator is allowed to read. The
+    #: ``ModerationAction.reason`` beside it is the internal audit note and
+    #: frequently contains staff-only reasoning, so it is not what a user sees.
+    reason = models.CharField(max_length=50, choices=REASON_CHOICES, default='policy_violation')
+    public_note = models.TextField(
+        blank=True, max_length=500,
+        help_text='Shown to the creator and to viewers on the tombstone. Staff-only '
+                  'reasoning belongs on the ModerationAction instead.',
+    )
+    taken_down_at = models.DateTimeField()
+    #: Who created the content, so "can this person still see it" is one indexed
+    #: lookup instead of a per-app join.
+    creator = models.ForeignKey(
+        'profiles.Profile', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='content_takedowns',
+    )
+    action = models.ForeignKey(
+        'moderation.ModerationAction', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='takedowns',
+    )
+    #: Null while the takedown stands; set when the content is finally deleted.
+    lifted_at = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Set when the takedown was reversed or the content was purged.',
+    )
+    lift_reason = models.CharField(max_length=100, blank=True)
+    purge_after = models.DateTimeField(null=True, blank=True)
+    purged_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'moderation_content_takedown'
+        constraints = [
+            # One standing takedown per piece of content. Revoking and re-taking
+            # down reuses the row rather than stacking history that nothing reads.
+            models.UniqueConstraint(
+                fields=['content_type', 'content_id'],
+                condition=models.Q(lifted_at__isnull=True, purged_at__isnull=True),
+                name='uniq_active_takedown_per_content',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['content_type', 'content_id']),
+            # The purge task's exact filter: due, not yet purged, still standing.
+            models.Index(fields=['purge_after', 'purged_at']),
+            models.Index(fields=['creator']),
+            models.Index(fields=['-taken_down_at']),
+        ]
+        ordering = ['-taken_down_at']
+
+    def __str__(self):
+        return f'{self.content_type}:{self.content_id} ({self.reason})'
+
+    @property
+    def is_active(self):
+        return self.lifted_at is None and self.purged_at is None
+
+    def schedule_purge(self, days=None):
+        from datetime import timedelta
+
+        days = self.DEFAULT_APPEAL_DAYS if days is None else days
+        self.purge_after = self.taken_down_at + timedelta(days=days)
+        return self.purge_after
 
 
 class ModerationAction(TimestampedModel):

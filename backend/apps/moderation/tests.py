@@ -1,12 +1,18 @@
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework import status
 from datetime import date
 from unittest.mock import patch, MagicMock
 from common.utils import hash_dob
 from apps.accounts.models import User
+from apps.feed.models import Post
 from apps.profiles.models import Profile
-from apps.moderation.models import ContentFlag, ModerationAction, ModerationAppeal
+from apps.moderation.models import ContentFlag, ContentTakedown, ModerationAction, ModerationAppeal
+from apps.moderation.tasks import purge_expired_takedowns
+from apps.moderation.visibility import (
+    VIS_FULL, VIS_TOMBSTONE, tombstone_payload, visibility_for,
+)
 from apps.notifications.models import Notification
 from apps.verification.models import VerificationSubmission, VerificationDocument
 
@@ -638,7 +644,15 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         post.refresh_from_db()
         self.assertEqual(post.moderation_status, 'removed')
-        self.assertIn('moderation_status=removed', response.data['data']['effect'])
+        # A takedown is a visibility state, not a delete: the row survives, a
+        # ContentTakedown is the authoritative record, and it carries the appeal
+        # deadline the creator is shown.
+        from apps.feed.models import Post as _Post
+        self.assertTrue(_Post.objects.filter(id=post.id).exists())
+        takedown = ContentTakedown.objects.get(content_type='feed.post', content_id=str(post.id))
+        self.assertTrue(takedown.is_active)
+        self.assertIsNotNone(takedown.purge_after)
+        self.assertIsNotNone(response.data['data'].get('takedown'))
 
         row = ModerationAction.objects.get(action='content_removed')
         self.assertEqual(row.content_type, 'feed.post')
@@ -654,8 +668,18 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
         comment = Comment.objects.create(post=post, author=self.target_profile, body='spam')
         response = self._remove(self._flag('feed.comment', comment.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        self.assertFalse(Comment.objects.filter(id=comment.id).exists())
-        self.assertIn('cannot be restored', response.data['data']['effect'])
+        # Used to be a hard delete that took replies and reactions with it, and
+        # was registered reversible=False. A moderator pressing Remove used to
+        # destroy the very evidence an appeal would be argued from.
+        self.assertTrue(
+            Comment.objects.filter(id=comment.id).exists(),
+            'A takedown must hide a comment, not delete it.',
+        )
+        self.assertTrue(
+            ContentTakedown.objects.filter(
+                content_type='feed.comment', content_id=str(comment.id), lifted_at__isnull=True,
+            ).exists(),
+        )
 
     def test_marketplace_product_takedown(self):
         from apps.marketplace.models import Product
@@ -666,8 +690,15 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
         response = self._remove(self._flag('marketplace.product', product.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         product.refresh_from_db()
-        self.assertFalse(product.is_active)
-        self.assertIn('is_active=False', response.data['data']['effect'])
+        # `is_active` is the shop's commercial switch, not a moderation signal.
+        # Delisting someone's product as a side effect of moderation destroyed a
+        # business metric that means something else entirely.
+        self.assertTrue(product.is_active)
+        self.assertTrue(
+            ContentTakedown.objects.filter(
+                content_type='marketplace.product', content_id=str(product.id), lifted_at__isnull=True,
+            ).exists(),
+        )
 
     def test_gym_takedown_marks_it_inactive(self):
         from apps.gyms.models import Gym
@@ -686,7 +717,7 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
         )
         response = self._remove(self._flag('gyms.schedule_post', slot.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        self.assertFalse(GymSchedulePost.objects.filter(id=slot.id).exists())
+        self.assertTrue(GymSchedulePost.objects.filter(id=slot.id).exists())
 
     def test_community_post_takedown(self):
         from apps.messaging.models import CommunityPost, Conversation
@@ -696,7 +727,7 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
         )
         response = self._remove(self._flag('messaging.community_post', cpost.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        self.assertFalse(CommunityPost.objects.filter(id=cpost.id).exists())
+        self.assertTrue(CommunityPost.objects.filter(id=cpost.id).exists())
 
     def test_marketplace_event_unpublishes(self):
         from datetime import timedelta
@@ -713,7 +744,6 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         event.refresh_from_db()
         self.assertFalse(event.is_published)
-        self.assertIn('is_published=False', response.data['data']['effect'])
 
     def test_a_failed_takedown_does_not_mark_the_flag_actioned(self):
         """The whole point: a takedown that failed must not record as done."""
@@ -732,12 +762,18 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
             id='00000000-0000-0000-0000-000000000000').exists())
 
     def test_an_unexpected_error_also_leaves_the_flag_open(self):
+        """An unexpected failure must leave no trace that anything happened.
+
+        Patched at the ContentTakedown write rather than a handler method: the
+        handler's `remove` hook is no longer what a takedown runs through, and a
+        test that patches a hook nobody calls proves nothing.
+        """
         from unittest import mock
 
         post = self._make_post()
         flag = self._flag('feed.post', post.id)
         with mock.patch(
-            'apps.moderation.takedown.FeedPostHandler.remove',
+            'apps.moderation.models.ContentTakedown.objects.create',
             side_effect=RuntimeError('database on fire'),
         ):
             response = self._remove(flag)
@@ -747,6 +783,14 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
         self.assertFalse(flag.is_actioned)
         post.refresh_from_db()
         self.assertEqual(post.moderation_status, 'clean')
+        # The audit row is written before the takedown and removed if it fails.
+        # A ModerationAction claiming content came down when it did not is worse
+        # than no row at all, so there must be none.
+        self.assertFalse(
+            ModerationAction.objects.filter(action='content_removed').exists(),
+            'A failed takedown must not leave an audit row claiming success.',
+        )
+        self.assertFalse(ContentTakedown.objects.exists())
 
     def test_an_unsupported_content_type_is_reported_not_swallowed(self):
         flag = self._flag('lives.stream', '1234')
@@ -849,7 +893,14 @@ class ModerationReversalTests(ModerationActionEnforcementBase):
         )
         self.assertEqual(second.status_code, status.HTTP_409_CONFLICT)
 
-    def test_reversal_of_a_hard_deleted_type_says_it_cannot(self):
+    def test_reversing_a_previously_undeletable_type_now_succeeds(self):
+        """Gym schedule posts used to be permanently undeletable-and-unrestorable.
+
+        The old handler hard-deleted the row, so it was registered
+        ``reversible=False`` and the reversal endpoint answered 409 "cannot be
+        undone". A takedown is now a visibility state with a real deletion step
+        behind an appeal window, so every type reverses -- including this one.
+        """
         from apps.gyms.models import Gym, GymSchedulePost
         gym = Gym.objects.create(name='Gone Gym', handle='gonegym', category='fitness')
         slot = GymSchedulePost.objects.create(
@@ -863,15 +914,23 @@ class ModerationReversalTests(ModerationActionEnforcementBase):
             f'/api/v1/moderation/content-flags/{flag.id}/act/',
             {'action': 'remove'}, format='json',
         )
+        self.assertTrue(GymSchedulePost.objects.filter(id=slot.id).exists())
+
         row = ModerationAction.objects.get(action='content_removed')
         response = self.mod_client.post(
             f'/api/v1/moderation/actions/{row.id}/reverse/',
             {'reason': 'Undo please.'}, format='json',
         )
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertIn('cannot be undone', response.data['message'])
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
         row.refresh_from_db()
-        self.assertFalse(row.is_reversed)
+        self.assertTrue(row.is_reversed)
+        self.assertFalse(
+            ContentTakedown.objects.filter(
+                content_type='gyms.schedule_post', content_id=str(slot.id),
+                lifted_at__isnull=True,
+            ).exists(),
+            'Reversing must lift the standing takedown.',
+        )
 
     def test_reversing_a_suspension_lifts_the_standing_properly(self):
         from apps.accounts.models import AccountStanding
@@ -1238,3 +1297,213 @@ class CeleryScheduleRegistrationTests(TestCase):
         schedule = app.conf.beat_schedule
         tasks = {entry.get('task') for entry in schedule.values()}
         self.assertNotIn('apps.moderation.tasks.auto_flag_expired_reports', tasks)
+
+
+class TakedownVisibilityTests(TestCase):
+    """Who sees what while a takedown is standing.
+
+    This is the contract that replaced hard deletion: staff see the content so
+    they can moderate it, the creator sees it so they can appeal it, and everyone
+    else sees a tombstone rather than the content or a blank space.
+    """
+
+    def setUp(self):
+        self.author, self.author_profile = _user('vis-author@example.com', 'visauthor')
+        self.bystander, _ = _user('vis-bystander@example.com', 'visbystander')
+        self.staff, _ = _user('vis-staff@example.com', 'visstaff', staff=True)
+        self.post = Post.objects.create(
+            author=self.author_profile, body='SECRET-BODY-MUST-NOT-LEAK',
+        )
+
+    def _take_down(self):
+        takedown = ContentTakedown.objects.create(
+            content_type='feed.post',
+            content_id=str(self.post.id),
+            reason='spam',
+            taken_down_at=timezone.now(),
+            creator=self.author_profile,
+        )
+        # The handler always schedules this; do the same here so the payload
+        # carries the appeal window the creator is actually shown.
+        takedown.schedule_purge()
+        takedown.save(update_fields=['purge_after'])
+        return takedown
+
+    def test_staff_see_the_content(self):
+        self._take_down()
+        self.assertEqual(
+            visibility_for(viewer=self.staff, creator=self.author, takedown=ContentTakedown.objects.first()),
+            VIS_FULL,
+        )
+
+    def test_creator_sees_their_own_taken_down_content(self):
+        self._take_down()
+        self.assertEqual(
+            visibility_for(viewer=self.author, creator=self.author_profile, takedown=ContentTakedown.objects.first()),
+            VIS_FULL,
+            'A creator cannot appeal, or understand a decision, against something '
+            'they can no longer see.',
+        )
+
+    def test_everyone_else_gets_a_tombstone(self):
+        self._take_down()
+        self.assertEqual(
+            visibility_for(viewer=self.bystander, creator=self.author_profile,
+                           takedown=ContentTakedown.objects.first()),
+            VIS_TOMBSTONE,
+        )
+
+    def test_anonymous_viewers_get_a_tombstone(self):
+        from django.contrib.auth.models import AnonymousUser
+        self._take_down()
+        self.assertEqual(
+            visibility_for(viewer=AnonymousUser(), creator=self.author,
+                           takedown=ContentTakedown.objects.first()),
+            VIS_TOMBSTONE,
+        )
+
+    def test_content_with_no_takedown_is_always_visible(self):
+        self.assertEqual(
+            visibility_for(viewer=self.bystander, creator=self.author_profile, takedown=None),
+            VIS_FULL,
+        )
+
+    def test_a_lifted_takedown_stops_hiding_anything(self):
+        takedown = self._take_down()
+        takedown.lifted_at = timezone.now()
+        takedown.save(update_fields=['lifted_at'])
+        takedown.refresh_from_db()
+        self.assertEqual(
+            visibility_for(viewer=self.bystander, creator=self.author_profile, takedown=takedown),
+            VIS_FULL,
+        )
+
+    def test_tombstone_payload_carries_no_content(self):
+        takedown = self._take_down()
+        payload = tombstone_payload(takedown)
+        self.assertTrue(payload['taken_down'])
+        self.assertEqual(payload['reason'], 'spam')
+        self.assertNotIn(str(self.post.body), str(payload))
+        self.assertIsNotNone(payload['appeal_window_days'])
+
+
+class TakedownRetentionTests(TestCase):
+    """The 90-day deletion, and the appeal that postpones it."""
+
+    def setUp(self):
+        self.author, self.author_profile = _user('retention-author@example.com', 'retentionauthor')
+        self.moderator, _ = _user('retention-mod@example.com', 'retentionmod', staff=True)
+        self.post = Post.objects.create(
+            author=self.author_profile, body='SECRET-BODY-MUST-NOT-LEAK',
+        )
+
+    def _takedown(self, *, days_ago=0, action=None):
+        taken_down_at = timezone.now() - timezone.timedelta(days=days_ago)
+        takedown = ContentTakedown.objects.create(
+            content_type='feed.post', content_id=str(self.post.id),
+            reason='spam', taken_down_at=taken_down_at, creator=self.author_profile,
+            action=action,
+        )
+        takedown.schedule_purge()
+        takedown.save(update_fields=['purge_after'])
+        return takedown
+
+    def test_window_is_ninety_days_by_default(self):
+        takedown = self._takedown()
+        delta = takedown.purge_after - takedown.taken_down_at
+        self.assertEqual(delta.days, ContentTakedown.DEFAULT_APPEAL_DAYS)
+
+    def test_purge_deletes_content_that_outlived_its_window(self):
+        self._takedown(days_ago=91)
+        result = purge_expired_takedowns.run()
+        self.assertEqual(result['deleted'], 1)
+        self.assertFalse(
+            Post.objects.filter(id=self.post.id).exists(),
+            'Content past the appeal window with no appeal must actually be gone.',
+        )
+
+    def test_purge_leaves_content_inside_the_window_alone(self):
+        self._takedown(days_ago=10)
+        result = purge_expired_takedowns.run()
+        self.assertEqual(result['deleted'], 0)
+        self.assertTrue(Post.objects.filter(id=self.post.id).exists())
+
+    def test_an_open_appeal_postpones_deletion(self):
+        action = ModerationAction.objects.create(
+            action='content_removed', moderator=self.moderator,
+            target_user=self.author, reason='test takedown',
+            content_type='feed.post', content_id=str(self.post.id),
+        )
+        takedown = self._takedown(days_ago=91, action=action)
+        ModerationAppeal.objects.create(
+            action=action, appellant=self.author, reason='this was a joke',
+        )
+        result = purge_expired_takedowns.run()
+        self.assertEqual(result['deleted'], 0)
+        self.assertEqual(result['deferred'], 1)
+        self.assertTrue(Post.objects.filter(id=self.post.id).exists())
+        takedown.refresh_from_db()
+        self.assertGreater(takedown.purge_after, timezone.now() + timezone.timedelta(days=80))
+
+    def test_a_denied_appeal_does_not_extend_the_window(self):
+        action = ModerationAction.objects.create(
+            action='content_removed', moderator=self.moderator,
+            target_user=self.author, reason='test takedown',
+            content_type='feed.post', content_id=str(self.post.id),
+        )
+        self._takedown(days_ago=91, action=action)
+        ModerationAppeal.objects.create(
+            action=action, appellant=self.author, reason='nope',
+            status='denied', reviewer=self.moderator,
+        )
+        result = purge_expired_takedowns.run()
+        self.assertEqual(result['deleted'], 1)
+
+    def test_content_already_deleted_is_closed_out_not_retried_forever(self):
+        self._takedown(days_ago=91)
+        Post.objects.filter(id=self.post.id).delete()
+        result = purge_expired_takedowns.run()
+        self.assertEqual(result['skipped'], 1)
+        self.assertTrue(
+            ContentTakedown.objects.filter(purged_at__isnull=False).exists(),
+            'A takedown whose content has already gone must be closed, or it is '
+            'retried every night forever.',
+        )
+
+
+def _backfill_module():
+    """Import the migration module by file, since its name starts with a digit."""
+    import importlib.util
+    from pathlib import Path
+
+    path = (
+        Path(__file__).resolve().parent
+        / 'migrations' / '0008_backfill_report_content_type.py'
+    )
+    spec = importlib.util.spec_from_file_location('report_backfill', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class ReportContentTypeBackfillTests(TestCase):
+    """Old reports pointed at content with a URL and nothing else."""
+
+    def test_recognised_paths_become_a_typed_reference(self):
+
+        module = _backfill_module()
+        cases = [
+            ('https://app.buddyup.app/communities/abc-123', 'messaging.community', 'abc-123'),
+            ('/buddies/find/someone', 'profiles.buddy_search_profile', 'someone'),
+            ('/marketplace/events/evt-9', 'marketplace.event', 'evt-9'),
+            ('/profile/someone', 'user.profile', 'someone'),
+        ]
+        for url, content_type, content_id in cases:
+            with self.subTest(url=url):
+                self.assertEqual(module._split_path(url), (content_type, content_id))
+
+    def test_unrecognised_paths_are_left_blank_rather_than_guessed(self):
+
+        module = _backfill_module()
+        self.assertEqual(module._split_path('/some/unknown/page'), (None, None))
+        self.assertEqual(module._split_path(''), (None, None))

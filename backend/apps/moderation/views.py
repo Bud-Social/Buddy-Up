@@ -330,6 +330,10 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
 
         moderator = request.user
         effect = None
+        # Bound up front so the shared response tail can read it on any branch.
+        # Previously it was only assigned inside `remove`, so approve/escalate
+        # raised UnboundLocalError at the response instead of returning.
+        takedown = None
 
         if action_name == 'approve':
             try:
@@ -350,8 +354,9 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
 
         elif action_name == 'remove':
             try:
-                action_row, effect = services.remove_flagged_content(
+                action_row, takedown, effect = services.remove_flagged_content(
                     flag=flag, moderator=moderator, note=note,
+                    public_note=note,
                 )
             except ContentTakedownError as exc:
                 # The decisive bit: `is_actioned` stays False, no
@@ -406,12 +411,19 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # `takedown` is only bound on the remove branch. Surfacing it lets the
+        # console tell the moderator this is reversible and until when, which is
+        # the difference between "hidden" and "gone" in their head.
+        response_data = {'flag': ContentFlagSerializer(flag).data, 'effect': effect}
+        if takedown is not None:
+            from .visibility import tombstone_payload
+
+            response_data['takedown'] = tombstone_payload(takedown)
+            response_data['takedown_id'] = str(takedown.id)
+
         return Response({
             'success': True,
-            'data': {
-                'flag': ContentFlagSerializer(flag).data,
-                'effect': effect,
-            },
+            'data': response_data,
             'message': f'Flag {action_name}d successfully.',
             'errors': None,
             'pagination': None,

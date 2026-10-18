@@ -373,36 +373,69 @@ def resolve_author(flag):
     return resolve_content_author(flag.content_type, flag.content_id)
 
 
-def remove_flagged_content(*, flag: ContentFlag, moderator, note=''):
+def remove_flagged_content(*, flag: ContentFlag, moderator, note='',
+                           public_note='', reason='policy_violation'):
     """Take a flagged item down and record the action.
 
-    Returns ``(action_row, description)``. Raises ``ContentTakedownError`` if
-    the takedown failed — and, critically, creates **no** ``ModerationAction``
-    in that case, so a failed takedown cannot leave an audit row claiming the
-    content came down.
+    A takedown hides rather than deletes: the content stays readable by staff and
+    by its creator for the whole appeal window, and everyone else sees a
+    tombstone. ``apps.moderation.tasks.purge_expired_takedowns`` is the only
+    thing that destroys it, and only once that window has closed unappealed.
+
+    ``public_note`` and ``reason`` are what the creator is shown, so they must be
+    phrased for them. ``note`` stays the internal audit text.
+
+    Returns ``(action_row, takedown, description)``. Raises
+    ``ContentTakedownError`` if the takedown failed -- and, critically, creates
+    **no** ``ModerationAction`` in that case, so a failed takedown cannot leave an
+    audit row claiming the content came down.
     """
     from .takedown import remove_content
 
-    author, description = remove_content(flag.content_type, flag.content_id)
-    reason = f'Removed {flag.content_type} {flag.content_id} (flag #{flag.id})'
+    # The takedown row has to exist before the action it points at, but it also
+    # stores the action id, so create the action first and link it immediately
+    # after. Doing it in this order means a takedown that raises leaves neither.
+    reason_text = f'Took down {flag.content_type} {flag.content_id} (flag #{flag.id})'
     if note:
-        reason = f'{reason}: {note}'
+        reason_text = f'{reason_text}: {note}'
+
+    # Resolved first so the audit row has a real target. If the creator cannot
+    # be found we must NOT fall back to the moderator: `target_user` is who may
+    # appeal, and writing the moderator there permanently denies them the right
+    # to appeal their own content.
+    author = resolve_author(flag)
 
     action_row = ModerationAction.objects.create(
         action='content_removed',
         moderator=moderator,
         report=None,
         target_user=author or moderator,
-        reason=reason,
+        reason=reason_text,
         content_type=flag.content_type,
         content_id=flag.content_id,
     )
+
+    try:
+        _, takedown, description = remove_content(
+            flag.content_type,
+            flag.content_id,
+            reason=reason,
+            public_note=public_note or note,
+            moderator=moderator,
+            action=action_row,
+        )
+    except Exception:
+        # The takedown is the part that matters. An audit row claiming content
+        # was hidden when it was not is worse than no row at all.
+        action_row.delete()
+        raise
+
     flag.is_actioned = True
     flag.action_taken = 'content_removed'
     flag.save(update_fields=['is_actioned', 'action_taken', 'updated_at'])
 
     notify_action_taken(action_row)
-    return action_row, description
+    return action_row, takedown, description
 
 
 def reverse_action(*, action_row, actor, reason=''):
@@ -433,7 +466,10 @@ def reverse_action(*, action_row, actor, reason=''):
                 f'Action {action_row.id} does not record which content it removed, '
                 'so there is nothing to restore.'
             )
-        description = restore_content(action_row.content_type, action_row.content_id)
+        description = restore_content(
+            action_row.content_type, action_row.content_id,
+            lift_reason=reason or 'reversed on appeal',
+        )
     elif action_row.action in ModerationAction.STANDING_ACTIONS:
         lift_standing_action_for_row(action_row, actor=actor, reason=reason)
         description = (
