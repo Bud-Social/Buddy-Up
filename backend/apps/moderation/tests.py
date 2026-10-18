@@ -1685,3 +1685,93 @@ class AppealPostponesDeletionTests(TestCase):
             Post.objects.filter(id=self.post.id).exists(),
             'The post must still exist while the appeal is open.',
         )
+
+
+class AutoModerationDispatchTests(TestCase):
+    """Auto-moderation has to actually reach the models it claims to.
+
+    This exists because it silently did not. `_model_for` was passed
+    `app.models.Model` paths, but `apps.get_model` wants `app_label.ModelName`,
+    so it returned None for *every* type -- the whole feature was a no-op behind
+    a warning log nobody read.
+    """
+
+    def test_every_configured_model_actually_resolves(self):
+        from apps.moderation.dispatch import TEXT_SOURCES, _model_for
+
+        unresolved = [label for label in TEXT_SOURCES if _model_for(label) is None]
+        self.assertEqual(
+            unresolved, [],
+            'A model label that does not resolve means that content type is not '
+            'auto-moderated at all, and nothing says so except a log line.',
+        )
+
+    def test_every_content_type_matches_the_takedown_registry(self):
+        from apps.moderation.dispatch import CONTENT_TYPES
+        from apps.moderation.takedown import CONTENT_HANDLERS
+
+        unknown = sorted(set(CONTENT_TYPES.values()) - set(CONTENT_HANDLERS))
+        self.assertEqual(
+            unknown, [],
+            'Auto-moderation may only produce flags for types a moderator can act on.',
+        )
+
+    def test_every_text_extractor_returns_a_string(self):
+        """A source that raises, or returns None, flags nothing -- silently.
+
+        Every extractor is called against a bare, unpopulated instance: that is
+        the worst case (every attribute missing) and it must still hand back a
+        string, because the first thing it meets is usually a partially built row.
+        """
+        from apps.moderation.dispatch import TEXT_SOURCES, _model_for
+
+        for label, (text_of, author_of) in TEXT_SOURCES.items():
+            with self.subTest(model=label):
+                model = _model_for(label)
+                blank = model()
+                value = text_of(blank)
+                self.assertIsInstance(value, str)
+                # Must not raise on an instance with no author either.
+                author_of(blank)
+
+    def test_a_populated_row_actually_yields_text(self):
+        """The extractors are not quietly returning '' for real content."""
+        from apps.moderation.dispatch import TEXT_SOURCES, _model_for
+
+        author, author_profile = _user('dispatch-text@example.com', 'dispatchtext')
+        populated = {
+            'feed.models.Comment': {'body': 'a real comment'},
+            'marketplace.models.Product': {'name': 'Protein powder'},
+            'lives.models.BuddyLive': {'title': 'Morning lift'},
+            'profiles.models.Profile': {'display_name': 'Ada'},
+        }
+        for label, kwargs in populated.items():
+            with self.subTest(model=label):
+                text_of = TEXT_SOURCES[label][0]
+                instance = _model_for(label)(**kwargs)
+                self.assertTrue(
+                    text_of(instance).strip(),
+                    f'{label} produced no text for a populated row, so it would '
+                    'never reach the checker.',
+                )
+        self.assertIsNotNone(author)
+
+    def test_dispatch_is_a_noop_for_blank_text(self):
+        from apps.moderation.dispatch import dispatch
+
+        # Blank or whitespace text must not be sent to the model at all, and
+        # must not be noisy about it either -- an empty bio is not an incident.
+        self.assertFalse(dispatch('feed.post', '1', ''))
+        self.assertFalse(dispatch('feed.post', '1', '   '))
+
+    def test_unmoderated_types_is_reported_not_hidden(self):
+        from apps.moderation.dispatch import unmoderated_types
+
+        # feed.post is wired directly in apps.feed; bookings and availability are
+        # transactional records with no user-authored prose. Anything else here
+        # is a genuine gap and should show up in this list.
+        remaining = unmoderated_types()
+        self.assertEqual(
+            sorted(remaining),
+            ['feed.post', 'sessions.availability', 'sessions.booking'],
+        )

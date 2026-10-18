@@ -12,3 +12,11 @@ class ModerationConfig(AppConfig):
         # apps.governance (and through it apps.admin_portal) into the app-loading
         # path.
         from . import signals  # noqa: F401
+
+        # Auto-moderation for everything except posts. Posts were wired directly
+        # in apps.feed; the other eight types reached the platform with no
+        # checker at all. Resolved lazily by model label because the owning apps
+        # must not be imported from here at app-load time.
+        from . import dispatch
+
+        dispatch.connect()
