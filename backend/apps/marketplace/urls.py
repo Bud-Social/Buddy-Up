@@ -21,6 +21,7 @@ urlpatterns = [
 
     # --- Meal Plans ---
     path('meal-plans/', views.MealPlanListView.as_view(), name='meal_plans'),
+    path('meal-plans/mine/', views.MyMealPlansView.as_view(), name='my_meal_plans'),
     path('meal-plans/<uuid:plan_id>/', views.MealPlanDetailView.as_view(), name='meal_plan_detail'),
     path('meal-plans/<uuid:plan_id>/purchase/', views.PurchaseMealPlanView.as_view(), name='purchase_meal_plan'),
     path('meal-plans/<uuid:plan_id>/personalise/', views.PersonaliseMealPlanView.as_view(), name='personalise'),
@@ -28,6 +29,7 @@ urlpatterns = [
 
     # --- Training Programmes ---
     path('programmes/', views.TrainingProgrammeListView.as_view(), name='programmes'),
+    path('programmes/mine/', views.MyProgrammesView.as_view(), name='my_programmes'),
     path('programmes/<uuid:programme_id>/', views.TrainingProgrammeDetailView.as_view(), name='programme_detail'),
     path('programmes/<uuid:programme_id>/purchase/', views.PurchaseTrainingProgrammeView.as_view(), name='purchase_programme'),
     path('programmes/<uuid:programme_id>/reviews/', views.TrainingProgrammeReviewView.as_view(), name='programme_reviews'),

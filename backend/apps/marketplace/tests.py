@@ -342,6 +342,12 @@ class ProgrammeSchedulePersistenceTests(TestCase):
         self.assertEqual(block['side_effects'], 'High fibre - hydrate well')
 
 
+def _mk_user(email, username):
+    user = User.objects.create_user(email=email, password='TestPass123!')
+    profile = Profile.objects.create(user=user, username=username, display_name=username.title())
+    return user, profile
+
+
 def _auth_client(user):
     client = APIClient()
     refresh = RefreshToken.for_user(user)
@@ -943,3 +949,314 @@ class OrderStatusNotificationDeduplicationTests(TestCase):
         pushed = [call.args[0] for call in push.call_args_list]
         self.assertIn(self.seller, pushed)
         self.assertIn(self.buyer, pushed)
+
+
+class OrderCardPayloadTests(TestCase):
+    """An order notification has to carry enough to render a card.
+
+    `Notification.metadata` is a free-form JSONField, so this cost no schema
+    change -- the payload simply was never populated. A buyer was told "order
+    BU-1 is now shipped" with no line items, no images and no destination.
+    """
+
+    def setUp(self):
+        self.buyer, self.buyer_profile = _mk_user('cardbuyer@example.com', 'cardbuyer')
+        self.seller, self.seller_profile = _mk_user('cardseller@example.com', 'cardseller')
+
+    def _order(self, item_type='meal_plan'):
+        from apps.marketplace.models import MealPlan, Order, OrderItem
+
+        plan = MealPlan.objects.create(
+            creator=self.seller_profile, title='Card Plan', description='d',
+            diet_type='balanced',
+        )
+        order = Order.objects.create(
+            buyer=self.buyer_profile, status='paid', fulfillment_type='digital',
+        )
+        # Only the FK matching `item_type` is set: the serializer resolves the
+        # target through the item_type -> FK map, so a stray FK would hide a
+        # real mismatch.
+        OrderItem.objects.create(
+            order=order, item_type=item_type, title='Card Plan',
+            meal_plan=plan if item_type == 'meal_plan' else None,
+            quantity=2, paid_artifacts={'dumbbell_tokens': 50},
+        )
+        return order
+
+    def test_order_item_exposes_a_target_and_a_route(self):
+        from apps.marketplace.serializers import OrderItemSerializer
+
+        order = self._order()
+        item = order.items.first()
+        data = OrderItemSerializer(item).data
+        self.assertEqual(data['item_type'], 'meal_plan')
+        self.assertTrue(data['target'], 'An order line must say what it bought.')
+        self.assertTrue(data['detail_route'].startswith('/marketplace/meal-plans/'))
+
+    def test_a_deleted_target_serialises_as_null_not_as_a_dead_link(self):
+        """OrderItem uses SET_NULL, so the purchase record outlives the product."""
+        from apps.marketplace.models import MealPlan, OrderItem
+        from apps.marketplace.serializers import OrderItemSerializer
+
+        order = self._order()
+        item = order.items.first()
+        MealPlan.objects.filter(id=item.meal_plan_id).delete()
+        data = OrderItemSerializer(OrderItem.objects.get(id=item.id)).data
+        self.assertIsNone(data['target'])
+        self.assertIsNone(data['detail_route'])
+        self.assertEqual(data['title'], 'Card Plan', 'The record of what was bought must survive.')
+
+    def test_card_payload_carries_line_items_and_a_destination(self):
+        from apps.marketplace.views import _order_card_payload
+
+        order = self._order()
+        card = _order_card_payload(order)
+        self.assertEqual(card['order_number'], order.order_number)
+        self.assertEqual(card['item_count'], 1)
+        self.assertEqual(card['items'][0]['title'], 'Card Plan')
+        self.assertTrue(card['items'][0]['target_id'])
+
+
+class TicketVisibilityTests(TestCase):
+    """A ticket must not vanish because it was used or refunded."""
+
+    def setUp(self):
+        self.buyer, self.buyer_profile = _mk_user('tixbuyer@example.com', 'tixbuyer')
+
+    def _ticket(self, status):
+        from datetime import timedelta
+
+        from django.utils import timezone as djtz
+
+        from apps.marketplace.models import EventTicket, MarketplaceEvent
+
+        event = MarketplaceEvent.objects.create(
+            creator=self.buyer_profile, title='Tix Event', category='fitness',
+            start_datetime=djtz.now() + timedelta(days=1),
+            end_datetime=djtz.now() + timedelta(days=1, hours=2),
+        )
+        return EventTicket.objects.create(event=event, holder=self.buyer_profile, status=status)
+
+    def test_used_and_refunded_tickets_still_appear(self):
+        from rest_framework.test import APIClient
+
+        self._ticket('active')
+        self._ticket('used')
+        self._ticket('refunded')
+
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        response = client.get('/api/v1/marketplace/events/my-tickets/')
+        self.assertEqual(response.status_code, 200, response.content)
+        statuses = {row['status'] for row in response.data['data']}
+        self.assertEqual(
+            statuses, {'active', 'used', 'refunded'},
+            'A ticket disappearing from the only list that shows tickets leaves '
+            'its holder no way to follow a refund.',
+        )
+
+    def test_the_active_filter_is_still_available(self):
+        from rest_framework.test import APIClient
+
+        self._ticket('active')
+        self._ticket('refunded')
+
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        response = client.get('/api/v1/marketplace/events/my-tickets/?status=active')
+        self.assertEqual(
+            {row['status'] for row in response.data['data']}, {'active'},
+        )
+
+    def test_ticket_exposes_flat_event_id_and_order_link(self):
+        from rest_framework.test import APIClient
+
+        ticket = self._ticket('active')
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        response = client.get('/api/v1/marketplace/events/my-tickets/')
+        row = response.data['data'][0]
+        self.assertEqual(row['event_id'], str(ticket.event_id))
+
+
+class ProductPurchaseSignalTests(TestCase):
+    """Products had no purchase signal in any layer."""
+
+    def setUp(self):
+        self.buyer, self.buyer_profile = _mk_user('prodbuyer@example.com', 'prodbuyer')
+        self.seller, self.seller_profile = _mk_user('prodseller@example.com', 'prodseller')
+
+    def test_a_bought_product_reports_is_purchased_with_its_order(self):
+        from apps.marketplace.models import Order, OrderItem, Product
+
+        product = Product.objects.create(
+            name='Bought Thing', brand='Acme', category='equipment',
+            description='d', recommended_by=self.seller_profile,
+        )
+        order = Order.objects.create(buyer=self.buyer_profile, status='paid')
+        OrderItem.objects.create(
+            order=order, item_type='product', product=product, title=product.name,
+            quantity=1,
+        )
+
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        response = client.get(f'/api/v1/marketplace/products/{product.pk}/')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertTrue(
+            response.data['data']['is_purchased'],
+            'A product has to be able to tell the buyer they already own it.',
+        )
+        self.assertEqual(response.data['data']['purchase_order_ids'], [str(order.id)])
+
+    def test_a_cancelled_order_is_not_a_purchase(self):
+        from apps.marketplace.models import Order, OrderItem, Product
+
+        product = Product.objects.create(
+            name='Cancelled Thing', brand='Acme', category='equipment',
+            description='d', recommended_by=self.seller_profile,
+        )
+        order = Order.objects.create(buyer=self.buyer_profile, status='cancelled')
+        OrderItem.objects.create(
+            order=order, item_type='product', product=product, title=product.name, quantity=1,
+        )
+
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        response = client.get(f'/api/v1/marketplace/products/{product.pk}/')
+        self.assertFalse(response.data['data']['is_purchased'])
+
+    def test_another_buyers_purchase_does_not_leak(self):
+        from apps.marketplace.models import Order, OrderItem, Product
+
+        product = Product.objects.create(
+            name='Someone Elses', brand='Acme', category='equipment',
+            description='d', recommended_by=self.seller_profile,
+        )
+        order = Order.objects.create(buyer=self.seller_profile, status='paid')
+        OrderItem.objects.create(
+            order=order, item_type='product', product=product, title=product.name, quantity=1,
+        )
+
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        response = client.get(f'/api/v1/marketplace/products/{product.pk}/')
+        self.assertFalse(response.data['data']['is_purchased'])
+
+
+class MyLibraryEndpointTests(TestCase):
+    """"Programmes" and "Meal Plans" tabs need a server-side "mine" source.
+
+    Filtering `/programmes/` on `is_purchased` happens client-side against a
+    paginated, popularity-ordered list -- so a buyer's own item drops off page 1
+    and simply is not there.
+    """
+
+    def setUp(self):
+        self.buyer, self.buyer_profile = _mk_user('libbuyer@example.com', 'libbuyer')
+        self.other, self.other_profile = _mk_user('libother@example.com', 'libother')
+        self.creator, self.creator_profile = _mk_user('libcreator@example.com', 'libcreator')
+
+    def _programme(self, title):
+        from apps.marketplace.models import TrainingProgramme
+
+        return TrainingProgramme.objects.create(
+            creator=self.creator_profile, title=title, description='d',
+            difficulty='beginner',
+        )
+
+    def _plan(self, title):
+        from apps.marketplace.models import MealPlan
+
+        return MealPlan.objects.create(
+            creator=self.creator_profile, title=title, description='d',
+            diet_type='balanced',
+        )
+
+    def test_my_programmes_returns_only_what_the_caller_bought(self):
+        from apps.marketplace.models import TrainingProgrammePurchase
+        from rest_framework.test import APIClient
+
+        mine = self._programme('Mine')
+        theirs = self._programme('Theirs')
+        TrainingProgrammePurchase.objects.create(programme=mine, buyer=self.buyer_profile)
+        TrainingProgrammePurchase.objects.create(programme=theirs, buyer=self.other_profile)
+
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        response = client.get('/api/v1/marketplace/programmes/mine/')
+        self.assertEqual(response.status_code, 200, response.content)
+        titles = [row['title'] for row in response.data['data']]
+        self.assertEqual(titles, ['Mine'])
+        self.assertTrue(response.data['data'][0]['is_purchased'])
+
+    def test_my_meal_plans_returns_only_what_the_caller_bought(self):
+        from apps.marketplace.models import MealPlanPurchase
+        from rest_framework.test import APIClient
+
+        mine = self._plan('Mine')
+        theirs = self._plan('Theirs')
+        MealPlanPurchase.objects.create(meal_plan=mine, buyer=self.buyer_profile)
+        MealPlanPurchase.objects.create(meal_plan=theirs, buyer=self.other_profile)
+
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        response = client.get('/api/v1/marketplace/meal-plans/mine/')
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual([row['title'] for row in response.data['data']], ['Mine'])
+
+    def test_a_buyer_with_nothing_gets_an_empty_list_not_a_404(self):
+        from rest_framework.test import APIClient
+
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        programmes = client.get('/api/v1/marketplace/programmes/mine/')
+        plans = client.get('/api/v1/marketplace/meal-plans/mine/')
+        self.assertEqual(programmes.data['data'], [])
+        self.assertEqual(plans.data['data'], [])
+
+    def test_mine_requires_authentication(self):
+        from rest_framework.test import APIClient
+
+        response = APIClient().get('/api/v1/marketplace/programmes/mine/')
+        self.assertIn(response.status_code, (401, 403))
+
+
+class ProductListPurchaseFlagTests(TestCase):
+    """The list endpoint batches ownership into one query, so cover that path."""
+
+    def setUp(self):
+        self.buyer, self.buyer_profile = _mk_user('listbuyer@example.com', 'listbuyer')
+        self.seller, self.seller_profile = _mk_user('listseller@example.com', 'listseller')
+
+    def test_the_grid_marks_owned_products(self):
+        from apps.marketplace.models import Order, OrderItem, Product
+        from rest_framework.test import APIClient
+
+        owned = Product.objects.create(
+            name='Owned', brand='Acme', category='equipment', description='d',
+            recommended_by=self.seller_profile,
+        )
+        unowned = Product.objects.create(
+            name='Unowned', brand='Acme', category='equipment', description='d',
+            recommended_by=self.seller_profile,
+        )
+        order = Order.objects.create(buyer=self.buyer_profile, status='paid')
+        OrderItem.objects.create(
+            order=order, item_type='product', product=owned, title=owned.name, quantity=1,
+        )
+
+        client = APIClient()
+        client.force_authenticate(self.buyer)
+        response = client.get('/api/v1/marketplace/products/')
+        self.assertEqual(response.status_code, 200, response.content)
+        rows = {str(row['id']): row for row in response.data['data']}
+        self.assertTrue(rows[str(owned.id)]['is_purchased'])
+        self.assertEqual(rows[str(owned.id)]['purchase_order_ids'], [str(order.id)])
+        self.assertFalse(rows[str(unowned.id)]['is_purchased'])

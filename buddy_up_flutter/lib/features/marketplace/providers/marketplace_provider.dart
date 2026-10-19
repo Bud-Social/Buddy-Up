@@ -31,6 +31,13 @@ final mealPlansProvider = FutureProvider<List<MealPlan>>((ref) async {
   return _parseMealPlanList(raw['data']);
 });
 
+/// The signed-in account's purchased meal plans.
+final myMealPlansProvider = FutureProvider<List<MealPlan>>((ref) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getMyMealPlans();
+  return _parseMealPlanList(raw['data']);
+});
+
 final mealPlanDetailProvider = FutureProvider.family<MealPlan, String>((ref, planId) async {
   final repo = ref.watch(marketplaceRepositoryProvider);
   final raw = await repo.getMealPlan(planId);
@@ -49,6 +56,13 @@ final mealPlanReviewsProvider = FutureProvider.family<List<MealPlanReview>, Stri
 final programmesProvider = FutureProvider<List<TrainingProgramme>>((ref) async {
   final repo = ref.watch(marketplaceRepositoryProvider);
   final raw = await repo.getProgrammes();
+  return _parseProgrammeList(raw['data']);
+});
+
+/// The signed-in account's purchased programmes.
+final myProgrammesProvider = FutureProvider<List<TrainingProgramme>>((ref) async {
+  final repo = ref.watch(marketplaceRepositoryProvider);
+  final raw = await repo.getMyProgrammes();
   return _parseProgrammeList(raw['data']);
 });
 

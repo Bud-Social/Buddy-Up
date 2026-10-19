@@ -185,6 +185,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen>
     final type = n.notificationType;
     final meta = n.metadata ?? {};
 
+    // The server names the destination it means; preferring it keeps this
+    // screen correct when a new notification type ships without an app update.
+    final destination = meta['destination'];
+    if (destination is Map && destination['route'] is String) {
+      context.push(destination['route'] as String);
+      return;
+    }
+
     if (type == 'live_starting' || type == 'live_reminder' || type == 'live_start') {
       final liveId = meta['live_id']?.toString() ?? '';
       if (liveId.isNotEmpty) {

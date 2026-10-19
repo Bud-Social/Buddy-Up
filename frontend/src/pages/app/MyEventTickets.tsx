@@ -1,15 +1,37 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, MapPin, Tag, Download } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Calendar, MapPin, Tag, Download, ReceiptText } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { marketplaceApi } from '@/api/marketplace';
 import { QRCodeSVG } from 'qrcode.react';
 
+type TicketStatus = 'all' | 'active' | 'used' | 'refunded' | 'cancelled';
+
+const STATUS_TABS: { key: TicketStatus; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'used', label: 'Used' },
+  { key: 'refunded', label: 'Refunded' },
+  { key: 'cancelled', label: 'Cancelled' },
+];
+
+const STATUS_STYLE: Record<string, string> = {
+  active: 'bg-buddy-green/20 text-buddy-green',
+  used: 'bg-buddy-blue/20 text-buddy-blue',
+  refunded: 'bg-buddy-gold/20 text-buddy-gold',
+  cancelled: 'bg-buddy-red/20 text-buddy-red',
+};
+
 export default function MyEventTickets() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  //: Set by the "View tickets" link on an order, so the wallet opens on exactly
+  //: the tickets that order paid for.
+  const orderFilter = searchParams.get('order');
   const [tickets, setTickets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState<TicketStatus>('all');
 
   useEffect(() => {
     marketplaceApi.getMyTickets()
@@ -17,6 +39,12 @@ export default function MyEventTickets() {
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
+
+  // The endpoint now returns every status, so this filter is local and instant.
+  // It used to be impossible: the API dropped anything that was not `active`.
+  const visibleTickets = tickets
+    .filter((ticket) => !orderFilter || ticket.order_id === orderFilter)
+    .filter((ticket) => status === 'all' || ticket.status === status);
 
   const handleDownload = (ticket: any) => {
     const svg = document.getElementById(`qr-${ticket.id}`);
@@ -61,6 +89,13 @@ export default function MyEventTickets() {
         <h1 className="text-2xl font-bold">My Tickets</h1>
       </div>
 
+      <div className="flex rounded-xl bg-buddy-surface p-1 mb-5 overflow-x-auto">
+        {STATUS_TABS.map(({ key, label }) => (
+          <button key={key} onClick={() => setStatus(key)}
+            className={`flex-1 whitespace-nowrap px-3 py-2 text-sm font-medium rounded-lg transition-colors ${status === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{label}</button>
+        ))}
+      </div>
+
       {tickets.length === 0 ? (
         <div className="text-center py-20 text-buddy-text-secondary bg-buddy-surface rounded-2xl">
           <Tag size={48} className="mx-auto mb-4 opacity-20" />
@@ -69,9 +104,14 @@ export default function MyEventTickets() {
             Browse Events
           </Button>
         </div>
+      ) : visibleTickets.length === 0 ? (
+        <div className="text-center py-20 text-buddy-text-secondary bg-buddy-surface rounded-2xl">
+          <Tag size={48} className="mx-auto mb-4 opacity-20" />
+          <p>No {status} tickets.</p>
+        </div>
       ) : (
         <div className="space-y-6">
-          {tickets.map(ticket => (
+          {visibleTickets.map(ticket => (
             <Card key={ticket.id} className="overflow-hidden border-none bg-buddy-surface">
               {ticket.event_data?.cover_image_url && (
                 <div className="w-full h-40 sm:h-48 relative">
@@ -84,7 +124,7 @@ export default function MyEventTickets() {
                   <div>
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-bold text-xl">{ticket.event_data?.title}</h3>
-                      <div className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${ticket.status === 'active' ? 'bg-buddy-green/20 text-buddy-green' : 'bg-buddy-surface-raised text-buddy-text-secondary'}`}>
+                      <div className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${STATUS_STYLE[ticket.status] || 'bg-buddy-surface-raised text-buddy-text-secondary'}`}>
                         {ticket.status}
                       </div>
                     </div>
@@ -102,6 +142,15 @@ export default function MyEventTickets() {
                         <span>{ticket.event_data.location}</span>
                       </div>
                     )}
+                    {ticket.order_id && (
+                      <button
+                        onClick={() => navigate(`/marketplace/orders/${ticket.order_id}`)}
+                        className="flex items-center gap-2 text-sm text-buddy-green hover:underline"
+                      >
+                        <ReceiptText size={16} />
+                        <span>View order</span>
+                      </button>
+                    )}
                   </div>
                 </div>
                 
@@ -112,17 +161,27 @@ export default function MyEventTickets() {
                   <div className="block sm:hidden absolute -top-3 -left-3 w-6 h-6 bg-buddy-black rounded-full"></div>
                   <div className="block sm:hidden absolute -top-3 -right-3 w-6 h-6 bg-buddy-black rounded-full"></div>
                   
-                  <div className="bg-white p-2 rounded-xl mb-3">
-                    <QRCodeSVG 
-                      id={`qr-${ticket.id}`}
-                      value={ticket.ticket_code} 
-                      size={120} 
-                      level="H" 
-                    />
-                  </div>
-                  <Button size="sm" variant="ghost" onClick={() => handleDownload(ticket)} className="w-full">
-                    <Download size={14} className="mr-2" /> Download
-                  </Button>
+                  {ticket.status === 'active' ? (
+                    <div className="bg-white p-2 rounded-xl mb-3">
+                      <QRCodeSVG
+                        id={`qr-${ticket.id}`}
+                        value={ticket.ticket_code}
+                        size={120}
+                        level="H"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-[136px] h-[136px] rounded-xl mb-3 flex items-center justify-center bg-buddy-surface text-center px-3">
+                      <p className="text-xs text-buddy-text-secondary">
+                        {ticket.status === 'used' ? 'Already scanned' : 'Not valid for entry'}
+                      </p>
+                    </div>
+                  )}
+                  {ticket.status === 'active' && (
+                    <Button size="sm" variant="ghost" onClick={() => handleDownload(ticket)} className="w-full">
+                      <Download size={14} className="mr-2" /> Download
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>

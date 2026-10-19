@@ -361,6 +361,10 @@ class TrainingProgrammeSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     recommender_data = serializers.SerializerMethodField()
     shop_data = serializers.SerializerMethodField()
+    is_purchased = serializers.SerializerMethodField()
+    #: Ids of this product's orders for the caller, so the UI can link a
+    #: "Purchased" badge straight to the order that bought it.
+    purchase_order_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -371,7 +375,38 @@ class ProductSerializer(serializers.ModelSerializer):
                    'stock_quantity', 'stock_tracking_enabled', 'supplement_registration_number',
                    'supplement_registration_expiry', 'supplement_claims_reviewed',
                    'supplement_label_url', 'delivery_modes', 'fulfillment_details',
-                   'created_at']
+                   'created_at', 'is_purchased', 'purchase_order_ids']
+
+    def _caller_order_ids(self, obj):
+        """Order ids for this product belonging to the caller.
+
+        Products had no purchase signal in any layer, so a buyer could not tell
+        what they already owned -- and there was no `ProductPurchase` model to
+        ask. The order item is the record of the purchase, so that is what this
+        reads.
+
+        List views pass a precomputed ``purchase_order_ids`` map; without it
+        this would issue one query per card on a grid of fifty.
+        """
+        cached = self.context.get('purchase_order_ids')
+        if cached is not None:
+            return cached.get(obj.pk, [])
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return []
+        rows = (
+            OrderItem.objects
+            .filter(product=obj, item_type='product', order__buyer=request.user.profile)
+            .exclude(order__status__in=('cancelled',))
+            .values_list('order_id', flat=True)
+        )
+        return [str(pk) for pk in rows]
+
+    def get_is_purchased(self, obj):
+        return bool(self._caller_order_ids(obj))
+
+    def get_purchase_order_ids(self, obj):
+        return self._caller_order_ids(obj)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -638,13 +673,43 @@ class EventTicketSerializer(serializers.ModelSerializer):
     holder_data = serializers.SerializerMethodField()
     qr_data_uri = serializers.SerializerMethodField()
 
+    #: Flat ids. The event was only reachable by digging into `event_data.id`,
+    #: so a client could not build a link to the event or the order from a
+    #: ticket row without walking nested JSON.
+    event_id = serializers.CharField(read_only=True)
+    #: The order that paid for this ticket, so a ticket links back to its receipt.
+    order_id = serializers.SerializerMethodField()
+
     class Meta:
         model = EventTicket
         fields = [
-            'id', 'ticket_code', 'event_data', 'holder_data',
+            'id', 'ticket_code', 'event_data', 'holder_data', 'event_id', 'order_id',
             'tier', 'price_paid_artifacts', 'status',
             'is_checked_in', 'checked_in_at', 'qr_data_uri', 'created_at',
         ]
+
+    def get_order_id(self, obj):
+        """The order whose line item bought this ticket.
+
+        There is no `OrderItem` -> `EventTicket` FK, so it is matched on the
+        event and the buyer. That is a heuristic, and it is why the order detail
+        page could not reliably link to its tickets: the honest fix is a real FK,
+        which needs a backfill, so this returns the most recent matching order
+        rather than pretending the link is exact.
+        """
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return None
+        row = (
+            OrderItem.objects
+            .filter(event=obj.event, item_type='event_ticket',
+                    order__buyer=request.user.profile)
+            .exclude(order__status__in=('cancelled',))
+            .order_by('-created_at')
+            .values_list('order_id', flat=True)
+            .first()
+        )
+        return str(row) if row else None
 
     def get_event_data(self, obj):
         cover_url = ''
@@ -942,18 +1007,72 @@ class OrderItemSerializer(serializers.ModelSerializer):
     price_artifacts = serializers.SerializerMethodField()
     paid_artifacts = serializers.SerializerMethodField()
     creator_name = serializers.CharField(source='creator.display_name', default=None, read_only=True)
+    #: Which line this is and where it points. Without these an order row was a
+    #: title and a price with nothing to open -- no id, no image, no way back to
+    #: the thing that was bought.
+    target = serializers.SerializerMethodField()
+    cover_url = serializers.SerializerMethodField()
+    detail_route = serializers.SerializerMethodField()
+
+    #: item_type -> (the FK name on OrderItem, the in-app route, cover attribute)
+    TARGETS = {
+        'meal_plan': ('meal_plan', '/marketplace/meal-plans/', 'cover_image'),
+        'programme': ('programme', '/marketplace/programmes/', 'cover_image'),
+        'product': ('product', '/marketplace/products/', 'images'),
+        'event_ticket': ('event', '/marketplace/events/', 'cover_image'),
+    }
 
     class Meta:
         model = OrderItem
         fields = ['item_type', 'title', 'quantity', 'price_artifacts',
                   'paid_artifacts', 'seller_split_artifacts', 'fulfillment_status',
-                  'creator_name', 'created_at']
+                  'creator_name', 'created_at', 'target', 'cover_url', 'detail_route']
 
     def get_price_artifacts(self, obj):
         return obj.price_artifacts or {}
 
     def get_paid_artifacts(self, obj):
         return obj.paid_artifacts or {}
+
+    def _target_object(self, obj):
+        entry = self.TARGETS.get(obj.item_type)
+        if not entry:
+            return None
+        return getattr(obj, entry[0], None)
+
+    def get_target(self, obj):
+        """The referenced object's id, or None once it has been deleted.
+
+        `OrderItem` uses SET_NULL on all four FKs, so a removed product leaves a
+        null rather than cascading the order away -- the purchase record survives
+        and says so here instead of showing an id that resolves to nothing.
+        """
+        target = self._target_object(obj)
+        return str(target.pk) if target is not None else None
+
+    def get_cover_url(self, obj):
+        target = self._target_object(obj)
+        if target is None:
+            return None
+        for attr in ('cover', 'cover_image_url', 'image_url'):
+            value = getattr(target, attr, None)
+            if value:
+                url = getattr(value, 'url', value)
+                if url:
+                    return str(url)
+        images = getattr(target, 'images', None)
+        if images:
+            first = images[0] if isinstance(images, (list, tuple)) else None
+            url = getattr(first, 'url', first)
+            if url:
+                return str(url)
+        return None
+
+    def get_detail_route(self, obj):
+        target = self._target_object(obj)
+        if target is None:
+            return None
+        return f'{self.TARGETS[obj.item_type][1]}{target.pk}/' 
 
 
 class OrderSerializer(serializers.ModelSerializer):

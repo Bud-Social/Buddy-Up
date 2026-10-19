@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Coins, Truck, Store, MapPin, Package, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Coins, Truck, Store, MapPin, Package, ExternalLink, CheckCircle2, Ticket, ChevronRight } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useToast } from '@/components/ui/Toast';
@@ -144,11 +144,19 @@ export default function OrderDetail() {
 
   if (!order) return null;
 
+  //: Event tickets are not addressable from an OrderItem (there is no FK), so
+  //: the order links to the ticket wallet pre-filtered to this order instead.
+  const hasTickets = (order.items || []).some((it) => it.item_type === 'event_ticket');
+
   const timeline = [...(order.status_history || [])].reverse();
   const canFulfill = isSeller && SELLER_STATUS_FLOW.includes(order.status);
   const canConfirmDelivery = !isSeller
     && ['shipped', 'out_for_delivery', 'ready_for_pickup'].includes(order.status);
   const currentStep = stepIndexFor(order.status);
+  //: A digital order has no truck, no pickup point and no transit. Showing the
+  //: shipping tracker for one was the old UI's most obvious "this is a receipt
+  //: for a download" mistake.
+  const isDigital = order.fulfillment_type === 'digital';
 
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4 space-y-4">
@@ -163,7 +171,7 @@ export default function OrderDetail() {
       </div>
 
       {/* Progress tracker */}
-      {order.status !== 'cancelled' && (
+      {order.status !== 'cancelled' && !isDigital && (
         <Card className="p-4">
           <div className="flex items-center justify-between">
             {BUYER_TRACK_STEPS.map((step, i) => {
@@ -207,6 +215,22 @@ export default function OrderDetail() {
       </div>
 
       {/* Fulfillment summary */}
+      {isDigital ? (
+        <Card className="p-4 space-y-2">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Package size={14} className="text-buddy-green" /> Digital delivery
+          </h3>
+          <p className="text-xs text-buddy-text-secondary">
+            Nothing ships. Your purchases are unlocked and stay in My Activity.
+          </p>
+          <button
+            onClick={() => navigate('/sessions?tab=programmes')}
+            className="text-xs font-medium text-buddy-green hover:underline"
+          >
+            Open my library
+          </button>
+        </Card>
+      ) : (
       <Card className="p-4 space-y-2">
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Truck size={14} className="text-buddy-green" /> Fulfillment
@@ -239,21 +263,48 @@ export default function OrderDetail() {
           </div>
         )}
       </Card>
+      )}
 
       {/* Items */}
       <Card className="p-4 space-y-3">
-        <h3 className="text-sm font-semibold">Items</h3>
-        {(order.items || []).map((it, i) => (
-          <div key={i} className="flex items-center justify-between rounded-xl bg-buddy-surface-raised/50 p-3 text-xs">
-            <div className="min-w-0">
-              <p className="font-semibold truncate">{it.title} <span className="text-buddy-text-secondary">× {it.quantity}</span></p>
-              <p className="text-buddy-text-secondary capitalize mt-0.5">{it.item_type.replace('_', ' ')}{it.creator_name ? ` · by ${it.creator_name}` : ''}</p>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Items</h3>
+          {hasTickets && (
+            <button
+              onClick={() => navigate(`/marketplace/events/my-tickets?order=${order.id}`)}
+              className="flex items-center gap-1 text-xs font-medium text-buddy-green hover:underline"
+            >
+              <Ticket size={13} /> View tickets
+            </button>
+          )}
+        </div>
+        {(order.items || []).map((it, i) => {
+          const openable = !!it.detail_route;
+          return (
+            <div
+              key={i}
+              className={`flex items-center gap-3 rounded-xl bg-buddy-surface-raised/50 p-3 text-xs ${openable ? 'cursor-pointer hover:bg-buddy-surface-raised transition-colors' : ''}`}
+              onClick={openable ? () => navigate(it.detail_route as string) : undefined}
+            >
+              {it.cover_url && (
+                <img src={it.cover_url} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold truncate">{it.title} <span className="text-buddy-text-secondary">× {it.quantity}</span></p>
+                <p className="text-buddy-text-secondary capitalize mt-0.5">
+                  {it.item_type.replace('_', ' ')}{it.creator_name ? ` · by ${it.creator_name}` : ''}
+                  {/* The target is null once a listing is deleted; the purchase
+                      record survives, so say so rather than showing a dead link. */}
+                  {!openable && it.item_type !== 'event_ticket' && it.title ? ' · no longer available' : ''}
+                </p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-buddy-green font-medium">{artifactDisplay(it.paid_artifacts) || '-'}</p>
+              </div>
+              {openable && <ChevronRight size={14} className="text-buddy-text-secondary shrink-0" />}
             </div>
-            <div className="text-right flex-shrink-0">
-              <p className="text-buddy-green font-medium">{artifactDisplay(it.paid_artifacts) || '-'}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
         <div className="border-t border-buddy-surface-raised pt-3 space-y-1.5 text-xs">
           {order.discount_code && (
             <div className="flex justify-between text-buddy-green">

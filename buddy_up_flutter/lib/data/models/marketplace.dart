@@ -791,6 +791,11 @@ abstract class OrderItem with _$OrderItem {
     @JsonKey(name: 'paid_artifacts') @Default(<String, int>{}) Map<String, int> paidArtifacts,
     @JsonKey(name: 'creator_name') String? creatorName,
     @JsonKey(name: 'created_at') String? createdAt,
+    // The bought object: null once a listing is deleted, in which case
+    // `detailRoute` is null too and the row is not tappable.
+    String? target,
+    @JsonKey(name: 'cover_url') String? coverUrl,
+    @JsonKey(name: 'detail_route') String? detailRoute,
   }) = _OrderItem;
 
   factory OrderItem.fromJson(Map<String, dynamic> json) => _$OrderItemFromJson(json);

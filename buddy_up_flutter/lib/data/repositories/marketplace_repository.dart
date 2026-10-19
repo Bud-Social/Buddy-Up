@@ -10,6 +10,11 @@ abstract class MarketplaceRepository {
   @GET('/marketplace/meal-plans/')
   Future<dynamic> getMealPlans({@Query('diet_type') String? dietType});
 
+  // The account's own purchases. Filtering the paginated discovery list by
+  // `is_purchased` client-side loses anything past page one.
+  @GET('/marketplace/meal-plans/mine/')
+  Future<dynamic> getMyMealPlans();
+
   @POST('/marketplace/meal-plans/')
   Future<dynamic> createMealPlan(@Body() Map<String, dynamic> data);
 
@@ -42,6 +47,9 @@ abstract class MarketplaceRepository {
 
   @GET('/marketplace/programmes/')
   Future<dynamic> getProgrammes({@Query('category') String? category});
+
+  @GET('/marketplace/programmes/mine/')
+  Future<dynamic> getMyProgrammes();
 
   @POST('/marketplace/programmes/')
   Future<dynamic> createProgramme(@Body() Map<String, dynamic> data);

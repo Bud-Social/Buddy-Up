@@ -8,15 +8,46 @@ import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/button.dart';
 import '../../../shared/widgets/input.dart' show BuddyInput;
 import '../../../shared/widgets/shimmer_loader.dart';
+import '../../marketplace/providers/marketplace_provider.dart';
 
-class MySessionsScreen extends ConsumerStatefulWidget {
+class MySessionsScreen extends StatelessWidget {
   const MySessionsScreen({super.key});
 
   @override
-  ConsumerState<MySessionsScreen> createState() => _MySessionsScreenState();
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 3,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('My Activity'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Sessions'),
+              Tab(text: 'Programmes'),
+              Tab(text: 'Meal Plans'),
+            ],
+          ),
+        ),
+        body: const TabBarView(
+          children: [
+            _SessionsTab(),
+            _MyProgrammesTab(),
+            _MyMealPlansTab(),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _MySessionsScreenState extends ConsumerState<MySessionsScreen> {
+class _SessionsTab extends ConsumerStatefulWidget {
+  const _SessionsTab();
+
+  @override
+  ConsumerState<_SessionsTab> createState() => _SessionsTabState();
+}
+
+class _SessionsTabState extends ConsumerState<_SessionsTab> {
   final _scrollCtrl = ScrollController();
 
   @override
@@ -44,7 +75,7 @@ class _MySessionsScreenState extends ConsumerState<MySessionsScreen> {
     final sessions = state.sessions;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Sessions')),
+      backgroundColor: Colors.transparent,
       body: sessions.isEmpty && state.isLoadingMore
           ? const ShimmerList()
           : sessions.isEmpty
@@ -122,6 +153,160 @@ class _MySessionsScreenState extends ConsumerState<MySessionsScreen> {
       child: Text(status.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
     );
   }
+}
+
+class _MyProgrammesTab extends ConsumerWidget {
+  const _MyProgrammesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(myProgrammesProvider);
+    return async.when(
+      loading: () => const ShimmerList(),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (programmes) => programmes.isEmpty
+          ? const EmptyState(
+              icon: Icons.fitness_center,
+              title: 'No programmes yet',
+              subtitle: 'Programmes you buy will be ready to follow here.',
+            )
+          : RefreshIndicator(
+              onRefresh: () => ref.refresh(myProgrammesProvider.future),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: programmes.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (_, i) => _LibraryTile(
+                  title: programmes[i].title,
+                  subtitle:
+                      '${programmes[i].durationWeeks} weeks · '
+                      '${programmes[i].creatorData.displayName}',
+                  coverUrl: programmes[i].coverImageUrl,
+                  icon: Icons.fitness_center,
+                  onTap: () =>
+                      context.push('/marketplace/programmes/${programmes[i].id}'),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+class _MyMealPlansTab extends ConsumerWidget {
+  const _MyMealPlansTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(myMealPlansProvider);
+    return async.when(
+      loading: () => const ShimmerList(),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (plans) => plans.isEmpty
+          ? const EmptyState(
+              icon: Icons.restaurant_menu,
+              title: 'No meal plans yet',
+              subtitle: 'Meal plans you buy will show up here.',
+            )
+          : RefreshIndicator(
+              onRefresh: () => ref.refresh(myMealPlansProvider.future),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: plans.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (_, i) => _LibraryTile(
+                  title: plans[i].title,
+                  subtitle:
+                      '${plans[i].durationWeeks} weeks · '
+                      '${plans[i].creatorData.displayName}',
+                  coverUrl: plans[i].coverImageUrl,
+                  icon: Icons.restaurant_menu,
+                  onTap: () =>
+                      context.push('/marketplace/meal-plans/${plans[i].id}'),
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+class _LibraryTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String coverUrl;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _LibraryTile({
+    required this.title,
+    required this.subtitle,
+    required this.coverUrl,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: BuddyColors.surface,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: coverUrl.isNotEmpty
+                    ? Image.network(
+                        coverUrl,
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _coverFallback(),
+                      )
+                    : _coverFallback(),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: BuddyColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: BuddyColors.textSecondary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _coverFallback() => Container(
+        width: 56,
+        height: 56,
+        color: BuddyColors.surfaceRaised,
+        child: Icon(icon, color: BuddyColors.textSecondary, size: 22),
+      );
 }
 
 class SessionDetailScreen extends ConsumerWidget {

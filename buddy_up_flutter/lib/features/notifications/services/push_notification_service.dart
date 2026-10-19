@@ -88,6 +88,15 @@ class PushNotificationService {
 
     String? route;
 
+    // Prefer the route the server attached; the per-type switch is the fallback
+    // for older payloads.
+    final destination = data['destination'];
+    if (destination is Map && destination['route'] is String) {
+      route = destination['route'] as String;
+    }
+
+    // Only fall back to the per-type switch when the server sent no destination.
+    if (route == null) {
     switch (type) {
       case 'live_starting':
       case 'live_reminder':
@@ -145,6 +154,7 @@ class PushNotificationService {
 
       default:
         route = '/notifications';
+    }
     }
 
     if (route != null) {

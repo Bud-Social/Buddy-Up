@@ -1015,6 +1015,9 @@ _OrderItem _$OrderItemFromJson(Map<String, dynamic> json) => _OrderItem(
       const <String, int>{},
   creatorName: json['creator_name'] as String?,
   createdAt: json['created_at'] as String?,
+  target: json['target'] as String?,
+  coverUrl: json['cover_url'] as String?,
+  detailRoute: json['detail_route'] as String?,
 );
 
 Map<String, dynamic> _$OrderItemToJson(_OrderItem instance) =>
@@ -1026,6 +1029,9 @@ Map<String, dynamic> _$OrderItemToJson(_OrderItem instance) =>
       'paid_artifacts': instance.paidArtifacts,
       'creator_name': instance.creatorName,
       'created_at': instance.createdAt,
+      'target': instance.target,
+      'cover_url': instance.coverUrl,
+      'detail_route': instance.detailRoute,
     };
 
 _Order _$OrderFromJson(Map<String, dynamic> json) => _Order(

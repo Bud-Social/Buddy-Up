@@ -102,8 +102,68 @@ def handle_event_ticket_created(sender, instance, created, **kwargs):
             'event_title': event.title,
             'event_category': event.category,
             'start_time': event.start_datetime.isoformat() if event.start_datetime else None,
+            # An explicit destination plus a card payload. Both clients used to
+            # branch on the notification type with hardcoded routes, so a ticket
+            # notification could not be told to open the wallet of tickets when
+            # the event had no id, and nothing rendered a card.
+            'destination': {
+                'kind': 'ticket',
+                'ticket_id': str(instance.id),
+                'event_id': str(event.id),
+                'route': '/marketplace/events/my-tickets',
+            },
+            'card': {
+                'ticket_id': str(instance.id),
+                'ticket_code': str(instance.ticket_code),
+                'event_id': str(event.id),
+                'event_title': event.title,
+                'start_time': event.start_datetime.isoformat() if event.start_datetime else None,
+                'cover_url': str(getattr(getattr(event.cover_image, 'url', None), '__str__', lambda: '')())
+                if event.cover_image else None,
+            },
         },
     )
+
+
+def _order_card(order):
+    """Shared card payload so both order notifications render identically.
+
+    Defined here rather than in `apps.marketplace.views` because this signal is
+    fired from inside a `post_save` on Order, and importing that module at app
+    load time would close a cycle through six other apps.
+    """
+    items = []
+    for item in order.items.select_related('meal_plan', 'programme', 'product', 'event')[:4]:
+        entry = {
+            'item_type': item.item_type,
+            'title': item.title,
+            'quantity': item.quantity,
+            'paid_artifacts': item.paid_artifacts or {},
+            'target_id': None,
+            'cover_url': None,
+        }
+        target = {
+            'meal_plan': item.meal_plan,
+            'programme': item.programme,
+            'product': item.product,
+            'event_ticket': item.event,
+        }.get(item.item_type)
+        if target is not None:
+            entry['target_id'] = str(target.pk)
+            for attr in ('cover', 'cover_image_url', 'image_url'):
+                url = getattr(getattr(target, attr, None), 'url', None) or getattr(target, attr, None)
+                if url:
+                    entry['cover_url'] = str(url)
+                    break
+        items.append(entry)
+    return {
+        'order_id': str(order.id),
+        'order_number': order.order_number,
+        'status': order.status,
+        'total_artifacts': order.total_artifacts or {},
+        'items': items,
+        'item_count': order.items.count(),
+    }
 
 
 @receiver(post_save, sender='marketplace.Order')
@@ -134,6 +194,14 @@ def handle_order_status_changed(sender, instance, created, **kwargs):
             'order_number': instance.order_number,
             'status': instance.status,
             'total': str(amount),
+            # Same card + destination shape as the status-change notification, so
+            # one client renderer handles both instead of two divergent paths.
+            'destination': {
+                'kind': 'order',
+                'order_id': str(instance.id),
+                'route': f'/marketplace/orders/{instance.id}',
+            },
+            'card': _order_card(instance),
         },
         # One row per order even if the order row is re-saved immediately after
         # creation (checkout does), so the buyer is not told twice.

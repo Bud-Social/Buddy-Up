@@ -14,6 +14,9 @@ export default function MealPlanDetail() {
   const [reviews, setReviews] = useState<MealPlanReview[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  //: The receipt the server created for this purchase. The response always had
+  //: `order_id`; it was simply discarded here.
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewBody, setReviewBody] = useState('');
   const [reviewing, setReviewing] = useState(false);
@@ -37,6 +40,7 @@ export default function MealPlanDetail() {
     try {
       const res = await marketplaceApi.purchaseMealPlan(planId);
       setPlan(res.data);
+      setOrderId(res.order_id || null);
     } catch {
       /* ignore */
     } finally {
@@ -100,6 +104,14 @@ export default function MealPlanDetail() {
         )}
 
         <div className="p-5 space-y-6">
+          {orderId && (
+            <button
+              onClick={() => navigate(`/marketplace/orders/${orderId}`)}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-buddy-green/10 px-3 py-2 text-xs font-medium text-buddy-green hover:bg-buddy-green/15 transition-colors"
+            >
+              <CheckCircle2 size={13} /> Purchase complete — view receipt
+            </button>
+          )}
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm text-buddy-text-secondary">Created by <span className="font-bold text-buddy-text-primary">{plan.creator_data.display_name}</span></p>

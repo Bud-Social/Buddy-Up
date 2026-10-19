@@ -112,9 +112,17 @@ const CART_ID_KEYS: Record<'meal_plan' | 'programme' | 'event_ticket' | 'product
   event_ticket: 'event_id',
 };
 
-function AddToCartButton({ type, id, unavailable = false }: { type: 'meal_plan' | 'programme' | 'event_ticket' | 'product', id: string, unavailable?: boolean }) {
+function AddToCartButton({ type, id, unavailable = false, owned = false }: { type: 'meal_plan' | 'programme' | 'event_ticket' | 'product', id: string, unavailable?: boolean, owned?: boolean }) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+
+  if (owned) {
+    return (
+      <Button size="sm" variant="outline" className="w-full text-xs py-1 h-7 mt-2" disabled>
+        Owned
+      </Button>
+    );
+  }
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -216,7 +224,7 @@ function MealPlansTab() {
                   {plan.review_count > 0 && <span className="flex items-center gap-1 text-[10px] font-medium text-buddy-gold flex-shrink-0"><Star size={10} className="fill-buddy-gold" /> {plan.average_rating}</span>}
                 </div>
               </div>
-              <AddToCartButton type="meal_plan" id={plan.id} />
+              <AddToCartButton type="meal_plan" id={plan.id} owned={Boolean(plan.is_purchased)} />
             </Card>
           ))}
           </div>
@@ -284,7 +292,7 @@ function ProgrammesTab() {
                   <span className="text-[10px] font-medium text-buddy-text-secondary flex items-center gap-1 flex-shrink-0"><Users size={10} /> {p.purchase_count}</span>
                 </div>
               </div>
-              <AddToCartButton type="programme" id={p.id} />
+              <AddToCartButton type="programme" id={p.id} owned={Boolean(p.is_purchased)} />
             </Card>
           ))}
         </div>
@@ -363,7 +371,7 @@ function ProductsTab() {
                   </div>
                 </div>
               </div>
-              <AddToCartButton type="product" id={p.id} unavailable={Boolean(p.stock_tracking_enabled && p.stock_quantity === 0)} />
+              <AddToCartButton type="product" id={p.id} owned={Boolean(p.is_purchased)} unavailable={Boolean(p.stock_tracking_enabled && p.stock_quantity === 0)} />
             </Card>
           ))}
           </div>

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/marketplace_provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
@@ -76,18 +77,23 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Order Tracking')),
+      appBar: AppBar(title: const Text('Order Details')),
       body: orderAsync.when(
         data: (order) => ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            if (order.status != 'cancelled') ...[
+            // A digital order has nothing to ship: the transit tracker and the
+            // carrier/pickup card are noise on a receipt for a download.
+            if (order.status != 'cancelled' &&
+                order.fulfillmentType != 'digital') ...[
               _progressTracker(),
               const SizedBox(height: 12),
             ],
             _statusBanner(order),
             const SizedBox(height: 12),
-            _fulfillmentCard(order),
+            order.fulfillmentType == 'digital'
+                ? _digitalCard()
+                : _fulfillmentCard(order),
             const SizedBox(height: 12),
             _itemsCard(order),
             if (!order.isSeller &&
@@ -233,6 +239,32 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
     );
   }
 
+  Widget _digitalCard() {
+    return _sectionCard([
+      const Text('Digital delivery',
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+      const SizedBox(height: 8),
+      const Text(
+        'Nothing ships. Your purchases are unlocked and stay in My Activity.',
+        style: TextStyle(fontSize: 12, color: BuddyColors.textSecondary),
+      ),
+      const SizedBox(height: 6),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton(
+          onPressed: () => context.push('/sessions'),
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(0, 32),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text('Open my library',
+              style: TextStyle(color: BuddyColors.green, fontSize: 12)),
+        ),
+      ),
+    ]);
+  }
+
   Widget _fulfillmentCard(Order order) {
     final f = order.fulfillment;
     final fulfillmentLabel =
@@ -309,43 +341,92 @@ class _OrderDetailScreenState extends ConsumerState<OrderDetailScreen> {
   }
 
   Widget _itemsCard(Order order) {
+    // Event tickets are not addressable from an OrderItem, so the order links to
+    // the ticket wallet where they do appear.
+    final hasTickets = order.items.any((it) => it.itemType == 'event_ticket');
+
     return _sectionCard([
-      const Text('Items',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-      const SizedBox(height: 8),
-      ...order.items.map(
-        (it) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${it.title} × ${it.quantity}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text(
-                      '${it.itemType.replaceAll('_', ' ')}${it.creatorName != null && it.creatorName!.isNotEmpty ? ' · by ${it.creatorName}' : ''}',
-                      style: const TextStyle(
-                          fontSize: 12, color: BuddyColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                _artifactDisplay(it.paidArtifacts).isNotEmpty
-                    ? _artifactDisplay(it.paidArtifacts)
-                    : '-',
-                style: const TextStyle(
-                    color: BuddyColors.green,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13),
-              ),
-            ],
-          ),
-        ),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text('Items',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          if (hasTickets)
+            TextButton.icon(
+              onPressed: () => context.push('/marketplace/tickets'),
+              icon: const Icon(Icons.confirmation_number_outlined,
+                  size: 16, color: BuddyColors.green),
+              label: const Text('View tickets',
+                  style: TextStyle(color: BuddyColors.green, fontSize: 12)),
+            ),
+        ],
       ),
+      const SizedBox(height: 8),
+      ...order.items.map((it) {
+        // `detailRoute` is null once the bought listing is deleted; the purchase
+        // record survives, so the row stays but is not tappable.
+        final openable = it.detailRoute != null && it.detailRoute!.isNotEmpty;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: InkWell(
+            onTap: openable ? () => context.push(it.detailRoute!) : null,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  if (it.coverUrl != null && it.coverUrl!.isNotEmpty) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        it.coverUrl!,
+                        width: 40,
+                        height: 40,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                          width: 40,
+                          height: 40,
+                          color: BuddyColors.surfaceRaised,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('${it.title} × ${it.quantity}',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text(
+                          '${it.itemType.replaceAll('_', ' ')}${it.creatorName != null && it.creatorName!.isNotEmpty ? ' · by ${it.creatorName}' : ''}',
+                          style: const TextStyle(
+                              fontSize: 12, color: BuddyColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    _artifactDisplay(it.paidArtifacts).isNotEmpty
+                        ? _artifactDisplay(it.paidArtifacts)
+                        : '-',
+                    style: const TextStyle(
+                        color: BuddyColors.green,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13),
+                  ),
+                  if (openable) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.chevron_right,
+                        size: 18, color: BuddyColors.textSecondary),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      }),
       const Divider(color: BuddyColors.border, height: 16),
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Package, ChevronRight, Truck, Coins } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
@@ -24,19 +24,88 @@ function artifactDisplay(artifacts: Record<string, number> | null | undefined): 
     .join(', ');
 }
 
-export default function OrderHistory() {
+/**
+ * The order list body, without page chrome.
+ *
+ * Split out so the Orders tab in Sessions can render exactly this — a second
+ * copy of the row markup would drift from this one the first time a status is
+ * added.
+ */
+export function OrdersList({ onBrowse }: { onBrowse?: () => void }) {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchOrders = useCallback(() => {
+  useEffect(() => {
     marketplaceApi.getOrders()
       .then((res) => setOrders(res.data))
       .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
 
-  useEffect(() => { fetchOrders(); }, [fetchOrders]);
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="p-4 animate-pulse"><div className="h-16 bg-buddy-surface-raised rounded-xl" /></Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-buddy-text-secondary">
+        <Package size={48} className="mb-4 opacity-30" />
+        <p className="text-lg font-medium mb-1">No orders yet</p>
+        <p className="text-sm mb-6">Your purchases and their tracking will appear here</p>
+        <button onClick={() => (onBrowse ? onBrowse() : navigate('/marketplace'))} className="text-buddy-green text-sm font-medium hover:underline">
+          Browse Marketplace
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {orders.map((order) => (
+        <Card
+          key={order.id}
+          className="p-4 cursor-pointer hover:border-buddy-green/40 transition-colors"
+          onClick={() => navigate(`/marketplace/orders/${order.id}`)}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-semibold">{order.order_number}</span>
+              <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${STATUS_STYLES[order.status] || 'bg-buddy-surface-raised text-buddy-text-secondary'}`}>
+                {order.status_label}
+              </span>
+            </div>
+            <ChevronRight size={16} className="text-buddy-text-secondary" />
+          </div>
+
+          <div className="flex items-center justify-between text-xs">
+            <div className="text-buddy-text-secondary space-y-0.5">
+              <p>{order.items?.length || 0} item{(order.items?.length || 0) > 1 ? 's' : ''} · {new Date(order.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+              <p className="flex items-center gap-1">
+                <Coins size={11} className="text-buddy-green" />
+                {artifactDisplay(order.total_artifacts) || '$0'}
+                {order.spent_usd > 0 && <span className="text-buddy-text-secondary/70">(${order.spent_usd.toFixed(2)})</span>}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 text-buddy-text-secondary">
+              <Truck size={12} />
+              <span className="capitalize">{order.fulfillment_type.replace('_', ' ')}</span>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+export default function OrderHistory() {
+  const navigate = useNavigate();
 
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
@@ -47,57 +116,7 @@ export default function OrderHistory() {
         <h1 className="font-display text-2xl font-extrabold">My Orders</h1>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="p-4 animate-pulse"><div className="h-16 bg-buddy-surface-raised rounded-xl" /></Card>
-          ))}
-        </div>
-      ) : orders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-buddy-text-secondary">
-          <Package size={48} className="mb-4 opacity-30" />
-          <p className="text-lg font-medium mb-1">No orders yet</p>
-          <p className="text-sm mb-6">Your purchases and their tracking will appear here</p>
-          <button onClick={() => navigate('/marketplace')} className="text-buddy-green text-sm font-medium hover:underline">
-            Browse Marketplace
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {orders.map((order) => (
-            <Card
-              key={order.id}
-              className="p-4 cursor-pointer hover:border-buddy-green/40 transition-colors"
-              onClick={() => navigate(`/marketplace/orders/${order.id}`)}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-semibold">{order.order_number}</span>
-                  <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${STATUS_STYLES[order.status] || 'bg-buddy-surface-raised text-buddy-text-secondary'}`}>
-                    {order.status_label}
-                  </span>
-                </div>
-                <ChevronRight size={16} className="text-buddy-text-secondary" />
-              </div>
-
-              <div className="flex items-center justify-between text-xs">
-                <div className="text-buddy-text-secondary space-y-0.5">
-                  <p>{order.items?.length || 0} item{(order.items?.length || 0) > 1 ? 's' : ''} · {new Date(order.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                  <p className="flex items-center gap-1">
-                    <Coins size={11} className="text-buddy-green" />
-                    {artifactDisplay(order.total_artifacts) || '$0'}
-                    {order.spent_usd > 0 && <span className="text-buddy-text-secondary/70">(${order.spent_usd.toFixed(2)})</span>}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 text-buddy-text-secondary">
-                  <Truck size={12} />
-                  <span className="capitalize">{order.fulfillment_type.replace('_', ' ')}</span>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      <OrdersList />
     </div>
   );
 }

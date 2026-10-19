@@ -238,6 +238,18 @@ def _notify_sellers_of_new_order(order):
         _push_notification_to_profile(profile, title, body, metadata)
 
 
+def _order_card_payload(order):
+    """Delegates to the shared builder in `apps.notifications.signals`.
+
+    Both order notifications -- the creation signal and the status-change view --
+    must render the same card, and a second copy of this loop would drift from
+    the first within a month.
+    """
+    from apps.notifications.signals import _order_card
+
+    return _order_card(order)
+
+
 def _notify_order_status_change(order, new_status):
     """Tell the buyer AND every seller that the order moved.
 
@@ -254,11 +266,22 @@ def _notify_order_status_change(order, new_status):
     label = dict(Order.STATUS_CHOICES).get(new_status, new_status.replace('_', ' ').title())
     title = 'Order update'
     body = f'Order #{order.order_number} is now {label}.'
+    # `Notification.metadata` is a free-form JSONField, so a card payload costs no
+    # schema change -- it was simply never populated. Without it a notification
+    # could say "order BU-123 is now shipped" and nothing more: no line items, no
+    # images, and no way to tell a buyer what actually moved.
     metadata = {
         'order_id': str(order.id),
         'order_number': order.order_number,
         'status': new_status,
         'fulfillment_type': order.fulfillment_type,
+        'status_label': label,
+        'destination': {
+            'kind': 'order',
+            'order_id': str(order.id),
+            'route': f'/marketplace/orders/{order.id}',
+        },
+        'card': _order_card_payload(order),
     }
     recipients = list(_order_seller_profiles(order))
     if not any(profile.pk == order.buyer_id for profile in recipients):
@@ -1311,6 +1334,38 @@ def _hide_taken_down(qs, content_type, viewer):
     return hide_taken_down(qs, content_type, viewer=viewer)
 
 
+class MyMealPlansView(views.APIView):
+    """The meal plans this caller has bought.
+
+    There was no "mine" endpoint at all: the tabs had to be built by pulling
+    ``/meal-plans/`` -- paginated and ordered by popularity -- and filtering on
+    ``is_purchased``, which silently drops anything a buyer owns that is not on
+    the first page. A purchase record is the source of truth for ownership, so
+    this reads it directly.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        # Ordering by the purchase date must go through an annotation: a plain
+        # `.distinct().order_by('purchases__created_at')` is rejected by Postgres
+        # (`ORDER BY expressions must appear in select list`), and `.distinct()`
+        # would also multiply rows for a plan bought twice.
+        plans = (
+            MealPlan.objects
+            .filter(purchases__buyer=request.user.profile)
+            .annotate(last_purchased=db_models.Max('purchases__created_at'))
+            .select_related('creator')
+            .order_by('-last_purchased')
+        )
+        plans, _taken = _hide_taken_down(plans, 'marketplace.meal_plan', viewer=request.user)
+        serializer = MealPlanSerializer(plans, many=True, context={'request': request})
+        return Response({
+            'success': True, 'data': serializer.data, 'message': 'OK',
+            'errors': None, 'pagination': None,
+        })
+
+
 class MealPlanListView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1595,6 +1650,29 @@ class PersonaliseMealPlanView(views.APIView):
         })
 
 
+class MyProgrammesView(views.APIView):
+    """The training programmes this caller has bought. See `MyMealPlansView`."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        # See `MyMealPlansView`: annotate instead of ordering on a joined column
+        # under DISTINCT, which Postgres rejects.
+        programmes = (
+            TrainingProgramme.objects
+            .filter(purchases__buyer=request.user.profile)
+            .annotate(last_purchased=db_models.Max('purchases__created_at'))
+            .select_related('creator')
+            .order_by('-last_purchased')
+        )
+        programmes, _taken = _hide_taken_down(programmes, 'marketplace.programme', viewer=request.user)
+        serializer = TrainingProgrammeSerializer(programmes, many=True, context={'request': request})
+        return Response({
+            'success': True, 'data': serializer.data, 'message': 'OK',
+            'errors': None, 'pagination': None,
+        })
+
+
 class TrainingProgrammeListView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1821,7 +1899,23 @@ class ProductListView(views.APIView):
 
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(qs.order_by('-click_count'), request)
-        serializer = ProductSerializer(page, many=True)
+        # One query for the whole page instead of one per card.
+        purchase_orders: dict = {}
+        page_ids = [product.pk for product in page]
+        if page_ids:
+            rows = (
+                OrderItem.objects
+                .filter(product_id__in=page_ids, item_type='product',
+                        order__buyer=request.user.profile)
+                .exclude(order__status='cancelled')
+                .values_list('product_id', 'order_id')
+            )
+            for product_id, order_id in rows:
+                purchase_orders.setdefault(product_id, []).append(str(order_id))
+        serializer = ProductSerializer(
+            page, many=True,
+            context={'request': request, 'purchase_order_ids': purchase_orders},
+        )
         return Response({
             'success': True, 'data': serializer.data, 'message': 'OK',
             'errors': None,
@@ -1844,7 +1938,7 @@ class ProductListView(views.APIView):
             shop=shop,
             **data,
         )
-        output = ProductSerializer(product)
+        output = ProductSerializer(product, context={'request': request})
         return Response({
             'success': True, 'data': output.data,
             'message': 'Product created.',
@@ -1873,7 +1967,7 @@ class ProductDetailView(views.APIView):
                 'success': False, 'data': None, 'message': 'Not found.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_404_NOT_FOUND)
-        serializer = ProductSerializer(product)
+        serializer = ProductSerializer(product, context={'request': request})
         return Response({
             'success': True, 'data': serializer.data, 'message': 'OK',
             'errors': None, 'pagination': None,
@@ -1896,7 +1990,7 @@ class ProductDetailView(views.APIView):
         for k, v in data.items():
             setattr(product, k, v)
         product.save()
-        output = ProductSerializer(product)
+        output = ProductSerializer(product, context={'request': request})
         return Response({
             'success': True, 'data': output.data,
             'message': 'Product updated.',
@@ -2268,9 +2362,21 @@ class MyEventTicketsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        """Every ticket the caller holds, not just the live ones.
+
+        This filtered hard to `status='active'`, so a ticket on an order that was
+        used, refunded or cancelled simply disappeared from the only list that
+        shows tickets -- the holder had no way to see it or to follow it through
+        a refund. Now all statuses are returned and the filter is opt-in.
+        """
         tickets = EventTicket.objects.filter(
-            holder=request.user.profile, status='active'
+            holder=request.user.profile,
         ).select_related('event').order_by('event__start_datetime')
+
+        status_filter = request.query_params.get('status')
+        if status_filter == 'active':
+            tickets = tickets.filter(status='active')
+
         return Response({'success': True, 'data': EventTicketSerializer(tickets, many=True, context={'request': request}).data})
 
 

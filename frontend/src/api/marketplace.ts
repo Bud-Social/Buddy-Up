@@ -111,6 +111,10 @@ export interface ProductMP {
   shop_data?: { id: string; name: string; handle: string; verification_status: string };
   delivery_modes?: string[];
   fulfillment_details?: Record<string, string>;
+  /** True when this account has an order for the product. */
+  is_purchased?: boolean;
+  /** Orders that bought this product, so the badge can link to one. */
+  purchase_order_ids?: string[];
   created_at: string;
 }
 
@@ -300,6 +304,11 @@ export interface OrderItem {
   paid_artifacts: Record<string, number>;
   creator_name: string | null;
   created_at: string;
+  /** The bought object's id, or null once it has been deleted. */
+  target: string | null;
+  cover_url: string | null;
+  /** In-app route to the bought object, or null if it is gone. */
+  detail_route: string | null;
 }
 
 export interface OrderFulfillment {
@@ -654,8 +663,14 @@ export const marketplaceApi = {
   getMealPlan: (planId: string) =>
     apiClient.get<ApiResponse<MealPlan>>(`/marketplace/meal-plans/${planId}/`).then((r) => r.data),
 
+  /** Meal plans this account owns. Server-side, so pagination cannot hide one. */
+  getMyMealPlans: () =>
+    apiClient.get<ApiResponse<MealPlan[]>>('/marketplace/meal-plans/mine/').then((r) => r.data),
+
+  /** `order_id` names the receipt the server just created; it was always in the
+   *  response and the client simply dropped it. */
   purchaseMealPlan: (planId: string) =>
-    apiClient.post<ApiResponse<MealPlan>>(`/marketplace/meal-plans/${planId}/purchase/`).then((r) => r.data),
+    apiClient.post<ApiResponse<MealPlan> & { order_id?: string; order_number?: string }>(`/marketplace/meal-plans/${planId}/purchase/`).then((r) => r.data),
 
   personaliseMealPlan: (planId: string) =>
     apiClient.post<ApiResponse<{ status: string }>>(`/marketplace/meal-plans/${planId}/personalise/`).then((r) => r.data),
@@ -672,8 +687,12 @@ export const marketplaceApi = {
   getProgramme: (programmeId: string) =>
     apiClient.get<ApiResponse<TrainingProgrammeMP>>(`/marketplace/programmes/${programmeId}/`).then((r) => r.data),
 
+  /** Programmes this account owns. Server-side, so pagination cannot hide one. */
+  getMyProgrammes: () =>
+    apiClient.get<ApiResponse<TrainingProgrammeMP[]>>('/marketplace/programmes/mine/').then((r) => r.data),
+
   purchaseProgramme: (programmeId: string) =>
-    apiClient.post<ApiResponse<TrainingProgrammeMP>>(`/marketplace/programmes/${programmeId}/purchase/`).then((r) => r.data),
+    apiClient.post<ApiResponse<TrainingProgrammeMP> & { order_id?: string; order_number?: string }>(`/marketplace/programmes/${programmeId}/purchase/`).then((r) => r.data),
 
   getProgrammeReviews: (programmeId: string) =>
     apiClient.get<ApiResponse<TrainingProgrammeReview[]>>(`/marketplace/programmes/${programmeId}/reviews/`).then((r) => r.data),

@@ -91,6 +91,76 @@ function LiveCountdown({ scheduledFor }: { scheduledFor?: string | null }) {
   return <span className="text-buddy-green font-medium">Starts in {label}</span>;
 }
 
+interface NotificationCardPayload {
+  order_id?: string;
+  order_number?: string;
+  item_count?: number;
+  items?: { title: string; quantity: number; cover_url?: string | null }[];
+  ticket_code?: string;
+  event_title?: string;
+  cover_url?: string | null;
+}
+
+/**
+ * The compact payload a commerce notification ships with.
+ *
+ * `metadata` is free-form JSON, so the server now attaches a small `card`
+ * object. Without it an order notification was a title and one sentence: no
+ * line items, no images, nothing to recognise the order by.
+ */
+function NotificationPayloadCard({ card }: { card?: NotificationCardPayload }) {
+  if (!card) return null;
+
+  if (card.ticket_code) {
+    return (
+      <div className="mt-2 flex items-center gap-2 rounded-lg bg-buddy-surface px-2.5 py-2">
+        {card.cover_url && (
+          <img src={card.cover_url} alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+        )}
+        <div className="min-w-0">
+          {card.event_title && <p className="text-xs font-medium truncate">{card.event_title}</p>}
+          <p className="font-mono text-[11px] text-buddy-text-secondary">{card.ticket_code}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!card.items?.length) return null;
+
+  return (
+    <div className="mt-2 flex items-center gap-2 rounded-lg bg-buddy-surface px-2.5 py-2">
+      <div className="flex -space-x-2 shrink-0">
+        {card.items.slice(0, 3).map((item, index) =>
+          item.cover_url ? (
+            <img
+              key={`${item.title}-${index}`}
+              src={item.cover_url}
+              alt=""
+              className="h-9 w-9 rounded-lg object-cover ring-2 ring-buddy-surface"
+            />
+          ) : (
+            <div
+              key={`${item.title}-${index}`}
+              className="h-9 w-9 rounded-lg bg-buddy-surface-raised ring-2 ring-buddy-surface"
+            />
+          ),
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-medium truncate">
+          {card.items[0].title}
+          {card.items[0].quantity > 1 && ` ×${card.items[0].quantity}`}
+        </p>
+        <p className="text-[11px] text-buddy-text-secondary">
+          {card.item_count && card.item_count > 1
+            ? `${card.item_count} items`
+            : `Order ${card.order_number || ''}`.trim()}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function Notifications() {
   const { notifications, setNotifications, markAllRead } = useNotificationStore();
   const [isLoading, setIsLoading] = useState(true);
@@ -159,6 +229,16 @@ export default function Notifications() {
     handleMarkRead(n.id);
     const meta = (n.metadata || {}) as Record<string, any>;
     const type = n.notification_type;
+
+    /* The server now names the destination it means. Preferring it means a new
+     * notification type routes correctly without a client release, and stops the
+     * class of bug where the client inferred a route from an id that was not
+     * there. The per-type branches below remain the fallback for older rows. */
+    const destination = meta.destination as { route?: string } | undefined;
+    if (destination?.route) {
+      navigate(destination.route);
+      return;
+    }
 
     if (type === 'live_starting' || type === 'live_reminder' || type === 'live_start') {
       const liveId = meta.live_id;
@@ -313,6 +393,7 @@ export default function Notifications() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-buddy-text-primary">{n.title}</p>
                         {n.body && <p className="text-xs text-buddy-text-secondary mt-0.5">{n.body}</p>}
+                        <NotificationPayloadCard card={(n.metadata as { card?: NotificationCardPayload })?.card} />
                         <p className="text-[11px] text-buddy-text-secondary/50 mt-1">
                           {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           {username ? ` · @${username}` : ''}
@@ -363,6 +444,7 @@ export default function Notifications() {
                           {n.title}
                         </p>
                         {n.body && <p className="text-xs text-buddy-text-secondary mt-0.5">{n.body}</p>}
+                        <NotificationPayloadCard card={(n.metadata as { card?: NotificationCardPayload })?.card} />
                         <p className="text-[11px] text-buddy-text-secondary/50 mt-1">
                           {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/components/ui/Toast';
@@ -12,6 +12,20 @@ import { Input } from '@/components/ui/Input';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { sessionsApi } from '@/api/sessions';
 import type { BookingSession } from '@/api/sessions';
+import { OrdersList } from './OrderHistory';
+import { MyMealPlansList, MyProgrammesList } from '@/components/marketplace/MyLibrary';
+
+//: The library lives with sessions because that is where a buyer looks for
+//: "what have I got to do" — the tabs were reachable only by digging into the
+//: marketplace before.
+type Section = 'sessions' | 'programmes' | 'meal-plans' | 'orders';
+
+const SECTIONS: { key: Section; label: string }[] = [
+  { key: 'sessions', label: 'Sessions' },
+  { key: 'programmes', label: 'Programmes' },
+  { key: 'meal-plans', label: 'Meal Plans' },
+  { key: 'orders', label: 'Orders' },
+];
 
 const SESSION_TYPES = [
   { value: 'in_person', label: 'In Person' },
@@ -37,6 +51,11 @@ export default function Sessions() {
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
   const [viewRole, setViewRole] = useState<'client' | 'trainer'>('client');
   const [searchParams, setSearchParams] = useSearchParams();
+  //: Deep-linkable: `/sessions?tab=programmes` lands on the library tab, which
+  //: is what a notification or an order card needs to be able to do.
+  const [section, setSection] = useState<Section>(
+    (searchParams.get('tab') as Section) || 'sessions',
+  );
   const bookTrainerUsername = searchParams.get('book');
   const { toast } = useToast();
 
@@ -49,7 +68,7 @@ export default function Sessions() {
   const [recurringWeeks, setRecurringWeeks] = useState(4);
   const [bookingLoading, setBookingLoading] = useState(false);
 
-  const fetchBookings = () => {
+  const fetchBookings = useCallback(() => {
     if (!profile) return;
     setIsLoading(true);
     setError('');
@@ -58,9 +77,21 @@ export default function Sessions() {
       .then((res) => setBookings(res.data || []))
       .catch(() => setError('Could not load sessions. Check your connection.'))
       .finally(() => setIsLoading(false));
-  };
+  }, [profile, viewRole, tab]);
 
-  useEffect(() => { fetchBookings(); }, [profile, tab, viewRole]);
+  //: Only fetch bookings when the sessions tab is showing; the other tabs load
+  //: their own data, and firing this on mount for them wasted a request.
+  useEffect(() => {
+    if (section === 'sessions') fetchBookings();
+  }, [section, fetchBookings]);
+
+  const selectSection = (next: Section) => {
+    setSection(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === 'sessions') params.delete('tab');
+    else params.set('tab', next);
+    setSearchParams(params, { replace: true });
+  };
 
   const handleBook = async () => {
     if (!bookTrainerUsername || !scheduledAt) return;
@@ -125,6 +156,20 @@ export default function Sessions() {
         )}
       </div>
 
+      <div className="flex rounded-xl bg-buddy-surface p-1 mb-5 overflow-x-auto">
+        {SECTIONS.map(({ key, label }) => (
+          <button key={key} onClick={() => selectSection(key)}
+            className={`flex-1 whitespace-nowrap px-3 py-2 text-sm font-medium rounded-lg transition-colors ${section === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{label}</button>
+        ))}
+      </div>
+
+      {section !== 'sessions' && (
+        section === 'programmes' ? <MyProgrammesList />
+          : section === 'meal-plans' ? <MyMealPlansList />
+          : <OrdersList onBrowse={() => navigate('/marketplace')} />
+      )}
+
+      {section === 'sessions' && (<>
       {profile?.role !== 'user' && (
         <div className="flex rounded-xl bg-buddy-surface p-1 mb-4">
           {[
@@ -220,6 +265,7 @@ export default function Sessions() {
           </div>
         </>
       )}
+      </>)}
 
       {/* Book Session Modal */}
       <Modal isOpen={!!bookTrainerUsername} onClose={() => setSearchParams({})} title="Book a Session">

@@ -9394,7 +9394,7 @@ as String?,
 /// @nodoc
 mixin _$OrderItem {
 
-@JsonKey(name: 'item_type') String get itemType; String get title; int get quantity;@JsonKey(name: 'price_artifacts') Map<String, int> get priceArtifacts;@JsonKey(name: 'paid_artifacts') Map<String, int> get paidArtifacts;@JsonKey(name: 'creator_name') String? get creatorName;@JsonKey(name: 'created_at') String? get createdAt;
+@JsonKey(name: 'item_type') String get itemType; String get title; int get quantity;@JsonKey(name: 'price_artifacts') Map<String, int> get priceArtifacts;@JsonKey(name: 'paid_artifacts') Map<String, int> get paidArtifacts;@JsonKey(name: 'creator_name') String? get creatorName;@JsonKey(name: 'created_at') String? get createdAt; String? get target;@JsonKey(name: 'cover_url') String? get coverUrl;@JsonKey(name: 'detail_route') String? get detailRoute;
 /// Create a copy of OrderItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -9407,16 +9407,16 @@ $OrderItemCopyWith<OrderItem> get copyWith => _$OrderItemCopyWithImpl<OrderItem>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is OrderItem&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.title, title) || other.title == title)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&const DeepCollectionEquality().equals(other.priceArtifacts, priceArtifacts)&&const DeepCollectionEquality().equals(other.paidArtifacts, paidArtifacts)&&(identical(other.creatorName, creatorName) || other.creatorName == creatorName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is OrderItem&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.title, title) || other.title == title)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&const DeepCollectionEquality().equals(other.priceArtifacts, priceArtifacts)&&const DeepCollectionEquality().equals(other.paidArtifacts, paidArtifacts)&&(identical(other.creatorName, creatorName) || other.creatorName == creatorName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.target, target) || other.target == target)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.detailRoute, detailRoute) || other.detailRoute == detailRoute));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,itemType,title,quantity,const DeepCollectionEquality().hash(priceArtifacts),const DeepCollectionEquality().hash(paidArtifacts),creatorName,createdAt);
+int get hashCode => Object.hash(runtimeType,itemType,title,quantity,const DeepCollectionEquality().hash(priceArtifacts),const DeepCollectionEquality().hash(paidArtifacts),creatorName,createdAt,target,coverUrl,detailRoute);
 
 @override
 String toString() {
-  return 'OrderItem(itemType: $itemType, title: $title, quantity: $quantity, priceArtifacts: $priceArtifacts, paidArtifacts: $paidArtifacts, creatorName: $creatorName, createdAt: $createdAt)';
+  return 'OrderItem(itemType: $itemType, title: $title, quantity: $quantity, priceArtifacts: $priceArtifacts, paidArtifacts: $paidArtifacts, creatorName: $creatorName, createdAt: $createdAt, target: $target, coverUrl: $coverUrl, detailRoute: $detailRoute)';
 }
 
 
@@ -9427,7 +9427,7 @@ abstract mixin class $OrderItemCopyWith<$Res>  {
   factory $OrderItemCopyWith(OrderItem value, $Res Function(OrderItem) _then) = _$OrderItemCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'item_type') String itemType, String title, int quantity,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'paid_artifacts') Map<String, int> paidArtifacts,@JsonKey(name: 'creator_name') String? creatorName,@JsonKey(name: 'created_at') String? createdAt
+@JsonKey(name: 'item_type') String itemType, String title, int quantity,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'paid_artifacts') Map<String, int> paidArtifacts,@JsonKey(name: 'creator_name') String? creatorName,@JsonKey(name: 'created_at') String? createdAt, String? target,@JsonKey(name: 'cover_url') String? coverUrl,@JsonKey(name: 'detail_route') String? detailRoute
 });
 
 
@@ -9444,7 +9444,7 @@ class _$OrderItemCopyWithImpl<$Res>
 
 /// Create a copy of OrderItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? itemType = null,Object? title = null,Object? quantity = null,Object? priceArtifacts = null,Object? paidArtifacts = null,Object? creatorName = freezed,Object? createdAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? itemType = null,Object? title = null,Object? quantity = null,Object? priceArtifacts = null,Object? paidArtifacts = null,Object? creatorName = freezed,Object? createdAt = freezed,Object? target = freezed,Object? coverUrl = freezed,Object? detailRoute = freezed,}) {
   return _then(_self.copyWith(
 itemType: null == itemType ? _self.itemType : itemType // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -9453,6 +9453,9 @@ as int,priceArtifacts: null == priceArtifacts ? _self.priceArtifacts : priceArti
 as Map<String, int>,paidArtifacts: null == paidArtifacts ? _self.paidArtifacts : paidArtifacts // ignore: cast_nullable_to_non_nullable
 as Map<String, int>,creatorName: freezed == creatorName ? _self.creatorName : creatorName // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,target: freezed == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
+as String?,coverUrl: freezed == coverUrl ? _self.coverUrl : coverUrl // ignore: cast_nullable_to_non_nullable
+as String?,detailRoute: freezed == detailRoute ? _self.detailRoute : detailRoute // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -9538,10 +9541,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'item_type')  String itemType,  String title,  int quantity, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'paid_artifacts')  Map<String, int> paidArtifacts, @JsonKey(name: 'creator_name')  String? creatorName, @JsonKey(name: 'created_at')  String? createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'item_type')  String itemType,  String title,  int quantity, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'paid_artifacts')  Map<String, int> paidArtifacts, @JsonKey(name: 'creator_name')  String? creatorName, @JsonKey(name: 'created_at')  String? createdAt,  String? target, @JsonKey(name: 'cover_url')  String? coverUrl, @JsonKey(name: 'detail_route')  String? detailRoute)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _OrderItem() when $default != null:
-return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_that.paidArtifacts,_that.creatorName,_that.createdAt);case _:
+return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_that.paidArtifacts,_that.creatorName,_that.createdAt,_that.target,_that.coverUrl,_that.detailRoute);case _:
   return orElse();
 
 }
@@ -9559,10 +9562,10 @@ return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'item_type')  String itemType,  String title,  int quantity, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'paid_artifacts')  Map<String, int> paidArtifacts, @JsonKey(name: 'creator_name')  String? creatorName, @JsonKey(name: 'created_at')  String? createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'item_type')  String itemType,  String title,  int quantity, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'paid_artifacts')  Map<String, int> paidArtifacts, @JsonKey(name: 'creator_name')  String? creatorName, @JsonKey(name: 'created_at')  String? createdAt,  String? target, @JsonKey(name: 'cover_url')  String? coverUrl, @JsonKey(name: 'detail_route')  String? detailRoute)  $default,) {final _that = this;
 switch (_that) {
 case _OrderItem():
-return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_that.paidArtifacts,_that.creatorName,_that.createdAt);case _:
+return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_that.paidArtifacts,_that.creatorName,_that.createdAt,_that.target,_that.coverUrl,_that.detailRoute);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -9579,10 +9582,10 @@ return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'item_type')  String itemType,  String title,  int quantity, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'paid_artifacts')  Map<String, int> paidArtifacts, @JsonKey(name: 'creator_name')  String? creatorName, @JsonKey(name: 'created_at')  String? createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'item_type')  String itemType,  String title,  int quantity, @JsonKey(name: 'price_artifacts')  Map<String, int> priceArtifacts, @JsonKey(name: 'paid_artifacts')  Map<String, int> paidArtifacts, @JsonKey(name: 'creator_name')  String? creatorName, @JsonKey(name: 'created_at')  String? createdAt,  String? target, @JsonKey(name: 'cover_url')  String? coverUrl, @JsonKey(name: 'detail_route')  String? detailRoute)?  $default,) {final _that = this;
 switch (_that) {
 case _OrderItem() when $default != null:
-return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_that.paidArtifacts,_that.creatorName,_that.createdAt);case _:
+return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_that.paidArtifacts,_that.creatorName,_that.createdAt,_that.target,_that.coverUrl,_that.detailRoute);case _:
   return null;
 
 }
@@ -9594,7 +9597,7 @@ return $default(_that.itemType,_that.title,_that.quantity,_that.priceArtifacts,_
 @JsonSerializable()
 
 class _OrderItem implements OrderItem {
-  const _OrderItem({@JsonKey(name: 'item_type') this.itemType = '', this.title = '', this.quantity = 1, @JsonKey(name: 'price_artifacts') final  Map<String, int> priceArtifacts = const <String, int>{}, @JsonKey(name: 'paid_artifacts') final  Map<String, int> paidArtifacts = const <String, int>{}, @JsonKey(name: 'creator_name') this.creatorName, @JsonKey(name: 'created_at') this.createdAt}): _priceArtifacts = priceArtifacts,_paidArtifacts = paidArtifacts;
+  const _OrderItem({@JsonKey(name: 'item_type') this.itemType = '', this.title = '', this.quantity = 1, @JsonKey(name: 'price_artifacts') final  Map<String, int> priceArtifacts = const <String, int>{}, @JsonKey(name: 'paid_artifacts') final  Map<String, int> paidArtifacts = const <String, int>{}, @JsonKey(name: 'creator_name') this.creatorName, @JsonKey(name: 'created_at') this.createdAt, this.target, @JsonKey(name: 'cover_url') this.coverUrl, @JsonKey(name: 'detail_route') this.detailRoute}): _priceArtifacts = priceArtifacts,_paidArtifacts = paidArtifacts;
   factory _OrderItem.fromJson(Map<String, dynamic> json) => _$OrderItemFromJson(json);
 
 @override@JsonKey(name: 'item_type') final  String itemType;
@@ -9616,6 +9619,9 @@ class _OrderItem implements OrderItem {
 
 @override@JsonKey(name: 'creator_name') final  String? creatorName;
 @override@JsonKey(name: 'created_at') final  String? createdAt;
+@override final  String? target;
+@override@JsonKey(name: 'cover_url') final  String? coverUrl;
+@override@JsonKey(name: 'detail_route') final  String? detailRoute;
 
 /// Create a copy of OrderItem
 /// with the given fields replaced by the non-null parameter values.
@@ -9630,16 +9636,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OrderItem&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.title, title) || other.title == title)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&const DeepCollectionEquality().equals(other._priceArtifacts, _priceArtifacts)&&const DeepCollectionEquality().equals(other._paidArtifacts, _paidArtifacts)&&(identical(other.creatorName, creatorName) || other.creatorName == creatorName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _OrderItem&&(identical(other.itemType, itemType) || other.itemType == itemType)&&(identical(other.title, title) || other.title == title)&&(identical(other.quantity, quantity) || other.quantity == quantity)&&const DeepCollectionEquality().equals(other._priceArtifacts, _priceArtifacts)&&const DeepCollectionEquality().equals(other._paidArtifacts, _paidArtifacts)&&(identical(other.creatorName, creatorName) || other.creatorName == creatorName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.target, target) || other.target == target)&&(identical(other.coverUrl, coverUrl) || other.coverUrl == coverUrl)&&(identical(other.detailRoute, detailRoute) || other.detailRoute == detailRoute));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,itemType,title,quantity,const DeepCollectionEquality().hash(_priceArtifacts),const DeepCollectionEquality().hash(_paidArtifacts),creatorName,createdAt);
+int get hashCode => Object.hash(runtimeType,itemType,title,quantity,const DeepCollectionEquality().hash(_priceArtifacts),const DeepCollectionEquality().hash(_paidArtifacts),creatorName,createdAt,target,coverUrl,detailRoute);
 
 @override
 String toString() {
-  return 'OrderItem(itemType: $itemType, title: $title, quantity: $quantity, priceArtifacts: $priceArtifacts, paidArtifacts: $paidArtifacts, creatorName: $creatorName, createdAt: $createdAt)';
+  return 'OrderItem(itemType: $itemType, title: $title, quantity: $quantity, priceArtifacts: $priceArtifacts, paidArtifacts: $paidArtifacts, creatorName: $creatorName, createdAt: $createdAt, target: $target, coverUrl: $coverUrl, detailRoute: $detailRoute)';
 }
 
 
@@ -9650,7 +9656,7 @@ abstract mixin class _$OrderItemCopyWith<$Res> implements $OrderItemCopyWith<$Re
   factory _$OrderItemCopyWith(_OrderItem value, $Res Function(_OrderItem) _then) = __$OrderItemCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'item_type') String itemType, String title, int quantity,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'paid_artifacts') Map<String, int> paidArtifacts,@JsonKey(name: 'creator_name') String? creatorName,@JsonKey(name: 'created_at') String? createdAt
+@JsonKey(name: 'item_type') String itemType, String title, int quantity,@JsonKey(name: 'price_artifacts') Map<String, int> priceArtifacts,@JsonKey(name: 'paid_artifacts') Map<String, int> paidArtifacts,@JsonKey(name: 'creator_name') String? creatorName,@JsonKey(name: 'created_at') String? createdAt, String? target,@JsonKey(name: 'cover_url') String? coverUrl,@JsonKey(name: 'detail_route') String? detailRoute
 });
 
 
@@ -9667,7 +9673,7 @@ class __$OrderItemCopyWithImpl<$Res>
 
 /// Create a copy of OrderItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? itemType = null,Object? title = null,Object? quantity = null,Object? priceArtifacts = null,Object? paidArtifacts = null,Object? creatorName = freezed,Object? createdAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? itemType = null,Object? title = null,Object? quantity = null,Object? priceArtifacts = null,Object? paidArtifacts = null,Object? creatorName = freezed,Object? createdAt = freezed,Object? target = freezed,Object? coverUrl = freezed,Object? detailRoute = freezed,}) {
   return _then(_OrderItem(
 itemType: null == itemType ? _self.itemType : itemType // ignore: cast_nullable_to_non_nullable
 as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
@@ -9676,6 +9682,9 @@ as int,priceArtifacts: null == priceArtifacts ? _self._priceArtifacts : priceArt
 as Map<String, int>,paidArtifacts: null == paidArtifacts ? _self._paidArtifacts : paidArtifacts // ignore: cast_nullable_to_non_nullable
 as Map<String, int>,creatorName: freezed == creatorName ? _self.creatorName : creatorName // ignore: cast_nullable_to_non_nullable
 as String?,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String?,target: freezed == target ? _self.target : target // ignore: cast_nullable_to_non_nullable
+as String?,coverUrl: freezed == coverUrl ? _self.coverUrl : coverUrl // ignore: cast_nullable_to_non_nullable
+as String?,detailRoute: freezed == detailRoute ? _self.detailRoute : detailRoute // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
