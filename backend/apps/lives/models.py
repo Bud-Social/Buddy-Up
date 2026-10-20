@@ -50,6 +50,11 @@ class BuddyLive(TimestampedModel):
     agora_channel = models.CharField(max_length=100, blank=True)
     mux_asset_id = models.CharField(max_length=100, blank=True)
     mux_playback_id = models.CharField(max_length=100, blank=True)
+    # Populated asynchronously once the replay exists; empty until the
+    # transcription service has processed it. Moderators read this when a
+    # recording is flagged, so it is deliberately not exposed on the public
+    # live serializer.
+    transcript = models.TextField(blank=True)
     livekit_egress_id = models.CharField(max_length=100, blank=True)
     client_recording_session_id = models.CharField(max_length=100, blank=True)
     co_hosts = models.ManyToManyField('profiles.Profile', blank=True, related_name='co_hosted_lives')

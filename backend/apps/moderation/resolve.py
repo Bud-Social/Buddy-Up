@@ -282,10 +282,10 @@ def _resolve_live(content_id):
             'scheduled_for': getattr(obj, 'scheduled_for', None),
             'replay_url': getattr(obj, 'replay_url', '') or '',
             'mux_playback_id': getattr(obj, 'mux_playback_id', '') or '',
-            # No transcript is captured for lives yet, so this is empty today.
-            # Surfaced as a key rather than omitted so the console can show
-            # "no transcript" instead of rendering an empty panel.
-            'transcript': _text(getattr(obj, 'transcript', ''), 2000),
+            # Generated after the replay exists (lives.tasks). Surfaced as a
+            # key even when empty so the console can distinguish "still
+            # transcribing" from "this live has no transcript field".
+            'transcript': _text(getattr(obj, 'transcript', ''), 20000),
             'transcript_available': bool(getattr(obj, 'transcript', '')),
         },
         'route': f'/lives/{obj.pk}',

@@ -167,6 +167,52 @@ def process_live_replay(live_id: str):
         except Exception as e:  # noqa: BLE001
             logger.error(f'Mux ingest failed for {live_id}: {e}')
 
+    # Transcription is best-effort: the replay is already playable, and a
+    # missing AI service must never fail the replay job that produced it.
+    if live.replay_url and not live.transcript:
+        try:
+            transcribe_live_replay.delay(str(live_id))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning('Could not queue live transcription for %s: %s', live_id, exc)
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=30, queue='ai')
+def transcribe_live_replay(self, live_id: str):
+    """Transcribe a finished live's replay so moderators can read it.
+
+    The console resolves a live through `moderation.resolve`, which reads the
+    stored text. Nothing here is exposed on the public live serializer — a
+    replay is reviewable by staff, not republished as captions.
+    """
+    from apps.ai.client import ai_post
+
+    try:
+        live = BuddyLive.objects.get(id=live_id)
+    except BuddyLive.DoesNotExist:
+        return
+
+    if live.transcript or not live.replay_url:
+        return
+
+    try:
+        resp = ai_post(
+            f'{settings.AI_SERVICE_URL}/api/v1/transcribe',
+            json={'media_url': live.replay_url},
+            timeout=300,
+        )
+        resp.raise_for_status()
+        result = resp.json()
+        segments = result.get('segments') or []
+        text = ' '.join(str(seg.get('text') or '') for seg in segments).strip()
+        text = text or str(result.get('text') or '').strip()
+        if not text:
+            logger.info('Live %s transcription returned no text', live_id)
+            return
+        BuddyLive.objects.filter(pk=live.id).update(transcript=text[:200_000])
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Live %s transcription failed: %s', live_id, exc)
+        raise self.retry(exc=exc)
+
 
 @shared_task
 def retry_failed_replays():

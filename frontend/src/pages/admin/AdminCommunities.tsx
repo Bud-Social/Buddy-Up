@@ -29,7 +29,29 @@ export default function AdminCommunities() {
   const [query, setQuery] = useState('');
   const [isPublic, setIsPublic] = useState('all');
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Detail is fetched on first expand so the row can show fresh counts and
+  // fields the list omits, without eighteen calls on page load.
+  const [details, setDetails] = useState<Record<string, PortalCommunity>>({});
+  const [detailLoading, setDetailLoading] = useState<string | null>(null);
   const debouncedQuery = useDebounced(query);
+
+  const toggleDetails = useCallback(async (community: PortalCommunity, key: string) => {
+    if (expanded === key) {
+      setExpanded(null);
+      return;
+    }
+    setExpanded(key);
+    if (!community.id || details[key]) return;
+    setDetailLoading(key);
+    try {
+      const res = await adminPortalApi.getCommunity(community.id);
+      if (res?.data) setDetails((prev) => ({ ...prev, [key]: res.data }));
+    } catch {
+      // Keep rendering the list row's fields; the detail call is an enhancement.
+    } finally {
+      setDetailLoading(null);
+    }
+  }, [expanded, details]);
 
   const filters = useMemo(
     () => ({
@@ -80,12 +102,13 @@ export default function AdminCommunities() {
           {items.map((community, index) => {
             const key = community.id || `community-${index}`;
             const isOpen = expanded === key;
+            const detail = details[key] ?? community;
             return (
               <Card key={key} className="p-4">
                 <div className="flex flex-wrap items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold truncate">{text(community.name, 'Unnamed community')}</span>
+                      <span className="text-sm font-semibold truncate">{text(community.group_name, 'Unnamed community')}</span>
                       {community.is_public === true ? (
                         <BooleanBadge value={true} trueLabel="Public" />
                       ) : (
@@ -93,24 +116,40 @@ export default function AdminCommunities() {
                           <EyeOff size={10} /> Private
                         </span>
                       )}
+                      {community.is_community === false && (
+                        <span className="text-[11px] text-buddy-text-secondary">not a community</span>
+                      )}
                     </div>
-                    <p className="text-xs text-buddy-text-secondary mt-1">/{text(community.slug)} · {shortId(community.id)}</p>
+                    <p className="text-xs text-buddy-text-secondary mt-1">
+                      {text(community.origin, 'unknown origin')} · {shortId(community.id)}
+                    </p>
                     {community.description && <p className="text-xs text-buddy-text-secondary mt-1.5 line-clamp-2">{community.description}</p>}
                     <p className="text-[11px] text-buddy-text-secondary mt-1 flex items-center gap-1.5">
                       <Users size={11} /> {typeof community.member_count === 'number' ? community.member_count.toLocaleString() : '—'} members
                       <span>· {typeof community.post_count === 'number' ? community.post_count : '—'} posts · created {formatDate(community.created_at)}</span>
                     </p>
                   </div>
-                  <Button variant="ghost" size="sm" className="flex-shrink-0" onClick={() => setExpanded(isOpen ? null : key)}>
+                  <Button variant="ghost" size="sm" className="flex-shrink-0" onClick={() => { void toggleDetails(community, key); }}>
                     <Eye size={14} className="mr-1" /> Details
                   </Button>
                 </div>
                 {isOpen && (
-                  <div className="mt-3 pt-3 border-t border-buddy-surface grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-                    <DataRow label="Community ID">{text(community.id)}</DataRow>
-                    <DataRow label="Slug">{text(community.slug)}</DataRow>
-                    <DataRow label="Created by">{text(community.created_by)}</DataRow>
-                    <DataRow label="Members (count only)">{typeof community.member_count === 'number' ? community.member_count : '—'}</DataRow>
+                  <div className="mt-3 pt-3 border-t border-buddy-surface">
+                    {detailLoading === key && (
+                      <p className="text-[11px] text-buddy-text-secondary mb-2">Loading full detail…</p>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                      <DataRow label="Community ID">{text(detail.id)}</DataRow>
+                      <DataRow label="Origin">{text(detail.origin)}</DataRow>
+                      <DataRow label="Created by">{text(detail.created_by_username)}</DataRow>
+                      <DataRow label="Members (count only)">
+                        {typeof detail.member_count === 'number' ? detail.member_count : '—'}
+                      </DataRow>
+                      <DataRow label="Posts">{typeof detail.post_count === 'number' ? detail.post_count : '—'}</DataRow>
+                      <DataRow label="Gym">{detail.gym_handle ? `/${detail.gym_handle}` : '—'}</DataRow>
+                      <DataRow label="Invite code">{text(detail.invite_code)}</DataRow>
+                      <DataRow label="Last activity">{formatDate(detail.last_message_at)}</DataRow>
+                    </div>
                   </div>
                 )}
               </Card>

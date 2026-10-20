@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/api/api_error.dart';
 import '../../../core/auth/auth_provider.dart';
@@ -265,6 +266,8 @@ class _AdminModerationScreenState extends ConsumerState<AdminModerationScreen> {
         children: [
           AdminDataRow(label: 'Flag ID', value: flag.id ?? '—'),
           AdminDataRow(label: 'Content ID', value: flag.contentId.isEmpty ? '—' : flag.contentId),
+          const SizedBox(height: 6),
+          _ContentPeek(contentType: flag.contentType, contentId: flag.contentId),
           // The model's own reasoning, plus an explicit note on what it did
           // *not* assess. A reviewer reading only "82% confidence" cannot act;
           // and an empty bias field would otherwise read as "nothing biased
@@ -1401,6 +1404,225 @@ class _FlagExplanation extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Collapsed renderer for the object behind a flag.
+///
+/// The queue shows a truncated id and a short preview, which is enough to
+/// triage but not to act on. Resolving fetches the real object, including a
+/// live's replay link and transcript, so the moderator can judge the thing in
+/// front of them rather than a description of it.
+///
+/// Fetched on first expand rather than for every row on load: a busy queue is
+/// dozens of rows and none of them are read until someone asks.
+class _ContentPeek extends ConsumerStatefulWidget {
+  const _ContentPeek({required this.contentType, required this.contentId});
+
+  final String contentType;
+  final String contentId;
+
+  @override
+  ConsumerState<_ContentPeek> createState() => _ContentPeekState();
+}
+
+class _ContentPeekState extends ConsumerState<_ContentPeek> {
+  bool _open = false;
+  bool _loading = false;
+  String? _error;
+  Map<String, dynamic>? _data;
+
+  bool get _isLive =>
+      widget.contentType.startsWith('lives') || _data?['label'] == 'Live';
+
+  Future<void> _toggle() async {
+    final next = !_open;
+    setState(() => _open = next);
+    if (!next || _data != null || _loading) return;
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final raw = await ref
+          .read(adminPortalRepositoryProvider)
+          .resolveModerationContent(widget.contentType, widget.contentId);
+      final payload = raw is Map && raw['data'] is Map ? raw['data'] as Map : raw;
+      if (!mounted) return;
+      setState(() {
+        _data = payload is Map ? Map<String, dynamic>.from(payload) : null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = apiErrorMessage(e, fallback: 'Could not load this content.'));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _openRecording(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.contentType.isEmpty || widget.contentId.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final cs = Theme.of(context).colorScheme;
+    final fields = (_data?['fields'] as Map?) ?? const {};
+    final replayUrl = '${fields['replay_url'] ?? ''}';
+    final muxId = '${fields['mux_playback_id'] ?? ''}';
+    final transcript = '${fields['transcript'] ?? ''}'.trim();
+    const reserved = {'replay_url', 'mux_playback_id', 'transcript', 'transcript_available'};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextButton.icon(
+          onPressed: _toggle,
+          icon: Icon(_open ? Icons.expand_less : Icons.expand_more, size: 16),
+          label: Text(_open ? 'Hide content' : 'View content'),
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(0, 32),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+        if (_open)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(top: 4, bottom: 6),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: _loading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : _error != null
+                    ? Text(_error!, style: TextStyle(fontSize: 11, color: cs.error))
+                    : _data == null || (_data!['label'] ?? '') == ''
+                        ? Text(
+                            'This content has already been deleted.',
+                            style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${_data!['label']}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurface,
+                                ),
+                              ),
+                              if ('${_data!['author']?['display_name'] ?? ''}'.isNotEmpty)
+                                Text(
+                                  'by ${_data!['author']['display_name']}',
+                                  style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                                ),
+                              if ('${_data!['title'] ?? ''}'.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_data!['title']}',
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                              if ('${_data!['body'] ?? ''}'.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_data!['body']}',
+                                  maxLines: 12,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12, height: 1.4),
+                                ),
+                              ],
+                              if (_isLive) ...[
+                                const SizedBox(height: 8),
+                                if (replayUrl.isNotEmpty)
+                                  OutlinedButton.icon(
+                                    onPressed: () => _openRecording(replayUrl),
+                                    icon: const Icon(Icons.play_circle_outline, size: 16),
+                                    label: const Text('Play recording'),
+                                  )
+                                else if (muxId.isNotEmpty)
+                                  OutlinedButton.icon(
+                                    onPressed: () => _openRecording(
+                                      'https://stream.mux.com/$muxId.m3u8',
+                                    ),
+                                    icon: const Icon(Icons.open_in_new, size: 16),
+                                    label: const Text('Open recording'),
+                                  )
+                                else
+                                  Text(
+                                    'No replay recording is attached to this live.',
+                                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                                  ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Transcript',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: cs.onSurface,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                if (transcript.isNotEmpty)
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(maxHeight: 220),
+                                    child: SingleChildScrollView(
+                                      child: Text(
+                                        transcript,
+                                        style: const TextStyle(fontSize: 11, height: 1.45),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    'No transcript yet. One is generated once the replay '
+                                    'has finished processing.',
+                                    style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                                  ),
+                              ],
+                              for (final entry in fields.entries)
+                                if (!reserved.contains(entry.key) &&
+                                    '${entry.value ?? ''}'.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 3),
+                                    child: Text(
+                                      '${entry.key.toString().replaceAll('_', ' ')}: '
+                                      '${entry.value}',
+                                      style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
+                                    ),
+                                  ),
+                              if ('${_data!['route'] ?? ''}'.isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: TextButton(
+                                    onPressed: () => _openRecording('${_data!['route']}'),
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: const Size(0, 28),
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    child: const Text('Open in app →', style: TextStyle(fontSize: 11)),
+                                  ),
+                                ),
+                            ],
+                          ),
+          ),
+      ],
     );
   }
 }

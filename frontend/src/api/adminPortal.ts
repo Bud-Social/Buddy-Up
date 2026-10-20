@@ -241,16 +241,21 @@ export interface PortalGymFilters extends PortalPaginationParams {
 /* Communities (member_count only — never a member list)              */
 /* ------------------------------------------------------------------ */
 
+/** Mirrors `PortalCommunitySerializer` (a Conversation row). */
 export interface PortalCommunity {
   id?: string;
-  slug?: string;
-  name?: string;
+  group_name?: string;
   description?: string | null;
-  icon_url?: string | null;
+  is_group?: boolean;
+  is_community?: boolean;
   is_public?: boolean;
+  origin?: string | null;
+  invite_code?: string | null;
+  gym_handle?: string | null;
+  created_by_username?: string | null;
   member_count?: number;
   post_count?: number;
-  created_by?: string | null;
+  last_message_at?: string | null;
   created_at?: string | null;
 }
 
@@ -1497,6 +1502,10 @@ export const adminPortalApi = {
   /* Communities ---------------------------------------------------- */
   getCommunities: (params?: PortalCommunityFilters) =>
     apiClient.get<ApiResponse<PortalCommunity[]>>('/portal/communities/', { params: clean(params as Record<string, unknown>) }).then((r) => r.data),
+
+  /** Fresh counts and fields for one community; membership is still a count. */
+  getCommunity: (id: string) =>
+    apiClient.get<ApiResponse<PortalCommunity>>(`/portal/communities/${id}/`).then((r) => r.data),
 
   /* Stations ------------------------------------------------------- */
   getStations: (params?: PortalPaginationParams & { q?: string; status?: string; is_active?: boolean }) =>

@@ -398,6 +398,69 @@ function ReportsTab({ onChanged }: { onChanged: () => void }) {
  *
  * Staff-only, and deliberately shows the content in full.
  */
+/**
+ * Recording + transcript for a flagged live.
+ *
+ * Both live in `fields` on the resolve payload. Without this panel a moderator
+ * saw a raw `replay_url` string in a definition list and an empty
+ * `transcript` row, which reads as "nothing here" rather than "the thing you
+ * need to judge this is here".
+ *
+ * Direct MP4 replays play inline. Mux playback ids are HLS, which Chrome and
+ * Firefox do not play natively, so those get an explicit link instead of a
+ * video element that silently fails.
+ */
+function LiveReview({ fields }: { fields: Record<string, unknown> }) {
+  const replayUrl = typeof fields.replay_url === 'string' ? fields.replay_url : '';
+  const muxId = typeof fields.mux_playback_id === 'string' ? fields.mux_playback_id : '';
+  const transcript = typeof fields.transcript === 'string' ? fields.transcript.trim() : '';
+  const muxStream = muxId ? `https://stream.mux.com/${muxId}.m3u8` : '';
+
+  return (
+    <div className="space-y-3 rounded-lg border border-buddy-surface bg-buddy-surface/60 p-2.5">
+      <div className="space-y-1">
+        <p className="text-[11px] font-semibold text-buddy-text-primary">Recording</p>
+        {replayUrl ? (
+          <video
+            controls
+            preload="metadata"
+            src={replayUrl}
+            className="w-full max-h-72 rounded bg-black"
+          >
+            <track kind="captions" />
+          </video>
+        ) : muxStream ? (
+          <a
+            href={muxStream}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-block text-[11px] text-buddy-green hover:underline"
+          >
+            Open HLS recording (Mux) →
+          </a>
+        ) : (
+          <p className="text-[11px] text-buddy-text-secondary">
+            No replay recording is attached to this live.
+          </p>
+        )}
+      </div>
+      <div>
+        <p className="text-[11px] font-semibold text-buddy-text-primary">Transcript</p>
+        {transcript ? (
+          <div className="mt-1 max-h-60 overflow-y-auto rounded border border-buddy-surface bg-buddy-surface-raised/40 p-2 text-[11px] leading-relaxed whitespace-pre-wrap break-words">
+            {transcript}
+          </div>
+        ) : (
+          <p className="mt-1 text-[11px] text-buddy-text-secondary">
+            No transcript yet. One is generated automatically once the replay has
+            finished processing.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ContentPeek({ contentType, contentId }: { contentType: string; contentId: string }) {
   const [open, setOpen] = useState(false);
   const [data, setData] = useState<ResolvedContent | null>(null);
@@ -469,9 +532,14 @@ function ContentPeek({ contentType, contentId }: { contentType: string; contentI
                   on: {data.context.post_body}
                 </p>
               )}
+              {(data.label === 'Live' || contentType.startsWith('lives')) && (
+                <LiveReview fields={data.fields ?? {}} />
+              )}
               {data.fields && Object.keys(data.fields).length > 0 && (
                 <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-[11px]">
-                  {Object.entries(data.fields).map(([k, v]) => (
+                  {Object.entries(data.fields)
+                    .filter(([k]) => !['replay_url', 'mux_playback_id', 'transcript', 'transcript_available'].includes(k))
+                    .map(([k, v]) => (
                     <div key={k} className="contents">
                       <dt className="text-buddy-text-secondary">{k.replace(/_/g, ' ')}</dt>
                       <dd className="break-words">{v === '' || v === null ? '—' : String(v)}</dd>

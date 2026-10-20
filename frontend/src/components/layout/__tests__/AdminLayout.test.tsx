@@ -40,6 +40,12 @@ describe('AdminLayout', () => {
     expect(screen.getByText('Console')).toBeInTheDocument();
   });
 
+  it('groups the nav into labelled rows instead of one wrapping run', () => {
+    expect(screen.getByRole('navigation', { name: /admin sections/i })).toBeInTheDocument();
+    expect(screen.getByText('Domains')).toBeInTheDocument();
+    expect(screen.getByText('Governance')).toBeInTheDocument();
+  });
+
   it('exposes every admin domain in the nav', () => {
     for (const label of [
       /Models/, /Users/, /Shops/, /Orders/, /Gyms/,

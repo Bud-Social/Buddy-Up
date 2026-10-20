@@ -72,6 +72,35 @@ function navClass(isActive: boolean) {
   }`;
 }
 
+/**
+ * One labelled row of section pills.
+ *
+ * The nav used to be a single wrapping run of eighteen pills. Even after the
+ * wrap fix the two kinds of surface (domain tools vs. governance) blurred into
+ * one long line on narrow screens. A fixed label column gives each row a
+ * shared left edge, so the grouping reads at a glance instead of relying on a
+ * hairline divider that wrapped away.
+ */
+function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
+      <span className="w-14 sm:w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wider text-buddy-text-secondary/70">
+        {label}
+      </span>
+      {items.map(({ to, label: itemLabel, icon: Icon, end }) => (
+        <NavLink
+          key={to}
+          to={to}
+          end={end}
+          className={({ isActive }) => `${navClass(isActive)} flex-shrink-0`}
+        >
+          <Icon size={14} className="flex-shrink-0" /> {itemLabel}
+        </NavLink>
+      ))}
+    </div>
+  );
+}
+
 function ModeToggle() {
   return (
     <div
@@ -121,39 +150,17 @@ export function AdminLayout() {
           </div>
         </div>
         {/*
-          * Wraps rather than scrolls. Eighteen pills on one non-wrapping row
-          * overflowed past the viewport with the scrollbar deliberately hidden,
-          * so on a narrow screen the last several sections were simply
-          * unreachable — and the divider between the domain pages and the
-          * operational tools was usually off-screen too, quietly erasing the
-          * distinction the split exists to make.
-          *
-          * `gap-2` for the spacing, `flex-shrink-0` so a pill never compresses
-          * into an unreadable sliver, and `py-2` to bring the hit area up from
-          * ~28px. The wider `gap-4` around the divider keeps the two groups
-          * reading as separate surfaces rather than one long list.
+          * Two labelled rows instead of one wrapping run. Each row wraps on
+          * its own, pills never compress (`flex-shrink-0`), and the label
+          * column keeps both groups aligned so the domain/governance split
+          * survives a narrow viewport.
           */}
-        <nav className="flex flex-wrap items-center gap-2 px-4 max-w-6xl mx-auto pb-4 pt-1">
-          {PRIMARY_NAV.map(({ to, label, icon: Icon, end }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={end}
-              className={({ isActive }) => `${navClass(isActive)} flex-shrink-0`}
-            >
-              <Icon size={14} className="flex-shrink-0" /> {label}
-            </NavLink>
-          ))}
-          <span className="w-px h-5 bg-buddy-surface-raised mx-2 flex-shrink-0" aria-hidden="true" />
-          {OPS_NAV.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => `${navClass(isActive)} flex-shrink-0`}
-            >
-              <Icon size={14} className="flex-shrink-0" /> {label}
-            </NavLink>
-          ))}
+        <nav
+          className="px-4 max-w-6xl mx-auto pb-4 pt-1 space-y-1.5"
+          aria-label="Admin sections"
+        >
+          <NavGroup label="Domains" items={PRIMARY_NAV} />
+          <NavGroup label="Governance" items={OPS_NAV} />
         </nav>
       </header>
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-6">
