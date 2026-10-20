@@ -379,6 +379,11 @@ abstract class EventTicket with _$EventTicket {
     @JsonKey(name: 'checked_in_at') String? checkedInAt,
     @JsonKey(name: 'qr_data_uri') String? qrDataUri,
     @JsonKey(name: 'created_at') required String createdAt,
+    // Flat ids the ticket wallet needs: digging them out of `event_data['id']`
+    // and the absence of an order link meant a ticket could not point at the
+    // receipt that paid for it.
+    @JsonKey(name: 'event_id') @Default('') String eventId,
+    @JsonKey(name: 'order_id') @Default('') String orderId,
   }) = _EventTicket;
 
   factory EventTicket.fromJson(Map<String, dynamic> json) =>

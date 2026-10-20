@@ -498,6 +498,8 @@ _EventTicket _$EventTicketFromJson(Map<String, dynamic> json) => _EventTicket(
   checkedInAt: json['checked_in_at'] as String?,
   qrDataUri: json['qr_data_uri'] as String?,
   createdAt: json['created_at'] as String,
+  eventId: json['event_id'] as String? ?? '',
+  orderId: json['order_id'] as String? ?? '',
 );
 
 Map<String, dynamic> _$EventTicketToJson(_EventTicket instance) =>
@@ -513,6 +515,8 @@ Map<String, dynamic> _$EventTicketToJson(_EventTicket instance) =>
       'checked_in_at': instance.checkedInAt,
       'qr_data_uri': instance.qrDataUri,
       'created_at': instance.createdAt,
+      'event_id': instance.eventId,
+      'order_id': instance.orderId,
     };
 
 _CartItem _$CartItemFromJson(Map<String, dynamic> json) => _CartItem(
