@@ -85,7 +85,9 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
               const Icon(Icons.calendar_today, size: 64, color: BuddyColors.green),
               const SizedBox(height: 24),
               const Text(
-                'Please enter your date of birth to continue.',
+                'Please enter your date of birth to continue. If your age is '
+                'challenged, you can confirm it with a photo of your ID or '
+                'passport in Settings → Verifications after sign-up.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
               ),
@@ -134,7 +136,15 @@ class _VerifyAgeScreenState extends State<VerifyAgeScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const SizedBox(height: 32),
+              const Text(
+                'ID and passport photos are used only to confirm your age. '
+                'They are deleted automatically after an admin decision '
+                '(usually within 30 days) and only non-identifying metadata '
+                'is kept.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+              ),
+              const SizedBox(height: 20),
               BuddyButton(
                 label: 'Verify Age',
                 onPressed: _selectedDate != null ? _handleVerify : null,

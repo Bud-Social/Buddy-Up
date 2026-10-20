@@ -63,6 +63,10 @@ import 'features/settings/screens/privacy_screen.dart';
 import 'features/settings/screens/data_screen.dart';
 import 'features/settings/screens/family_screen.dart';
 import 'features/settings/screens/appearance_screen.dart';
+import 'features/settings/screens/alarm_center_screen.dart';
+import 'features/settings/screens/activity_log_screen.dart';
+import 'features/settings/screens/billing_screen.dart';
+import 'features/settings/screens/content_prefs_screen.dart';
 import 'features/settings/screens/blocked_screen.dart';
 import 'features/settings/screens/notification_prefs_screen.dart';
 import 'features/settings/screens/adult_content_policy_screen.dart';
@@ -560,6 +564,26 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         path: '/settings/appearance',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const AppearanceScreen(),
+      ),
+      GoRoute(
+        path: '/settings/alarms',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const AlarmCenterScreen(),
+      ),
+      GoRoute(
+        path: '/settings/activity',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const ActivityLogScreen(),
+      ),
+      GoRoute(
+        path: '/settings/billing',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const BillingScreen(),
+      ),
+      GoRoute(
+        path: '/settings/content',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const ContentPrefsScreen(),
       ),
       GoRoute(
         path: '/settings/data',

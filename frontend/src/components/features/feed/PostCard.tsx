@@ -27,6 +27,7 @@ import { FeedTrackAudio } from '@/components/features/feed/FeedTrackAudio';
 import { isProfanityFilterEnabled, maskProfanity } from '@/lib/profanity';
 import { SensitiveGate } from '@/components/features/feed/SensitiveGate';
 import { isSensitive, sensitiveKind } from '@/lib/sensitive';
+import { useHandednessStore } from '@/store/handednessStore';
 
 function combinedFilterCss(page: MediaPage): string {
   const edits = page.edit_meta;
@@ -439,6 +440,7 @@ interface PostCardProps {
 
 export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAuthor }: PostCardProps) {
   const navigate = useNavigate();
+  const handedness = useHandednessStore((s) => s.handedness);
   const [post] = useState(initialPost);
   // Engagement always reflects the ORIGINAL post: repost rows borrow the
   // original's counts and actions target the original id.
@@ -940,7 +942,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
         </div>
       )}
 
-      <div className="flex gap-1">
+      <div className={`flex gap-1 ${handedness === 'left' ? 'flex-row-reverse' : ''}`}>
         {/* Main content — left 88% */}
         <div onDoubleClick={handleDoubleClick} className="relative flex-1 min-w-0 p-4 pt-3">
           {/* Pinned banner */}
@@ -1164,7 +1166,12 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
         </div>
 
         {/* Side action bar — right column */}
-        <div onClick={e => e.stopPropagation()} className="flex flex-col items-center justify-center gap-0.5 py-4 pr-2 border-l border-buddy-surface min-w-[52px]">
+        <div
+          onClick={e => e.stopPropagation()}
+          className={`flex flex-col items-center justify-center gap-0.5 py-4 border-buddy-surface min-w-[52px] ${
+            handedness === 'left' ? 'pl-2 border-r' : 'pr-2 border-l'
+          }`}
+        >
           {/* Like — one-tap toggles 💪, long-press opens other reactions */}
           <div
             className="relative flex flex-col items-center"

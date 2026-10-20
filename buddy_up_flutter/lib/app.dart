@@ -5,6 +5,7 @@ import 'core/auth/auth_provider.dart';
 import 'core/auth/biometric_provider.dart';
 import 'features/notifications/services/push_notification_service.dart';
 import 'features/messaging/widgets/call_host.dart';
+import 'features/settings/widgets/alarm_ring_host.dart';
 import 'router.dart';
 
 // ── Simple theme-mode notifier ─────────────────────────────────────────────────
@@ -61,7 +62,7 @@ class _BuddyUpAppState extends ConsumerState<BuddyUpApp> {
               ],
             );
           }
-          return child ?? const SizedBox.shrink();
+          return AlarmRingHost(child: child ?? const SizedBox.shrink());
         },
       ),
     );

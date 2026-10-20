@@ -17,6 +17,62 @@ const MAX_TIMEOUT_MS = 2_147_483_647;
 
 const activeStops = new Set<() => void>();
 
+/**
+ * Shared AudioContext used by the beep fallback. Browsers only allow audio
+ * to start after a user gesture, so the first gesture in the tab primes it;
+ * after that every alarm (even one that fires hours later) can beep.
+ */
+let sharedCtx: AudioContext | null = null;
+let primed = false;
+
+function getAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  const AudioCtx =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!sharedCtx) {
+    try {
+      sharedCtx = new AudioCtx();
+    } catch {
+      return null;
+    }
+  }
+  return sharedCtx;
+}
+
+function unlockContext(): void {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    if (ctx.state === 'suspended') void ctx.resume();
+    // A silent one-sample buffer is enough to satisfy the autoplay gate.
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  } catch {
+    // Ignore — the next gesture retries.
+  }
+}
+
+/**
+ * Prime alarm audio on the first user gesture. Safe to call repeatedly;
+ * listeners are installed once and removed after the first interaction.
+ */
+export function primeAlarmAudio(): void {
+  if (primed || typeof window === 'undefined') return;
+  primed = true;
+  const onGesture = () => {
+    unlockContext();
+    window.removeEventListener('pointerdown', onGesture);
+    window.removeEventListener('keydown', onGesture);
+  };
+  window.addEventListener('pointerdown', onGesture, { passive: true });
+  window.addEventListener('keydown', onGesture);
+}
+
 function registerStop(stop: () => void): () => void {
   activeStops.add(stop);
   return () => {
@@ -43,17 +99,15 @@ export function stopAllAlarms(): void {
  * Returns a stop function.
  */
 function playBeepLoop(): () => void {
-  const AudioCtx =
-    typeof window !== 'undefined' &&
-    (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext);
-  if (!AudioCtx) return () => undefined;
-  const ctx = new AudioCtx();
+  const ctx = getAudioContext();
+  if (!ctx) return () => undefined;
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const beep = () => {
     if (stopped) return;
     try {
+      if (ctx.state === 'suspended') void ctx.resume();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -76,11 +130,7 @@ function playBeepLoop(): () => void {
   return () => {
     stopped = true;
     if (timer) clearTimeout(timer);
-    try {
-      void ctx.close();
-    } catch {
-      // ignore
-    }
+    // The context is shared across alarms — close it only when the page dies.
   };
 }
 
@@ -99,7 +149,9 @@ export interface PlayAlarmOptions {
 export function playAlarmSound(url: string, options: PlayAlarmOptions = {}): () => void {
   const { loops = Number.POSITIVE_INFINITY, volume = 1 } = options;
 
-  if (typeof Audio === 'undefined') return registerStop(playBeepLoop());
+  // No custom sound (or no Audio in this environment) → beep immediately.
+  // `new Audio('')` never fires a reliable error event, so don't rely on it.
+  if (!url || typeof Audio === 'undefined') return registerStop(playBeepLoop());
 
   let stopped = false;
   let plays = 0;

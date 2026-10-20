@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader, Mic, Play, Send, Share2, Square, Trash2, Upload } from 'lucide-react';
+import { DAY_LABELS, formatDays, toggleDayBit } from '@/lib/alarmSchedule';
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
 import { Button } from '@/components/ui/Button';
@@ -10,51 +11,14 @@ import type { Alarm, AlarmSound, AlarmSuggestion, SoundShare, SuggestionDecision
 import type { Profile } from '@/types';
 import { useAuthStore } from '@/store/authStore';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
-import { MAX_SOUND_MS, playAlarmSound, scheduleAlarm, stopAllAlarms } from '@/lib/alarmPlayer';
+import { MAX_SOUND_MS, playAlarmSound } from '@/lib/alarmPlayer';
 import { SectionShell } from './SectionShell';
 
-// ── Day-mask helpers (Mon=1 … Sun=64) ──────────────────────────────────────
+// Day-mask helpers live in lib/alarmSchedule so the app-wide AlarmWatcher
+// can share them. Re-exported here for existing imports.
+export { DAY_LABELS, formatDays, maskToDays, nextFireDate, toggleDayBit } from '@/lib/alarmSchedule';
 
-export const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
-
-/** Expand a bitmask into 7 booleans, Mon-first. */
-export function maskToDays(mask: number): boolean[] {
-  return DAY_LABELS.map((_, i) => Boolean(mask & (1 << i)));
-}
-
-/** Flip one day-bit (index 0=Mon … 6=Sun). */
-export function toggleDayBit(mask: number, index: number): number {
-  return mask ^ (1 << index);
-}
-
-/** Human summary: "Every day", "Weekdays", "Weekends", "Mon, Wed", "Once". */
-export function formatDays(mask: number): string {
-  if (mask === 0) return 'Once';
-  if (mask === 127) return 'Every day';
-  if (mask === 31) return 'Weekdays';
-  if (mask === 96) return 'Weekends';
-  return DAY_LABELS.filter((_, i) => mask & (1 << i)).join(', ');
-}
-
-/** Next Date matching a "HH:MM" time + days mask (mask 0 = next occurrence). */
-export function nextFireDate(time: string, daysMask: number, from: Date = new Date()): Date | null {
-  const m = /^(\d{1,2}):(\d{2})/.exec(time);
-  if (!m) return null;
-  const hh = Math.min(23, parseInt(m[1], 10));
-  const mm = Math.min(59, parseInt(m[2], 10));
-  for (let offset = 0; offset < 8; offset += 1) {
-    const d = new Date(from);
-    d.setDate(from.getDate() + offset);
-    d.setHours(hh, mm, 0, 0);
-    if (d <= from) continue;
-    if (daysMask === 0) return d;
-    const idx = (d.getDay() + 6) % 7; // Mon=0 … Sun=6
-    if (daysMask & (1 << idx)) return d;
-  }
-  return null;
-}
-
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_UPLOAD_BYTES = 2 * 1024 * 1024; // matches the backend cap
 
 const inputCls =
   'w-full bg-buddy-surface-raised text-sm rounded-lg px-3 py-2 border border-buddy-surface text-buddy-text-primary outline-none';
@@ -103,7 +67,6 @@ function SoundPreview({ url, label }: { url: string; label: string }) {
       stopRef.current = null;
       setPlaying(false);
     } else {
-      stopAllAlarms();
       stopRef.current = playAlarmSound(url);
       setPlaying(true);
     }
@@ -175,7 +138,6 @@ export default function AlarmCenter() {
   const [inbox, setInbox] = useState<SoundShare[]>([]);
   const [suggestions, setSuggestions] = useState<AlarmSuggestion[]>([]);
   const [buddies, setBuddies] = useState<Profile[]>([]);
-  const [ringing, setRinging] = useState<{ alarmId: string; label: string; time: string } | null>(null);
 
   // Add-alarm form
   const [newTime, setNewTime] = useState('07:00');
@@ -246,26 +208,7 @@ export default function AlarmCenter() {
     if (recState === 'recording' && recMs >= MAX_SOUND_MS) recorder.stop();
   }, [recState, recMs, recorder]);
 
-  // ── Ring enabled alarms while this page is open (best-effort) ──
-  useEffect(() => {
-    if (alarms.length === 0) return;
-    const cancels = alarms
-      .filter((a) => a.enabled)
-      .map((alarm) => {
-        const fireAt = nextFireDate(alarm.time, alarm.days_mask);
-        if (!fireAt) return () => undefined;
-        return scheduleAlarm(fireAt, () => {
-          setRinging({ alarmId: alarm.id, label: alarm.label, time: alarm.time });
-          playAlarmSound(alarm.sound?.audio_url ?? '');
-        });
-      });
-    return () => {
-      cancels.forEach((c) => c());
-    };
-  }, [alarms]);
-
-  // Never leave audio playing after leaving the page.
-  useEffect(() => () => stopAllAlarms(), []);
+  // Ringing is handled app-wide by <AlarmWatcher /> so alarms fire on any page.
 
   // ── Alarms CRUD (optimistic toggle/delete with rollback, like Notifications) ──
   const handleToggleAlarm = async (alarm: Alarm) => {
@@ -325,7 +268,7 @@ export default function AlarmCenter() {
       return;
     }
     if (file.size > MAX_UPLOAD_BYTES) {
-      toast('error', 'Sound file is too big (max 10 MB)');
+      toast('error', 'Sound file is too big (max 2 MB)');
       return;
     }
     const durationMs = await probeAudioDurationMs(file);
@@ -442,7 +385,7 @@ export default function AlarmCenter() {
     setSuggestions((prev) => prev.filter((s) => s.id !== id));
     try {
       await alarmsApi.respondToSuggestion(id, decision);
-      toast('success', decision === 'accept' ? 'Suggestion accepted' : decision === 'decline' ? 'Suggestion declined' : 'Suggestion dismissed');
+      toast('success', decision === 'accepted' ? 'Suggestion accepted' : decision === 'declined' ? 'Suggestion declined' : 'Suggestion dismissed');
     } catch {
       setSuggestions(previous);
       toast('error', 'Failed to respond');
@@ -466,25 +409,6 @@ export default function AlarmCenter() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {ringing && (
-            <Card className="p-4 border border-buddy-green/50 space-y-2" role="alert">
-              <p className="font-heading text-sm font-semibold">
-                Ringing: {ringing.time}
-                {ringing.label ? ` — ${ringing.label}` : ''}
-              </p>
-              <p className="text-xs text-buddy-text-secondary">Your alarm is going off. Rise and grind!</p>
-              <Button
-                size="sm"
-                onClick={() => {
-                  stopAllAlarms();
-                  setRinging(null);
-                }}
-              >
-                <Square size={14} /> Stop
-              </Button>
-            </Card>
-          )}
-
           {/* (a) My alarms */}
           <Card className="p-4 space-y-4">
             <h3 className="font-heading text-sm font-semibold">My alarms</h3>
@@ -599,7 +523,6 @@ export default function AlarmCenter() {
                   <select aria-label="Sound visibility" value={uploadVisibility} onChange={(e) => setUploadVisibility(e.target.value)} className={inputCls}>
                     <option value="private">Just me</option>
                     <option value="buddies">My buddies</option>
-                    <option value="public">Everyone</option>
                   </select>
                 </label>
                 <div className="pt-5">
@@ -619,7 +542,7 @@ export default function AlarmCenter() {
                   if (f) void handleFilePicked(f);
                 }}
               />
-              <p className="text-[11px] text-buddy-text-secondary">Max {MAX_SOUND_MS / 1000}s and 10 MB — short and punchy wakes you up best.</p>
+              <p className="text-[11px] text-buddy-text-secondary">Max {MAX_SOUND_MS / 1000}s and 2 MB — short and punchy wakes you up best.</p>
             </div>
             <div className="pt-2 border-t border-buddy-surface space-y-2">
               <p className="text-xs font-semibold text-buddy-text-secondary">Record a sound (max {MAX_SOUND_MS / 1000}s)</p>
@@ -744,13 +667,13 @@ export default function AlarmCenter() {
                       )}
                     </p>
                     <div className="flex items-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => void handleRespondSuggestion(sug.id, 'accept')}>
+                      <Button size="sm" variant="outline" onClick={() => void handleRespondSuggestion(sug.id, 'accepted')}>
                         Accept
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => void handleRespondSuggestion(sug.id, 'decline')}>
+                      <Button size="sm" variant="ghost" onClick={() => void handleRespondSuggestion(sug.id, 'declined')}>
                         Decline
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => void handleRespondSuggestion(sug.id, 'dismiss')}>
+                      <Button size="sm" variant="ghost" onClick={() => void handleRespondSuggestion(sug.id, 'dismissed')}>
                         Dismiss
                       </Button>
                     </div>
@@ -774,10 +697,10 @@ export default function AlarmCenter() {
           <Card className="p-4 space-y-2">
             <h3 className="font-heading text-sm font-semibold">How alarms work</h3>
             <p className="text-xs text-buddy-text-secondary leading-relaxed">
-              Your alarms ring while the app (or at least this tab) is open and your device allows sound — keep a tab
-              open overnight and your volume up, champ. Exact background timing on mobile web is best-effort: browsers
-              love to nap background tabs to save battery, so for mission-critical wake-ups (races, flights, leg day
-              PRs) keep a backup alarm on your phone clock too. We keep it honest so you never miss what matters.
+              Your alarms ring anywhere in Buddy-Up — no need to sit on this page. Keep the tab (or the installed app)
+              open overnight and your device volume up, champ. One-off alarms switch themselves off after ringing;
+              repeating alarms re-arm for their next day. Background tabs on mobile web are best-effort (browsers nap
+              them to save battery), so for mission-critical wake-ups keep a backup alarm on your phone clock too.
             </p>
           </Card>
         </div>

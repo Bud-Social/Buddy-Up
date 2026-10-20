@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api/api_client.dart';
 import '../../../data/repositories/admin_portal_repository.dart';
 import '../../../data/repositories/auth_repository.dart';
@@ -33,3 +34,52 @@ final settingsAdminRepoProvider = Provider<AdminPortalRepository>((ref) {
   final dio = ref.watch(settingsApiClientProvider).dio;
   return AdminPortalRepository(dio);
 });
+
+/// Device-level left-handed mode: post interaction rows mirror so the
+/// primary actions sit under a left thumb. Persisted in SharedPreferences.
+class HandednessNotifier extends Notifier<bool> {
+  static const _key = 'buddyup_left_handed';
+
+  @override
+  bool build() {
+    var disposed = false;
+    ref.onDispose(() => disposed = true);
+    SharedPreferences.getInstance().then((prefs) {
+      if (!disposed) state = prefs.getBool(_key) ?? false;
+    }).catchError((_) {});
+    return false;
+  }
+
+  Future<void> setLeftHanded(bool value) async {
+    state = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_key, value);
+  }
+}
+
+final handednessProvider =
+    NotifierProvider<HandednessNotifier, bool>(HandednessNotifier.new);
+
+class ProfanityFilterNotifier extends Notifier<bool> {
+  static const _key = 'buddyup_profanity_filter';
+
+  @override
+  bool build() {
+    var disposed = false;
+    ref.onDispose(() => disposed = true);
+    SharedPreferences.getInstance().then((prefs) {
+      if (!disposed) state = prefs.getBool(_key) ?? true;
+    }).catchError((_) {});
+    return false;
+  }
+
+  Future<void> setEnabled(bool value) async {
+    state = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_key, value);
+  }
+}
+
+final profanityFilterProvider =
+    NotifierProvider<ProfanityFilterNotifier, bool>(ProfanityFilterNotifier.new);
+

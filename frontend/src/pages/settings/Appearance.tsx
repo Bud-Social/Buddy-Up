@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Contrast, Monitor, Moon, Sun } from 'lucide-react';
+import { Bookmark, Contrast, Heart, MessageCircle, Monitor, Moon, Repeat2, Sun } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Toggle } from '@/components/ui/Toggle';
 import { useThemeStore } from '@/store/themeStore';
+import { useHandednessStore } from '@/store/handednessStore';
 import {
   isReducedMotionEnabled, setReducedMotionEnabled,
 } from '@/lib/reducedMotion';
@@ -21,6 +22,8 @@ export default function Appearance() {
   const appIcon = useThemeStore((s) => s.appIcon);
   const setAppIcon = useThemeStore((s) => s.setAppIcon);
   const [reducedMotion, setReducedMotion] = useState(isReducedMotionEnabled());
+  const handedness = useHandednessStore((s) => s.handedness);
+  const setHandedness = useHandednessStore((s) => s.setHandedness);
 
   const handleReducedMotion = (checked: boolean) => {
     setReducedMotion(checked);
@@ -73,6 +76,57 @@ export default function Appearance() {
               <p className="text-xs text-buddy-text-secondary">Minimise animations and transitions across the app (on this device).</p>
             </div>
             <Toggle checked={reducedMotion} onCheckedChange={handleReducedMotion} label="Reduced motion" />
+          </div>
+        </Card>
+
+        <Card className="p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="pr-3">
+              <p className="text-sm font-medium">Left-handed mode</p>
+              <p className="text-xs text-buddy-text-secondary">
+                Move post interaction buttons to the left side, under a left thumb.
+              </p>
+            </div>
+            <Toggle
+              checked={handedness === 'left'}
+              onCheckedChange={(checked) => setHandedness(checked ? 'left' : 'right')}
+              label="Left-handed mode"
+            />
+          </div>
+
+          {/* Live preview of the interaction rail on the chosen side. */}
+          <div>
+            <p className="text-[11px] text-buddy-text-secondary mb-2">Post interaction preview</p>
+            <div
+              data-testid="handedness-preview"
+              className={`flex gap-1 rounded-xl border border-buddy-surface bg-buddy-surface-raised overflow-hidden ${
+                handedness === 'left' ? 'flex-row-reverse' : ''
+              }`}
+            >
+              <div className="flex-1 min-w-0 p-3 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="h-6 w-6 rounded-full bg-buddy-green/30" aria-hidden="true" />
+                  <span className="text-xs font-semibold">Sample post</span>
+                </div>
+                <div className="h-2 w-3/4 rounded bg-buddy-surface" aria-hidden="true" />
+                <div className="h-2 w-1/2 rounded bg-buddy-surface" aria-hidden="true" />
+              </div>
+              <div
+                className={`flex flex-col items-center justify-center gap-1.5 px-2 border-buddy-surface ${
+                  handedness === 'left' ? 'border-r' : 'border-l'
+                }`}
+              >
+                {[Heart, MessageCircle, Repeat2, Bookmark].map((Icon, i) => (
+                  <span
+                    key={i}
+                    className="p-1.5 rounded-full text-buddy-text-secondary"
+                    aria-hidden="true"
+                  >
+                    <Icon size={15} />
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </Card>
 

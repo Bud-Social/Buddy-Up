@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,12 +7,14 @@ import 'package:intl/intl.dart';
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/profanity.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../shared/widgets/media_gallery.dart';
 import '../../../shared/widgets/reaction_bar.dart';
 import '../../../shared/widgets/toast.dart';
 import '../providers/feed_provider.dart';
+import '../../settings/providers/settings_providers.dart';
 import 'repost_indicator.dart';
 import 'poll_widget.dart';
 import 'ai_analysis_card.dart';
@@ -340,8 +343,9 @@ class _PostCardState extends ConsumerState<PostCard> {
   }
 
   Widget _buildBody(BuildContext context) {
+    final mask = ref.watch(profanityFilterProvider);
     return Text(
-      _post.body,
+      mask ? maskProfanity(_post.body) : _post.body,
       style: const TextStyle(
         color: BuddyColors.textPrimary,
         fontSize: 15,
@@ -351,7 +355,12 @@ class _PostCardState extends ConsumerState<PostCard> {
   }
 
   Widget _buildActionBar(BuildContext context) {
+    final leftHanded = ref.watch(handednessProvider);
     return Row(
+      // Mirrored in left-handed mode so the primary actions sit under a left
+      // thumb (Settings → Appearance → Left-handed mode).
+      textDirection:
+          leftHanded ? ui.TextDirection.rtl : ui.TextDirection.ltr,
       children: [
         _ActionButton(
           icon: _userReaction != null ? Icons.favorite : Icons.favorite_border,

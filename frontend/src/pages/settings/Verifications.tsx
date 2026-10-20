@@ -23,7 +23,7 @@ export default function Verifications() {
   return (
     <SectionShell title="Verifications">
       <div className="space-y-4">
-        <AgeVerificationCard />
+        <AgeVerificationCard onVerifyWithId={() => setWizardOpen(true)} />
         <Card className="p-4 space-y-4">
           <div>
             <p className="text-sm font-medium">Identity Verification</p>

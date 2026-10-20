@@ -5,6 +5,7 @@ import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { StandingBanner } from './StandingBanner';
 import { IncomingCallOverlay } from '@/components/chat/IncomingCallOverlay';
+import { AlarmWatcher } from './AlarmWatcher';
 import { UploadPill } from './UploadPill';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useSidebarStore } from '@/store/sidebarStore';
@@ -75,6 +76,7 @@ export function AppShell() {
       )}
 
       <IncomingCallOverlay />
+      <AlarmWatcher />
       <UploadPill />
     </div>
   );

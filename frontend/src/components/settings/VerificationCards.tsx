@@ -22,7 +22,7 @@ async function submitDob(dateOfBirth: string): Promise<{ age: number; is_adult: 
   return res.data.data as { age: number; is_adult: boolean };
 }
 
-export function AgeVerificationCard() {
+export function AgeVerificationCard({ onVerifyWithId }: { onVerifyWithId?: () => void }) {
   const { toast } = useToast();
   const [dob, setDob] = useState('');
   const [saving, setSaving] = useState(false);
@@ -50,7 +50,8 @@ export function AgeVerificationCard() {
         <p className="text-sm font-medium">Age Verification</p>
         <p className="text-xs text-buddy-text-secondary mb-2">
           Required for accessing mature content and gyms. Your date of birth is
-          stored only as a secure hash.
+          stored only as a secure hash. To confirm your age with a government
+          ID or passport, start identity verification below.
         </p>
         {result ? (
           <p className="text-sm text-buddy-green flex items-center gap-1.5">
@@ -68,9 +69,22 @@ export function AgeVerificationCard() {
             <Button size="sm" variant="outline" onClick={handleVerify} isLoading={saving} disabled={!dob || saving}>
               Verify Age
             </Button>
+            {onVerifyWithId && (
+              <Button size="sm" variant="ghost" onClick={onVerifyWithId}>
+                Verify with ID
+              </Button>
+            )}
           </div>
         )}
       </div>
+      {onVerifyWithId && (
+        <p className="text-[11px] text-buddy-text-secondary leading-relaxed">
+          An ID or passport photo is used only to confirm your age. After an
+          admin decision the file is deleted automatically (usually within 30
+          days) and only non-identifying metadata is kept. You can read the
+          exact retention policy inside the ID wizard before uploading.
+        </p>
+      )}
     </Card>
   );
 }

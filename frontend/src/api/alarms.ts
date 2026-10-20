@@ -58,7 +58,7 @@ export interface AlarmSuggestion {
   created_at?: string;
 }
 
-export type SuggestionDecision = 'accept' | 'decline' | 'dismiss';
+export type SuggestionDecision = 'accepted' | 'declined' | 'dismissed';
 
 export const alarmsApi = {
   // ── Alarms ─────────────────────────────────────────────────────────────
