@@ -119,6 +119,12 @@ class _GridCard extends StatelessWidget {
   final bool isPast;
   final String? distanceLabel;
 
+  /// True for the re-purchase-blocked content types (plans, programmes): render
+  /// a disabled "Owned" instead of dropping the CTA silently. Not for products,
+  /// which are physical goods bought again -- and not for sold-out products,
+  /// whose state lives in `stockBadge`.
+  final bool ownedMark;
+
   /// Stock state for products only. Null hides it entirely, which is what every
   /// non-product listing and every untracked product wants.
   final Widget? stockBadge;
@@ -137,6 +143,7 @@ class _GridCard extends StatelessWidget {
     this.onAddToCart,
     this.isPast = false,
     this.distanceLabel,
+    this.ownedMark = false,
     this.stockBadge,
     this.ratingLabel,
   });
@@ -275,7 +282,33 @@ class _GridCard extends StatelessWidget {
                   // A sold-out product gets no button at all rather than a
                   // disabled one: a control that can never fire is noise, and
                   // the badge above already says why.
-                  if (onAddToCart != null) ...[
+                  if (ownedMark) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 32,
+                      child: OutlinedButton(
+                        onPressed: null,
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: BuddyColors.border),
+                          shape:
+                              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_circle_outline, size: 14, color: BuddyColors.green),
+                            SizedBox(width: 4),
+                            Text('Owned',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: BuddyColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else if (onAddToCart != null) ...[
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
@@ -591,6 +624,7 @@ class _MealPlansTab extends ConsumerWidget {
                     onTap: () => context.push('/marketplace/meal-plans/${plan.id}'),
                     onAddToCart:
                         plan.isPurchased ? null : () => _addToCart(ref, context, plan),
+                    ownedMark: plan.isPurchased,
                   );
                 },
               ),
@@ -640,6 +674,7 @@ class _ProgrammesTab extends ConsumerWidget {
                     onTap: () => context.push('/marketplace/programmes/${p.id}'),
                     onAddToCart:
                         p.isPurchased ? null : () => _addToCart(ref, context, p),
+                    ownedMark: p.isPurchased,
                   );
                 },
               ),

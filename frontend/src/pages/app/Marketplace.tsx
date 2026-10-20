@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Calendar, Clock, Users, Package, LocateFixed, Loader2, MapPin } from 'lucide-react';
+import { ShoppingBag, Utensils, Dumbbell, Pill, Star, Calendar, Clock, Users, Package, LocateFixed, Loader2, MapPin, CheckCircle2 } from 'lucide-react';
 import { NearbyNotice } from '@/components/ui/NearbyNotice';
 import { requestLocation, formatDistance, type GeoMeta } from '@/lib/geo';
 import { Button } from '@/components/ui/Button';
@@ -116,7 +116,11 @@ function AddToCartButton({ type, id, unavailable = false, owned = false }: { typ
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  if (owned) {
+  /* Meal plans and programmes reject a second purchase server-side, so a
+   * disabled "Owned" is the honest end state. A product is a physical good
+   * bought again -- supplements especially -- so its purchase flag is only a
+   * badge; the CTA stays. */
+  if (owned && type !== 'product') {
     return (
       <Button size="sm" variant="outline" className="w-full text-xs py-1 h-7 mt-2" disabled>
         Owned
@@ -369,6 +373,7 @@ function ProductsTab() {
                   <div>
                     {p.price_display && <span className="text-xs font-coin font-bold text-buddy-green">{p.price_display}</span>}
                   </div>
+                  {p.is_purchased && <span className="text-[10px] text-buddy-green flex items-center gap-0.5"><CheckCircle2 size={10} /> Purchased</span>}
                 </div>
               </div>
               <AddToCartButton type="product" id={p.id} owned={Boolean(p.is_purchased)} unavailable={Boolean(p.stock_tracking_enabled && p.stock_quantity === 0)} />

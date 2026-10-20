@@ -113,6 +113,9 @@ export default function ProductDetail() {
 
           <div className="flex items-center gap-2">
             {product.stock_tracking_enabled && <Badge variant={product.stock_quantity === 0 ? 'red' : product.stock_quantity <= 5 ? 'gold' : 'green'} label={product.stock_quantity === 0 ? 'Out of stock' : product.stock_quantity <= 5 ? `Only ${product.stock_quantity} left` : 'In stock'} size="sm" />}
+            {/* A product can be bought again, so this is information, not a
+                locked door: the CTA below stays live for repeat orders. */}
+            {product.is_purchased && <Badge variant="green" label="Purchased" size="sm" />}
             {product.review_count > 0 && <span className="text-sm font-semibold text-buddy-gold flex items-center gap-1"><Star size={15} className="fill-buddy-gold" /> {product.average_rating} · {product.review_count} review{product.review_count === 1 ? '' : 's'}</span>}
           </div>
 
