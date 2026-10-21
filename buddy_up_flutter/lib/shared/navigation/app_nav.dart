@@ -42,6 +42,12 @@ const List<AppNavDestination> appNavDestinations = [
     'Gyms',
   ),
   AppNavDestination(
+    '/schedule',
+    Icons.event_note_outlined,
+    Icons.event_note,
+    'Schedule',
+  ),
+  AppNavDestination(
     '/messages',
     Icons.chat_bubble_outline,
     Icons.chat_bubble,

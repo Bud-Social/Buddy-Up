@@ -6,6 +6,24 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/page_loader.dart';
 import '../../../data/models/marketplace.dart';
 
+/// Where an order card should land.
+///
+/// Programmes and meal plans are content the buyer opens; a physical product
+/// has no far end, so its destination is the order tracker. Mixed or unknown
+/// orders stay on the tracker, which can never be the wrong page.
+String orderDestination(Order order) {
+  final items = order.items;
+  final digital = items
+      .where((item) =>
+          (item.itemType == 'programme' || item.itemType == 'meal_plan') &&
+          (item.detailRoute ?? '').isNotEmpty)
+      .toList();
+  if (digital.isNotEmpty && digital.length == items.length) {
+    return digital.first.detailRoute!;
+  }
+  return '/marketplace/orders/${order.id}';
+}
+
 class OrdersScreen extends ConsumerWidget {
   const OrdersScreen({super.key});
 
@@ -40,7 +58,7 @@ class OrdersScreen extends ConsumerWidget {
                   final order = orders[i];
                   return _OrderCard(
                     order: order,
-                    onTap: () => context.push('/marketplace/orders/${order.id}'),
+                    onTap: () => context.push(orderDestination(order)),
                   );
                 },
               ),
@@ -153,8 +171,26 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const Icon(Icons.chevron_right,
-                      color: BuddyColors.textSecondary),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: () =>
+                            context.push('/marketplace/orders/${order.id}'),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: const Size(0, 28),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'Receipt',
+                          style: TextStyle(fontSize: 11),
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right,
+                          color: BuddyColors.textSecondary),
+                    ],
+                  ),
                 ],
               ),
             ],

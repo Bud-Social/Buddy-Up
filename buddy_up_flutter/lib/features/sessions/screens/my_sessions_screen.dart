@@ -19,10 +19,17 @@ class MySessionsScreen extends StatelessWidget {
       length: 3,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('My Activity'),
+          title: const Text('Bookings & Orders'),
+          actions: [
+            IconButton(
+              tooltip: 'Schedule',
+              icon: const Icon(Icons.event_note_outlined),
+              onPressed: () => context.push('/schedule'),
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
-              Tab(text: 'Sessions'),
+              Tab(text: 'Bookings'),
               Tab(text: 'Programmes'),
               Tab(text: 'Meal Plans'),
             ],

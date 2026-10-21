@@ -25,6 +25,27 @@ function artifactDisplay(artifacts: Record<string, number> | null | undefined): 
 }
 
 /**
+ * Where an order card should land.
+ *
+ * A programme or meal plan is the thing the buyer wants to open; the receipt
+ * is secondary. A physical product is the opposite — there is nothing to read
+ * at the far end, so the order tracker is the destination. Mixed or unknown
+ * orders stay on the tracker, which can never be the wrong page.
+ */
+export function orderDestination(order: Order): string {
+  const items = order.items ?? [];
+  const digital = items.filter(
+    (item) =>
+      (item.item_type === 'programme' || item.item_type === 'meal_plan') &&
+      !!item.detail_route,
+  );
+  if (digital.length > 0 && digital.length === items.length) {
+    return digital[0].detail_route as string;
+  }
+  return `/marketplace/orders/${order.id}`;
+}
+
+/**
  * The order list body, without page chrome.
  *
  * Split out so the Orders tab in Sessions can render exactly this — a second
@@ -72,7 +93,7 @@ export function OrdersList({ onBrowse }: { onBrowse?: () => void }) {
         <Card
           key={order.id}
           className="p-4 cursor-pointer hover:border-buddy-green/40 transition-colors"
-          onClick={() => navigate(`/marketplace/orders/${order.id}`)}
+          onClick={() => navigate(orderDestination(order))}
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -93,9 +114,21 @@ export function OrdersList({ onBrowse }: { onBrowse?: () => void }) {
                 {order.spent_usd > 0 && <span className="text-buddy-text-secondary/70">(${order.spent_usd.toFixed(2)})</span>}
               </p>
             </div>
-            <div className="flex items-center gap-1 text-buddy-text-secondary">
-              <Truck size={12} />
-              <span className="capitalize">{order.fulfillment_type.replace('_', ' ')}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/marketplace/orders/${order.id}`);
+                }}
+                className="text-[11px] text-buddy-text-secondary hover:text-buddy-green transition-colors"
+              >
+                Receipt
+              </button>
+              <span className="flex items-center gap-1 text-buddy-text-secondary">
+                <Truck size={12} />
+                <span className="capitalize">{order.fulfillment_type.replace('_', ' ')}</span>
+              </span>
             </div>
           </div>
         </Card>

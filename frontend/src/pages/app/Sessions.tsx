@@ -15,13 +15,14 @@ import type { BookingSession } from '@/api/sessions';
 import { OrdersList } from './OrderHistory';
 import { MyMealPlansList, MyProgrammesList } from '@/components/marketplace/MyLibrary';
 
-//: The library lives with sessions because that is where a buyer looks for
+//: The library lives with bookings because that is where a buyer looks for
 //: "what have I got to do" — the tabs were reachable only by digging into the
-//: marketplace before.
+//: marketplace before. The internal key stays `sessions` so existing deep
+//: links (`?tab=sessions`) keep working; the surface is named for what it is.
 type Section = 'sessions' | 'programmes' | 'meal-plans' | 'orders';
 
 const SECTIONS: { key: Section; label: string }[] = [
-  { key: 'sessions', label: 'Sessions' },
+  { key: 'sessions', label: 'Bookings' },
   { key: 'programmes', label: 'Programmes' },
   { key: 'meal-plans', label: 'Meal Plans' },
   { key: 'orders', label: 'Orders' },
@@ -148,12 +149,17 @@ export default function Sessions() {
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <h1 className="font-display text-2xl font-extrabold">Sessions</h1>
-        {profile?.role !== 'user' && (
-          <Button variant="outline" size="sm" onClick={() => navigate('/sessions/offering')}>
-            Manage Offerings
+        <h1 className="font-display text-2xl font-extrabold">Bookings &amp; Orders</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/schedule')}>
+            <Calendar size={14} className="mr-1" /> Schedule
           </Button>
-        )}
+          {profile?.role !== 'user' && (
+            <Button variant="outline" size="sm" onClick={() => navigate('/sessions/offering')}>
+              Manage Offerings
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex rounded-xl bg-buddy-surface p-1 mb-5 overflow-x-auto">
@@ -204,7 +210,7 @@ export default function Sessions() {
         ) : (
           <div className="text-center py-20">
             <Calendar size={48} className="mx-auto text-buddy-text-secondary/30 mb-4" />
-            <p className="text-buddy-text-secondary">No sessions booked yet.</p>
+            <p className="text-buddy-text-secondary">No bookings yet.</p>
             <p className="text-buddy-text-secondary/50 text-sm mt-1">Find a trainer and book your first session!</p>
             <Button className="mt-6" onClick={() => navigate('/trainers')}>Browse Trainers</Button>
           </div>

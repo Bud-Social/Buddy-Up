@@ -94,6 +94,7 @@ const ProgrammeActivityFocus = lazy(() => import('@/pages/app/ProgrammeActivityF
 const ProductDetail = lazy(() => import('@/pages/app/ProductDetail'));
 const CreateProduct = lazy(() => import('@/pages/app/CreateProduct'));
 const Sessions = lazy(() => import('@/pages/app/Sessions'));
+const Schedule = lazy(() => import('@/pages/app/Schedule'));
 const CreateSessionOffering = lazy(() => import('@/pages/app/CreateSessionOffering'));
 const SessionDetail = lazy(() => import('@/pages/app/SessionDetail'));
 const Messages = lazy(() => import('@/pages/app/Messages'));
@@ -259,6 +260,7 @@ export const router = createBrowserRouter([
           { path: '/marketplace/programmes/:programmeId/activity/:weekKey/:dayKey/:activityIndex', element: <SWrapper><ProgrammeActivityFocus /></SWrapper> },
           { path: '/marketplace/products/create', element: <SWrapper><CreateProduct /></SWrapper> },
           { path: '/marketplace/products/:productId', element: <SWrapper><ProductDetail /></SWrapper> },
+          { path: '/schedule', element: <SWrapper><Schedule /></SWrapper> },
           { path: '/sessions', element: <SWrapper><Sessions /></SWrapper> },
           { path: '/sessions/offering', element: <SWrapper><CreateSessionOffering /></SWrapper> },
           { path: '/sessions/:bookingId', element: <SWrapper><SessionDetail /></SWrapper> },

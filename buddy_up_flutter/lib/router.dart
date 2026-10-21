@@ -76,6 +76,7 @@ import 'features/sessions/screens/trainer_list_screen.dart';
 import 'features/sessions/screens/trainer_profile_screen.dart';
 import 'features/sessions/screens/booking_screen.dart';
 import 'features/sessions/screens/my_sessions_screen.dart';
+import 'features/sessions/screens/schedule_screen.dart';
 import 'features/sessions/screens/availability_screen.dart';
 import 'features/sessions/screens/programme_weeks_screen.dart';
 import 'features/messaging/screens/conversation_list_screen.dart';
@@ -630,6 +631,11 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
       ),
       // Sessions
       GoRoute(
+        path: '/schedule',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const ScheduleScreen(),
+      ),
+      GoRoute(
         path: '/sessions',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const MySessionsScreen(),
@@ -951,6 +957,12 @@ class _AppShellState extends State<_AppShell> {
       'Gyms',
     ),
     _NavDestination(
+      '/schedule',
+      Icons.event_note_outlined,
+      Icons.event_note,
+      'Schedule',
+    ),
+    _NavDestination(
       '/messages',
       Icons.chat_bubble_outline,
       Icons.chat_bubble,
@@ -1098,7 +1110,7 @@ class _AppShellState extends State<_AppShell> {
     '/adult-content-policy', '/feed', '/health-insights', '/workout-form',
     '/gyms', '/lives', '/marketplace', '/wallet', '/analytics',
     '/notifications', '/verification', '/trainers', '/book', '/sessions',
-    '/my-enrollments', '/programmes', '/discover', '/messages',
+    '/my-enrollments', '/programmes', '/schedule', '/discover', '/messages',
     '/communities', '/profile', '/settings', '/buddies', '/admin',
   };
 
