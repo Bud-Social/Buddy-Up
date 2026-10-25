@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "django",
+      "bindings": [
+        { "type": "service", "service": "ai_service", "format": "url", "env": "AI_SERVICE_URL" }
+      ]
+    },
+    "ai_service": {
+      "root": "ai_service",
+      "framework": "fastapi"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/v1/health/", "destination": { "service": "app" } },
+    { "source": "/api/v1/(.*)", "destination": { "service": "app" } },
+    { "source": "/(.*)", "destination": { "service": "app" } }
+  ]
+}
