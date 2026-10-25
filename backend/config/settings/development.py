@@ -35,11 +35,14 @@ _TOOLBAR_DISABLED = (
     or any('pytest' in arg for arg in _sys.argv)
 )
 if not _TOOLBAR_DISABLED:
-    INSTALLED_APPS += [
-        'django_extensions',
-        'debug_toolbar',
-    ]
-    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    _extra_apps = ['django_extensions']
+    try:
+        import debug_toolbar  # noqa: F401
+        _extra_apps.append('debug_toolbar')
+        MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    except ImportError:
+        pass
+    INSTALLED_APPS += _extra_apps
 
 INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
