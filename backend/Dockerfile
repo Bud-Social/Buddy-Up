@@ -50,7 +50,7 @@ RUN addgroup --system appgroup && \
 USER appuser
 EXPOSE 8002
 
-CMD ["sh", "-c", "python manage.py migrate --noinput && daphne -b 0.0.0.0 -p 8002 config.asgi:application"]
+CMD ["sh", "-c", "DJANGO_SETTINGS_MODULE=config.settings.production python manage.py migrate --noinput && daphne -b 0.0.0.0 -p 8002 config.asgi:application"]
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f "http://localhost:${PORT:-8002}/api/v1/health/" || exit 1

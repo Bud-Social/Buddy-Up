@@ -37,3 +37,4 @@ requests>=2.32
 # CSV needs nothing from the stdlib beyond `csv`; xlsx does. Absent at runtime
 # the export endpoint answers 503 naming this package rather than 500.
 openpyxl>=3.1
+django_extensions>=3.2
