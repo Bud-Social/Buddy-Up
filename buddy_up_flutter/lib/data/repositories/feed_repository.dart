@@ -151,4 +151,16 @@ abstract class FeedRepository {
   @POST('/feed/studio/transcribe/')
   @MultiPart()
   Future<dynamic> transcribeStudioMedia(@Part(name: 'media') File file);
+
+  /// Per-clip captions edited in the Bud Press studio, keyed by a
+  /// client-generated item id. Persisted so they survive between studio
+  /// sessions and ship with the post as media[].captions.
+  @GET('/feed/studio/captions/{item_id}/')
+  Future<dynamic> getStudioCaptions(@Path('item_id') String itemId);
+
+  @POST('/feed/studio/captions/{item_id}/')
+  Future<dynamic> saveStudioCaptions(
+    @Path('item_id') String itemId,
+    @Body() Map<String, dynamic> body,
+  );
 }

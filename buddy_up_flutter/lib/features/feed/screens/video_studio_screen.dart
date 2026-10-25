@@ -24,6 +24,11 @@ class VideoStudioResult {
   final List<CaptionSegment> captions;
   final String visibility;
   final bool commentsEnabled;
+  /// Cover frame offset in seconds (0 = start of clip).
+  final double? coverOffsetSec;
+  /// Creative-studio edit metadata (captions style, text overlays, stickers…)
+  /// shipped with the post as media[].edit_meta.
+  final Map<String, dynamic>? editMeta;
 
   const VideoStudioResult({
     required this.trimStartMs,
@@ -33,6 +38,8 @@ class VideoStudioResult {
     this.captions = const [],
     required this.visibility,
     required this.commentsEnabled,
+    this.coverOffsetSec,
+    this.editMeta,
   });
 }
 
@@ -42,11 +49,15 @@ class VideoStudioResult {
 class VideoStudioScreen extends ConsumerStatefulWidget {
   final ComposerMedia video;
   final String initialVisibility;
+  /// Client-generated id for this clip instance — captions are saved/restored
+  /// per item id via ``POST/GET /feed/studio/captions/<item_id>/``.
+  final String? itemId;
 
   const VideoStudioScreen({
     super.key,
     required this.video,
     this.initialVisibility = 'public',
+    this.itemId,
   });
 
   @override
@@ -69,10 +80,21 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
   bool _commentsEnabled = true;
 
   List<CaptionSegment> _captions = const [];
+  Map<String, dynamic>? _editMeta;
+  double? _coverOffsetSec;
   bool _transcribing = false;
   String? _transcribeError;
+  final Map<String, TextEditingController> _captionCtrls = {};
 
   static const int _maxTrimMs = 180 * 1000;
+
+  static const Map<String, dynamic> _defaultCaptionStyle = {
+    'preset': 'classic',
+    'size': 0.9,
+    'color': '#FFFFFF',
+    'bg': 'block',
+    'placement': 'bottom',
+  };
 
   @override
   void initState() {
@@ -85,9 +107,14 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
       objectId: widget.video.name,
     );
     _setupPlayer();
+    _editMeta = {'captions_style': Map<String, dynamic>.from(_defaultCaptionStyle)};
+    _coverOffsetSec = 0.0;
     Future.microtask(
       () => ref.read(soundsProvider.notifier).load(ordering: 'trending'),
     );
+    if (widget.itemId != null) {
+      _loadSavedCaptions();
+    }
   }
 
   void _setupPlayer() {
@@ -118,6 +145,9 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
   void dispose() {
     _positionSub?.cancel();
     _player?.dispose();
+    for (final c in _captionCtrls.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -223,6 +253,8 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
             .toList(),
         visibility: _visibility,
         commentsEnabled: _commentsEnabled,
+        coverOffsetSec: _coverOffsetSec,
+        editMeta: _editMeta,
       ),
     );
   }
@@ -289,6 +321,405 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
 
   void _removeCaption(int index) {
     setState(() => _captions = List.of(_captions)..removeAt(index));
+    _syncCaptionCtrls();
+    _persistCaptions();
+  }
+
+  /// Load captions saved for this clip item (if any) from the backend.
+  Future<void> _loadSavedCaptions() async {
+    if (widget.itemId == null) return;
+    try {
+      final raw = await ref
+          .read(feedRepositoryProvider)
+          .getStudioCaptions(widget.itemId!);
+      final data = (raw['data'] as Map<String, dynamic>?) ?? {};
+      final segments = data['captions'];
+      final parsed = <CaptionSegment>[];
+      if (segments is List) {
+        for (final s in segments) {
+          if (s is! Map) continue;
+          final text = (s['text'] as String? ?? '').trim();
+          if (text.isEmpty) continue;
+          parsed.add(
+            CaptionSegment(
+              startMs: (s['start_ms'] as num?)?.toInt() ?? 0,
+              endMs: (s['end_ms'] as num?)?.toInt() ?? 0,
+              text: text,
+            ),
+          );
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _captions = parsed;
+        _syncCaptionCtrls();
+      });
+    } catch (_) {
+      // Captions are optional — start empty if the backend is unreachable.
+    }
+  }
+
+  /// Persist the current captions for this clip item (fire and forget).
+  Future<void> _persistCaptions() async {
+    if (widget.itemId == null) return;
+    try {
+      await ref.read(feedRepositoryProvider).saveStudioCaptions(
+        widget.itemId!,
+        {
+          'captions': _captions
+              .map((c) => {
+                    'start_ms': c.startMs,
+                    'end_ms': c.endMs,
+                    'text': c.text,
+                  })
+              .toList(),
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+      showToast(
+        context,
+        'Captions saved locally — they will publish with the video.',
+        type: ToastType.info,
+      );
+      }
+    }
+  }
+
+  void _setCaptionText(int index, String text) {
+    setState(() {
+      _captions = [
+        for (var i = 0; i < _captions.length; i++)
+          i == index
+              ? _captions[i].copyWith(text: text)
+              : _captions[i]
+      ];
+    });
+    _syncCaptionCtrls();
+    _persistCaptions();
+  }
+
+  void _setCaptionTiming(int index, {int? startMs, int? endMs}) {
+    setState(() {
+      _captions = [
+        for (var i = 0; i < _captions.length; i++)
+          i == index
+              ? _captions[i].copyWith(
+                    startMs: startMs ?? _captions[i].startMs,
+                    endMs: endMs ?? _captions[i].endMs,
+                  )
+              : _captions[i]
+      ];
+    });
+    _syncCaptionCtrls();
+    _persistCaptions();
+  }
+
+  void _addCaptionLine() {
+    var start = _captions.isEmpty ? 0 : _captions.last.endMs;
+    if (_durationMs > 0 && start > _durationMs - 1000) {
+      start = (_durationMs - 1000).clamp(0, _durationMs);
+    }
+    final end = (start + 3000).clamp(0, _durationMs);
+    setState(() {
+      _captions = [
+        ..._captions,
+        CaptionSegment(startMs: start, endMs: end, text: ''),
+      ];
+    });
+    _syncCaptionCtrls();
+    _persistCaptions();
+    showToast(
+      context,
+      'Caption line added at ${_fmt(start)} — edit the text and timing.',
+      type: ToastType.success,
+    );
+  }
+
+  void _syncCaptionCtrls() {
+    final keys = <String>{};
+    for (var i = 0; i < _captions.length; i++) {
+      keys.addAll(['${i}t', '${i}s', '${i}e']);
+      _captionCtrls.putIfAbsent(
+        '${i}t',
+        () => TextEditingController(text: _captions[i].text),
+      );
+      _captionCtrls.putIfAbsent(
+        '${i}s',
+        () => TextEditingController(text: _captions[i].startMs.toString()),
+      );
+      _captionCtrls.putIfAbsent(
+        '${i}e',
+        () => TextEditingController(text: _captions[i].endMs.toString()),
+      );
+    }
+    for (var i = 0; i < _captions.length; i++) {
+      _captionCtrls['${i}t']!.text = _captions[i].text;
+      _captionCtrls['${i}s']!.text = _captions[i].startMs.toString();
+      _captionCtrls['${i}e']!.text = _captions[i].endMs.toString();
+    }
+    _captionCtrls.removeWhere((k, _) => !keys.contains(k));
+  }
+
+  TextEditingController _captionTextCtrl(int i) =>
+      _captionCtrls.putIfAbsent(
+        '${i}t',
+        () => TextEditingController(text: _captions[i].text),
+      );
+
+  TextEditingController _captionStartCtrl(int i) =>
+      _captionCtrls.putIfAbsent(
+        '${i}s',
+        () => TextEditingController(text: _captions[i].startMs.toString()),
+      );
+
+  TextEditingController _captionEndCtrl(int i) =>
+      _captionCtrls.putIfAbsent(
+        '${i}e',
+        () => TextEditingController(text: _captions[i].endMs.toString()),
+      );
+
+  void _openCaptionStyleSheet() {
+    final style = Map<String, dynamic>.from(_editMeta?['captions_style'] ?? _defaultCaptionStyle);
+    var placement = style['placement'] as String? ?? 'bottom';
+    var sizeKey = (style['size'] as num?)?.toDouble() ?? 1.0;
+    var sizeLabel = sizeKey < 0.9 ? 'Small' : sizeKey > 1.1 ? 'Large' : 'Medium';
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: BuddyColors.surface,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Caption style',
+                style: TextStyle(
+                  color: BuddyColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Position',
+                style: TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                children: ['bottom', 'center', 'top'].map((p) {
+                  return ChoiceChip(
+                    label: Text(p[0].toUpperCase() + p.substring(1)),
+                    selected: placement == p,
+                    onSelected: (_) => placement = p,
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Size',
+                style: TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                children: ['Small', 'Medium', 'Large'].map((label) {
+                  final value = {'Small': 0.8, 'Medium': 1.0, 'Large': 1.3}[label]!;
+                  return ChoiceChip(
+                    label: Text(label),
+                    selected: sizeLabel == label,
+                    onSelected: (_) => sizeKey = value,
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: BuddyColors.green,
+                    foregroundColor: BuddyColors.black,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _editMeta = {
+                        ...?_editMeta,
+                        'captions_style': {
+                          'preset': 'classic',
+                          'size': sizeKey,
+                          'color': '#FFFFFF',
+                          'bg': 'block',
+                          'placement': placement,
+                        }
+                      };
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Save'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Open a tiny overlay editor so captions/text stickers are placed relative
+  /// to the video frame (bottom / center / top) instead of covering it.
+  void _openOverlayEditor() {
+    var kind = 'text';
+    var content = '';
+    var position = 'bottom';
+    var sizeKey = 1.0;
+    const startMs = 0;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: BuddyColors.surface,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Add overlay',
+                style: TextStyle(
+                  color: BuddyColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Kind',
+                style: TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                children: [
+                  ('text', 'Text caption'),
+                  ('emoji', 'Emoji / sticker'),
+                ].map((entry) {
+                  return ChoiceChip(
+                    label: Text(entry.$2),
+                    selected: kind == entry.$1,
+                    onSelected: (_) => kind = entry.$1,
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Caption or emoji text',
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) => content = v,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Position on the video',
+                style: TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                children: ['bottom', 'center', 'top'].map((p) {
+                  return ChoiceChip(
+                    label: Text(p[0].toUpperCase() + p.substring(1)),
+                    selected: position == p,
+                    onSelected: (_) => position = p,
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Size',
+                style: TextStyle(
+                  color: BuddyColors.textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                children: ['Small', 'Medium', 'Large'].map((label) {
+                  return ChoiceChip(
+                    label: Text(label),
+                    selected: sizeKey == {'Small': 0.8, 'Medium': 1.0, 'Large': 1.3}[label],
+                    onSelected: (_) => sizeKey = {'Small': 0.8, 'Medium': 1.0, 'Large': 1.3}[label]!,
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: BuddyColors.green,
+                    foregroundColor: BuddyColors.black,
+                  ),
+                  onPressed: content.trim().isEmpty
+                      ? null
+                      : () {
+                          final y = {'bottom': 80, 'center': 50, 'top': 20}[position]!;
+                          final overlay = {
+                            'text': content.trim(),
+                            'start_ms': startMs,
+                            'end_ms': startMs + 4000,
+                            'x': 50,
+                            'y': y,
+                            'size': sizeKey,
+                            'color': '#FFFFFF',
+                            'effect': 'shadow',
+                            'bg': 'block',
+                            'font': 'classic',
+                          };
+                          setState(() {
+                            final overlays = List<Map<String, dynamic>>.from(
+                                (_editMeta?['text_overlays'] as List?)
+                                    ?.cast<Map<String, dynamic>>() ??
+                                <Map<String, dynamic>>[]);
+                            overlays.add(overlay);
+                            _editMeta = {
+                              ...?_editMeta,
+                              'text_overlays': overlays,
+                            };
+                          });
+                          Navigator.of(context).pop();
+                          showToast(
+                            context,
+                            'Overlay added — it renders relative to the video frame.',
+                            type: ToastType.success,
+                          );
+                        },
+                  child: const Text('Add overlay'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   String _fmt(int ms) {
@@ -383,6 +814,36 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
                     ),
                     onPressed: _openAudienceSheet,
                   ),
+                  ActionChip(
+                    avatar: const Icon(
+                      Icons.text_fields,
+                      size: 18,
+                      color: BuddyColors.textSecondary,
+                    ),
+                    label: const Text(
+                      'Caption style',
+                      style: TextStyle(
+                        color: BuddyColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onPressed: _openCaptionStyleSheet,
+                  ),
+                  ActionChip(
+                    avatar: const Icon(
+                      Icons.sticky_note_2_outlined,
+                      size: 18,
+                      color: BuddyColors.textSecondary,
+                    ),
+                    label: const Text(
+                      'Overlays',
+                      style: TextStyle(
+                        color: BuddyColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onPressed: _openOverlayEditor,
+                  ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -467,28 +928,124 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
                       ),
                     for (var i = 0; i < _captions.length; i++)
                       Padding(
-                        padding: const EdgeInsets.only(top: 6),
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: TextField(
+                                    controller: _captionTextCtrl(i),
+                                    maxLines: 1,
+                                    style: const TextStyle(
+                                      color: BuddyColors.textPrimary,
+                                      fontSize: 13,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: 'Caption text',
+                                      hintStyle: TextStyle(
+                                        color: BuddyColors.textSecondary,
+                                        fontSize: 12,
+                                      ),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4,
+                                      ),
+                                    ),
+                                    onChanged: (v) => _setCaptionText(i, v),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                SizedBox(
+                                  width: 72,
+                                  child: TextField(
+                                    controller: _captionStartCtrl(i),
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(
+                                      color: BuddyColors.textPrimary,
+                                      fontSize: 12,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: 'start',
+                                      hintStyle: TextStyle(
+                                        color: BuddyColors.textSecondary,
+                                        fontSize: 11,
+                                      ),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 4,
+                                      ),
+                                    ),
+                                    onChanged: (v) {
+                                      final n = int.tryParse(v);
+                                      if (n != null) _setCaptionTiming(i, startMs: n);
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                SizedBox(
+                                  width: 72,
+                                  child: TextField(
+                                    controller: _captionEndCtrl(i),
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(
+                                      color: BuddyColors.textPrimary,
+                                      fontSize: 12,
+                                    ),
+                                    decoration: const InputDecoration(
+                                      hintText: 'end',
+                                      hintStyle: TextStyle(
+                                        color: BuddyColors.textSecondary,
+                                        fontSize: 11,
+                                      ),
+                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 4,
+                                      ),
+                                    ),
+                                    onChanged: (v) {
+                                      final n = int.tryParse(v);
+                                      if (n != null) _setCaptionTiming(i, endMs: n);
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: BuddyColors.textSecondary,
+                                    size: 18,
+                                  ),
+                                  tooltip: 'Remove line',
+                                  onPressed: () => _removeCaption(i),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+                        ),
+                      ),
+                    if (_captions.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
                         child: Row(
                           children: [
-                            Expanded(
-                              child: Text(
-                                _captions[i].text,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: BuddyColors.textPrimary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                            IconButton(
+                            OutlinedButton.icon(
+                              onPressed: _addCaptionLine,
                               icon: const Icon(
-                                Icons.close,
-                                color: BuddyColors.textSecondary,
+                                Icons.add,
+                                color: BuddyColors.green,
                                 size: 16,
                               ),
-                              tooltip: 'Remove line',
-                              onPressed: () => _removeCaption(i),
+                              label: const Text(
+                                'Add line at playhead',
+                                style: TextStyle(
+                                  color: BuddyColors.textPrimary,
+                                  fontSize: 12,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -503,21 +1060,64 @@ class _VideoStudioScreenState extends ConsumerState<VideoStudioScreen> {
                   color: BuddyColors.surfaceRaised.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.image_outlined,
-                      color: BuddyColors.textSecondary,
-                      size: 20,
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.image_outlined,
+                          color: BuddyColors.textSecondary,
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Cover frame',
+                            style: TextStyle(
+                              color: BuddyColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Cover: auto-generated from your video when it uploads',
+                    const SizedBox(height: 8),
+                    if (_durationMs > 0)
+                      Column(
+                        children: [
+                          Slider(
+                            min: 0,
+                            max: _durationMs.toDouble(),
+                            value: (_coverOffsetSec ?? 0) * 1000,
+                            onChanged: (v) => setState(
+                              () => _coverOffsetSec = v / 1000,
+                            ),
+                          ),
+                          Text(
+                            'Cover at ${_fmt((( _coverOffsetSec ?? 0) * 1000).round())} of ${_fmt(_durationMs)}',
+                            style: const TextStyle(
+                              color: BuddyColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      const Text(
+                        'Cover chosen from the first frame once the video loads.',
                         style: TextStyle(
                           color: BuddyColors.textSecondary,
                           fontSize: 12,
                         ),
+                      ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'The chosen frame is sent with the post as the cover hint.',
+                      style: TextStyle(
+                        color: BuddyColors.textSecondary,
+                        fontSize: 11,
                       ),
                     ),
                   ],

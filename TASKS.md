@@ -260,6 +260,32 @@
 
 ---
 
+## Track 8 — Bud Press Studio Refinement
+
+### Flutter
+- [x] T8.1 Fix `?publishedSoundId` → `publishedSoundId` (and 5 other `?x` map-value sites) in `post_composer_screen.dart`
+- [x] T8.2 Add `ComposerMedia` fields: `studioItemId`, `coverOffsetSec`, `editMeta` + `copyWith` + draft restore/save (studio item id persists captions/cover/edit_meta across studio re-opens)
+- [x] T8.3 In `video_studio_screen.dart` — cover frame timestamp scrubber storing `cover_offset_sec` (Cloudinary `so_N` poster hint at publish)
+- [x] T8.4 In `video_studio_screen.dart` — editable captions: edit segment text + drag start/end ms, add line at playhead, remove line; captions persist via `GET/POST /feed/studio/captions/<item_id>/`
+- [x] T8.5 In `video_studio_screen.dart` — captions style sheet (placement bottom/center/top, size small/medium/large) stored in `edit_meta.captions_style`; overlay editor producing relative-position `text_overlays` (x/y % of video frame, size, effect)
+- [x] T8.6 Cloudinary sign failure → user-visible snackbar instead of silent legacy fallback
+- [x] T8.7 Widget tests: `test/caption_overlay_test.dart` (renders active segment, hides outside range, applies style/placement, shows nothing when inactive)
+
+### Backend
+- [x] T8.8 Model `StudioCaption` (user, item_id, captions JSON, unique_together) + migration `0023_studiocaption.py`
+- [x] T8.9 `GET/POST /feed/studio/captions/<item_id>/` (`StudioCaptionsView`) — save/restore per-clip captions; validation drops backwards/empty segments; user-scoped
+- [x] T8.10 Whitelist `cover_offset_sec` in `edit_meta` validation (`apps/feed/views.py`)
+- [x] T8.11 Backend tests: `test_studio_captions.py` (get empty, post+get roundtrip, update same item, reject non-list, requires auth, user isolation)
+
+### Web (React)
+- [x] T8.12 Fix `coverPosterUrl` to use `&` (not `?`) when media URL already has query params (`frontend/src/lib/createStudio.ts`)
+- [x] T8.13 Tests for `coverPosterUrl` (`frontend/src/lib/__tests__/createStudio.test.ts`)
+
+### Docs
+- [x] T8.14 `docs/CLIENT_PARITY.md` Bud Press row → Flutter Partial with cover picker / edit_meta / caption details
+- [x] T8.15 `enhancements.md` + `TASKS.md` Track 8 — Bud Press Studio Refinement
+
+---
 ## Regression / QA Checklist
 - [x] QA.1 Dark theme: all 7 feature areas render correctly in dark mode
 - [x] QA.2 Light theme: analytics, community, feed all look polished

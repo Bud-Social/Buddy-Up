@@ -457,3 +457,32 @@ class PostTag(TimestampedModel):
 
     def __str__(self):
         return f'{self.post_id} #{self.tag_id}'
+
+
+class StudioCaption(TimestampedModel):
+    """Captions edited in the Bud Press studio for one clip item.
+
+    Keyed by a client-generated ``item_id`` so captions survive between studio
+    sessions and are published with the post as ``media[].captions`` without
+    requiring a draft or a published post.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    user = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE,
+        related_name='studio_captions',
+    )
+    item_id = models.CharField(max_length=64, db_index=True)
+    captions = models.JSONField(default=list)  # [{start_ms, end_ms, text}]
+
+    class Meta:
+        db_table = 'feed_studio_caption'
+        unique_together = (('user', 'item_id'),)
+        indexes = [
+            models.Index(
+                fields=['user', 'item_id'], name='feed_studiocap_user_item_idx'
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.item_id} ({len(self.captions)} captions)'

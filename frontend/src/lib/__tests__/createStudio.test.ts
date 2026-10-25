@@ -7,6 +7,7 @@ import {
   normalizeTrimExport, shouldExportTrimmedVideo, trimmedVideoBitrate,
   trimmedVideoFilename, rebaseTimedSegments, rebaseEditMetaForTrimmedVideo,
   rebaseCoverOffsetSeconds,
+  coverPosterUrl,
   type EditMeta,
 } from '../createStudio';
 
@@ -181,5 +182,23 @@ describe('trim export rebasing', () => {
   it('rebases cover offsets into snippet coordinates', () => {
     expect(rebaseCoverOffsetSeconds(7.5, 5_000, 10_000)).toBeCloseTo(2.5);
     expect(rebaseCoverOffsetSeconds(null, 5_000, 10_000)).toBeNull();
+  });
+});
+
+describe('coverPosterUrl', () => {
+  const base = 'https://res.cloudinary.com/demo/video/upload/v1/clip.mp4';
+
+  it('appends the Cloudinary start offset when the URL has no query', () => {
+    expect(coverPosterUrl(base, 7.5)).toBe(`${base}?so_7.5`);
+  });
+
+  it('uses & when the URL already carries query parameters', () => {
+    expect(coverPosterUrl(`${base}?f_auto,q_auto`, 3)).toBe(`${base}?f_auto,q_auto&so_3`);
+  });
+
+  it('returns undefined when there is nothing to append', () => {
+    expect(coverPosterUrl(undefined, 3)).toBeUndefined();
+    expect(coverPosterUrl(base, null)).toBeUndefined();
+    expect(coverPosterUrl(base, -1)).toBeUndefined();
   });
 });

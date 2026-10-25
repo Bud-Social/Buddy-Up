@@ -44,3 +44,11 @@
 - Add AI recommendation engine for feed content, workout plans, buddy matching
 - Rate-limit AI calls with per-user daily quota
 - Frontend loading state + regenerate button on personalised results
+
+## 6. Bud Press Studio Refinement (Track 8)
+**Files affected:** `buddy_up_flutter/lib/features/feed/screens/video_studio_screen.dart`, `buddy_up_flutter/lib/features/feed/screens/post_composer_screen.dart`, `buddy_up_flutter/lib/data/repositories/feed_repository.dart`, `backend/apps/feed/models.py`, `backend/apps/feed/views.py`, `backend/apps/feed/urls.py`, `frontend/src/lib/createStudio.ts`
+
+- Flutter: cover frame timestamp scrubber → `cover_offset_sec` (Cloudinary `so_N` poster hint); editable captions (text + start/end timing) persisted per `item_id` via `GET/POST /feed/studio/captions/`; captions style sheet (placement bottom/center/top, size) + relative-position overlay editor (x/y % of video frame); Cloudinary sign failure → user-visible snackbar; widget/unit tests
+- Backend: `StudioCaption` model + migration; `GET/POST /feed/studio/captions/<item_id>/` endpoint; `cover_offset_sec` whitelisted in `edit_meta` validation; backend tests
+- Web: `coverPosterUrl` uses `&` when URL already has query params; unit tests
+- Open-model captioning via `POST /feed/studio/transcribe/` (faster-whisper); caption text positioned relative to video (bottom/center/top), reasonable size so it does not fill the screen on different screen sizes

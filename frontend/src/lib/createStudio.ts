@@ -101,7 +101,8 @@ export function formatMs(ms: number): string {
  */
 export function coverPosterUrl(url: string | undefined | null, offsetSec?: number | null): string | undefined {
   if (!url || offsetSec == null || !Number.isFinite(offsetSec) || offsetSec < 0) return undefined;
-  return `${url}?${formatCoverOffset(offsetSec)}`;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}${formatCoverOffset(offsetSec)}`;
 }
 
 /** Serializable slice of a studio item used to build the publish payload. */

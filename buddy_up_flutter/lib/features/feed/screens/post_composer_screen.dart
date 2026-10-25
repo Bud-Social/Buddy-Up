@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -36,6 +37,14 @@ class ComposerMedia {
   final int trimEndMs;
   final String? soundId;
   final double? soundVolume;
+  // Client-generated id for this clip instance — captions + cover offset are
+  // saved per item id so they survive studio re-opens and draft restores.
+  final String? studioItemId;
+  // Cover frame offset in seconds (0 = start of clip).
+  final double? coverOffsetSec;
+  // Creative-studio edit metadata (captions style, text overlays, stickers…)
+  // shipped to the backend as media[].edit_meta.
+  final Map<String, dynamic>? editMeta;
   final List<Map<String, dynamic>> captions;
 
   const ComposerMedia({
@@ -47,6 +56,9 @@ class ComposerMedia {
     this.trimEndMs = 0,
     this.soundId,
     this.soundVolume,
+    this.studioItemId,
+    this.coverOffsetSec,
+    this.editMeta,
     this.captions = const [],
   });
 
@@ -59,6 +71,9 @@ class ComposerMedia {
     int? trimEndMs,
     String? soundId,
     double? soundVolume,
+    String? studioItemId,
+    double? coverOffsetSec,
+    Map<String, dynamic>? editMeta,
     List<Map<String, dynamic>>? captions,
   }) {
     return ComposerMedia(
@@ -70,6 +85,9 @@ class ComposerMedia {
       trimEndMs: trimEndMs ?? this.trimEndMs,
       soundId: soundId ?? this.soundId,
       soundVolume: soundVolume ?? this.soundVolume,
+      studioItemId: studioItemId ?? this.studioItemId,
+      coverOffsetSec: coverOffsetSec ?? this.coverOffsetSec,
+      editMeta: editMeta ?? this.editMeta,
       captions: captions ?? this.captions,
     );
   }
@@ -197,6 +215,12 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               trimEndMs: (map['trim_end_ms'] ?? 0) as int,
               soundId: map['sound_id'] as String?,
               soundVolume: (map['sound_volume'] as num?)?.toDouble(),
+              studioItemId:
+                  (map['studio_item_id'] as String?) ??
+                  (path.isNotEmpty ? const Uuid().v4() : null),
+              coverOffsetSec: (map['cover_offset_sec'] as num?)?.toDouble(),
+              editMeta:
+                  (map['edit_meta'] as Map<String, dynamic>?),
               captions: [
                 for (final c in (map['captions'] as List? ?? []))
                   if (c is Map)
@@ -272,11 +296,14 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                               'path': m.path,
                               'name': m.name,
                               'type': m.type,
-                              'trim_start_ms': m.trimStartMs,
-                              'trim_end_ms': m.trimEndMs,
-                              'sound_id': m.soundId,
-                              'sound_volume': m.soundVolume,
-                              'captions': m.captions,
+                  'trim_start_ms': m.trimStartMs,
+                  'trim_end_ms': m.trimEndMs,
+                  'sound_id': m.soundId,
+                  'sound_volume': m.soundVolume,
+                  'studio_item_id': m.studioItemId,
+                  'cover_offset_sec': m.coverOffsetSec,
+                  'edit_meta': m.editMeta,
+                  'captions': m.captions,
                             })
                         .toList(),
                   }),
@@ -324,14 +351,20 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
       case 'video':
         final file = await _picker.pickVideo(source: ImageSource.gallery);
         if (file != null) {
-          final item = ComposerMedia(path: file.path, name: file.name, type: 'video');
+          final item = ComposerMedia(
+            path: file.path,
+            name: file.name,
+            type: 'video',
+            studioItemId: const Uuid().v4(),
+          );
           if (!mounted) return;
-          // Route through the studio for trim → sound → audience steps.
+          // Route through the studio for trim → captions → overlays → audience steps.
           final result = await Navigator.of(context).push<VideoStudioResult>(
             MaterialPageRoute(
               builder: (_) => VideoStudioScreen(
                 video: item,
                 initialVisibility: _visibility,
+                itemId: item.studioItemId,
               ),
             ),
           );
@@ -342,6 +375,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               trimEndMs: result.trimEndMs,
               soundId: result.soundId,
               soundVolume: result.soundVolume,
+              coverOffsetSec: result.coverOffsetSec,
+              editMeta: result.editMeta,
               captions: [
                 for (final s in result.captions)
                   {'start_ms': s.startMs, 'end_ms': s.endMs, 'text': s.text},
@@ -506,7 +541,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         properties: {
           'post_type': _postType,
           'media_count': publishedMediaCount,
-          'sound_id': ?publishedSoundId,
+          'sound_id': publishedSoundId,
         },
       );
       widget.onPostCreated?.call();
@@ -577,7 +612,15 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           resourceType: m.type == 'video' ? 'video' : 'image',
           filename: m.name,
         );
-        if (sign == null) return const [];
+        if (sign == null) {
+          if (mounted) {
+            _snack(
+              'Direct upload unavailable — using standard upload instead',
+              error: false,
+            );
+          }
+          return const [];
+        }
 
         final res = await uploader.upload(
           file: file,
@@ -600,14 +643,16 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         uploaded.add(<String, dynamic>{
           'url': res.url,
           'media_type': m.type == 'video' ? 'video' : 'image',
-          'width': ?width,
-          'height': ?height,
+          'width': width,
+          'height': height,
           if (res.durationMs != null) 'duration_ms': res.durationMs,
-          'poster_url': ?res.posterUrl,
+          'poster_url': res.posterUrl,
           if (m.type == 'video' && m.trimStartMs > 0) 'trim_start_ms': m.trimStartMs,
           if (m.type == 'video' && m.trimEndMs > 0) 'trim_end_ms': m.trimEndMs,
-          'sound_id': ?m.soundId,
-          'sound_volume': ?m.soundVolume,
+          'sound_id': m.soundId,
+          'sound_volume': m.soundVolume,
+          if (m.coverOffsetSec != null) 'cover_offset_sec': m.coverOffsetSec,
+          if (m.editMeta != null && m.editMeta!.isNotEmpty) 'edit_meta': m.editMeta,
           if (m.type == 'video' && m.captions.isNotEmpty) 'captions': m.captions,
         });
         AnalyticsService.instance.track(

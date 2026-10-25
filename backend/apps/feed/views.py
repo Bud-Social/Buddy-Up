@@ -22,7 +22,11 @@ from apps.moderation.takedown import active_takedown_for
 from apps.moderation.visibility import (
     VIS_FULL, VIS_HIDDEN, VIS_TOMBSTONE, takedown_map, tombstone_payload, visibility_for,
 )
-from .models import Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote, Draft, PostMedia, PostShare, Sound, HiddenPost, MutedAuthor, PostView
+from .models import (
+    Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote,
+    Draft, PostMedia, PostShare, Sound, HiddenPost, MutedAuthor, PostView,
+    StudioCaption,
+)
 from .media_types import ALLOWED_EXTS, guess_media_type, url_extension
 from .serializers import (
     PostSerializer, FeedPostSerializer, PostCreateSerializer, CommentSerializer,
@@ -389,6 +393,12 @@ def _validate_media_items(items):
                 caps_style['placement'] = _caps_style_raw['placement']
             if caps_style:
                 edit_meta['captions_style'] = caps_style
+
+        if item.get('cover_offset_sec') not in (None, ''):
+            try:
+                edit_meta['cover_offset_sec'] = max(0, int(item.get('cover_offset_sec')))
+            except (TypeError, ValueError):
+                pass
 
         if sound_placement:
             edit_meta['sound_placement'] = sound_placement
@@ -2280,6 +2290,85 @@ class StudioTranscribeView(views.APIView):
                 'message': 'Transcription service unavailable.',
                 'errors': str(e), 'pagination': None,
             }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class StudioCaptionsView(views.APIView):
+    """GET/POST /api/v1/feed/studio/captions/<item_id>/
+
+    Save and restore per-clip captions edited in the Bud Press studio.
+    Captions are keyed by a client-generated ``item_id`` and published with
+    the post as ``media[].captions``; this endpoint keeps them available
+    between studio sessions without requiring a draft or a published post.
+    Captioning itself is handled by the open-model transcription route
+    (``POST /feed/studio/transcribe/`` -> faster-whisper via the AI service);
+    this endpoint only persists the user's edits.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'uploads'
+
+    @staticmethod
+    def _clean_captions(raw):
+        if not isinstance(raw, list):
+            return None
+        cleaned = []
+        for seg in raw[:500]:
+            if not isinstance(seg, dict):
+                continue
+            text = str(seg.get('text') or '').strip()[:500]
+            if not text:
+                continue
+            try:
+                start = max(0, int(seg.get('start_ms') or 0))
+                end = max(0, int(seg.get('end_ms') or 0))
+            except (TypeError, ValueError):
+                continue
+            if end <= start:
+                continue
+            cleaned.append({'start_ms': start, 'end_ms': end, 'text': text})
+        return cleaned
+
+    def get(self, request, item_id):
+        profile = getattr(request.user, 'profile', None)
+        cap = (
+            StudioCaption.objects.filter(user=profile, item_id=item_id).first()
+            if profile is not None
+            else None
+        )
+        return Response({
+            'success': True,
+            'data': {'item_id': item_id, 'captions': cap.captions if cap else []},
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+    def post(self, request, item_id):
+        profile = getattr(request.user, 'profile', None)
+        if profile is None:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Profile is required.', 'errors': None,
+                'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        raw = request.data.get('captions') if hasattr(request.data, 'get') else None
+        cleaned = self._clean_captions(raw)
+        if cleaned is None:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'captions must be a list.', 'errors': None,
+                'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        obj, _created = StudioCaption.objects.update_or_create(
+            user=profile, item_id=item_id, defaults={'captions': cleaned},
+        )
+        return Response({
+            'success': True,
+            'data': {'item_id': item_id, 'captions': obj.captions},
+            'message': 'Captions saved.',
+            'errors': None,
+            'pagination': None,
+        })
 
 
 class SoundListCreateView(views.APIView):
