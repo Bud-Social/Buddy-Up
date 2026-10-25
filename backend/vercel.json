@@ -4,13 +4,16 @@
     "app": {
       "root": ".",
       "framework": "django",
+      "buildCommand": "pip install -r requirements/production.txt",
       "bindings": [
         { "type": "service", "service": "ai_service", "format": "url", "env": "AI_SERVICE_URL" }
       ]
     },
     "ai_service": {
       "root": "ai_service",
-      "framework": "fastapi"
+      "framework": "fastapi",
+      "buildCommand": "pip install -r requirements.txt",
+      "entrypoint": "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     }
   },
   "rewrites": [
