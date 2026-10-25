@@ -90,12 +90,16 @@ CORS_ALLOW_CREDENTIALS = True
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 if _HAS_SENTRY:
-    sentry_sdk.init(
-        dsn=os.environ.get('SENTRY_DSN', ''),
-        integrations=[DjangoIntegration(), CeleryIntegration()],
-        traces_sample_rate=0.1,
-        send_default_pii=False,
-    )
+    _sentry_dsn = os.environ.get('SENTRY_DSN', '')
+    # Skip Sentry init when the DSN is a placeholder (e.g. 'xxxxx') to avoid
+    # crashing startup on environments without a real Sentry project.
+    if _sentry_dsn and 'xxxxx' not in _sentry_dsn:
+        sentry_sdk.init(
+            dsn=_sentry_dsn,
+            integrations=[DjangoIntegration(), CeleryIntegration()],
+            traces_sample_rate=0.1,
+            send_default_pii=False,
+        )
 
 LOGGING = {
     'version': 1,
