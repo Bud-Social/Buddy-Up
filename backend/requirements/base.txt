@@ -38,4 +38,3 @@ requests>=2.32
 # the export endpoint answers 503 naming this package rather than 500.
 openpyxl>=3.1
 django_extensions>=3.2
-debug_toolbar
