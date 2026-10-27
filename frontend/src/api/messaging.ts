@@ -16,7 +16,7 @@ export interface Conversation {
   is_community?: boolean;
   group_name: string;
   group_avatar_url: string;
-  group_cover_url?: string;
+  cover_url?: string;
   group_gym_id: string | null;
   member_count?: number;
   description?: string;

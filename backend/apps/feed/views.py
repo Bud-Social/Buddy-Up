@@ -1377,7 +1377,10 @@ class CommentsView(views.APIView):
         serializer = CommentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        body = data['body'][:500]
+        body = data.get('body', '')[:500]
+        media_type = data.get('media_type', 'text')
+        media_url = data.get('media_url', '')
+        sticker_pack = data.get('sticker_pack', '')
         parent_id = data.get('parent_id')
 
         parent = None
@@ -1388,6 +1391,9 @@ class CommentsView(views.APIView):
             post=post,
             author=request.user.profile,
             body=body,
+            media_type=media_type,
+            media_url=media_url,
+            sticker_pack=sticker_pack,
             parent=parent,
             is_anonymous=data.get('is_anonymous', False),
         )
@@ -1401,6 +1407,43 @@ class CommentsView(views.APIView):
             'errors': None,
             'pagination': None,
         }, status=status.HTTP_201_CREATED)
+
+
+class CommentMediaUploadView(views.APIView):
+    """Upload media (image/GIF/sticker) for comment replies."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        file = request.FILES.get('file')
+        media_type = request.POST.get('media_type', 'image')
+        if not file:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No file provided.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Upload to Cloudinary
+        import cloudinary.uploader
+        try:
+            result = cloudinary.uploader.upload(
+                file,
+                resource_type = 'auto',
+                folder = 'buddyup/comments',
+            )
+            return Response({
+                'success': True,
+                'data': {'url': result['secure_url']},
+                'message': 'Media uploaded.',
+                'errors': None, 'pagination': None,
+            })
+        except Exception as e:
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Upload failed: {e}',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class CommentDetailView(views.APIView):

@@ -108,7 +108,7 @@ class _RepostIndicatorState extends State<RepostIndicator>
                       ],
                       Flexible(
                         child: Text(
-                          people == null ? '$username reposted' : '$username reposted',
+                          people == null ? '${widget.username} reposted' : '${widget.username} reposted',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -144,12 +144,12 @@ class _RepostIndicatorState extends State<RepostIndicator>
   }
 
   Widget _buildStackedAvatars(BuildContext context, List<ReposterData> people) {
-    final viewerSlot = (viewerAvatarUrl ?? '').isNotEmpty;
+    final viewerSlot = (widget.viewerAvatarUrl ?? '').isNotEmpty;
     // Skip a backend echo of the viewer — the animated slot below owns it.
     final visible = people
         .where((r) =>
             !viewerSlot ||
-            r.avatarUrl != viewerAvatarUrl)
+            r.avatarUrl != widget.viewerAvatarUrl)
         .take(3)
         .toList();
     final overflow = people.length - visible.length;
@@ -193,11 +193,11 @@ class _RepostIndicatorState extends State<RepostIndicator>
             Positioned(
               left: (visible.length + (overflow > 0 ? 1 : 0)) * 14.0,
               child: AnimatedScale(
-                scale: viewerReposted ? 1.0 : 0.0,
+                scale: widget.viewerReposted ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOutBack,
                 child: AnimatedOpacity(
-                  opacity: viewerReposted ? 1.0 : 0.0,
+                  opacity: widget.viewerReposted ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 200),
                   child: Container(
                     key: const ValueKey('viewer-repost-avatar'),
@@ -206,8 +206,8 @@ class _RepostIndicatorState extends State<RepostIndicator>
                       border: Border.all(color: BuddyColors.green, width: 1.5),
                     ),
                     child: Avatar(
-                      src: viewerAvatarUrl,
-                      alt: viewerDisplayName ?? '?',
+                      src: widget.viewerAvatarUrl,
+                      alt: widget.viewerDisplayName ?? '?',
                       size: AvatarSize.xs,
                     ),
                   ),

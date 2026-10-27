@@ -34,4 +34,5 @@ urlpatterns = [
     path('workout-form/', views.WorkoutFormAnalysisView.as_view(), name='workout_form'),
     path('studio/transcribe/', views.StudioTranscribeView.as_view(), name='studio_transcribe'),
     path('studio/captions/<str:item_id>/', views.StudioCaptionsView.as_view(), name='studio_captions'),
+    path('comments/media/', views.CommentMediaUploadView.as_view(), name='comment_media_upload'),
 ]

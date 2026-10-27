@@ -273,8 +273,8 @@ export default function Discover() {
                 {trending.communities!.map((c) => (
                   <Card key={c.id} className="p-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors group" onClick={() => navigate(`/communities/${c.id}`)}>
                     <div className="aspect-video rounded-xl bg-buddy-surface-raised overflow-hidden mb-3 relative group-hover:scale-95 transition-transform duration-200">
-                      {c.group_cover_url ? (
-                        <img src={c.group_cover_url} alt="" className="w-full h-full object-cover" />
+                      {c.cover_url ? (
+                        <img src={c.cover_url} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-buddy-surface-raised flex items-center justify-center">
                           <span className="text-[12px] font-bold text-buddy-green">

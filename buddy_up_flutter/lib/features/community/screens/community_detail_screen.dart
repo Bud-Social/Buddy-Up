@@ -503,7 +503,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
                                   child: Image.network(
-                                    tab.community!.coverUrl!,
+                                    tab.community!.coverUrl,
                                     width: 20,
                                     height: 20,
                                     fit: BoxFit.cover,
@@ -687,7 +687,7 @@ class CommunityPostCardWithTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
