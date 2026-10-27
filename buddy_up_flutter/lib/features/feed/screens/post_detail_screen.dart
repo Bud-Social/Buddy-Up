@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/feed_provider.dart';
 import '../widgets/post_card.dart';
 import '../widgets/share_sheet.dart';
@@ -22,6 +24,7 @@ class PostDetailScreen extends ConsumerStatefulWidget {
 
 class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final TextEditingController _commentController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
 
   @override
   void dispose() {
@@ -126,10 +129,20 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                             hint: 'Write a comment...',
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         IconButton(
                           icon: const Icon(Icons.send, color: BuddyColors.green),
-                          onPressed: () => _submitComment(post.id),
+                          onPressed: () => _submitTextComment(post.id),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: const Icon(Icons.insert_emoticon, color: BuddyColors.textSecondary),
+                          onPressed: () => _showCommentMediaSheet(post.id),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton(
+                          icon: const Icon(Icons.image, color: BuddyColors.textSecondary),
+                          onPressed: () => _pickImageComment(post.id),
                         ),
                       ],
                     ),
@@ -169,7 +182,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     } catch (_) {}
   }
 
-  void _submitComment(String postId) async {
+  void _submitTextComment(String postId) async {
     final body = _commentController.text.trim();
     if (body.isEmpty) return;
     final post = ref.read(postDetailProvider(postId)).value;
@@ -183,6 +196,100 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       _commentController.clear();
       ref.invalidate(commentsProvider(widget.postId));
     } catch (_) {}
+  }
+
+  void _showCommentMediaSheet(String postId) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: BuddyColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Add to comment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _MediaSheetOption(
+                  icon: Icons.gif,
+                  label: 'GIF',
+                  color: BuddyColors.green,
+                  onTap: () => _showStickerGifPicker(postId, 'gif'),
+                ),
+                _MediaSheetOption(
+                  icon: Icons.sentiment_very_satisfied,
+                  label: 'Sticker',
+                  color: BuddyColors.purple,
+                  onTap: () => _showStickerGifPicker(postId, 'sticker'),
+                ),
+                _MediaSheetOption(
+                  icon: Icons.image,
+                  label: 'Photo',
+                  color: BuddyColors.blue,
+                  onTap: () => _pickImageComment(postId),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: BuddyColors.textSecondary, fontSize: 14),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showStickerGifPicker(String postId, String type) async {
+    Navigator.of(context).pop();
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1024,
+    );
+    if (picked == null) return;
+    await _submitMediaComment(postId, type, picked.path);
+  }
+
+  Future<void> _pickImageComment(String postId) async {
+    Navigator.of(context).pop();
+    final picked = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1024,
+    );
+    if (picked == null) return;
+    await _submitMediaComment(postId, 'image', picked.path);
+  }
+
+  Future<void> _submitMediaComment(String postId, String mediaType, String filePath) async {
+    final repo = ref.read(feedRepositoryProvider);
+    try {
+      final uploadResult = await repo.uploadCommentMedia(File(filePath), mediaType);
+      final mediaUrl = uploadResult['url'] as String;
+      final stickerPack = mediaType == 'sticker' ? 'default' : null;
+
+      await repo.addComment(
+        postId,
+        CommentCreateInput(
+          body: '',
+          mediaType: mediaType,
+          mediaUrl: mediaUrl,
+          stickerPack: stickerPack,
+        ),
+      );
+      ref.invalidate(commentsProvider(widget.postId));
+    } catch (_) {
+      showToast(context, 'Failed to upload comment media');
+    }
   }
 }
 
@@ -246,6 +353,45 @@ class _TombstoneBanner extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// A single option in the comment media bottom sheet.
+class _MediaSheetOption extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _MediaSheetOption({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 8),
+            Text(label, style: const TextStyle(fontSize: 12, color: BuddyColors.textPrimary)),
+          ],
+        ),
       ),
     );
   }

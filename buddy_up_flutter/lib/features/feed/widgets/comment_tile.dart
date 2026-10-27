@@ -45,22 +45,51 @@ class CommentTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        comment.authorData.displayName,
-                        style: const TextStyle(
-                          color: BuddyColors.textPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  comment.authorData.displayName,
+                                  style: const TextStyle(
+                                    color: BuddyColors.textPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                if (comment.mediaType == 'text' && comment.body.isNotEmpty)
+                                  Text(
+                                    comment.body,
+                                    style: const TextStyle(
+                                      color: BuddyColors.textPrimary,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (comment.mediaType != 'text') ...[
+                            const SizedBox(width: 8),
+                            _buildMediaPreview(context),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        comment.body,
-                        style: const TextStyle(
-                          color: BuddyColors.textPrimary,
-                          fontSize: 14,
+                      if (comment.mediaType == 'sticker' && comment.stickerPack != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            comment.stickerPack!,
+                            style: const TextStyle(
+                              color: BuddyColors.textSecondary,
+                              fontSize: 11,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -122,6 +151,46 @@ class CommentTile extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMediaPreview(BuildContext context) {
+    final url = comment.mediaUrl;
+    if (url == null || url.isEmpty) return const SizedBox.shrink();
+
+    final isGif = comment.mediaType == 'gif';
+    final isSticker = comment.mediaType == 'sticker';
+    final size = isSticker ? 40.0 : 56.0;
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: BuddyColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isSticker
+              ? BuddyColors.green.withValues(alpha: 0.3)
+              : BuddyColors.border,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.network(
+          url,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            color: BuddyColors.surfaceRaised,
+            child: Icon(
+              isGif ? Icons.gif : Icons.image,
+              size: 20,
+              color: BuddyColors.textSecondary,
+            ),
+          ),
+        ),
       ),
     );
   }

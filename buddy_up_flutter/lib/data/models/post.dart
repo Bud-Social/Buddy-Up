@@ -231,6 +231,9 @@ abstract class Comment with _$Comment {
     @JsonKey(name: 'post_id') required String postId,
     @JsonKey(name: 'author_data') required AuthorData authorData,
     required String body,
+    @JsonKey(name: 'media_type') @Default('text') String mediaType,
+    @JsonKey(name: 'media_url') String? mediaUrl,
+    @JsonKey(name: 'sticker_pack') String? stickerPack,
     @JsonKey(name: 'parent_id') String? parentId,
     @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
     @JsonKey(name: 'reply_count') @Default(0) int replyCount,
@@ -291,7 +294,10 @@ abstract class ReactionInput with _$ReactionInput {
 @freezed
 abstract class CommentCreateInput with _$CommentCreateInput {
   const factory CommentCreateInput({
-    required String body,
+    String? body,
+    @JsonKey(name: 'media_type') @Default('text') String mediaType,
+    @JsonKey(name: 'media_url') String? mediaUrl,
+    @JsonKey(name: 'sticker_pack') String? stickerPack,
     @JsonKey(name: 'parent_id') String? parentId,
     @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
   }) = _CommentCreateInput;

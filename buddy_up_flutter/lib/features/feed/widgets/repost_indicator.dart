@@ -3,7 +3,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/avatar.dart';
 
-class RepostIndicator extends StatelessWidget {
+class RepostIndicator extends StatefulWidget {
   final List<ReposterData> reposters;
   final String username;
   final String? quoteBody;
@@ -25,61 +25,120 @@ class RepostIndicator extends StatelessWidget {
   });
 
   @override
+  State<RepostIndicator> createState() => _RepostIndicatorState();
+}
+
+class _RepostIndicatorState extends State<RepostIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    if (widget.viewerReposted) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(RepostIndicator oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.viewerReposted && !oldWidget.viewerReposted) {
+      _pulseController.repeat(reverse: true);
+    } else if (!widget.viewerReposted && oldWidget.viewerReposted) {
+      _pulseController.stop();
+      _pulseController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final people = reposters.length > 1 ? reposters : null;
+    final people = widget.reposters.length > 1 ? widget.reposters : null;
     // When the viewer reposted but the backend hasn't echoed them back yet,
     // still show the stack so the pop-in has a home.
-    final showStack = people != null || viewerReposted;
+    final showStack = people != null || widget.viewerReposted;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(right: 8),
-            child: Icon(Icons.repeat, size: 14, color: BuddyColors.green),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
+            child: child,
           ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (showStack) ...[
-                      _buildStackedAvatars(context, people ?? const []),
-                      const SizedBox(width: 8),
-                    ],
-                    Flexible(
-                      child: Text(
-                        people == null ? '$username reposted' : '$username reposted',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: BuddyColors.green,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+        ),
+        child: Row(
+          key: const ValueKey('repost-indicator'),
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ScaleTransition(
+                scale: _pulseAnimation,
+                child: const Icon(
+                  Icons.repeat,
+                  size: 14,
+                  color: BuddyColors.green,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (showStack) ...[
+                        _buildStackedAvatars(context, people ?? const []),
+                        const SizedBox(width: 8),
+                      ],
+                      Flexible(
+                        child: Text(
+                          people == null ? '$username reposted' : '$username reposted',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: BuddyColors.green,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                if (quoteBody != null && quoteBody!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      quoteBody!,
-                      style: const TextStyle(
-                        color: BuddyColors.textSecondary,
-                        fontSize: 13,
-                        fontStyle: FontStyle.italic,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    ],
                   ),
-              ],
+                  if (widget.quoteBody != null && widget.quoteBody!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        widget.quoteBody!,
+                        style: const TextStyle(
+                          color: BuddyColors.textSecondary,
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

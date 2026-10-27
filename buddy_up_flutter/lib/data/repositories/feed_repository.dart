@@ -45,6 +45,13 @@ abstract class FeedRepository {
     @Body() CommentCreateInput input,
   );
 
+  @POST('/feed/comments/media/')
+  @MultiPart()
+  Future<dynamic> uploadCommentMedia(
+    @Part(name: 'file') File file,
+    @Part(name: 'media_type') String mediaType,
+  );
+
   @DELETE('/feed/{id}/comments/{cid}/')
   Future<void> deleteComment(
     @Path('id') String postId,
