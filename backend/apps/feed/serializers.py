@@ -75,7 +75,8 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'post_id', 'author_id', 'author_data', 'body', 'parent_id',
+        fields = ['id', 'post_id', 'author_id', 'author_data', 'body', 'media_type',
+                   'media_url', 'sticker_pack', 'parent_id',
                    'is_anonymous', 'reply_count', 'reaction_counts', 'user_reaction',
                    'created_at', 'updated_at']
         read_only_fields = ['id', 'author_id', 'created_at', 'updated_at']
@@ -288,9 +289,26 @@ class PostSerializer(serializers.ModelSerializer):
 
 
 class CommentCreateSerializer(serializers.Serializer):
-    body = serializers.CharField(max_length=500)
+    body = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
+    media_type = serializers.ChoiceField(choices=['text', 'image', 'gif', 'sticker'], default='text')
+    media_url = serializers.URLField(required=False, allow_blank=True, default='')
+    sticker_pack = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
     parent_id = serializers.CharField(required=False, allow_null=True)
     is_anonymous = serializers.BooleanField(default=False)
+
+    def validate(self, attrs):
+        media_type = attrs.get('media_type', 'text')
+        body = attrs.get('body', '')
+        media_url = attrs.get('media_url', '')
+        if media_type == 'text' and not body.strip():
+            raise serializers.ValidationError({
+                'body': 'Text comments cannot be empty.'
+            })
+        if media_type in ('image', 'gif', 'sticker') and not media_url:
+            raise serializers.ValidationError({
+                'media_url': f'{media_type} comments require a media URL.'
+            })
+        return attrs
 
 
 class ReactionInputSerializer(serializers.Serializer):

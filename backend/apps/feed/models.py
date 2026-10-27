@@ -96,9 +96,19 @@ class GymPost(Post):
 
 
 class Comment(TimestampedModel):
+    MEDIA_TYPE_CHOICES = [
+        ('text', 'Text'),
+        ('image', 'Image'),
+        ('gif', 'GIF'),
+        ('sticker', 'Sticker'),
+    ]
+
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')
     author = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='comments')
-    body = models.TextField()
+    body = models.TextField(blank=True)
+    media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES, default='text')
+    media_url = models.URLField(blank=True, max_length=1000)
+    sticker_pack = models.CharField(max_length=50, blank=True)
     is_anonymous = models.BooleanField(default=False)
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
 
