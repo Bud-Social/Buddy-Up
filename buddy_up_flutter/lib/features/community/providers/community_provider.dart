@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/messaging.dart';
 import '../../messaging/providers/messaging_provider.dart' show messagingRepositoryProvider;
+import '../../feed/providers/feed_provider.dart' show feedRepositoryProvider;
+import '../../../data/models/post.dart' show ReactionInput, RepostPayload, SavePayload;
 
 final communityRepositoryProvider = messagingRepositoryProvider;
 
@@ -246,14 +248,44 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
     await refresh();
   }
 
-  Future<void> toggleLike(String postId) async {
+    Future<void> toggleLike(String postId) async {
     await ref.read(communityRepositoryProvider).togglePostLike(communityId, postId);
     await loadPosts();
+    await loadAllPosts();
   }
 
   Future<void> addComment(String postId, String body) async {
     await ref.read(communityRepositoryProvider).addPostComment(communityId, postId, {'body': body});
     await loadPosts();
+    await loadAllPosts();
+  }
+
+        /// Repost a community post — mirrors the feed repost API.
+  Future<void> repost(String postId) async {
+    final repo = ref.read(feedRepositoryProvider);
+    await repo.repost(postId, RepostPayload());
+    await loadPosts();
+    await loadAllPosts();
+  }
+
+  /// Save/unsave a community post.
+  Future<void> save(String postId) async {
+    final repo = ref.read(feedRepositoryProvider);
+    await repo.save(postId, SavePayload());
+    await loadPosts();
+    await loadAllPosts();
+  }
+
+  /// React to a community post (fire reaction type).
+  Future<void> react(String postId, String reaction) async {
+    final repo = ref.read(feedRepositoryProvider);
+    if (reaction.isEmpty) {
+      await repo.unreact(postId);
+    } else {
+      await repo.react(postId, ReactionInput(reactionType: reaction));
+    }
+    await loadPosts();
+    await loadAllPosts();
   }
 
   Future<void> join() async {

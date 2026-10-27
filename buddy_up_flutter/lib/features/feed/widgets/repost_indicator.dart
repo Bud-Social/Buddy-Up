@@ -6,7 +6,7 @@ import '../../../shared/widgets/avatar.dart';
 class RepostIndicator extends StatefulWidget {
   final List<ReposterData> reposters;
   final String username;
-  final String? quoteBody;
+     final String? quoteBody;
 
   /// Set when the viewer reposted: their avatar pops into the stack with a
   /// scale/fade entrance (AnimatedSwitcher) and animates out on unrepost.
@@ -14,14 +14,18 @@ class RepostIndicator extends StatefulWidget {
   final String? viewerAvatarUrl;
   final String? viewerDisplayName;
 
+  /// View count from the original post, displayed when this is a repost row.
+  final int? viewCount;
+
   const RepostIndicator({
     super.key,
     this.reposters = const [],
     required this.username,
-    this.quoteBody,
+        this.quoteBody,
     this.viewerReposted = false,
     this.viewerAvatarUrl,
     this.viewerDisplayName,
+    this.viewCount,
   });
 
   @override
@@ -48,14 +52,19 @@ class _RepostIndicatorState extends State<RepostIndicator>
     }
   }
 
-  @override
+    @override
   void didUpdateWidget(RepostIndicator oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.viewerReposted && !oldWidget.viewerReposted) {
-      _pulseController.repeat(reverse: true);
-    } else if (!widget.viewerReposted && oldWidget.viewerReposted) {
-      _pulseController.stop();
-      _pulseController.reset();
+    // Re-trigger pulse whenever the viewer repost state changes.
+    if (widget.viewerReposted != oldWidget.viewerReposted) {
+      if (widget.viewerReposted) {
+        _pulseController
+          ..duration = const Duration(milliseconds: 1500)
+          ..repeat(reverse: true);
+      } else {
+        _pulseController.stop();
+        _pulseController.reset();
+      }
     }
   }
 
@@ -67,23 +76,30 @@ class _RepostIndicatorState extends State<RepostIndicator>
 
   @override
   Widget build(BuildContext context) {
-    final people = widget.reposters.length > 1 ? widget.reposters : null;
+    final people = widget.reposters;
     // When the viewer reposted but the backend hasn't echoed them back yet,
     // still show the stack so the pop-in has a home.
-    final showStack = people != null || widget.viewerReposted;
+    final showStack = people.isNotEmpty || widget.viewerReposted;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-            child: AnimatedSwitcher(
+      child: AnimatedSwitcher(
+        // Use a stable key based ONLY on viewerReposted — the reposter count
+        // changing is a normal data update, not a structural swap that should
+        // reset the viewer's pulse animation.
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (child, animation) => FadeTransition(
           opacity: animation,
           child: ScaleTransition(
-            scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
+            scale: Tween<double>(begin: 0.95, end: 1.0).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutBack),
+            ),
             child: child,
           ),
         ),
+        // Stable key: only re-animates when viewerReposted toggles,
+        // not when the reposters list updates.
         child: Row(
-          key: ValueKey('repost-indicator-${people?.length ?? 0}-${widget.viewerReposted}'),
+          key: ValueKey('repost-${widget.viewerReposted}'),
           children: [
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -103,19 +119,45 @@ class _RepostIndicatorState extends State<RepostIndicator>
                   Row(
                     children: [
                       if (showStack) ...[
-                        _buildStackedAvatars(context, people ?? const []),
+                                                _buildStackedAvatars(context, people),
                         const SizedBox(width: 8),
                       ],
-                      Flexible(
-                        child: Text(
-                          people == null ? '${widget.username} reposted' : '${widget.username} reposted',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: BuddyColors.green,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
+                                            Flexible(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${widget.username} reposted',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: BuddyColors.green,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (widget.viewCount != null && widget.viewCount! > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.visibility_outlined,
+                                      size: 12,
+                                      color: BuddyColors.textSecondary,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      _formatCount(widget.viewCount!),
+                                      style: const TextStyle(
+                                        color: BuddyColors.textSecondary,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],
@@ -216,6 +258,12 @@ class _RepostIndicatorState extends State<RepostIndicator>
             ),
         ],
       ),
-    );
+        );
+  }
+
+  String _formatCount(int count) {
+    if (count < 1000) return count.toString();
+    if (count < 1000000) return '${(count / 1000).toStringAsFixed(1)}k';
+    return '${(count / 1000000).toStringAsFixed(1)}m';
   }
 }

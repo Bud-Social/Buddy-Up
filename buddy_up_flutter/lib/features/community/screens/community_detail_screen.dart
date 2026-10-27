@@ -43,6 +43,11 @@ extension CommunityPostToPost on CommunityPost {
       commentCount: commentCount,
       isPinned: isPinned,
       createdAt: createdAt,
+      viewCount: 0, // community posts don't expose view_count from API yet
+      isRepostedByMe: false,
+      repostCount: 0,
+      shareCount: 0,
+      saveCount: 0,
     );
   }
 }
@@ -104,8 +109,20 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     notifier.loadPosts();
   }
 
-  Future<void> _toggleLike(String postId) async {
+    Future<void> _toggleLike(String postId) async {
     await ref.read(communityFeedProvider(widget.communityId).notifier).toggleLike(postId);
+  }
+
+  Future<void> _toggleRepost(String postId) async {
+    await ref.read(communityFeedProvider(widget.communityId).notifier).repost(postId);
+  }
+
+  Future<void> _toggleSave(String postId) async {
+    await ref.read(communityFeedProvider(widget.communityId).notifier).save(postId);
+  }
+
+  Future<void> _handleReact(String postId, String reaction) async {
+    await ref.read(communityFeedProvider(widget.communityId).notifier).react(postId, reaction);
   }
 
   Future<void> _addComment(String postId, String body) async {
@@ -600,6 +617,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   post: p.toPost(),
                   onLike: (_) => _toggleLike(p.id),
                   onComment: (_) => _commentSheet(p),
+                  onRepost: (_) => _toggleRepost(p.id),
+                  onSave: (_) => _toggleSave(p.id),
+                  onReact: (postId, reaction) => _handleReact(postId, reaction),
                   onPin: canManage
                       ? (_) async {
                           await ref
@@ -641,12 +661,15 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: state.allPosts.map((entry) {
                 final p = entry.post;
-                return CommunityPostCardWithTag(
+                                return CommunityPostCardWithTag(
                   post: p.toPost(),
                   communityName: entry.communityName,
                   communityCoverUrl: entry.communityCoverUrl,
                   onLike: (_) => _toggleLike(p.id),
                   onComment: (_) => _commentSheet(p),
+                  onRepost: (_) => _toggleRepost(p.id),
+                  onSave: (_) => _toggleSave(p.id),
+                  onReact: (postId, reaction) => _handleReact(postId, reaction),
                   onPin: canManage
                       ? (_) async {
                           await ref
@@ -674,6 +697,9 @@ class CommunityPostCardWithTag extends StatelessWidget {
   final String? communityCoverUrl;
   final void Function(String)? onLike;
   final void Function(String)? onComment;
+  final void Function(String)? onRepost;
+  final void Function(String)? onSave;
+  final void Function(String, String)? onReact;
   final void Function(String)? onPin;
   final void Function(String)? onDelete;
 
@@ -684,6 +710,9 @@ class CommunityPostCardWithTag extends StatelessWidget {
     this.communityCoverUrl,
     this.onLike,
     this.onComment,
+    this.onRepost,
+    this.onSave,
+    this.onReact,
     this.onPin,
     this.onDelete,
   });
@@ -736,10 +765,13 @@ class CommunityPostCardWithTag extends StatelessWidget {
             ],
           ),
         ),
-        PostCard(
+                PostCard(
           post: post,
           onLike: onLike,
           onComment: onComment,
+          onRepost: onRepost,
+          onSave: onSave,
+          onReact: onReact,
           onPin: onPin,
           onDelete: onDelete,
         ),

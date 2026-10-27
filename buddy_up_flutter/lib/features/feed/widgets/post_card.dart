@@ -214,7 +214,7 @@ class _PostCardState extends ConsumerState<PostCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_post.isRepost)
+                    if (_post.isRepost)
             RepostIndicator(
               reposters: _post.reposters,
               username: _post.authorData.displayName,
@@ -222,6 +222,7 @@ class _PostCardState extends ConsumerState<PostCard> {
               viewerReposted: _post.isRepostedByMe,
               viewerAvatarUrl: viewer?.avatarUrl,
               viewerDisplayName: viewer?.displayName,
+              viewCount: _orig?.viewCount,
             ),
                     _buildHeader(context),
           if (_displayBody.isNotEmpty) ...[
