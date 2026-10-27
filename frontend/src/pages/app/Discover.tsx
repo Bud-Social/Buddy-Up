@@ -260,23 +260,41 @@ export default function Discover() {
           )}
 
           {(trending.communities?.length ?? 0) > 0 && (
-            <div>
-              <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary mb-2">
-                <Users className="w-4 h-4 text-buddy-green" /> Active Communities
-              </p>
-              <div className="flex flex-wrap gap-2">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="flex items-center gap-2 text-sm font-medium text-buddy-text-primary">
+                  <Users className="w-4 h-4 text-buddy-green" /> Active Communities
+                </p>
+                <button onClick={() => setActiveTab('communities')} className="text-xs text-buddy-green font-medium">
+                  See all
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {trending.communities!.map((c) => (
-                  <button key={c.id} onClick={() => navigate(`/communities/${c.id}`)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-buddy-surface hover:bg-buddy-surface-raised transition-colors">
-                    {c.group_avatar_url ? (
-                      <img src={c.group_avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
-                    ) : (
-                      <span className="w-6 h-6 rounded-full bg-buddy-green/15 flex items-center justify-center text-[10px] font-bold text-buddy-green">
-                        {c.group_name.charAt(0).toUpperCase()}
-                      </span>
+                  <Card key={c.id} className="p-4 cursor-pointer hover:bg-buddy-surface-raised transition-colors group" onClick={() => navigate(`/communities/${c.id}`)}>
+                    <div className="aspect-video rounded-xl bg-buddy-surface-raised overflow-hidden mb-3 relative group-hover:scale-95 transition-transform duration-200">
+                      {c.group_cover_url ? (
+                        <img src={c.group_cover_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-buddy-surface-raised flex items-center justify-center">
+                          <span className="text-[12px] font-bold text-buddy-green">
+                            {c.group_name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 bg-buddy-black/60 backdrop-blur-sm px-2 py-1 rounded-md">
+                        <span className="text-[10px] font-bold text-white">{c.member_count || 0} members</span>
+                      </div>
+                    </div>
+                    <p className="font-semibold text-buddy-text-primary truncate">{c.group_name}</p>
+                    {c.description && (
+                      <p className="text-[12px] text-buddy-text-secondary line-clamp-2 mt-1">{c.description}</p>
                     )}
-                    <span className="text-sm max-w-[140px] truncate">{c.group_name}</span>
-                  </button>
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-buddy-border/50">
+                      <span className="text-[10px] text-buddy-text-secondary/70">{c.role?.toUpperCase() || 'MEMBER'}</span>
+                      <span className="ml-auto text-[10px] text-buddy-text-secondary/70">{c.post_count || 0} posts</span>
+                    </div>
+                  </Card>
                 ))}
               </div>
             </div>
