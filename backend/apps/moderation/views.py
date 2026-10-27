@@ -249,6 +249,35 @@ class ContentFlagViewSet(viewsets.ReadOnlyModelViewSet):
             'supported_content_types': describe_registry(),
         })
 
+    @action(detail=True, methods=['get'], url_path='explanation')
+    def explanation(self, request, pk=None):
+        """Return the human-readable explanation for why content was flagged.
+
+        Any authenticated user can request this — it surfaces the AI's own
+        account of why a piece of content was flagged, so viewers understand
+        the moderation decision instead of seeing a silent removal.
+        """
+        flag = self.get_object()
+        return Response({
+            'success': True,
+            'data': {
+                'flag_id': str(flag.id),
+                'flag_reason': flag.flag_reason,
+                'severity': flag.severity,
+                'confidence': flag.confidence,
+                'ai_explanation': flag.ai_explanation,
+                'ai_method': flag.ai_method,
+                'content_preview': flag.content_preview,
+                'content_type': flag.content_type,
+                'content_id': flag.content_id,
+                'is_actioned': flag.is_actioned,
+                'created_at': flag.created_at.isoformat(),
+            },
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
     @action(detail=False, methods=['get'], url_path='resolve')
     def resolve(self, request):
         """Resolve a `content_type`/`content_id` pair into something viewable.

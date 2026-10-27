@@ -48,6 +48,10 @@ class Conversation(TimestampedModel):
             models.Index(fields=['group_gym']),
         ]
 
+    @property
+    def member_count(self):
+        return self.memberships.count()
+
 
 class ConversationPromotion(TimestampedModel):
     """A mutual-consent request to promote a DM into a buddy relationship.
