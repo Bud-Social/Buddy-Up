@@ -208,7 +208,19 @@ export interface Post {
     reaction_counts?: Record<string, number>;
     user_reaction?: string | null;
     gym_tag_name?: string | null;
-  } | null;
+    } | null;
+
+  /** Reposter avatars for the "reposted by" ribbon. */
+  reposters?: ReposterData[];
+  /** Flag IDs on this post for looking up the AI explanation. */
+  flag_ids?: string[];
+}
+
+export interface ReposterData {
+  user_id?: string;
+  display_name: string;
+  avatar_url: string;
+  followed_by_viewer?: boolean;
 }
 
 export interface Comment {
@@ -223,6 +235,10 @@ export interface Comment {
   reaction_counts: Record<string, number>;
   user_reaction: string | null;
   created_at: string;
+  media_type?: string;
+  media_url?: string | null;
+  sticker_pack?: string | null;
+  updated_at?: string;
 }
 
 /** Per-post aggregates for the creator-insights endpoint. All counts are

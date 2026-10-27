@@ -94,6 +94,20 @@ export interface ModerationPendingApproval {
   moderation_action_id?: string | null;
 }
 
+export interface FlagExplanation {
+  flag_id: string;
+  flag_reason: string;
+  severity: string;
+  confidence: number;
+  ai_explanation?: string;
+  ai_method?: string;
+  content_preview?: string;
+  content_type: string;
+  content_id: string;
+  is_actioned: boolean;
+  created_at: string;
+}
+
 export const moderationApi = {
   getQueue: (params?: { flag_reason?: string; severity?: string }) =>
     apiClient.get<ApiResponse<ContentFlag[]>>('/moderation/content-flags/queue/', { params }).then((r) => r.data),
@@ -147,6 +161,14 @@ export const moderationApi = {
     apiClient.delete<void>(`/moderation/commendations/${commendationId}/`).then((r) => r.data),
 
   /** Ban/suspension requests raised from moderation, awaiting a second approver. */
-  getPendingApprovals: () =>
+    getPendingApprovals: () =>
     apiClient.get<ApiResponse<ModerationPendingApproval[]>>('/moderation/content-flags/pending-approvals/').then((r) => r.data),
+
+  /**
+   * Human-readable explanation for why content was flagged, by flag ID.
+   * Any authenticated user may request this so viewers understand a
+   * moderation decision instead of seeing a silent removal.
+   */
+  getExplanation: (flagId: string) =>
+    apiClient.get<ApiResponse<FlagExplanation>>(`/moderation/content-flags/${flagId}/explanation/`).then((r) => r.data),
 };

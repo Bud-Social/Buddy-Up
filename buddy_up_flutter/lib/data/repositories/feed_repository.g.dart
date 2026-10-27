@@ -198,6 +198,42 @@ class _FeedRepository implements FeedRepository {
   }
 
   @override
+  Future<dynamic> uploadCommentMedia(File file, String mediaType) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = FormData();
+    _data.files.add(
+      MapEntry(
+        'file',
+        MultipartFile.fromFileSync(
+          file.path,
+          filename: file.path.split(Platform.pathSeparator).last,
+        ),
+      ),
+    );
+    _data.fields.add(MapEntry('media_type', mediaType));
+    final _options = _setStreamType<dynamic>(
+      Options(
+            method: 'POST',
+            headers: _headers,
+            extra: _extra,
+            contentType: 'multipart/form-data',
+          )
+          .compose(
+            _dio.options,
+            '/feed/comments/media/',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
   Future<void> deleteComment(String postId, String commentId) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
@@ -208,6 +244,71 @@ class _FeedRepository implements FeedRepository {
           .compose(
             _dio.options,
             '/feed/${postId}/comments/${commentId}/',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    await _dio.fetch<void>(_options);
+  }
+
+  @override
+  Future<dynamic> getCommentReplies(String postId, String commentId) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<dynamic>(
+      Options(method: 'GET', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/feed/${postId}/comments/${commentId}/replies/',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
+  Future<dynamic> reactToComment(
+    String postId,
+    String commentId,
+    ReactionInput input,
+  ) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    final _data = input;
+    final _options = _setStreamType<dynamic>(
+      Options(method: 'POST', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/feed/${postId}/comments/${commentId}/react/',
+            queryParameters: queryParameters,
+            data: _data,
+          )
+          .copyWith(baseUrl: _combineBaseUrls(_dio.options.baseUrl, baseUrl)),
+    );
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
+  Future<void> unreactToComment(String postId, String commentId) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<void>(
+      Options(method: 'DELETE', headers: _headers, extra: _extra)
+          .compose(
+            _dio.options,
+            '/feed/${postId}/comments/${commentId}/react/',
             queryParameters: queryParameters,
             data: _data,
           )

@@ -542,3 +542,13 @@ final commentsProvider = FutureProvider.family<List<Comment>, String>((ref, post
   final raw = await repo.getComments(postId);
   return _parseCommentList(raw['data']);
 });
+
+/// Replies to a single comment, lazily loaded by the PostDetailScreen.
+/// Takes (postId, commentId) so it doesn't need a separate post-id provider.
+final commentRepliesProvider =
+    FutureProvider.family.autoDispose<List<Comment>, (String, String)>((ref, params) async {
+  final (postId, commentId) = params;
+  final repo = ref.watch(feedRepositoryProvider);
+  final raw = await repo.getCommentReplies(postId, commentId);
+  return _parseCommentList(raw['data']);
+});

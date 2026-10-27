@@ -62,26 +62,28 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   List<CommunityDetail> _userCommunities = [];
   int _selectedCommunityTab = 0; // 0 = All, 1+ = individual community
 
-  @override
+    @override
   void initState() {
     super.initState();
     _loadUserCommunities();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final notifier = ref.read(communityFeedProvider(widget.communityId).notifier);
       notifier.loadPosts();
+      // Pre-load the aggregated feed so the "All" tab has data immediately.
+      notifier.loadAllPosts();
     });
   }
 
-  Future<void> _loadUserCommunities() async {
+    Future<void> _loadUserCommunities() async {
     try {
       final raw = await ref.read(communityRepositoryProvider).getCommunities();
-      final data = raw['data'] as List?;
-      if (data != null) {
-        final communities = data
-            .map((c) => CommunityDetail.fromJson(c as Map<String, dynamic>))
-            .toList();
-        if (mounted) setState(() => _userCommunities = communities);
-      }
+      // API returns {success, data: {mine: [...], discover: [...]}}
+      final data = raw['data'] as Map<String, dynamic>?;
+      final mine = data?['mine'] as List? ?? [];
+      final communities = mine
+          .map((c) => CommunityDetail.fromJson(c as Map<String, dynamic>))
+          .toList();
+      if (mounted) setState(() => _userCommunities = communities);
     } catch (_) {}
   }
 
@@ -617,15 +619,15 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
             ),
     );
   }
-  Widget _allCommunitiesTab(CommunityFeedState state, bool canManage) {
+    Widget _allCommunitiesTab(CommunityFeedState state, bool canManage) {
     final cs = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
       onRefresh: () async {
         await ref.read(communityFeedProvider(widget.communityId).notifier).refresh();
-        await ref.read(communityFeedProvider(widget.communityId).notifier).loadPosts();
+        await ref.read(communityFeedProvider(widget.communityId).notifier).loadAllPosts();
       },
-      child: state.posts.isEmpty
+      child: state.allPosts.isEmpty
           ? ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
@@ -637,11 +639,12 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
             )
           : ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: state.posts.map((p) {
+              children: state.allPosts.map((entry) {
+                final p = entry.post;
                 return CommunityPostCardWithTag(
                   post: p.toPost(),
-                  communityName: state.detail?.groupName ?? 'Community',
-                  communityCoverUrl: state.detail?.coverUrl,
+                  communityName: entry.communityName,
+                  communityCoverUrl: entry.communityCoverUrl,
                   onLike: (_) => _toggleLike(p.id),
                   onComment: (_) => _commentSheet(p),
                   onPin: canManage

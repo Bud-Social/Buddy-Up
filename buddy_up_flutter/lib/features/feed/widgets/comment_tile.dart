@@ -10,6 +10,11 @@ class CommentTile extends StatelessWidget {
   final void Function(String)? onDelete;
   final bool isThreaded;
 
+  /// Inline replies rendered in a threaded view when expanded.
+  final List<Comment>? replies;
+  final bool isRepliesExpanded;
+  final void Function(Comment)? onViewReplies;
+
   const CommentTile({
     super.key,
     required this.comment,
@@ -17,12 +22,15 @@ class CommentTile extends StatelessWidget {
     this.onReact,
     this.onDelete,
     this.isThreaded = false,
+    this.replies,
+    this.isRepliesExpanded = false,
+    this.onViewReplies,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(left: isThreaded ? 40 : 0),
+            padding: EdgeInsets.only(left: isThreaded ? 16 : 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -93,7 +101,7 @@ class CommentTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 4),
+                                const SizedBox(height: 4),
                 Row(
                   children: [
                     Text(
@@ -106,11 +114,11 @@ class CommentTile extends StatelessWidget {
                     if (comment.replyCount > 0) ...[
                       const SizedBox(width: 12),
                       GestureDetector(
-                        onTap: () => onReply?.call(comment),
+                        onTap: () => onViewReplies?.call(comment),
                         child: Text(
                           '${comment.replyCount} ${comment.replyCount == 1 ? 'reply' : 'replies'}',
-                          style: const TextStyle(
-                            color: BuddyColors.textSecondary,
+                          style: TextStyle(
+                            color: BuddyColors.green,
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                           ),
@@ -129,23 +137,60 @@ class CommentTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (comment.reactionCounts.isNotEmpty) ...[
-                      const Spacer(),
-                      ...comment.reactionCounts.entries.take(3).map((e) =>
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: Text(
-                            '${e.key} ${e.value}',
-                            style: const TextStyle(
-                              color: BuddyColors.textSecondary,
-                              fontSize: 11,
+                    if (comment.reactionCounts.isNotEmpty || comment.userReaction != null) ...[
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          final next = comment.userReaction != null ? '' : '💪';
+                          onReact?.call(comment, next);
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            ...comment.reactionCounts.entries.map((e) =>
+                              Padding(
+                                padding: const EdgeInsets.only(left: 4),
+                                child: Text(
+                                  '${e.key} ${e.value}',
+                                  style: const TextStyle(
+                                    color: BuddyColors.textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
                             ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (comment.reactionCounts.isEmpty && comment.userReaction == null) ...[
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => onReact?.call(comment, '💪'),
+                        child: const Text(
+                          '💪 Like',
+                          style: TextStyle(
+                            color: BuddyColors.textSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     ],
                   ],
                 ),
+                // Inline threaded replies.
+                if (isRepliesExpanded && replies != null) ...[
+                  const SizedBox(height: 4),
+                  for (final r in replies!)
+                    CommentTile(
+                      comment: r,
+                      isThreaded: true,
+                      onReply: onReply,
+                      onReact: onReact,
+                      key: ValueKey(r.id),
+                    ),
+                ],
                 const SizedBox(height: 8),
               ],
             ),

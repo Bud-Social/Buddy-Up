@@ -90,7 +90,21 @@ class _PostCardState extends ConsumerState<PostCard> {
   int get _repostCount => _orig?.repostCount ?? _post.repostCount;
   int get _saveCount => _orig?.saveCount ?? _post.saveCount;
   int get _shareCount => _orig?.shareCount ?? _post.shareCount;
-  int get _viewCount => _orig?.viewCount ?? _post.viewCount;
+    int get _viewCount => _orig?.viewCount ?? _post.viewCount;
+
+  /// When the row is a repost, content (author/avatar/body/media/header) is
+  /// sourced from the original post so the viewer sees the real content, not
+  /// the empty repost stub. Engagement metrics already use `_orig`.
+  AuthorData get _displayAuthor => _orig?.authorData ?? _post.authorData;
+  String get _displayBody => _orig?.body ?? _post.body;
+  List<String> get _displayMediaUrls => _orig?.mediaUrls ?? _post.mediaUrls;
+  List<PostMedia> get _displayMedia => _orig?.media ?? _post.media;
+  String get _displayCreatedAt => _orig?.createdAt ?? _post.createdAt;
+  Poll? get _displayPoll => _orig?.poll ?? _post.poll;
+  Map<String, dynamic>? get _displayWorkoutLogData =>
+      _orig?.workoutLogData ?? _post.workoutLogData;
+  String? get _displayGymTagName => _orig?.gymTagName ?? _post.gymTagName;
+  bool get _displayCommentsDisabled => _post.commentsDisabled;
 
   @override
   void initState() {
@@ -209,29 +223,29 @@ class _PostCardState extends ConsumerState<PostCard> {
               viewerAvatarUrl: viewer?.avatarUrl,
               viewerDisplayName: viewer?.displayName,
             ),
-          _buildHeader(context),
-          if (_post.body.isNotEmpty) ...[
+                    _buildHeader(context),
+          if (_displayBody.isNotEmpty) ...[
             const SizedBox(height: 8),
             _buildBody(context),
           ],
-          if (_post.mediaUrls.isNotEmpty || _post.media.isNotEmpty) ...[
+          if (_displayMediaUrls.isNotEmpty || _displayMedia.isNotEmpty) ...[
             const SizedBox(height: 10),
             MediaGallery(
-              urls: _post.mediaUrls,
-              media: _post.media.isEmpty ? null : _post.media,
-              postId: _post.id,
+              urls: _displayMediaUrls,
+              media: _displayMedia.isEmpty ? null : _displayMedia,
+              postId: _targetId,
             ),
           ],
-          if (_post.poll != null) ...[
+          if (_displayPoll != null) ...[
             const SizedBox(height: 8),
             PollWidget(
-              poll: _post.poll!,
-              postId: _post.id,
+              poll: _displayPoll!,
+              postId: _targetId,
               onVote: widget.onPollVote,
 
             ),
           ],
-          if (_post.workoutLogData != null) ...[
+          if (_displayWorkoutLogData != null) ...[
             const SizedBox(height: 8),
             _buildWorkoutLog(context),
           ],
@@ -251,7 +265,7 @@ class _PostCardState extends ConsumerState<PostCard> {
               widget.onReact?.call(_targetId, '');
             },
           ),
-          if (_post.gymTagName != null) ...[
+          if (_displayGymTagName != null) ...[
             const SizedBox(height: 6),
             _buildGymTag(),
           ],
@@ -260,19 +274,19 @@ class _PostCardState extends ConsumerState<PostCard> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+          Widget _buildHeader(BuildContext context) {
     return Row(
       children: [
         GestureDetector(
           onTap: () {
             _trackPostInteraction('profile');
-            widget.onProfileTap?.call(_post.authorData.username);
+            widget.onProfileTap?.call(_displayAuthor.username);
           },
           child: Avatar(
-            src: _post.authorData.avatarUrl,
-            alt: _post.authorData.displayName,
+            src: _displayAuthor.avatarUrl,
+            alt: _displayAuthor.displayName,
             size: AvatarSize.md,
-            verificationStatus: _post.authorData.verificationStatus,
+            verificationStatus: _displayAuthor.verificationStatus,
           ),
         ),
         const SizedBox(width: 10),
@@ -280,13 +294,13 @@ class _PostCardState extends ConsumerState<PostCard> {
           child: GestureDetector(
             onTap: () {
               _trackPostInteraction('profile');
-              widget.onProfileTap?.call(_post.authorData.username);
+              widget.onProfileTap?.call(_displayAuthor.username);
             },
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _post.authorData.displayName,
+                  _displayAuthor.displayName,
                   style: const TextStyle(
                     color: BuddyColors.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -294,7 +308,7 @@ class _PostCardState extends ConsumerState<PostCard> {
                   ),
                 ),
                 Text(
-                  '@${_post.authorData.username}',
+                  '@${_displayAuthor.username}',
                   style: const TextStyle(
                     color: BuddyColors.textSecondary,
                     fontSize: 12,
@@ -305,7 +319,7 @@ class _PostCardState extends ConsumerState<PostCard> {
           ),
         ),
         Text(
-          _formatTime(_post.createdAt),
+          _formatTime(_displayCreatedAt),
           style: const TextStyle(
             color: BuddyColors.textSecondary,
             fontSize: 11,
@@ -342,10 +356,10 @@ class _PostCardState extends ConsumerState<PostCard> {
     );
   }
 
-  Widget _buildBody(BuildContext context) {
+      Widget _buildBody(BuildContext context) {
     final mask = ref.watch(profanityFilterProvider);
     return Text(
-      mask ? maskProfanity(_post.body) : _post.body,
+      mask ? maskProfanity(_displayBody) : _displayBody,
       style: const TextStyle(
         color: BuddyColors.textPrimary,
         fontSize: 15,
@@ -424,7 +438,7 @@ class _PostCardState extends ConsumerState<PostCard> {
     widget.onComment?.call(_targetId);
   }
 
-  Widget _buildWorkoutLog(BuildContext context) {    final data = _post.workoutLogData!;
+  Widget _buildWorkoutLog(BuildContext context) {        final data = _displayWorkoutLogData!;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -455,12 +469,12 @@ class _PostCardState extends ConsumerState<PostCard> {
   }
 
   Widget _buildGymTag() {
-    return Row(
+        return Row(
       children: [
         const Icon(Icons.fitness_center, size: 14, color: BuddyColors.green),
         const SizedBox(width: 4),
         Text(
-          _post.gymTagName!,
+          _displayGymTagName!,
           style: const TextStyle(color: BuddyColors.green, fontSize: 12),
         ),
       ],

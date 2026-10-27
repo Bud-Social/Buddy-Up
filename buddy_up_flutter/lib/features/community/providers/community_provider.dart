@@ -10,6 +10,27 @@ List<Conversation> _parseConvList(dynamic data) =>
 List<CommunityPost> _parsePostList(dynamic data) =>
     (data as List).map((e) => CommunityPost.fromJson(e as Map<String, dynamic>)).toList();
 
+/// A CommunityPost tagged with the community it belongs to, for the "All"
+/// tab which aggregates posts across every community the user is in.
+class CommunityPostEntry {
+  final CommunityPost post;
+  final String communityName;
+  final String communityCoverUrl;
+
+  CommunityPostEntry(this.post, this.communityName, this.communityCoverUrl);
+
+  CommunityPostEntry copyWith({
+    CommunityPost? post,
+    String? communityName,
+    String? communityCoverUrl,
+  }) =>
+      CommunityPostEntry(
+        post ?? this.post,
+        communityName ?? this.communityName,
+        communityCoverUrl ?? this.communityCoverUrl,
+      );
+}
+
 class CommunitiesListState {
   final List<Conversation> mine;
   final List<Conversation> discover;
@@ -92,23 +113,32 @@ final communitiesListProvider =
   CommunitiesListNotifier.new,
 );
 
-class CommunityFeedState {
+  class CommunityFeedState {
   final CommunityDetail? detail;
   final List<CommunityPost> posts;
+  final List<CommunityPostEntry> allPosts;
   final bool isLoading;
   final String? error;
 
-  const CommunityFeedState({this.detail, this.posts = const [], this.isLoading = false, this.error});
+  const CommunityFeedState({
+    this.detail,
+    this.posts = const [],
+    this.allPosts = const [],
+    this.isLoading = false,
+    this.error,
+  });
 
   CommunityFeedState copyWith({
     CommunityDetail? detail,
     List<CommunityPost>? posts,
+    List<CommunityPostEntry>? allPosts,
     bool? isLoading,
     String? error,
   }) {
     return CommunityFeedState(
       detail: detail ?? this.detail,
       posts: posts ?? this.posts,
+      allPosts: allPosts ?? this.allPosts,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
     );
@@ -133,7 +163,7 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
     state = AsyncValue.data(CommunityFeedState(detail: detail));
   }
 
-  Future<void> loadPosts() async {
+    Future<void> loadPosts() async {
     try {
       final raw = await ref.read(communityRepositoryProvider).getCommunityPosts(communityId);
       state = AsyncValue.data((state.value ?? const CommunityFeedState()).copyWith(
@@ -141,6 +171,41 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
       ));
     } catch (e) {
       state = AsyncValue.data((state.value ?? const CommunityFeedState()).copyWith(error: e.toString()));
+    }
+  }
+
+  /// Aggregate posts from ALL communities the user belongs to, tagging each
+  /// with its community name + cover so the "All" tab can show a per-community
+  /// ribbon. Posts are merged newest-first.
+  Future<void> loadAllPosts() async {
+    try {
+      final raw = await ref.read(communityRepositoryProvider).getCommunities();
+      final data = raw['data'] as Map<String, dynamic>?;
+      final mine = _parseConvList(data?['mine'] ?? []);
+      final entries = <CommunityPostEntry>[];
+      for (final conv in mine) {
+        if (!conv.isCommunity) continue;
+        final postsRaw = await ref
+            .read(communityRepositoryProvider)
+            .getCommunityPosts(conv.id);
+        final posts = _parsePostList(postsRaw['data'] as List);
+        for (final p in posts) {
+          entries.add(CommunityPostEntry(
+            p,
+            conv.groupName,
+            conv.coverUrl,
+          ));
+        }
+      }
+      entries.sort((a, b) => b.post.createdAt.compareTo(a.post.createdAt));
+      state = AsyncValue.data((state.value ?? const CommunityFeedState()).copyWith(
+        allPosts: entries,
+      ));
+    } catch (e) {
+      state = AsyncValue.data((state.value ?? const CommunityFeedState()).copyWith(
+        allPosts: const [],
+        error: e.toString(),
+      ));
     }
   }
 

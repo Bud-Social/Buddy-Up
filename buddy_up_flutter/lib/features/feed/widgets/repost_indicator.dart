@@ -73,7 +73,7 @@ class _RepostIndicatorState extends State<RepostIndicator>
     final showStack = people != null || widget.viewerReposted;
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
-      child: AnimatedSwitcher(
+            child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (child, animation) => FadeTransition(
           opacity: animation,
@@ -83,7 +83,7 @@ class _RepostIndicatorState extends State<RepostIndicator>
           ),
         ),
         child: Row(
-          key: const ValueKey('repost-indicator'),
+          key: ValueKey('repost-indicator-${people?.length ?? 0}-${widget.viewerReposted}'),
           children: [
             Padding(
               padding: const EdgeInsets.only(right: 8),

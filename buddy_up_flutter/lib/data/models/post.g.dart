@@ -39,6 +39,8 @@ _PostMedia _$PostMediaFromJson(Map<String, dynamic> json) => _PostMedia(
           ?.map((e) => CaptionSegment.fromJson(e as Map<String, dynamic>))
           .toList() ??
       const <CaptionSegment>[],
+  textContent: json['textContent'] as String?,
+  textStyle: json['textStyle'] as Map<String, dynamic>?,
 );
 
 Map<String, dynamic> _$PostMediaToJson(_PostMedia instance) =>
@@ -57,6 +59,8 @@ Map<String, dynamic> _$PostMediaToJson(_PostMedia instance) =>
       'editMeta': instance.editMeta,
       'altText': instance.altText,
       'captions': instance.captions,
+      'textContent': instance.textContent,
+      'textStyle': instance.textStyle,
     };
 
 _AuthorData _$AuthorDataFromJson(Map<String, dynamic> json) => _AuthorData(
@@ -130,6 +134,7 @@ _ReposterData _$ReposterDataFromJson(Map<String, dynamic> json) =>
       userId: json['user_id'] as String?,
       displayName: json['display_name'] as String? ?? '',
       avatarUrl: json['avatar_url'] as String? ?? '',
+      followedByViewer: json['followed_by_viewer'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$ReposterDataToJson(_ReposterData instance) =>
@@ -137,6 +142,7 @@ Map<String, dynamic> _$ReposterDataToJson(_ReposterData instance) =>
       'user_id': instance.userId,
       'display_name': instance.displayName,
       'avatar_url': instance.avatarUrl,
+      'followed_by_viewer': instance.followedByViewer,
     };
 
 _OriginalPostData _$OriginalPostDataFromJson(Map<String, dynamic> json) =>
@@ -309,6 +315,9 @@ _Comment _$CommentFromJson(Map<String, dynamic> json) => _Comment(
   postId: json['post_id'] as String,
   authorData: AuthorData.fromJson(json['author_data'] as Map<String, dynamic>),
   body: json['body'] as String,
+  mediaType: json['media_type'] as String? ?? 'text',
+  mediaUrl: json['media_url'] as String?,
+  stickerPack: json['sticker_pack'] as String?,
   parentId: json['parent_id'] as String?,
   isAnonymous: json['is_anonymous'] as bool? ?? false,
   replyCount: (json['reply_count'] as num?)?.toInt() ?? 0,
@@ -327,6 +336,9 @@ Map<String, dynamic> _$CommentToJson(_Comment instance) => <String, dynamic>{
   'post_id': instance.postId,
   'author_data': instance.authorData,
   'body': instance.body,
+  'media_type': instance.mediaType,
+  'media_url': instance.mediaUrl,
+  'sticker_pack': instance.stickerPack,
   'parent_id': instance.parentId,
   'is_anonymous': instance.isAnonymous,
   'reply_count': instance.replyCount,
@@ -402,7 +414,10 @@ Map<String, dynamic> _$ReactionInputToJson(_ReactionInput instance) =>
 
 _CommentCreateInput _$CommentCreateInputFromJson(Map<String, dynamic> json) =>
     _CommentCreateInput(
-      body: json['body'] as String,
+      body: json['body'] as String?,
+      mediaType: json['media_type'] as String? ?? 'text',
+      mediaUrl: json['media_url'] as String?,
+      stickerPack: json['sticker_pack'] as String?,
       parentId: json['parent_id'] as String?,
       isAnonymous: json['is_anonymous'] as bool? ?? false,
     );
@@ -410,6 +425,9 @@ _CommentCreateInput _$CommentCreateInputFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$CommentCreateInputToJson(_CommentCreateInput instance) =>
     <String, dynamic>{
       'body': instance.body,
+      'media_type': instance.mediaType,
+      'media_url': instance.mediaUrl,
+      'sticker_pack': instance.stickerPack,
       'parent_id': instance.parentId,
       'is_anonymous': instance.isAnonymous,
     };

@@ -7,7 +7,7 @@ import {
   Volume2, VolumeX, Share2, Eye, EyeOff, Flag, Ban, Undo2,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
-import { feedApi, profilesApi } from '@/api';
+import { feedApi, profilesApi, moderationApi } from '@/api';
 import { REPORT_REASONS } from '@/api/feed';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/components/ui/Toast';
@@ -467,11 +467,33 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
   const [justRepostedFlash, setJustRepostedFlash] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [shareAnchor, setShareAnchor] = useState<{ top: number; left: number; bottom: number } | null>(null);
-  const [heartPop, setHeartPop] = useState<{ show: boolean; x: number; y: number } | null>(null);
+    const [heartPop, setHeartPop] = useState<{ show: boolean; x: number; y: number } | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFired = useRef(false);
 
+  // ── Flag explanation ("See why") ──────────────────────────────────
+  const [flagExplanation, setFlagExplanation] = useState<string | null>(null);
+  const [explanationLoading, setExplanationLoading] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+
+  const handleSeeWhy = useCallback(async () => {
+    const flagIds = post.flag_ids;
+    if (!flagIds || flagIds.length === 0) return;
+    setExplanationLoading(true);
+    try {
+      const result = await moderationApi.getExplanation(flagIds[0]);
+      setFlagExplanation(result?.ai_explanation ?? result?.content_preview ?? 'No explanation available.');
+      setShowExplanation(true);
+    } catch {
+      setFlagExplanation('Could not load the explanation.');
+      setShowExplanation(true);
+    } finally {
+      setExplanationLoading(false);
+    }
+    }, [post.flag_ids]);
+
   // ── Bud Press: viewer avatar overlay, menu, view recording, focus analytics ──
+
   const { toast } = useToast();
   const viewerAvatar = useAuthStore((s) => s.profile?.avatar_url);
   const viewerName = useAuthStore((s) => s.profile?.display_name);
@@ -945,10 +967,53 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
       <div className={`flex gap-1 ${handedness === 'left' ? 'flex-row-reverse' : ''}`}>
         {/* Main content — left 88% */}
         <div onDoubleClick={handleDoubleClick} className="relative flex-1 min-w-0 p-4 pt-3">
-          {/* Pinned banner */}
+                    {/* Pinned banner */}
           {post.is_pinned && (
             <div className="flex items-center gap-1.5 text-xs text-buddy-gold font-medium mb-2">
               📌 Pinned post
+            </div>
+          )}
+
+          {/* Flag / takedown warning + "See why" */}
+          {(post.tombstone?.taken_down || (post.flag_ids?.length ?? 0) > 0) && (
+            <div className="mb-3 rounded-xl bg-buddy-surface-raised border border-buddy-gold/50 p-3">
+              <div className="flex items-start gap-2">
+                <Flag size={16} className="text-buddy-gold shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  {post.tombstone?.taken_down && (
+                    <p className="text-xs font-medium text-buddy-gold">
+                      This post was taken down by moderators
+                      {post.tombstone.reason && (
+                        <span className="text-buddy-text-secondary">
+                          : {post.tombstone.reason.replaceAll('_', ' ')}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  {!post.tombstone?.taken_down && post.flag_ids && post.flag_ids.length > 0 && (
+                    <p className="text-xs font-medium text-buddy-gold">
+                      This post was flagged for review
+                      {post.tombstone?.note && (
+                        <span className="text-buddy-text-secondary">
+                          : {post.tombstone.note}
+                        </span>
+                      )}
+                    </p>
+                  )}
+                  {showExplanation && flagExplanation && (
+                    <p className="text-xs text-buddy-text-secondary mt-1.5">
+                      {flagExplanation}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={handleSeeWhy}
+                  disabled={explanationLoading}
+                  className="text-xs font-medium text-buddy-green hover:text-buddy-green/80 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                  {explanationLoading ? 'Loading…' : showExplanation ? 'Hide' : 'See why'}
+                </button>
+              </div>
             </div>
           )}
 

@@ -52,8 +52,27 @@ abstract class FeedRepository {
     @Part(name: 'media_type') String mediaType,
   );
 
-  @DELETE('/feed/{id}/comments/{cid}/')
+    @DELETE('/feed/{id}/comments/{cid}/')
   Future<void> deleteComment(
+    @Path('id') String postId,
+    @Path('cid') String commentId,
+  );
+
+  @GET('/feed/{id}/comments/{cid}/replies/')
+  Future<dynamic> getCommentReplies(
+    @Path('id') String postId,
+    @Path('cid') String commentId,
+  );
+
+  @POST('/feed/{id}/comments/{cid}/react/')
+  Future<dynamic> reactToComment(
+    @Path('id') String postId,
+    @Path('cid') String commentId,
+    @Body() ReactionInput input,
+  );
+
+  @DELETE('/feed/{id}/comments/{cid}/react/')
+  Future<void> unreactToComment(
     @Path('id') String postId,
     @Path('cid') String commentId,
   );

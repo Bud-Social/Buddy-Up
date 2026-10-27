@@ -284,7 +284,7 @@ as String,
 /// @nodoc
 mixin _$PostMedia {
 
- String get url; String get mediaType; int? get width; int? get height; int? get durationMs; String? get posterUrl; int? get trimStartMs; int? get trimEndMs; String? get soundId; double? get soundVolume; String? get soundAudioUrl; Map<String, dynamic>? get editMeta; String? get altText; List<CaptionSegment> get captions;
+ String get url; String get mediaType; int? get width; int? get height; int? get durationMs; String? get posterUrl; int? get trimStartMs; int? get trimEndMs; String? get soundId; double? get soundVolume; String? get soundAudioUrl; Map<String, dynamic>? get editMeta; String? get altText; List<CaptionSegment> get captions; String? get textContent; Map<String, dynamic>? get textStyle;
 /// Create a copy of PostMedia
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -297,16 +297,16 @@ $PostMediaCopyWith<PostMedia> get copyWith => _$PostMediaCopyWithImpl<PostMedia>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PostMedia&&(identical(other.url, url) || other.url == url)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.trimStartMs, trimStartMs) || other.trimStartMs == trimStartMs)&&(identical(other.trimEndMs, trimEndMs) || other.trimEndMs == trimEndMs)&&(identical(other.soundId, soundId) || other.soundId == soundId)&&(identical(other.soundVolume, soundVolume) || other.soundVolume == soundVolume)&&(identical(other.soundAudioUrl, soundAudioUrl) || other.soundAudioUrl == soundAudioUrl)&&const DeepCollectionEquality().equals(other.editMeta, editMeta)&&(identical(other.altText, altText) || other.altText == altText)&&const DeepCollectionEquality().equals(other.captions, captions));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PostMedia&&(identical(other.url, url) || other.url == url)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.trimStartMs, trimStartMs) || other.trimStartMs == trimStartMs)&&(identical(other.trimEndMs, trimEndMs) || other.trimEndMs == trimEndMs)&&(identical(other.soundId, soundId) || other.soundId == soundId)&&(identical(other.soundVolume, soundVolume) || other.soundVolume == soundVolume)&&(identical(other.soundAudioUrl, soundAudioUrl) || other.soundAudioUrl == soundAudioUrl)&&const DeepCollectionEquality().equals(other.editMeta, editMeta)&&(identical(other.altText, altText) || other.altText == altText)&&const DeepCollectionEquality().equals(other.captions, captions)&&(identical(other.textContent, textContent) || other.textContent == textContent)&&const DeepCollectionEquality().equals(other.textStyle, textStyle));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,url,mediaType,width,height,durationMs,posterUrl,trimStartMs,trimEndMs,soundId,soundVolume,soundAudioUrl,const DeepCollectionEquality().hash(editMeta),altText,const DeepCollectionEquality().hash(captions));
+int get hashCode => Object.hash(runtimeType,url,mediaType,width,height,durationMs,posterUrl,trimStartMs,trimEndMs,soundId,soundVolume,soundAudioUrl,const DeepCollectionEquality().hash(editMeta),altText,const DeepCollectionEquality().hash(captions),textContent,const DeepCollectionEquality().hash(textStyle));
 
 @override
 String toString() {
-  return 'PostMedia(url: $url, mediaType: $mediaType, width: $width, height: $height, durationMs: $durationMs, posterUrl: $posterUrl, trimStartMs: $trimStartMs, trimEndMs: $trimEndMs, soundId: $soundId, soundVolume: $soundVolume, soundAudioUrl: $soundAudioUrl, editMeta: $editMeta, altText: $altText, captions: $captions)';
+  return 'PostMedia(url: $url, mediaType: $mediaType, width: $width, height: $height, durationMs: $durationMs, posterUrl: $posterUrl, trimStartMs: $trimStartMs, trimEndMs: $trimEndMs, soundId: $soundId, soundVolume: $soundVolume, soundAudioUrl: $soundAudioUrl, editMeta: $editMeta, altText: $altText, captions: $captions, textContent: $textContent, textStyle: $textStyle)';
 }
 
 
@@ -317,7 +317,7 @@ abstract mixin class $PostMediaCopyWith<$Res>  {
   factory $PostMediaCopyWith(PostMedia value, $Res Function(PostMedia) _then) = _$PostMediaCopyWithImpl;
 @useResult
 $Res call({
- String url, String mediaType, int? width, int? height, int? durationMs, String? posterUrl, int? trimStartMs, int? trimEndMs, String? soundId, double? soundVolume, String? soundAudioUrl, Map<String, dynamic>? editMeta, String? altText, List<CaptionSegment> captions
+ String url, String mediaType, int? width, int? height, int? durationMs, String? posterUrl, int? trimStartMs, int? trimEndMs, String? soundId, double? soundVolume, String? soundAudioUrl, Map<String, dynamic>? editMeta, String? altText, List<CaptionSegment> captions, String? textContent, Map<String, dynamic>? textStyle
 });
 
 
@@ -334,7 +334,7 @@ class _$PostMediaCopyWithImpl<$Res>
 
 /// Create a copy of PostMedia
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? url = null,Object? mediaType = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? posterUrl = freezed,Object? trimStartMs = freezed,Object? trimEndMs = freezed,Object? soundId = freezed,Object? soundVolume = freezed,Object? soundAudioUrl = freezed,Object? editMeta = freezed,Object? altText = freezed,Object? captions = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? url = null,Object? mediaType = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? posterUrl = freezed,Object? trimStartMs = freezed,Object? trimEndMs = freezed,Object? soundId = freezed,Object? soundVolume = freezed,Object? soundAudioUrl = freezed,Object? editMeta = freezed,Object? altText = freezed,Object? captions = null,Object? textContent = freezed,Object? textStyle = freezed,}) {
   return _then(_self.copyWith(
 url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
@@ -350,7 +350,9 @@ as double?,soundAudioUrl: freezed == soundAudioUrl ? _self.soundAudioUrl : sound
 as String?,editMeta: freezed == editMeta ? _self.editMeta : editMeta // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,altText: freezed == altText ? _self.altText : altText // ignore: cast_nullable_to_non_nullable
 as String?,captions: null == captions ? _self.captions : captions // ignore: cast_nullable_to_non_nullable
-as List<CaptionSegment>,
+as List<CaptionSegment>,textContent: freezed == textContent ? _self.textContent : textContent // ignore: cast_nullable_to_non_nullable
+as String?,textStyle: freezed == textStyle ? _self.textStyle : textStyle // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,
   ));
 }
 
@@ -435,10 +437,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? soundAudioUrl,  Map<String, dynamic>? editMeta,  String? altText,  List<CaptionSegment> captions)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? soundAudioUrl,  Map<String, dynamic>? editMeta,  String? altText,  List<CaptionSegment> captions,  String? textContent,  Map<String, dynamic>? textStyle)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PostMedia() when $default != null:
-return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.soundAudioUrl,_that.editMeta,_that.altText,_that.captions);case _:
+return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.soundAudioUrl,_that.editMeta,_that.altText,_that.captions,_that.textContent,_that.textStyle);case _:
   return orElse();
 
 }
@@ -456,10 +458,10 @@ return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.duratio
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? soundAudioUrl,  Map<String, dynamic>? editMeta,  String? altText,  List<CaptionSegment> captions)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? soundAudioUrl,  Map<String, dynamic>? editMeta,  String? altText,  List<CaptionSegment> captions,  String? textContent,  Map<String, dynamic>? textStyle)  $default,) {final _that = this;
 switch (_that) {
 case _PostMedia():
-return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.soundAudioUrl,_that.editMeta,_that.altText,_that.captions);case _:
+return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.soundAudioUrl,_that.editMeta,_that.altText,_that.captions,_that.textContent,_that.textStyle);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -476,10 +478,10 @@ return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.duratio
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? soundAudioUrl,  Map<String, dynamic>? editMeta,  String? altText,  List<CaptionSegment> captions)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String url,  String mediaType,  int? width,  int? height,  int? durationMs,  String? posterUrl,  int? trimStartMs,  int? trimEndMs,  String? soundId,  double? soundVolume,  String? soundAudioUrl,  Map<String, dynamic>? editMeta,  String? altText,  List<CaptionSegment> captions,  String? textContent,  Map<String, dynamic>? textStyle)?  $default,) {final _that = this;
 switch (_that) {
 case _PostMedia() when $default != null:
-return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.soundAudioUrl,_that.editMeta,_that.altText,_that.captions);case _:
+return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.durationMs,_that.posterUrl,_that.trimStartMs,_that.trimEndMs,_that.soundId,_that.soundVolume,_that.soundAudioUrl,_that.editMeta,_that.altText,_that.captions,_that.textContent,_that.textStyle);case _:
   return null;
 
 }
@@ -491,7 +493,7 @@ return $default(_that.url,_that.mediaType,_that.width,_that.height,_that.duratio
 @JsonSerializable()
 
 class _PostMedia implements PostMedia {
-  const _PostMedia({required this.url, this.mediaType = 'image', this.width, this.height, this.durationMs, this.posterUrl, this.trimStartMs, this.trimEndMs, this.soundId, this.soundVolume, this.soundAudioUrl, final  Map<String, dynamic>? editMeta, this.altText, final  List<CaptionSegment> captions = const <CaptionSegment>[]}): _editMeta = editMeta,_captions = captions;
+  const _PostMedia({required this.url, this.mediaType = 'image', this.width, this.height, this.durationMs, this.posterUrl, this.trimStartMs, this.trimEndMs, this.soundId, this.soundVolume, this.soundAudioUrl, final  Map<String, dynamic>? editMeta, this.altText, final  List<CaptionSegment> captions = const <CaptionSegment>[], this.textContent, final  Map<String, dynamic>? textStyle}): _editMeta = editMeta,_captions = captions,_textStyle = textStyle;
   factory _PostMedia.fromJson(Map<String, dynamic> json) => _$PostMediaFromJson(json);
 
 @override final  String url;
@@ -522,6 +524,16 @@ class _PostMedia implements PostMedia {
   return EqualUnmodifiableListView(_captions);
 }
 
+@override final  String? textContent;
+ final  Map<String, dynamic>? _textStyle;
+@override Map<String, dynamic>? get textStyle {
+  final value = _textStyle;
+  if (value == null) return null;
+  if (_textStyle is EqualUnmodifiableMapView) return _textStyle;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
 
 /// Create a copy of PostMedia
 /// with the given fields replaced by the non-null parameter values.
@@ -536,16 +548,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PostMedia&&(identical(other.url, url) || other.url == url)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.trimStartMs, trimStartMs) || other.trimStartMs == trimStartMs)&&(identical(other.trimEndMs, trimEndMs) || other.trimEndMs == trimEndMs)&&(identical(other.soundId, soundId) || other.soundId == soundId)&&(identical(other.soundVolume, soundVolume) || other.soundVolume == soundVolume)&&(identical(other.soundAudioUrl, soundAudioUrl) || other.soundAudioUrl == soundAudioUrl)&&const DeepCollectionEquality().equals(other._editMeta, _editMeta)&&(identical(other.altText, altText) || other.altText == altText)&&const DeepCollectionEquality().equals(other._captions, _captions));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PostMedia&&(identical(other.url, url) || other.url == url)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.width, width) || other.width == width)&&(identical(other.height, height) || other.height == height)&&(identical(other.durationMs, durationMs) || other.durationMs == durationMs)&&(identical(other.posterUrl, posterUrl) || other.posterUrl == posterUrl)&&(identical(other.trimStartMs, trimStartMs) || other.trimStartMs == trimStartMs)&&(identical(other.trimEndMs, trimEndMs) || other.trimEndMs == trimEndMs)&&(identical(other.soundId, soundId) || other.soundId == soundId)&&(identical(other.soundVolume, soundVolume) || other.soundVolume == soundVolume)&&(identical(other.soundAudioUrl, soundAudioUrl) || other.soundAudioUrl == soundAudioUrl)&&const DeepCollectionEquality().equals(other._editMeta, _editMeta)&&(identical(other.altText, altText) || other.altText == altText)&&const DeepCollectionEquality().equals(other._captions, _captions)&&(identical(other.textContent, textContent) || other.textContent == textContent)&&const DeepCollectionEquality().equals(other._textStyle, _textStyle));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,url,mediaType,width,height,durationMs,posterUrl,trimStartMs,trimEndMs,soundId,soundVolume,soundAudioUrl,const DeepCollectionEquality().hash(_editMeta),altText,const DeepCollectionEquality().hash(_captions));
+int get hashCode => Object.hash(runtimeType,url,mediaType,width,height,durationMs,posterUrl,trimStartMs,trimEndMs,soundId,soundVolume,soundAudioUrl,const DeepCollectionEquality().hash(_editMeta),altText,const DeepCollectionEquality().hash(_captions),textContent,const DeepCollectionEquality().hash(_textStyle));
 
 @override
 String toString() {
-  return 'PostMedia(url: $url, mediaType: $mediaType, width: $width, height: $height, durationMs: $durationMs, posterUrl: $posterUrl, trimStartMs: $trimStartMs, trimEndMs: $trimEndMs, soundId: $soundId, soundVolume: $soundVolume, soundAudioUrl: $soundAudioUrl, editMeta: $editMeta, altText: $altText, captions: $captions)';
+  return 'PostMedia(url: $url, mediaType: $mediaType, width: $width, height: $height, durationMs: $durationMs, posterUrl: $posterUrl, trimStartMs: $trimStartMs, trimEndMs: $trimEndMs, soundId: $soundId, soundVolume: $soundVolume, soundAudioUrl: $soundAudioUrl, editMeta: $editMeta, altText: $altText, captions: $captions, textContent: $textContent, textStyle: $textStyle)';
 }
 
 
@@ -556,7 +568,7 @@ abstract mixin class _$PostMediaCopyWith<$Res> implements $PostMediaCopyWith<$Re
   factory _$PostMediaCopyWith(_PostMedia value, $Res Function(_PostMedia) _then) = __$PostMediaCopyWithImpl;
 @override @useResult
 $Res call({
- String url, String mediaType, int? width, int? height, int? durationMs, String? posterUrl, int? trimStartMs, int? trimEndMs, String? soundId, double? soundVolume, String? soundAudioUrl, Map<String, dynamic>? editMeta, String? altText, List<CaptionSegment> captions
+ String url, String mediaType, int? width, int? height, int? durationMs, String? posterUrl, int? trimStartMs, int? trimEndMs, String? soundId, double? soundVolume, String? soundAudioUrl, Map<String, dynamic>? editMeta, String? altText, List<CaptionSegment> captions, String? textContent, Map<String, dynamic>? textStyle
 });
 
 
@@ -573,7 +585,7 @@ class __$PostMediaCopyWithImpl<$Res>
 
 /// Create a copy of PostMedia
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? url = null,Object? mediaType = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? posterUrl = freezed,Object? trimStartMs = freezed,Object? trimEndMs = freezed,Object? soundId = freezed,Object? soundVolume = freezed,Object? soundAudioUrl = freezed,Object? editMeta = freezed,Object? altText = freezed,Object? captions = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? url = null,Object? mediaType = null,Object? width = freezed,Object? height = freezed,Object? durationMs = freezed,Object? posterUrl = freezed,Object? trimStartMs = freezed,Object? trimEndMs = freezed,Object? soundId = freezed,Object? soundVolume = freezed,Object? soundAudioUrl = freezed,Object? editMeta = freezed,Object? altText = freezed,Object? captions = null,Object? textContent = freezed,Object? textStyle = freezed,}) {
   return _then(_PostMedia(
 url: null == url ? _self.url : url // ignore: cast_nullable_to_non_nullable
 as String,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
@@ -589,7 +601,9 @@ as double?,soundAudioUrl: freezed == soundAudioUrl ? _self.soundAudioUrl : sound
 as String?,editMeta: freezed == editMeta ? _self._editMeta : editMeta // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>?,altText: freezed == altText ? _self.altText : altText // ignore: cast_nullable_to_non_nullable
 as String?,captions: null == captions ? _self._captions : captions // ignore: cast_nullable_to_non_nullable
-as List<CaptionSegment>,
+as List<CaptionSegment>,textContent: freezed == textContent ? _self.textContent : textContent // ignore: cast_nullable_to_non_nullable
+as String?,textStyle: freezed == textStyle ? _self._textStyle : textStyle // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,
   ));
 }
 
@@ -1452,7 +1466,7 @@ as List<String>,
 /// @nodoc
 mixin _$ReposterData {
 
-@JsonKey(name: 'user_id') String? get userId;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;
+@JsonKey(name: 'user_id') String? get userId;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'followed_by_viewer') bool get followedByViewer;
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1465,16 +1479,16 @@ $ReposterDataCopyWith<ReposterData> get copyWith => _$ReposterDataCopyWithImpl<R
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReposterData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ReposterData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,userId,displayName,avatarUrl);
+int get hashCode => Object.hash(runtimeType,userId,displayName,avatarUrl,followedByViewer);
 
 @override
 String toString() {
-  return 'ReposterData(userId: $userId, displayName: $displayName, avatarUrl: $avatarUrl)';
+  return 'ReposterData(userId: $userId, displayName: $displayName, avatarUrl: $avatarUrl, followedByViewer: $followedByViewer)';
 }
 
 
@@ -1485,7 +1499,7 @@ abstract mixin class $ReposterDataCopyWith<$Res>  {
   factory $ReposterDataCopyWith(ReposterData value, $Res Function(ReposterData) _then) = _$ReposterDataCopyWithImpl;
 @useResult
 $Res call({
-@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
+@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'followed_by_viewer') bool followedByViewer
 });
 
 
@@ -1502,12 +1516,13 @@ class _$ReposterDataCopyWithImpl<$Res>
 
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? userId = freezed,Object? displayName = null,Object? avatarUrl = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = freezed,Object? displayName = null,Object? avatarUrl = null,Object? followedByViewer = null,}) {
   return _then(_self.copyWith(
 userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String?,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
-as String,
+as String,followedByViewer: null == followedByViewer ? _self.followedByViewer : followedByViewer // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -1592,10 +1607,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'followed_by_viewer')  bool followedByViewer)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ReposterData() when $default != null:
-return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
+return $default(_that.userId,_that.displayName,_that.avatarUrl,_that.followedByViewer);case _:
   return orElse();
 
 }
@@ -1613,10 +1628,10 @@ return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'followed_by_viewer')  bool followedByViewer)  $default,) {final _that = this;
 switch (_that) {
 case _ReposterData():
-return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
+return $default(_that.userId,_that.displayName,_that.avatarUrl,_that.followedByViewer);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1633,10 +1648,10 @@ return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String? userId, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'followed_by_viewer')  bool followedByViewer)?  $default,) {final _that = this;
 switch (_that) {
 case _ReposterData() when $default != null:
-return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
+return $default(_that.userId,_that.displayName,_that.avatarUrl,_that.followedByViewer);case _:
   return null;
 
 }
@@ -1648,12 +1663,13 @@ return $default(_that.userId,_that.displayName,_that.avatarUrl);case _:
 @JsonSerializable()
 
 class _ReposterData implements ReposterData {
-  const _ReposterData({@JsonKey(name: 'user_id') this.userId, @JsonKey(name: 'display_name') this.displayName = '', @JsonKey(name: 'avatar_url') this.avatarUrl = ''});
+  const _ReposterData({@JsonKey(name: 'user_id') this.userId, @JsonKey(name: 'display_name') this.displayName = '', @JsonKey(name: 'avatar_url') this.avatarUrl = '', @JsonKey(name: 'followed_by_viewer') this.followedByViewer = false});
   factory _ReposterData.fromJson(Map<String, dynamic> json) => _$ReposterDataFromJson(json);
 
 @override@JsonKey(name: 'user_id') final  String? userId;
 @override@JsonKey(name: 'display_name') final  String displayName;
 @override@JsonKey(name: 'avatar_url') final  String avatarUrl;
+@override@JsonKey(name: 'followed_by_viewer') final  bool followedByViewer;
 
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
@@ -1668,16 +1684,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReposterData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ReposterData&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.followedByViewer, followedByViewer) || other.followedByViewer == followedByViewer));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,userId,displayName,avatarUrl);
+int get hashCode => Object.hash(runtimeType,userId,displayName,avatarUrl,followedByViewer);
 
 @override
 String toString() {
-  return 'ReposterData(userId: $userId, displayName: $displayName, avatarUrl: $avatarUrl)';
+  return 'ReposterData(userId: $userId, displayName: $displayName, avatarUrl: $avatarUrl, followedByViewer: $followedByViewer)';
 }
 
 
@@ -1688,7 +1704,7 @@ abstract mixin class _$ReposterDataCopyWith<$Res> implements $ReposterDataCopyWi
   factory _$ReposterDataCopyWith(_ReposterData value, $Res Function(_ReposterData) _then) = __$ReposterDataCopyWithImpl;
 @override @useResult
 $Res call({
-@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl
+@JsonKey(name: 'user_id') String? userId,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'followed_by_viewer') bool followedByViewer
 });
 
 
@@ -1705,12 +1721,13 @@ class __$ReposterDataCopyWithImpl<$Res>
 
 /// Create a copy of ReposterData
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? userId = freezed,Object? displayName = null,Object? avatarUrl = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = freezed,Object? displayName = null,Object? avatarUrl = null,Object? followedByViewer = null,}) {
   return _then(_ReposterData(
 userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String?,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
-as String,
+as String,followedByViewer: null == followedByViewer ? _self.followedByViewer : followedByViewer // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -2613,7 +2630,7 @@ $OriginalPostDataCopyWith<$Res>? get originalPostData {
 /// @nodoc
 mixin _$Comment {
 
- String get id;@JsonKey(name: 'post_id') String get postId;@JsonKey(name: 'author_data') AuthorData get authorData; String get body;@JsonKey(name: 'parent_id') String? get parentId;@JsonKey(name: 'is_anonymous') bool get isAnonymous;@JsonKey(name: 'reply_count') int get replyCount;@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts;@JsonKey(name: 'user_reaction') String? get userReaction;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
+ String get id;@JsonKey(name: 'post_id') String get postId;@JsonKey(name: 'author_data') AuthorData get authorData; String get body;@JsonKey(name: 'media_type') String get mediaType;@JsonKey(name: 'media_url') String? get mediaUrl;@JsonKey(name: 'sticker_pack') String? get stickerPack;@JsonKey(name: 'parent_id') String? get parentId;@JsonKey(name: 'is_anonymous') bool get isAnonymous;@JsonKey(name: 'reply_count') int get replyCount;@JsonKey(name: 'reaction_counts') Map<String, int> get reactionCounts;@JsonKey(name: 'user_reaction') String? get userReaction;@JsonKey(name: 'created_at') String get createdAt;@JsonKey(name: 'updated_at') String? get updatedAt;
 /// Create a copy of Comment
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -2626,16 +2643,16 @@ $CommentCopyWith<Comment> get copyWith => _$CommentCopyWithImpl<Comment>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Comment&&(identical(other.id, id) || other.id == id)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.body, body) || other.body == body)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&const DeepCollectionEquality().equals(other.reactionCounts, reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Comment&&(identical(other.id, id) || other.id == id)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.stickerPack, stickerPack) || other.stickerPack == stickerPack)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&const DeepCollectionEquality().equals(other.reactionCounts, reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,postId,authorData,body,parentId,isAnonymous,replyCount,const DeepCollectionEquality().hash(reactionCounts),userReaction,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,postId,authorData,body,mediaType,mediaUrl,stickerPack,parentId,isAnonymous,replyCount,const DeepCollectionEquality().hash(reactionCounts),userReaction,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Comment(id: $id, postId: $postId, authorData: $authorData, body: $body, parentId: $parentId, isAnonymous: $isAnonymous, replyCount: $replyCount, reactionCounts: $reactionCounts, userReaction: $userReaction, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Comment(id: $id, postId: $postId, authorData: $authorData, body: $body, mediaType: $mediaType, mediaUrl: $mediaUrl, stickerPack: $stickerPack, parentId: $parentId, isAnonymous: $isAnonymous, replyCount: $replyCount, reactionCounts: $reactionCounts, userReaction: $userReaction, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -2646,7 +2663,7 @@ abstract mixin class $CommentCopyWith<$Res>  {
   factory $CommentCopyWith(Comment value, $Res Function(Comment) _then) = _$CommentCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'post_id') String postId,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'reply_count') int replyCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+ String id,@JsonKey(name: 'post_id') String postId,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'media_type') String mediaType,@JsonKey(name: 'media_url') String? mediaUrl,@JsonKey(name: 'sticker_pack') String? stickerPack,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'reply_count') int replyCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
@@ -2663,13 +2680,16 @@ class _$CommentCopyWithImpl<$Res>
 
 /// Create a copy of Comment
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? postId = null,Object? authorData = null,Object? body = null,Object? parentId = freezed,Object? isAnonymous = null,Object? replyCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? postId = null,Object? authorData = null,Object? body = null,Object? mediaType = null,Object? mediaUrl = freezed,Object? stickerPack = freezed,Object? parentId = freezed,Object? isAnonymous = null,Object? replyCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,postId: null == postId ? _self.postId : postId // ignore: cast_nullable_to_non_nullable
 as String,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
 as AuthorData,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
-as String,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
+as String,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
+as String,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
+as String?,stickerPack: freezed == stickerPack ? _self.stickerPack : stickerPack // ignore: cast_nullable_to_non_nullable
+as String?,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
 as String?,isAnonymous: null == isAnonymous ? _self.isAnonymous : isAnonymous // ignore: cast_nullable_to_non_nullable
 as bool,replyCount: null == replyCount ? _self.replyCount : replyCount // ignore: cast_nullable_to_non_nullable
 as int,reactionCounts: null == reactionCounts ? _self.reactionCounts : reactionCounts // ignore: cast_nullable_to_non_nullable
@@ -2770,10 +2790,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'post_id')  String postId, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'post_id')  String postId, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_type')  String mediaType, @JsonKey(name: 'media_url')  String? mediaUrl, @JsonKey(name: 'sticker_pack')  String? stickerPack, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Comment() when $default != null:
-return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId,_that.isAnonymous,_that.replyCount,_that.reactionCounts,_that.userReaction,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.mediaType,_that.mediaUrl,_that.stickerPack,_that.parentId,_that.isAnonymous,_that.replyCount,_that.reactionCounts,_that.userReaction,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -2791,10 +2811,10 @@ return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'post_id')  String postId, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'post_id')  String postId, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_type')  String mediaType, @JsonKey(name: 'media_url')  String? mediaUrl, @JsonKey(name: 'sticker_pack')  String? stickerPack, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Comment():
-return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId,_that.isAnonymous,_that.replyCount,_that.reactionCounts,_that.userReaction,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.mediaType,_that.mediaUrl,_that.stickerPack,_that.parentId,_that.isAnonymous,_that.replyCount,_that.reactionCounts,_that.userReaction,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2811,10 +2831,10 @@ return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'post_id')  String postId, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'post_id')  String postId, @JsonKey(name: 'author_data')  AuthorData authorData,  String body, @JsonKey(name: 'media_type')  String mediaType, @JsonKey(name: 'media_url')  String? mediaUrl, @JsonKey(name: 'sticker_pack')  String? stickerPack, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous, @JsonKey(name: 'reply_count')  int replyCount, @JsonKey(name: 'reaction_counts')  Map<String, int> reactionCounts, @JsonKey(name: 'user_reaction')  String? userReaction, @JsonKey(name: 'created_at')  String createdAt, @JsonKey(name: 'updated_at')  String? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Comment() when $default != null:
-return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId,_that.isAnonymous,_that.replyCount,_that.reactionCounts,_that.userReaction,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.mediaType,_that.mediaUrl,_that.stickerPack,_that.parentId,_that.isAnonymous,_that.replyCount,_that.reactionCounts,_that.userReaction,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -2826,13 +2846,16 @@ return $default(_that.id,_that.postId,_that.authorData,_that.body,_that.parentId
 @JsonSerializable()
 
 class _Comment implements Comment {
-  const _Comment({required this.id, @JsonKey(name: 'post_id') required this.postId, @JsonKey(name: 'author_data') required this.authorData, required this.body, @JsonKey(name: 'parent_id') this.parentId, @JsonKey(name: 'is_anonymous') this.isAnonymous = false, @JsonKey(name: 'reply_count') this.replyCount = 0, @JsonKey(name: 'reaction_counts') final  Map<String, int> reactionCounts = const <String, int>{}, @JsonKey(name: 'user_reaction') this.userReaction, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _reactionCounts = reactionCounts;
+  const _Comment({required this.id, @JsonKey(name: 'post_id') required this.postId, @JsonKey(name: 'author_data') required this.authorData, required this.body, @JsonKey(name: 'media_type') this.mediaType = 'text', @JsonKey(name: 'media_url') this.mediaUrl, @JsonKey(name: 'sticker_pack') this.stickerPack, @JsonKey(name: 'parent_id') this.parentId, @JsonKey(name: 'is_anonymous') this.isAnonymous = false, @JsonKey(name: 'reply_count') this.replyCount = 0, @JsonKey(name: 'reaction_counts') final  Map<String, int> reactionCounts = const <String, int>{}, @JsonKey(name: 'user_reaction') this.userReaction, @JsonKey(name: 'created_at') required this.createdAt, @JsonKey(name: 'updated_at') this.updatedAt}): _reactionCounts = reactionCounts;
   factory _Comment.fromJson(Map<String, dynamic> json) => _$CommentFromJson(json);
 
 @override final  String id;
 @override@JsonKey(name: 'post_id') final  String postId;
 @override@JsonKey(name: 'author_data') final  AuthorData authorData;
 @override final  String body;
+@override@JsonKey(name: 'media_type') final  String mediaType;
+@override@JsonKey(name: 'media_url') final  String? mediaUrl;
+@override@JsonKey(name: 'sticker_pack') final  String? stickerPack;
 @override@JsonKey(name: 'parent_id') final  String? parentId;
 @override@JsonKey(name: 'is_anonymous') final  bool isAnonymous;
 @override@JsonKey(name: 'reply_count') final  int replyCount;
@@ -2860,16 +2883,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Comment&&(identical(other.id, id) || other.id == id)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.body, body) || other.body == body)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&const DeepCollectionEquality().equals(other._reactionCounts, _reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Comment&&(identical(other.id, id) || other.id == id)&&(identical(other.postId, postId) || other.postId == postId)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.stickerPack, stickerPack) || other.stickerPack == stickerPack)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous)&&(identical(other.replyCount, replyCount) || other.replyCount == replyCount)&&const DeepCollectionEquality().equals(other._reactionCounts, _reactionCounts)&&(identical(other.userReaction, userReaction) || other.userReaction == userReaction)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,postId,authorData,body,parentId,isAnonymous,replyCount,const DeepCollectionEquality().hash(_reactionCounts),userReaction,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,postId,authorData,body,mediaType,mediaUrl,stickerPack,parentId,isAnonymous,replyCount,const DeepCollectionEquality().hash(_reactionCounts),userReaction,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Comment(id: $id, postId: $postId, authorData: $authorData, body: $body, parentId: $parentId, isAnonymous: $isAnonymous, replyCount: $replyCount, reactionCounts: $reactionCounts, userReaction: $userReaction, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'Comment(id: $id, postId: $postId, authorData: $authorData, body: $body, mediaType: $mediaType, mediaUrl: $mediaUrl, stickerPack: $stickerPack, parentId: $parentId, isAnonymous: $isAnonymous, replyCount: $replyCount, reactionCounts: $reactionCounts, userReaction: $userReaction, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -2880,7 +2903,7 @@ abstract mixin class _$CommentCopyWith<$Res> implements $CommentCopyWith<$Res> {
   factory _$CommentCopyWith(_Comment value, $Res Function(_Comment) _then) = __$CommentCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'post_id') String postId,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'reply_count') int replyCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
+ String id,@JsonKey(name: 'post_id') String postId,@JsonKey(name: 'author_data') AuthorData authorData, String body,@JsonKey(name: 'media_type') String mediaType,@JsonKey(name: 'media_url') String? mediaUrl,@JsonKey(name: 'sticker_pack') String? stickerPack,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous,@JsonKey(name: 'reply_count') int replyCount,@JsonKey(name: 'reaction_counts') Map<String, int> reactionCounts,@JsonKey(name: 'user_reaction') String? userReaction,@JsonKey(name: 'created_at') String createdAt,@JsonKey(name: 'updated_at') String? updatedAt
 });
 
 
@@ -2897,13 +2920,16 @@ class __$CommentCopyWithImpl<$Res>
 
 /// Create a copy of Comment
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? postId = null,Object? authorData = null,Object? body = null,Object? parentId = freezed,Object? isAnonymous = null,Object? replyCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? postId = null,Object? authorData = null,Object? body = null,Object? mediaType = null,Object? mediaUrl = freezed,Object? stickerPack = freezed,Object? parentId = freezed,Object? isAnonymous = null,Object? replyCount = null,Object? reactionCounts = null,Object? userReaction = freezed,Object? createdAt = null,Object? updatedAt = freezed,}) {
   return _then(_Comment(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,postId: null == postId ? _self.postId : postId // ignore: cast_nullable_to_non_nullable
 as String,authorData: null == authorData ? _self.authorData : authorData // ignore: cast_nullable_to_non_nullable
 as AuthorData,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
-as String,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
+as String,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
+as String,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
+as String?,stickerPack: freezed == stickerPack ? _self.stickerPack : stickerPack // ignore: cast_nullable_to_non_nullable
+as String?,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
 as String?,isAnonymous: null == isAnonymous ? _self.isAnonymous : isAnonymous // ignore: cast_nullable_to_non_nullable
 as bool,replyCount: null == replyCount ? _self.replyCount : replyCount // ignore: cast_nullable_to_non_nullable
 as int,reactionCounts: null == reactionCounts ? _self._reactionCounts : reactionCounts // ignore: cast_nullable_to_non_nullable
@@ -3785,7 +3811,7 @@ as String,
 /// @nodoc
 mixin _$CommentCreateInput {
 
- String get body;@JsonKey(name: 'parent_id') String? get parentId;@JsonKey(name: 'is_anonymous') bool get isAnonymous;
+ String? get body;@JsonKey(name: 'media_type') String get mediaType;@JsonKey(name: 'media_url') String? get mediaUrl;@JsonKey(name: 'sticker_pack') String? get stickerPack;@JsonKey(name: 'parent_id') String? get parentId;@JsonKey(name: 'is_anonymous') bool get isAnonymous;
 /// Create a copy of CommentCreateInput
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3798,16 +3824,16 @@ $CommentCreateInputCopyWith<CommentCreateInput> get copyWith => _$CommentCreateI
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommentCreateInput&&(identical(other.body, body) || other.body == body)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommentCreateInput&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.stickerPack, stickerPack) || other.stickerPack == stickerPack)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,body,parentId,isAnonymous);
+int get hashCode => Object.hash(runtimeType,body,mediaType,mediaUrl,stickerPack,parentId,isAnonymous);
 
 @override
 String toString() {
-  return 'CommentCreateInput(body: $body, parentId: $parentId, isAnonymous: $isAnonymous)';
+  return 'CommentCreateInput(body: $body, mediaType: $mediaType, mediaUrl: $mediaUrl, stickerPack: $stickerPack, parentId: $parentId, isAnonymous: $isAnonymous)';
 }
 
 
@@ -3818,7 +3844,7 @@ abstract mixin class $CommentCreateInputCopyWith<$Res>  {
   factory $CommentCreateInputCopyWith(CommentCreateInput value, $Res Function(CommentCreateInput) _then) = _$CommentCreateInputCopyWithImpl;
 @useResult
 $Res call({
- String body,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous
+ String? body,@JsonKey(name: 'media_type') String mediaType,@JsonKey(name: 'media_url') String? mediaUrl,@JsonKey(name: 'sticker_pack') String? stickerPack,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous
 });
 
 
@@ -3835,10 +3861,13 @@ class _$CommentCreateInputCopyWithImpl<$Res>
 
 /// Create a copy of CommentCreateInput
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? body = null,Object? parentId = freezed,Object? isAnonymous = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? body = freezed,Object? mediaType = null,Object? mediaUrl = freezed,Object? stickerPack = freezed,Object? parentId = freezed,Object? isAnonymous = null,}) {
   return _then(_self.copyWith(
-body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
-as String,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
+body: freezed == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String?,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
+as String,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
+as String?,stickerPack: freezed == stickerPack ? _self.stickerPack : stickerPack // ignore: cast_nullable_to_non_nullable
+as String?,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
 as String?,isAnonymous: null == isAnonymous ? _self.isAnonymous : isAnonymous // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
@@ -3925,10 +3954,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? body, @JsonKey(name: 'media_type')  String mediaType, @JsonKey(name: 'media_url')  String? mediaUrl, @JsonKey(name: 'sticker_pack')  String? stickerPack, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CommentCreateInput() when $default != null:
-return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
+return $default(_that.body,_that.mediaType,_that.mediaUrl,_that.stickerPack,_that.parentId,_that.isAnonymous);case _:
   return orElse();
 
 }
@@ -3946,10 +3975,10 @@ return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? body, @JsonKey(name: 'media_type')  String mediaType, @JsonKey(name: 'media_url')  String? mediaUrl, @JsonKey(name: 'sticker_pack')  String? stickerPack, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous)  $default,) {final _that = this;
 switch (_that) {
 case _CommentCreateInput():
-return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
+return $default(_that.body,_that.mediaType,_that.mediaUrl,_that.stickerPack,_that.parentId,_that.isAnonymous);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3966,10 +3995,10 @@ return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String body, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? body, @JsonKey(name: 'media_type')  String mediaType, @JsonKey(name: 'media_url')  String? mediaUrl, @JsonKey(name: 'sticker_pack')  String? stickerPack, @JsonKey(name: 'parent_id')  String? parentId, @JsonKey(name: 'is_anonymous')  bool isAnonymous)?  $default,) {final _that = this;
 switch (_that) {
 case _CommentCreateInput() when $default != null:
-return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
+return $default(_that.body,_that.mediaType,_that.mediaUrl,_that.stickerPack,_that.parentId,_that.isAnonymous);case _:
   return null;
 
 }
@@ -3981,10 +4010,13 @@ return $default(_that.body,_that.parentId,_that.isAnonymous);case _:
 @JsonSerializable()
 
 class _CommentCreateInput implements CommentCreateInput {
-  const _CommentCreateInput({required this.body, @JsonKey(name: 'parent_id') this.parentId, @JsonKey(name: 'is_anonymous') this.isAnonymous = false});
+  const _CommentCreateInput({this.body, @JsonKey(name: 'media_type') this.mediaType = 'text', @JsonKey(name: 'media_url') this.mediaUrl, @JsonKey(name: 'sticker_pack') this.stickerPack, @JsonKey(name: 'parent_id') this.parentId, @JsonKey(name: 'is_anonymous') this.isAnonymous = false});
   factory _CommentCreateInput.fromJson(Map<String, dynamic> json) => _$CommentCreateInputFromJson(json);
 
-@override final  String body;
+@override final  String? body;
+@override@JsonKey(name: 'media_type') final  String mediaType;
+@override@JsonKey(name: 'media_url') final  String? mediaUrl;
+@override@JsonKey(name: 'sticker_pack') final  String? stickerPack;
 @override@JsonKey(name: 'parent_id') final  String? parentId;
 @override@JsonKey(name: 'is_anonymous') final  bool isAnonymous;
 
@@ -4001,16 +4033,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommentCreateInput&&(identical(other.body, body) || other.body == body)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommentCreateInput&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaType, mediaType) || other.mediaType == mediaType)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.stickerPack, stickerPack) || other.stickerPack == stickerPack)&&(identical(other.parentId, parentId) || other.parentId == parentId)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,body,parentId,isAnonymous);
+int get hashCode => Object.hash(runtimeType,body,mediaType,mediaUrl,stickerPack,parentId,isAnonymous);
 
 @override
 String toString() {
-  return 'CommentCreateInput(body: $body, parentId: $parentId, isAnonymous: $isAnonymous)';
+  return 'CommentCreateInput(body: $body, mediaType: $mediaType, mediaUrl: $mediaUrl, stickerPack: $stickerPack, parentId: $parentId, isAnonymous: $isAnonymous)';
 }
 
 
@@ -4021,7 +4053,7 @@ abstract mixin class _$CommentCreateInputCopyWith<$Res> implements $CommentCreat
   factory _$CommentCreateInputCopyWith(_CommentCreateInput value, $Res Function(_CommentCreateInput) _then) = __$CommentCreateInputCopyWithImpl;
 @override @useResult
 $Res call({
- String body,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous
+ String? body,@JsonKey(name: 'media_type') String mediaType,@JsonKey(name: 'media_url') String? mediaUrl,@JsonKey(name: 'sticker_pack') String? stickerPack,@JsonKey(name: 'parent_id') String? parentId,@JsonKey(name: 'is_anonymous') bool isAnonymous
 });
 
 
@@ -4038,10 +4070,13 @@ class __$CommentCreateInputCopyWithImpl<$Res>
 
 /// Create a copy of CommentCreateInput
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? body = null,Object? parentId = freezed,Object? isAnonymous = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? body = freezed,Object? mediaType = null,Object? mediaUrl = freezed,Object? stickerPack = freezed,Object? parentId = freezed,Object? isAnonymous = null,}) {
   return _then(_CommentCreateInput(
-body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
-as String,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
+body: freezed == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String?,mediaType: null == mediaType ? _self.mediaType : mediaType // ignore: cast_nullable_to_non_nullable
+as String,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: cast_nullable_to_non_nullable
+as String?,stickerPack: freezed == stickerPack ? _self.stickerPack : stickerPack // ignore: cast_nullable_to_non_nullable
+as String?,parentId: freezed == parentId ? _self.parentId : parentId // ignore: cast_nullable_to_non_nullable
 as String?,isAnonymous: null == isAnonymous ? _self.isAnonymous : isAnonymous // ignore: cast_nullable_to_non_nullable
 as bool,
   ));

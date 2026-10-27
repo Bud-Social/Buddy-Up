@@ -30,6 +30,8 @@ Map<String, dynamic> _normalizeMediaJson(Map<dynamic, dynamic> json) {
     'sound_audio_url': 'soundAudioUrl',
     'edit_meta': 'editMeta',
     'alt_text': 'altText',
+    'text_content': 'textContent',
+    'text_style': 'textStyle',
     'start_ms': 'startMs',
     'end_ms': 'endMs',
   };
@@ -70,6 +72,10 @@ abstract class PostMedia with _$PostMedia {
     Map<String, dynamic>? editMeta,
     String? altText,
     @Default(<CaptionSegment>[]) List<CaptionSegment> captions,
+    // Styled text body for text media items (text-only posts, text layers).
+    String? textContent,
+    // Text style: {background, font, color, effect, size, alignment}.
+    Map<String, dynamic>? textStyle,
   }) = _PostMedia;
 
   factory PostMedia.fromJson(Map<String, dynamic> json) =>
@@ -143,6 +149,7 @@ abstract class ReposterData with _$ReposterData {
     @JsonKey(name: 'user_id') String? userId,
     @JsonKey(name: 'display_name') @Default('') String displayName,
     @JsonKey(name: 'avatar_url') @Default('') String avatarUrl,
+    @JsonKey(name: 'followed_by_viewer') @Default(false) bool followedByViewer,
   }) = _ReposterData;
 
   factory ReposterData.fromJson(Map<String, dynamic> json) =>

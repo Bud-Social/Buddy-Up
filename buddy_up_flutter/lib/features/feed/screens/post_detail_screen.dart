@@ -26,13 +26,21 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
   final TextEditingController _commentController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
 
+    /// When set, the comment composer is in "reply" mode — tapping send
+  /// creates a child comment under this parent.
+  String? _replyToCommentId;
+  String? _replyToDisplayName;
+
+  /// Comment IDs whose reply threads are expanded inline.
+  final Set<String> _expandedReplies = {};
+
   @override
   void dispose() {
     _commentController.dispose();
     super.dispose();
   }
 
-  @override
+      @override
   Widget build(BuildContext context) {
     final postAsync = ref.watch(postDetailProvider(widget.postId));
     final commentsAsync = ref.watch(commentsProvider(widget.postId));
@@ -88,12 +96,36 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               ),
                             );
                           }
-                          return Column(
-                            children: comments.map((c) => CommentTile(
-                              comment: c,
-                              onReply: (_) {},
-                              onReact: (_, _) {},
-                            )).toList(),
+                                                    return Column(
+                            children: comments.map((c) {
+                              final isExpanded = _expandedReplies.contains(c.id);
+                                                            final repliesAsync = isExpanded
+                                  ? ref.watch(commentRepliesProvider((widget.postId, c.id)))
+                                  : null;
+                              return CommentTile(
+                                comment: c,
+                                                                onReply: (comment) => setState(() {
+                                  _replyToCommentId = comment.id;
+                                  _replyToDisplayName = comment.authorData.displayName;
+                                }),
+                                onReact: (comment, reaction) =>
+                                    _handleCommentReact(comment, reaction),
+                                onViewReplies: (comment) => setState(() {
+                                  if (_expandedReplies.contains(comment.id)) {
+                                    _expandedReplies.remove(comment.id);
+                                  } else {
+                                    _expandedReplies.add(comment.id);
+                                  }
+                                }),
+                                isRepliesExpanded: isExpanded,
+                                replies: isExpanded
+                                    ? repliesAsync?.maybeWhen(
+                                        data: (d) => d,
+                                        orElse: () => null,
+                                      )
+                                    : null,
+                              );
+                            }).toList(),
                           );
                         },
                       ),
@@ -121,28 +153,75 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         ),
                       ],
                     )
-                  : Row(
+                                    : Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: BuddyInput(
-                            controller: _commentController,
-                            hint: 'Write a comment...',
+                        if (_replyToCommentId != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: BuddyColors.surfaceRaised,
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                                                            Text(
+                                        'Replying to @${_replyToDisplayName ?? ''}',
+                                        style: const TextStyle(
+                                          color: BuddyColors.green,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      GestureDetector(
+                                        onTap: () => setState(() {
+                                          _replyToCommentId = null;
+                                          _replyToDisplayName = null;
+                                        }),
+                                        child: const Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: BuddyColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          icon: const Icon(Icons.send, color: BuddyColors.green),
-                          onPressed: () => _submitTextComment(post.id),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          icon: const Icon(Icons.insert_emoticon, color: BuddyColors.textSecondary),
-                          onPressed: () => _showCommentMediaSheet(post.id),
-                        ),
-                        const SizedBox(width: 6),
-                        IconButton(
-                          icon: const Icon(Icons.image, color: BuddyColors.textSecondary),
-                          onPressed: () => _pickImageComment(post.id),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: BuddyInput(
+                                controller: _commentController,
+                                hint: _replyToCommentId != null
+                                    ? 'Reply...'
+                                    : 'Write a comment...',
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(Icons.send, color: BuddyColors.green),
+                              onPressed: () => _submitTextComment(post.id),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(Icons.insert_emoticon, color: BuddyColors.textSecondary),
+                              onPressed: () => _showCommentMediaSheet(post.id),
+                            ),
+                            const SizedBox(width: 6),
+                            IconButton(
+                              icon: const Icon(Icons.image, color: BuddyColors.textSecondary),
+                              onPressed: () => _pickImageComment(post.id),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -174,6 +253,23 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     } catch (_) {}
   }
 
+    void _handleCommentReact(Comment comment, String reaction) async {
+    final repo = ref.read(feedRepositoryProvider);
+    try {
+      if (reaction.isEmpty) {
+        await repo.unreactToComment(widget.postId, comment.id);
+      } else {
+        await repo.reactToComment(widget.postId, comment.id,
+            ReactionInput(reactionType: reaction));
+      }
+      ref.invalidate(commentsProvider(widget.postId));
+      // If the comment's thread is expanded, refresh the replies too.
+      if (_expandedReplies.contains(comment.id)) {
+                ref.invalidate(commentRepliesProvider((widget.postId, comment.id)));
+      }
+    } catch (_) {}
+  }
+
   void _handleDelete(String postId) async {
     final repo = ref.read(feedRepositoryProvider);
     try {
@@ -182,7 +278,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     } catch (_) {}
   }
 
-  void _submitTextComment(String postId) async {
+    void _submitTextComment(String postId) async {
     final body = _commentController.text.trim();
     if (body.isEmpty) return;
     final post = ref.read(postDetailProvider(postId)).value;
@@ -192,8 +288,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     }
     final repo = ref.read(feedRepositoryProvider);
     try {
-      await repo.addComment(postId, CommentCreateInput(body: body));
+      await repo.addComment(postId, CommentCreateInput(
+        body: body,
+        parentId: _replyToCommentId,
+      ));
       _commentController.clear();
+      setState(() => _replyToCommentId = null);
       ref.invalidate(commentsProvider(widget.postId));
     } catch (_) {}
   }
