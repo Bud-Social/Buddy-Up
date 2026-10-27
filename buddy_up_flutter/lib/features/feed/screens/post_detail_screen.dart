@@ -223,13 +223,13 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                 _MediaSheetOption(
                   icon: Icons.sentiment_very_satisfied,
                   label: 'Sticker',
-                  color: BuddyColors.purple,
+                  color: BuddyColors.red,
                   onTap: () => _showStickerGifPicker(postId, 'sticker'),
                 ),
                 _MediaSheetOption(
                   icon: Icons.image,
                   label: 'Photo',
-                  color: BuddyColors.blue,
+                  color: BuddyColors.green,
                   onTap: () => _pickImageComment(postId),
                 ),
               ],
@@ -288,7 +288,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       );
       ref.invalidate(commentsProvider(widget.postId));
     } catch (_) {
-      showToast(context, 'Failed to upload comment media');
+      if (mounted) showToast(context, 'Failed to upload comment media');
     }
   }
 }
