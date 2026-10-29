@@ -1,16 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/messaging.dart';
-import '../../messaging/providers/messaging_provider.dart' show messagingRepositoryProvider;
+import '../../messaging/providers/messaging_provider.dart'
+    show messagingRepositoryProvider;
 import '../../feed/providers/feed_provider.dart' show feedRepositoryProvider;
-import '../../../data/models/post.dart' show ReactionInput, RepostPayload, SavePayload;
+import '../../../data/models/post.dart'
+    show ReactionInput, RepostPayload, SavePayload;
 
 final communityRepositoryProvider = messagingRepositoryProvider;
 
-List<Conversation> _parseConvList(dynamic data) =>
-    (data as List).map((e) => Conversation.fromJson(e as Map<String, dynamic>)).toList();
+List<Conversation> _parseConvList(dynamic data) => (data as List)
+    .map((e) => Conversation.fromJson(e as Map<String, dynamic>))
+    .toList();
 
-List<CommunityPost> _parsePostList(dynamic data) =>
-    (data as List).map((e) => CommunityPost.fromJson(e as Map<String, dynamic>)).toList();
+List<CommunityPost> _parsePostList(dynamic data) => (data as List)
+    .map((e) => CommunityPost.fromJson(e as Map<String, dynamic>))
+    .toList();
 
 /// A CommunityPost tagged with the community it belongs to, for the "All"
 /// tab which aggregates posts across every community the user is in.
@@ -25,12 +29,11 @@ class CommunityPostEntry {
     CommunityPost? post,
     String? communityName,
     String? communityCoverUrl,
-  }) =>
-      CommunityPostEntry(
-        post ?? this.post,
-        communityName ?? this.communityName,
-        communityCoverUrl ?? this.communityCoverUrl,
-      );
+  }) => CommunityPostEntry(
+    post ?? this.post,
+    communityName ?? this.communityName,
+    communityCoverUrl ?? this.communityCoverUrl,
+  );
 }
 
 class CommunitiesListState {
@@ -77,18 +80,22 @@ class CommunitiesListNotifier extends AsyncNotifier<CommunitiesListState> {
     try {
       final raw = await ref.read(communityRepositoryProvider).getCommunities();
       final data = raw['data'] as Map<String, dynamic>;
-      state = AsyncValue.data(CommunitiesListState(
-        mine: _parseConvList(data['mine']),
-        discover: _parseConvList(data['discover']),
-        isLoading: false,
-      ));
+      state = AsyncValue.data(
+        CommunitiesListState(
+          mine: _parseConvList(data['mine']),
+          discover: _parseConvList(data['discover']),
+          isLoading: false,
+        ),
+      );
     } catch (e) {
       state = AsyncValue.error(e, StackTrace.current);
     }
   }
 
   Future<CommunityDetail?> joinByCode(String inviteCode) async {
-    final raw = await ref.read(communityRepositoryProvider).joinCommunityByCode({'invite_code': inviteCode});
+    final raw = await ref.read(communityRepositoryProvider).joinCommunityByCode(
+      {'invite_code': inviteCode},
+    );
     await refresh();
     return CommunityDetail.fromJson(raw['data'] as Map<String, dynamic>);
   }
@@ -103,7 +110,8 @@ class CommunitiesListNotifier extends AsyncNotifier<CommunitiesListState> {
       'name': name,
       'description': description,
       'is_public': isPublic,
-      if (groupAvatarUrl != null && groupAvatarUrl.isNotEmpty) 'group_avatar_url': groupAvatarUrl,
+      if (groupAvatarUrl != null && groupAvatarUrl.isNotEmpty)
+        'group_avatar_url': groupAvatarUrl,
     });
     await refresh();
     return CommunityDetail.fromJson(raw['data'] as Map<String, dynamic>);
@@ -112,10 +120,10 @@ class CommunitiesListNotifier extends AsyncNotifier<CommunitiesListState> {
 
 final communitiesListProvider =
     AsyncNotifierProvider<CommunitiesListNotifier, CommunitiesListState>(
-  CommunitiesListNotifier.new,
-);
+      CommunitiesListNotifier.new,
+    );
 
-  class CommunityFeedState {
+class CommunityFeedState {
   final CommunityDetail? detail;
   final List<CommunityPost> posts;
   final List<CommunityPostEntry> allPosts;
@@ -154,25 +162,41 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
 
   @override
   Future<CommunityFeedState> build() async {
-    final raw = await ref.read(communityRepositoryProvider).getCommunity(communityId);
-    final detail = CommunityDetail.fromJson(raw['data'] as Map<String, dynamic>);
+    final raw = await ref
+        .read(communityRepositoryProvider)
+        .getCommunity(communityId);
+    final detail = CommunityDetail.fromJson(
+      raw['data'] as Map<String, dynamic>,
+    );
     return CommunityFeedState(detail: detail);
   }
 
   Future<void> refresh() async {
-    final raw = await ref.read(communityRepositoryProvider).getCommunity(communityId);
-    final detail = CommunityDetail.fromJson(raw['data'] as Map<String, dynamic>);
+    final raw = await ref
+        .read(communityRepositoryProvider)
+        .getCommunity(communityId);
+    final detail = CommunityDetail.fromJson(
+      raw['data'] as Map<String, dynamic>,
+    );
     state = AsyncValue.data(CommunityFeedState(detail: detail));
   }
 
-    Future<void> loadPosts() async {
+  Future<void> loadPosts() async {
     try {
-      final raw = await ref.read(communityRepositoryProvider).getCommunityPosts(communityId);
-      state = AsyncValue.data((state.value ?? const CommunityFeedState()).copyWith(
-        posts: _parsePostList(raw['data']),
-      ));
+      final raw = await ref
+          .read(communityRepositoryProvider)
+          .getCommunityPosts(communityId);
+      state = AsyncValue.data(
+        (state.value ?? const CommunityFeedState()).copyWith(
+          posts: _parsePostList(raw['data']),
+        ),
+      );
     } catch (e) {
-      state = AsyncValue.data((state.value ?? const CommunityFeedState()).copyWith(error: e.toString()));
+      state = AsyncValue.data(
+        (state.value ?? const CommunityFeedState()).copyWith(
+          error: e.toString(),
+        ),
+      );
     }
   }
 
@@ -192,39 +216,43 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
             .getCommunityPosts(conv.id);
         final posts = _parsePostList(postsRaw['data'] as List);
         for (final p in posts) {
-          entries.add(CommunityPostEntry(
-            p,
-            conv.groupName,
-            conv.coverUrl,
-          ));
+          entries.add(CommunityPostEntry(p, conv.groupName, conv.coverUrl));
         }
       }
       entries.sort((a, b) => b.post.createdAt.compareTo(a.post.createdAt));
-      state = AsyncValue.data((state.value ?? const CommunityFeedState()).copyWith(
-        allPosts: entries,
-      ));
+      state = AsyncValue.data(
+        (state.value ?? const CommunityFeedState()).copyWith(allPosts: entries),
+      );
     } catch (e) {
-      state = AsyncValue.data((state.value ?? const CommunityFeedState()).copyWith(
-        allPosts: const [],
-        error: e.toString(),
-      ));
+      state = AsyncValue.data(
+        (state.value ?? const CommunityFeedState()).copyWith(
+          allPosts: const [],
+          error: e.toString(),
+        ),
+      );
     }
   }
 
   Future<void> createPost(String body, {String mediaUrl = ''}) async {
     final payload = <String, dynamic>{'body': body};
     if (mediaUrl.isNotEmpty) payload['media_url'] = mediaUrl;
-    await ref.read(communityRepositoryProvider).createCommunityPost(communityId, payload);
+    await ref
+        .read(communityRepositoryProvider)
+        .createCommunityPost(communityId, payload);
     await loadPosts();
   }
 
   Future<void> updatePost(String postId, Map<String, dynamic> body) async {
-    await ref.read(communityRepositoryProvider).updateCommunityPost(communityId, postId, body);
+    await ref
+        .read(communityRepositoryProvider)
+        .updateCommunityPost(communityId, postId, body);
     await loadPosts();
   }
 
   Future<void> deletePost(String postId) async {
-    await ref.read(communityRepositoryProvider).deleteCommunityPost(communityId, postId);
+    await ref
+        .read(communityRepositoryProvider)
+        .deleteCommunityPost(communityId, postId);
     await loadPosts();
   }
 
@@ -238,7 +266,8 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
       'name': name,
       'description': description,
       'is_public': isPublic,
-      if (groupAvatarUrl != null && groupAvatarUrl.isNotEmpty) 'group_avatar_url': groupAvatarUrl,
+      if (groupAvatarUrl != null && groupAvatarUrl.isNotEmpty)
+        'group_avatar_url': groupAvatarUrl,
     });
     await refresh();
   }
@@ -248,22 +277,28 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
     await refresh();
   }
 
-    Future<void> toggleLike(String postId) async {
-    await ref.read(communityRepositoryProvider).togglePostLike(communityId, postId);
+  Future<void> toggleLike(String postId) async {
+    await ref
+        .read(communityRepositoryProvider)
+        .togglePostLike(communityId, postId);
     await loadPosts();
     await loadAllPosts();
   }
 
   Future<void> addComment(String postId, String body) async {
-    await ref.read(communityRepositoryProvider).addPostComment(communityId, postId, {'body': body});
+    await ref.read(communityRepositoryProvider).addPostComment(
+      communityId,
+      postId,
+      {'body': body},
+    );
     await loadPosts();
     await loadAllPosts();
   }
 
-        /// Repost a community post — mirrors the feed repost API.
+  /// Repost a community post — mirrors the feed repost API.
   Future<void> repost(String postId) async {
     final repo = ref.read(feedRepositoryProvider);
-    await repo.repost(postId, RepostPayload());
+    await repo.repost(postId, const RepostPayload());
     await loadPosts();
     await loadAllPosts();
   }
@@ -271,7 +306,7 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
   /// Save/unsave a community post.
   Future<void> save(String postId) async {
     final repo = ref.read(feedRepositoryProvider);
-    await repo.save(postId, SavePayload());
+    await repo.save(postId, const SavePayload());
     await loadPosts();
     await loadAllPosts();
   }
@@ -298,27 +333,39 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
   }
 
   Future<void> setRole(String userId, String role) async {
-    await ref.read(communityRepositoryProvider).setCommunityRole(communityId, userId, {'role': role});
+    await ref.read(communityRepositoryProvider).setCommunityRole(
+      communityId,
+      userId,
+      {'role': role},
+    );
     await refresh();
   }
 
   Future<void> transferOwnership(String userId) async {
-    await ref.read(communityRepositoryProvider).transferCommunityOwnership(communityId, {'user_id': userId});
+    await ref.read(communityRepositoryProvider).transferCommunityOwnership(
+      communityId,
+      {'user_id': userId},
+    );
     await refresh();
   }
 
   Future<void> removeMember(String userId) async {
-    await ref.read(communityRepositoryProvider).removeCommunityMember(communityId, userId);
+    await ref
+        .read(communityRepositoryProvider)
+        .removeCommunityMember(communityId, userId);
     await refresh();
   }
 
   bool get canManage {
-    final role = state.value?.detail?.myRole ?? state.value?.detail?.membershipRole;
+    final role =
+        state.value?.detail?.myRole ?? state.value?.detail?.membershipRole;
     return role == 'owner' || role == 'admin';
   }
 }
 
 final communityFeedProvider =
-    AsyncNotifierProvider.family<CommunityFeedNotifier, CommunityFeedState, String>(
-  CommunityFeedNotifier.new,
-);
+    AsyncNotifierProvider.family<
+      CommunityFeedNotifier,
+      CommunityFeedState,
+      String
+    >(CommunityFeedNotifier.new);

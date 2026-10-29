@@ -21,7 +21,9 @@ class _CommunityTab {
   _CommunityTab.all() : kind = _CommunityTabKind.all, community = null;
   _CommunityTab.community(this.community) : kind = _CommunityTabKind.single;
 
-  String get label => kind == _CommunityTabKind.all ? 'All' : (community?.groupName ?? 'Community');
+  String get label => kind == _CommunityTabKind.all
+      ? 'All'
+      : (community?.groupName ?? 'Community');
   String? get id => kind == _CommunityTabKind.all ? null : community?.id;
 }
 
@@ -32,13 +34,17 @@ extension CommunityPostToPost on CommunityPost {
       authorData: AuthorData(
         userId: authorId,
         username: authorData.username,
-        displayName: authorData.displayName.isNotEmpty ? authorData.displayName : authorData.username,
+        displayName: authorData.displayName.isNotEmpty
+            ? authorData.displayName
+            : authorData.username,
         avatarUrl: authorData.avatarUrl,
         verificationStatus: authorData.role,
       ),
       body: body,
       mediaUrls: mediaUrl.isNotEmpty ? [mediaUrl] : const [],
-      reactionCounts: isLiked ? {'heart': likeCount} : (likeCount > 0 ? {'heart': likeCount} : const {}),
+      reactionCounts: isLiked
+          ? {'heart': likeCount}
+          : (likeCount > 0 ? {'heart': likeCount} : const {}),
       userReaction: isLiked ? 'heart' : null,
       commentCount: commentCount,
       isPinned: isPinned,
@@ -58,7 +64,8 @@ class CommunityDetailScreen extends ConsumerStatefulWidget {
   final String communityId;
 
   @override
-  ConsumerState<CommunityDetailScreen> createState() => _CommunityDetailScreenState();
+  ConsumerState<CommunityDetailScreen> createState() =>
+      _CommunityDetailScreenState();
 }
 
 class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
@@ -67,19 +74,21 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   List<CommunityDetail> _userCommunities = [];
   int _selectedCommunityTab = 0; // 0 = All, 1+ = individual community
 
-    @override
+  @override
   void initState() {
     super.initState();
     _loadUserCommunities();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final notifier = ref.read(communityFeedProvider(widget.communityId).notifier);
+      final notifier = ref.read(
+        communityFeedProvider(widget.communityId).notifier,
+      );
       notifier.loadPosts();
       // Pre-load the aggregated feed so the "All" tab has data immediately.
       notifier.loadAllPosts();
     });
   }
 
-    Future<void> _loadUserCommunities() async {
+  Future<void> _loadUserCommunities() async {
     try {
       final raw = await ref.read(communityRepositoryProvider).getCommunities();
       // API returns {success, data: {mine: [...], discover: [...]}}
@@ -93,7 +102,10 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   }
 
   List<_CommunityTab> get _tabs {
-    return [_CommunityTab.all(), ..._userCommunities.map((c) => _CommunityTab.community(c))];
+    return [
+      _CommunityTab.all(),
+      ..._userCommunities.map((c) => _CommunityTab.community(c)),
+    ];
   }
 
   CommunityDetail? get _selectedCommunity {
@@ -104,29 +116,41 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
   }
 
   void _refresh() {
-    final notifier = ref.read(communityFeedProvider(widget.communityId).notifier);
+    final notifier = ref.read(
+      communityFeedProvider(widget.communityId).notifier,
+    );
     notifier.refresh();
     notifier.loadPosts();
   }
 
-    Future<void> _toggleLike(String postId) async {
-    await ref.read(communityFeedProvider(widget.communityId).notifier).toggleLike(postId);
+  Future<void> _toggleLike(String postId) async {
+    await ref
+        .read(communityFeedProvider(widget.communityId).notifier)
+        .toggleLike(postId);
   }
 
   Future<void> _toggleRepost(String postId) async {
-    await ref.read(communityFeedProvider(widget.communityId).notifier).repost(postId);
+    await ref
+        .read(communityFeedProvider(widget.communityId).notifier)
+        .repost(postId);
   }
 
   Future<void> _toggleSave(String postId) async {
-    await ref.read(communityFeedProvider(widget.communityId).notifier).save(postId);
+    await ref
+        .read(communityFeedProvider(widget.communityId).notifier)
+        .save(postId);
   }
 
   Future<void> _handleReact(String postId, String reaction) async {
-    await ref.read(communityFeedProvider(widget.communityId).notifier).react(postId, reaction);
+    await ref
+        .read(communityFeedProvider(widget.communityId).notifier)
+        .react(postId, reaction);
   }
 
   Future<void> _addComment(String postId, String body) async {
-    await ref.read(communityFeedProvider(widget.communityId).notifier).addComment(postId, body);
+    await ref
+        .read(communityFeedProvider(widget.communityId).notifier)
+        .addComment(postId, body);
   }
 
   Future<void> _openPostComposer(String communityName) async {
@@ -151,7 +175,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Enter the community invite code or tap Join to proceed:'),
+            const Text(
+              'Enter the community invite code or tap Join to proceed:',
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: codeController,
@@ -164,7 +190,10 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Join'),
@@ -180,14 +209,16 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
         if (code.isNotEmpty) {
           await ref.read(communitiesListProvider.notifier).joinByCode(code);
         } else {
-          await ref.read(communityFeedProvider(widget.communityId).notifier).join();
+          await ref
+              .read(communityFeedProvider(widget.communityId).notifier)
+              .join();
         }
         _refresh();
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Join failed: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Join failed: $e')));
         }
       } finally {
         if (mounted) setState(() => _joining = false);
@@ -219,12 +250,18 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Invite to Community', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Invite to Community',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             Text(
               'Share this code or link with friends to let them join ${detail.groupName}.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6), fontSize: 13),
+              style: TextStyle(
+                color: cs.onSurface.withValues(alpha: 0.6),
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -241,11 +278,18 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 children: [
                   Text(
                     'INVITE CODE',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: cs.onSurface.withValues(alpha: 0.5)),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                      color: cs.onSurface.withValues(alpha: 0.5),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    detail.inviteCode.isNotEmpty ? detail.inviteCode : 'BUDDY26',
+                    detail.inviteCode.isNotEmpty
+                        ? detail.inviteCode
+                        : 'BUDDY26',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 28,
@@ -271,7 +315,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                       Clipboard.setData(ClipboardData(text: detail.inviteCode));
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Invite code copied to clipboard!')),
+                        const SnackBar(
+                          content: Text('Invite code copied to clipboard!'),
+                        ),
                       );
                     },
                   ),
@@ -285,7 +331,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                       Clipboard.setData(ClipboardData(text: inviteLink));
                       Navigator.pop(ctx);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Community invite link copied!')),
+                        const SnackBar(
+                          content: Text('Community invite link copied!'),
+                        ),
                       );
                     },
                   ),
@@ -297,8 +345,6 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
       ),
     );
   }
-
-
 
   Future<void> _commentSheet(CommunityPost post) async {
     final controller = TextEditingController();
@@ -319,7 +365,10 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Comments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'Comments',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             const SizedBox(height: 12),
             ...post.comments.map(
               (c) => Padding(
@@ -327,7 +376,11 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.person_outline, size: 18, color: cs.onSurface.withValues(alpha: 0.6)),
+                    Icon(
+                      Icons.person_outline,
+                      size: 18,
+                      color: cs.onSurface.withValues(alpha: 0.6),
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -345,7 +398,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 Expanded(
                   child: TextField(
                     controller: controller,
-                    decoration: const InputDecoration(hintText: 'Write a comment...'),
+                    decoration: const InputDecoration(
+                      hintText: 'Write a comment...',
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -374,19 +429,32 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Community', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Community',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
       ),
-      floatingActionButton: asyncState.value?.detail?.myRole != null && _tab == 0
+      floatingActionButton:
+          asyncState.value?.detail?.myRole != null && _tab == 0
           ? FloatingActionButton(
               backgroundColor: BuddyColors.green,
               foregroundColor: BuddyColors.black,
-              onPressed: () => _openPostComposer(asyncState.value?.detail?.groupName ?? 'Community'),
+              onPressed: () => _openPostComposer(
+                asyncState.value?.detail?.groupName ?? 'Community',
+              ),
               child: const Icon(Icons.add),
             )
           : null,
       body: asyncState.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: BuddyColors.green)),
-        error: (e, _) => Center(child: Text('$e', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6)))),
+        loading: () => const Center(
+          child: CircularProgressIndicator(color: BuddyColors.green),
+        ),
+        error: (e, _) => Center(
+          child: Text(
+            '$e',
+            style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6)),
+          ),
+        ),
         data: (state) {
           final detail = state.detail;
           if (detail == null) {
@@ -404,7 +472,11 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 color: cs.surfaceContainerHighest,
                 child: detail.coverUrl.isNotEmpty
                     ? Image.network(detail.coverUrl, fit: BoxFit.cover)
-                    : const Icon(Icons.groups_outlined, size: 56, color: BuddyColors.green),
+                    : const Icon(
+                        Icons.groups_outlined,
+                        size: 56,
+                        color: BuddyColors.green,
+                      ),
               ),
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -414,8 +486,14 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: Text(detail.groupName,
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: cs.onSurface)),
+                          child: Text(
+                            detail.groupName,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: cs.onSurface,
+                            ),
+                          ),
                         ),
                         if (canManage)
                           IconButton(
@@ -440,8 +518,12 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                       ],
                     ),
                     if (detail.description.isNotEmpty)
-                      Text(detail.description,
-                          style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6))),
+                      Text(
+                        detail.description,
+                        style: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -454,20 +536,34 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                               ),
                             ),
                           ),
-                          child: Text('${detail.memberCount} members · View All',
-                              style: const TextStyle(fontSize: 12, color: BuddyColors.green, fontWeight: FontWeight.w600)),
+                          child: Text(
+                            '${detail.memberCount} members · View All',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: BuddyColors.green,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                         const Spacer(),
                         if (detail.myRole != null)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: BuddyColors.green.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text(detail.myRole!.toUpperCase(),
-                                style: const TextStyle(
-                                    fontSize: 10, color: BuddyColors.green, fontWeight: FontWeight.bold)),
+                            child: Text(
+                              detail.myRole!.toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: BuddyColors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                       ],
                     ),
@@ -477,7 +573,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: _joining ? null : _showJoinDialog,
-                          child: Text(_joining ? 'Joining...' : 'Join Community'),
+                          child: Text(
+                            _joining ? 'Joining...' : 'Join Community',
+                          ),
                         ),
                       ),
                     ],
@@ -510,7 +608,8 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                         label: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (tab.kind == _CommunityTabKind.single && tab.community?.coverUrl != null)
+                            if (tab.kind == _CommunityTabKind.single &&
+                                tab.community?.coverUrl != null)
                               Container(
                                 width: 20,
                                 height: 20,
@@ -529,19 +628,25 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                                   ),
                                 ),
                               ),
-                            if (tab.kind == _CommunityTabKind.single && tab.community?.coverUrl != null)
+                            if (tab.kind == _CommunityTabKind.single &&
+                                tab.community?.coverUrl != null)
                               const SizedBox(width: 6),
                             Text(tab.label),
                           ],
                         ),
                         selected: isSelected,
-                        onSelected: (_) => setState(() => _selectedCommunityTab = idx),
+                        onSelected: (_) =>
+                            setState(() => _selectedCommunityTab = idx),
                         labelStyle: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isSelected ? BuddyColors.green : cs.onSurface.withValues(alpha: 0.7),
+                          color: isSelected
+                              ? BuddyColors.green
+                              : cs.onSurface.withValues(alpha: 0.7),
                         ),
-                        backgroundColor: isSelected ? BuddyColors.green.withValues(alpha: 0.1) : null,
+                        backgroundColor: isSelected
+                            ? BuddyColors.green.withValues(alpha: 0.1)
+                            : null,
                       ),
                     );
                   }).toList(),
@@ -552,8 +657,12 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 child: _selectedCommunityTab == 0
                     ? _allCommunitiesTab(state, canManage)
                     : _selectedCommunity == null
-                        ? const Center(child: Text('Community not found'))
-                        : _singleCommunityTab(_selectedCommunity!, state, canManage),
+                    ? const Center(child: Text('Community not found'))
+                    : _singleCommunityTab(
+                        _selectedCommunity!,
+                        state,
+                        canManage,
+                      ),
               ),
             ],
           );
@@ -562,7 +671,12 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     );
   }
 
-  Widget _tabButton(int index, String label, CommunityDetail detail, bool canManage) {
+  Widget _tabButton(
+    int index,
+    String label,
+    CommunityDetail detail,
+    bool canManage,
+  ) {
     final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: InkWell(
@@ -583,7 +697,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
-                color: _tab == index ? BuddyColors.green : cs.onSurface.withValues(alpha: 0.6),
+                color: _tab == index
+                    ? BuddyColors.green
+                    : cs.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -592,22 +708,39 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     );
   }
 
-  Widget _singleCommunityTab(CommunityDetail community, CommunityFeedState state, bool canManage) {
+  Widget _singleCommunityTab(
+    CommunityDetail community,
+    CommunityFeedState state,
+    bool canManage,
+  ) {
     final cs = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
       onRefresh: () async {
         await ref.read(communityFeedProvider(community.id).notifier).refresh();
-        await ref.read(communityFeedProvider(community.id).notifier).loadPosts();
+        await ref
+            .read(communityFeedProvider(community.id).notifier)
+            .loadPosts();
       },
       child: state.posts.isEmpty
           ? ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 const SizedBox(height: 80),
-                Icon(Icons.forum_outlined, size: 48, color: cs.onSurface.withValues(alpha: 0.4)),
+                Icon(
+                  Icons.forum_outlined,
+                  size: 48,
+                  color: cs.onSurface.withValues(alpha: 0.4),
+                ),
                 const SizedBox(height: 8),
-                Center(child: Text('No posts yet in ${community.groupName}', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6)))),
+                Center(
+                  child: Text(
+                    'No posts yet in ${community.groupName}',
+                    style: TextStyle(
+                      color: cs.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
               ],
             )
           : ListView(
@@ -623,14 +756,18 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   onPin: canManage
                       ? (_) async {
                           await ref
-                              .read(communityFeedProvider(community.id).notifier)
+                              .read(
+                                communityFeedProvider(community.id).notifier,
+                              )
                               .updatePost(p.id, {'is_pinned': !p.isPinned});
                         }
                       : null,
                   onDelete: canManage
                       ? (_) async {
                           await ref
-                              .read(communityFeedProvider(community.id).notifier)
+                              .read(
+                                communityFeedProvider(community.id).notifier,
+                              )
                               .deletePost(p.id);
                         }
                       : null,
@@ -639,29 +776,45 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
             ),
     );
   }
-    Widget _allCommunitiesTab(CommunityFeedState state, bool canManage) {
+
+  Widget _allCommunitiesTab(CommunityFeedState state, bool canManage) {
     final cs = Theme.of(context).colorScheme;
 
     return RefreshIndicator(
       onRefresh: () async {
-        await ref.read(communityFeedProvider(widget.communityId).notifier).refresh();
-        await ref.read(communityFeedProvider(widget.communityId).notifier).loadAllPosts();
+        await ref
+            .read(communityFeedProvider(widget.communityId).notifier)
+            .refresh();
+        await ref
+            .read(communityFeedProvider(widget.communityId).notifier)
+            .loadAllPosts();
       },
       child: state.allPosts.isEmpty
           ? ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               children: [
                 const SizedBox(height: 80),
-                Icon(Icons.forum_outlined, size: 48, color: cs.onSurface.withValues(alpha: 0.4)),
+                Icon(
+                  Icons.forum_outlined,
+                  size: 48,
+                  color: cs.onSurface.withValues(alpha: 0.4),
+                ),
                 const SizedBox(height: 8),
-                Center(child: Text('No posts yet across communities', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6)))),
+                Center(
+                  child: Text(
+                    'No posts yet across communities',
+                    style: TextStyle(
+                      color: cs.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
               ],
             )
           : ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: state.allPosts.map((entry) {
                 final p = entry.post;
-                                return CommunityPostCardWithTag(
+                return CommunityPostCardWithTag(
                   post: p.toPost(),
                   communityName: entry.communityName,
                   communityCoverUrl: entry.communityCoverUrl,
@@ -673,14 +826,22 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   onPin: canManage
                       ? (_) async {
                           await ref
-                              .read(communityFeedProvider(widget.communityId).notifier)
+                              .read(
+                                communityFeedProvider(
+                                  widget.communityId,
+                                ).notifier,
+                              )
                               .updatePost(p.id, {'is_pinned': !p.isPinned});
                         }
                       : null,
                   onDelete: canManage
                       ? (_) async {
                           await ref
-                              .read(communityFeedProvider(widget.communityId).notifier)
+                              .read(
+                                communityFeedProvider(
+                                  widget.communityId,
+                                ).notifier,
+                              )
                               .deletePost(p.id);
                         }
                       : null,
@@ -690,6 +851,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     );
   }
 }
+
 /// A post card with a community name tag/ribbon above it (used in "All" tab).
 class CommunityPostCardWithTag extends StatelessWidget {
   final Post post;
@@ -719,7 +881,6 @@ class CommunityPostCardWithTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -756,7 +917,7 @@ class CommunityPostCardWithTag extends StatelessWidget {
                 const SizedBox(width: 6),
               Text(
                 communityName,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: BuddyColors.green,
@@ -765,7 +926,7 @@ class CommunityPostCardWithTag extends StatelessWidget {
             ],
           ),
         ),
-                PostCard(
+        PostCard(
           post: post,
           onLike: onLike,
           onComment: onComment,

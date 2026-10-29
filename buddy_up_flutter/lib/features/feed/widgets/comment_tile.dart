@@ -30,7 +30,7 @@ class CommentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-            padding: EdgeInsets.only(left: isThreaded ? 16 : 0),
+      padding: EdgeInsets.only(left: isThreaded ? 16 : 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -69,7 +69,8 @@ class CommentTile extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                if (comment.mediaType == 'text' && comment.body.isNotEmpty)
+                                if (comment.mediaType == 'text' &&
+                                    comment.body.isNotEmpty)
                                   Text(
                                     comment.body,
                                     style: const TextStyle(
@@ -86,7 +87,8 @@ class CommentTile extends StatelessWidget {
                           ],
                         ],
                       ),
-                      if (comment.mediaType == 'sticker' && comment.stickerPack != null)
+                      if (comment.mediaType == 'sticker' &&
+                          comment.stickerPack != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
@@ -101,7 +103,7 @@ class CommentTile extends StatelessWidget {
                     ],
                   ),
                 ),
-                                const SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Text(
@@ -117,7 +119,7 @@ class CommentTile extends StatelessWidget {
                         onTap: () => onViewReplies?.call(comment),
                         child: Text(
                           '${comment.replyCount} ${comment.replyCount == 1 ? 'reply' : 'replies'}',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: BuddyColors.green,
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
@@ -137,7 +139,8 @@ class CommentTile extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (comment.reactionCounts.isNotEmpty || comment.userReaction != null) ...[
+                    if (comment.reactionCounts.isNotEmpty ||
+                        comment.userReaction != null) ...[
                       const SizedBox(width: 8),
                       GestureDetector(
                         onTap: () {
@@ -147,8 +150,8 @@ class CommentTile extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            ...comment.reactionCounts.entries.map((e) =>
-                              Padding(
+                            ...comment.reactionCounts.entries.map(
+                              (e) => Padding(
                                 padding: const EdgeInsets.only(left: 4),
                                 child: Text(
                                   '${e.key} ${e.value}',
@@ -163,7 +166,8 @@ class CommentTile extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (comment.reactionCounts.isEmpty && comment.userReaction == null) ...[
+                    if (comment.reactionCounts.isEmpty &&
+                        comment.userReaction == null) ...[
                       const SizedBox(width: 8),
                       GestureDetector(
                         onTap: () => onReact?.call(comment, '💪'),
@@ -227,7 +231,7 @@ class CommentTile extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => Container(
+          errorBuilder: (context, error, stackTrace) => Container(
             color: BuddyColors.surfaceRaised,
             child: Icon(
               isGif ? Icons.gif : Icons.image,
