@@ -1,21 +1,70 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Activity, BookOpen, CalendarDays, ChevronDown, Dumbbell, GraduationCap,
-  Menu, MessagesSquare, Radio, Utensils, X,
+  Activity,
+  BookOpen,
+  CalendarDays,
+  ChevronDown,
+  Dumbbell,
+  GraduationCap,
+  Menu,
+  MessagesSquare,
+  Radio,
+  Utensils,
+  X,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 import { Button } from '@/components/ui/Button';
 
 const SERVICES: { icon: typeof Radio; title: string; desc: string; to: string }[] = [
-  { icon: Radio, title: 'Live Workouts', desc: 'HIIT, yoga, strength — live or on demand.', to: '/services#service-live' },
-  { icon: Dumbbell, title: 'Gyms', desc: 'Nearby, virtual, and hybrid communities.', to: '/services#service-gyms' },
-  { icon: GraduationCap, title: 'Trainers & Practitioners', desc: 'Verified pros, mobile or online.', to: '/services#service-trainers' },
-  { icon: MessagesSquare, title: 'Communities & Messaging', desc: 'Group chats that notice when you show up.', to: '/services#service-communities' },
-  { icon: CalendarDays, title: 'Events', desc: 'Runs, games, and workshops near you.', to: '/services#service-events' },
-  { icon: Utensils, title: 'Marketplace', desc: 'Meal plans, programmes, and gear.', to: '/services#service-marketplace' },
-  { icon: BookOpen, title: 'Training Programmes', desc: 'Structured multi-week plans.', to: '/services#service-programmes' },
-  { icon: Activity, title: 'Activity Analytics', desc: 'Runs, walks, hikes — tracked and streaked.', to: '/services#service-analytics' },
+  {
+    icon: Radio,
+    title: 'Live Workouts',
+    desc: 'HIIT, yoga, strength — live or on demand.',
+    to: '/services#service-live',
+  },
+  {
+    icon: Dumbbell,
+    title: 'Gyms',
+    desc: 'Nearby, virtual, and hybrid communities.',
+    to: '/services#service-gyms',
+  },
+  {
+    icon: GraduationCap,
+    title: 'Trainers & Practitioners',
+    desc: 'Verified pros, mobile or online.',
+    to: '/services#service-trainers',
+  },
+  {
+    icon: MessagesSquare,
+    title: 'Communities & Messaging',
+    desc: 'Group chats that notice when you show up.',
+    to: '/services#service-communities',
+  },
+  {
+    icon: CalendarDays,
+    title: 'Events',
+    desc: 'Runs, games, and workshops near you.',
+    to: '/services#service-events',
+  },
+  {
+    icon: Utensils,
+    title: 'Marketplace',
+    desc: 'Meal plans, programmes, and gear.',
+    to: '/services#service-marketplace',
+  },
+  {
+    icon: BookOpen,
+    title: 'Training Programmes',
+    desc: 'Structured multi-week plans.',
+    to: '/services#service-programmes',
+  },
+  {
+    icon: Activity,
+    title: 'Activity Analytics',
+    desc: 'Runs, walks, hikes — tracked and streaked.',
+    to: '/services#service-analytics',
+  },
 ];
 
 const NAV_LINKS = [
@@ -48,14 +97,10 @@ export function Navbar() {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  const goWaitlist = () => {
+  const goLogin = () => {
     setMobileOpen(false);
     setServicesOpen(false);
-    if (window.location.pathname !== '/') {
-      navigate('/#waitlist');
-    } else {
-      document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
-    }
+    navigate('/login?next=/');
   };
 
   return (
@@ -91,7 +136,11 @@ export function Navbar() {
               onMouseEnter={() => setServicesOpen(true)}
               className="inline-flex items-center gap-1 px-4 py-2 text-sm leading-6 text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
             >
-              Services <ChevronDown size={14} className={`shrink-0 transition-transform ${servicesOpen ? 'rotate-180' : ''}`} />
+              Services{' '}
+              <ChevronDown
+                size={14}
+                className={`shrink-0 transition-transform ${servicesOpen ? 'rotate-180' : ''}`}
+              />
             </button>
             {servicesOpen && (
               <div className="absolute left-1/2 -translate-x-1/2 top-full pt-2 w-[32rem]">
@@ -107,8 +156,12 @@ export function Navbar() {
                         <Icon size={18} className="text-buddy-green" />
                       </span>
                       <span>
-                        <span className="block text-sm font-medium text-buddy-text-primary">{title}</span>
-                        <span className="block text-xs text-buddy-text-secondary mt-0.5">{desc}</span>
+                        <span className="block text-sm font-medium text-buddy-text-primary">
+                          {title}
+                        </span>
+                        <span className="block text-xs text-buddy-text-secondary mt-0.5">
+                          {desc}
+                        </span>
                       </span>
                     </Link>
                   ))}
@@ -128,7 +181,9 @@ export function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Button size="sm" onClick={goWaitlist}>Join waiting list</Button>
+          <Button size="sm" onClick={goLogin}>
+            Sign in
+          </Button>
         </div>
 
         {/* Mobile toggle */}
@@ -157,7 +212,9 @@ export function Navbar() {
               {label}
             </Link>
           ))}
-          <p className="pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-buddy-text-secondary">Services</p>
+          <p className="pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-buddy-text-secondary">
+            Services
+          </p>
           <div className="grid grid-cols-1 gap-1 pb-3">
             {SERVICES.map(({ icon: Icon, title, to }) => (
               <Link
@@ -171,7 +228,9 @@ export function Navbar() {
             ))}
           </div>
           <div className="pt-1">
-            <Button className="w-full" onClick={goWaitlist}>Join waiting list</Button>
+            <Button className="w-full" onClick={goLogin}>
+              Sign in
+            </Button>
           </div>
         </div>
       )}
