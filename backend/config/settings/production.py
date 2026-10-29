@@ -21,6 +21,18 @@ ALLOWED_HOSTS = [
     '.up.railway.app',
     '.vercel.app',
     '.containers.snapdeploy.app',
+    # Primary API host on Render
+    'backend-api.buddyupfit.com',
+    # Frontend app hosts (Vercel) — needed for WebSocket Origin validation
+    'buddyupfit.com',
+    'www.buddyupfit.com',
+    'app.buddyupfit.com',
+    'api.buddyupfit.com',
+    'buddyupfit.co.ke',
+    'www.buddyupfit.co.ke',
+    'app.buddyupfit.co.ke',
+    'api.buddyupfit.co.ke',
+    # Legacy hosts kept for backward-compat during the migration
     'buddyup.app',
     'www.buddyup.app',
     'api.buddyup.app',
@@ -36,6 +48,13 @@ CORS_ALLOWED_ORIGINS = [
     'https://www.buddyupfit.com',
     'https://buddyupfit.co.ke',
     'https://www.buddyupfit.co.ke',
+    # Vercel preview / app sub-domains
+    'https://app.buddyupfit.com',
+    'https://api.buddyupfit.com',
+    'https://app.buddyupfit.co.ke',
+    'https://api.buddyupfit.co.ke',
+    'https://app.buddyup.app',
+    'https://api.buddyup.app',
 ]
 # Env-supplied origins must never crash deploys (corsheaders.E013 turns a
 # single malformed entry into SystemCheckError → container unhealthy →
@@ -76,7 +95,7 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'Lax'
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
-SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
