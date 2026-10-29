@@ -39,4 +39,12 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += [path('__debug__/', include('debug_toolbar.urls'))]
+    # debug_toolbar is a development-only dependency (requirements/development.txt,
+    # not base.txt/production.txt). Guard the import so a DEBUG=True environment
+    # that lacks the package does not crash URL resolution for every request —
+    # including the error handler itself, which needs URL resolution to render.
+    try:
+        import debug_toolbar  # noqa: F401
+        urlpatterns += [path('__debug__/', include('debug_toolbar.urls'))]
+    except ImportError:
+        pass
