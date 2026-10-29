@@ -167,7 +167,12 @@ class StartLiveView(views.APIView):
             from apps.notifications.tasks import send_live_started_notification
             send_live_started_notification.delay(str(live.id), str(request.user.profile.user_id))
 
-        if live.status == 'live' and live.recording_consent == 'auto_record':
+        # Moderation-first: every live is recorded server-side so staff always
+        # have a durable master for review. `recording_consent` only governs
+        # whether the master is *published* as a public replay (see
+        # EndLiveView + process_live_replay). `live.recording_status` tracks
+        # the recording lifecycle.
+        if live.status == 'live' and getattr(settings, 'LIVE_MODERATION_RECORDING', True):
             from .tasks import start_livekit_recording
             start_livekit_recording.delay(str(live.id))
 
@@ -203,9 +208,12 @@ class EndLiveView(views.APIView):
         live.replay_saved = serializer.validated_data['save_replay']
         live.save(update_fields=['status', 'ended_at', 'replay_saved'])
 
-        if live.replay_saved:
-            from .tasks import process_live_replay
-            process_live_replay.delay(str(live.id))
+        # Moderation-first: always finalize the staff archive. Public
+        # publishing is gated on consent inside process_live_replay, so the
+        # host toggle no longer controls whether a recording is kept — only
+        # whether it is published.
+        from .tasks import process_live_replay
+        process_live_replay.delay(str(live.id))
 
         return Response({
             'success': True,
@@ -877,6 +885,9 @@ class LiveCredentialsView(views.APIView):
                 'host_user_id': live.host.user_id,
                 'host_avatar': live.host.avatar_url,
                 'status': live.status,
+                'recording_status': live.recording_status,
+                'mux_status': live.mux_status,
+                'mux_playback_id': live.mux_playback_id,
                 'viewer_count': viewer_count,
                 'co_hosts': [
                     {'user_id': p.user_id, 'display_name': p.display_name, 'avatar_url': p.avatar_url}
@@ -1108,3 +1119,63 @@ class ReplayViewRecordView(views.APIView):
             'message': 'Replay view recorded.' if created else 'Replay view already counted.',
             'errors': None, 'pagination': None,
         })
+
+
+class LiveRecordingView(views.APIView):
+    """Staff-only master recording surface for a live.
+
+    Returns the recording lifecycle fields plus a **fresh** presigned archive URL
+    on every request — staff always have a durable, non-expired link to review or
+    download the master, regardless of the public `replay_url` lifetime.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if not live.recording_archive_key:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No server-side recording exists for this live.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        from .recording import generate_archive_presigned_url
+        return Response({
+            'success': True,
+            'data': {
+                'recording_status': live.recording_status,
+                'mux_status': live.mux_status,
+                'mux_playback_id': live.mux_playback_id or '',
+                'mux_processing_error': live.mux_processing_error or '',
+                'replay_url': live.replay_url or '',
+                'archive_url': generate_archive_presigned_url(live) or '',
+            },
+            'message': 'OK',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class LiveRecordingDownloadView(views.APIView):
+    """Staff-only direct download of the master recording via a 302 redirect
+    to a fresh presigned URL."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request, live_id):
+        live = get_object_or_404(BuddyLive, id=live_id)
+        if not live.recording_archive_key:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No recording is attached to this live.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        from .recording import generate_archive_presigned_url
+        archive_url = generate_archive_presigned_url(live)
+        if not archive_url:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Recording storage is not configured.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(status=status.HTTP_302_FOUND, headers={'Location': archive_url})

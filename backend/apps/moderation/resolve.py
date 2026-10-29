@@ -279,6 +279,10 @@ def _resolve_live(content_id):
         # for a live and neither is reachable anywhere in the console today.
         'fields': {
             'status': obj.status,
+            'recording_status': getattr(obj, 'recording_status', '') or '',
+            'mux_status': getattr(obj, 'mux_status', '') or '',
+            'mux_processing_error': getattr(obj, 'mux_processing_error', '') or '',
+            'mux_asset_id': getattr(obj, 'mux_asset_id', '') or '',
             'scheduled_for': getattr(obj, 'scheduled_for', None),
             'replay_url': getattr(obj, 'replay_url', '') or '',
             'mux_playback_id': getattr(obj, 'mux_playback_id', '') or '',

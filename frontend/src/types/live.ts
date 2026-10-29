@@ -41,6 +41,10 @@ export interface BuddyLive {
   replay_url: string;
   replay_saved: boolean;
   mux_playback_id?: string;
+  recording_status: string;
+  mux_status: string;
+  mux_processing_error?: string;
+  recording_archive_key?: string;
   scheduled_for: string | null;
   is_recurring: boolean;
   equipment_list: string[];

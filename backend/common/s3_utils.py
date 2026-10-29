@@ -9,9 +9,10 @@ def generate_presigned_url(
     object_key: str,
     expiration_seconds: int = 3600,
     method: str = 'GET',
+    bucket: str | None = None,
 ) -> str | None:
     endpoint = getattr(settings, 'LIVE_RECORDING_S3_ENDPOINT', '')
-    bucket = getattr(settings, 'LIVE_RECORDING_S3_BUCKET', '')
+    bucket = bucket or getattr(settings, 'LIVE_RECORDING_S3_BUCKET', '')
     access_key = getattr(settings, 'LIVE_RECORDING_S3_ACCESS_KEY', '')
     secret_key = getattr(settings, 'LIVE_RECORDING_S3_SECRET_KEY', '')
 

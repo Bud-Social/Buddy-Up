@@ -1670,6 +1670,12 @@ export const adminPortalApi = {
       })
       .then((r) => r.data),
 
+  /** Staff-only master recording surface: statuses + a fresh presigned
+   * archive URL (the durable fallback when Mux HLS isn't ready). */
+  getLiveRecording: (liveId: string) =>
+    apiClient.get<ApiResponse<LiveRecording>>(`/lives/${liveId}/recording/`)
+      .then((r) => r.data),
+
   getContentFlagStats: () =>
     apiClient.get<ApiResponse<ModerationStatsRow>>('/moderation/content-flags/stats/').then((r) => r.data),
 
@@ -1751,3 +1757,12 @@ export const adminPortalApi = {
 };
 
 export type AdminPortalApi = typeof adminPortalApi;
+
+export interface LiveRecording {
+  recording_status?: 'not_recorded' | 'recording' | 'ready' | 'failed';
+  mux_status?: 'not_created' | 'created' | 'ready' | 'failed';
+  mux_processing_error?: string | null;
+  mux_playback_id?: string | null;
+  replay_url?: string | null;
+  archive_url?: string | null;
+}

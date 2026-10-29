@@ -57,6 +57,38 @@ class BuddyLive(TimestampedModel):
     transcript = models.TextField(blank=True)
     livekit_egress_id = models.CharField(max_length=100, blank=True)
     client_recording_session_id = models.CharField(max_length=100, blank=True)
+    # ── Recording / moderation archive ─────────────────────────────────
+    # Server-authoritative lifecycle of the master recording (LiveKit
+    # Egress MP4, or a stitched client replay). Deliberately separate from
+    # `status`, which is the broadcast lifecycle: a live can be `ended`
+    # while its recording is still `processing` or `ready` for review.
+    RECORDING_STATUS_CHOICES = [
+        ('not_recorded', 'Not Recorded'),
+        ('recording', 'Recording'),
+        ('stopped', 'Stopped'),
+        ('processing', 'Processing'),
+        ('ready', 'Ready'),
+        ('failed', 'Failed'),
+    ]
+    recording_status = models.CharField(
+        max_length=15, choices=RECORDING_STATUS_CHOICES, default='not_recorded',
+    )
+    # Mux adaptive-streaming (HLS) distribution lifecycle for replays.
+    MUX_STATUS_CHOICES = [
+        ('not_created', 'Not Created'),
+        ('created', 'Created'),
+        ('ready', 'Ready'),
+        ('failed', 'Failed'),
+    ]
+    mux_status = models.CharField(
+        max_length=15, choices=MUX_STATUS_CHOICES, default='not_created',
+    )
+    mux_processing_error = models.TextField(blank=True)
+    # S3 object key of the durable master MP4 that backs both the public
+    # replay (`replay_url`) and the staff moderation archive. The public
+    # `replay_url` may be a short-lived presigned link; this key lets staff
+    # always mint a fresh one for review regardless of link expiry.
+    recording_archive_key = models.CharField(max_length=255, blank=True)
     co_hosts = models.ManyToManyField('profiles.Profile', blank=True, related_name='co_hosted_lives')
     scheduled_for = models.DateTimeField(null=True, blank=True)
     is_recurring = models.BooleanField(default=False)

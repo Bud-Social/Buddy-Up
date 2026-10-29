@@ -170,5 +170,5 @@ export const moderationApi = {
    * moderation decision instead of seeing a silent removal.
    */
   getExplanation: (flagId: string) =>
-    apiClient.get<ApiResponse<FlagExplanation>>(`/moderation/content-flags/${flagId}/explanation/`).then((r) => r.data),
+    apiClient.get<ApiResponse<FlagExplanation>>(`/moderation/content-flags/${flagId}/explanation/`).then((r) => r.data.data),
 };

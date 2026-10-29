@@ -502,6 +502,20 @@ LIVE_RECORDING_S3_ACCESS_KEY = os.environ.get('LIVE_RECORDING_S3_ACCESS_KEY', ''
 LIVE_RECORDING_S3_SECRET_KEY = os.environ.get('LIVE_RECORDING_S3_SECRET_KEY', '')
 LIVE_REPLAY_BASE_URL = os.environ.get('LIVE_REPLAY_BASE_URL', '')
 
+# Durable admin-archive home for a live recording master file. Defaults to
+# the same S3-compatible bucket the LiveKit egress writes to, but may point
+# at a dedicated, long-retention bucket. Staff mint fresh presigned URLs
+# from it on demand, so a recording never goes unreachable to moderators.
+LIVE_ARCHIVE_BUCKET = os.environ.get('LIVE_ARCHIVE_BUCKET', LIVE_RECORDING_S3_BUCKET)
+LIVE_ARCHIVE_TTL = int(os.environ.get('LIVE_ARCHIVE_TTL', '86400'))  # seconds a fresh staff link lives
+# Moderation-first: every live is recorded server-side for staff review. This
+# toggle exists for operators who want to disable server-side recording
+# entirely (e.g. ephemeral dev stacks); public replay is still gated by
+# `recording_consent`.
+LIVE_MODERATION_RECORDING = os.environ.get('LIVE_MODERATION_RECORDING', 'true').lower() == 'true'
+# Lifetime of the public replay presigned URL (Mux HLS supersedes it once ready).
+LIVE_REPLAY_TTL = int(os.environ.get('LIVE_REPLAY_TTL', str(7 * 24 * 3600)))
+
 # Mux (replay recording)
 MUX_TOKEN_ID = os.environ.get('MUX_TOKEN_ID', '')
 MUX_TOKEN_SECRET = os.environ.get('MUX_TOKEN_SECRET', '')

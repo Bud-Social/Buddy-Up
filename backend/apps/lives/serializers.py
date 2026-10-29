@@ -33,6 +33,7 @@ class BuddyLiveSerializer(serializers.ModelSerializer):
             'replay_url', 'replay_saved', 'co_hosts', 'scheduled_for',
             'is_recurring', 'recurrence_rule', 'equipment_list',
             'recording_consent',
+            'recording_status', 'mux_status',
             'host', 'viewer_count', 'is_joined', 'has_rsvped', 'rsvp_count',
             'created_at', 'updated_at',
         ]

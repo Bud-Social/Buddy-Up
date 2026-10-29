@@ -410,26 +410,44 @@ function ReportsTab({ onChanged }: { onChanged: () => void }) {
  * Firefox do not play natively, so those get an explicit link instead of a
  * video element that silently fails.
  */
-function LiveReview({ fields }: { fields: Record<string, unknown> }) {
+function LiveReview({ liveId, fields }: { liveId: string; fields: Record<string, unknown> }) {
   const replayUrl = typeof fields.replay_url === 'string' ? fields.replay_url : '';
   const muxId = typeof fields.mux_playback_id === 'string' ? fields.mux_playback_id : '';
   const transcript = typeof fields.transcript === 'string' ? fields.transcript.trim() : '';
   const muxStream = muxId ? `https://stream.mux.com/${muxId}.m3u8` : '';
 
+  const recStatus = typeof fields.recording_status === 'string' ? fields.recording_status : '';
+  const muxStatus = typeof fields.mux_status === 'string' ? fields.mux_status : '';
+  const muxError = typeof fields.mux_processing_error === 'string' ? fields.mux_processing_error : '';
+
+  // Staff-only: mint a fresh, non-expiring master URL on demand so the review
+  // player always has a working source (the public replay_url TTLs out). A 403
+  // is swallowed — the resolved fields above still drive the status display.
+  const [archiveUrl, setArchiveUrl] = useState<string>('');
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  useEffect(() => {
+    if (!liveId) return;
+    setArchiveLoading(true);
+    adminPortalApi.getLiveRecording(liveId)
+      .then((res) => setArchiveUrl((res?.data?.archive_url as string) ?? ''))
+      .catch(() => setArchiveUrl(''))
+      .finally(() => setArchiveLoading(false));
+  }, [liveId]);
+
+  const masterSrc = archiveUrl || replayUrl;
+
   return (
     <div className="space-y-3 rounded-lg border border-buddy-surface bg-buddy-surface/60 p-2.5">
+      <div className="flex flex-wrap items-center gap-2 text-[11px]">
+        <Badge variant="silver" label={`Recording: ${recStatus || 'unknown'}`} size="sm" />
+        <Badge variant="silver" label={`Mux: ${muxStatus || 'unknown'}`} size="sm" />
+        {muxError && <span className="text-buddy-text-secondary">error: {muxError}</span>}
+        <Badge variant="silver" label={archiveLoading ? 'Refreshing link…' : 'Archive live'} size="sm" />
+      </div>
+
       <div className="space-y-1">
         <p className="text-[11px] font-semibold text-buddy-text-primary">Recording</p>
-        {replayUrl ? (
-          <video
-            controls
-            preload="metadata"
-            src={replayUrl}
-            className="w-full max-h-72 rounded bg-black"
-          >
-            <track kind="captions" />
-          </video>
-        ) : muxStream ? (
+        {muxStatus === 'ready' && muxStream ? (
           <a
             href={muxStream}
             target="_blank"
@@ -438,6 +456,17 @@ function LiveReview({ fields }: { fields: Record<string, unknown> }) {
           >
             Open HLS recording (Mux) →
           </a>
+        ) : masterSrc ? (
+          <video
+            controls
+            preload="metadata"
+            src={masterSrc}
+            className="w-full max-h-72 rounded bg-black"
+          >
+            <track kind="captions" />
+          </video>
+        ) : archiveLoading ? (
+          <p className="text-[11px] text-buddy-text-secondary">Minting fresh master link…</p>
         ) : (
           <p className="text-[11px] text-buddy-text-secondary">
             No replay recording is attached to this live.
@@ -533,7 +562,7 @@ function ContentPeek({ contentType, contentId }: { contentType: string; contentI
                 </p>
               )}
               {(data.label === 'Live' || contentType.startsWith('lives')) && (
-                <LiveReview fields={data.fields ?? {}} />
+                <LiveReview liveId={contentId} fields={data.fields ?? {}} />
               )}
               {data.fields && Object.keys(data.fields).length > 0 && (
                 <dl className="grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-[11px]">

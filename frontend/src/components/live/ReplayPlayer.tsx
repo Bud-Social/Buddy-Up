@@ -16,6 +16,7 @@ interface ReplayPlayerProps {
 
 export default function ReplayPlayer({ title, hostName, replayUrl, muxPlaybackId, liveId, onClose }: ReplayPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
+  const [useFallback, setUseFallback] = useState(false);
   const pinged = useRef(false);
 
   // Unique-per-viewer replay view: fire once per mount; the server dedupes.
@@ -45,7 +46,7 @@ export default function ReplayPlayer({ title, hostName, replayUrl, muxPlaybackId
           </div>
         )}
 
-        {muxPlaybackId ? (
+        {muxPlaybackId && !useFallback ? (
           <Suspense fallback={null}>
             <MuxPlayer
               playbackId={muxPlaybackId}
@@ -53,6 +54,7 @@ export default function ReplayPlayer({ title, hostName, replayUrl, muxPlaybackId
               accentColor="#22c55e"
               style={{ width: '100%', height: '100%', maxHeight: '100vh' }}
               onCanPlay={() => setIsLoading(false)}
+              onError={() => setUseFallback(true)}
             />
           </Suspense>
         ) : (

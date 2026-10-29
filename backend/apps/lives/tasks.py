@@ -111,73 +111,146 @@ def start_livekit_recording(live_id: str):
 
 @shared_task
 def process_live_replay(live_id: str):
+    """Finalize a finished live's recording.
+
+    Moderation-first pipeline:
+      1. Seal the durable S3 master MP4 (always available to staff, even for
+         opt-out lives). ``recording_status`` tracks this lifecycle.
+      2. Mux adaptive-HLS distribution is best-effort and non-blocking: a Mux
+         failure never breaks replay completion (the master MP4 is the
+         fault-tolerant fallback).
+      3. A public ``replay_url`` is published only for lives whose
+         ``recording_consent == 'auto_record'``; opt-out lives keep a master
+         archive for staff review without a public replay.
+      4. Transcription runs on the master (best-effort).
+    """
     try:
         live = BuddyLive.objects.select_related('host').get(id=live_id)
     except BuddyLive.DoesNotExist:
         return
 
-    from .recording import stop_livekit_egress, stitch_and_upload_client_replay
+    from .recording import (
+        stop_livekit_egress,
+        stitch_and_upload_client_replay,
+        create_mux_asset,
+        archive_recording_url,
+        generate_archive_presigned_url,
+        PUBLIC_REPLAY_TTL,
+    )
 
+    master_url = None
+
+    # (1) Server-side egress master — the staff archive source of truth.
     if live.livekit_egress_id:
-        replay_url = stop_livekit_egress(live.livekit_egress_id, live_id)
-        if replay_url:
-            live.replay_url = replay_url
-            live.replay_saved = True
-            live.save(update_fields=['replay_url', 'replay_saved'])
+        master_url = stop_livekit_egress(live.livekit_egress_id, live_id)
+        live.refresh_from_db()
 
-    if not live.replay_url and live.client_recording_session_id:
-        replay_url = stitch_and_upload_client_replay(live_id, live.client_recording_session_id)
-        if replay_url:
-            live.replay_url = replay_url
-            live.replay_saved = True
-            live.save(update_fields=['replay_url', 'replay_saved'])
-
-    if not live.replay_url:
-        from common.s3_utils import generate_presigned_url
-        presigned = generate_presigned_url(f'replays/{live_id}.mp4')
-        if presigned:
-            live.replay_url = presigned
-        else:
-            base_url = (settings.LIVE_REPLAY_BASE_URL or '').rstrip('/')
-            if base_url:
-                live.replay_url = f"{base_url}/{live_id}.mp4"
-            else:
-                logger.warning('No replay storage configured for live %s', live_id)
-                return
-        live.replay_saved = True
-        live.save(update_fields=['replay_url', 'replay_saved'])
-
-    mux_token_id = getattr(settings, 'MUX_TOKEN_ID', '')
-    mux_token_secret = getattr(settings, 'MUX_TOKEN_SECRET', '')
-
-    if mux_token_id and mux_token_secret and live.replay_url and not live.mux_asset_id:
-        try:
-            import requests
-            resp = requests.post(
-                'https://api.mux.com/video/v1/assets',
-                json={'input': [{'type': 'video', 'url': live.replay_url}]},
-                auth=(mux_token_id, mux_token_secret),
-                timeout=30,
+    # (2) Client-stitch fallback master (host uploaded chunks).
+    if not master_url and live.client_recording_session_id:
+        master_url = stitch_and_upload_client_replay(live_id, live.client_recording_session_id)
+        if master_url:
+            BuddyLive.objects.filter(pk=live_id).update(
+                recording_archive_key=master_url,
+                recording_status='ready',
             )
-            if resp.ok:
-                data = resp.json().get('data', {})
-                live.mux_asset_id = data.get('id', live.mux_asset_id or '')
-                live.mux_playback_id = data.get('playback_ids', [{}])[0].get('id', '')
-                live.save(update_fields=['mux_asset_id', 'mux_playback_id'])
-        except Exception as e:  # noqa: BLE001
-            logger.error(f'Mux ingest failed for {live_id}: {e}')
+            live.refresh_from_db()
 
-    # Transcription is best-effort: the replay is already playable, and a
-    # missing AI service must never fail the replay job that produced it.
-    if live.replay_url and not live.transcript:
+    # (3) Reconstruct a master URL from a persisted archive key if present.
+    if not master_url and live.recording_archive_key:
+        master_url = generate_archive_presigned_url(live, expiration_seconds=PUBLIC_REPLAY_TTL)
+
+    if not master_url:
+        logger.warning('No replay materialized for live %s', live_id)
+        return
+
+    live.refresh_from_db()
+
+    # (4) Mux adaptive-HLS distribution — best-effort, never blocking. Only
+    # created for consented (public) lives; opt-out lives rely on the MP4
+    # archive that staff mint on demand.
+    if live.recording_consent == 'auto_record' and live.mux_status != 'ready':
+        if not live.mux_asset_id:
+            asset_id, playback_id, err = create_mux_asset(master_url, live_id)
+            if asset_id:
+                BuddyLive.objects.filter(pk=live_id).update(
+                    mux_asset_id=asset_id,
+                    mux_playback_id=playback_id,
+                    mux_status='created',
+                    mux_processing_error=err or '',
+                )
+                live.refresh_from_db()
+                finalize_mux_status.delay(str(live_id))
+            else:
+                BuddyLive.objects.filter(pk=live_id).update(
+                    mux_status='failed',
+                    mux_processing_error=(
+                        (live.mux_processing_error + '; ' if live.mux_processing_error else '')
+                        + (err or 'mux not configured')
+                    ),
+                )
+                live.refresh_from_db()
+
+    live.refresh_from_db()
+
+    # (5) Publish a public replay URL only for consented (auto_record) lives
+    # whose host also opted in at end-of-stream. archive_recording_url()
+    # returns Mux HLS once ready, else a long-lived S3 presigned MP4 — the
+    # published link is therefore always playable.
+    if live.recording_consent == 'auto_record' and live.replay_saved:
+        replay_url = archive_recording_url(live)
+        if replay_url:
+            BuddyLive.objects.filter(pk=live_id).update(
+                replay_url=replay_url,
+                replay_saved=True,
+            )
+            live.refresh_from_db()
+
+    # (6) Transcription — staff review, best-effort, on the master archive.
+    if master_url and not live.transcript:
         try:
-            transcribe_live_replay.delay(str(live_id))
+            transcribe_live_replay.delay(str(live_id), master_url)
         except Exception as exc:  # noqa: BLE001
             logger.warning('Could not queue live transcription for %s: %s', live_id, exc)
 
 
+@shared_task
+def finalize_mux_status(live_id: str):
+    """Poll Mux asynchronously and, when the asset is ready, upgrade the live's
+    recording surface to HLS. A not-yet-ready asset leaves the long-lived S3
+    presigned MP4 in place as the public/visible fallback."""
+    try:
+        live = BuddyLive.objects.get(id=live_id)
+    except BuddyLive.DoesNotExist:
+        return
+    if live.mux_status != 'created' or not live.mux_asset_id:
+        return
+
+    from .recording import poll_mux_asset_status, archive_recording_url
+    status = poll_mux_asset_status(live.mux_asset_id, attempts=12, delay=10)
+
+    if status == 'ready':
+        updates = ['mux_status']
+        live.mux_status = 'ready'
+        if live.recording_consent == 'auto_record':
+            replay_url = archive_recording_url(live)
+            if replay_url:
+                live.replay_url = replay_url
+                updates.append('replay_url')
+        live.save(update_fields=updates)
+        logger.info('Mux asset ready for live %s', live_id)
+    elif status in ('errored', 'failed', 'deleted'):
+        live.mux_status = 'failed'
+        live.mux_processing_error = (
+            (live.mux_processing_error + '; ' if live.mux_processing_error else '')
+            + f'mux status={status}'
+        )
+        live.save(update_fields=['mux_status', 'mux_processing_error'])
+        logger.warning('Mux asset for live %s ended in %s', live_id, status)
+    # else: still 'created' (processing) — leave it; MP4 fallback stays live.
+
+
 @shared_task(bind=True, max_retries=2, default_retry_delay=30, queue='ai')
-def transcribe_live_replay(self, live_id: str):
+def transcribe_live_replay(self, live_id: str, media_url: str | None = None):
     """Transcribe a finished live's replay so moderators can read it.
 
     The console resolves a live through `moderation.resolve`, which reads the
@@ -191,13 +264,14 @@ def transcribe_live_replay(self, live_id: str):
     except BuddyLive.DoesNotExist:
         return
 
-    if live.transcript or not live.replay_url:
+    media = media_url or live.replay_url
+    if live.transcript or not media:
         return
 
     try:
         resp = ai_post(
             f'{settings.AI_SERVICE_URL}/api/v1/transcribe',
-            json={'media_url': live.replay_url},
+            json={'media_url': media},
             timeout=300,
         )
         resp.raise_for_status()
@@ -219,12 +293,15 @@ def retry_failed_replays():
     from django.db import models as db_models
     pending = BuddyLive.objects.filter(
         status='ended',
-        replay_saved=True,
     ).filter(
-        db_models.Q(replay_url='') | db_models.Q(replay_url__isnull=True),
+        db_models.Q(recording_status='recording') | db_models.Q(mux_status='created'),
     )[:100]
     for live in pending:
-        process_live_replay.delay(str(live.id))
+        if live.recording_status == 'recording' and not live.livekit_egress_id and not live.client_recording_session_id:
+            live.recording_status = 'failed'
+            live.save(update_fields=['recording_status'])
+        else:
+            process_live_replay.delay(str(live.id))
 
 
 @shared_task

@@ -155,7 +155,47 @@ ellipses.
 
 ---
 
-## 8. Before you publish — the non-environment checklist
+## 8. Moderation recording & S3 archive
+
+This change makes the platform **moderation-first**: every live is recorded
+server-side (LiveKit egress → a durable S3 master) so staff always have
+something to review, regardless of host action.
+
+- `LIVE_MODERATION_RECORDING` (default `true`) is the master switch. Set `false`
+  only on ephemeral dev stacks where nothing must persist.
+- `LIVE_ARCHIVE_BUCKET` / `LIVE_RECORDING_S3_BUCKET` hold the durable master.
+  Staff **mint a fresh presigned URL on every request**
+  (`GET /api/v1/lives/<id>/recording/`), so a recording never expires for a
+  moderator even though the *public* replay URL does (see `LIVE_REPLAY_TTL`).
+- `LIVE_ARCHIVE_TTL` is the staff-link lifetime (default 1 day; 7 days in
+  production via env).
+- Public replays are published only for `recording_consent == 'auto_record'`
+  lives whose host opted in at end-of-stream. Opt-out lives are still archived
+  for staff review, just not published.
+- Mux HLS is **best-effort / non-blocking**: a Mux failure is recorded on
+  `mux_status` / `mux_processing_error` but the master MP4 stays live as the
+  fallback. `finalize_mux_status` upgrades the public `replay_url` to HLS
+  asynchronously once Mux reports `ready`.
+
+| Variable | Default | Notes |
+|---|---|---|
+| `LIVEKIT_*` | — | Egress requires a LiveKit `EGRESS` role + valid API key/secret |
+| `MUX_TOKEN_ID` / `MUX_TOKEN_SECRET` | empty | Required only for HLS distribution; empty = MP4-only fallback |
+| `LIVE_ARCHIVE_BUCKET` | `LIVE_RECORDING_S3_BUCKET` | A dedicated long-retention bucket is recommended |
+| `LIVE_ARCHIVE_TTL` | `86400` (1 day) | Staff-presigned URL lifetime |
+| `LIVE_REPLAY_TTL` | `604800` (7 days) | Public replay URL lifetime before Mux upgrades it |
+| `LIVE_MODERATION_RECORDING` | `true` | Master switch for server-side recording |
+
+Staff endpoints (admin JWT only):
+
+- `GET /api/v1/lives/<id>/recording/` — statuses + a **fresh** `archive_url`.
+- `GET /api/v1/lives/<id>/recording/download/` — `302` redirect to a fresh presigned URL.
+- `GET /api/v1/lives/<id>/` (credentials) — now also returns `recording_status`,
+  `mux_status` and `mux_playback_id` so the client can render the right player.
+
+---
+
+## 9. Before you publish — the non-environment checklist
 
 These are not env vars and no amount of configuration substitutes for them.
 
