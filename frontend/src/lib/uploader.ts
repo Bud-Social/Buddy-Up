@@ -74,7 +74,7 @@ export function mapCloudinaryResponse(json: CloudinaryUploadResponse): UploadedM
 }
 
 function resourceTypeFor(file: File): 'image' | 'video' {
-  if (file.type.startsWith('video/')) return 'video';
+  if (file.type.startsWith('video/') || file.type.startsWith('audio/')) return 'video';
   return 'image';
 }
 
@@ -784,8 +784,8 @@ export interface FinalizedItem {
  */
 export async function finalizeStudioItem(
   input: {
-    file: File;
-    kind: 'image' | 'video';
+    file?: File;
+    kind: 'image' | 'video' | 'audio' | 'text';
     trimStartMs?: number | null;
     trimEndMs?: number | null;
     durationMs?: number | null;
@@ -793,20 +793,32 @@ export async function finalizeStudioItem(
   opts: TrimVideoOptions = {},
 ): Promise<FinalizedItem> {
   const duration = Math.round(input.durationMs ?? 0);
+  // Text items have no file — nothing to finalize.
+  if (input.kind === 'text') {
+    const file = input.file ?? new File([''], '', { type: 'text/plain' });
+    return { file, exported: false, offsetMs: 0, durationMs: 0 };
+  }
+  // Audio items pass through without trim-export.
+  if (input.kind === 'audio') {
+    const file = input.file ?? new File([''], '', { type: 'audio/mp3' });
+    return { file, exported: false, offsetMs: 0, durationMs: duration };
+  }
+  const file = input.file;
+  if (!file) throw new Error(`No file for ${input.kind} item`);
   if (input.kind === 'image') {
-    return { file: await compressImage(input.file), exported: false, offsetMs: 0, durationMs: duration };
+    return { file: await compressImage(file), exported: false, offsetMs: 0, durationMs: duration };
   }
   const plan = normalizeTrimExport(input.trimStartMs, input.trimEndMs, input.durationMs ?? null);
-  if (!plan) return { file: input.file, exported: false, offsetMs: 0, durationMs: duration };
+  if (!plan) return { file, exported: false, offsetMs: 0, durationMs: duration };
   if (!shouldExportTrimmedVideo(plan, TRIM_EXPORT_TOLERANCE_MS)) {
-    return { file: input.file, exported: false, offsetMs: plan.start_ms, durationMs: plan.duration_ms };
+    return { file, exported: false, offsetMs: plan.start_ms, durationMs: plan.duration_ms };
   }
-  const res = await getOrExportTrimmedVideo(input.file, plan.start_ms, plan.end_ms, {
+  const res = await getOrExportTrimmedVideo(file, plan.start_ms, plan.end_ms, {
     ...opts,
     durationMs: input.durationMs ?? null,
   });
   if (!res.trimmed) {
-    return { file: input.file, exported: false, offsetMs: plan.start_ms, durationMs: plan.duration_ms };
+    return { file, exported: false, offsetMs: plan.start_ms, durationMs: plan.duration_ms };
   }
   return { file: res.file, exported: true, offsetMs: plan.start_ms, durationMs: res.duration_ms ?? plan.duration_ms };
 }

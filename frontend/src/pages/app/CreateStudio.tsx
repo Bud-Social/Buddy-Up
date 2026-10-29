@@ -42,14 +42,18 @@ type StepKey = 'pick' | 'edit' | 'sound' | 'cover' | 'captions' | 'post';
 
 interface StudioItem {
   id: string;
-  file: File;
-  kind: 'image' | 'video';
+  file?: File;
+  kind: 'image' | 'video' | 'audio' | 'text';
   previewUrl: string;
   durationMs: number | null;
   trim: TrimRangeValue | null;
   editMeta: EditMeta;
   altText: string;
   coverOffsetSec: number | null;
+  /** Text content for text-only items. */
+  textContent?: string | null;
+  /** Text style for text-only items. */
+  textStyle?: EditMeta | null;
 }
 
 interface StudioSnap {
@@ -121,21 +125,24 @@ export default function CreateStudio() {
 
   // Active video per Edit/Cover/Captions step.
   const videoItems = useMemo(() => items.filter((it) => it.kind === 'video'), [items]);
+  const audioItems = useMemo(() => items.filter((it) => it.kind === 'audio'), [items]);
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const activeVideo = videoItems.find((it) => it.id === activeVideoId) ?? videoItems[0] ?? null;
   const activeIdx = activeVideo ? videoItems.findIndex((it) => it.id === activeVideo.id) : -1;
 
   const hasVideo = videoItems.length > 0;
+  const hasAudio = audioItems.length > 0;
   useEffect(() => { itemsRef.current = items; }, [items]);
   useEffect(() => { captionsRef.current = captionsByItem; }, [captionsByItem]);
   useEffect(() => { stylesRef.current = captionStylesByItem; }, [captionStylesByItem]);
   useEffect(() => { soundRef.current = sound; }, [sound]);
   const steps: StepKey[] = useMemo(() => {
     const s: StepKey[] = ['pick'];
-    if (hasVideo) s.push('edit', 'sound', 'cover');
-    s.push('captions', 'post');
+    if (hasVideo) s.push('edit', 'sound', 'cover', 'captions');
+    else if (hasAudio) s.push('sound');
+    s.push('post');
     return s;
-  }, [hasVideo]);
+  }, [hasVideo, hasAudio]);
   const step = steps[stepIdx] ?? steps[steps.length - 1];
   const isLastStep = stepIdx === steps.length - 1;
 
@@ -187,9 +194,9 @@ export default function CreateStudio() {
       const draft = await loadStudioDraft();
       if (cancelled || !draft || draft.items.length === 0) return;
       const restored: StudioItem[] = draft.items.map((d: DraftMediaItem) => {
-        const file = new File([d.blob], d.name, { type: d.type });
-        const previewUrl = URL.createObjectURL(file);
-        urlsRef.current.add(previewUrl);
+        const file = d.blob ? new File([d.blob], d.name, { type: d.type }) : undefined;
+        const previewUrl = file ? URL.createObjectURL(file) : '';
+        if (file) urlsRef.current.add(previewUrl);
         return {
           id: d.id,
           file,
@@ -202,6 +209,8 @@ export default function CreateStudio() {
           altText: d.alt_text ?? '',
           coverOffsetSec: d.cover_offset_sec ?? null,
           editMeta: { ...defaultEditMeta(), ...(d.edit_meta ?? {}) },
+          textContent: d.text_content ?? null,
+          textStyle: d.text_style ?? null,
         };
       });
       const perClip = extractCaptionsByItem(draft);
@@ -241,10 +250,10 @@ export default function CreateStudio() {
       const draftItems: DraftMediaItem[] = items.map((it) => ({
         id: it.id,
         kind: it.kind,
-        name: it.file.name,
-        type: it.file.type,
-        size: it.file.size,
-        blob: it.file,
+        name: it.file?.name ?? (it.kind === 'text' ? 'Text' : 'Audio'),
+        type: it.file?.type ?? (it.kind === 'text' ? 'text/plain' : 'audio/mp3'),
+        size: it.file?.size ?? 0,
+        blob: it.file ?? undefined,
         duration_ms: it.durationMs ?? undefined,
         trim_start_ms: it.trim?.start_ms,
         trim_end_ms: it.trim?.end_ms,
@@ -267,6 +276,8 @@ export default function CreateStudio() {
         captions: it.kind === 'video' && captionsByItem[it.id]?.length
           ? cleanCaptionSegments(captionsByItem[it.id])
           : undefined,
+        text_content: it.kind === 'text' ? it.textContent ?? null : null,
+        text_style: it.kind === 'text' ? it.textStyle ?? null : null,
       }));
       void saveStudioDraft({
         savedAt: Date.now(),
@@ -339,7 +350,7 @@ export default function CreateStudio() {
     if (!fileList) return;
     const remaining = MAX_MEDIA_ITEMS - itemsRef.current.length;
     const picked = Array.from(fileList)
-      .filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/'))
+      .filter((f) => f.type.startsWith('image/') || f.type.startsWith('video/') || f.type.startsWith('audio/'))
       .slice(0, Math.max(0, remaining));
     if (picked.length === 0) return;
     track('create.started', { surface: 'create', properties: { count: picked.length } });
@@ -350,7 +361,7 @@ export default function CreateStudio() {
       return {
         id: crypto.randomUUID(),
         file,
-        kind: file.type.startsWith('video/') ? 'video' : 'image',
+        kind: file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image',
         previewUrl,
         durationMs: null,
         trim: null,
@@ -361,6 +372,26 @@ export default function CreateStudio() {
     });
     pushHistory();
     setItems((prev) => [...prev, ...newItems]);
+  };
+
+  /** Add a text-only media item (no file — content is the media). */
+  const addTextItem = (text: string, style: EditMeta = defaultEditMeta()) => {
+    if (items.length >= MAX_MEDIA_ITEMS) return;
+    const item: StudioItem = {
+      id: crypto.randomUUID(),
+      kind: 'text',
+      previewUrl: '',
+      durationMs: null,
+      trim: null,
+      editMeta: style,
+      altText: '',
+      coverOffsetSec: null,
+      textContent: text.trim(),
+      textStyle: style,
+    };
+    pushHistory();
+    setItems((prev) => [...prev, item]);
+    track('create.text_item_added', { surface: 'create', properties: { chars: text.length } });
   };
 
   const removeItem = (id: string) => {
@@ -515,7 +546,7 @@ export default function CreateStudio() {
   // ── Per-clip auto-captions (trimmed snippet + offset re-anchor) ────────────
   const generateAutoCaptions = async (itemId: string) => {
     const item = itemsRef.current.find((it) => it.id === itemId);
-    if (!item || item.kind !== 'video') return;
+    if (!item || item.kind !== 'video' || !item.file) return;
     autoCtrlRef.current.get(itemId)?.abort();
     const ctrl = new AbortController();
     autoCtrlRef.current.set(itemId, ctrl);
@@ -649,14 +680,19 @@ export default function CreateStudio() {
     const spec: EnqueueSpec = {
       body,
       visibility,
-      postType: items.some((i) => i.kind === 'video') ? 'short_video' : 'photo',
+      postType:
+        items.some((i) => i.kind === 'video')
+          ? 'short_video'
+          : items.some((i) => i.kind === 'text')
+            ? 'text'
+            : 'photo',
       commentsDisabled,
       autoCaptions,
       items: items.map((it) => ({
         id: it.id,
         kind: it.kind,
-        name: it.file.name,
-        file: it.file,
+        name: it.file?.name ?? (it.kind === 'text' ? 'Text' : 'Audio'),
+        file: it.file ?? undefined,
         durationMs: it.durationMs,
         trimStartMs: it.trim?.start_ms ?? null,
         trimEndMs: it.trim?.end_ms ?? it.durationMs ?? null,
@@ -674,6 +710,8 @@ export default function CreateStudio() {
           : null,
         altText: it.altText || null,
         coverOffsetSec: it.coverOffsetSec,
+        textContent: it.textContent ?? null,
+        textStyle: it.textStyle ?? null,
       })),
     };
     // Keep one draft copy until the manager clears it on post-create success.
@@ -697,8 +735,9 @@ export default function CreateStudio() {
   const tryResumeSession = (s: PersistedSession) => {
     const files = new Map<string, File>();
     for (const it of s.items) {
+      if (it.kind === 'text') continue; // text items have no file to re-attach
       const local = itemsRef.current.find((x) => x.id === it.id);
-      if (!local) {
+      if (!local || !local.file) {
         setPublishError('Could not resume: the saved draft no longer has those clips.');
         return;
       }
@@ -746,6 +785,17 @@ export default function CreateStudio() {
           <span className="text-sm font-bold">Gallery</span>
           <span className="text-[10px] opacity-80">Photos &amp; videos</span>
         </button>
+        <button
+          onClick={() => {
+            const text = window.prompt("Add text caption", "");
+            if (text !== null && text.trim()) addTextItem(text.trim(), defaultEditMeta());
+          }}
+          className="flex flex-col items-center gap-1.5 py-5 rounded-2xl bg-buddy-surface-raised text-buddy-text-secondary hover:bg-buddy-surface hover:text-buddy-text-primary transition-colors"
+        >
+          <Type size={22} />
+          <span className="text-sm font-bold">Text</span>
+          <span className="text-[10px] opacity-80">Text card</span>
+        </button>
       </div>
 
       {items.length > 0 && (
@@ -758,11 +808,16 @@ export default function CreateStudio() {
               <div key={it.id} className="relative rounded-xl overflow-hidden bg-buddy-surface-raised aspect-[3/4] group">
                 {it.kind === 'image' ? (
                   <img src={it.previewUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
+                ) : it.kind === 'video' ? (
                   <video src={it.previewUrl} muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 w-full h-full flex flex-col items-center justify-center p-4 text-center bg-buddy-surface text-buddy-text-primary">
+                    <Type size={20} />
+                    <span className="mt-2 text-[11px] font-semibold">{it.textContent?.slice(0, 20)}...</span>
+                  </div>
                 )}
                 <span className="absolute top-1.5 left-1.5 p-1 rounded-full bg-black/60 text-white">
-                  {it.kind === 'video' ? <Clapperboard size={10} /> : <ImageIcon size={10} />}
+                  {it.kind === 'video' ? <Clapperboard size={10} /> : it.kind === 'audio' ? <Music size={10} /> : <Type size={10} />}
                 </span>
                 <button
                   onClick={() => removeItem(it.id)}
@@ -779,6 +834,11 @@ export default function CreateStudio() {
                 {it.kind === 'video' && it.durationMs != null && (
                   <span className="absolute bottom-1.5 left-1.5 px-1 rounded bg-black/60 text-white text-[9px] font-semibold">
                     {Math.round(it.durationMs / 1000)}s
+                  </span>
+                )}
+                {it.kind === 'text' && it.textContent && (
+                  <span className="absolute bottom-1.5 left-1.5 px-1 rounded bg-black/60 text-white text-[9px] font-semibold">
+                    {Math.round(it.textContent.length / 10)}s read
                   </span>
                 )}
               </div>
@@ -1168,7 +1228,7 @@ export default function CreateStudio() {
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*,video/*"
+        accept="image/*,video/*,audio/*"
         multiple
         className="hidden"
         onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }}

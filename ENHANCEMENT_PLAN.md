@@ -282,7 +282,9 @@ publish path (cover poster URL with query params, Cloudinary sign failure UX).
 | Backend `test_studio_captions.py` | 6 tests: get empty, post+get roundtrip, update same item, reject non-list, requires auth, user isolation |
 | Web `createStudio.ts` | `coverPosterUrl` uses `&` (not `?`) when the media URL already has query params |
 | Web `createStudio.test.ts` | 6 tests for `coverPosterUrl` (no query, existing query, undefined/null/negative offset) |
-| Docs | `docs/CLIENT_PARITY.md` Bud Press row → Flutter Partial with cover picker / edit_meta / caption details |
+| Web `createStudio.ts` + `CreateStudio.tsx` | Bud Press creation studio accepts text-card (`kind: 'text'`) and audio-only (`kind: 'audio'`) media items; `text_content`/`text_style` serialized into the structured `media` JSON and audio emits `duration_ms`; trim/sound/cover steps remain video-only |
+| Web `createStudio.ts` + `uploader.ts` + `uploadManager.ts` + `createDrafts.ts` | Text & audio items draft-persist (`text_content`/`text_style`, optional `blob`) and re-hydrate across sessions; `resourceTypeFor` maps audio→`video` upload resource, `finalizeStudioItem` no-ops trim-export for text/audio |
+| Docs | `docs/CLIENT_PARITY.md` Bud Press row → Flutter Partial with cover picker / edit_meta / caption details + web text/audio media items |
 
 ### Acceptance Criteria
 - [x] Flutter studio: cover frame scrubber sets `cover_offset_sec`, published as `cover_offset_sec` in media JSON
@@ -291,6 +293,9 @@ publish path (cover poster URL with query params, Cloudinary sign failure UX).
 - [x] Flutter: Cloudinary sign failure surfaces a snackbar instead of silent fallback
 - [x] Backend: `GET/POST /feed/studio/captions/<item_id>/` saves/restores captions; user-scoped; backwards/empty segments dropped
 - [x] Web: `coverPosterUrl` appends `&so_N` when URL already has query params
+- [x] Web studio: text-card (`text`) and audio-only (`audio`) media items publish with `media_type`, `text_content`, `text_style`, and audio `duration_ms` via `buildMediaPayload`
+- [x] Web studio: text/audio items round-trip through local drafts and resume (no file required)
+- [x] Web studio: text items render a Text tile in the pick grid and use the `postType: 'text'` publish branch; audio gets the sound step only
 - [x] Full suites green: Flutter `flutter analyze` + `flutter test`; backend `pytest apps`; web `vitest` + `tsc -b`
 
 ---

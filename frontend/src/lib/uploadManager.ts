@@ -65,9 +65,9 @@ export type JobItemStatus = 'pending' | 'finalizing' | 'uploading' | 'done' | 'e
 
 export interface ManagedUploadItem {
   id: string;
-  kind: 'image' | 'video';
+  kind: 'image' | 'video' | 'audio' | 'text';
   name: string;
-  file: File;
+  file?: File;
   durationMs?: number | null;
   trimStartMs?: number | null;
   trimEndMs?: number | null;
@@ -77,12 +77,14 @@ export interface ManagedUploadItem {
   sound?: { id: string; volume: number; start_ms?: number | null; fade_in_ms?: number | null; fade_out_ms?: number | null } | null;
   altText?: string | null;
   coverOffsetSec?: number | null;
+  textContent?: string | null;
+  textStyle?: EditMeta | null;
 }
 
 export interface EnqueueSpec {
   body: string;
   visibility: string;
-  postType: 'short_video' | 'photo';
+  postType: 'short_video' | 'photo' | 'text';
   commentsDisabled: boolean;
   autoCaptions: boolean;
   items: ManagedUploadItem[];
@@ -93,7 +95,7 @@ export interface EnqueueSpec {
 export interface JobItemState {
   id: string;
   name: string;
-  kind: 'image' | 'video';
+  kind: 'image' | 'video' | 'audio' | 'text';
   status: JobItemStatus;
   loadedBytes: number;
   totalBytes: number;
@@ -139,7 +141,7 @@ interface PersistedItemMeta {
 
 interface PersistedItem {
   id: string;
-  kind: 'image' | 'video';
+  kind: 'image' | 'video' | 'audio' | 'text';
   name: string;
   fingerprint: string;
   bytesDone: number;
@@ -160,7 +162,7 @@ export interface PersistedSession {
   post: {
     body: string;
     visibility: string;
-    postType: 'short_video' | 'photo';
+    postType: 'short_video' | 'photo' | 'text';
     commentsDisabled: boolean;
     autoCaptions: boolean;
   };
@@ -489,10 +491,10 @@ export function createUploadManager(overrides: Partial<UploadManagerDeps> = {}) 
           const entry = job.finalized.get(s.id);
           const itemState = job.items.find((it) => it.id === s.id);
           const media = itemState?.media;
-          if (!media) throw new Error(`Missing upload for "${s.name}".`);
+          if (!media && s.kind !== 'text') throw new Error(`Missing upload for "${s.name}".`);
           const fin = entry?.finalized;
           const exported = fin?.exported ?? false;
-          const durationMs = fin?.durationMs ?? s.durationMs ?? media.duration_ms ?? 0;
+          const durationMs = fin?.durationMs ?? s.durationMs ?? media?.duration_ms ?? 0;
           const merged: EditMeta = {
             ...(s.editMeta ?? defaultEditMeta()),
             ...(s.captionsStyle ? { captions_style: s.captionsStyle } : {}),
@@ -502,7 +504,7 @@ export function createUploadManager(overrides: Partial<UploadManagerDeps> = {}) 
             : merged;
           return {
             kind: s.kind,
-            media,
+            media: s.kind === 'text' ? undefined : media,
             trim_start_ms: s.kind === 'video' ? (exported ? 0 : (s.trimStartMs ?? 0)) : null,
             trim_end_ms: s.kind === 'video' ? (exported ? durationMs : (s.trimEndMs ?? durationMs ?? 0)) : null,
             editMeta,
@@ -514,6 +516,8 @@ export function createUploadManager(overrides: Partial<UploadManagerDeps> = {}) 
                 ? rebaseCoverOffsetSeconds(s.coverOffsetSec, fin.offsetMs, fin.durationMs)
                 : s.coverOffsetSec
               : null,
+            text_content: s.kind === 'text' ? s.textContent ?? null : null,
+            text_style: s.kind === 'text' ? s.textStyle ?? null : null,
           };
         }),
       );
@@ -575,14 +579,16 @@ export function createUploadManager(overrides: Partial<UploadManagerDeps> = {}) 
       status: 'queued',
       items: spec.items.map((s) => {
         const seeded = seed?.doneById?.get(s.id);
+        const file = s.file;
+        const isTextOrAudio = s.kind === 'text' || s.kind === 'audio';
         return {
           id: s.id,
-          name: s.name || s.file.name,
+          name: s.name || (file?.name ?? (s.kind === 'text' ? 'Text' : 'Audio')),
           kind: s.kind,
           status: seeded ? ('done' as JobItemStatus) : ('pending' as JobItemStatus),
-          loadedBytes: seeded ? s.file.size : 0,
-          totalBytes: s.file.size,
-          fingerprint: fingerprintFile(s.file),
+          loadedBytes: seeded ? s.file?.size ?? 0 : (isTextOrAudio ? 0 : s.file?.size ?? 0),
+          totalBytes: isTextOrAudio ? 0 : s.file?.size ?? 0,
+          fingerprint: s.kind === 'text' ? `text:${s.id}` : fingerprintFile(s.file!),
           retries: seeded?.retries ?? 0,
           lastError: undefined,
           media: seeded?.media,
@@ -608,7 +614,7 @@ export function createUploadManager(overrides: Partial<UploadManagerDeps> = {}) 
           job.finalized.set(s.id, {
             spec: s,
             finalized: {
-              file: s.file,
+              file: s.file ?? new File([''], 'resumed', { type: 'application/octet-stream' }),
               exported: seeded.offset.exported,
               offsetMs: seeded.offset.offsetMs,
               durationMs: seeded.offset.durationMs,

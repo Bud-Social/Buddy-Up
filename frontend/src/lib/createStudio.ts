@@ -551,8 +551,8 @@ export function sanitizeEditMeta(meta: EditMeta | undefined | null): Record<stri
 }
 
 export interface PublishableMediaItem {
-  kind: 'image' | 'video';
-  media: UploadedMedia;
+  kind: 'image' | 'video' | 'audio' | 'text';
+  media?: UploadedMedia;
   trim_start_ms?: number | null;
   trim_end_ms?: number | null;
   editMeta?: EditMeta | null;
@@ -568,6 +568,10 @@ export interface PublishableMediaItem {
   } | null;
   alt_text?: string | null;
   coverOffsetSec?: number | null;
+  /** Text content for text-only items. */
+  text_content?: string | null;
+  /** Text style for text-only items. */
+  text_style?: EditMeta | null;
 }
 
 export interface PublishableCaption {
@@ -578,7 +582,7 @@ export interface PublishableCaption {
 
 export interface MediaPayloadItem {
   url: string;
-  media_type: 'image' | 'video';
+  media_type: 'image' | 'video' | 'audio' | 'text';
   width?: number;
   height?: number;
   duration_ms?: number;
@@ -593,19 +597,30 @@ export interface MediaPayloadItem {
   sound_fade_in_ms?: number;
   sound_fade_out_ms?: number;
   alt_text?: string;
+  /** Text content for text items. */
+  text_content?: string | null;
+  /** Text style for text items. */
+  text_style?: EditMeta | null;
 }
 
 /** Build the `media` JSON array sent to POST /feed/create/ (max 12 items). */
 export function buildMediaPayload(items: PublishableMediaItem[]): MediaPayloadItem[] {
   return items.slice(0, MAX_MEDIA_ITEMS).map((item) => {
     const out: MediaPayloadItem = {
-      url: item.media.url,
+      url: item.media?.url ?? '',
       media_type: item.kind,
     };
-    if (item.media.width != null) out.width = item.media.width;
-    if (item.media.height != null) out.height = item.media.height;
-    if (item.kind === 'video' && item.media.duration_ms != null) out.duration_ms = item.media.duration_ms;
-    const poster = coverPosterUrl(item.media.url, item.coverOffsetSec) ?? item.media.poster_url;
+    if (item.kind === 'text') {
+      if (item.text_content) out.text_content = item.text_content;
+      if (item.text_style) out.text_style = item.text_style;
+      return out;
+    }
+    if (item.media?.width != null) out.width = item.media.width;
+    if (item.media?.height != null) out.height = item.media.height;
+        if ((item.kind === 'video' || item.kind === 'audio') && item.media?.duration_ms != null) out.duration_ms = item.media?.duration_ms;
+    const poster = item.media?.url
+      ? coverPosterUrl(item.media.url, item.coverOffsetSec) ?? item.media.poster_url
+      : undefined;
     if (poster) out.poster_url = poster;
     if (item.kind === 'video') {
       if (item.trim_start_ms != null && item.trim_start_ms > 0) out.trim_start_ms = item.trim_start_ms;
@@ -787,7 +802,7 @@ export type PublishStage = 'idle' | 'finalizing' | 'uploading' | 'creating' | 'd
 export interface PublishUploadItem {
   id: string;
   name: string;
-  kind: 'image' | 'video';
+  kind: 'image' | 'video' | 'audio' | 'text';
   status: 'pending' | 'uploading' | 'done' | 'error';
   loadedBytes: number;
   totalBytes: number;
@@ -819,7 +834,7 @@ export type PublishAction =
 export interface PublishPlanItem {
   id: string;
   name: string;
-  kind: 'image' | 'video';
+  kind: 'image' | 'video' | 'audio' | 'text';
   size: number;
 }
 

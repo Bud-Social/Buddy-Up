@@ -31,11 +31,11 @@ export interface DraftCaption {
 
 export interface DraftMediaItem {
   id: string;
-  kind: 'image' | 'video';
+  kind: 'image' | 'video' | 'audio' | 'text';
   name: string;
   type: string;
   size: number;
-  blob: Blob;
+  blob?: Blob;
   width?: number;
   height?: number;
   duration_ms?: number;
@@ -45,6 +45,10 @@ export interface DraftMediaItem {
   alt_text?: string;
   cover_offset_sec?: number | null;
   edit_meta?: import('./createStudio').EditMeta;
+  /** Text content for text items. */
+  text_content?: string | null;
+  /** Text style for text items. */
+  text_style?: import('./createStudio').EditMeta | null;
   /** Per-clip timed captions in absolute media coordinates. */
   captions?: DraftCaption[];
 }
@@ -126,7 +130,7 @@ function normalizeDraft(raw: unknown): StudioDraft | null {
   const d = raw as Partial<StudioDraft>;
   if (!Array.isArray(d.items)) return null;
   const items = (d.items as DraftMediaItem[]).filter(
-    (it) => it && typeof it.id === 'string' && (it.kind === 'image' || it.kind === 'video'),
+    (it) => it && typeof it.id === 'string' && (it.kind === 'image' || it.kind === 'video' || it.kind === 'audio' || it.kind === 'text'),
   );
   const cleanCaptions = (list: unknown): DraftCaption[] | undefined => {
     if (!Array.isArray(list)) return undefined;

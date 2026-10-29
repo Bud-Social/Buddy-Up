@@ -191,6 +191,7 @@ export interface Community extends Conversation {
   members?: CommunityMember[];
   member_count?: number;
   my_role?: CommunityRole | null;
+  role?: CommunityRole | null;
 }
 
 export interface CommunityListData {

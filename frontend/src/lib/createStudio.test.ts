@@ -6,6 +6,8 @@ import {
   formatCoverOffset,
   formatMs,
   buildMediaPayload,
+  defaultEditMeta,
+  MAX_MEDIA_ITEMS,
   MAX_TRIM_MS,
 } from './createStudio';
 import type { PublishableMediaItem } from './createStudio';
@@ -150,5 +152,75 @@ describe('buildMediaPayload', () => {
   it('caps the payload at 12 items', () => {
     const many = Array.from({ length: 15 }, () => ({ ...base }));
     expect(buildMediaPayload(many)).toHaveLength(12);
+  });
+});
+
+
+describe('buildMediaPayload (text & audio)', () => {
+  it('serializes a text-only item with content and style', () => {
+    const style = defaultEditMeta();
+    const [out] = buildMediaPayload([
+      { kind: 'text', text_content: 'Hello world', text_style: style },
+    ]);
+    expect(out).toEqual({
+      url: '',
+      media_type: 'text',
+      text_content: 'Hello world',
+      text_style: style,
+    });
+  });
+
+  it('drops empty text content but keeps a populated one', () => {
+    const [out] = buildMediaPayload([{ kind: 'text', text_content: null, text_style: null }]);
+    expect(out).toEqual({ url: '', media_type: 'text' });
+  });
+
+  it('serializes an audio item carrying duration and url', () => {
+    const [out] = buildMediaPayload([
+      { kind: 'audio', media: { url: 'https://cdn/voice.m4a', duration_ms: 12_000, bytes: 1000 } },
+    ]);
+    expect(out).toEqual({
+      url: 'https://cdn/voice.m4a',
+      media_type: 'audio',
+      duration_ms: 12_000,
+    });
+  });
+
+  it('mixes text, image, audio and video into one payload', () => {
+    const payload = buildMediaPayload([
+      { kind: 'text', text_content: 'hi' },
+      { kind: 'image', media: { url: 'https://cdn/i.png', width: 10, height: 10, bytes: 10 } },
+      { kind: 'audio', media: { url: 'https://cdn/a.m4a', duration_ms: 5_000, bytes: 5 } },
+      {
+        kind: 'video',
+        media: { url: 'https://cdn/v.mp4', duration_ms: 30_000, poster_url: 'https://cdn/auto.jpg' },
+        trim_start_ms: 1000,
+        trim_end_ms: 20_000,
+      },
+    ]);
+    expect(payload).toHaveLength(4);
+    expect(payload.map((p) => p.media_type)).toEqual(['text', 'image', 'audio', 'video']);
+    expect(payload[0].text_content).toBe('hi');
+    expect(payload[2].width).toBeUndefined();
+    expect(payload[3].trim_start_ms).toBe(1000);
+    expect(payload[3].poster_url).toBe('https://cdn/auto.jpg');
+  });
+
+  it('caps the payload at MAX_MEDIA_ITEMS', () => {
+    const items: PublishableMediaItem[] = Array.from({ length: 15 }, () => ({
+      kind: 'text' as const,
+      text_content: 'x',
+    }));
+    expect(buildMediaPayload(items)).toHaveLength(MAX_MEDIA_ITEMS);
+  });
+
+  it('omits media-only fields for text and audio items', () => {
+    const [textOut, audioOut] = buildMediaPayload([
+      { kind: 'text', text_content: 'solo' },
+      { kind: 'audio', media: { url: 'https://cdn/a.m4a' } },
+    ]);
+    expect(textOut).toEqual({ url: '', media_type: 'text', text_content: 'solo' });
+    expect(audioOut.width).toBeUndefined();
+    expect(audioOut.trim_start_ms).toBeUndefined();
   });
 });
