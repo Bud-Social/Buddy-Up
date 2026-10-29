@@ -1317,8 +1317,8 @@ def send_staff_invitation_email(invitation):
     """
     from django.conf import settings as django_settings
 
-    # Never falls back to EMAIL_HOST any more: that would put a `smtp.gmail.com`
-    # link in a new hire's inbox. FRONTEND_BASE_URL already defaults to the
+    # Never falls back to EMAIL_HOST any more: the frontend origin is what
+    # matters for the accept link. FRONTEND_BASE_URL already defaults to the
     # canonical web host in settings, so this only has to handle an operator
     # having overridden it with something empty.
     frontend = (getattr(django_settings, 'FRONTEND_BASE_URL', '') or '').rstrip('/')

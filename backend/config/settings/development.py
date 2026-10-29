@@ -48,7 +48,7 @@ INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
 SECURE_CROSS_ORIGIN_OPENER_POLICY = None
 
-# Email: use real SMTP when credentials exist (Gmail app password in .env),
+# Email: use real SMTP when credentials exist (app password in .env),
 # otherwise fall back to the console backend — OTPs then print to the Django
 # and Celery worker logs so local flows are never blocked.
 if os.environ.get('EMAIL_BACKEND'):
