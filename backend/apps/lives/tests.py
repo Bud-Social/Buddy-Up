@@ -1,3 +1,5 @@
+from unittest import mock
+
 from datetime import timedelta
 
 from django.test import TestCase
@@ -219,9 +221,6 @@ class ReplayViewTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.json()['data']['unique_viewers'], 1)
         self.assertEqual(res.json()['data']['replay_views'], 1)
-
-
-from unittest import mock
 
 
 class StaffRecordingViewTests(TestCase):

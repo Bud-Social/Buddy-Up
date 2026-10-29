@@ -1461,7 +1461,6 @@ class CommentMediaUploadView(views.APIView):
 
     def post(self, request):
         file = request.FILES.get('file')
-        media_type = request.POST.get('media_type', 'image')
         if not file:
             return Response({
                 'success': False, 'data': None,

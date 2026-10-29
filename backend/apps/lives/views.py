@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
 from django.utils import timezone
