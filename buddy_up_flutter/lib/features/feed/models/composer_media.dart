@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:uuid/uuid.dart';
-
 /// A locally-picked attachment ready to be uploaded with a post.
 ///
 /// A layer in the Bud Press creation studio: photo, video, audio or styled

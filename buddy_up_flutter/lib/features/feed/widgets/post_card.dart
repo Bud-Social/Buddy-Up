@@ -104,6 +104,7 @@ class _PostCardState extends ConsumerState<PostCard> {
   Map<String, dynamic>? get _displayWorkoutLogData =>
       _orig?.workoutLogData ?? _post.workoutLogData;
   String? get _displayGymTagName => _orig?.gymTagName ?? _post.gymTagName;
+  // ignore: unused_element
   bool get _displayCommentsDisabled => _post.commentsDisabled;
 
   @override

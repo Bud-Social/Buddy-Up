@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,8 +9,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/analytics/analytics_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/upload/cloudinary_uploader.dart';
-import '../../../core/utils/constants.dart';
 import '../../../data/models/post.dart';
 import '../../../shared/widgets/caption_overlay.dart';
 import '../../../shared/widgets/creative_overlays.dart';
@@ -290,6 +286,7 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
 
   // ── captions ──────────────────────────────────────────────────────────
 
+  // ignore: unused_element
   List<Map<String, dynamic>> get _captions =>
       List<Map<String, dynamic>>.from(_active.captions);
 
@@ -333,6 +330,7 @@ class _BudPressStudioScreenState extends ConsumerState<BudPressStudioScreen> {
     }
   }
 
+  // ignore: unused_element
   void _setCaption(int index, String field, dynamic value) {
     if (index < 0 || index >= _active.captions.length) return;
     final cap = Map<String, dynamic>.from(_active.captions[index]);
@@ -1019,7 +1017,6 @@ class _CaptionsPanel extends StatelessWidget {
           const Text('Generate or add captions — they publish with the video.', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 12))
         else
           ...List.generate(captions.length, (i) {
-            final c = captions[i];
             return Padding(
               padding: const EdgeInsets.only(top: 6),
               child: Row(
@@ -1305,7 +1302,7 @@ class _AudiencePanel extends StatelessWidget {
         SwitchListTile(
           title: const Text('Allow comments'),
           value: commentsEnabled,
-          onChanged: (v) => onChange((visibility: visibility, commentsEnabled: v ?? false)),
+          onChanged: (v) => onChange((visibility: visibility, commentsEnabled: v)),
         ),
       ],
     );
