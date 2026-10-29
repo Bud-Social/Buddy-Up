@@ -402,7 +402,7 @@ class PortalCommunitySerializer(serializers.ModelSerializer):
     can leak from here.
     """
 
-    member_count = serializers.IntegerField(read_only=True, default=0)
+    member_count = serializers.SerializerMethodField()
     post_count = serializers.SerializerMethodField()
     created_by_username = serializers.SerializerMethodField()
     gym_handle = serializers.SerializerMethodField()
@@ -415,6 +415,18 @@ class PortalCommunitySerializer(serializers.ModelSerializer):
             'created_by_username', 'member_count', 'post_count',
             'last_message_at', 'created_at',
         ]
+
+    def get_member_count(self, obj):
+        """Roster size as a COUNT, never the roster itself.
+
+        Reads ``annotated_member_count`` when the view supplied it (so the
+        list/detail stay a single aggregate query instead of N+1), falling
+        back to the model property otherwise.
+        """
+        annotated = getattr(obj, 'annotated_member_count', None)
+        if annotated is not None:
+            return annotated
+        return obj.member_count
 
     def get_post_count(self, obj):
         return getattr(obj, 'post_count', None) or 0

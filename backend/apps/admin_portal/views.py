@@ -868,7 +868,7 @@ class CommunityListView(PortalView):
 
     def get(self, request):
         qs = Conversation.objects.annotate(
-            member_count=Count('memberships', distinct=True),
+            annotated_member_count=Count('memberships', distinct=True),
             post_count=Count('community_posts', distinct=True),
         )
         qs = filter_text(request, qs, ['group_name', 'description'])
@@ -889,7 +889,7 @@ class CommunityDetailView(PortalView):
     def get(self, request, conversation_id):
         conversation = get_object_or_404(
             Conversation.objects.annotate(
-                member_count=Count('memberships', distinct=True),
+                annotated_member_count=Count('memberships', distinct=True),
                 post_count=Count('community_posts', distinct=True),
             ),
             pk=conversation_id,
