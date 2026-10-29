@@ -87,16 +87,24 @@ def _validate_media_items(items):
     for i, item in enumerate(items):
         if not isinstance(item, dict):
             return None, f'media[{i}] must be an object.'
+        media_type = str(item.get('media_type') or '').strip()
         url = str(item.get('url') or '').strip()
-        if not url:
-            return None, f'media[{i}].url is required.'
-        if url_extension(url) not in ALLOWED_EXTS:
-            return None, f'media[{i}].url file extension is not allowed.'
-        if not is_allowed_media_host(url):
-            return None, f'media[{i}].url host is not allowed.'
-        media_type = item.get('media_type') or guess_media_type(url)
-        if media_type not in ('image', 'video', 'audio'):
-            return None, f'media[{i}].media_type must be one of image, video, audio.'
+        if media_type == 'text':
+            # Text items carry their body in text_content; no media file/URL.
+            text_content = str(item.get('text_content') or '').strip()
+            if not text_content:
+                return None, f'media[{i}].text_content is required.'
+        else:
+            if not url:
+                return None, f'media[{i}].url is required.'
+            if url_extension(url) not in ALLOWED_EXTS:
+                return None, f'media[{i}].url file extension is not allowed.'
+            if not is_allowed_media_host(url):
+                return None, f'media[{i}].url host is not allowed.'
+            if not media_type:
+                media_type = guess_media_type(url)
+            if media_type not in ('image', 'video', 'audio'):
+                return None, f'media[{i}].media_type must be one of image, video, audio.'
 
         def _int(key):
             value = item.get(key)
@@ -394,11 +402,44 @@ def _validate_media_items(items):
             if caps_style:
                 edit_meta['captions_style'] = caps_style
 
-        if item.get('cover_offset_sec') not in (None, ''):
+        # Cover frame offset (seconds) for video/photo cover hints — accepted
+        # at top level or inside edit_meta.
+        _cover_offset = item.get('cover_offset_sec')
+        if _cover_offset is None and isinstance(item.get('edit_meta'), dict):
+            _cover_offset = item['edit_meta'].get('cover_offset_sec')
+        if _cover_offset not in (None, ''):
             try:
-                edit_meta['cover_offset_sec'] = max(0, int(item.get('cover_offset_sec')))
+                edit_meta['cover_offset_sec'] = max(0, int(_cover_offset))
             except (TypeError, ValueError):
                 pass
+
+        # Text media items: styled body + style (background/font/color/effect/
+        # size/alignment) used by text-only posts and text layers.
+        text_style_raw = item.get('text_style')
+        text_style = {}
+        if isinstance(text_style_raw, dict):
+            _bg = str(text_style_raw.get('background') or '').strip()
+            if _bg:
+                text_style['background'] = _bg[:32]
+            _font = str(text_style_raw.get('font') or '').strip()
+            if _font:
+                text_style['font'] = _font[:24]
+            _color = str(text_style_raw.get('color') or '').strip()
+            if _color:
+                text_style['color'] = _color[:16]
+            _effect = str(text_style_raw.get('effect') or '').strip()
+            if _effect in ('none', 'pop', 'glow', 'neon', 'bubble', 'shadow', 'outline'):
+                text_style['effect'] = _effect
+            try:
+                _size = max(0.5, min(2.0, float(text_style_raw.get('size') or 1)))
+            except (TypeError, ValueError):
+                _size = 1.0
+            text_style['size'] = round(_size, 2)
+            _align = str(text_style_raw.get('alignment') or 'center').strip()
+            if _align in ('start', 'center', 'end'):
+                text_style['alignment'] = _align
+            else:
+                text_style['alignment'] = 'center'
 
         if sound_placement:
             edit_meta['sound_placement'] = sound_placement
@@ -417,6 +458,8 @@ def _validate_media_items(items):
             'captions': captions,
             'edit_meta': edit_meta,
             'alt_text': str(item.get('alt_text') or '')[:255],
+            'text_content': str(item.get('text_content') or '').strip()[:2000],
+            'text_style': text_style,
         })
     return clean, None
 
@@ -449,6 +492,8 @@ def _create_post_media(post, items):
             captions_vtt=segments_to_vtt(row_captions),
             edit_meta=item.get('edit_meta') or {},
             alt_text=item.get('alt_text') or '',
+            text_content=item.get('text_content') or '',
+            text_style=item.get('text_style') or {},
         ))
     usage_counts = {}
     for row in rows:

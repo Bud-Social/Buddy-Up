@@ -8,6 +8,12 @@ export default defineConfig({
   // exactly which build a stuck client is running.
   define: {
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    // GOOGLE_CLIENT_ID is intentionally NOT VITE_-prefixed (Vercel convention).
+    // Vite only exposes VITE_* variables to import.meta.env by default, so we
+    // inject GOOGLE_CLIENT_ID explicitly from process.env at build time.
+    'import.meta.env.GOOGLE_CLIENT_ID': JSON.stringify(
+      process.env.GOOGLE_CLIENT_ID ?? process.env.VITE_GOOGLE_CLIENT_ID ?? '',
+    ),
   },
   plugins: [
     react(),

@@ -5,7 +5,7 @@
  */
 import { useCallback } from 'react';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_CLIENT_ID as string | undefined;
 
 interface Props {
   label: string;

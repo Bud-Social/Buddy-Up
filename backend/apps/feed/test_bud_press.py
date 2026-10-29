@@ -1117,3 +1117,91 @@ class HideMuteTests(TestCase):
         viewer_client.post(self.MUTE.format(username='hide_author'))
         after = viewer_client.get('/api/v1/feed/', {'tab': 'videos'})
         self.assertNotIn(str(clip.id), {p['id'] for p in after.data['data']})
+
+
+class CreateTextAudioMediaTests(TestCase):
+    """Text-only and audio media items in the Bud Press structured-media path."""
+
+    def setUp(self):
+        self.user = _make_user('textcreator')
+        self.client = _client_for(self.user)
+        self.url = '/api/v1/feed/create/'
+
+    def test_text_media_item_with_style(self):
+        media = [{
+            'media_type': 'text',
+            'text_content': "It's leg day.",
+            'text_style': {
+                'background': 'gradient:sunrise',
+                'font': 'bangers',
+                'color': '#FFD400',
+                'effect': 'outline',
+                'size': 1.4,
+                'alignment': 'center',
+            },
+        }]
+        res = self.client.post(
+            self.url,
+            {'post_type': 'text', 'body': "It's leg day.", 'media': media},
+            format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        post = Post.objects.get(id=res.data['data']['id'])
+        row = post.media.get(media_type='text')
+        self.assertEqual(row.text_content, "It's leg day.")
+        self.assertEqual(row.text_style['background'], 'gradient:sunrise')
+        self.assertEqual(row.text_style['font'], 'bangers')
+        self.assertEqual(row.text_style['color'], '#FFD400')
+        self.assertEqual(row.text_style['effect'], 'outline')
+        self.assertEqual(row.text_style['size'], 1.4)
+        self.assertEqual(row.text_style['alignment'], 'center')
+        self.assertEqual(row.url, '')
+
+    def test_text_media_requires_text_content(self):
+        res = self.client.post(
+            self.url,
+            {'post_type': 'text', 'media': [{'media_type': 'text', 'text_style': {'font': 'classic'}}]},
+            format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_audio_media_item(self):
+        media = [{
+            'url': 'https://res.cloudinary.com/demo/video/upload/track.mp3',
+            'media_type': 'audio',
+            'duration_ms': 180000,
+            'sound_volume': 70,
+            'edit_meta': {'cover_offset_sec': 4.5},
+        }]
+        res = self.client.post(
+            self.url,
+            {'post_type': 'photo', 'body': 'Morning mix', 'media': media},
+            format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        post = Post.objects.get(id=res.data['data']['id'])
+        row = post.media.get(media_type='audio')
+        self.assertEqual(row.duration_ms, 180000)
+        self.assertEqual(row.sound_volume, 70)
+        self.assertEqual(row.edit_meta['cover_offset_sec'], 4)
+
+    def test_mixed_carousel_photo_video_text_audio(self):
+        media = [
+            {'url': 'https://res.cloudinary.com/demo/image/upload/p1.jpg', 'media_type': 'image'},
+            {'url': 'https://res.cloudinary.com/demo/video/upload/clip.mp4', 'media_type': 'video', 'trim_start_ms': 1000, 'trim_end_ms': 5000},
+            {'media_type': 'text', 'text_content': 'Quote of the day', 'text_style': {'font': 'serif', 'color': '#FFFFFF'}},
+            {'url': 'https://res.cloudinary.com/demo/video/upload/track.mp3', 'media_type': 'audio'},
+        ]
+        res = self.client.post(
+            self.url,
+            {'post_type': 'photo', 'body': 'A full mix', 'media': media},
+            format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
+        post = Post.objects.get(id=res.data['data']['id'])
+        rows = list(post.media.all())
+        self.assertEqual([r.media_type for r in rows], ['image', 'video', 'text', 'audio'])
+        self.assertEqual(rows[2].text_content, 'Quote of the day')
+        self.assertEqual(rows[1].trim_start_ms, 1000)
+        self.assertEqual(rows[1].trim_end_ms, 5000)
+        self.assertEqual([r.order for r in rows], [0, 1, 2, 3])

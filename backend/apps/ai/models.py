@@ -37,6 +37,10 @@ class AIPredictionJob(TimestampedModel):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    created_by = models.ForeignKey(
+        'profiles.Profile', null=True, blank=True, on_delete=models.CASCADE,
+        related_name='ai_jobs', db_index=True,
+    )
     task = models.CharField(max_length=40, choices=TASK_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     input_data = models.JSONField(default=dict)

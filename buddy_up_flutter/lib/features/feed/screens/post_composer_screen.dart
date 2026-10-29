@@ -18,80 +18,14 @@ import '../../../data/models/post.dart';
 import '../../community/providers/community_provider.dart';
 import '../providers/feed_provider.dart';
 import 'location_picker_screen.dart';
-import 'video_studio_screen.dart';
+import 'bud_press_studio_screen.dart';
+import '../models/composer_media.dart';
 
 const List<String> _docExtensions = [
   'pdf', 'doc', 'docx', 'xls', 'xlsx',
   'ppt', 'pptx', 'txt', 'csv', 'md', 'zip',
 ];
 
-/// A locally-picked attachment ready to be uploaded with a post.
-class ComposerMedia {
-  final String path;
-  final String name;
-  final String type; // image | video | file | document
-  final Uint8List? bytes;
-
-  // Video studio results (trim + sound + captions), persisted into the media JSON.
-  final int trimStartMs;
-  final int trimEndMs;
-  final String? soundId;
-  final double? soundVolume;
-  // Client-generated id for this clip instance — captions + cover offset are
-  // saved per item id so they survive studio re-opens and draft restores.
-  final String? studioItemId;
-  // Cover frame offset in seconds (0 = start of clip).
-  final double? coverOffsetSec;
-  // Creative-studio edit metadata (captions style, text overlays, stickers…)
-  // shipped to the backend as media[].edit_meta.
-  final Map<String, dynamic>? editMeta;
-  final List<Map<String, dynamic>> captions;
-
-  const ComposerMedia({
-    this.path = '',
-    required this.name,
-    required this.type,
-    this.bytes,
-    this.trimStartMs = 0,
-    this.trimEndMs = 0,
-    this.soundId,
-    this.soundVolume,
-    this.studioItemId,
-    this.coverOffsetSec,
-    this.editMeta,
-    this.captions = const [],
-  });
-
-  ComposerMedia copyWith({
-    String? path,
-    String? name,
-    String? type,
-    Uint8List? bytes,
-    int? trimStartMs,
-    int? trimEndMs,
-    String? soundId,
-    double? soundVolume,
-    String? studioItemId,
-    double? coverOffsetSec,
-    Map<String, dynamic>? editMeta,
-    List<Map<String, dynamic>>? captions,
-  }) {
-    return ComposerMedia(
-      path: path ?? this.path,
-      name: name ?? this.name,
-      type: type ?? this.type,
-      bytes: bytes ?? this.bytes,
-      trimStartMs: trimStartMs ?? this.trimStartMs,
-      trimEndMs: trimEndMs ?? this.trimEndMs,
-      soundId: soundId ?? this.soundId,
-      soundVolume: soundVolume ?? this.soundVolume,
-      studioItemId: studioItemId ?? this.studioItemId,
-      coverOffsetSec: coverOffsetSec ?? this.coverOffsetSec,
-      editMeta: editMeta ?? this.editMeta,
-      captions: captions ?? this.captions,
-    );
-  }
-}
 
 class PostComposerScreen extends ConsumerStatefulWidget {
   final String? communityId;
@@ -215,12 +149,12 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
               trimEndMs: (map['trim_end_ms'] ?? 0) as int,
               soundId: map['sound_id'] as String?,
               soundVolume: (map['sound_volume'] as num?)?.toDouble(),
-              studioItemId:
-                  (map['studio_item_id'] as String?) ??
-                  (path.isNotEmpty ? const Uuid().v4() : null),
+              studioItemId: (map['studio_item_id'] as String?) ?? const Uuid().v4(),
               coverOffsetSec: (map['cover_offset_sec'] as num?)?.toDouble(),
               editMeta:
                   (map['edit_meta'] as Map<String, dynamic>?),
+              textContent: map['text_content'] as String?,
+              textStyle: (map['text_style'] as Map<String, dynamic>?),
               captions: [
                 for (final c in (map['captions'] as List? ?? []))
                   if (c is Map)
@@ -296,14 +230,16 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                               'path': m.path,
                               'name': m.name,
                               'type': m.type,
-                  'trim_start_ms': m.trimStartMs,
-                  'trim_end_ms': m.trimEndMs,
-                  'sound_id': m.soundId,
-                  'sound_volume': m.soundVolume,
-                  'studio_item_id': m.studioItemId,
-                  'cover_offset_sec': m.coverOffsetSec,
-                  'edit_meta': m.editMeta,
-                  'captions': m.captions,
+                              'trim_start_ms': m.trimStartMs,
+                              'trim_end_ms': m.trimEndMs,
+                              'sound_id': m.soundId,
+                              'sound_volume': m.soundVolume,
+                              'studio_item_id': m.studioItemId,
+                              'cover_offset_sec': m.coverOffsetSec,
+                              'edit_meta': m.editMeta,
+                              'text_content': m.textContent,
+                              'text_style': m.textStyle,
+                              'captions': m.captions,
                             })
                         .toList(),
                   }),
@@ -359,33 +295,84 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           );
           if (!mounted) return;
           // Route through the studio for trim → captions → overlays → audience steps.
-          final result = await Navigator.of(context).push<VideoStudioResult>(
+          final result = await Navigator.of(context).push<BudPressStudioResult>(
             MaterialPageRoute(
-              builder: (_) => VideoStudioScreen(
-                video: item,
+              builder: (_) => BudPressStudioScreen(
+                initialLayers: [item],
                 initialVisibility: _visibility,
-                itemId: item.studioItemId,
               ),
             ),
           );
           if (!mounted || result == null) return;
           setState(() {
-            _media.add(item.copyWith(
-              trimStartMs: result.trimStartMs,
-              trimEndMs: result.trimEndMs,
-              soundId: result.soundId,
-              soundVolume: result.soundVolume,
-              coverOffsetSec: result.coverOffsetSec,
-              editMeta: result.editMeta,
-              captions: [
-                for (final s in result.captions)
-                  {'start_ms': s.startMs, 'end_ms': s.endMs, 'text': s.text},
-              ],
-            ));
+            _media.add(result.layers.first);
             _visibility = result.visibility;
             _commentsEnabled = result.commentsEnabled;
           });
         }
+        break;
+      case 'audio':
+        final item = ComposerMedia(
+          name: 'Audio track', type: 'audio',
+          studioItemId: const Uuid().v4(),
+        );
+        if (!mounted) return;
+        // Open the studio so the user can pick/trim the audio and set volume.
+        final result = await Navigator.of(context).push<BudPressStudioResult>(
+          MaterialPageRoute(
+            builder: (_) => BudPressStudioScreen(
+              initialLayers: [item],
+              initialVisibility: _visibility,
+            ),
+          ),
+        );
+        if (!mounted || result == null) return;
+        setState(() {
+          _media.add(result.layers.first);
+          _visibility = result.visibility;
+          _commentsEnabled = result.commentsEnabled;
+        });
+        break;
+      case 'text':
+        if (!mounted) return;
+        final controller = TextEditingController();
+        final result = await showDialog<String>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Add styled text'),
+            content: TextField(
+              controller: controller,
+              maxLines: 4,
+              maxLength: 200,
+              decoration: const InputDecoration(hintText: 'What’s on your mind?'),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+              FilledButton(
+                onPressed: controller.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.pop(context, controller.text.trim()),
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || result == null) return;
+        setState(() {
+          _media.add(ComposerMedia(
+            name: 'Text', type: 'text',
+            studioItemId: const Uuid().v4(),
+            textContent: result.trim(),
+            textStyle: {
+              'background': 'none',
+              'font': 'classic',
+              'color': '#FFFFFF',
+              'effect': 'none',
+              'size': 1.0,
+              'alignment': 'center',
+            },
+          ));
+        });
         break;
       case 'file':
       case 'document':
@@ -589,6 +576,18 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
           width = prep.width;
           height = prep.height;
         }
+        if (m.type == 'text') {
+          // Text media has no file — add its media JSON entry directly.
+          uploaded.add(<String, dynamic>{
+            'url': '',
+            'media_type': 'text',
+            'text_content': m.textContent ?? '',
+            'text_style': m.textStyle ?? const {},
+            if (m.editMeta != null && m.editMeta!.isNotEmpty)
+              'edit_meta': m.editMeta,
+          });
+          continue;
+        }
         if (file.existsSync()) totalBytes += file.lengthSync();
         prepared.add((m: m, file: file, width: width, height: height));
       }
@@ -605,6 +604,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
         final (:m, :file, width: finalWidth, height: finalHeight) = prepared[i];
       var width = finalWidth;
       var height = finalHeight;
+        // Text media was added directly in stage 1 — nothing to upload.
+        if (m.type == 'text') continue;
         if (mounted) {
           setState(() => _uploadStatus = 'Uploading ${m.name}… (${i + 1}/${prepared.length})');
         }
@@ -815,6 +816,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     final kinds = [
       ('image', Icons.image_outlined, 'Photo'),
       ('video', Icons.videocam_outlined, 'Video'),
+      ('audio', Icons.audiotrack_outlined, 'Audio'),
+      ('text', Icons.text_fields, 'Styled text'),
       ('file', Icons.insert_drive_file_outlined, 'File'),
       ('document', Icons.description_outlined, 'Doc'),
     ];

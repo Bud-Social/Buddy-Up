@@ -48,6 +48,7 @@ services:
     environment:
       - AI_REDIS_URL=redis://redis:6379/0
       - AI_LOG_LEVEL=DEBUG
+      - AI_ENV=development
       - AI_MODEL_CACHE_DIR=/models
       - AI_HF_HOME=/models/hf
       - AI_OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -57,7 +58,7 @@ services:
       - ./backend/ai_service/app:/app/app
       - ./backend/ai_service/models:/models
     ports:
-      - "8003:8003"
+      - "127.0.0.1:8003:8003"
     depends_on:
       redis:
         condition: service_healthy

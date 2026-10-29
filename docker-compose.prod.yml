@@ -180,6 +180,8 @@ services:
     environment:
       - AI_REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
       - AI_LOG_LEVEL=INFO
+      - AI_ENV=production
+      - AI_CORS_ORIGINS=${AI_CORS_ORIGINS:-https://buddyup.app}
       - AI_MODEL_CACHE_DIR=/models
       - AI_HF_HOME=/models/hf
       - AI_API_KEY=${AI_API_KEY}

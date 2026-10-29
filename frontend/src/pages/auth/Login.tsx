@@ -10,7 +10,7 @@ import { authApi } from '@/api';
 import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { GoogleConsentGate } from '@/components/auth/GoogleConsentGate';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_CLIENT_ID as string | undefined;
 
 type LoginStep = 'credentials' | 'otp' | 'totp';
 

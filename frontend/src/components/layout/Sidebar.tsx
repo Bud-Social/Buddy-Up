@@ -16,7 +16,7 @@ const main = [
   { to: '/analytics', icon: Activity, label: 'Analytics' },
   { to: '/lives', icon: Radio, label: 'Lives' }, { to: '/gyms', icon: Dumbbell, label: 'Gyms' },
   { to: '/trainers', icon: Users, label: 'Trainers' }, { to: '/marketplace', icon: ShoppingBag, label: 'Marketplace' },
-  { to: '/schedule', icon: CalendarDays, label: 'Schedule' }, { to: '/sessions', icon: Calendar, label: 'Bookings' }, { to: '/messages', icon: MessageCircle, label: 'Messages' },
+  { to: '/schedule', icon: CalendarDays, label: 'Schedule' }, { to: '/sessions', icon: Calendar, label: 'Sessions' }, { to: '/messages', icon: MessageCircle, label: 'Messages' },
   { to: '/communities', icon: UsersRound, label: 'Communities' },
   { to: '/notifications', icon: Bell, label: 'Notifications' }, { to: '/wallet', icon: Wallet, label: 'Wallet' },
   { to: '/profile', icon: User, label: 'Profile' },

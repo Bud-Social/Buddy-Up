@@ -22,7 +22,7 @@ import { MyMealPlansList, MyProgrammesList } from '@/components/marketplace/MyLi
 type Section = 'sessions' | 'programmes' | 'meal-plans' | 'orders';
 
 const SECTIONS: { key: Section; label: string }[] = [
-  { key: 'sessions', label: 'Bookings' },
+  { key: 'sessions', label: 'Sessions' },
   { key: 'programmes', label: 'Programmes' },
   { key: 'meal-plans', label: 'Meal Plans' },
   { key: 'orders', label: 'Orders' },
@@ -149,7 +149,7 @@ export default function Sessions() {
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <h1 className="font-display text-2xl font-extrabold">Bookings &amp; Orders</h1>
+        <h1 className="font-display text-2xl font-extrabold">Sessions &amp; Orders</h1>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => navigate('/schedule')}>
             <Calendar size={14} className="mr-1" /> Schedule
@@ -179,8 +179,8 @@ export default function Sessions() {
       {profile?.role !== 'user' && (
         <div className="flex rounded-xl bg-buddy-surface p-1 mb-4">
           {[
-            { key: 'client' as const, label: 'Client Bookings' },
-            { key: 'trainer' as const, label: 'Trainer Bookings' },
+            { key: 'client' as const, label: 'Client Sessions' },
+            { key: 'trainer' as const, label: 'Trainer Sessions' },
           ].map(({ key, label }) => (
             <button key={key} onClick={() => setViewRole(key)}
               className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${viewRole === key ? 'bg-buddy-green text-buddy-black' : 'text-buddy-text-secondary hover:text-buddy-text-primary'}`}>{label}</button>
@@ -210,7 +210,7 @@ export default function Sessions() {
         ) : (
           <div className="text-center py-20">
             <Calendar size={48} className="mx-auto text-buddy-text-secondary/30 mb-4" />
-            <p className="text-buddy-text-secondary">No bookings yet.</p>
+            <p className="text-buddy-text-secondary">No sessions yet.</p>
             <p className="text-buddy-text-secondary/50 text-sm mt-1">Find a trainer and book your first session!</p>
             <Button className="mt-6" onClick={() => navigate('/trainers')}>Browse Trainers</Button>
           </div>

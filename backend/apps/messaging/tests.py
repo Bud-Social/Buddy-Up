@@ -181,6 +181,22 @@ class LiveConsumerRelayTests(TestCase):
             asyncio.run(self.consumer.receive_json({'type': 'reaction', 'data': {'emoji': '🔥'}}))
         self.assertEqual(len(self.consumer.channel_layer.sent), 10)
 
+
+class LiveConsumerGiftRateLimitTests(TransactionTestCase):
+    """Gift relay rate limiting.
+
+    The gift settlement runs via ``database_sync_to_async`` on its own
+    thread connection, so this class needs ``TransactionTestCase`` — a plain
+    ``TestCase`` keeps the SQLite write lock and the settlement thread
+    deadlocks on ``profiles_profile``.
+    """
+
+    def setUp(self):
+        self.sender_user = User.objects.create_user(email='live-sender@example.com', password='TestPass123!')
+        self.sender = Profile.objects.create(user=self.sender_user, username='live-sender', display_name='Sender')
+        self.live_id = '11111111-1111-1111-1111-111111111111'
+        self.consumer = _make_live_consumer(str(self.sender.user_id), self.sender, self.live_id)
+
     def test_gift_events_are_rate_limited(self):
         for i in range(5):
             asyncio.run(self.consumer.receive_json({'type': 'gift', 'data': {'artifact_type': 'dumbbell', 'quantity': 1}}))

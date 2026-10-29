@@ -385,6 +385,7 @@ REST_FRAMEWORK = {
         'otp': '10/h',
         'password_reset': '3/h',
         'upload_attachment': '20/h',
+        'ai_food_recognize': '30/h',
         'uploads': '60/h',
         'link_preview': '30/h',
         'checkout': '10/h',

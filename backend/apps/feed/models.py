@@ -255,6 +255,7 @@ class PostMedia(TimestampedModel):
         ('image', 'Image'),
         ('video', 'Video'),
         ('audio', 'Audio'),
+        ('text', 'Text'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
@@ -275,6 +276,10 @@ class PostMedia(TimestampedModel):
     alt_text = models.CharField(max_length=255, blank=True)
     # Creative-studio edits: {filter, speed, volume, enhance, text_overlays[]}
     edit_meta = models.JSONField(default=dict, blank=True)
+    # Text media items: styled body (text-only posts, text layers) and its
+    # style: {background, font, color, effect, size, alignment, ...}.
+    text_content = models.TextField(blank=True)
+    text_style = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = 'feed_post_media'

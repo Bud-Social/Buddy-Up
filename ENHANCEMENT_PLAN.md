@@ -261,6 +261,40 @@ profile + decrements count). Count updates atomically.
 
 ---
 
+## Enhancement 8 — Bud Press Studio Refinement
+
+**Goal:** Bring the Flutter Bud Press video studio to parity with the web studio's write
+surface (cover frame picker, editable per-clip captions, captions style, relative-position
+overlays) and persist per-clip captions so they survive studio re-opens; harden the shared
+publish path (cover poster URL with query params, Cloudinary sign failure UX).
+
+### New / changed surfaces
+
+| Area | Change |
+|---|---|
+| Flutter `video_studio_screen.dart` | Cover frame timestamp scrubber (`cover_offset_sec` → Cloudinary `so_N` poster hint), editable captions (text + start/end ms, add line at playhead, remove), captions style sheet (placement bottom/center/top, size), relative-position overlay editor producing `text_overlays` in `edit_meta`, per-clip captions load/save via `GET/POST /feed/studio/captions/<item_id>/` |
+| Flutter `post_composer_screen.dart` | Fix `?x` map-value compile sites; `ComposerMedia` gains `studioItemId`, `coverOffsetSec`, `editMeta` persisted through server drafts; Cloudinary sign failure shows a snackbar instead of silently falling back |
+| Flutter `feed_repository.dart` + codegen | `getStudioCaptions(itemId)` / `saveStudioCaptions(itemId, body)` retrofit methods |
+| Flutter `caption_overlay_test.dart` | Widget tests: renders active segment, hides outside time range, applies style/placement, shows nothing when inactive |
+| Backend `feed/models.py` | `StudioCaption` model (user, item_id, captions JSON, unique_together) + migration `0023_studiocaption.py` |
+| Backend `feed/views.py` | `GET/POST /feed/studio/captions/<item_id>/` (`StudioCaptionsView`); whitelist `cover_offset_sec` in `edit_meta` validation |
+| Backend `feed/urls.py` | Route `studio/captions/<str:item_id>/` → `StudioCaptionsView` |
+| Backend `test_studio_captions.py` | 6 tests: get empty, post+get roundtrip, update same item, reject non-list, requires auth, user isolation |
+| Web `createStudio.ts` | `coverPosterUrl` uses `&` (not `?`) when the media URL already has query params |
+| Web `createStudio.test.ts` | 6 tests for `coverPosterUrl` (no query, existing query, undefined/null/negative offset) |
+| Docs | `docs/CLIENT_PARITY.md` Bud Press row → Flutter Partial with cover picker / edit_meta / caption details |
+
+### Acceptance Criteria
+- [x] Flutter studio: cover frame scrubber sets `cover_offset_sec`, published as `cover_offset_sec` in media JSON
+- [x] Flutter studio: captions editable per line (text, start, end), add/remove lines, persist per `item_id` between sessions
+- [x] Flutter studio: captions style (placement/size) and relative-position overlays stored in `edit_meta`
+- [x] Flutter: Cloudinary sign failure surfaces a snackbar instead of silent fallback
+- [x] Backend: `GET/POST /feed/studio/captions/<item_id>/` saves/restores captions; user-scoped; backwards/empty segments dropped
+- [x] Web: `coverPosterUrl` appends `&so_N` when URL already has query params
+- [x] Full suites green: Flutter `flutter analyze` + `flutter test`; backend `pytest apps`; web `vitest` + `tsc -b`
+
+---
+
 ## Cross-Cutting Concerns
 
 ### Theme Token Usage
@@ -291,3 +325,4 @@ Backend: one DRF test per new endpoint.
 | 5 | #3 Event Categories | Expand data model + UI filter |
 | 6 | #4 Creator Studio | Larger scope, builds on order system |
 | 7 | #1 PiP Live | Requires native platform integration, highest complexity |
+| 8 | #8 Bud Press Studio | Parity refinement — cover picker, editable captions, captions API |

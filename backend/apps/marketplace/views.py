@@ -18,6 +18,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.throttling import ScopedRateThrottle
 
 from common.pagination import PageNumberPagination
+from common.utils import validate_file_signature
 from apps.guardians.services import guardian_blocks_spends
 from apps.profiles.models import BuddyRelationship
 from common.age_gating import gate_mature_queryset, can_view_content
@@ -2729,6 +2730,11 @@ class OrganiserEventStatsView(views.APIView):
 class FoodRecognizeView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+    throttle_scope = 'ai_food_recognize'
+    throttle_classes = [ScopedRateThrottle]
+
+    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
+    MAX_SIZE_MB = 15
 
     def post(self, request):
         file = request.FILES.get('file')
@@ -2744,6 +2750,33 @@ class FoodRecognizeView(views.APIView):
                 'success': False, 'data': None,
                 'message': 'File must be an image.',
                 'errors': 'invalid content type.', 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if file.size > self.MAX_SIZE_MB * 1024 * 1024:
+            return Response({
+                'success': False, 'data': None,
+                'message': f'File exceeds {self.MAX_SIZE_MB} MB limit.',
+                'errors': 'file too large.', 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        ext = os.path.splitext(file.name)[1].lower()
+        if ext not in self.ALLOWED_EXTENSIONS:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'File type not allowed.',
+                'errors': 'unsupported image extension.', 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # The declared extension cannot be a costume: verify the leading bytes
+        # look like a real image before anything is read forward to the AI
+        # service (same discipline as messaging uploads).
+        chunk = file.read(512)
+        file.seek(0)
+        if not validate_file_signature(chunk, ext):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'File content does not match its extension.',
+                'errors': 'image signature mismatch.', 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
         ai_url = f'{settings.AI_SERVICE_URL}/api/v1/food/recognize'

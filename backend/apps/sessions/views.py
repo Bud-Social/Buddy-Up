@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from django.db import models as db_models, transaction
+from django.db import connection, models as db_models, transaction
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from datetime import timedelta
@@ -54,20 +54,27 @@ class TrainerListView(views.APIView):
             qs = qs.filter(profile__verification_status__in=['trainer', 'practitioner'])
         if min_rating > 0:
             qs = qs.filter(average_rating__gte=min_rating)
+        # JSONField `contains` lookups exist only on PostgreSQL/MySQL; the
+        # SQLite test database falls back to in-Python filtering.
+        json_contains = connection.vendor in ('postgresql', 'mysql')
+        remote_types = ['1on1_live', 'group_live', 'async', 'nutrition']
+        remote_sql = db_models.Q(is_virtual=True)
+        for remote_type in remote_types:
+            remote_sql |= db_models.Q(session_types__contains=[remote_type])
+        mobile_sql = db_models.Q(is_mobile=True) | db_models.Q(session_types__contains=['in_person'])
+        offers_remote = offers_mobile = None
+        if not json_contains:
+            def offers_remote(t):
+                return t.is_virtual or any(vt in (t.session_types or []) for vt in remote_types)
+
+            def offers_mobile(t):
+                return t.is_mobile or 'in_person' in (t.session_types or [])
         if virtual_only:
-            # Explicit flag, or offers a remote-capable session type.
-            qs = qs.filter(
-                db_models.Q(is_virtual=True)
-                | db_models.Q(session_types__contains=['1on1_live'])
-                | db_models.Q(session_types__contains=['group_live'])
-                | db_models.Q(session_types__contains=['async'])
-                | db_models.Q(session_types__contains=['nutrition'])
-            )
+            if json_contains:
+                qs = qs.filter(remote_sql)
         if mobile_only:
-            qs = qs.filter(
-                db_models.Q(is_mobile=True)
-                | db_models.Q(session_types__contains=['in_person'])
-            )
+            if json_contains:
+                qs = qs.filter(mobile_sql)
         if gym_handle:
             from apps.gyms.models import GymMembership
             trainer_ids = GymMembership.objects.filter(
@@ -75,7 +82,14 @@ class TrainerListView(views.APIView):
                 subscription_active=True,
             ).values_list('member__trainer_profile__id', flat=True)
             qs = qs.filter(id__in=trainer_ids)
+        # Order while qs is still a QuerySet (before any Python list filter
+        # turns it into a plain list below).
         qs = qs.order_by('-average_rating', '-review_count')
+        if not json_contains:
+            if virtual_only and offers_remote:
+                qs = [t for t in qs if offers_remote(t)]
+            if mobile_only and offers_mobile:
+                qs = [t for t in qs if offers_mobile(t)]
         if specialty:
             qs = [t for t in qs if specialty in (t.specialties or [])]
 
