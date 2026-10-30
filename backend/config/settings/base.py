@@ -205,6 +205,9 @@ CELERY_TASK_ROUTES = {
     'apps.notifications.tasks.*': {'queue': 'high_priority'},
 }
 
+# Memory management: recycling workers prevents long-running memory leaks
+CELERY_WORKER_MAX_MEMORY_PER_CHILD = 10000
+
 # Beat entries: merged with config/celery.py's CELERY_BEAT_SCHEDULE by
 # config.celery (module entries win on key collisions).
 from celery.schedules import crontab  # noqa: E402
