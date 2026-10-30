@@ -381,6 +381,7 @@ def _authenticate_allow_inactive(request, email, password):
 
 
 class RegisterView(views.APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'registration'
 
@@ -484,6 +485,7 @@ class RegisterView(views.APIView):
 
 
 class VerifyRegistrationOTPView(views.APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'otp'
 
@@ -609,6 +611,7 @@ class VerifyRegistrationOTPView(views.APIView):
 
 
 class LoginView(views.APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'login'
 
@@ -809,6 +812,7 @@ class LoginView(views.APIView):
 
 
 class VerifyLoginOTPView(views.APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'otp'
 
@@ -1148,6 +1152,7 @@ class TOTPDisableView(views.APIView):
 
 
 class TOTPChallengeView(views.APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'otp'
 
@@ -1436,6 +1441,7 @@ def _finalize_social_login(user, method, request):
 
 
 class GoogleLoginView(views.APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'login'
 
@@ -1541,6 +1547,7 @@ class GoogleLoginView(views.APIView):
         return response
 
 class AppleLoginView(views.APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'login'
 
@@ -1967,6 +1974,7 @@ class ResendRegistrationOTPView(views.APIView):
 
 
 class PasswordResetRequestView(views.APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
     throttle_scope = 'password_reset'
 
@@ -2005,6 +2013,7 @@ class PasswordResetRequestView(views.APIView):
 
 
 class PasswordResetConfirmView(views.APIView):
+    authentication_classes = []
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
