@@ -6,6 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Cache-buster: forces clean rebuild for Render external Redis integration
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
