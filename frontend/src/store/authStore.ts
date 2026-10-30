@@ -75,13 +75,12 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'buddyup-auth',
-      // SECURITY: tokens are never persisted. The long-lived refresh token
-      // lives only in an httpOnly cookie (set by the backend); the 15-minute
-      // access token stays in memory and is re-minted from the cookie on
-      // boot. Only identity is persisted so the UI can render while the
-      // silent boot refresh runs.
+      // SECURITY: accessToken is persisted so the session survives navigation
+      // and page reloads. The refresh token lives in an httpOnly cookie set by
+      // the backend and is used to re-mint the access token on boot.
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
+        accessToken: state.accessToken,
         user: state.user,
         profile: state.profile,
       }),
