@@ -109,11 +109,16 @@ export default function Register() {
     setIsLoading(true);
     try {
       const res = await authApi.googleLogin(googleToken, true);
-      const data = res.data as typeof res.data & { require_age_setup?: boolean; onboarding_required?: boolean; require_password?: boolean };
+      const data = res.data as typeof res.data & { require_activation?: boolean; require_age_setup?: boolean; onboarding_required?: boolean; require_password?: boolean; require_otp?: boolean; login_token?: string };
       // If this Google account already has a password set, redirect to login
       // where the password + OTP flow will be handled.
       if (data.require_password) {
         navigate('/login', { replace: true });
+        return;
+      }
+      // New account created - activation required
+      if (data.require_activation && data.data?.activation_token) {
+        navigate(`/activate?token=${encodeURIComponent(data.data.activation_token)}`);
         return;
       }
       const tokens = data as unknown as { access: string; refresh: string; user: import('@/types').User; profile: import('@/types').Profile };
@@ -172,7 +177,8 @@ export default function Register() {
           guardian_phone: guardianPhone,
         }),
       });
-      navigate(`/verify-registration-otp?token=${encodeURIComponent(res.data.registration_token)}&email=${encodeURIComponent(res.data.email)}`);
+      // Navigate to a page telling user to check email for activation link
+      navigate(`/verify-registration-otp?token=${encodeURIComponent(res.data.registration_token)}&email=${encodeURIComponent(res.data.email)}&activation=true`);
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
       setError(data?.message || 'Registration failed. Please try again.');

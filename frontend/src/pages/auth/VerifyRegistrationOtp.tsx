@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
 import { authApi } from '@/api';
 import { useAuthStore } from '@/store/authStore';
+import { Mail } from 'lucide-react';
 
 export default function VerifyRegistrationOtp() {
   const navigate = useNavigate();
@@ -14,9 +15,7 @@ export default function VerifyRegistrationOtp() {
 
   const regToken = searchParams.get('token') || '';
   const email = searchParams.get('email') || '';
-  // When redirected from a login attempt, tell the user why they are here:
-  // their account was never verified. `fresh` means a new OTP was just sent
-  // because the previous one had expired.
+  const activationMode = searchParams.get('activation') === 'true';
   const fromLogin = searchParams.get('reason') === 'unverified';
   const freshOtp = searchParams.get('fresh') === '1';
 
@@ -66,13 +65,15 @@ export default function VerifyRegistrationOtp() {
     <div className="min-h-screen flex items-center justify-center px-4 bg-buddy-black">
       <Card className="w-full max-w-md p-8 bg-buddy-surface">
         <h1 className="font-display text-3xl font-extrabold text-center mb-2">
-          Verify Your <span className="text-buddy-green">Email</span>
+          {activationMode ? 'Check Your Email' : 'Verify Your <span className="text-buddy-green">Email</span>'}
         </h1>
         <p className="text-buddy-text-secondary text-center mb-6">
-          Enter the 6-digit code sent to <strong className="text-buddy-text-primary">{email}</strong>
+          {activationMode
+            ? `We've sent an activation link to <strong className="text-buddy-text-primary">{email}</strong>. Click the link in the email to activate your account, then return here to log in.`
+            : `Enter the 6-digit code sent to <strong className="text-buddy-text-primary">{email}</strong>`}
         </p>
 
-        {fromLogin && (
+        {fromLogin && !activationMode && (
           <div className="bg-buddy-orange/10 border border-buddy-orange/30 text-buddy-orange rounded-xl p-3 text-sm mb-4">
             <p className="font-semibold">Your account isn't verified yet.</p>
             <p className="mt-0.5 text-buddy-text-secondary">
@@ -83,22 +84,35 @@ export default function VerifyRegistrationOtp() {
           </div>
         )}
 
+        {activationMode && (
+          <div className="bg-buddy-green/10 border border-buddy-green/30 text-buddy-green rounded-xl p-4 mb-4 text-center">
+            <Mail className="w-10 h-10 mx-auto mb-2 text-buddy-green" />
+            <p className="font-semibold">Check your inbox</p>
+            <p className="mt-1 text-sm text-buddy-text-secondary">
+              We've sent an activation link to <strong>{email}</strong>. 
+              Click the link to activate your account, then return to log in.
+            </p>
+          </div>
+        )}
+
         {error && <div className="bg-buddy-red/10 border border-buddy-red/30 text-buddy-red rounded-xl p-3 text-sm mb-4">{error}</div>}
 
-        <form onSubmit={handleVerify} className="space-y-4">
-          <Input
-            label="OTP Code"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            placeholder="000000"
-            maxLength={6}
-            required
-            helperText="Check your email for the 6-digit code"
-          />
-          <Button type="submit" isLoading={isLoading} disabled={otp.length !== 6} className="w-full" size="lg">
-            Verify Email
-          </Button>
-        </form>
+        {!activationMode && (
+          <form onSubmit={handleVerify} className="space-y-4">
+            <Input
+              label="OTP Code"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="000000"
+              maxLength={6}
+              required
+              helperText="Check your email for the 6-digit code"
+            />
+            <Button type="submit" isLoading={isLoading} disabled={otp.length !== 6} className="w-full" size="lg">
+              Verify Email
+            </Button>
+          </form>
+        )}
 
         <div className="mt-4 text-center">
           <button
@@ -106,7 +120,7 @@ export default function VerifyRegistrationOtp() {
             disabled={cooldown > 0 || resending}
             className="text-sm text-buddy-green hover:text-buddy-green-deep disabled:text-buddy-text-secondary/50 disabled:cursor-not-allowed"
           >
-            {cooldown > 0 ? `Resend in ${cooldown}s` : resending ? 'Sending...' : 'Resend OTP'}
+            {cooldown > 0 ? `Resend in ${cooldown}s` : resending ? 'Sending...' : activationMode ? 'Resend Activation Link' : 'Resend OTP'}
           </button>
         </div>
 

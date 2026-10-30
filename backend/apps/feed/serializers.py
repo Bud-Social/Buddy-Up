@@ -140,7 +140,6 @@ class PostSerializer(serializers.ModelSerializer):
     is_reposted_by_me = serializers.SerializerMethodField()
     poll = serializers.SerializerMethodField()
     gym_tag_name = serializers.SerializerMethodField()
-    original_post_data = serializers.SerializerMethodField()
     reposters = serializers.SerializerMethodField()
     media = PostMediaSerializer(many=True, read_only=True)
 
@@ -148,13 +147,13 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = [
         'id', 'post_type', 'body', 'is_anonymous', 'gym_tag_id', 'gym_tag_name',
-        'visibility', 'is_repost', 'original_post_id', 'quote_body',
+        'visibility',
         'location_label', 'location_lat', 'location_lng', 'workout_log_data',
         'media_urls', 'media', 'tags', 'view_count', 'share_count', 'moderation_status',
         'content_rating', 'comments_disabled',
         'author_data', 'reaction_counts', 'user_reaction',
         'comment_count', 'repost_count', 'save_count', 'is_saved', 'is_reposted_by_me', 'is_pinned',
-        'poll', 'original_post_data', 'reposters', 'created_at', 'updated_at',
+        'poll', 'reposters', 'created_at', 'updated_at',
         'ai_analysis',
         ]
         read_only_fields = ['id', 'view_count', 'share_count', 'moderation_status', 'ai_analysis', 'created_at', 'updated_at']
@@ -189,6 +188,7 @@ class PostSerializer(serializers.ModelSerializer):
         return obj.comments.count()
 
     def get_repost_count(self, obj):
+        """Count the PostRepost log rows (reposts are post properties)."""
         return obj.reposts.count()
 
     def get_save_count(self, obj):
@@ -204,7 +204,7 @@ class PostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return False
-        return obj.reposts.filter(author=request.user.profile).exists()
+        return obj.reposts.filter(profile=request.user.profile, is_deleted=False).exists()
 
     def get_poll(self, obj):
         if hasattr(obj, 'poll'):
@@ -214,75 +214,32 @@ class PostSerializer(serializers.ModelSerializer):
     def get_gym_tag_name(self, obj):
         return obj.gym_tag.name if obj.gym_tag else None
 
-    def get_original_post_data(self, obj):
-        if obj.is_repost and obj.original_post:
-            request = self.context.get('request')
-            orig = obj.original_post
-            viewer_reaction = None
-            try:
-                if request and request.user.is_authenticated:
-                    mine = orig.reactions.filter(author=request.user.profile).first()
-                    viewer_reaction = normalize_reaction(mine.reaction_type) if mine else None
-            except Exception:  # noqa: BLE001 — best-effort
-                pass
-            orig_counts = Counter(
-                normalize_reaction(k) for k in
-                orig.reactions.values_list('reaction_type', flat=True)
-            )
-            return {
-                'id': str(orig.id),
-                'post_type': orig.post_type,
-                'author_data': {
-                    'user_id': str(orig.author.user_id),
-                    'username': orig.author.username,
-                    'display_name': orig.author.display_name,
-                    'avatar_url': absolute_media_url(request, orig.author.avatar_url),
-                    'verification_status': orig.author.verification_status,
-                },
-                'body': orig.body,
-                'media_urls': orig.media_urls or [],
-                'location_label': orig.location_label,
-                'location_lat': orig.location_lat,
-                'location_lng': orig.location_lng,
-                'workout_log_data': orig.workout_log_data,
-                'quote_body': orig.quote_body,
-                'gym_tag_name': orig.gym_tag.name if orig.gym_tag else None,
-                'created_at': orig.created_at.isoformat(),
-                # Engagement always reflects the ORIGINAL so repost rows
-                # never show zeroed counts.
-                'reaction_counts': dict(orig_counts),
-                'user_reaction': viewer_reaction,
-                'comment_count': orig.comments.count(),
-                'repost_count': Post.objects.filter(original_post=orig, is_repost=True).count(),
-                'view_count': orig.view_count,
-                'share_count': orig.share_count,
-                'save_count': orig.saves.count(),
-            }
-        return None
-
     def get_reposters(self, obj):
+        """Reposter ribbon, derived from PostRepost log rows on this post."""
         request = self.context.get('request')
-        if not obj.is_repost or not obj.original_post_id:
+        if not obj.reposts.count():
             return []
+        viewer = None
+        try:
+            if request and request.user.is_authenticated:
+                viewer = request.user.profile
+        except Exception:  # noqa: BLE001 — attribution ordering is best-effort
+            viewer = None
         followed_ids = set()
         try:
-            viewer = request.user.profile if request and request.user.is_authenticated else None
             if viewer is not None and hasattr(viewer, 'following'):
                 followed_ids = set(viewer.following.values_list('followee_id', flat=True))
         except Exception:  # noqa: BLE001 — attribution ordering is best-effort
             pass
-        reposts = list(Post.objects.filter(
-            original_post_id=obj.original_post_id,
-            is_repost=True,
-        ).select_related('author')[:20])
+        reposts = list(obj.reposts.filter(is_deleted=False).select_related('profile')[:20])
         # TikTok-style attribution: accounts the viewer follows first.
-        reposts.sort(key=lambda r: (r.author_id not in followed_ids, r.created_at))
+        reposts.sort(key=lambda r: (r.profile_id not in followed_ids, r.created_at))
         return [
             {
-                'user_id': str(r.author.user_id),
-                'display_name': r.author.display_name,
-                'avatar_url': absolute_media_url(request, r.author.avatar_url),
-                'followed_by_viewer': r.author_id in followed_ids,
+                'user_id': str(r.profile.user_id),
+                'display_name': r.profile.display_name,
+                'avatar_url': absolute_media_url(request, r.profile.avatar_url),
+                'followed_by_viewer': r.profile_id in followed_ids,
             }
             for r in reposts
         ]

@@ -112,6 +112,9 @@ export const authApi = {
   verifyRegistrationOtp: (registration_token: string, otp: string) =>
     apiClient.post<ApiResponse<TokenResponse>>('/auth/verify-registration-otp/', { registration_token, otp }).then((r) => r.data),
 
+  activateAccount: (activation_token: string) =>
+    apiClient.post<ApiResponse<{ require_otp: boolean; login_token: string; masked_email: string; message: string }>>('/auth/activate/', { activation_token }).then((r) => r.data),
+
   login: (data: LoginPayload) =>
     apiClient.post<ApiResponse<LoginInitResponse>>('/auth/login/', data).then((r) => r.data),
 

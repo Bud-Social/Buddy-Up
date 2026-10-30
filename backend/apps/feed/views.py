@@ -665,35 +665,16 @@ def _handle_media_uploads(request_files):
 
 
 def _dedupe_reposts_for_viewer(posts, viewer_profile):
-    """TikTok-style repost/original collapse, viewer-aware.
+    """Removed with repost-as-a-Post.
 
-    For each original with repost rows in the page: viewers who follow (or
-    are) the reposter keep the repost row(s) and lose the plain original;
-    everyone else keeps the original (with its repost count) and never sees
-    a stranger's repost row.
+    Reposts used to be their own Post rows that had to be collapsed against
+    the original per viewer. They are now PostRepost log rows rendered as a
+    ribbon on the original post, so the feed simply returns posts unchanged.
     """
-    try:
-        followed_ids = set(viewer_profile.following.values_list('followee_id', flat=True))
-    except Exception:  # noqa: BLE001 — fall back to showing originals
-        followed_ids = set()
-    followed_ids.add(viewer_profile.user_id)
-    by_original: dict = {}
-    for p in posts:
-        if p.is_repost and p.original_post_id:
-            by_original.setdefault(p.original_post_id, []).append(p)
-    keep_repost_ids = set()
-    drop_original_ids = set()
-    for orig_id, reposts in by_original.items():
-        kept = [r for r in reposts if r.author_id in followed_ids]
-        if kept:
-            keep_repost_ids.update(r.id for r in kept)
-            drop_original_ids.add(orig_id)
-    return [
-        p for p in posts
-        if p.id in keep_repost_ids
-        or (not p.is_repost and p.id not in drop_original_ids)
-        or (p.is_repost and not p.original_post_id)
-    ]
+    return posts
+
+
+_REMOVED = _dedupe_reposts_for_viewer  # legacy alias (no-op)
 
 
 def _apply_hide_mute_exclusions(queryset, user_profile):
@@ -1593,42 +1574,37 @@ class RepostView(views.APIView):
         serializer.is_valid(raise_exception=True)
         quote_body = serializer.validated_data.get('quote_body', '')
 
-        # Resolve the ROOT original so reposting a repost still points at the
-        # real source post. This keeps reposters stacked on one original and
-        # avoids "empty repost" cards whose original is itself a repost.
-        root = original
-        while root.is_repost and root.original_post_id:
-            root = root.original_post
-        original = root
+        # A repost is a logged property of the post (PostRepost row), never a
+        # new Post. Because posting a repost always carries the ROOT post id,
+        # reposting a reposted post reuses the same row: the unique
+        # (profile, post) constraint makes the toggle conflict-free, and the
+        # original post's view_count / interaction logs are untouched.
+        existing = PostRepost.objects.filter(
+            profile=request.user.profile, post=original, is_deleted=False,
+        ).first()
 
-        # Toggle logic
-        existing = Post.objects.filter(author=request.user.profile, original_post=original, is_repost=True).first()
-        
         if existing:
-            existing.delete()
+            existing.soft_delete()
             action = 'unreposted'
         else:
-            _repost = Post.objects.create(
-                author=request.user.profile,
-                post_type='text',
-                body='',
-                is_repost=True,
-                original_post=original,
+            PostRepost.objects.create(
+                profile=request.user.profile,
+                post=original,
                 quote_body=quote_body[:500],
-                visibility='public',
             )
             action = 'reposted'
 
-            # Notify the original author their post was reposted
-            try:
-                from apps.notifications.tasks import send_repost_notification
-                send_repost_notification.delay(str(request.user.profile.user_id), str(original.id))
-            except Exception:  # noqa: BLE001
-                pass
+            # Notify the original author their post was reposted (skip self).
+            if original.author_id != request.user.profile.pk:
+                try:
+                    from apps.notifications.tasks import send_repost_notification
+                    send_repost_notification.delay(str(request.user.profile.user_id), str(original.id))
+                except Exception:  # noqa: BLE001
+                    pass
 
             ai_ranking.send_feedback(str(request.user.profile.user_id), original, 1.0)
 
-        count = Post.objects.filter(original_post=original, is_repost=True).count()
+        count = PostRepost.objects.filter(post=original, is_deleted=False).count()
         return Response({
             'success': True,
             'action': action,

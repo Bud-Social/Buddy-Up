@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   X, Link2, Repeat2, Bookmark, BookmarkCheck, User, Check,
-  MessageCircle, Twitter, Facebook, Send,
+  MessageCircle, Twitter, Facebook, Send, Download,
 } from 'lucide-react';
 import { feedApi } from '@/api/feed';
 import { Avatar } from '@/components/ui/Avatar';
@@ -194,6 +194,43 @@ export function PostShareSheet({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownload = async () => {
+    // Find the first media URL to download
+    const mediaUrls = post.media_urls || [];
+    const media = post.media || [];
+    const videoMedia = media.find((m) => m.media_type === 'video');
+    const imageMedia = media.find((m) => m.media_type === 'image');
+    
+    let downloadUrl = '';
+    if (videoMedia?.media_url) {
+      downloadUrl = videoMedia.media_url;
+    } else if (imageMedia?.media_url) {
+      downloadUrl = imageMedia.media_url;
+    } else if (mediaUrls.length > 0) {
+      downloadUrl = mediaUrls[0];
+    }
+    
+    if (!downloadUrl) {
+      setError('No media available to download');
+      return;
+    }
+    
+    try {
+      const response = await fetch(downloadUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `buddyup_${post.id}.${blob.type.split('/')[1] || 'mp4'}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setError('Failed to download media');
+    }
+  };
+
   const handleSocial = async (id: string, href: (url: string, text: string) => string) => {
     const url = await trackedLink(id);
     window.open(href(url, shareText), '_blank', 'noopener,noreferrer');
@@ -286,6 +323,14 @@ export function PostShareSheet({
               ? <BookmarkCheck size={18} className="text-buddy-green shrink-0" />
               : <Bookmark size={18} className="text-buddy-text-secondary shrink-0" />}
             <span className="flex-1">{isSaved ? 'Saved — tap to unsave' : 'Save'}</span>
+          </button>
+          <button
+            className={rowCls}
+            onClick={handleDownload}
+            aria-label="Download media"
+          >
+            <Download size={18} className="text-buddy-text-secondary shrink-0" />
+            <span className="flex-1">Download</span>
           </button>
           <button
             className={rowCls}

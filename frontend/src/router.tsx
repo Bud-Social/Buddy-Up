@@ -7,7 +7,7 @@ import { ScrollToHash } from '@/components/ScrollToHash';
 import { useAuthStore } from '@/store/authStore';
 
 const PUBLIC_ROUTES = [
-  '/', '/login', '/signup', '/verify-registration-otp', '/verify-age',
+  '/', '/login', '/signup', '/verify-registration-otp', '/activate', '/verify-age',
   '/forgot-password', '/reset-password',
   '/terms', '/privacy', '/community-guidelines', '/cookie-policy',
   '/medical-disclaimer', '/sponsorship-policy', '/adult-content-policy', '/help',
@@ -50,6 +50,7 @@ function AdminGuard() {
 const Login = lazy(() => import('@/pages/auth/Login'));
 const Register = lazy(() => import('@/pages/auth/Register'));
 const VerifyRegistrationOtp = lazy(() => import('@/pages/auth/VerifyRegistrationOtp'));
+const Activate = lazy(() => import('@/pages/auth/Activate'));
 const VerifyAge = lazy(() => import('@/pages/auth/VerifyAge'));
 const Onboarding = lazy(() => import('@/pages/auth/Onboarding'));
 const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'));
@@ -185,6 +186,7 @@ export const router = createBrowserRouter([
   { path: '/login', element: <SWrapper><Login /></SWrapper> },
   { path: '/signup', element: <SWrapper><Register /></SWrapper> },
   { path: '/verify-registration-otp', element: <SWrapper><VerifyRegistrationOtp /></SWrapper> },
+  { path: '/activate', element: <SWrapper><Activate /></SWrapper> },
   { path: '/verify-age', element: <SWrapper><VerifyAge /></SWrapper> },
   { path: '/onboarding', element: <SWrapper><Onboarding /></SWrapper> },
   { path: '/forgot-password', element: <SWrapper><ForgotPassword /></SWrapper> },

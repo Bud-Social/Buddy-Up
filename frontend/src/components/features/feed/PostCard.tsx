@@ -945,14 +945,16 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
           )}
           <div className="flex-1 min-w-0 flex items-center gap-1.5">
             <Repeat2 size={13} className="text-buddy-green shrink-0" />
-            {justRepostedFlash && !post.is_repost ? (
-              <span className="font-semibold text-buddy-green truncate">You reposted this</span>
+            {isRepostedByMe && !post.is_repost ? (
+              <span className="font-semibold text-buddy-green truncate">You reposted</span>
             ) : (
               <span className="font-semibold text-buddy-green cursor-pointer truncate" onClick={(e) => { e.stopPropagation(); openProfile(post.author_data?.username); }}>
                 {post.author_data?.display_name}
               </span>
             )}
-            {!justRepostedFlash && (
+            {isRepostedByMe && !post.is_repost ? (
+              <span className="text-buddy-text-secondary flex-shrink-0">your repost</span>
+            ) : (
               <span className="text-buddy-text-secondary flex-shrink-0">reposted</span>
             )}
             {post.quote_body && (

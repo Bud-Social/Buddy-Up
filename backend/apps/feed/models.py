@@ -35,9 +35,6 @@ class Post(TimestampedModel, SoftDeleteModel):
     is_anonymous = models.BooleanField(default=False)
     gym_tag = models.ForeignKey('gyms.Gym', null=True, blank=True, on_delete=models.SET_NULL, related_name='tagged_posts')
     visibility = models.CharField(max_length=15, choices=VISIBILITY_CHOICES, default='public')
-    is_repost = models.BooleanField(default=False)
-    original_post = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='reposts')
-    quote_body = models.TextField(blank=True)
     location_label = models.CharField(max_length=200, blank=True)
     location_lat = models.FloatField(null=True, blank=True)
     location_lng = models.FloatField(null=True, blank=True)
@@ -59,7 +56,6 @@ class Post(TimestampedModel, SoftDeleteModel):
 
     class Meta:
         db_table = 'feed_post'
-        unique_together = [('author', 'original_post')]
         indexes = [
             models.Index(fields=['author', '-created_at']),
             models.Index(fields=['post_type']),
@@ -73,6 +69,44 @@ class Post(TimestampedModel, SoftDeleteModel):
                 name='unique_post_client_request',
             ),
         ]
+
+
+class PostRepost(TimestampedModel, SoftDeleteModel):
+    """One log row per (profile, post) pair of who reposted a post.
+
+    Reposts are properties of the post, never separate posts: the ribbon the
+    UI renders ("You reposted" / reposter avatars) and the ``repost_count``
+    are both derived from this table. Reposting a post that was itself
+    reposted always resolves to the same root ``post`` id, so there is no
+    chain to conflict with, and the original post keeps its own view counts
+    and interaction logs because nothing new was ever created.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    profile = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='post_reposts',
+    )
+    # related_name='reposts' deliberately keeps the old accessor so aggregate
+    # queries like ``Count('reposts')`` on Post keep working against the log.
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reposts')
+    # Optional quoted commentary kept from the previous repost UX; unused by
+    # the plain ribbon but accepted so old clients don't 400.
+    quote_body = models.TextField(blank=True)
+
+    class Meta:
+        db_table = 'feed_post_repost'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['profile', 'post'], name='unique_post_repost_per_profile',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['post', '-created_at']),
+            models.Index(fields=['profile', '-created_at']),
+        ]
+
+    def __str__(self):
+        return f'@{self.profile.username} reposted {self.post_id}'
 
 class FeedPostManager(models.Manager):
     def get_queryset(self):

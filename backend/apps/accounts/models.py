@@ -75,6 +75,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     google_id = models.CharField(max_length=100, blank=True)
     apple_id = models.CharField(max_length=100, blank=True)
     preferences = models.JSONField(default=dict, blank=True)
+    # Account activation: the user clicks an emailed activation link before
+    # they may log in / set up a profile. Set True once the link is validated.
+    activation_verified = models.BooleanField(default=False)
+    activation_sent_at = models.DateTimeField(null=True, blank=True)
 
     # Parental co-owner (mandatory for users aged 16–17 per platform policy).
     guardian_name = models.CharField(max_length=120, blank=True)

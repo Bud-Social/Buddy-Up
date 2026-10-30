@@ -1,6 +1,7 @@
 from django.db import models
 from common.models import TimestampedModel
 from common.age_gating import CONTENT_RATING_CHOICES, CONTENT_RATING_DEFAULT
+from apps.accounts.crypto import EncryptedCharField
 
 
 class Profile(TimestampedModel):
@@ -79,6 +80,13 @@ class Profile(TimestampedModel):
     workout_schedule = models.JSONField(null=True, blank=True)
     saved_payment_methods = models.JSONField(default=list, blank=True)
     last_seen = models.DateTimeField(null=True, blank=True)
+    # The DOB the user entered at registration, Fernet-encrypted at rest via
+    # EncryptedCharField (ISO yyyy-mm-dd in the ciphertext). One-way
+    # ``User.dob_hash`` stays the age gate; this reversible copy exists only so
+    # "find a buddy" can pre-fill the date instead of asking for it a third
+    # time. Populated at registration / social sign-up; readable by the owner
+    # through the buddy-search profile serializer and never shown publicly.
+    date_of_birth = EncryptedCharField(max_length=255, blank=True)
 
     class Meta:
         db_table = 'profiles_profile'
