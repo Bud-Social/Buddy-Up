@@ -81,15 +81,16 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
         accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
         user: state.user,
         profile: state.profile,
       }),
-      onRehydrateStorage: () => () => {
-        // No tokens exist at rehydration by design; App's AuthInitializer
-        // mints an access token from the httpOnly cookie right after boot.
-        // (Legacy sessions that still have a refreshToken in storage are
-        // handled transparently by client.ts's refresh — it sends the body
-        // token once, the backend rotates it and sets the cookie.)
+      onRehydrateStorage: (state) => {
+        // Feed the persisted access token into wsManager so live sockets
+        // re-handshake with the new credential immediately on rehydration.
+        if (state?.accessToken) {
+          wsManager.setAccessToken(state.accessToken);
+        }
       },
     }
   )
