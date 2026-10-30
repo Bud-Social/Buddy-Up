@@ -45,7 +45,12 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
         }
       } catch (e) {
         // A definitive 4xx means the cookie/session is really gone.
-        if (isAuthRefreshRejection(e)) logout();
+        if (isAuthRefreshRejection(e)) {
+          // Don't logout on transient refresh failures — just stop loading.
+          // The user can still navigate to /login manually if needed.
+          setLoading(false);
+          return;
+        }
       } finally {
         setLoading(false);
       }

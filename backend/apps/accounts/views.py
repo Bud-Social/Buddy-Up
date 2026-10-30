@@ -828,7 +828,7 @@ class VerifyLoginOTPView(views.APIView):
 
         user = _verify_temp_token(data['login_token'], 'login')
         if not user:
-            logger.warning(f"[VerifyLoginOTP] Invalid or expired login token")
+            logger.warning("[VerifyLoginOTP] Invalid or expired login token")
             return Response({
                 'success': False, 'data': None,
                 'message': 'Invalid or expired login token.',
