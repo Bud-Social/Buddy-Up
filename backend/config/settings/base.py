@@ -425,25 +425,17 @@ RELEASE_VERSION = os.environ.get('RELEASE_VERSION', 'development')
 RELEASE_COMMIT = os.environ.get('RELEASE_COMMIT', os.environ.get('RAILWAY_GIT_COMMIT_SHA', 'unknown'))
 METRICS_TOKEN = os.environ.get('METRICS_TOKEN', '')
 
-# Email (SMTP)
-# Transactional email. SendGrid is wired automatically when SENDGRID_API_KEY
-# is set (SMTP relay: user 'apikey', key as password); otherwise generic SMTP.
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
-if not os.environ.get('EMAIL_BACKEND'):
-    if SENDGRID_API_KEY:
-        os.environ.setdefault('EMAIL_HOST', 'smtp.sendgrid.net')
-        os.environ.setdefault('EMAIL_HOST_USER', 'apikey')
-        os.environ.setdefault('EMAIL_HOST_PASSWORD', SENDGRID_API_KEY)
-        os.environ.setdefault('EMAIL_PORT', '587')
-        os.environ.setdefault('EMAIL_USE_TLS', 'True')
-
+# Email (Zoho SMTP only — SendGrid support has been removed)
 EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.zoho.com')
 EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'support@buddyupfit.com')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+# Fallback password tried automatically if the primary password fails
+# (e.g. after rotation or expiry). Keeps OTP delivery resilient.
+EMAIL_HOST_PASSWORD_FALLBACK = os.environ.get('EMAIL_HOST_PASSWORD_FALLBACK', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@buddyup.app')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'support@buddyupfit.com')
 
 # Africa's Talking SMS (used only when both credentials are configured).
 AFRICASTALKING_USERNAME = os.environ.get('AFRICASTALKING_USERNAME', '')

@@ -1,5 +1,5 @@
 from celery import shared_task
-from django.core.mail import send_mail
+from django.core.mail import send_mail, get_connection
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
@@ -7,8 +7,52 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
 import logging
+import smtplib
 
 logger = logging.getLogger(__name__)
+
+
+def _send_mail_with_fallback(subject, message, html_message, from_email, recipient_list):
+    """Send email using primary SMTP password; fall back to EMAIL_HOST_PASSWORD_FALLBACK
+    on authentication errors (e.g. after password rotation)."""
+    fallback_pw = getattr(settings, 'EMAIL_HOST_PASSWORD_FALLBACK', '')
+    if not fallback_pw:
+        # No fallback configured — just send normally.
+        send_mail(
+            subject=subject, message=message, html_message=html_message,
+            from_email=from_email, recipient_list=recipient_list,
+            fail_silently=False,
+        )
+        return
+
+    conn = get_connection()
+    try:
+        conn.open()
+        send_mail(
+            subject=subject, message=message, html_message=html_message,
+            from_email=from_email, recipient_list=recipient_list,
+            connection=conn,
+        )
+        conn.close()
+    except (smtplib.SMTPAuthenticationError, smtplib.SMTPNotSupportedError):
+        logger.warning(
+            'Primary SMTP password failed for %s, retrying with fallback password',
+            from_email,
+        )
+        conn.close()
+        # Re-open with the fallback password — Django's email backend
+        # accepts password as a constructor kwarg via get_connection().
+        conn = get_connection(password=fallback_pw)
+        conn.open()
+        send_mail(
+            subject=subject, message=message, html_message=html_message,
+            from_email=from_email, recipient_list=recipient_list,
+            connection=conn,
+        )
+        conn.close()
+    except Exception:
+        conn.close()
+        raise
 
 
 def sms_delivery_configured() -> bool:
@@ -50,13 +94,12 @@ def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
     plain = strip_tags(html)
 
     try:
-        send_mail(
+        _send_mail_with_fallback(
             subject=subject,
             message=plain,
             html_message=html,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
-            fail_silently=False,
         )
         logger.info('OTP email sent user=%s purpose=%s', user.id, purpose)
         # Developers running locally without a real mail backend must still
