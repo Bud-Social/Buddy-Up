@@ -110,8 +110,15 @@ export default function Register() {
     try {
       const res = await authApi.googleLogin(googleToken, true);
       const data = res.data as typeof res.data & { require_age_setup?: boolean; onboarding_required?: boolean };
-      setTokens(data.access, data.refresh);
-      setUser(data.user, data.profile);
+      // If this Google account already has a password set, redirect to login
+      // where the password + OTP flow will be handled.
+      if (data.require_password) {
+        navigate('/login', { replace: true });
+        return;
+      }
+      const tokens = data as unknown as { access: string; refresh: string; user: import('@/types').User; profile: import('@/types').Profile };
+      setTokens(tokens.access, tokens.refresh);
+      setUser(tokens.user, tokens.profile);
       if (data.require_age_setup) navigate('/onboarding?step=age');
       else if (data.onboarding_required) navigate('/onboarding');
       else navigate('/feed');

@@ -7,8 +7,6 @@ AI_API_KEY, and CORS must never carry credentials while origins stay open.
 
 from unittest import mock
 
-from fastapi.testclient import TestClient
-
 import app.main as m
 
 

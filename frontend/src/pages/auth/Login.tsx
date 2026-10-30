@@ -240,8 +240,9 @@ export default function Login() {
         setError('');
         return;
       }
-      setTokens(res.data.access, res.data.refresh);
-      setUser(res.data.user, res.data.profile);
+      const tokens = res.data as unknown as { access: string; refresh: string; user: import('@/types').User; profile: import('@/types').Profile };
+      setTokens(tokens.access, tokens.refresh);
+      setUser(tokens.user, tokens.profile);
       // New social accounts must complete age verification before mature content.
       if (data.require_age_setup) {
         navigate('/onboarding?step=age');
