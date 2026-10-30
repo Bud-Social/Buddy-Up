@@ -817,17 +817,25 @@ class VerifyLoginOTPView(views.APIView):
     throttle_scope = 'otp'
 
     def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+
         serializer = LoginOTPSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
+        logger.info(f"[VerifyLoginOTP] Serializer validated, password={bool(data.get('password'))}, otp={bool(data.get('otp'))}")
+
         user = _verify_temp_token(data['login_token'], 'login')
         if not user:
+            logger.warning(f"[VerifyLoginOTP] Invalid or expired login token")
             return Response({
                 'success': False, 'data': None,
                 'message': 'Invalid or expired login token.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
+
+        logger.info(f"[VerifyLoginOTP] Token verified for user {user.id} ({user.email})")
 
         if _is_locked_out(user):
             return _locked_out_response(user)
@@ -866,11 +874,16 @@ class VerifyLoginOTPView(views.APIView):
             )
             send_otp_email.delay(str(user.id), otp, 'login')
             _log_event(user, 'login_password_verified', request, metadata={'method': 'social'})
+            # Issue a FRESH login_token for the OTP step. Reusing the same
+            # token that was already validated once at line 824 can cause
+            # subtle auth-state issues when the client sends it again with
+            # the OTP code. A new token guarantees a clean verification path.
+            new_login_token = _generate_temp_token(user, 'login', expiry_minutes=5)
             return Response({
                 'success': True,
                 'data': {
                     'require_otp': True,
-                    'login_token': data['login_token'],
+                    'login_token': new_login_token,
                     'masked_email': f'{user.email[:3]}***@{user.email.split("@")[1]}' if '@' in user.email else user.email,
                 },
                 'message': 'Password verified. OTP sent to your email.',
@@ -907,6 +920,7 @@ class VerifyLoginOTPView(views.APIView):
                 user=user, channel='email', is_used=False
             ).latest('created_at')
         except OTPToken.DoesNotExist:
+            logger.warning(f"[VerifyLoginOTP] No pending OTP for user {user.id}")
             return Response({
                 'success': False, 'data': None,
                 'message': 'No pending OTP. Please login again.',
@@ -914,6 +928,7 @@ class VerifyLoginOTPView(views.APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         if not otp_token.is_valid():
+            logger.warning(f"[VerifyLoginOTP] OTP expired for user {user.id}")
             return Response({
                 'success': False, 'data': None,
                 'message': 'OTP has expired. Please login again.',
@@ -938,6 +953,7 @@ class VerifyLoginOTPView(views.APIView):
 
         otp_token.is_used = True
         otp_token.save(update_fields=['is_used'])
+        logger.info(f"[VerifyLoginOTP] OTP verified for user {user.id}")
 
         if user.totp_enabled:
             temp_token = _generate_temp_token(user, 'totp_challenge', expiry_minutes=5)
