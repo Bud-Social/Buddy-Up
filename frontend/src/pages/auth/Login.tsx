@@ -28,7 +28,11 @@ export default function Login() {
    * /login (e.g. guardian invite acceptance). Only internal paths allowed. */
   const nextUrl = (() => {
     const next = searchParams.get('next');
-    return next && next.startsWith('/') && !next.startsWith('//') ? next : '/feed';
+    // Never redirect to root/landing page after login — always go to feed
+    if (next && next.startsWith('/') && !next.startsWith('//') && next !== '/') {
+      return next;
+    }
+    return '/feed';
   })();
   const goNext = (opts?: NavigateOptions) => navigate(nextUrl, opts);
 
