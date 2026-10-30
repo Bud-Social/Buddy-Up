@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Link, NavigateOptions, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -47,6 +47,7 @@ export default function Login() {
   // password set, so they must confirm it before receiving the OTP.
   const [socialLoginToken, setSocialLoginToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState('');
   const [reactivatePrompt, setReactivatePrompt] = useState<ReactivatePrompt | null>(null);
   /** Google credential captured from the sign-in button — held (not exchanged)
@@ -57,6 +58,7 @@ export default function Login() {
   const processLoginResponse = (res: Awaited<ReturnType<typeof authApi.login>>) => {
     setLoginToken(res.data.login_token);
     setMaskedEmail(res.data.masked_email);
+    setResendCooldown(30);
     setStep('otp');
   };
 
@@ -173,6 +175,7 @@ export default function Login() {
       const data = res.data as { require_otp?: boolean; login_token?: string };
       if (data.require_otp && data.login_token) {
         setLoginToken(data.login_token);
+        setResendCooldown(30);
         setStep('otp');
       }
     } catch (err: unknown) {
@@ -191,11 +194,26 @@ export default function Login() {
       const data = res.data as { require_otp?: boolean; login_token?: string };
       if (data.require_otp && data.login_token) {
         setLoginToken(data.login_token);
+        setResendCooldown(30);
         setStep('otp');
       }
     } catch (err: unknown) {
       const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
       setError(data?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setError('');
+    setIsLoading(true);
+    try {
+      await authApi.verifyLoginOtp(loginToken);
+      setResendCooldown(30);
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      setError(data?.message || 'Failed to resend OTP.');
     } finally {
       setIsLoading(false);
     }
@@ -227,6 +245,7 @@ export default function Login() {
       if (data.require_otp && data.login_token) {
         setLoginToken(data.login_token);
         setMaskedEmail(data.masked_email || '');
+        setResendCooldown(30);
         setStep('otp');
         setError('');
         return;
@@ -263,6 +282,15 @@ export default function Login() {
       setIsLoading(false);
     }
   }, [setTokens, setUser, navigate, goNext]);
+
+  // Countdown timer for OTP resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev > 0 ? prev - 1 : 0);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-buddy-black">
@@ -386,8 +414,24 @@ export default function Login() {
               </Button>
             </form>
 
+            <div className="mt-6 text-center">
+              {resendCooldown > 0 ? (
+                <p className="text-sm text-buddy-text-secondary">
+                  Resend in {Math.floor(resendCooldown / 60)}:{String(resendCooldown % 60).padStart(2, '0')}
+                </p>
+              ) : (
+                <button
+                  onClick={handleResendOtp}
+                  disabled={isLoading}
+                  className="text-sm text-buddy-green hover:text-buddy-green-deep disabled:opacity-50"
+                >
+                  {isLoading ? 'Resending…' : 'Resend OTP'}
+                </button>
+              )}
+            </div>
+
             <div className="mt-4 text-center">
-              <button onClick={() => { setStep('credentials'); setError(''); }} className="text-sm text-buddy-text-secondary hover:text-buddy-green">
+              <button onClick={() => { setStep('credentials'); setError(''); setResendCooldown(0); }} className="text-sm text-buddy-text-secondary hover:text-buddy-green">
                 Back to Login
               </button>
             </div>
