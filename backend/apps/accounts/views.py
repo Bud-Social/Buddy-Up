@@ -835,6 +835,69 @@ class VerifyLoginOTPView(views.APIView):
         if blocked is not None:
             return blocked
 
+        # ── Password-verification phase ──────────────────────────────────
+        # Client sent a password (Google social login for a password-setup
+        # user, or a password step in the login flow). Verify it, then issue
+        # an OTP so the next step is always email confirmation.
+        if data.get('password'):
+            if not user.has_usable_password() or not user.check_password(data['password']):
+                _register_failed_login(user)
+                _log_event(user, 'login_failed', request, metadata={'reason': 'bad_social_password'})
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Invalid password.',
+                    'errors': {'password': ['Invalid password.']},
+                    'pagination': None,
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+            _clear_failed_logins(user)
+
+            # Password correct — send the OTP and tell the client to collect it.
+            otp = _generate_otp()
+            OTPToken.objects.create(
+                user=user,
+                code=otp,
+                channel='email',
+                expires_at=timezone.now() + timedelta(minutes=10),
+            )
+            send_otp_email.delay(str(user.id), otp, 'login')
+            _log_event(user, 'login_password_verified', request, metadata={'method': 'social'})
+            return Response({
+                'success': True,
+                'data': {
+                    'require_otp': True,
+                    'login_token': data['login_token'],
+                    'masked_email': f'{user.email[:3]}***@{user.email.split("@")[1]}' if '@' in user.email else user.email,
+                },
+                'message': 'Password verified. OTP sent to your email.',
+                'errors': None, 'pagination': None,
+            })
+
+        # ── Confirm-with-OTP phase ────────────────────────────────────────
+        # Client clicked "Confirm with OTP" (or arrived here with neither
+        # password nor OTP). Just fire the OTP and let the client verify it.
+        if not data.get('otp'):
+            otp = _generate_otp()
+            OTPToken.objects.create(
+                user=user,
+                code=otp,
+                channel='email',
+                expires_at=timezone.now() + timedelta(minutes=10),
+            )
+            send_otp_email.delay(str(user.id), otp, 'login')
+            _log_event(user, 'login_otp_requested', request, metadata={'method': 'social'})
+            return Response({
+                'success': True,
+                'data': {
+                    'require_otp': True,
+                    'login_token': data['login_token'],
+                    'masked_email': f'{user.email[:3]}***@{user.email.split("@")[1]}' if '@' in user.email else user.email,
+                },
+                'message': 'OTP sent to your email.',
+                'errors': None, 'pagination': None,
+            })
+
+        # ── OTP-verification phase (existing logic) ──────────────────────
         try:
             otp_token = OTPToken.objects.filter(
                 user=user, channel='email', is_used=False
@@ -853,7 +916,7 @@ class VerifyLoginOTPView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if otp_token.code != data['otp']:
+        if otp_token.code != data.get('otp', ''):
             otp_token.attempts += 1
             otp_token.save(update_fields=['attempts'])
             if otp_token.attempts >= 3:
@@ -1322,6 +1385,26 @@ def _finalize_social_login(user, method, request):
             'require_totp': True,
             'temp_token': temp_token,
             'message': 'Enter your authenticator code.',
+        }, True)
+
+    # Users who already have a password set (via password login) must prove
+    # identity through the same password + OTP flow when entering via social
+    # sign-in. This prevents Google's assertion alone from minting a session
+    # for an account that was secured with a password.
+    if user.has_usable_password():
+        login_token = _generate_temp_token(user, 'login', expiry_minutes=5)
+        _log_event(
+            user, 'login_social_password_prompt', request,
+            metadata={'method': method},
+        )
+        return ({
+            'require_password': True,
+            'login_token': login_token,
+            'masked_email': (
+                f'{user.email[:3]}***@{user.email.split("@")[1]}'
+                if '@' in user.email else user.email
+            ),
+            'has_password': True,
         }, True)
 
     _clear_failed_logins(user)

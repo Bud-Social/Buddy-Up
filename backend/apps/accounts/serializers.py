@@ -193,8 +193,30 @@ class RegistrationOTPSerializer(serializers.Serializer):
 
 class LoginOTPSerializer(serializers.Serializer):
     login_token = serializers.CharField()
-    otp = serializers.CharField(min_length=6, max_length=6)
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    otp = serializers.CharField(min_length=6, max_length=6, required=False, allow_blank=True)
     remember_me = serializers.BooleanField(default=False)
+
+    def validate(self, attrs):
+        """Exactly one of password or otp must be supplied, or neither
+        when the client explicitly requests to skip the password step
+        via the 'confirm with OTP' path.
+
+        Validation rules:
+          password + otp → error (ambiguous; must be one step at a time)
+          password only  → password-verification phase
+          otp only       → OTP-verification phase
+          neither        → OTP-resend phase (client clicked "Confirm with OTP")
+        """
+        password = (attrs.get('password') or '').strip()
+        otp = (attrs.get('otp') or '').strip()
+        if password and otp:
+            raise serializers.ValidationError(
+                'Provide either a password or an OTP code, not both.'
+            )
+        attrs['password'] = password
+        attrs['otp'] = otp
+        return attrs
 
 
 class TOTPChallengeSerializer(serializers.Serializer):

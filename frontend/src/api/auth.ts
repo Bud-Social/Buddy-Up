@@ -46,6 +46,13 @@ export interface LoginInitResponse {
   masked_email: string;
 }
 
+export interface SocialPasswordChallenge {
+  require_password: boolean;
+  login_token: string;
+  masked_email: string;
+  has_password: boolean;
+}
+
 export interface LoginOTPResponse extends TokenResponse {
   new_device?: boolean;
 }
@@ -108,8 +115,17 @@ export const authApi = {
   login: (data: LoginPayload) =>
     apiClient.post<ApiResponse<LoginInitResponse>>('/auth/login/', data).then((r) => r.data),
 
-  verifyLoginOtp: (login_token: string, otp: string, remember_me?: boolean) =>
-    apiClient.post<ApiResponse<LoginOTPResponse | TOTPChallengeInitResponse>>('/auth/verify-login-otp/', { login_token, otp, remember_me }).then((r) => r.data),
+  verifyLoginOtp: (
+    login_token: string,
+    otp?: string,
+    opts?: { password?: string; remember_me?: boolean },
+  ) =>
+    apiClient
+      .post<ApiResponse<LoginOTPResponse | TOTPChallengeInitResponse>>(
+        '/auth/verify-login-otp/',
+        { login_token, otp, password: opts?.password, remember_me: opts?.remember_me },
+      )
+      .then((r) => r.data),
 
   totpChallenge: (temp_token: string, code: string) =>
     apiClient.post<ApiResponse<TOTPChallengeResponse>>('/auth/totp/challenge/', { temp_token, code }).then((r) => r.data),
@@ -140,7 +156,7 @@ export const authApi = {
   forgotPassword: (email: string) => apiClient.post<ApiResponse<null>>('/auth/forgot-password/', { email }).then((r) => r.data),
   resetPassword: (email: string, token: string, new_password: string) => apiClient.post<ApiResponse<null>>('/auth/reset-password/', { email, token, new_password }).then((r) => r.data),
   googleLogin: (credential: string, dataAccessConsent?: boolean) =>
-    apiClient.post<ApiResponse<TokenResponse>>('/auth/google/', {
+    apiClient.post<ApiResponse<TokenResponse | SocialPasswordChallenge>>('/auth/google/', {
       credential,
       // Explicit data-access consent (set by the GoogleConsentGate modal).
       ...(dataAccessConsent ? { data_access_consent: true } : {}),

@@ -12,7 +12,7 @@ import { GoogleConsentGate } from '@/components/auth/GoogleConsentGate';
 
 const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_CLIENT_ID as string | undefined;
 
-type LoginStep = 'credentials' | 'otp' | 'totp';
+type LoginStep = 'credentials' | 'social_password' | 'otp' | 'totp';
 
 interface ReactivatePrompt {
   hard_deletion_scheduled: string | null;
@@ -43,6 +43,9 @@ export default function Login() {
   const [maskedEmail, setMaskedEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [totpCode, setTotpCode] = useState('');
+  // Social login with password: the user authenticated with Google but has a
+  // password set, so they must confirm it before receiving the OTP.
+  const [socialLoginToken, setSocialLoginToken] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [reactivatePrompt, setReactivatePrompt] = useState<ReactivatePrompt | null>(null);
@@ -113,7 +116,7 @@ export default function Login() {
     setError('');
     setIsLoading(true);
     try {
-      const res = await authApi.verifyLoginOtp(loginToken, otp, rememberMe);
+      const res = await authApi.verifyLoginOtp(loginToken, otp, { remember_me: rememberMe });
       const data = res.data as { require_totp?: boolean; temp_token?: string; access?: string; refresh?: string; user?: import('@/types').User; profile?: import('@/types').Profile };
       if (data.require_totp) {
         setTempToken(data.temp_token || '');
@@ -159,6 +162,45 @@ export default function Login() {
     }
   };
 
+  const handleSocialPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsLoading(true);
+    try {
+      const res = await authApi.verifyLoginOtp(socialLoginToken, undefined, {
+        password: password,
+      });
+      const data = res.data as { require_otp?: boolean; login_token?: string };
+      if (data.require_otp && data.login_token) {
+        setLoginToken(data.login_token);
+        setStep('otp');
+      }
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string; errors?: { password?: string[] } } } })?.response?.data;
+      setError(data?.errors?.password?.[0] || data?.message || 'Invalid password.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSocialConfirmOtp = async () => {
+    setError('');
+    setIsLoading(true);
+    try {
+      const res = await authApi.verifyLoginOtp(socialLoginToken, undefined);
+      const data = res.data as { require_otp?: boolean; login_token?: string };
+      if (data.require_otp && data.login_token) {
+        setLoginToken(data.login_token);
+        setStep('otp');
+      }
+    } catch (err: unknown) {
+      const data = (err as { response?: { data?: { message?: string } } })?.response?.data;
+      setError(data?.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGoogleSuccess = useCallback(async (credential: string) => {
     setError('');
     setIsLoading(true);
@@ -169,6 +211,7 @@ export default function Login() {
         temp_token?: string;
         require_age_setup?: boolean;
         require_otp?: boolean;
+        require_password?: boolean;
         login_token?: string;
         masked_email?: string;
         mfa_enrolment_pending?: boolean;
@@ -185,6 +228,15 @@ export default function Login() {
         setLoginToken(data.login_token);
         setMaskedEmail(data.masked_email || '');
         setStep('otp');
+        setError('');
+        return;
+      }
+      // Google login for a user who has a password set — require password
+      // confirmation (or "confirm with OTP") before issuing an OTP.
+      if (data.require_password && data.login_token) {
+        setSocialLoginToken(data.login_token);
+        setMaskedEmail(data.masked_email || '');
+        setStep('social_password');
         setError('');
         return;
       }
@@ -214,6 +266,54 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-buddy-black">
       <Card className="w-full max-w-md p-8 bg-buddy-surface">
+        {/* Step: Google login for a user with a password set */}
+        {step === 'social_password' && (
+          <>
+            <h1 className="font-display text-2xl font-extrabold text-center mb-2">
+              Confirm Your <span className="text-buddy-green">Password</span>
+            </h1>
+            <p className="text-buddy-text-secondary text-center mb-6">
+              You signed in with Google, but this account also has a password.
+              Enter it to continue, or confirm with the OTP sent to <strong className="text-buddy-text-primary">{maskedEmail}</strong>.
+            </p>
+            {error && (
+              <div className="bg-buddy-red/10 border border-buddy-red/30 text-buddy-red rounded-xl p-3 text-sm mb-4">{error}</div>
+            )}
+            <form onSubmit={handleSocialPasswordSubmit} className="space-y-4">
+              <Input
+                label="Password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+              />
+              <Button type="submit" isLoading={isLoading} className="w-full" size="lg">
+                Confirm Password
+              </Button>
+            </form>
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={handleSocialConfirmOtp}
+                disabled={isLoading}
+                className="text-sm text-buddy-green hover:text-buddy-green-deep disabled:opacity-50"
+              >
+                {isLoading ? 'Sending…' : 'Confirm with OTP instead'}
+              </button>
+            </div>
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => { setStep('credentials'); setError(''); setPassword(''); }}
+                className="text-sm text-buddy-text-secondary hover:text-buddy-green"
+              >
+                Back to Login
+              </button>
+            </div>
+          </>
+        )}
+
         {step === 'credentials' && (
           <>
             <h1 className="font-display text-3xl font-extrabold text-center mb-2">
