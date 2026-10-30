@@ -124,7 +124,7 @@ export default function Login() {
         has_access: !!data.access,
         has_refresh: !!data.refresh,
         user_id: data.user?.id,
-        profile_id: data.profile?.id,
+        profile_user_id: data.profile?.user_id,
         require_totp: data.require_totp,
         has_temp_token: !!data.temp_token,
         full_response_keys: Object.keys(data),
