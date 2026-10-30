@@ -439,7 +439,7 @@ export default function Landing() {
               <Typewriter />
             </span>
           </p>
-          <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-extrabold text-white mb-6 leading-tight">
+          <h1 className="font-display text-5xl sm:text-6xl md:text-7xl font-extrabold text-buddy-text-primary dark:text-white mb-6 leading-tight">
             Find your
             <br />
             <span className="text-buddy-green">fitness family.</span>

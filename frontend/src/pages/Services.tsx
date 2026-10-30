@@ -97,7 +97,7 @@ export default function Services() {
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-buddy-green/5 to-transparent pointer-events-none" />
         <div className="max-w-4xl mx-auto px-6 pt-28 pb-12 text-center relative z-10">
-          <h1 className="font-display text-4xl sm:text-5xl font-extrabold text-white mb-5 leading-tight">
+          <h1 className="font-display text-4xl sm:text-5xl font-extrabold text-buddy-text-primary dark:text-white mb-5 leading-tight">
             Everything your fitness life needs,<br />
             <span className="text-buddy-green">in one place.</span>
           </h1>

@@ -109,7 +109,7 @@ export default function Register() {
     setIsLoading(true);
     try {
       const res = await authApi.googleLogin(googleToken, true);
-      const data = res.data as typeof res.data & { require_age_setup?: boolean; onboarding_required?: boolean };
+      const data = res.data as typeof res.data & { require_age_setup?: boolean; onboarding_required?: boolean; require_password?: boolean };
       // If this Google account already has a password set, redirect to login
       // where the password + OTP flow will be handled.
       if (data.require_password) {
