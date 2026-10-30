@@ -169,6 +169,12 @@ services:
       - DATABASE_URL=postgresql://buddyup:${DB_PASSWORD:-devpassword}@db:5432/buddyup_dev
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-prod}
+      # Email credentials (Zoho SMTP only)
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.zoho.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
     volumes:
       - ./backend:/app
     depends_on:
@@ -194,6 +200,12 @@ services:
       - DATABASE_URL=postgresql://buddyup:${DB_PASSWORD:-devpassword}@db:5432/buddyup_dev
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-prod}
+      # Email credentials (Zoho SMTP only)
+      - EMAIL_HOST=${EMAIL_HOST:-smtp.zoho.com}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
     volumes:
       - ./backend:/app
     depends_on:

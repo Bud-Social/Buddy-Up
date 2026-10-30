@@ -64,12 +64,29 @@ def sms_delivery_configured() -> bool:
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
 def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
-    from .models import User
     import logging
     logger = logging.getLogger(__name__)
+
+    # Log initialisation with env-variable fetch status
+    logger.info(
+        'send_otp_email INIT user_id=%s purpose=%s '
+        'email_host=%s email_port=%s email_user=%s '
+        'has_password=%s has_fallback=%s '
+        'backend=%s',
+        user_id, purpose,
+        getattr(settings, 'EMAIL_HOST', ''),
+        getattr(settings, 'EMAIL_PORT', ''),
+        getattr(settings, 'EMAIL_HOST_USER', ''),
+        bool(getattr(settings, 'EMAIL_HOST_PASSWORD', '')),
+        bool(getattr(settings, 'EMAIL_HOST_PASSWORD_FALLBACK', '')),
+        getattr(settings, 'EMAIL_BACKEND', ''),
+    )
+
+    from .models import User
     try:
         user = User.objects.get(id=user_id)
     except User.DoesNotExist:
+        logger.warning('send_otp_email ABORT - user not found user_id=%s', user_id)
         return
 
     username = user.email.split('@')[0]
@@ -101,7 +118,10 @@ def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[user.email],
         )
-        logger.info('OTP email sent user=%s purpose=%s', user.id, purpose)
+        logger.info(
+            'send_otp_email SUCCESS user=%s purpose=%s to=%s provider=zoho',
+            user.id, purpose, user.email,
+        )
         # Developers running locally without a real mail backend must still
         # be able to complete the flow — surface the code in the worker log.
         if settings.DEBUG and 'console' in settings.EMAIL_BACKEND:
@@ -110,7 +130,10 @@ def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
                 user.id, purpose, otp,
             )
     except Exception as exc:  # noqa: BLE001 — retry transient SMTP/provider errors
-        logger.exception('OTP email delivery failed user=%s purpose=%s', user.id, purpose)
+        logger.exception(
+            'send_otp_email FAILED user=%s purpose=%s to=%s provider=zoho error=%s',
+            user.id, purpose, user.email, str(exc)[:200],
+        )
         raise self.retry(exc=exc)
 
 
