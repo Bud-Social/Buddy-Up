@@ -193,6 +193,14 @@ def _generate_temp_token(user, purpose, expiry_minutes=5):
     return str(token)
 
 
+def _generate_activation_token(user):
+    """Generate a long-lived activation token (24 hours) for email verification."""
+    token = RefreshToken.for_user(user)
+    token['purpose'] = 'activation'
+    token.set_exp(lifetime=timedelta(hours=24))
+    return str(token)
+
+
 def _verify_temp_token(token_str, expected_purpose):
     try:
         token = RefreshToken(token_str)
@@ -457,17 +465,13 @@ class RegisterView(views.APIView):
                 privacy_level='private',
             )
 
-        otp = _generate_otp()
-        OTPToken.objects.create(
-            user=user,
-            code=otp,
-            channel='email',
-            expires_at=timezone.now() + timedelta(minutes=10),
-        )
-        send_otp_email.delay(str(user.id), otp, 'registration')
+        # Send activation link instead of OTP
+        activation_token = _generate_activation_token(user)
+        send_activation_email.delay(str(user.id), activation_token)
 
         _log_event(user, 'registration', request)
 
+        # Return a token that can be used to track registration state
         reg_token = _generate_temp_token(user, 'registration', expiry_minutes=10)
 
         return Response({
@@ -476,9 +480,9 @@ class RegisterView(views.APIView):
                 'registration_token': reg_token,
                 'email': user.email,
                 'user_id': str(user.id),
-                'message': 'Account created. Please verify your email with the OTP sent.',
+                'message': 'Account created. Please check your email to activate your account.',
             },
-            'message': 'Registration successful. Please verify your email.',
+            'message': 'Registration successful. Please check your email to activate your account.',
             'errors': None,
             'pagination': None,
         }, status=status.HTTP_201_CREATED)
@@ -608,6 +612,69 @@ class VerifyRegistrationOTPView(views.APIView):
         }, status=status.HTTP_200_OK)
         _set_refresh_cookie(response, tokens['refresh'])
         return response
+
+
+class ActivateAccountView(views.APIView):
+    """Activate account via email link. Marks email_verified=True and returns
+    a login_token so the user must log in again (password + OTP) before
+    accessing onboarding."""
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ActivationTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token_str = serializer.validated_data['activation_token']
+
+        try:
+            token = RefreshToken(token_str)
+            if token.get('purpose') != 'activation':
+                return Response({
+                    'success': False, 'data': None,
+                    'message': 'Invalid activation token.',
+                    'errors': None, 'pagination': None,
+                }, status=status.HTTP_400_BAD_REQUEST)
+            user = User.objects.get(id=token['user_id'])
+        except Exception:  # noqa: BLE001
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Invalid or expired activation link.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.email_verified:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Email already verified. Please log in.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user.email_verified = True
+        user.save(update_fields=['email_verified'])
+
+        profile = user.profile
+        if profile.verification_status == 'none':
+            profile.verification_status = 'email'
+            profile.save(update_fields=['verification_status'])
+
+        _log_event(user, 'email_activated', request)
+
+        # Issue a login_token so the user must log in again (password + OTP)
+        login_token = _generate_temp_token(user, 'login', expiry_minutes=5)
+        masked_email = f'{user.email[:3]}***@{user.email.split("@")[1]}' if '@' in user.email else user.email
+
+        return Response({
+            'success': True,
+            'data': {
+                'require_otp': True,
+                'login_token': login_token,
+                'masked_email': masked_email,
+                'message': 'Email verified! Please log in to continue.',
+            },
+            'message': 'Email verified! Please log in to continue.',
+            'errors': None,
+            'pagination': None,
+        }, status=status.HTTP_200_OK)
 
 
 class LoginView(views.APIView):
@@ -1320,7 +1387,7 @@ def _provision_social_user(email, provider_field, provider_id, name='', picture=
         user = User.objects.create_user(
             email=email,
             password=None,
-            email_verified=True,
+            email_verified=False,  # Require activation link click for new social users
             **{provider_field: provider_id},
         )
         created = True
@@ -1544,6 +1611,24 @@ class GoogleLoginView(views.APIView):
             user.consent_log = log
             user.save(update_fields=['consent_log'])
 
+        # For newly created users, send activation email instead of direct login
+        if created:
+            activation_token = _generate_activation_token(user)
+            send_activation_email.delay(str(user.id), activation_token)
+            _log_event(user, 'activation_email_sent', request, metadata={'method': 'google'})
+
+            return Response({
+                'success': True,
+                'data': {
+                    'require_activation': True,
+                    'email': user.email,
+                    'message': 'Account created! Please check your email to activate your account.',
+                },
+                'message': 'Account created! Please check your email to activate your account.',
+                'errors': None,
+                'pagination': None,
+            }, status=status.HTTP_201_CREATED)
+
         try:
             data, challenged = _finalize_social_login(user, 'google', request)
         except _StandingBlocked as blocked:
@@ -1631,6 +1716,23 @@ class AppleLoginView(views.APIView):
             )
             if created:
                 _log_event(user, 'registered', request, metadata={'method': 'apple'})
+
+                # For newly created users, send activation email instead of direct login
+                activation_token = _generate_activation_token(user)
+                send_activation_email.delay(str(user.id), activation_token)
+                _log_event(user, 'activation_email_sent', request, metadata={'method': 'apple'})
+
+                return Response({
+                    'success': True,
+                    'data': {
+                        'require_activation': True,
+                        'email': user.email,
+                        'message': 'Account created! Please check your email to activate your account.',
+                    },
+                    'message': 'Account created! Please check your email to activate your account.',
+                    'errors': None,
+                    'pagination': None,
+                }, status=status.HTTP_201_CREATED)
 
             try:
                 data, challenged = _finalize_social_login(user, 'apple', request)

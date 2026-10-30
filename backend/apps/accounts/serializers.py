@@ -191,6 +191,10 @@ class RegistrationOTPSerializer(serializers.Serializer):
     otp = serializers.CharField(min_length=6, max_length=6)
 
 
+class ActivationTokenSerializer(serializers.Serializer):
+    activation_token = serializers.CharField()
+
+
 class LoginOTPSerializer(serializers.Serializer):
     login_token = serializers.CharField()
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)

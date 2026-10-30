@@ -137,6 +137,77 @@ def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
         raise self.retry(exc=exc)
 
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def send_activation_email(self, user_id: str, activation_token: str):
+    """Send account activation link via email."""
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info(
+        'send_activation_email INIT user_id=%s '
+        'email_host=%s email_port=%s email_user=%s '
+        'has_password=%s has_fallback=%s '
+        'backend=%s',
+        user_id,
+        getattr(settings, 'EMAIL_HOST', ''),
+        getattr(settings, 'EMAIL_PORT', ''),
+        getattr(settings, 'EMAIL_HOST_USER', ''),
+        bool(getattr(settings, 'EMAIL_HOST_PASSWORD', '')),
+        bool(getattr(settings, 'EMAIL_HOST_PASSWORD_FALLBACK', '')),
+        getattr(settings, 'EMAIL_BACKEND', ''),
+    )
+
+    from .models import User
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        logger.warning('send_activation_email ABORT - user not found user_id=%s', user_id)
+        return
+
+    username = user.email.split('@')[0]
+    subject = 'Activate your BuddyUp Fit account'
+
+    # Build the activation link
+    frontend_url = getattr(settings, 'PUBLIC_FRONTEND_URL', 'https://buddyup.app').rstrip('/')
+    activation_link = f"{frontend_url}/activate?token={activation_token}"
+
+    logo_url = getattr(settings, 'EMAIL_LOGO_URL', '') or (
+        f"{getattr(settings, 'PUBLIC_FRONTEND_URL', 'https://buddyup.app').rstrip('/')}"
+        "/icons/icon-512.png"
+    )
+
+    html = render_to_string('emails/activation.html', {
+        'username': username,
+        'activation_link': activation_link,
+        'logo_url': logo_url,
+    })
+    plain = strip_tags(html)
+
+    try:
+        _send_mail_with_fallback(
+            subject='Activate your BuddyUp Fit account',
+            message=plain,
+            html_message=html,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+        )
+        logger.info(
+            'send_activation_email SUCCESS user=%s to=%s provider=zoho',
+            user.id, user.email,
+        )
+        if settings.DEBUG and 'console' in settings.EMAIL_BACKEND:
+            logger.warning(
+                'DEV ACTIVATION LINK (console email backend) user=%s link=%s',
+                user.id, activation_link,
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.exception(
+            'send_activation_email FAILED user=%s to=%s provider=zoho error=%s',
+            user.id, user.email, str(exc)[:200],
+        )
+        raise self.retry(exc=exc)
+
+
 @shared_task
 def send_otp_sms(user_id: str, otp: str):
     """Send an OTP through Africa's Talking without exposing it in logs."""

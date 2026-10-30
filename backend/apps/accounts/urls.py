@@ -6,6 +6,7 @@ app_name = 'accounts'
 urlpatterns = [
     path('register/', views.RegisterView.as_view(), name='register'),
     path('verify-registration-otp/', views.VerifyRegistrationOTPView.as_view(), name='verify_registration_otp'),
+    path('activate/', views.ActivateAccountView.as_view(), name='activate_account'),
     path('login/', views.LoginView.as_view(), name='login'),
     path('google/', views.GoogleLoginView.as_view(), name='google_login'),
     path('apple/', views.AppleLoginView.as_view(), name='apple_login'),
