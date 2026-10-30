@@ -9,7 +9,7 @@ import { gymsApi, livesApi, profilesApi, marketplaceApi } from '@/api';
 import type { Gym, GymMembership, Profile } from '@/types';
 import type { GymMembershipException } from '@/types/gym';
 import type { BuddyLive } from '@/types/live';
-import type { GymSchedulePost, GymReview } from '@/types/gym';
+import type { GymRoutinePost, GymReview } from '@/types/gym';
 import { GymDiscoursePost } from '@/components/features/gyms/GymDiscoursePost';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { ArtifactIcon } from '@/components/ui/ArtifactIcon';
@@ -30,7 +30,7 @@ export default function GymDetail() {
   const [liveSubmitting, setLiveSubmitting] = useState(false);
 
   // New states
-  const [schedulePosts, setSchedulePosts] = useState<GymSchedulePost[]>([]);
+  const [routinePosts, setSchedulePosts] = useState<GymRoutinePost[]>([]);
   const [reviews, setReviews] = useState<GymReview[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   
@@ -231,7 +231,7 @@ export default function GymDetail() {
         max_slots: parseInt(scheduleMaxSlots) || 0,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
-      setSchedulePosts([res.data, ...schedulePosts]);
+      setSchedulePosts([res.data, ...routinePosts]);
       setShowScheduleModal(false);
       setScheduleTitle('');
       setScheduleContent('');
@@ -376,11 +376,11 @@ export default function GymDetail() {
               </Button>
             )}
             
-            {schedulePosts.length === 0 ? (
+            {routinePosts.length === 0 ? (
               <div className="text-center py-12 text-buddy-text-secondary text-sm">No schedule updates posted yet.</div>
             ) : (
               <div className="space-y-3">
-                {schedulePosts.map((post) => (
+                {routinePosts.map((post) => (
                   <Card key={post.id} className="p-4 space-y-3">
                     <div className="flex items-center gap-2">
                       <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name} size="sm" />
@@ -420,7 +420,7 @@ export default function GymDetail() {
                         onClick={() => {
                           if (!slug || post.is_enrolled) return;
                           gymsApi.enrollScheduleSlot(slug, post.id).then(() => {
-                            setSchedulePosts(schedulePosts.map(p => p.id === post.id ? { ...p, is_enrolled: true, enrollment_count: (p.enrollment_count || 0) + 1 } : p));
+                            setSchedulePosts(routinePosts.map(p => p.id === post.id ? { ...p, is_enrolled: true, enrollment_count: (p.enrollment_count || 0) + 1 } : p));
                           }).catch((e: any) => alert(e?.response?.data?.message || 'Failed to enroll'));
                         }}
                       >

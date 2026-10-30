@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from common.utils import hash_dob
 from apps.accounts.models import User
 from apps.profiles.models import Profile
-from .models import Gym, GymCategory, GymMembership, JoinRequest, GymInvite, GymSchedulePost, GymReview, ScheduleSlotEnrollment
+from .models import Gym, GymCategory, GymMembership, JoinRequest, GymInvite, GymRoutinePost, GymReview, RoutineSlotEnrollment
 
 
 class GymCrudTests(TestCase):
@@ -274,7 +274,7 @@ class GymInviteTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
-class GymSchedulePostTests(TestCase):
+class GymRoutinePostTests(TestCase):
     def setUp(self):
         self.client = APIClient()
         self.user = User.objects.create_user(email='owner@test.com', password='TestPass123!')
@@ -290,7 +290,7 @@ class GymSchedulePostTests(TestCase):
         refresh = RefreshToken.for_user(self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
 
-    def test_create_schedule_post(self):
+    def test_create_routine_post(self):
         response = self.client.post('/api/v1/gyms/schedulegym/schedule-posts/', {
             'title': 'Morning Yoga',
             'activity_type': 'yoga',
@@ -299,10 +299,10 @@ class GymSchedulePostTests(TestCase):
             'end_time': (timezone.now() + timedelta(days=1, hours=1)).isoformat(),
         }, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(GymSchedulePost.objects.filter(gym=self.gym, title='Morning Yoga').exists())
+        self.assertTrue(GymRoutinePost.objects.filter(gym=self.gym, title='Morning Yoga').exists())
 
-    def test_list_schedule_posts(self):
-        GymSchedulePost.objects.create(
+    def test_list_routine_posts(self):
+        GymRoutinePost.objects.create(
             gym=self.gym, author=self.profile, title='Test Class',
             activity_type='yoga', location_mode='in_house',
         )
@@ -310,8 +310,8 @@ class GymSchedulePostTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(len(response.data['data']) >= 1)
 
-    def test_update_schedule_post(self):
-        post = GymSchedulePost.objects.create(
+    def test_update_routine_post(self):
+        post = GymRoutinePost.objects.create(
             gym=self.gym, author=self.profile, title='Original',
             activity_type='yoga', location_mode='in_house',
         )
@@ -320,26 +320,26 @@ class GymSchedulePostTests(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['data']['title'], 'Updated Title')
 
-    def test_delete_schedule_post(self):
-        post = GymSchedulePost.objects.create(
+    def test_delete_routine_post(self):
+        post = GymRoutinePost.objects.create(
             gym=self.gym, author=self.profile, title='To Delete',
             activity_type='yoga', location_mode='in_house',
         )
         response = self.client.delete(f'/api/v1/gyms/schedulegym/schedule-posts/{post.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertFalse(GymSchedulePost.objects.filter(id=post.id).exists())
+        self.assertFalse(GymRoutinePost.objects.filter(id=post.id).exists())
 
-    def test_enroll_in_schedule_post(self):
-        post = GymSchedulePost.objects.create(
+    def test_enroll_in_routine_post(self):
+        post = GymRoutinePost.objects.create(
             gym=self.gym, author=self.profile, title='Enroll Class',
             activity_type='yoga', location_mode='in_house', max_slots=10,
         )
         response = self.client.post(f'/api/v1/gyms/schedulegym/schedule-posts/{post.id}/enroll/', format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertTrue(ScheduleSlotEnrollment.objects.filter(schedule_post=post, member=self.profile).exists())
+        self.assertTrue(RoutineSlotEnrollment.objects.filter(routine_post=post, member=self.profile).exists())
 
-    def test_unenroll_from_schedule_post(self):
-        post = GymSchedulePost.objects.create(
+    def test_unenroll_from_routine_post(self):
+        post = GymRoutinePost.objects.create(
             gym=self.gym, author=self.profile, title='Unenroll Class',
             activity_type='yoga', location_mode='in_house',
         )
@@ -469,7 +469,7 @@ class GymDiscoveryFilterTests(TestCase):
             name='Cloud Strength Club', handle='cloud-strength', category='fitness',
             access_type='public',
         )
-        GymSchedulePost.objects.create(
+        GymRoutinePost.objects.create(
             gym=self.virtual, author=self.profile, title='Online HIIT',
             activity_type='hiit', location_mode='online',
         )
@@ -482,7 +482,7 @@ class GymDiscoveryFilterTests(TestCase):
             gym=self.hybrid, name='Westlands branch', city='Nairobi', country='Kenya',
             latitude='-1.263400', longitude='36.802800', is_active=True,
         )
-        GymSchedulePost.objects.create(
+        GymRoutinePost.objects.create(
             gym=self.hybrid, author=self.profile, title='Hybrid strength',
             activity_type='strength', location_mode='hybrid',
         )
@@ -816,7 +816,7 @@ class GymAuthorityNotificationTests(TestCase):
         self.assertEqual(self._notes('gym_joined'), [])
 
 
-class GymSchedulePostModerationTests(TestCase):
+class GymRoutinePostModerationTests(TestCase):
     """Who may delete a schedule post somebody else wrote.
 
     PATCH has always let owner / co-owner / trainer / moderator edit anyone's
@@ -862,7 +862,7 @@ class GymSchedulePostModerationTests(TestCase):
         return user
 
     def _post(self, author=None):
-        return GymSchedulePost.objects.create(
+        return GymRoutinePost.objects.create(
             gym=self.gym, author=author or self.plain, title='Someone elses class',
             activity_type='yoga', location_mode='in_house',
         )
@@ -874,7 +874,7 @@ class GymSchedulePostModerationTests(TestCase):
         self._auth('schedmod')
         post = self._post()
         self.assertEqual(self._delete(post).status_code, status.HTTP_200_OK)
-        self.assertFalse(GymSchedulePost.objects.filter(id=post.id).exists())
+        self.assertFalse(GymRoutinePost.objects.filter(id=post.id).exists())
 
     def test_owner_and_co_owner_can_delete_someone_elses_post(self):
         for username in ('schedowner', 'schedcoowner'):
@@ -890,7 +890,7 @@ class GymSchedulePostModerationTests(TestCase):
         # the lookup never resolves. Answering 403 would confirm that the post
         # exists to someone with no business knowing either way.
         self.assertEqual(self._delete(post).status_code, status.HTTP_404_NOT_FOUND)
-        self.assertTrue(GymSchedulePost.objects.filter(id=post.id).exists())
+        self.assertTrue(GymRoutinePost.objects.filter(id=post.id).exists())
 
     def test_an_author_can_delete_their_own_post(self):
         self._auth('author')
@@ -911,9 +911,9 @@ class GymSchedulePostModerationTests(TestCase):
     def test_gym_authority_does_not_reach_another_gyms_post(self):
         other = Gym.objects.create(
             name='Other', handle='othergym', category='fitness', access_type='public')
-        GymSchedulePost.objects.create(
+        GymRoutinePost.objects.create(
             gym=other, author=self.plain, title='Elsewhere',
             activity_type='yoga', location_mode='in_house')
         self._auth('schedowner')
-        response = self.client.delete(f'{self.URL}{GymSchedulePost.objects.get(gym=other).id}/')
+        response = self.client.delete(f'{self.URL}{GymRoutinePost.objects.get(gym=other).id}/')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

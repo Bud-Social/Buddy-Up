@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { sessionsApi, type BookingSession } from '@/api/sessions';
 import { gymsApi } from '@/api/gyms';
 import { marketplaceApi, type MealPlan, type TrainingProgrammeMP } from '@/api/marketplace';
-import type { Gym, GymSchedulePost } from '@/types';
+import type { Gym, GymRoutinePost } from '@/types';
 
 /**
  * Everything with a date, in one place.
@@ -128,7 +128,7 @@ export default function Schedule() {
           const enrollments = (result.value.data || []) as Enrollment[];
           for (const enrollment of enrollments) {
             const post = enrollment.schedule_post_data as
-              | GymSchedulePost
+              | GymRoutinePost
               | undefined;
             const when = post?.start_time ?? null;
             if (when && new Date(when).getTime() < cutoff) continue;

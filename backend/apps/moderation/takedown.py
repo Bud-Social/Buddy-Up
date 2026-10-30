@@ -338,16 +338,16 @@ class GymHandler(ContentHandler):
         return membership.member if membership else None
 
 
-class GymSchedulePostHandler(ContentHandler):
-    content_type = 'gyms.schedule_post'
+class GymRoutinePostHandler(ContentHandler):
+    content_type = 'gyms.routine_post'
     label = 'Gym schedule post'
     # Previously reversible=False: the gym app's own delete hard-deletes the
     # row. Hidden now instead, so a takedown can be lifted. No soft-delete
     # column on this model, so the takedown table is the whole state.
 
     def get_queryset(self):
-        from apps.gyms.models import GymSchedulePost
-        return GymSchedulePost.objects.all()
+        from apps.gyms.models import GymRoutinePost
+        return GymRoutinePost.objects.all()
 
     def get_author(self, obj):
         return obj.author.user
@@ -493,7 +493,7 @@ _HANDLERS = [
     MarketplaceProgrammeHandler(),
     MarketplaceEventHandler(),
     GymHandler(),
-    GymSchedulePostHandler(),
+    GymRoutinePostHandler(),
     CommunityPostHandler(),
     CommunityHandler(),
     BuddyLiveHandler(),

@@ -129,7 +129,7 @@ export interface CityResult {
   description: string;
 }
 
-export interface GymSchedulePost {
+export interface GymRoutinePost {
   id: string;
   gym_id: string;
   author: string;

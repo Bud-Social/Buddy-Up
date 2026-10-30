@@ -24,7 +24,7 @@ from apps.feed.models import (
 )
 from apps.gyms.models import (
     GymCategory, Gym, GymMembership, GymCategoryPricing, JoinRequest,
-    GymInvite, GymSchedulePost, ScheduleSlotEnrollment, GymReview, GymDonation,
+    GymInvite, GymRoutinePost, RoutineSlotEnrollment, GymReview, GymDonation,
 )
 from apps.lives.models import BuddyLive, LiveRSVP, LiveAttendee
 from apps.sessions.models import (
@@ -472,7 +472,7 @@ class Command(BaseCommand):
             if not author_prof:
                 author_prof = self._pick(all_profiles)
             start = self.now + timedelta(days=random.randint(0, 14), hours=random.randint(6, 20))
-            GymSchedulePost.objects.get_or_create(
+            GymRoutinePost.objects.get_or_create(
                 gym=gym, title=f'{self._pick(["Yoga Flow", "HIIT Blast", "Strength Block", "Cardio Burn", "Open Gym"])} #{i}',
                 defaults={
                     'author': author_prof,
@@ -485,23 +485,23 @@ class Command(BaseCommand):
                     'slots_taken': random.randint(0, 10),
                 },
             )
-        self._log('schedule posts', GymSchedulePost.objects.count())
+        self._log('routine posts', GymRoutinePost.objects.count())
 
         # Slot enrollments
-        sched_posts = list(GymSchedulePost.objects.all())
+        sched_posts = list(GymRoutinePost.objects.all())
         for i in range(12):
             if not sched_posts:
                 break
             sp = self._pick(sched_posts)
             member = self._pick(all_profiles)
             try:
-                ScheduleSlotEnrollment.objects.get_or_create(
-                    schedule_post=sp, member=member,
+                RoutineSlotEnrollment.objects.get_or_create(
+                    routine_post=sp, member=member,
                     defaults={'recurrence': 'none', 'is_active': True},
                 )
             except Exception:  # noqa: BLE001
                 pass
-        self._log('slot enrollments', ScheduleSlotEnrollment.objects.count())
+        self._log('routine enrollments', RoutineSlotEnrollment.objects.count())
 
         # Reviews
         for i in range(15):

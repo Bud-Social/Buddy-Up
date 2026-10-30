@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from .models import (
     AttendanceRecord, Gym, GymMembership, GymCategory, GymCategoryPricing,
-    GymOnboardingChecklist, JoinRequest, GymInvite, GymSchedulePost, GymReview,
-    GymDonation, GymMembershipException, ScheduleSlotEnrollment, VenueLocation,
+    GymOnboardingChecklist, JoinRequest, GymInvite, GymRoutinePost, GymReview,
+    GymDonation, GymMembershipException, RoutineSlotEnrollment, VenueLocation,
 )
 
 
@@ -58,7 +58,7 @@ class GymSerializer(serializers.ModelSerializer):
         if has_physical is None:
             has_physical = obj.venues.filter(is_active=True).exists()
         if has_virtual is None:
-            has_virtual = obj.schedule_posts.filter(
+            has_virtual = obj.routine_posts.filter(
                 location_mode__in=['online', 'hybrid'],
             ).exists()
         modes = []
@@ -121,9 +121,9 @@ class GymSerializer(serializers.ModelSerializer):
         ).exists()
 
     def get_active_today(self, obj):
-        from .models import ScheduleSlotEnrollment
-        return ScheduleSlotEnrollment.objects.filter(
-            schedule_post__gym=obj, is_active=True
+        from .models import RoutineSlotEnrollment
+        return RoutineSlotEnrollment.objects.filter(
+            routine_post__gym=obj, is_active=True
         ).values('member').distinct().count()
 
     def get_average_rating(self, obj):
@@ -318,14 +318,14 @@ class HandleCheckSerializer(serializers.Serializer):
         return value.lower()
 
 
-class GymSchedulePostSerializer(serializers.ModelSerializer):
+class GymRoutinePostSerializer(serializers.ModelSerializer):
     author_data = serializers.SerializerMethodField()
 
     is_enrolled = serializers.SerializerMethodField()
     enrollment_count = serializers.IntegerField(source='slots_taken', read_only=True)
 
     class Meta:
-        model = GymSchedulePost
+        model = GymRoutinePost
         fields = ['id', 'gym_id', 'author', 'author_data', 'title', 'content', 
                   'activity_type', 'custom_activity_type', 'location_mode', 
                   'start_time', 'end_time', 'recurrence', 'recurrence_end_date',
@@ -337,8 +337,7 @@ class GymSchedulePostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return False
-        from .models import ScheduleSlotEnrollment
-        return ScheduleSlotEnrollment.objects.filter(schedule_post=obj, member=request.user.profile, is_active=True).exists()
+        return obj.enrollments.filter(profile=request.user.profile, is_active=True, is_deleted=False).exists()
 
     def get_author_data(self, obj):
         return {
@@ -395,15 +394,15 @@ class GymDonationSerializer(serializers.ModelSerializer):
         }
 
 
-class ScheduleSlotEnrollmentSerializer(serializers.ModelSerializer):
+class RoutineSlotEnrollmentSerializer(serializers.ModelSerializer):
     member_data = serializers.SerializerMethodField()
-    schedule_post_data = serializers.SerializerMethodField()
+    routine_post_data = serializers.SerializerMethodField()
 
     class Meta:
-        model = ScheduleSlotEnrollment
-        fields = ['id', 'schedule_post', 'schedule_post_data', 'member_data',
+        model = RoutineSlotEnrollment
+        fields = ['id', 'routine_post', 'routine_post_data', 'member_data',
                   'recurrence', 'recurrence_end_date', 'reminder_minutes', 'is_active', 'created_at']
-        read_only_fields = ['id', 'member_data', 'schedule_post_data', 'created_at']
+        read_only_fields = ['id', 'member_data', 'routine_post_data', 'created_at']
 
     def get_member_data(self, obj):
         return {
@@ -413,8 +412,8 @@ class ScheduleSlotEnrollmentSerializer(serializers.ModelSerializer):
             'avatar_url': obj.member.avatar_url,
         }
 
-    def get_schedule_post_data(self, obj):
-        sp = obj.schedule_post
+    def get_routine_post_data(self, obj):
+        sp = obj.routine_post
         return {
             'id': str(sp.id),
             'title': sp.title,
@@ -503,6 +502,6 @@ class AttendanceRecordSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AttendanceRecord
-        fields = ['id', 'member', 'member_username', 'schedule_post', 'venue', 'status',
+        fields = ['id', 'member', 'member_username', 'routine_post', 'venue', 'status',
                   'checked_in_at', 'checked_out_at', 'source', 'notes', 'created_at']
         read_only_fields = ['id', 'created_at']

@@ -247,10 +247,10 @@ def _resolve_gym(content_id):
     }
 
 
-def _resolve_gym_schedule_post(content_id):
-    from apps.gyms.models import GymSchedulePost
+def _resolve_gym_routine_post(content_id):
+    from apps.gyms.models import GymRoutinePost
 
-    obj = GymSchedulePost.objects.select_related('author', 'gym').filter(pk=content_id).first()
+    obj = GymRoutinePost.objects.select_related('author', 'gym').filter(pk=content_id).first()
     if obj is None:
         return None
     return {
@@ -365,7 +365,7 @@ RESOLVERS = {
     'marketplace.programme': _resolve_programme,
     'marketplace.event': _resolve_event,
     'gym': _resolve_gym,
-    'gyms.schedule_post': _resolve_gym_schedule_post,
+    'gyms.routine_post': _resolve_gym_routine_post,
     'lives.buddy_live': _resolve_live,
     'sessions.booking': _resolve_booking,
     'sessions.trainer_profile': _resolve_trainer_profile,

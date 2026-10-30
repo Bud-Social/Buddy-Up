@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Gym, GymCategory, GymCategoryPricing, GymMembership,
-    JoinRequest, GymInvite, GymSchedulePost, ScheduleSlotEnrollment,
+    JoinRequest, GymInvite, GymRoutinePost, RoutineSlotEnrollment,
     GymReview, GymDonation,
 )
 
@@ -48,17 +48,17 @@ class GymInviteAdmin(admin.ModelAdmin):
     list_select_related = ['gym', 'invited_user', 'invited_by']
 
 
-@admin.register(GymSchedulePost)
-class GymSchedulePostAdmin(admin.ModelAdmin):
+@admin.register(GymRoutinePost)
+class GymRoutinePostAdmin(admin.ModelAdmin):
     list_display = ['title', 'gym', 'author', 'activity_type', 'start_time']
     list_filter = ['activity_type', 'location_mode']
     list_select_related = ['gym', 'author']
 
 
-@admin.register(ScheduleSlotEnrollment)
-class ScheduleSlotEnrollmentAdmin(admin.ModelAdmin):
-    list_display = ['schedule_post', 'member', 'recurrence', 'is_active']
-    list_select_related = ['schedule_post', 'member']
+@admin.register(RoutineSlotEnrollment)
+class RoutineSlotEnrollmentAdmin(admin.ModelAdmin):
+    list_display = ['routine_post', 'member', 'recurrence', 'is_active']
+    list_select_related = ['routine_post', 'member']
 
 
 @admin.register(GymReview)

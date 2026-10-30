@@ -25,11 +25,11 @@ from .serializers import (
     GymCategorySerializer, JoinRequestSerializer, CreateJoinRequestSerializer,
     ApproveRejectSerializer, GymInviteSerializer, CreateInviteSerializer,
     DonationInputSerializer, ReviewReplyInputSerializer, ManageMemberRoleSerializer,
-    HandleCheckSerializer, GymSchedulePostSerializer, GymReviewSerializer, GymDonationSerializer,
+    HandleCheckSerializer, GymRoutinePostSerializer, GymReviewSerializer, GymDonationSerializer,
     GymMembershipExceptionSerializer, CreateMembershipExceptionSerializer, MembershipCheckoutSerializer,
     AttendanceRecordSerializer, GymOnboardingChecklistSerializer, VenueLocationSerializer,
 )
-from .models import GymSchedulePost, GymReview, GymDonation
+from .models import GymRoutinePost, GymReview, GymDonation
 from apps.wallet.utils import deduct_artifacts
 from apps.wallet.serializers import ARTIFACT_VALUES
 from apps.marketplace.models import DiscountCode, DiscountUsage
@@ -122,7 +122,7 @@ class PartnerMetricsView(views.APIView):
             'check_ins_30d': checked_in.count(),
             'unique_attendees_30d': unique_attendees,
             'activation_rate_30d': round(unique_attendees / active_members * 100, 1) if active_members else 0,
-            'scheduled_activities_30d': gym.schedule_posts.filter(start_time__gte=since).count(),
+            'scheduled_activities_30d': gym.routine_posts.filter(start_time__gte=since).count(),
         }})
 
 
@@ -265,7 +265,7 @@ class GymListView(views.APIView):
                 VenueLocation.objects.filter(gym=db_models.OuterRef('pk'), is_active=True)
             ),
             has_virtual=db_models.Exists(
-                GymSchedulePost.objects.filter(
+                GymRoutinePost.objects.filter(
                     gym=db_models.OuterRef('pk'), location_mode__in=['online', 'hybrid'],
                 )
             ),
@@ -1353,16 +1353,16 @@ class InviteActionView(views.APIView):
         })
 
 
-class GymSchedulePostListView(views.APIView):
+class GymRoutinePostListView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, gym_slug):
         gym = get_object_or_404(Gym, handle__iexact=gym_slug)
-        posts = gym.schedule_posts.all().select_related('author')
+        posts = gym.routine_posts.all().select_related('author')
         
         paginator = PageNumberPagination()
         page = paginator.paginate_queryset(posts, request)
-        serializer = GymSchedulePostSerializer(page, many=True)
+        serializer = GymRoutinePostSerializer(page, many=True)
         
         return Response({
             'success': True,
@@ -1383,8 +1383,8 @@ class GymSchedulePostListView(views.APIView):
             role__in=['owner', 'co_owner', 'trainer', 'moderator']
         )
         
-        from .serializers import GymSchedulePostSerializer
-        serializer = GymSchedulePostSerializer(data=request.data)
+        from .serializers import GymRoutinePostSerializer
+        serializer = GymRoutinePostSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         post = serializer.save(gym=gym, author=request.user.profile)
         
@@ -1419,19 +1419,19 @@ class GymSchedulePostListView(views.APIView):
         
         return Response({
             'success': True,
-            'data': GymSchedulePostSerializer(post).data,
+            'data': GymRoutinePostSerializer(post).data,
             'message': 'Schedule post created.',
             'errors': None,
             'pagination': None,
         }, status=status.HTTP_201_CREATED)
 
 
-class GymSchedulePostDetailView(views.APIView):
+class GymRoutinePostDetailView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def patch(self, request, gym_slug, post_id):
         gym = get_object_or_404(Gym, handle__iexact=gym_slug)
-        post = get_object_or_404(GymSchedulePost, id=post_id, gym=gym)
+        post = get_object_or_404(GymRoutinePost, id=post_id, gym=gym)
         get_object_or_404(
             GymMembership, gym=gym, member=request.user.profile,
             role__in=['owner', 'co_owner', 'trainer', 'moderator'],
@@ -1445,14 +1445,14 @@ class GymSchedulePostDetailView(views.APIView):
         post.save(update_fields=[k for k in allowed if k in request.data])
         return Response({
             'success': True,
-            'data': GymSchedulePostSerializer(post, context={'request': request}).data,
+            'data': GymRoutinePostSerializer(post, context={'request': request}).data,
             'message': 'Schedule post updated.',
             'errors': None, 'pagination': None,
         })
 
     def delete(self, request, gym_slug, post_id):
         gym = get_object_or_404(Gym, handle__iexact=gym_slug)
-        post = get_object_or_404(GymSchedulePost, id=post_id, gym=gym)
+        post = get_object_or_404(GymRoutinePost, id=post_id, gym=gym)
         membership = get_object_or_404(
             GymMembership, gym=gym, member=request.user.profile,
             role__in=['owner', 'co_owner', 'trainer', 'moderator'],
@@ -1664,22 +1664,22 @@ class SlotEnrollView(views.APIView):
     def post(self, request, gym_slug, post_id):
         try:
             gym = Gym.objects.get(handle=gym_slug)
-            schedule_post = GymSchedulePost.objects.get(id=post_id, gym=gym)
-        except (Gym.DoesNotExist, GymSchedulePost.DoesNotExist):
+            routine_post = GymRoutinePost.objects.get(id=post_id, gym=gym)
+        except (Gym.DoesNotExist, GymRoutinePost.DoesNotExist):
             return Response({'success': False, 'message': 'Not found.'}, status=404)
 
         profile = request.user.profile
         if not GymMembership.objects.filter(gym=gym, member=profile, subscription_active=True).exists():
             return Response({'success': False, 'message': 'You must be a member to enroll.'}, status=403)
 
-        from .serializers import CreateEnrollmentSerializer, ScheduleSlotEnrollmentSerializer
-        from .models import ScheduleSlotEnrollment
+        from .serializers import CreateEnrollmentSerializer, RoutineSlotEnrollmentSerializer
+        from .models import RoutineSlotEnrollment
         ser = CreateEnrollmentSerializer(data=request.data)
         if not ser.is_valid():
             return Response({'success': False, 'errors': ser.errors}, status=400)
 
-        enrollment, created = ScheduleSlotEnrollment.objects.get_or_create(
-            schedule_post=schedule_post,
+        enrollment, created = RoutineSlotEnrollment.objects.get_or_create(
+            routine_post=routine_post,
             member=profile,
             defaults={**ser.validated_data, 'is_active': True}
         )
@@ -1691,28 +1691,28 @@ class SlotEnrollView(views.APIView):
             enrollment.save()
 
         # Update slots count
-        schedule_post.slots_taken = ScheduleSlotEnrollment.objects.filter(
-            schedule_post=schedule_post, is_active=True
+        routine_post.slots_taken = RoutineSlotEnrollment.objects.filter(
+            routine_post=routine_post, is_active=True
         ).count()
-        schedule_post.save(update_fields=['slots_taken'])
+        routine_post.save(update_fields=['slots_taken'])
 
-        return Response({'success': True, 'data': ScheduleSlotEnrollmentSerializer(enrollment).data}, status=201)
+        return Response({'success': True, 'data': RoutineSlotEnrollmentSerializer(enrollment).data}, status=201)
 
     def delete(self, request, gym_slug, post_id):
         try:
             gym = Gym.objects.get(handle=gym_slug)
-            schedule_post = GymSchedulePost.objects.get(id=post_id, gym=gym)
-            from .models import ScheduleSlotEnrollment
-            enrollment = ScheduleSlotEnrollment.objects.get(
-                schedule_post=schedule_post, member=request.user.profile
+            routine_post = GymRoutinePost.objects.get(id=post_id, gym=gym)
+            from .models import RoutineSlotEnrollment
+            enrollment = RoutineSlotEnrollment.objects.get(
+                routine_post=routine_post, member=request.user.profile
             )
         except Exception:  # noqa: BLE001
             return Response({'success': False, 'message': 'Enrollment not found.'}, status=404)
 
         enrollment.is_active = False
         enrollment.save()
-        schedule_post.slots_taken = max(0, schedule_post.slots_taken - 1)
-        schedule_post.save(update_fields=['slots_taken'])
+        routine_post.slots_taken = max(0, routine_post.slots_taken - 1)
+        routine_post.save(update_fields=['slots_taken'])
         return Response({'success': True, 'message': 'Unenrolled successfully.'})
 
 
@@ -1720,18 +1720,18 @@ class MySlotEnrollmentsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, gym_slug):
-        from .models import ScheduleSlotEnrollment
-        from .serializers import ScheduleSlotEnrollmentSerializer
+        from .models import RoutineSlotEnrollment
+        from .serializers import RoutineSlotEnrollmentSerializer
         try:
             gym = Gym.objects.get(handle=gym_slug)
         except Gym.DoesNotExist:
             return Response({'success': False, 'message': 'Gym not found.'}, status=404)
-        enrollments = ScheduleSlotEnrollment.objects.filter(
+        enrollments = RoutineSlotEnrollment.objects.filter(
             member=request.user.profile,
-            schedule_post__gym=gym,
+            routine_post__gym=gym,
             is_active=True
-        ).select_related('schedule_post')
-        return Response({'success': True, 'data': ScheduleSlotEnrollmentSerializer(enrollments, many=True).data})
+        ).select_related('routine_post')
+        return Response({'success': True, 'data': RoutineSlotEnrollmentSerializer(enrollments, many=True).data})
 
 
 class GymEventsView(views.APIView):

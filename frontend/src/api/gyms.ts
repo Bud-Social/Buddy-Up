@@ -2,7 +2,7 @@ import { apiClient } from './client';
 import type {
   ApiResponse, Gym, GymMembership, GymCategory,
   JoinRequest, GymInvite, CityResult, GymCategoryPricing,
-  GymSchedulePost, GymReview, GymDonation, GymMembershipException, MembershipCheckoutResult,
+  GymRoutinePost, GymReview, GymDonation, GymMembershipException, MembershipCheckoutResult,
   GymPartnerMetrics,
 } from '@/types';
 
@@ -112,18 +112,18 @@ export const gymsApi = {
   respondToInvite: (slug: string, inviteId: string, action: 'accept' | 'decline') =>
     apiClient.post<ApiResponse<GymInvite>>(`/gyms/${slug}/invites/${inviteId}/${action}/`).then((r) => r.data),
 
-  getSchedulePosts: (slug: string, params?: { page?: number }) =>
-    apiClient.get<ApiResponse<GymSchedulePost[]>>(`/gyms/${slug}/schedule-posts/`, { params }).then((r) => r.data),
+  getRoutinePosts: (slug: string, params?: { page?: number }) =>
+    apiClient.get<ApiResponse<GymRoutinePost[]>>(`/gyms/${slug}/routine-posts/`, { params }).then((r) => r.data),
 
-  createSchedulePost: (slug: string, data: { 
+  createRoutinePost: (slug: string, data: { 
     title?: string; content?: string; activity_type: string; custom_activity_type?: string; 
     location_mode: string; start_time?: string; end_time?: string;
     recurrence?: string; recurrence_end_date?: string; recurrence_days?: number[];
     max_slots?: number; timezone?: string;
-  }) => apiClient.post<ApiResponse<GymSchedulePost>>(`/gyms/${slug}/schedule-posts/`, data).then((r) => r.data),
+  }) => apiClient.post<ApiResponse<GymRoutinePost>>(`/gyms/${slug}/routine-posts/`, data).then((r) => r.data),
 
-  enrollScheduleSlot: (slug: string, postId: string) =>
-    apiClient.post<ApiResponse<any>>(`/gyms/${slug}/schedule-posts/${postId}/enroll/`).then((r) => r.data),
+  enrollRoutineSlot: (slug: string, postId: string) =>
+    apiClient.post<ApiResponse<any>>(`/gyms/${slug}/routine-posts/${postId}/enroll/`).then((r) => r.data),
 
   getMyEnrollments: (slug: string) =>
     apiClient.get<ApiResponse<any[]>>(`/gyms/${slug}/my-enrollments/`).then((r) => r.data),

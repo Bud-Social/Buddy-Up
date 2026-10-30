@@ -130,7 +130,7 @@ class AttendanceRecord(TimestampedModel):
     STATUS_CHOICES = [('checked_in', 'Checked In'), ('checked_out', 'Checked Out'), ('absent', 'Absent')]
     member = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='gym_attendance')
     gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='attendance_records')
-    schedule_post = models.ForeignKey('GymSchedulePost', null=True, blank=True, on_delete=models.SET_NULL, related_name='attendance_records')
+    routine_post = models.ForeignKey('GymRoutinePost', null=True, blank=True, on_delete=models.SET_NULL, related_name='attendance_records')
     venue = models.ForeignKey(VenueLocation, null=True, blank=True, on_delete=models.SET_NULL, related_name='attendance_records')
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='checked_in')
     checked_in_at = models.DateTimeField(null=True, blank=True)
@@ -203,7 +203,7 @@ class GymInvite(TimestampedModel):
         return f'{self.invited_by.username} invited {self.invited_user.username} to {self.gym.name}'
 
 
-class GymSchedulePost(TimestampedModel):
+class GymRoutinePost(TimestampedModel):
     ACTIVITY_CHOICES = [
         ('yoga', 'Yoga Class'),
         ('hiit', 'HIIT Session'),
@@ -222,8 +222,8 @@ class GymSchedulePost(TimestampedModel):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='schedule_posts')
-    author = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='gym_schedule_posts')
+    gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='routine_posts')
+    author = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='gym_routine_posts')
     title = models.CharField(max_length=150, blank=True)
     content = models.TextField(max_length=2000, blank=True)
     activity_type = models.CharField(max_length=20, choices=ACTIVITY_CHOICES, default='other')
@@ -240,17 +240,17 @@ class GymSchedulePost(TimestampedModel):
     max_slots = models.IntegerField(default=0)  # 0 = unlimited
     slots_taken = models.IntegerField(default=0)
     timezone = models.CharField(max_length=60, default='UTC')
-    linked_live = models.ForeignKey('lives.BuddyLive', null=True, blank=True, on_delete=models.SET_NULL, related_name='schedule_slots')
+    linked_live = models.ForeignKey('lives.BuddyLive', null=True, blank=True, on_delete=models.SET_NULL, related_name='routine_slots')
 
     class Meta:
-        db_table = 'gyms_schedule_post'
+        db_table = 'gyms_routine_post'
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'Schedule Post in {self.gym.name} by {self.author.username}'
+        return f'Routine Post in {self.gym.name} by {self.author.username}'
 
 
-class ScheduleSlotEnrollment(TimestampedModel):
+class RoutineSlotEnrollment(TimestampedModel):
     RECURRENCE_CHOICES = [
         ('none', 'One-time'),
         ('weekly', 'Weekly'),
@@ -259,20 +259,20 @@ class ScheduleSlotEnrollment(TimestampedModel):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    schedule_post = models.ForeignKey(GymSchedulePost, on_delete=models.CASCADE, related_name='enrollments')
-    member = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='slot_enrollments')
+    routine_post = models.ForeignKey(GymRoutinePost, on_delete=models.CASCADE, related_name='enrollments')
+    member = models.ForeignKey('profiles.Profile', on_delete=models.CASCADE, related_name='routine_enrollments')
     recurrence = models.CharField(max_length=10, choices=RECURRENCE_CHOICES, default='none')
     recurrence_end_date = models.DateField(null=True, blank=True)
     reminder_minutes = models.JSONField(default=list)  # e.g. [30, 15]
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        db_table = 'gyms_slot_enrollment'
-        unique_together = ('schedule_post', 'member')
+        db_table = 'gyms_routine_enrollment'
+        unique_together = ('routine_post', 'member')
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.member.username} enrolled in {self.schedule_post.title}'
+        return f'{self.member.username} enrolled in {self.routine_post.title}'
 
 
 class GymReview(TimestampedModel):

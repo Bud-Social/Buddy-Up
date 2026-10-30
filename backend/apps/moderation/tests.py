@@ -709,15 +709,15 @@ class ContentTakedownTests(ModerationActionEnforcementBase):
         self.assertTrue(gym.is_deleted)
         self.assertIsNotNone(gym.deleted_at)
 
-    def test_gym_schedule_post_takedown(self):
-        from apps.gyms.models import Gym, GymSchedulePost
+    def test_gym_routine_post_takedown(self):
+        from apps.gyms.models import Gym, GymRoutinePost
         gym = Gym.objects.create(name='Schedule Gym', handle='schedgym', category='fitness')
-        slot = GymSchedulePost.objects.create(
+        slot = GymRoutinePost.objects.create(
             gym=gym, author=self.target_profile, title='HIIT', activity_type='hiit',
         )
-        response = self._remove(self._flag('gyms.schedule_post', slot.id))
+        response = self._remove(self._flag('gyms.routine_post', slot.id))
         self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
-        self.assertTrue(GymSchedulePost.objects.filter(id=slot.id).exists())
+        self.assertTrue(GymRoutinePost.objects.filter(id=slot.id).exists())
 
     def test_community_post_takedown(self):
         from apps.messaging.models import CommunityPost, Conversation
@@ -901,20 +901,20 @@ class ModerationReversalTests(ModerationActionEnforcementBase):
         undone". A takedown is now a visibility state with a real deletion step
         behind an appeal window, so every type reverses -- including this one.
         """
-        from apps.gyms.models import Gym, GymSchedulePost
+        from apps.gyms.models import Gym, GymRoutinePost
         gym = Gym.objects.create(name='Gone Gym', handle='gonegym', category='fitness')
-        slot = GymSchedulePost.objects.create(
+        slot = GymRoutinePost.objects.create(
             gym=gym, author=self.target_profile, title='Class', activity_type='hiit',
         )
         flag = ContentFlag.objects.create(
-            content_type='gyms.schedule_post', content_id=str(slot.id),
+            content_type='gyms.routine_post', content_id=str(slot.id),
             flag_reason='toxic', severity='high', source='test',
         )
         self.mod_client.post(
             f'/api/v1/moderation/content-flags/{flag.id}/act/',
             {'action': 'remove'}, format='json',
         )
-        self.assertTrue(GymSchedulePost.objects.filter(id=slot.id).exists())
+        self.assertTrue(GymRoutinePost.objects.filter(id=slot.id).exists())
 
         row = ModerationAction.objects.get(action='content_removed')
         response = self.mod_client.post(
@@ -926,7 +926,7 @@ class ModerationReversalTests(ModerationActionEnforcementBase):
         self.assertTrue(row.is_reversed)
         self.assertFalse(
             ContentTakedown.objects.filter(
-                content_type='gyms.schedule_post', content_id=str(slot.id),
+                content_type='gyms.routine_post', content_id=str(slot.id),
                 lifted_at__isnull=True,
             ).exists(),
             'Reversing must lift the standing takedown.',

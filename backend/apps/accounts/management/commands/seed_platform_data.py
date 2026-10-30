@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from apps.accounts.models import User
 from apps.profiles.models import Profile
-from apps.gyms.models import Gym, GymMembership, GymSchedulePost, GymReview, VenueLocation
+from apps.gyms.models import Gym, GymMembership, GymRoutinePost, GymReview, VenueLocation
 from apps.sessions.models import TrainerProfile, Availability, BookingSession, Review as SessionReview
 from apps.marketplace.models import (
     Shop, ShopMembership, MarketplaceEvent, EventMedia, MealPlan,
@@ -63,7 +63,7 @@ class Command(BaseCommand):
         self._discount_codes(trainers)
         self._feed(all_profiles)
         self._venues()
-        self._schedule_posts(all_profiles, now)
+        self._routine_posts(all_profiles, now)
         self._lives(trainers, all_profiles, now)
         self._bookings(trainers, all_profiles, now)
         self._reviews(trainers, all_profiles)
@@ -486,8 +486,8 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(self.style.SUCCESS(f'  + venue: {name}'))
 
-    # -- 12. Gym schedule posts (physical / virtual / hybrid mix) --------------
-    def _schedule_posts(self, all_profiles, now):
+    # -- 12. Gym routine posts (physical / virtual / hybrid mix) --------------
+    def _routine_posts(self, all_profiles, now):
         gyms = list(Gym.objects.order_by('handle')[:3])
         modes = ['in_house', 'online', 'hybrid']
         kinds = [('hiit', 'Morning HIIT Blast'), ('yoga', 'Sunrise Yoga Flow'),
@@ -496,7 +496,7 @@ class Command(BaseCommand):
             author = random.choice(all_profiles)
             for j, (activity, title) in enumerate(kinds[:3]):
                 start = now + timedelta(days=i + 1, hours=j * 3)
-                post, created = GymSchedulePost.objects.get_or_create(
+                post, created = GymRoutinePost.objects.get_or_create(
                     gym=gym, title=f'{title} @ {gym.name}',
                     defaults={'author': author, 'activity_type': activity,
                               'location_mode': modes[(i + j) % 3],

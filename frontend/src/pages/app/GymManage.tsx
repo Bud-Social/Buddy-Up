@@ -8,7 +8,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { gymsApi } from '@/api/gyms';
-import type { Gym, GymMembership, GymSchedulePost, GymReview, JoinRequest, GymPartnerMetrics } from '@/types';
+import type { Gym, GymMembership, GymRoutinePost, GymReview, JoinRequest, GymPartnerMetrics } from '@/types';
 import { RoleDashboardShell, RoleSectionTitle } from './roles/RoleShell';
 
 type Tab = 'overview' | 'members' | 'requests' | 'schedule' | 'reviews';
@@ -62,7 +62,7 @@ export default function GymManage() {
   const [gym, setGym] = useState<Gym | null>(null);
   const [members, setMembers] = useState<GymMembership[]>([]);
   const [requests, setRequests] = useState<JoinRequest[]>([]);
-  const [schedulePosts, setSchedulePosts] = useState<GymSchedulePost[]>([]);
+  const [routinePosts, setSchedulePosts] = useState<GymRoutinePost[]>([]);
   const [reviews, setReviews] = useState<GymReview[]>([]);
 
   const [tab, setTab] = useState<Tab>('overview');
@@ -105,7 +105,7 @@ export default function GymManage() {
       const [membersRes, requestsRes, postsRes, reviewsRes, metricsRes] = await Promise.all([
         gymsApi.getMembers(slug).catch(() => ({ data: [] as GymMembership[] })),
         gymsApi.getJoinRequests(slug, 'pending').catch(() => ({ data: [] as JoinRequest[] })),
-        gymsApi.getSchedulePosts(slug).catch(() => ({ data: [] as GymSchedulePost[] })),
+        gymsApi.getRoutinePosts(slug).catch(() => ({ data: [] as GymRoutinePost[] })),
         gymsApi.getReviews(slug).catch(() => ({ data: [] as GymReview[] })),
         gymsApi.getPartnerMetrics(slug).catch(() => ({ data: null as GymPartnerMetrics | null })),
       ]);
@@ -418,13 +418,13 @@ export default function GymManage() {
       {tab === 'schedule' && (
         <section className="space-y-2">
           <RoleSectionTitle action={isAdmin && <Button size="sm" onClick={() => setScheduleOpen(true)}><Plus size={12} className="mr-1" /> Post</Button>}>
-            Schedule updates ({schedulePosts.length})
+            Routine updates ({routinePosts.length})
           </RoleSectionTitle>
-          {schedulePosts.length === 0 ? (
+          {routinePosts.length === 0 ? (
             <Card className="p-8 text-center text-buddy-text-secondary text-sm">No schedule updates posted yet.</Card>
           ) : (
             <div className="space-y-3">
-              {schedulePosts.map((post) => (
+              {routinePosts.map((post) => (
                 <Card key={post.id} className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name} size="sm" />
