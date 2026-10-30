@@ -120,10 +120,20 @@ export default function Login() {
     try {
       const res = await authApi.verifyLoginOtp(loginToken, otp, { remember_me: rememberMe });
       const data = res.data as { require_totp?: boolean; temp_token?: string; access?: string; refresh?: string; user?: import('@/types').User; profile?: import('@/types').Profile };
+      console.log('[Login] OTP response received', {
+        has_access: !!data.access,
+        has_refresh: !!data.refresh,
+        user_id: data.user?.id,
+        profile_id: data.profile?.id,
+        require_totp: data.require_totp,
+        has_temp_token: !!data.temp_token,
+        full_response_keys: Object.keys(data),
+      });
       if (data.require_totp) {
         setTempToken(data.temp_token || '');
         setStep('totp');
       } else {
+        console.log('[Login] Storing tokens and navigating');
         setTokens(data.access!, data.refresh!);
         setUser(data.user!, data.profile!);
         goNext();
@@ -169,10 +179,16 @@ export default function Login() {
     setError('');
     setIsLoading(true);
     try {
+      console.log('[Login] Submitting social password for token:', socialLoginToken.slice(0, 8) + '...');
       const res = await authApi.verifyLoginOtp(socialLoginToken, undefined, {
         password: password,
       });
       const data = res.data as { require_otp?: boolean; login_token?: string };
+      console.log('[Login] Social password response:', {
+        require_otp: data.require_otp,
+        has_login_token: !!data.login_token,
+        full_keys: Object.keys(data),
+      });
       if (data.require_otp && data.login_token) {
         setLoginToken(data.login_token);
         setResendCooldown(30);
@@ -223,6 +239,7 @@ export default function Login() {
     setError('');
     setIsLoading(true);
     try {
+      console.log('[Login] Starting Google login flow');
       const res = await authApi.googleLogin(credential, true);
       const data = res.data as typeof res.data & {
         require_totp?: boolean;
@@ -234,6 +251,14 @@ export default function Login() {
         masked_email?: string;
         mfa_enrolment_pending?: boolean;
       };
+      console.log('[Login] Google login response:', {
+        require_totp: data.require_totp,
+        require_otp: data.require_otp,
+        require_password: data.require_password,
+        has_login_token: !!data.login_token,
+        masked_email: data.masked_email,
+        full_keys: Object.keys(data),
+      });
       if (data.require_totp && data.temp_token) {
         setTempToken(data.temp_token);
         setStep('totp');
