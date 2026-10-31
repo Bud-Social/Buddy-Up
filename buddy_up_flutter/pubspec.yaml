@@ -44,6 +44,8 @@ dependencies:
   video_compress: ^3.1.4
   share_plus: ^13.3.1
   cupertino_icons: ^1.0.8
+  # Watermarking dependencies
+  image: ^4.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
