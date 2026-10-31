@@ -442,10 +442,10 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
   const navigate = useNavigate();
   const handedness = useHandednessStore((s) => s.handedness);
   const [post] = useState(initialPost);
-  // Engagement always reflects the ORIGINAL post: repost rows borrow the
-  // original's counts and actions target the original id.
-  const engagementSource = (post.is_repost && post.original_post_data) ? post.original_post_data : post;
-  const engagementId = post.is_repost && post.original_post_data ? post.original_post_data.id : post.id;
+  // Engagement reflects the post itself; reposts are logged properties on the
+  // original post, not separate rows.
+  const engagementSource = post;
+  const engagementId = post.id;
   const [isSaved, setIsSaved] = useState(post.is_saved ?? false);
   const [saveCount, setSaveCount] = useState<number | undefined>(
     (engagementSource as { save_count?: number }).save_count ?? post.save_count,
@@ -464,7 +464,6 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
   const [isRepostedByMe, setIsRepostedByMe] = useState(post.is_reposted_by_me ?? false);
   const [shareCount, setShareCount] = useState(post.share_count ?? 0);
   const [viewCount, setViewCount] = useState(post.view_count ?? 0);
-  const [justRepostedFlash, setJustRepostedFlash] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [shareAnchor, setShareAnchor] = useState<{ top: number; left: number; bottom: number } | null>(null);
     const [heartPop, setHeartPop] = useState<{ show: boolean; x: number; y: number } | null>(null);
@@ -497,9 +496,6 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
   const { toast } = useToast();
   const viewerAvatar = useAuthStore((s) => s.profile?.avatar_url);
   const viewerName = useAuthStore((s) => s.profile?.display_name);
-  const [showViewerAvatar, setShowViewerAvatar] = useState(false);
-  const [avatarLeaving, setAvatarLeaving] = useState(false);
-  const avatarOutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState<'main' | 'report' | 'block'>('main');
   const [selectedReason, setSelectedReason] = useState<string>('spam');
@@ -512,33 +508,14 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
   const cardRef = useRef<HTMLElement | null>(null);
   const focusStartRef = useRef<number | null>(null);
 
-  useEffect(() => () => {
-    if (avatarOutTimer.current) clearTimeout(avatarOutTimer.current);
-  }, []);
-
-  const popViewerAvatarIn = useCallback(() => {
-    if (avatarOutTimer.current) { clearTimeout(avatarOutTimer.current); avatarOutTimer.current = null; }
-    setAvatarLeaving(false);
-    setShowViewerAvatar(true);
-  }, []);
-
-  const popViewerAvatarOut = useCallback(() => {
-    setAvatarLeaving(true);
-    if (avatarOutTimer.current) clearTimeout(avatarOutTimer.current);
-    avatarOutTimer.current = setTimeout(() => {
-      setShowViewerAvatar(false);
-      setAvatarLeaving(false);
-    }, 220);
-  }, []);
-
   const interact = useCallback((action: InteractAction, extra?: Record<string, unknown>) => {
     track('feed.post_interact', {
       surface: 'feed',
       object_type: 'post',
       object_id: post.id,
-      properties: { action, ...(post.is_repost ? { is_repost: true } : {}), ...extra },
+      properties: { action, ...extra },
     });
-  }, [post.id, post.is_repost]);
+  }, [post.id]);
 
   // Focus analytics: single IntersectionObserver per card, no per-frame work.
   // Reports feed.post_focus (bucketed) when the card hides or unmounts.
@@ -713,14 +690,6 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     setIsRepostedByMe(!wasReposted);
     setRepostCount(c => wasReposted ? Math.max(0, c - 1) : c + 1);
     interact('repost');
-    // Viewer avatar pops into the reposters stack (in) or fades out (out).
-    if (!wasReposted) popViewerAvatarIn();
-    else popViewerAvatarOut();
-    // Fresh repost on an original row: flash the card into repost design.
-    if (!wasReposted && !post.is_repost) {
-      setJustRepostedFlash(true);
-      setTimeout(() => setJustRepostedFlash(false), 2200);
-    }
     try {
       const res = await feedApi.repost(post.id);
       if (res.data) {
@@ -730,9 +699,6 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     } catch {
       // Rollback on error
       setIsRepostedByMe(wasReposted);
-      setJustRepostedFlash(false);
-      if (!wasReposted) popViewerAvatarOut();
-      else popViewerAvatarIn();
       setRepostCount(c => wasReposted ? c + 1 : Math.max(0, c - 1));
     }
   };
@@ -748,7 +714,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     if (userReaction !== '💪') void handleReact('💪');
   };
 
-  const displayPost = (post.is_repost && post.original_post_data) ? post.original_post_data : post;
+  const displayPost = post;
   const displayAuthor = displayPost.author_data;
 
   const handleComment = () => {
@@ -889,79 +855,36 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
       ref={setCardRefs}
       className={`flex gap-1 bg-buddy-surface rounded-2xl border ${post.is_repost ? 'border-buddy-green/30 shadow-[0_0_15px_rgba(0,255,157,0.05)]' : 'border-buddy-surface-raised hover:border-buddy-green/20'} transition-colors select-none flex-col`}
     >
-      {/* Repost header: TikTok-style "X reposted" attribution above the creator. */}
-      {(post.is_repost || (justRepostedFlash && isRepostedByMe)) && (
+      {/* Repost ribbon: shown when the viewer has reposted this post. Persistent
+       * (does not auto-hide); reposts are logged properties of the post, never
+       * separate rows, so this renders on the original post itself. */}
+      {isRepostedByMe && (
         <div
-          key={post.is_repost ? 'repost-row' : 'just-reposted'}
+          key="repost-ribbon"
           className="animate-in slide-in-from-top-2 fade-in duration-300 flex items-center gap-2 px-4 py-2 bg-buddy-green/10 border-l-4 border-buddy-green text-xs"
         >
           <AvatarPopStyle />
-          {(post as any).reposters && (post as any).reposters.length > 0 ? (
-            <div className="flex items-center -space-x-2 flex-shrink-0">
-              {(post as any).reposters.slice(0, 3).map((reposter: any, idx: number) => (
-                <Avatar key={reposter.user_id || idx} src={reposter.avatar_url} alt={reposter.display_name} size="xs" className="ring-2 ring-buddy-green/30" style={{ zIndex: 3 - idx }} verificationStatus={reposter.verification_status} />
-              ))}
-              {showViewerAvatar && (
-                <span
-                  data-testid="repost-viewer-avatar"
-                  title={viewerName || 'You'}
-                  className="inline-flex origin-center"
-                  style={{
-                    zIndex: 4,
-                    animation: avatarLeaving
-                      ? 'budpress-avatar-out 220ms ease-in forwards'
-                      : 'budpress-avatar-pop 320ms cubic-bezier(.34,1.56,.64,1) both',
-                  }}
-                >
-                  <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" className="ring-2 ring-buddy-green" />
-                </span>
-              )}
-              {(post as any).reposters.length > 3 && (
-                <div className="w-6 h-6 rounded-full bg-buddy-surface-raised text-[10px] font-bold flex items-center justify-center ring-2 ring-buddy-green/30">
-                  +{(post as any).reposters.length - 3}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center flex-shrink-0">
-              <button onClick={(e) => { e.stopPropagation(); openProfile(post.author_data?.username); }} className="flex-shrink-0" aria-label={`View ${post.author_data?.display_name || 'author'} profile`}>
-                <Avatar src={post.author_data?.avatar_url} alt={post.author_data?.display_name || 'User'} size="xs" className="ring-2 ring-buddy-green/30" verificationStatus={post.author_data?.verification_status} />
-              </button>
-              {showViewerAvatar && (
-                <span
-                  data-testid="repost-viewer-avatar"
-                  title={viewerName || 'You'}
-                  className="inline-flex origin-center -ml-2"
-                  style={{
-                    animation: avatarLeaving
-                      ? 'budpress-avatar-out 220ms ease-in forwards'
-                      : 'budpress-avatar-pop 320ms cubic-bezier(.34,1.56,.64,1) both',
-                  }}
-                >
-                  <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" className="ring-2 ring-buddy-green" />
-                </span>
-              )}
-            </div>
-          )}
+          <div className="flex items-center -space-x-2 flex-shrink-0">
+            {(post.reposters || []).slice(0, 3).map((reposter: any, idx: number) => (
+              <Avatar key={reposter.user_id || idx} src={reposter.avatar_url} alt={reposter.display_name} size="xs" className="ring-2 ring-buddy-green/30" style={{ zIndex: 3 - idx }} verificationStatus={reposter.verification_status} />
+            ))}
+            <span
+              data-testid="repost-viewer-avatar"
+              title={viewerName || 'You'}
+              className="inline-flex origin-center z-4"
+            >
+              <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" className="ring-2 ring-buddy-green" />
+            </span>
+            {(post.reposters || []).length > 3 && (
+              <div className="w-6 h-6 rounded-full bg-buddy-surface-raised text-[10px] font-bold flex items-center justify-center ring-2 ring-buddy-green/30">
+                +{(post.reposters || []).length - 3}
+              </div>
+            )}
+          </div>
           <div className="flex-1 min-w-0 flex items-center gap-1.5">
             <Repeat2 size={13} className="text-buddy-green shrink-0" />
-            {isRepostedByMe && !post.is_repost ? (
-              <span className="font-semibold text-buddy-green truncate">You reposted</span>
-            ) : (
-              <span className="font-semibold text-buddy-green cursor-pointer truncate" onClick={(e) => { e.stopPropagation(); openProfile(post.author_data?.username); }}>
-                {post.author_data?.display_name}
-              </span>
-            )}
-            {isRepostedByMe && !post.is_repost ? (
-              <span className="text-buddy-text-secondary flex-shrink-0">your repost</span>
-            ) : (
-              <span className="text-buddy-text-secondary flex-shrink-0">reposted</span>
-            )}
-            {post.quote_body && (
-              <span className="text-buddy-text-primary truncate border-l border-buddy-green/40 pl-1.5 italic flex-1">
-                "{post.quote_body}"
-              </span>
-            )}
+            <span className="font-semibold text-buddy-green truncate">You reposted</span>
+            <span className="text-buddy-text-secondary flex-shrink-0">your repost</span>
           </div>
         </div>
       )}

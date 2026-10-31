@@ -115,7 +115,7 @@ export function PostDetailModal({ post: initialPost, onClose }: PostDetailModalP
   const topReactions = reactionsArr.slice(0, 3);
   const remainingCount = reactionsArr.slice(3).reduce((s, [, c]) => s + c, 0);
 
-  const displayPost = (post.is_repost && post.original_post_data) ? post.original_post_data : post;
+  const displayPost = post;
   const displayAuthor = displayPost.author_data;
 
   useEffect(() => {
@@ -212,33 +212,25 @@ export function PostDetailModal({ post: initialPost, onClose }: PostDetailModalP
         <div className={`flex flex-col flex-1 overflow-hidden ${displayPost.media_urls?.length ? '' : 'w-full'}`}>
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-buddy-surface-raised flex-shrink-0">
-            {post.is_repost && (
-              <div className="w-full px-4 py-2 bg-buddy-green/10 border-l-2 border-buddy-green text-xs text-buddy-green flex items-center gap-2">
-                <Avatar src={post.author_data?.avatar_url} alt="" size="xs" className="ring-1 ring-buddy-green/40" />
-                <span className="font-semibold">{post.author_data?.display_name}</span> reposted
+            <>
+              <button onClick={() => { navigate(`/${displayAuthor?.username}`); onClose(); }}>
+                <Avatar src={displayAuthor?.avatar_url} alt={displayAuthor?.display_name || ''} size="sm" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <button
+                  onClick={() => { navigate(`/${displayAuthor?.username}`); onClose(); }}
+                  className="font-semibold text-sm hover:text-buddy-green transition-colors block truncate"
+                >
+                  {displayAuthor?.display_name}
+                </button>
+                <p className="text-xs text-buddy-text-secondary">
+                  @{displayAuthor?.username} · {formatPostDate(displayPost.created_at)}
+                </p>
               </div>
-            )}
-            {!post.is_repost && (
-              <>
-                <button onClick={() => { navigate(`/${displayAuthor?.username}`); onClose(); }}>
-                  <Avatar src={displayAuthor?.avatar_url} alt={displayAuthor?.display_name || ''} size="sm" />
-                </button>
-                <div className="flex-1 min-w-0">
-                  <button
-                    onClick={() => { navigate(`/${displayAuthor?.username}`); onClose(); }}
-                    className="font-semibold text-sm hover:text-buddy-green transition-colors block truncate"
-                  >
-                    {displayAuthor?.display_name}
-                  </button>
-                  <p className="text-xs text-buddy-text-secondary">
-                    @{displayAuthor?.username} · {formatPostDate(displayPost.created_at)}
-                  </p>
-                </div>
-                <button className="p-1 text-buddy-text-secondary hover:text-buddy-text-primary flex-shrink-0">
-                  <MoreHorizontal size={18} />
-                </button>
-              </>
-            )}
+              <button className="p-1 text-buddy-text-secondary hover:text-buddy-text-primary flex-shrink-0">
+                <MoreHorizontal size={18} />
+              </button>
+            </>
           </div>
 
           {/* Body text */}

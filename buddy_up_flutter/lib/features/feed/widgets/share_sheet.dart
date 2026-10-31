@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/app_theme.dart';
@@ -190,6 +192,45 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
     showToast(context, 'Link copied', type: ToastType.success);
   }
 
+  /// Download the post media (image or video) to device storage.
+  Future<void> _downloadMedia() async {
+    // Find the first downloadable media URL
+    final mediaUrls = _post.mediaUrls;
+    final media = _post.media;
+    final videoMedia = media.where((m) => m.mediaType == 'video').firstOrNull;
+    final imageMedia = media.where((m) => m.mediaType == 'image').firstOrNull;
+
+    String? downloadUrl;
+    if (videoMedia != null) {
+      downloadUrl = videoMedia.url;
+    } else if (imageMedia != null) {
+      downloadUrl = imageMedia.url;
+    } else if (mediaUrls.isNotEmpty) {
+      downloadUrl = mediaUrls.first;
+    }
+
+    if (downloadUrl == null || downloadUrl.isEmpty) {
+      if (mounted) showToast(context, 'No media available to download', type: ToastType.error);
+      return;
+    }
+
+    setState(() => _busy = true);
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final ext = downloadUrl.contains('.') ? '.${downloadUrl.split('.').last}' : '.dat';
+      final fileName = 'buddyup_${_post.id}$ext';
+      final file = File('${dir.path}/$fileName');
+      final dio = ref.read(apiClientProvider).dio;
+      await dio.download(downloadUrl, file.path);
+      if (!mounted) return;
+      showToast(context, 'Downloaded to ${file.path}', type: ToastType.success);
+    } catch (_) {
+      if (mounted) showToast(context, 'Failed to download media', type: ToastType.error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   Future<void> _openSocial(_SocialTarget target) async {
     final url = await _trackedLink(target.id);
     final ok = await launchUrl(
@@ -272,6 +313,11 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
               iconColor: _copied ? BuddyColors.green : null,
               label: _copied ? 'Link copied!' : 'Copy link',
               onTap: _busy ? null : _copyLink,
+            ),
+            _Row(
+              icon: Icons.download,
+              label: 'Download',
+              onTap: _busy ? null : _downloadMedia,
             ),
             _Row(
               icon: Icons.repeat,

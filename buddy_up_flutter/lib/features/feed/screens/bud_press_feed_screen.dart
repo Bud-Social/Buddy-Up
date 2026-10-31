@@ -245,12 +245,11 @@ class _PostMetaState extends ConsumerState<_PostMeta> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (post.isRepost)
+            if (post.isRepostedByMe)
               RepostIndicator(
                 reposters: post.reposters,
-                username: post.authorData.displayName,
-                quoteBody: post.quoteBody,
-                viewerReposted: post.isRepostedByMe,
+                username: 'You',
+                viewerReposted: true,
                 viewerAvatarUrl: viewer?.avatarUrl,
                 viewerDisplayName: viewer?.displayName,
               ),

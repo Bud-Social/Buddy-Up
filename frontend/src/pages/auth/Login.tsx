@@ -259,14 +259,14 @@ export default function Login() {
         require_totp: data.require_totp,
         require_otp: data.require_otp,
         require_password: data.require_password,
-        require_activation: data.require_activation,
+        require_activation: 'require_activation' in data && (data as { require_activation?: boolean }).require_activation,
         has_login_token: !!data.login_token,
         masked_email: data.masked_email,
         full_keys: Object.keys(data),
       });
-      // New account created - activation required
-      if (data.require_activation && data.data?.activation_token) {
-        navigate(`/activate?token=${encodeURIComponent(data.data.activation_token)}`);
+      // New account created - activation required (link sent by email).
+      if ('require_activation' in data && data.require_activation) {
+        navigate('/activate', { replace: true });
         return;
       }
       if (data.require_totp && data.temp_token) {

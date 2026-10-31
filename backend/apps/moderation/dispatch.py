@@ -77,7 +77,7 @@ TEXT_SOURCES = {
         # policy checker only needs to know whether the author is a practitioner.
         lambda o: None,
     ),
-    'gyms.models.GymSchedulePost': (
+    'gyms.models.GymRoutinePost': (
         lambda o: (getattr(o, 'title', '') or '').strip(),
         lambda o: getattr(o, 'author', None),
     ),
@@ -106,7 +106,7 @@ CONTENT_TYPES = {
     'feed.models.Comment': 'feed.comment',
     'lives.models.BuddyLive': 'lives.buddy_live',
     'gyms.models.Gym': 'gym',
-    'gyms.models.GymSchedulePost': 'gyms.schedule_post',
+    'gyms.models.GymRoutinePost': 'gyms.routine_post',
     'profiles.models.Profile': 'user.profile',
     'messaging.models.Conversation': 'messaging.community',
 }

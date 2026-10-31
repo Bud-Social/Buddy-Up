@@ -28,6 +28,7 @@ import logging
 
 from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
+from django.db import models
 
 logger = logging.getLogger(__name__)
 
@@ -79,3 +80,30 @@ def decrypt_value(value: str) -> str:
             'cannot be completed until it is re-enrolled.',
         )
         return ''
+
+
+class EncryptedCharField(models.CharField):
+    """
+    CharField that transparently encrypts/decrypts values using Fernet.
+    Values are stored as Fernet ciphertext with 'f1:' prefix.
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('max_length', 255)
+        super().__init__(*args, **kwargs)
+
+    def from_db_value(self, value, expression, connection):
+        return decrypt_value(value) if value else ''
+
+    def to_python(self, value):
+        if value is None or value == '':
+            return ''
+        if isinstance(value, str) and not is_encrypted(value):
+            return value
+        return decrypt_value(value)
+
+    def get_prep_value(self, value):
+        return encrypt_value(value) if value else ''
+
+    def get_internal_type(self):
+        return 'CharField'

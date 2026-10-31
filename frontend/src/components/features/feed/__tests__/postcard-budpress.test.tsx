@@ -75,10 +75,8 @@ function makePost(overrides: Partial<Post> = {}): Post {
     user_reaction: null,
     comment_count: 0,
     repost_count: 0,
-    is_repost: false,
     is_reposted_by_me: false,
-    original_post_id: null,
-    quote_body: '',
+    reposters: [],
     is_saved: false,
     visibility: 'public',
     moderation_status: 'ok',
@@ -135,7 +133,7 @@ describe('PostCard repost avatar overlay', () => {
 
     expect(feedApiMock.repost).toHaveBeenCalledWith('post-1');
     expect(await screen.findByTestId('repost-viewer-avatar')).toBeInTheDocument();
-    expect(screen.getByText('You reposted this')).toBeInTheDocument();
+    expect(screen.getByText('You reposted')).toBeInTheDocument();
   });
 
   it('animates the viewer avatar out on unrepost', async () => {
@@ -154,22 +152,13 @@ describe('PostCard repost avatar overlay', () => {
     );
   });
 
-  it('pops the viewer avatar into an existing reposters stack', async () => {
+  it('adds the viewer avatar to an existing reposters stack', async () => {
     feedApiMock.repost.mockResolvedValue(ok({ action: 'reposted', repost_count: 5 }));
     renderCard(
       makePost({
         id: 'post-9',
-        is_repost: true,
         is_reposted_by_me: false,
-        original_post_data: {
-          id: 'orig-9',
-          author_data: { username: 'coachamy', display_name: 'Coach Amy', avatar_url: '' },
-          body: 'Original',
-          media_urls: [],
-          created_at: new Date().toISOString(),
-          post_type: 'text',
-        },
-        ...( { reposters: [{ user_id: 'u-sam', display_name: 'Gym Sam', avatar_url: '' }] } as object ),
+        reposters: [{ user_id: 'u-sam', display_name: 'Gym Sam', avatar_url: '' }],
       }),
     );
 
@@ -197,26 +186,19 @@ describe('PostCard three-dots menu', () => {
     );
   });
 
-  it('targets the original post id for Like on repost rows', async () => {
+  it('targets the post id for Like on all posts (reposts are post properties, not separate rows)', async () => {
     feedApiMock.react.mockResolvedValue(ok({ '💪': 2 }));
     renderCard(
       makePost({
         id: 'row-2',
-        is_repost: true,
-        original_post_data: {
-          id: 'orig-2',
-          author_data: { username: 'coachamy', display_name: 'Coach Amy', avatar_url: '' },
-          body: 'Original',
-          media_urls: [],
-          created_at: new Date().toISOString(),
-          post_type: 'text',
-        },
+        is_reposted_by_me: true,
+        reposters: [{ user_id: 'u-sam', display_name: 'Gym Sam', avatar_url: '' }],
       }),
     );
 
     openMenu();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Like' }));
-    expect(feedApiMock.react).toHaveBeenCalledWith('orig-2', '💪');
+    expect(feedApiMock.react).toHaveBeenCalledWith('row-2', '💪');
   });
 
   it('hides the post with an inline undo row on "Not interested"', async () => {

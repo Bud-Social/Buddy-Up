@@ -53,6 +53,16 @@ export interface SocialPasswordChallenge {
   has_password: boolean;
 }
 
+/** Returned by Google/Apple login when a brand-new account must be activated
+ *  by email before it can be used. ``activation_token`` is deliberately NOT
+ *  included here — it is delivered out-of-band via email. The client simply
+ *  routes the user to /activate so they can click the link. */
+export interface SocialActivationRequired {
+  require_activation: true;
+  email: string;
+  message: string;
+}
+
 export interface LoginOTPResponse extends TokenResponse {
   new_device?: boolean;
 }
@@ -159,7 +169,7 @@ export const authApi = {
   forgotPassword: (email: string) => apiClient.post<ApiResponse<null>>('/auth/forgot-password/', { email }).then((r) => r.data),
   resetPassword: (email: string, token: string, new_password: string) => apiClient.post<ApiResponse<null>>('/auth/reset-password/', { email, token, new_password }).then((r) => r.data),
   googleLogin: (credential: string, dataAccessConsent?: boolean) =>
-    apiClient.post<ApiResponse<TokenResponse | SocialPasswordChallenge>>('/auth/google/', {
+    apiClient.post<ApiResponse<TokenResponse | SocialPasswordChallenge | SocialActivationRequired>>('/auth/google/', {
       credential,
       // Explicit data-access consent (set by the GoogleConsentGate modal).
       ...(dataAccessConsent ? { data_access_consent: true } : {}),

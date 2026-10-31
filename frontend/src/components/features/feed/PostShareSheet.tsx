@@ -202,10 +202,10 @@ export function PostShareSheet({
     const imageMedia = media.find((m) => m.media_type === 'image');
     
     let downloadUrl = '';
-    if (videoMedia?.media_url) {
-      downloadUrl = videoMedia.media_url;
-    } else if (imageMedia?.media_url) {
-      downloadUrl = imageMedia.media_url;
+    if (videoMedia?.url) {
+      downloadUrl = videoMedia.url;
+    } else if (imageMedia?.url) {
+      downloadUrl = imageMedia.url;
     } else if (mediaUrls.length > 0) {
       downloadUrl = mediaUrls[0];
     }

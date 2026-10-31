@@ -79,31 +79,25 @@ class _PostCardState extends ConsumerState<PostCard> {
 
   Post get _post => widget.post;
 
-  /// Engagement reflects the ORIGINAL on repost rows so counts never zero out.
-  OriginalPostData? get _orig =>
-      _post.isRepost ? _post.originalPostData : null;
-  String get _targetId => _orig?.id ?? _post.id;
-  Map<String, int> get _reactionCounts =>
-      _orig?.reactionCounts ?? _post.reactionCounts;
-  String? get _userReaction => _orig?.userReaction ?? _post.userReaction;
-  int get _commentCount => _orig?.commentCount ?? _post.commentCount;
-  int get _repostCount => _orig?.repostCount ?? _post.repostCount;
-  int get _saveCount => _orig?.saveCount ?? _post.saveCount;
-  int get _shareCount => _orig?.shareCount ?? _post.shareCount;
-    int get _viewCount => _orig?.viewCount ?? _post.viewCount;
+  /// Engagement reflects the post itself; reposts are logged properties on the
+  /// original post, not separate rows.
+  Map<String, int> get _reactionCounts => _post.reactionCounts;
+  String? get _userReaction => _post.userReaction;
+  int get _commentCount => _post.commentCount;
+  int get _repostCount => _post.repostCount;
+  int get _saveCount => _post.saveCount;
+  int get _shareCount => _post.shareCount;
+  int get _viewCount => _post.viewCount;
 
-  /// When the row is a repost, content (author/avatar/body/media/header) is
-  /// sourced from the original post so the viewer sees the real content, not
-  /// the empty repost stub. Engagement metrics already use `_orig`.
-  AuthorData get _displayAuthor => _orig?.authorData ?? _post.authorData;
-  String get _displayBody => _orig?.body ?? _post.body;
-  List<String> get _displayMediaUrls => _orig?.mediaUrls ?? _post.mediaUrls;
-  List<PostMedia> get _displayMedia => _orig?.media ?? _post.media;
-  String get _displayCreatedAt => _orig?.createdAt ?? _post.createdAt;
-  Poll? get _displayPoll => _orig?.poll ?? _post.poll;
-  Map<String, dynamic>? get _displayWorkoutLogData =>
-      _orig?.workoutLogData ?? _post.workoutLogData;
-  String? get _displayGymTagName => _orig?.gymTagName ?? _post.gymTagName;
+  /// Content always comes from the post itself (no separate repost rows).
+  AuthorData get _displayAuthor => _post.authorData;
+  String get _displayBody => _post.body;
+  List<String> get _displayMediaUrls => _post.mediaUrls;
+  List<PostMedia> get _displayMedia => _post.media;
+  String get _displayCreatedAt => _post.createdAt;
+  Poll? get _displayPoll => _post.poll;
+  Map<String, dynamic>? get _displayWorkoutLogData => _post.workoutLogData;
+  String? get _displayGymTagName => _post.gymTagName;
   // ignore: unused_element
   bool get _displayCommentsDisabled => _post.commentsDisabled;
 
@@ -163,7 +157,7 @@ class _PostCardState extends ConsumerState<PostCard> {
       'feed.post_interaction',
       surface: 'feed',
       objectType: 'post',
-      objectId: _targetId,
+      objectId: _post.id,
       properties: {'action': action},
     );
   }
@@ -179,7 +173,7 @@ class _PostCardState extends ConsumerState<PostCard> {
       ),
       builder: (sheetContext) => _PostMenuSheet(
         post: _post,
-        targetId: _targetId,
+        targetId: _post.id,
         messenger: messenger,
         notifier: notifier,
         onSave: widget.onSave,
@@ -215,17 +209,16 @@ class _PostCardState extends ConsumerState<PostCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-                    if (_post.isRepost)
-            RepostIndicator(
-              reposters: _post.reposters,
-              username: _post.authorData.displayName,
-              quoteBody: _post.quoteBody,
-              viewerReposted: _post.isRepostedByMe,
-              viewerAvatarUrl: viewer?.avatarUrl,
-              viewerDisplayName: viewer?.displayName,
-              viewCount: _orig?.viewCount,
-            ),
-                    _buildHeader(context),
+            if (_post.isRepostedByMe)
+              RepostIndicator(
+                reposters: _post.reposters,
+                username: 'You',
+                viewerReposted: true,
+                viewerAvatarUrl: viewer?.avatarUrl,
+                viewerDisplayName: viewer?.displayName,
+              ),
+
+            _buildHeader(context),
           if (_displayBody.isNotEmpty) ...[
             const SizedBox(height: 8),
             _buildBody(context),
@@ -235,14 +228,14 @@ class _PostCardState extends ConsumerState<PostCard> {
             MediaGallery(
               urls: _displayMediaUrls,
               media: _displayMedia.isEmpty ? null : _displayMedia,
-              postId: _targetId,
+              postId: _post.id,
             ),
           ],
           if (_displayPoll != null) ...[
             const SizedBox(height: 8),
             PollWidget(
               poll: _displayPoll!,
-              postId: _targetId,
+              postId: _post.id,
               onVote: widget.onPollVote,
 
             ),
@@ -253,18 +246,18 @@ class _PostCardState extends ConsumerState<PostCard> {
           ],
           AiAnalysisCard(analysis: _post.aiAnalysis),
           const SizedBox(height: 10),
-          _buildActionBar(context),
+          _buildActionBar(context, viewer),
           const SizedBox(height: 8),
           ReactionBar(
             counts: _reactionCounts,
             userReaction: _userReaction,
             onReact: (r) {
               _trackPostInteraction('like');
-              widget.onReact?.call(_targetId, r);
+              widget.onReact?.call(_post.id, r);
             },
             onUnreact: () {
               _trackPostInteraction('unlike');
-              widget.onReact?.call(_targetId, '');
+              widget.onReact?.call(_post.id, '');
             },
           ),
           if (_displayGymTagName != null) ...[
@@ -370,7 +363,7 @@ class _PostCardState extends ConsumerState<PostCard> {
     );
   }
 
-  Widget _buildActionBar(BuildContext context) {
+  Widget _buildActionBar(BuildContext context, final viewer) {
     final leftHanded = ref.watch(handednessProvider);
     return Row(
       // Mirrored in left-handed mode so the primary actions sit under a left
@@ -385,7 +378,7 @@ class _PostCardState extends ConsumerState<PostCard> {
           onTap: () {
             _trackPostInteraction(
                 _userReaction != null ? 'unlike' : 'like');
-            widget.onReact?.call(_targetId, 'fire');
+            widget.onReact?.call(_post.id, 'fire');
           },
         ),
         _ActionButton(
@@ -409,9 +402,24 @@ class _PostCardState extends ConsumerState<PostCard> {
           label: _formatCount(_saveCount),
           onTap: () {
             _trackPostInteraction(_post.isSaved ? 'unsave' : 'save');
-            widget.onSave?.call(_targetId);
+            widget.onSave?.call(_post.id);
           },
         ),
+        if (_post.authorData.userId != viewer?.userId)
+          _ActionButton(
+            icon: _post.authorData.followedByViewer
+                ? Icons.person_remove
+                : Icons.person_add,
+            color: _post.authorData.followedByViewer
+                ? BuddyColors.green
+                : BuddyColors.textSecondary,
+            label: _post.authorData.followedByViewer ? 'Following' : 'Follow',
+            onTap: () {
+              _trackPostInteraction(
+                  _post.authorData.followedByViewer ? 'unfollow' : 'follow');
+              ref.read(feedProvider.notifier).toggleFollowById(_post.id);
+            },
+          ),
         const Spacer(),
         _ActionButton(
           icon: Icons.share_outlined,
@@ -435,9 +443,9 @@ class _PostCardState extends ConsumerState<PostCard> {
       'feed.comment_focus',
       surface: 'feed',
       objectType: 'post',
-      objectId: _targetId,
+      objectId: _post.id,
     );
-    widget.onComment?.call(_targetId);
+    widget.onComment?.call(_post.id);
   }
 
   Widget _buildWorkoutLog(BuildContext context) {        final data = _displayWorkoutLogData!;

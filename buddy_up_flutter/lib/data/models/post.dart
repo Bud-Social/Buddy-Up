@@ -105,6 +105,8 @@ abstract class AuthorData with _$AuthorData {
     @JsonKey(name: 'display_name') required String displayName,
     @JsonKey(name: 'avatar_url') required String avatarUrl,
     @JsonKey(name: 'verification_status') @Default('none') String verificationStatus,
+    /// Client-managed follow state; the backend does not echo this yet.
+    @Default(false) bool followedByViewer,
   }) = _AuthorData;
 
   factory AuthorData.fromJson(Map<String, dynamic> json) =>

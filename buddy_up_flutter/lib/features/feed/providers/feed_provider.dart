@@ -275,6 +275,25 @@ class FeedNotifier extends Notifier<FeedState> {
     }
   }
 
+  /// Optimistic follow/unfollow toggle on the post author.
+  Future<void> toggleFollowById(String postId) async {
+    final idx = state.posts.indexWhere((p) => p.id == postId);
+    if (idx == -1) return;
+    final post = state.posts[idx];
+    final profileRepo = ref.read(profileRepositoryProvider);
+    final currentlyFollowing = post.authorData.followedByViewer;
+    updatePostInList(post.copyWith(authorData: post.authorData.copyWith(followedByViewer: !currentlyFollowing)));
+    try {
+      if (currentlyFollowing) {
+        await profileRepo.unfollowUser(post.authorData.username);
+      } else {
+        await profileRepo.followUser(post.authorData.username);
+      }
+    } catch (_) {
+      updatePostInList(post.copyWith(authorData: post.authorData.copyWith(followedByViewer: currentlyFollowing)));
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Bud Press parity: hide / mute / block / report (all optimistic + rollback).
   //

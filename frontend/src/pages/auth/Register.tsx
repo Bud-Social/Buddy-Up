@@ -116,9 +116,9 @@ export default function Register() {
         navigate('/login', { replace: true });
         return;
       }
-      // New account created - activation required
-      if (data.require_activation && data.data?.activation_token) {
-        navigate(`/activate?token=${encodeURIComponent(data.data.activation_token)}`);
+      // New account created - activation required (link sent by email).
+      if ('require_activation' in data && data.require_activation) {
+        navigate('/activate', { replace: true });
         return;
       }
       const tokens = data as unknown as { access: string; refresh: string; user: import('@/types').User; profile: import('@/types').Profile };

@@ -6,26 +6,19 @@ import '../../../shared/widgets/avatar.dart';
 class RepostIndicator extends StatefulWidget {
   final List<ReposterData> reposters;
   final String username;
-     final String? quoteBody;
 
-  /// Set when the viewer reposted: their avatar pops into the stack with a
-  /// scale/fade entrance (AnimatedSwitcher) and animates out on unrepost.
+  /// Set when the viewer reposted: their avatar pulses in the stack.
   final bool viewerReposted;
   final String? viewerAvatarUrl;
   final String? viewerDisplayName;
-
-  /// View count from the original post, displayed when this is a repost row.
-  final int? viewCount;
 
   const RepostIndicator({
     super.key,
     this.reposters = const [],
     required this.username,
-        this.quoteBody,
     this.viewerReposted = false,
     this.viewerAvatarUrl,
     this.viewerDisplayName,
-    this.viewCount,
   });
 
   @override
@@ -136,46 +129,11 @@ class _RepostIndicatorState extends State<RepostIndicator>
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            if (widget.viewCount != null && widget.viewCount! > 0)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 6),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.visibility_outlined,
-                                      size: 12,
-                                      color: BuddyColors.textSecondary,
-                                    ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      _formatCount(widget.viewCount!),
-                                      style: const TextStyle(
-                                        color: BuddyColors.textSecondary,
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  if (widget.quoteBody != null && widget.quoteBody!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        widget.quoteBody!,
-                        style: const TextStyle(
-                          color: BuddyColors.textSecondary,
-                          fontSize: 13,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -259,11 +217,5 @@ class _RepostIndicatorState extends State<RepostIndicator>
         ],
       ),
         );
-  }
-
-  String _formatCount(int count) {
-    if (count < 1000) return count.toString();
-    if (count < 1000000) return '${(count / 1000).toStringAsFixed(1)}k';
-    return '${(count / 1000000).toStringAsFixed(1)}m';
   }
 }

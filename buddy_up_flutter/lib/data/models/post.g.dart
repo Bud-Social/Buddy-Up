@@ -69,6 +69,7 @@ _AuthorData _$AuthorDataFromJson(Map<String, dynamic> json) => _AuthorData(
   displayName: json['display_name'] as String,
   avatarUrl: json['avatar_url'] as String,
   verificationStatus: json['verification_status'] as String? ?? 'none',
+  followedByViewer: json['followedByViewer'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$AuthorDataToJson(_AuthorData instance) =>
@@ -78,6 +79,7 @@ Map<String, dynamic> _$AuthorDataToJson(_AuthorData instance) =>
       'display_name': instance.displayName,
       'avatar_url': instance.avatarUrl,
       'verification_status': instance.verificationStatus,
+      'followedByViewer': instance.followedByViewer,
     };
 
 _PollOption _$PollOptionFromJson(Map<String, dynamic> json) => _PollOption(
