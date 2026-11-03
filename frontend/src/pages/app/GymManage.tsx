@@ -159,7 +159,7 @@ export default function GymManage() {
     setScheduleBusy(true);
     setActionError(null);
     try {
-      const res = await gymsApi.createSchedulePost(slug, {
+      const res = await gymsApi.createRoutinePost(slug, {
         title: scheduleTitle,
         content: scheduleContent,
         activity_type: scheduleActivity,

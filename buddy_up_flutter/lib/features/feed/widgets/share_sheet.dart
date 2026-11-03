@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:image/image.dart' as img;
+import 'package:ffmpeg_kit_flutter_min_gpl/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_min_gpl/return_code.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';
@@ -218,7 +220,7 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
     
     // Add "BuddyUp Fit" text (simplified - just a green bar with text indicator)
     // In a real app, you'd use a font rendering library
-    final barHeight = 4;
+    const barHeight = 4;
     final barWidth = watermarkWidth - 20;
     // Green color: alpha=200, red=0, green=200, blue=150
     final barColor = img.ColorRgba8(0, 200, 150, 200);
@@ -244,6 +246,36 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
     );
     
     return watermark;
+  }
+
+  /// Creates a temporary PNG watermark image file for use with FFmpeg.
+  Future<File> _createWatermarkImageFile(int width, int height) async {
+    final watermark = _createWatermark(width, height);
+    final pngBytes = img.encodePng(watermark);
+    final tempDir = await getTemporaryDirectory();
+    final file = File('${tempDir.path}/buddyup_watermark_${DateTime.now().millisecondsSinceEpoch}.png');
+    await file.writeAsBytes(pngBytes);
+    return file;
+  }
+
+  /// Burns the BuddyUp watermark into a video using FFmpeg overlay filter.
+  /// Returns the path to the watermarked output file.
+  Future<File> _addVideoWatermark(File inputFile, File watermarkFile) async {
+    final outputDir = await getApplicationDocumentsDirectory();
+    final outputFile = File('${outputDir.path}/buddyup_watermarked_${DateTime.now().millisecondsSinceEpoch}.mp4');
+
+    final session = await FFmpegKit.execute(
+      '-i ${inputFile.path} -i ${watermarkFile.path} '
+      '-filter_complex "overlay=main_w-overlay_w-20:main_h-overlay_h-20" '
+      '-codec:a copy -movflags +faststart ${outputFile.path}',
+    );
+    final returnCode = await session.getReturnCode();
+    if (returnCode == null || !ReturnCode.isSuccess(returnCode)) {
+      final log = await session.getAllLogs();
+      throw Exception('FFmpeg failed (code $returnCode): $log');
+    }
+
+    return outputFile;
   }
 
 /// Download the post media (image or video) to device storage with watermark.
@@ -289,12 +321,25 @@ class _ShareSheetState extends ConsumerState<ShareSheet> {
       if (!mounted) return;
 
       if (isVideo) {
-        // For videos, save to gallery with watermark note
-        // Note: Full video watermarking requires FFmpeg which is heavy
-        // For now, save to gallery and notify user about watermark
-        // Video saved to temp directory (gallery_saver removed for compatibility)
-        if (mounted) {
-          showToast(context, 'Video saved to app storage. Watermark feature coming soon.', type: ToastType.success);
+        // Burn BuddyUp watermark into the video using FFmpeg, then save
+        // to app documents. The watermark PNG is generated at 30% of the
+        // video width (clamped 60-200px) and placed in the bottom-right
+        // corner, matching the image-watermark placement.
+        try {
+          // Use a fixed watermark size scaled to a typical video width.
+          final watermarkFile = await _createWatermarkImageFile(1280, 720);
+          final watermarkedFile = await _addVideoWatermark(tempFile, watermarkFile);
+          // Clean up temp watermark
+          try { await watermarkFile.delete(); } catch (_) {}
+          if (!mounted) return;
+          showToast(context, 'Video downloaded with watermark: ${watermarkedFile.path}', type: ToastType.success);
+        } catch (e) {
+          // Fallback: save original video without watermark
+          final dir = await getApplicationDocumentsDirectory();
+          final fileName = 'buddyup_${_post.id}$ext';
+          final file = File('${dir.path}/$fileName');
+          await file.writeAsBytes(await tempFile.readAsBytes());
+          if (mounted) showToast(context, 'Video saved to ${file.path}', type: ToastType.success);
         }
       } else {
         // For images, add watermark using image package

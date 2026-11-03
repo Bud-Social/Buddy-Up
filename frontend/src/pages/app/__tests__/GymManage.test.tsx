@@ -11,14 +11,14 @@ vi.mock('@/api/gyms', async (importOriginal) => ({
     detail: vi.fn(),
     getMembers: vi.fn(),
     getJoinRequests: vi.fn(),
-    getSchedulePosts: vi.fn(),
+    getRoutinePosts: vi.fn(),
     getReviews: vi.fn(),
     getPartnerMetrics: vi.fn(),
     manageMember: vi.fn(),
     removeMember: vi.fn(),
     invite: vi.fn(),
     manageJoinRequest: vi.fn(),
-    createSchedulePost: vi.fn(),
+    createRoutinePost: vi.fn(),
     replyToReview: vi.fn(),
   },
 }));
@@ -76,7 +76,7 @@ describe('Gym management console', () => {
     api.detail.mockResolvedValue(envelope(GYM));
     api.getMembers.mockResolvedValue(envelope(MEMBERS));
     api.getJoinRequests.mockResolvedValue(envelope([]));
-    api.getSchedulePosts.mockResolvedValue(envelope([]));
+    api.getRoutinePosts.mockResolvedValue(envelope([]));
     api.getReviews.mockResolvedValue(envelope([]));
     api.getPartnerMetrics.mockResolvedValue(
       envelope({

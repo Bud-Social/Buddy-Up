@@ -90,7 +90,7 @@ def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
         return
 
     username = user.email.split('@')[0]
-    subject = {
+    otp_subject = {
         'registration': 'Verify your BuddyUp Fit email',
         'login': 'Your BuddyUp Fit login code',
         'password_reset': 'Reset your BuddyUp Fit password',
@@ -112,7 +112,7 @@ def send_otp_email(self, user_id: str, otp: str, purpose: str = 'registration'):
 
     try:
         _send_mail_with_fallback(
-            subject=subject,
+            subject=otp_subject,
             message=plain,
             html_message=html,
             from_email=settings.DEFAULT_FROM_EMAIL,

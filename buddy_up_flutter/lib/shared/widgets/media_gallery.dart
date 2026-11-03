@@ -420,6 +420,29 @@ class _InlineVideoPageState extends State<_InlineVideoPage> {
           meta: widget.media.editMeta,
           positionMs: positionMs,
         ),
+        // BuddyUp branding watermark (UI overlay on video playback)
+        Positioned(
+          right: 8,
+          bottom: 12,
+          child: IgnorePointer(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'BuddyUp',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
         if (endMs != null && endMs > _trimStartMs)
           Positioned(
             left: 0,

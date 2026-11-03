@@ -22,7 +22,7 @@ const queryClient = new QueryClient({
 });
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
-  const { setUser, logout, setLoading, isAuthenticated } = useAuthStore();
+  const { setUser, _logout, setLoading, isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     const init = async () => {

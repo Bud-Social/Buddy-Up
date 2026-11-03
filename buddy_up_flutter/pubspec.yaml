@@ -46,6 +46,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   # Watermarking dependencies
   image: ^4.2.0
+  # FFmpeg for video watermarking (burns BuddyUp branding into downloaded videos)
+  ffmpeg_kit_flutter_min_gpl: ^6.0.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

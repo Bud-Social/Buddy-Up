@@ -189,7 +189,10 @@ export function GymDiscoursePost({ post: initialPost, isAdmin, gymName, onPin, o
     if (userReaction !== emoji) {
       handleReact(emoji);
       const rect = e.currentTarget.getBoundingClientRect();
-      setHeartPop({ show: true, x: e.clientX - rect.left, y: e.clientY - rect.top });
+      setHeartPop(null);
+      requestAnimationFrame(() => {
+        setHeartPop({ show: true, x: e.clientX - rect.left, y: e.clientY - rect.top });
+      });
       setTimeout(() => setHeartPop(null), 700);
     }
   };

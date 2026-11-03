@@ -730,7 +730,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     onComment?.(displayPost.id);
   };
 
-  const openProfile = (username?: string) => {
+  const _openProfile = (username?: string) => {
     if (!username) return;
     interact('profile_open');
     navigate(`/${username}`);

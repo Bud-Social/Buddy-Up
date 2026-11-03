@@ -102,7 +102,7 @@ export default function GymDetail() {
         return Promise.all([
           gymsApi.getMembers(slug),
           livesApi.getGymSchedule(res.data.id),
-          gymsApi.getSchedulePosts(slug).catch(() => ({ data: [] })),
+          gymsApi.getRoutinePosts(slug).catch(() => ({ data: [] })),
           gymsApi.getReviews(slug).catch(() => ({ data: [] })),
           gymsApi.getGymFeed(slug).catch(() => ({ data: [] })),
           gymsApi.getEvents(slug).catch(() => ({ data: [] })),
@@ -218,7 +218,7 @@ export default function GymDetail() {
     setScheduleError(null);
     setActionSubmitting(true);
     try {
-      const res = await gymsApi.createSchedulePost(slug, {
+      const res = await gymsApi.createRoutinePost(slug, {
         title: scheduleTitle,
         content: scheduleContent,
         activity_type: scheduleActivity,
@@ -419,7 +419,7 @@ export default function GymDetail() {
                         disabled={post.is_enrolled || (post.max_slots > 0 && (post.enrollment_count || 0) >= post.max_slots)}
                         onClick={() => {
                           if (!slug || post.is_enrolled) return;
-                          gymsApi.enrollScheduleSlot(slug, post.id).then(() => {
+                          gymsApi.enrollRoutineSlot(slug, post.id).then(() => {
                             setSchedulePosts(routinePosts.map(p => p.id === post.id ? { ...p, is_enrolled: true, enrollment_count: (p.enrollment_count || 0) + 1 } : p));
                           }).catch((e: any) => alert(e?.response?.data?.message || 'Failed to enroll'));
                         }}
