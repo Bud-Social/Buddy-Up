@@ -27,7 +27,7 @@ interface AuthState {
   setAccessToken: (access: string) => void;
   setUser: (user: User, profile: Profile) => void;
   setProfile: (profile: Profile) => void;
-  logout: () => void;
+  _logout: () => void;
   setLoading: (loading: boolean) => void;
 }
 
@@ -47,7 +47,7 @@ export const useAuthStore = create<AuthState>()(
       },
       setUser: (user, profile) => set({ user, profile, isAuthenticated: true, isLoading: false }),
       setProfile: (profile) => set({ profile }),
-      logout: () => {
+      _logout: () => {
         wsManager.setAccessToken(null);
         set({ totpEnrolmentToken: null });
         wsManager.disconnectAll();

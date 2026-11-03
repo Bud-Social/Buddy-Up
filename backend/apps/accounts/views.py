@@ -46,12 +46,12 @@ from .serializers import (
     ChangePasswordSerializer, TOTPVerifySerializer,
     LoginOTPSerializer, RegistrationOTPSerializer,
     TOTPChallengeSerializer, TOTPDisableSerializer, GoogleLoginSerializer,
-    PasskeyRenameSerializer, PasskeyRevokeSerializer, ConsentSerializer,
+    PasskeyRenameSerializer, PasskeyRevokeSerializer, ConsentSerializer, ActivationTokenSerializer,
 )
 from apps.profiles.models import Profile
 from .tasks import (
     send_otp_email, send_otp_sms, sms_delivery_configured,
-    send_security_notification_email,
+    send_security_notification_email, send_activation_email,
 )
 
 logger = logging.getLogger(__name__)

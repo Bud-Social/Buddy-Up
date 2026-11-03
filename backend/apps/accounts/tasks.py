@@ -165,7 +165,6 @@ def send_activation_email(self, user_id: str, activation_token: str):
         return
 
     username = user.email.split('@')[0]
-    subject = 'Activate your BuddyUp Fit account'
 
     # Build the activation link
     frontend_url = getattr(settings, 'PUBLIC_FRONTEND_URL', 'https://buddyup.app').rstrip('/')
