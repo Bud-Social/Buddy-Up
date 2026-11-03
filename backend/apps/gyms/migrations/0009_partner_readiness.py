@@ -51,7 +51,6 @@ class Migration(migrations.Migration):
                 ('notes', models.CharField(blank=True, max_length=300)),
                 ('gym', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attendance_records', to='gyms.gym')),
                 ('member', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='gym_attendance', to='profiles.profile')),
-                ('schedule_post', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='attendance_records', to='gyms.gymschedulepost')),
                 ('venue', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='attendance_records', to='gyms.venuelocation')),
             ],
             options={'db_table': 'gyms_attendance_record'},
