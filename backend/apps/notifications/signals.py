@@ -11,7 +11,7 @@ def handle_post_created(sender, instance, created, **kwargs):
     from apps.notifications.tasks import create_notification
 
     # 1. Repost notification
-    if instance.is_repost and instance.original_post and instance.original_post.author:
+    if getattr(instance, 'is_repost', False) and instance.original_post and instance.original_post.author:
         orig_author = instance.original_post.author
         if orig_author.user_id != instance.author.user_id:
             create_notification.delay(
