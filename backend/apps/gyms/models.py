@@ -294,6 +294,29 @@ class GymReview(TimestampedModel):
         return f'{self.rating} star by {self.reviewer.username} for {self.gym.name}'
 
 
+class GymSchedulePost(models.Model):
+    title = models.CharField(blank=True, max_length=150)
+    content = models.TextField(max_length=2000, blank=True)
+    scheduled_for = models.DateTimeField(blank=True, null=True)
+    author = models.ForeignKey(
+        on_delete=django.db.models.deletion.CASCADE,
+        related_name="gym_schedule_posts",
+        to="profiles.profile",
+    )
+    gym = models.ForeignKey(
+        on_delete=django.db.models.deletion.CASCADE,
+        related_name="schedule_posts",
+        to="gyms.gym",
+    )
+
+    class Meta:
+        db_table = "gyms_schedule_post"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.title or "Unnamed Schedule Post"
+
+
 class GymDonation(TimestampedModel):
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name='donations')
