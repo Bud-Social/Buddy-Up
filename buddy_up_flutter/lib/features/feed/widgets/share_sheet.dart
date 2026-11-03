@@ -8,8 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:image/image.dart' as img;
-import 'package:ffmpeg_kit_new/ffmpeg_kit.dart';
-import 'package:ffmpeg_kit_new/return_code.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/return_code.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../data/models/post.dart';

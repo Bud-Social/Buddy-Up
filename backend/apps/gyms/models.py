@@ -299,12 +299,12 @@ class GymSchedulePost(models.Model):
     content = models.TextField(max_length=2000, blank=True)
     scheduled_for = models.DateTimeField(blank=True, null=True)
     author = models.ForeignKey(
-        on_delete=django.db.models.deletion.CASCADE,
+        on_delete=models.CASCADE,
         related_name="gym_schedule_posts",
         to="profiles.profile",
     )
     gym = models.ForeignKey(
-        on_delete=django.db.models.deletion.CASCADE,
+        on_delete=models.CASCADE,
         related_name="schedule_posts",
         to="gyms.gym",
     )

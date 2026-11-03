@@ -32,7 +32,7 @@ export function useAuthRequired() {
         }
       } catch (e) {
         if (isAuthRefreshRejection(e)) {
-          logout();
+          _logout();
           if (!PUBLIC_ROUTES.includes(location.pathname)) navigate('/login');
         }
       } finally {
