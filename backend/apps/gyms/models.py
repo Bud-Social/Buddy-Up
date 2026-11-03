@@ -294,7 +294,7 @@ class GymReview(TimestampedModel):
         return f'{self.rating} star by {self.reviewer.username} for {self.gym.name}'
 
 
-class GymSchedulePost(models.Model):
+class GymSchedulePost(TimestampedModel):
     title = models.CharField(blank=True, max_length=150)
     content = models.TextField(max_length=2000, blank=True)
     scheduled_for = models.DateTimeField(blank=True, null=True)
