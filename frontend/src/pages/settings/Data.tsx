@@ -16,7 +16,7 @@ const DELETE_PHRASE = 'delete my account';
 export default function Data() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const logout = useAuthStore((s) => s.logout);
+  const logout = useAuthStore((s) => s._logout);
 
   const [consentStatus, setConsentStatus] = useState<Awaited<ReturnType<typeof authApi.getConsentStatus>>['data'] | null>(null);
   const [consentLoading, setConsentLoading] = useState(true);

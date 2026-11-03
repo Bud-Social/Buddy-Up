@@ -59,7 +59,7 @@ function GoogleSignUpButton({ onError }: { onError: (msg: string) => void }) {
 export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const logout = useAuthStore((s) => s.logout);
+  const logout = useAuthStore((s) => s._logout);
   const setTokens = useAuthStore((s) => s.setTokens);
   const setUser = useAuthStore((s) => s.setUser);
 

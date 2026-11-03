@@ -17,7 +17,7 @@ export default function Account() {
   const profile = useAuthStore((s) => s.profile);
   const user = useAuthStore((s) => s.user);
   const setProfile = useAuthStore((s) => s.setProfile);
-  const logout = useAuthStore((s) => s.logout);
+  const logout = useAuthStore((s) => s._logout);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false);

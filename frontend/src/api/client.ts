@@ -105,7 +105,7 @@ apiClient.interceptors.response.use(
         // Only a definitive auth rejection (4xx) ends the session — a
         // network hiccup must not log the user out.
         if (isAuthRefreshRejection(e)) {
-          useAuthStore.getState().logout();
+          useAuthStore.getState()._logout();
         }
         throw error;
       }

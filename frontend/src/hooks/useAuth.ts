@@ -6,7 +6,7 @@ import { refreshAccessToken, isAuthRefreshRejection } from '@/api/client';
 const PUBLIC_ROUTES = ['/', '/login', '/signup', '/verify-age', '/forgot-password', '/terms', '/privacy', '/community-guidelines', '/cookie-policy', '/medical-disclaimer', '/sponsorship-policy', '/adult-content-policy'];
 
 export function useAuthRequired() {
-  const { isAuthenticated, isLoading, setUser, logout, setLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, setUser, _logout, setLoading } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
