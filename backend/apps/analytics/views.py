@@ -1,5 +1,6 @@
 import os
 import uuid
+from django.conf import settings
 
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
@@ -12,7 +13,7 @@ from rest_framework.response import Response
 
 from .models import (
     ActivityRecord, WorkoutLog, BodyMetric, AnalyticsReport,
-    WORKOUT_TYPE_SPECS, all_category_keys,
+    WORKOUT_TYPE_SPECS, all_category_keys, VideoWatermark,
 )
 from .serializers import (
     ActivityRecordSerializer, WorkoutLogSerializer,
@@ -445,3 +446,295 @@ class AnalyticsReportShareView(views.APIView):
             'data': {'report_id': str(report.id), 'post_id': str(post.id), 'image_url': image_url},
             'message': 'Report shared to your feed.', 'errors': None, 'pagination': None,
         }, status=status.HTTP_201_CREATED)
+
+
+class PrepareShareView(views.APIView):
+    """Prepare a share draft from an activity or workout log.
+
+    Creates a feed ``Draft`` pre-filled with the activity/workout data so the
+    user can edit caption, attach media, and choose visibility before
+    publishing. Nothing is posted to the feed yet.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from apps.feed.models import Draft, Post
+        from .models import ActivityRecord, WorkoutLog
+
+        profile = request.user.profile
+        kind = request.data.get('kind')
+        obj_id = request.data.get('obj_id')
+
+        if kind not in ('activity', 'workout') or not obj_id:
+            return Response({'success': False, 'data': None,
+                             'message': 'kind (activity|workout) and obj_id are required.',
+                             'errors': None, 'pagination': None},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        draft = Draft(
+            author=profile,
+            post_type='workout_log',
+            visibility=request.data.get('visibility', 'public'),
+            source_kind=kind,
+        )
+
+        if kind == 'activity':
+            obj = get_object_or_404(ActivityRecord, id=obj_id, user=profile)
+            draft.source_activity = obj
+            km = round((obj.distance_meters or 0) / 1000, 2)
+            mins = round((obj.duration_seconds or 0) / 60)
+            draft.body = (
+                f'🏃 Just finished a {obj.get_activity_type_display().lower()} — '
+                f'{km} km in {mins} min.'
+            )
+            draft.tags = ['activity', obj.activity_type]
+        else:
+            obj = get_object_or_404(WorkoutLog, id=obj_id, user=profile)
+            draft.source_workout = obj
+            draft.body = (
+                f'💪 Logged {obj.exercise} — {obj.sets or 0}×{obj.reps or 0}'
+                + (f' @ {obj.weight_kg}kg' if obj.weight_kg else '')
+            )
+            draft.tags = ['workout', obj.workout_type]
+
+        if obj.location_lat and obj.location_lng:
+            draft.location_lat = obj.location_lat
+            draft.location_lng = obj.location_lng
+            draft.location_label = obj.notes or ''
+
+        draft.save()
+        return Response({
+            'success': True,
+            'data': {
+                'draft_id': str(draft.id),
+                'body': draft.body,
+                'visibility': draft.visibility,
+                'source_kind': draft.source_kind,
+                'tags': draft.tags,
+            },
+            'message': 'Share draft prepared. Edit and publish when ready.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class PublishDraftView(views.APIView):
+    """Publish a prepared share draft as a feed Post.
+
+    The user has already edited the draft (caption, media, visibility).
+    This converts it into a real Post and clears the source link.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, draft_id):
+        from apps.feed.models import Draft, Post
+
+        profile = request.user.profile
+        draft = get_object_or_404(Draft, id=draft_id, author=profile)
+
+        body = request.data.get('body', draft.body or '').strip()
+        visibility = request.data.get('visibility', draft.visibility or 'public')
+        media_urls = request.data.get('media_urls', draft.media_urls or [])
+        tags = request.data.get('tags', draft.tags or [])
+
+        if visibility not in ('public', 'buddies', 'gym_members', 'private'):
+            visibility = 'public'
+
+        post = Post.objects.create(
+            author=profile,
+            post_type=draft.post_type or 'workout_log',
+            body=body,
+            visibility=visibility,
+            media_urls=media_urls,
+            tags=tags,
+            workout_log_data={
+                'source': 'share_draft',
+                'source_kind': draft.source_kind,
+            } if draft.source_kind else None,
+            location_label=draft.location_label or '',
+            location_lat=draft.location_lat,
+            location_lng=draft.location_lng,
+        )
+
+        # Clear the draft's source link so it isn't re-published.
+        draft.source_activity = None
+        draft.source_workout = None
+        draft.source_kind = ''
+        draft.save(update_fields=['source_activity', 'source_workout', 'source_kind', 'updated_at'])
+
+        return Response({
+            'success': True,
+            'data': {'post_id': str(post.id), 'draft_id': str(draft.id)},
+            'message': 'Published to feed.', 'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CaptionCorrectView(views.APIView):
+    """Correct grammar in a social caption via the AI microservice.
+
+    Keyless / rule-based fallback if the AI service is unavailable.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'analytics'
+
+    def post(self, request):
+        caption = request.data.get('caption', '').strip()
+        context = request.data.get('context', 'post')
+        if not caption:
+            return Response({'success': False, 'data': None,
+                             'message': 'caption is required.',
+                             'errors': None, 'pagination': None},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.ai.client import ai_post
+        try:
+            resp = ai_post(
+                f'{settings.AI_SERVICE_URL}/api/v1/feed/correct-caption',
+                json={'caption': caption, 'context': context},
+                timeout=5.0,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return Response({
+                    'success': True,
+                    'data': data,
+                    'message': 'Caption corrected.', 'errors': None, 'pagination': None,
+                })
+        except Exception:  # noqa: BLE001 — fall back to local correction
+            pass
+
+        # Local rule-based fallback (no network, no API key needed)
+        from .caption_engine import correct_caption
+        result = correct_caption(caption, context)
+        return Response({
+            'success': True,
+            'data': result,
+            'message': 'Caption corrected (local fallback).', 'errors': None, 'pagination': None,
+        })
+
+
+class VideoDownloadView(views.APIView):
+    """Download a video attached to a post (activity/workout share).
+
+    Returns the watermarked video URL. The first request triggers an async
+    ffmpeg watermark job; subsequent requests return the ready watermarked file.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'analytics'
+
+    def get(self, request, post_id):
+        from apps.feed.models import Post
+
+        profile = request.user.profile
+        post = get_object_or_404(Post, id=post_id, author=profile)
+
+        video_urls = [
+            u for u in (post.media_urls or [])
+            if u.lower().endswith(('.mp4', '.mov', '.webm', '.m4v', '.avi'))
+        ]
+        if not video_urls:
+            return Response({'success': False, 'data': None,
+                             'message': 'No video attached to this post.',
+                             'errors': None, 'pagination': None},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        video_url = video_urls[0]
+
+        # Get or create the watermark record.
+        vw, created = VideoWatermark.objects.get_or_create(
+            post=post, original_video_url=video_url,
+            defaults={'status': 'pending'},
+        )
+
+        if vw.status == 'ready':
+            return Response({
+                'success': True,
+                'data': {
+                    'video_url': vw.watermarked_video_url,
+                    'download': True,
+                    'watermark': 'BuddyUp Fit',
+                    'post_id': str(post.id),
+                    'status': 'ready',
+                },
+                'message': 'Watermarked video ready.', 'errors': None, 'pagination': None,
+            })
+
+        if vw.status == 'failed':
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Watermarking failed: {vw.error_message or "unknown error"}',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # pending or processing: kick off (or re-kick) the async watermark job.
+        if created or vw.status == 'pending':
+            watermark_video.delay(str(vw.id))
+
+        return Response({
+            'success': True,
+            'data': {
+                'video_url': video_url,
+                'download': True,
+                'watermark': 'BuddyUp Fit',
+                'post_id': str(post.id),
+                'status': 'processing',
+                'message': 'Watermarking in progress — poll this endpoint for the ready URL.',
+            },
+            'message': 'Watermarking started.', 'errors': None, 'pagination': None,
+            'status_code': status.HTTP_202_ACCEPTED,
+        }, status=status.HTTP_202_ACCEPTED)
+
+
+class ActivityDetectionView(views.APIView):
+    """Automatically detect activity type from GPS route or summary stats.
+
+    Keyless, server-side heuristics — no ML model or external API needed.
+    Accepts either a full route (list of [lat, lng, timestamp, elevation?])
+    or summary stats (duration, distance, avg_speed, elevation_gain).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_scope = 'analytics'
+
+    def post(self, request):
+        from .activity_detection import detect_activity_type, detect_activity_type_from_summary
+
+        route = request.data.get('route')
+        duration_seconds = request.data.get('duration_seconds', 0)
+        distance_meters = request.data.get('distance_meters', 0)
+        avg_speed_kmh = request.data.get('avg_speed_kmh')
+        elevation_gain_m = request.data.get('elevation_gain_m')
+
+        if route:
+            detected = detect_activity_type(
+                route=route,
+                duration_seconds=duration_seconds,
+                distance_meters=distance_meters,
+                elevation_gain_m=elevation_gain_m,
+            )
+            method = 'route'
+        else:
+            detected = detect_activity_type_from_summary(
+                duration_seconds=duration_seconds,
+                distance_meters=distance_meters,
+                avg_speed_kmh=avg_speed_kmh,
+                elevation_gain_m=elevation_gain_m,
+            )
+            method = 'summary'
+
+        # Confidence heuristic: more trackpoints = higher confidence
+        confidence = 'high' if route and len(route) >= 10 else (
+            'medium' if route else 'low'
+        )
+
+        return Response({
+            'success': True,
+            'data': {
+                'activity_type': detected,
+                'confidence': confidence,
+                'method': method,
+            },
+            'message': 'Activity detected.', 'errors': None, 'pagination': None,
+        })
+
+
+
+

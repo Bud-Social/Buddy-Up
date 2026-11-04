@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, CalendarDays, MessageCircle, Bell, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, LayoutDashboard, Activity, UsersRound, HeartHandshake, Footprints, Bike, MapPin, CalendarRange, Store } from 'lucide-react';
+import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, CalendarDays, MessageCircle, Bell, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, LayoutDashboard, Activity, UsersRound, HeartHandshake, Footprints, Bike, MapPin, CalendarRange, Store, Timer, Map as MapIcon } from 'lucide-react';
 import { useNotificationStore } from '@/store/notificationStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useAuthStore } from '@/store/authStore';
@@ -14,6 +14,8 @@ const main = [
   { to: '/discover', icon: Search, label: 'Discover' },
   { to: '/buddies/find', icon: Footprints, label: 'Find a Buddy' },
   { to: '/analytics', icon: Activity, label: 'Analytics' },
+  { to: '/countdowns', icon: Timer, label: 'Countdowns' },
+  { to: '/activities', icon: MapIcon, label: 'Activities' },
   { to: '/lives', icon: Radio, label: 'Lives' }, { to: '/gyms', icon: Dumbbell, label: 'Gyms' },
   { to: '/trainers', icon: Users, label: 'Trainers' }, { to: '/marketplace', icon: ShoppingBag, label: 'Marketplace' },
   { to: '/routines', icon: CalendarDays, label: 'Routines' }, { to: '/sessions', icon: Calendar, label: 'Sessions' }, { to: '/messages', icon: MessageCircle, label: 'Messages' },

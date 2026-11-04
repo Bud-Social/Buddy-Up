@@ -17,5 +17,10 @@ urlpatterns = [
     path('report/download/', views.AnalyticsReportDownloadView.as_view(), name='report_download'),
     path('report/share/', views.AnalyticsReportShareView.as_view(), name='report_share'),
     path('<str:kind>/<uuid:obj_id>/share/', views.ActivityShareView.as_view(), name='activity_share'),
+    path('share/prepare/', views.PrepareShareView.as_view(), name='share_prepare'),
+    path('share/draft/<uuid:draft_id>/publish/', views.PublishDraftView.as_view(), name='share_publish'),
+    path('caption/correct/', views.CaptionCorrectView.as_view(), name='caption_correct'),
+    path('video/<uuid:post_id>/download/', views.VideoDownloadView.as_view(), name='video_download'),
+    path('activity/detect/', views.ActivityDetectionView.as_view(), name='activity_detect'),
     path('events/', views.IngestEventsView.as_view(), name='events'),
 ]

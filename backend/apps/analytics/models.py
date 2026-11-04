@@ -381,3 +381,43 @@ class AnalyticsEvent(TimestampedModel):
 
     def __str__(self):
         return f'{self.event_name} @ {self.received_at:%Y-%m-%d %H:%M}'
+
+
+class VideoWatermark(TimestampedModel):
+    """Tracks watermarking status for videos attached to feed posts.
+
+    Videos are burned with a diagonal "BuddyUp Fit" watermark via ffmpeg
+    (drawtext filter). Processing is asynchronous: a Celery task renders the
+    watermarked file and stores its public URL here.
+    """
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('ready', 'Ready'),
+        ('failed', 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    post = models.ForeignKey(
+        'feed.Post', on_delete=models.CASCADE, related_name='video_watermarks',
+    )
+    original_video_url = models.URLField(
+        help_text='Source video URL (Cloudinary or local media).',
+    )
+    watermarked_video_url = models.URLField(blank=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
+    error_message = models.TextField(blank=True)
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'analytics_video_watermark'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['post', '-created_at']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f'{self.post_id} — {self.status}'
+

@@ -14,6 +14,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/upload/cloudinary_uploader.dart';
 import '../../../core/utils/constants.dart';
 import '../../../data/models/post.dart';
+import '../../../features/analytics/providers/analytics_provider.dart';
 import '../../community/providers/community_provider.dart';
 import '../providers/feed_provider.dart';
 import 'location_picker_screen.dart';
@@ -74,6 +75,8 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
   bool _commentsEnabled = true;
 
   bool _isSubmitting = false;
+  bool _isCorrectingCaption = false;
+  String? _correctedCaption;
   // TikTok-style publish stages: Finalizing → Uploading (overall %) → Creating.
   String _publishStage = '';
   double _overallProgress = 0;
@@ -545,6 +548,49 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     }
   }
 
+  /// Correct grammar in the current caption via the AI microservice.
+  Future<void> _correctCaption() async {
+    final original = _bodyController.text.trim();
+    if (original.isEmpty) return;
+    setState(() {
+      _isCorrectingCaption = true;
+      _correctedCaption = null;
+    });
+    try {
+      final raw = await ref.read(analyticsRepositoryProvider).correctCaption({
+        'caption': original,
+        'context': 'post_composer',
+      });
+      final data = raw['data'] as Map<String, dynamic>?;
+      if (data != null && mounted) {
+        setState(() {
+          _correctedCaption = data['corrected'] as String?;
+          final changes = (data['changes'] as List?) ?? [];
+          if (changes.isNotEmpty) {
+            _snack('Grammar fixes: ${changes.join(', ')}', error: false);
+          }
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Caption correction failed: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isCorrectingCaption = false);
+    }
+  }
+
+  /// Apply the corrected caption to the text field.
+  void _applyCorrectedCaption() {
+    if (_correctedCaption == null) return;
+    _bodyController.text = _correctedCaption!;
+    setState(() => _correctedCaption = null);
+  }
+
   /// TikTok-style publish pipeline:
   /// 1. *Finalizing* — video compression runs once here, before any upload.
   /// 2. *Uploading* — signed Cloudinary uploads with a byte-weighted overall
@@ -783,17 +829,60 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextField(
-          controller: _bodyController,
-          maxLines: 8,
-          maxLength: maxPostBodyLength,
-          style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 16),
-          decoration: const InputDecoration(
-            hintText: "What's on your mind?",
-            hintStyle: TextStyle(color: BuddyColors.textSecondary),
-            border: InputBorder.none,
-            counterStyle: TextStyle(color: BuddyColors.textSecondary),
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _bodyController,
+                maxLines: 8,
+                maxLength: maxPostBodyLength,
+                style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 16),
+                decoration: const InputDecoration(
+                  hintText: "What's on your mind?",
+                  hintStyle: TextStyle(color: BuddyColors.textSecondary),
+                  border: InputBorder.none,
+                  counterStyle: TextStyle(color: BuddyColors.textSecondary),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (_bodyController.text.trim().isNotEmpty)
+              _isCorrectingCaption
+                  ? const SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : OutlinedButton.icon(
+                      onPressed: _correctCaption,
+                      icon: const Icon(Icons.auto_fix_high, size: 16),
+                      label: const Text('Fix grammar', style: TextStyle(fontSize: 12)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: BuddyColors.green,
+                        side: BorderSide(color: BuddyColors.green),
+                        minimumSize: Size.zero,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+            if (_correctedCaption != null && _correctedCaption!.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(left: 8),
+                child: OutlinedButton.icon(
+                  onPressed: _applyCorrectedCaption,
+                  icon: const Icon(Icons.check_circle, size: 16),
+                  label: const Text('Apply', style: TextStyle(fontSize: 12)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: BuddyColors.green,
+                    side: BorderSide(color: BuddyColors.green),
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+          ],
         ),
         if (_media.isNotEmpty) ...[
           const SizedBox(height: 12),

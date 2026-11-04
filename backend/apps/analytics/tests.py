@@ -312,3 +312,86 @@ class WorkoutProvenanceExtrasTests(TestCase):
         resp = self._log(exercise='Deadlift')
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED, resp.content)
         self.assertEqual(resp.data['data']['provenance'], {})
+
+
+class ActivityDetectionTests(TestCase):
+    """Automatic activity-type detection from GPS route / summary stats."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='detect@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='detectuser', display_name='Detect User')
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    def _detect(self, payload):
+        return self.client.post('/api/v1/analytics/activity/detect/', payload, format='json')
+
+    def test_detect_walk_from_route(self):
+        # Slow walking pace ~4 km/h over 10 points
+        route = []
+        lat, lng, t = 51.5, -0.1, 1000.0
+        for i in range(10):
+            route.append([lat, lng, t + i * 60])
+            lat += 0.0005  # ~55m per minute → ~3.3 km/h
+        resp = self._detect({'route': route, 'duration_seconds': 600, 'distance_meters': 330})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['data']['activity_type'], 'walk')
+        self.assertEqual(resp.data['data']['method'], 'route')
+
+    def test_detect_run_from_route(self):
+        # Running pace ~10 km/h
+        route = []
+        lat, lng, t = 51.5, -0.1, 1000.0
+        for i in range(10):
+            route.append([lat, lng, t + i * 30])
+            lat += 0.0008  # ~88m per 30s → ~10.6 km/h
+        resp = self._detect({'route': route, 'duration_seconds': 300, 'distance_meters': 880})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['data']['activity_type'], 'run')
+
+    def test_detect_cycle_from_route(self):
+        # Cycling pace ~20 km/h
+        route = []
+        lat, lng, t = 51.5, -0.1, 1000.0
+        for i in range(10):
+            route.append([lat, lng, t + i * 20])
+            lat += 0.0015  # ~166m per 20s → ~30 km/h
+        resp = self._detect({'route': route, 'duration_seconds': 200, 'distance_meters': 1660})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['data']['activity_type'], 'cycle')
+
+    def test_detect_hike_from_route(self):
+        # Walking pace with elevation gain >100m → hike
+        route = []
+        lat, lng, t, elev = 51.5, -0.1, 1000.0, 0.0
+        for i in range(10):
+            route.append([lat, lng, t + i * 60, elev])
+            lat += 0.0005
+            elev += 15  # 15m per point → 135m gain
+        resp = self._detect({'route': route, 'duration_seconds': 600, 'distance_meters': 550,
+                             'elevation_gain_m': 135})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['data']['activity_type'], 'hike')
+
+    def test_detect_walk_from_summary(self):
+        resp = self._detect({
+            'duration_seconds': 1800, 'distance_meters': 2000,
+            'avg_speed_kmh': 4.0,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['data']['activity_type'], 'walk')
+        self.assertEqual(resp.data['data']['method'], 'summary')
+
+    def test_detect_cycle_from_summary(self):
+        resp = self._detect({
+            'duration_seconds': 1800, 'distance_meters': 10000,
+            'avg_speed_kmh': 20.0,
+        })
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['data']['activity_type'], 'cycle')
+
+    def test_detect_insufficient_route_falls_back_to_walk(self):
+        resp = self._detect({'route': [[51.5, -0.1, 1000.0]], 'duration_seconds': 60, 'distance_meters': 0})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['data']['activity_type'], 'walk')
+

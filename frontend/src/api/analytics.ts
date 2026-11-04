@@ -38,6 +38,33 @@ export const analyticsApi = {
   shareActivity: (kind: 'activity' | 'workout', id: string, body?: string) =>
     apiClient.post<ApiResponse<{ post_id: string }>>(`/analytics/${kind}/${id}/share/`, body ? { body } : {}).then((r) => r.data),
 
+  /** Prepare a share draft (edit caption/media before publishing). */
+  sharePrepare: (payload: { kind: 'activity' | 'workout'; obj_id: string; visibility?: string; body?: string }) =>
+    apiClient.post<ApiResponse<{ draft_id: string; body: string; visibility: string; source_kind: string; tags: string[] }>>('/analytics/share/prepare/', payload).then((r) => r.data.data),
+
+  /** Publish a prepared share draft to the feed. */
+  sharePublish: (draftId: string, payload: { body?: string; visibility?: string; media_urls?: string[]; tags?: string[] }) =>
+    apiClient.post<ApiResponse<{ post_id: string; draft_id: string }>>(`/analytics/share/draft/${draftId}/publish/`, payload).then((r) => r.data.data),
+
+  /** Correct grammar in a caption before posting. */
+  captionCorrect: (payload: { caption: string; context?: string }) =>
+    apiClient.post<ApiResponse<{ corrected: string; changes: string[] }>>('/analytics/caption/correct/', payload).then((r) => r.data.data),
+
+  /** Get a download URL for a video attached to a post. Triggers async watermarking if needed. */
+  videoDownload: (postId: string) =>
+    apiClient.get<ApiResponse<{ video_url: string; download: boolean; watermark: string; post_id: string; status: 'ready' | 'processing' | 'failed' }>>(`/analytics/video/${postId}/download/`).then((r) => r.data.data),
+
+  /** Poll for watermark readiness. */
+  pollWatermark: (postId: string) =>
+    apiClient.get<ApiResponse<{ video_url: string; download: boolean; watermark: string; post_id: string; status: 'ready' | 'processing' | 'failed' }>>(`/analytics/video/${postId}/download/`).then((r) => r.data.data),
+
+  /** Auto-detect activity type from GPS route or summary stats. */
+  detectActivity: (payload: {
+    route?: number[][]; duration_seconds?: number; distance_meters?: number;
+    avg_speed_kmh?: number | null; elevation_gain_m?: number | null;
+  }) =>
+    apiClient.post<ApiResponse<{ activity_type: string; confidence: string; method: string }>>('/analytics/activity/detect/', payload).then((r) => r.data.data),
+
   getWorkouts: (params?: { category?: string; start?: string; end?: string }) =>
     apiClient.get<ApiResponse<unknown[]>>('/analytics/workouts/', { params }).then((r) => r.data),
 

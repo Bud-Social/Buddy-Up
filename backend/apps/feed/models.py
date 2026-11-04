@@ -244,11 +244,26 @@ class Draft(TimestampedModel):
     poll_max_selections = models.PositiveSmallIntegerField(default=1)
     mentioned_user_ids = models.JSONField(default=list)
     is_anonymous = models.BooleanField(default=False)
+    # Optional link to the activity/workout being shared. When set, the draft
+    # is a "pre-share" that the user edits before publishing to a Post.
+    source_activity = models.ForeignKey(
+        'analytics.ActivityRecord', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='share_drafts',
+    )
+    source_workout = models.ForeignKey(
+        'analytics.WorkoutLog', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='share_drafts',
+    )
+    source_kind = models.CharField(
+        max_length=10, blank=True,
+        help_text='"activity" or "workout" — which source this draft previews.',
+    )
 
     class Meta:
         db_table = 'feed_draft'
         indexes = [
             models.Index(fields=['author', '-updated_at']),
+            models.Index(fields=['author', 'source_kind', '-updated_at']),
         ]
 
 

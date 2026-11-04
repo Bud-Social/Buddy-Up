@@ -61,6 +61,12 @@ const List<AppNavDestination> appNavDestinations = [
   ),
   AppNavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
   AppNavDestination(
+    '/countdowns',
+    Icons.timer_outlined,
+    Icons.timer,
+    'Countdowns',
+  ),
+  AppNavDestination(
     '/settings',
     Icons.settings_outlined,
     Icons.settings,

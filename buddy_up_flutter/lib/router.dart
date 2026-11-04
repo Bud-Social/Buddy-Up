@@ -71,6 +71,7 @@ import 'features/settings/screens/blocked_screen.dart';
 import 'features/settings/screens/notification_prefs_screen.dart';
 import 'features/settings/screens/adult_content_policy_screen.dart';
 import 'features/analytics/screens/analytics_screen.dart';
+import 'features/countdowns/screens/countdowns_screen.dart';
 import 'features/feed/screens/creator_insights_screen.dart';
 import 'features/sessions/screens/trainer_list_screen.dart';
 import 'features/sessions/screens/trainer_profile_screen.dart';
@@ -525,6 +526,11 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
         builder: (_, _) => const AnalyticsScreen(),
       ),
       GoRoute(
+        path: '/countdowns',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (_, _) => const CountdownsScreen(),
+      ),
+      GoRoute(
         path: '/insights',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (_, _) => const CreatorInsightsScreen(),
@@ -976,6 +982,12 @@ class _AppShellState extends State<_AppShell> {
     ),
     _NavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
     _NavDestination(
+      '/countdowns',
+      Icons.timer_outlined,
+      Icons.timer,
+      'Countdowns',
+    ),
+    _NavDestination(
       '/settings',
       Icons.settings_outlined,
       Icons.settings,
@@ -999,6 +1011,12 @@ class _AppShellState extends State<_AppShell> {
       'Gyms',
     ),
     _NavDestination('/profile', Icons.person_outline, Icons.person, 'Profile'),
+    _NavDestination(
+      '/countdowns',
+      Icons.timer_outlined,
+      Icons.timer,
+      'Countdowns',
+    ),
   ];
 
   @override
@@ -1109,6 +1127,7 @@ class _AppShellState extends State<_AppShell> {
     '/community-guidelines', '/medical-disclaimer', '/sponsorship-policy',
     '/adult-content-policy', '/feed', '/health-insights', '/workout-form',
     '/gyms', '/lives', '/marketplace', '/wallet', '/analytics',
+    '/countdowns',
     '/notifications', '/verification', '/trainers', '/book', '/sessions',
     '/my-enrollments', '/programmes', '/schedule', '/discover', '/messages',
     '/communities', '/profile', '/settings', '/buddies', '/admin',

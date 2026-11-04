@@ -20,6 +20,9 @@ decision (see ``ANALYTICS_EVENT_RETENTION_DAYS`` in config/settings/base.py).
 """
 import datetime as dt
 import logging
+import os
+import tempfile
+import uuid
 
 from celery import shared_task
 from django.conf import settings
@@ -166,3 +169,88 @@ def purge_expired_analytics_events(limit=None, days=None):
         cutoff.isoformat(), deleted, window_days,
     )
     return {'deleted': deleted, 'cutoff': cutoff.isoformat(), 'retention_days': window_days}
+
+
+@shared_task(name='apps.analytics.tasks.watermark_video')
+def watermark_video(video_watermark_id: str):
+    """Burn a BuddyUp Fit watermark into a video asynchronously.
+
+    Downloads the source video, runs ffmpeg drawtext, uploads the result to
+    storage, and updates the ``VideoWatermark`` record. Idempotent — re-running
+    on a ``ready`` record is a no-op.
+    """
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+    from django.utils import timezone
+
+    import requests
+
+    from .models import VideoWatermark
+
+    try:
+        vw = VideoWatermark.objects.get(id=video_watermark_id)
+    except VideoWatermark.DoesNotExist:
+        logger.warning('VideoWatermark %s not found — skipping', video_watermark_id)
+        return {'status': 'not_found', 'id': video_watermark_id}
+
+    if vw.status == 'ready':
+        return {'status': 'already_ready', 'id': video_watermark_id}
+
+    vw.status = 'processing'
+    vw.save(update_fields=['status', 'updated_at'])
+
+    try:
+        # Download source video to a temp file.
+        resp = requests.get(vw.original_video_url, timeout=60)
+        resp.raise_for_status()
+        ext = os.path.splitext(vw.original_video_url)[1] or '.mp4'
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            tmp.write(resp.content)
+            input_path = tmp.name
+
+        try:
+            output_path = watermark_video(input_path)
+            if output_path == input_path:
+                # Watermarking skipped (no ffmpeg/font) — use original.
+                vw.watermarked_video_url = vw.original_video_url
+                vw.status = 'ready'
+                vw.processed_at = timezone.now()
+                vw.save(update_fields=[
+                    'watermarked_video_url', 'status', 'processed_at', 'updated_at',
+                ])
+                return {'status': 'skipped', 'id': video_watermark_id}
+
+            # Upload the watermarked file to storage.
+            with open(output_path, 'rb') as f:
+                stored_name = default_storage.save(
+                    f'watermarked_videos/{uuid.uuid4().hex}{ext}',
+                    ContentFile(f.read()),
+                )
+            watermarked_url = default_storage.url(stored_name)
+            if not watermarked_url.startswith('http'):
+                watermarked_url = settings.PUBLIC_API_URL.rstrip('/') + watermarked_url
+
+            vw.watermarked_video_url = watermarked_url
+            vw.status = 'ready'
+            vw.processed_at = timezone.now()
+            vw.save(update_fields=[
+                'watermarked_video_url', 'status', 'processed_at', 'updated_at',
+            ])
+            logger.info(
+                'Video watermark ready post=%s url=%s', vw.post_id, watermarked_url,
+            )
+            return {'status': 'ready', 'id': video_watermark_id, 'url': watermarked_url}
+        finally:
+            for p in (input_path, output_path):
+                if p and os.path.exists(p) and p != vw.original_video_url:
+                    try:
+                        os.unlink(p)
+                    except OSError:  # noqa: BLE001
+                        pass
+
+    except Exception as exc:  # noqa: BLE001 — never let the task die silently
+        logger.exception('Video watermark failed id=%s', video_watermark_id)
+        vw.status = 'failed'
+        vw.error_message = str(exc)[:1000]
+        vw.save(update_fields=['status', 'error_message', 'updated_at'])
+        return {'status': 'failed', 'id': video_watermark_id, 'error': str(exc)[:200]}

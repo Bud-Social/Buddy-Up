@@ -72,4 +72,8 @@ abstract class AnalyticsRepository {
     @Path('id') String id,
     @Body() Map<String, dynamic> data,
   );
+
+  /// Correct grammar in a social caption via the AI microservice.
+  @POST('/analytics/caption/correct/')
+  Future<dynamic> correctCaption(@Body() Map<String, dynamic> data);
 }

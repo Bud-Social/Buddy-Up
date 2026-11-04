@@ -33,6 +33,16 @@ class FeedbackResponse(BaseModel):
     exploited_steps: int
 
 
+class CaptionCorrectRequest(BaseModel):
+    caption: str
+    context: str = ''  # e.g. 'workout_share', 'activity_share', 'post'
+
+
+class CaptionCorrectResponse(BaseModel):
+    corrected: str
+    changes: list[str] = []
+
+
 @router.post('/rank', response_model=RankResponse)
 async def rank_feed_endpoint(req: RankRequest):
     ranked = rank_feed(req.user_id, req.candidates, bandit=req.bandit)
@@ -43,3 +53,15 @@ async def rank_feed_endpoint(req: RankRequest):
 async def feedback_endpoint(req: FeedbackRequest):
     result = record_feedback(req.user_id, req.arm_key, req.context, req.reward)
     return FeedbackResponse(**result)
+
+
+@router.post('/correct-caption', response_model=CaptionCorrectResponse)
+async def correct_caption_endpoint(req: CaptionCorrectRequest):
+    """Correct grammar and improve a social caption.
+
+    Uses a small local model (or falls back to rule-based fixes) to fix
+    grammatically incorrect captions before a user posts them.
+    """
+    from ..caption_engine import correct_caption
+    result = await asyncio.to_thread(correct_caption, req.caption, req.context)
+    return CaptionCorrectResponse(**result)
