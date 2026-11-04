@@ -5,10 +5,12 @@ speed, elevation gain, and movement patterns. Keyless — works entirely
 on-device/server-side with no external API or ML model.
 """
 
-import math
+import logging
 from typing import List, Tuple, Optional
 
 from common.geo import haversine_km
+
+logger = logging.getLogger(__name__)
 
 
 def _segment_speeds(points: List[Tuple[float, float, float]]) -> List[float]:
@@ -95,7 +97,7 @@ def detect_activity_type(
         elevation_gain_m = _elevation_gain_m(points)
 
     # Distance sanity
-    dist_km = (distance_meters or 0) / 1000.0
+    _ = (distance_meters or 0) / 1000.0
 
     # --- Classification ---
     # Cycle: sustained speed >10 km/h, or max speed >25 km/h

@@ -6,7 +6,7 @@ captions without a network call when the AI microservice is unavailable.
 """
 
 import re
-from typing import Tuple, List
+from typing import List
 
 
 _CAPTION_FIXES = [

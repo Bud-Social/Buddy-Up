@@ -91,11 +91,15 @@ extension CreateUserCountdownRequest on CreateUserCountdown {
       'unit': unit,
     };
     if (templateId != null) map['template'] = templateId;
-    if (customReason != null && customReason!.isNotEmpty)
+    if (customReason != null && customReason!.isNotEmpty) {
       map['custom_reason'] = customReason;
-    if (targetCount > 0) map['target_count'] = targetCount;
-    if (startDate != null && startDate!.isNotEmpty)
+    }
+    if (targetCount > 0) {
+      map['target_count'] = targetCount;
+    }
+    if (startDate != null && startDate!.isNotEmpty) {
       map['start_date'] = startDate;
+    }
     return map;
   }
 }
@@ -120,14 +124,24 @@ abstract class UpdateUserCountdown with _$UpdateUserCountdown {
 extension UpdateUserCountdownRequest on UpdateUserCountdown {
   Map<String, dynamic> toRequestJson() {
     final map = <String, dynamic>{};
-    if (customReason != null && customReason!.isNotEmpty)
+    if (customReason != null && customReason!.isNotEmpty) {
       map['custom_reason'] = customReason;
-    if (countdownType != null) map['countdown_type'] = countdownType;
-    if (unit != null) map['unit'] = unit;
-    if (targetCount != null) map['target_count'] = targetCount;
-    if (startDate != null && startDate!.isNotEmpty)
+    }
+    if (countdownType != null) {
+      map['countdown_type'] = countdownType;
+    }
+    if (unit != null) {
+      map['unit'] = unit;
+    }
+    if (targetCount != null) {
+      map['target_count'] = targetCount;
+    }
+    if (startDate != null && startDate!.isNotEmpty) {
       map['start_date'] = startDate;
-    if (isActive != null) map['is_active'] = isActive;
+    }
+    if (isActive != null) {
+      map['is_active'] = isActive;
+    }
     return map;
   }
 }

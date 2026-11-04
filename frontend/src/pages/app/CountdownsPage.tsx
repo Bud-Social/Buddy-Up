@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import {
-  Plus, RefreshCw, Trash2, Edit, Play, Timer, Settings,
+  Plus, RefreshCw, Trash2, Edit, Play, Timer,
 } from 'lucide-react';
 import { useCountdownsStore } from '@/store/countdownsStore';
-import { countdownsApi } from '@/api/countdowns';
-import type { CountdownTemplate, UserCountdown, CreateUserCountdown } from '@/types/countdowns';
+import type { UserCountdown, CreateUserCountdown } from '@/types/countdowns';
 
 const TEMPLATE_ICONS: Record<string, string> = {
   sobriety: '🍻',

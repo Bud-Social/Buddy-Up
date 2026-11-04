@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:retrofit/retrofit.dart';
 
-import '../../../core/api/api_client.dart';
 import '../models/countdown_models.dart';
 
 part 'countdown_repository.g.dart';

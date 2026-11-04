@@ -21,7 +21,7 @@ interface CountdownsState {
 
 export const useCountdownsStore = create<CountdownsState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       templates: [],
       countdowns: [],
       loading: false,

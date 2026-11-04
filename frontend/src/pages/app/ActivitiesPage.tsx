@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  MapPin, Timer, Flame, Calculator, Share2, X, Maximize, Smartphone, Image, Video,
+  MapPin, Timer, Share2, X, Smartphone, Image,
 } from 'lucide-react';
 import { analyticsApi } from '@/api/analytics';
 import type { ActivityRecent } from '@/types/analytics';

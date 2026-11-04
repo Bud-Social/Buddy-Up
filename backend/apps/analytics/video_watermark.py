@@ -8,12 +8,6 @@ Python ffmpeg binding is required.
 import logging
 import os
 import subprocess
-import tempfile
-import uuid
-from pathlib import Path
-
-from django.conf import settings
-from django.core.files.storage import default_storage
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +98,7 @@ def watermark_video(input_path: str, output_path: str | None = None) -> str:
     ]
 
     try:
-        result = subprocess.run(
+        subprocess.run(
             cmd, check=True, capture_output=True, timeout=600,
         )
         logger.info('Watermarked video %s -> %s', input_path, output_path)

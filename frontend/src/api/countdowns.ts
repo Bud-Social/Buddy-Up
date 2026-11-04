@@ -5,9 +5,6 @@ import type {
   UserCountdown,
   CreateUserCountdown,
   UpdateUserCountdown,
-  CountdownCheckInResult,
-  CountdownResetResult,
-  CountdownAutoAdvanceResult,
 } from '@/types/countdowns';
 
 export const countdownsApi = {

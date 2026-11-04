@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../analytics/providers/analytics_provider.dart';
 import '../models/countdown_models.dart';
 import '../providers/countdown_provider.dart';
 
@@ -43,7 +42,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
     super.dispose();
   }
 
-  Color _colorFor(template) =>
+  Color _colorFor(CountdownTemplate template) =>
       _templateColors[template.code] ?? Color(int.tryParse(
               template.color.replaceAll('#', '0xFF') ?? '0xFF6366f1') ??
           0xFF6366f1);
@@ -71,7 +70,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => Consumer(
-        builder: (_, ref, __) {
+        builder: (__ref, _, ___) {
           final templates = ref.watch(countdownsProvider).templates;
           final isLoading = ref.watch(countdownsProvider).isLoading;
           return Padding(
@@ -804,7 +803,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                                       : null,
                                 ),
                               );
-                          Navigator.pop(ctx);
+                          if (mounted) Navigator.pop(ctx);
                           _customReasonController.clear();
                           _targetCount = 0;
                           setState(() => _creatingTemplateId = null);

@@ -144,7 +144,7 @@ class UserCountdownTests(TestCase):
 
     def test_users_only_see_own_countdowns(self):
         other_user = User.objects.create_user(email='other@example.com', password='TestPass123!')
-        other_profile = Profile.objects.create(user=other_user, username='otheruser', display_name='Other')
+        Profile.objects.create(user=other_user, username='otheruser', display_name='Other')
         c = UserCountdown.objects.create(
             user=self.profile, template=self.template,
             countdown_type='manual', unit='days', current_count=5,

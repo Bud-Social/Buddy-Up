@@ -21,6 +21,7 @@ from .serializers import (
 )
 from . import engine
 from . import report as report_service
+from .tasks import watermark_video
 
 
 class BaseOwnedView(views.APIView):
@@ -458,7 +459,7 @@ class PrepareShareView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        from apps.feed.models import Draft, Post
+        from apps.feed.models import Draft
         from .models import ActivityRecord, WorkoutLog
 
         profile = request.user.profile
