@@ -148,6 +148,57 @@ class CountdownAutoAdvanceView(views.APIView):
         })
 
 
+class WelcomeCheckView(views.APIView):
+    """Check if the authenticated user's email is in the welcome celebration list.
+    
+    Emails are stored server-side only — never leaked to the frontend.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    WELCOME_EMAILS = {
+        'goddiekevo@gmail.com': {
+            'display_name': 'Naphtalie',
+            'nickname': 'Tosiq',
+            'auto_buddy_email': 'jmbngugimbugua@gmail.com',
+        },
+        'jmbngugimbugua@gmail.com': {
+            'display_name': 'Automatic Buddy',
+            'nickname': 'AutoBuddy',
+        },
+        'hairplacebnsalon@gmail.com': {
+            'display_name': 'Test User',
+            'nickname': 'Tester',
+        },
+    }
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        if not email:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'email is required.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        welcome_info = self.WELCOME_EMAILS.get(email)
+        if welcome_info:
+            return Response({
+                'success': True,
+                'data': {
+                    'is_welcome_user': True,
+                    'display_name': welcome_info['display_name'],
+                    'nickname': welcome_info['nickname'],
+                    'auto_buddy_email': welcome_info.get('auto_buddy_email'),
+                },
+                'message': 'Welcome user confirmed.', 'errors': None, 'pagination': None,
+            })
+        return Response({
+            'success': True,
+            'data': {'is_welcome_user': False},
+            'message': 'Not a welcome user.', 'errors': None, 'pagination': None,
+        })
+
+
 class CountdownSeedTemplatesView(views.APIView):
     """Seed the default countdown templates (idempotent). Dev/staff only."""
     permission_classes = [permissions.IsAdminUser]

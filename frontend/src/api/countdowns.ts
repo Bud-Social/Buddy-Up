@@ -43,4 +43,14 @@ export const countdownsApi = {
     apiClient
       .post<ApiResponse<{ advanced_ids: string[]; count: number }>>('/countdowns/auto-advance/', { signal })
       .then((r) => r.data.data),
+
+  welcomeCheck: (email: string) =>
+    apiClient
+      .post<ApiResponse<{
+        is_welcome_user: boolean;
+        display_name: string;
+        nickname: string;
+        auto_buddy_email: string | null;
+      }>>('/countdowns/welcome-check/', { email })
+      .then((r) => r.data.data),
 };
