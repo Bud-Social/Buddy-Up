@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   MapPin, Timer, Share2, X, Smartphone, Image, Play,
-  Timer as TimerIcon,
+  Timer as TimerIcon, Activity,
 } from 'lucide-react';
 import { analyticsApi } from '@/api/analytics';
 import type { ActivityRecent } from '@/types/analytics';
@@ -11,6 +11,7 @@ const ACTIVITY_ICONS: Record<string, React.ComponentType<any>> = {
   run: Timer,
   hike: MapPin,
   cycle: MapPin,
+  workout: Activity,
 };
 
 const ACTIVITY_LABELS: Record<string, string> = {
@@ -18,22 +19,31 @@ const ACTIVITY_LABELS: Record<string, string> = {
   run: 'Running',
   hike: 'Hiking',
   cycle: 'Cycling',
+  workout: 'Workout',
 };
 
-const ACTIVITY_COLORS: Record<string, { bg: string; text: string; border: string; icon: string }> = {
-  walk: { bg: 'bg-buddy-green/10', text: 'text-buddy-green', border: 'border-buddy-green/30', icon: '🚶' },
-  run: { bg: 'bg-buddy-red/10', text: 'text-buddy-red', border: 'border-buddy-red/30', icon: '🏃' },
-  cycle: { bg: 'bg-buddy-electric/10', text: 'text-buddy-electric', border: 'border-buddy-electric/30', icon: '🚴' },
-  hike: { bg: 'bg-buddy-orange/10', text: 'text-buddy-orange', border: 'border-buddy-orange/30', icon: '🥾' },
-  workout: { bg: 'bg-buddy-gold/10', text: 'text-buddy-gold', border: 'border-buddy-gold/30', icon: '💪' },
+const ACTIVITY_TARGETS: Record<string, { value: number; unit: string; label: string }> = {
+  walk: { value: 5000, unit: 'steps', label: 'Steps' },
+  run: { value: 2, unit: 'km', label: 'Distance' },
+  hike: { value: 5, unit: 'km', label: 'Distance' },
+  cycle: { value: 10, unit: 'km', label: 'Distance' },
+  workout: { value: 30, unit: 'min', label: 'Duration' },
 };
 
-const ACTIVITY_CATEGORIES: { key: string; label: string; description: string; icon: React.ComponentType<any> }[] = [
-  { key: 'walk', label: 'Walking', description: 'Casual stroll or power walk', icon: MapPin },
-  { key: 'run', label: 'Running', description: 'Jog or sprint session', icon: Timer },
-  { key: 'cycle', label: 'Cycling', description: 'Road or mountain bike ride', icon: MapPin },
-  { key: 'hike', label: 'Hiking', description: 'Trail or mountain trek', icon: MapPin },
-  { key: 'workout', label: 'Workout', description: 'Gym or strength session', icon: Timer },
+const ACTIVITY_COLORS: Record<string, { bg: string; text: string; border: string; glow: string }> = {
+  walk: { bg: 'bg-buddy-green/10', text: 'text-buddy-green', border: 'border-buddy-green/30', glow: 'shadow-[0_0_20px_rgba(0,200,150,0.3)]' },
+  run: { bg: 'bg-buddy-red/10', text: 'text-buddy-red', border: 'border-buddy-red/30', glow: 'shadow-[0_0_20px_rgba(255,71,87,0.3)]' },
+  cycle: { bg: 'bg-buddy-electric/10', text: 'text-buddy-electric', border: 'border-buddy-electric/30', glow: 'shadow-[0_0_20px_rgba(123,97,255,0.3)]' },
+  hike: { bg: 'bg-buddy-orange/10', text: 'text-buddy-orange', border: 'border-buddy-orange/30', glow: 'shadow-[0_0_20px_rgba(255,107,53,0.3)]' },
+  workout: { bg: 'bg-buddy-gold/10', text: 'text-buddy-gold', border: 'border-buddy-gold/30', glow: 'shadow-[0_0_20px_rgba(255,215,0,0.3)]' },
+};
+
+const ACTIVITY_CATEGORIES: { key: string; label: string; description: string; icon: React.ComponentType<any>; targetUnit: string }[] = [
+  { key: 'walk', label: 'Walking', description: '5,000 steps daily goal', icon: MapPin, targetUnit: 'steps' },
+  { key: 'run', label: 'Running', description: '2 km daily goal', icon: Timer, targetUnit: 'km' },
+  { key: 'cycle', label: 'Cycling', description: '10 km daily goal', icon: MapPin, targetUnit: 'km' },
+  { key: 'hike', label: 'Hiking', description: '5 km trail goal', icon: MapPin, targetUnit: 'km' },
+  { key: 'workout', label: 'Workout', description: '30 min gym session', icon: Activity, targetUnit: 'min' },
 ];
 
 const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'gym_members' | 'private'; label: string }[] = [
@@ -75,6 +85,12 @@ export default function ActivitiesPage() {
   const [trackingRoute, setTrackingRoute] = useState<number[][]>([]);
   const [trackingGpsEnabled, setTrackingGpsEnabled] = useState(false);
   const [trackingWatchId, setTrackingWatchId] = useState<number | null>(null);
+  const [trackingTarget, setTrackingTarget] = useState<number | null>(null);
+  const [trackingTargetUnit, setTrackingTargetUnit] = useState<string | null>(null);
+
+  // Blur pop state for category selection on mobile
+  const [categoryPopOpen, setCategoryPopOpen] = useState(false);
+  const [categoryPopType, setCategoryPopType] = useState<string | null>(null);
 
   useEffect(() => {
     analyticsApi.getActivities().then((res) => {
@@ -126,13 +142,6 @@ export default function ActivitiesPage() {
     const m = Math.floor((seconds % 3600) / 60);
     const s = seconds % 60;
     return h ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
-  };
-
-  const formatPace = (paceSecPerKm: number | null, distanceKm: number) => {
-    if (!paceSecPerKm || !distanceKm) return '--';
-    const mins = Math.floor(paceSecPerKm);
-    const secs = Math.round((paceSecPerKm - mins) * 60);
-    return `${mins}:${secs.toString().padStart(2, '0')} /km`;
   };
 
   const handleShare = (activity: ActivityRecent) => {
@@ -225,8 +234,21 @@ export default function ActivitiesPage() {
   };
 
   // Activity tracking handlers
-  const startTracking = (type: string) => {
-    setTrackingType(type);
+  const openCategoryPop = (type: string) => {
+    setCategoryPopType(type);
+    setCategoryPopOpen(true);
+  };
+
+  const closeCategoryPop = () => {
+    setCategoryPopOpen(false);
+    setCategoryPopType(null);
+  };
+
+  const startTrackingWithTarget = (targetValue: number | null, targetUnit: string | null) => {
+    closeCategoryPop();
+    setTrackingType(categoryPopType || '');
+    setTrackingTarget(targetValue);
+    setTrackingTargetUnit(targetUnit);
     setTrackingActive(true);
     setTrackingSeconds(0);
     setTrackingRoute([]);
@@ -255,15 +277,21 @@ export default function ActivitiesPage() {
     }
 
     try {
+      const targetDef = ACTIVITY_TARGETS[trackingType as keyof typeof ACTIVITY_TARGETS];
+      const finalTarget = trackingTarget ?? targetDef?.value ?? 0;
+      const finalUnit = trackingTargetUnit ?? targetDef?.unit ?? '';
+
       await analyticsApi.createActivity({
         activity_type: trackingType as 'walk' | 'run' | 'hike' | 'cycle',
         duration_seconds: trackingSeconds,
-        distance_meters: trackingRoute.length > 1 ? 0 : 0, // Will be calculated from route if GPS
+        distance_meters: trackingRoute.length > 1 ? 0 : 0,
         route: trackingGpsEnabled && trackingRoute.length > 0 ? trackingRoute : [],
-        notes: `Tracked via Buddy-Up mobile`,
+        notes: `Tracked via Buddy-Up mobile | Target: ${finalTarget} ${finalUnit}`,
       });
       setTrackingOpen(false);
       setTrackingType(null);
+      setTrackingTarget(null);
+      setTrackingTargetUnit(null);
       setTrackingSeconds(0);
       setTrackingRoute([]);
       // Refresh activities list
@@ -283,6 +311,8 @@ export default function ActivitiesPage() {
     }
     setTrackingOpen(false);
     setTrackingType(null);
+    setTrackingTarget(null);
+    setTrackingTargetUnit(null);
     setTrackingSeconds(0);
     setTrackingRoute([]);
   };
@@ -323,7 +353,7 @@ export default function ActivitiesPage() {
         <div>
           <h1 className="font-display text-2xl font-bold">Activities</h1>
           <p className="text-sm text-buddy-text-secondary mt-0.5">
-            Track walk, run, cycle, hike and workouts — with GPS route and sharing.
+            Track walk, run, cycle, hike and workouts — with GPS route, targets and sharing.
           </p>
         </div>
         <div className="flex gap-2 bg-buddy-surface rounded-xl p-1">
@@ -369,17 +399,21 @@ export default function ActivitiesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {ACTIVITY_CATEGORIES.map((cat) => {
             const color = ACTIVITY_COLORS[cat.key];
+            const target = ACTIVITY_TARGETS[cat.key];
             return (
               <button
                 key={cat.key}
-                onClick={() => startTracking(cat.key)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border border-buddy-border transition-all duration-200 hover:border-buddy-green hover:shadow-[0_0_20px_rgba(0,200,150,0.2)] ${color.bg} ${color.text}`}
+                onClick={() => openCategoryPop(cat.key)}
+                className={`flex flex-col items-center gap-3 p-5 rounded-2xl border border-buddy-border transition-all duration-200 hover:border-buddy-green hover:shadow-lg ${color.bg} ${color.text} ${color.glow}`}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${color.bg.replace('/10', '/20')} ${color.text}`}>
-                  <cat.icon size={20} />
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${color.bg.replace('/10', '/20')} ${color.text}`}>
+                  <cat.icon size={24} />
                 </div>
                 <div className="font-medium text-sm text-buddy-text-primary">{cat.label}</div>
-                <div className="text-xs text-buddy-text-secondary">{cat.description}</div>
+                <div className="text-xs text-buddy-text-secondary text-center">{cat.description}</div>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-buddy-surface/50 text-buddy-text-secondary text-[10px]">
+                  {target?.value}
+                </div>
               </button>
             );
           })}
@@ -398,60 +432,101 @@ export default function ActivitiesPage() {
         </div>
 
         <div className="divide-y divide-buddy-border">
-          {filteredActivities.map((activity) => (
-            <div
-              key={activity.id}
-              onClick={() => setSelected(selected?.id === activity.id ? null : activity)}
-              className={`cursor-pointer p-4 transition-colors hover:bg-buddy-surface/50 ${selected?.id === activity.id ? 'bg-buddy-green/5' : ''}`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 shrink-0">
-                  {(() => {
-                    const Icon = ACTIVITY_ICONS[activity.activity_type] ?? MapPin;
-                    const bgClass = activity.activity_type === 'run' ? 'bg-red-100 text-red-600' :
-                      activity.activity_type === 'walk' ? 'bg-green-100 text-green-600' :
-                      activity.activity_type === 'hike' ? 'bg-yellow-100 text-yellow-600' :
-                      'bg-blue-100 text-blue-600';
-                    return (
-                      <div className={`p-2 rounded-lg ${bgClass}`}>
-                        <Icon size={20} />
+          {filteredActivities.map((activity) => {
+            const color = ACTIVITY_COLORS[activity.activity_type];
+            const target = ACTIVITY_TARGETS[activity.activity_type];
+            const progress = activity.distance_km && target
+              ? Math.min(100, (activity.distance_km / target.value) * 100)
+              : activity.duration_seconds && target
+                ? Math.min(100, (activity.duration_seconds / (target.value * 60)) * 100)
+                : 0;
+            const isTargetActivity = !!target;
+            const achieved = progress >= 100;
+
+            return (
+              <div
+                key={activity.id}
+                onClick={() => setSelected(selected?.id === activity.id ? null : activity)}
+                className={`cursor-pointer p-4 transition-colors hover:bg-buddy-surface/50 ${selected?.id === activity.id ? 'bg-buddy-green/5 border-buddy-green/30' : ''} border-buddy-border rounded-xl`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className={`p-3 rounded-xl ${color.bg} ${color.text}`}>
+                      {(() => {
+                        const Icon = ACTIVITY_ICONS[activity.activity_type] ?? MapPin;
+                        return <Icon size={24} />;
+                      })()}
+                    </div>
+                    <div>
+                      <div className="flex items-baseline gap-1">
+                        <span className={`text-2xl font-display font-bold ${color.text}`}>
+                          {isTargetActivity && activity.distance_km
+                            ? activity.distance_km.toFixed(1)
+                            : activity.duration_seconds
+                              ? Math.floor(activity.duration_seconds / 60)
+                              : 0}
+                        </span>
+                        <span className="text-xs text-buddy-text-secondary font-medium">
+                          {isTargetActivity && activity.distance_km
+                            ? target.unit
+                            : 'min'}
+                        </span>
                       </div>
-                    );
-                  })()}
-                  <div>
-                    <div className="font-medium text-buddy-text-primary">{ACTIVITY_LABELS[activity.activity_type] ?? activity.activity_type}</div>
+                      <div className="text-xs text-buddy-text-secondary">
+                        {ACTIVITY_LABELS[activity.activity_type] ?? activity.activity_type}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold text-buddy-text-primary">
+                      {progress > 0 ? `${Math.round(progress)}%` : '—'}
+                    </div>
                     <div className="text-xs text-buddy-text-secondary">
                       {new Date(activity.started_at || '').toLocaleDateString()} • {formatDuration(activity.duration_seconds)}
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-semibold text-buddy-text-primary">{activity.distance_km?.toFixed(1) ?? 0} km</div>
-                  <div className="text-xs text-buddy-text-secondary">{formatPace(activity.avg_pace, activity.distance_km)} pace</div>
-                </div>
-              </div>
-              {activity.route && activity.route.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-buddy-border/50">
-                  <div className="flex items-center gap-2 mb-2 text-xs font-medium text-buddy-text-secondary">
-                    <MapPin size={12} /> Route map ({activity.route.length} trackpoints)
-                  </div>
-                  <div className="aspect-video bg-buddy-surface rounded-lg border border-buddy-border flex items-center justify-center min-h-[200px]">
-                    <div className="text-sm text-buddy-text-secondary">
-                      Interactive map — tap to view full route replay
+
+                {isTargetActivity && (
+                  <div className="mt-3 pt-3 border-t border-buddy-border/50">
+                    <div className="flex items-center justify-between mb-1 text-xs">
+                      <span className="text-buddy-text-secondary">Target</span>
+                      <span className={achieved ? 'text-buddy-green font-medium' : 'text-buddy-text-secondary'}>
+                        {target.label}: {target.value} {target.unit}
+                      </span>
+                    </div>
+                    <div className="w-full bg-buddy-surface/50 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${achieved ? 'bg-buddy-gold' : color.bg.replace('/10', '')} ${achieved ? 'text-black' : color.text.replace('text-', '')}`}
+                        style={{ width: `${progress}%` }}
+                      />
                     </div>
                   </div>
+                )}
+
+                {activity.route && activity.route.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-buddy-border/50">
+                    <div className="flex items-center gap-2 mb-2 text-xs font-medium text-buddy-text-secondary">
+                      <MapPin size={12} /> Route map ({activity.route.length} trackpoints)
+                    </div>
+                    <div className="aspect-video bg-buddy-surface rounded-lg border border-buddy-border flex items-center justify-center min-h-[200px]">
+                      <div className="text-sm text-buddy-text-secondary">
+                        Interactive map — tap to view full route replay
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div className="mt-3 flex items-center gap-2 text-xs text-buddy-text-secondary">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleShare(activity); }}
+                    className="flex items-center gap-1 px-2 py-1 bg-buddy-surface hover:bg-buddy-surface/80 rounded text-buddy-text-primary text-xs font-medium transition-colors"
+                  >
+                    <Share2 size={14} /> Share
+                  </button>
                 </div>
-              )}
-              <div className="mt-3 flex items-center gap-2 text-xs text-buddy-text-secondary">
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleShare(activity); }}
-                  className="flex items-center gap-1 px-2 py-1 bg-buddy-surface hover:bg-buddy-surface/80 rounded text-buddy-text-primary text-xs font-medium transition-colors"
-                >
-                  <Share2 size={14} /> Share
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -531,6 +606,102 @@ export default function ActivitiesPage() {
         </div>
       )}
 
+      {/* Category Pop - Blur overlay on mobile */}
+      {categoryPopOpen && categoryPopType && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md" onClick={closeCategoryPop} />
+          <div className="relative bg-buddy-surface rounded-2xl border border-buddy-border p-8 w-full max-w-md z-[61] shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const Icon = ACTIVITY_ICONS[categoryPopType] ?? MapPin;
+                  const color = ACTIVITY_COLORS[categoryPopType];
+                  return (
+                    <div className={`p-3 rounded-xl ${color.bg} ${color.text}`}>
+                      <Icon size={24} />
+                    </div>
+                  );
+                })()}
+                <div>
+                  <h3 className="font-display text-xl font-bold text-buddy-text-primary">
+                    {ACTIVITY_LABELS[categoryPopType] ?? categoryPopType} Target
+                  </h3>
+                  <p className="text-xs text-buddy-text-secondary">
+                    Set your target for this session
+                  </p>
+                </div>
+              </div>
+              <button onClick={closeCategoryPop} className="text-buddy-text-secondary hover:text-buddy-text-primary">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-buddy-text-secondary">Target value</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step={categoryPopType === 'walk' ? 100 : 1}
+                    defaultValue={ACTIVITY_TARGETS[categoryPopType as keyof typeof ACTIVITY_TARGETS]?.value}
+                    onChange={(e) => setTrackingTarget(parseInt(e.target.value) || 0)}
+                    className="flex-1 px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green"
+                  />
+                  <span className="text-xs text-buddy-text-secondary font-medium">
+                    {ACTIVITY_TARGETS[categoryPopType as keyof typeof ACTIVITY_TARGETS]?.unit}
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-buddy-surface/50 rounded-xl p-4 border border-buddy-border">
+                <div className="text-xs text-buddy-text-secondary mb-2">Suggested targets</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {(() => {
+                    const t = ACTIVITY_TARGETS[categoryPopType as keyof typeof ACTIVITY_TARGETS];
+                    if (!t) return null;
+                    const multipliers = [0.5, 1, 1.5, 2];
+                    return multipliers.map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setTrackingTarget(Math.round(t.value * m))}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                          trackingTarget === Math.round(t.value * m)
+                            ? 'bg-buddy-green text-white border-buddy-green'
+                            : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border hover:bg-buddy-surface/50'
+                        }`}
+                      >
+                        {Math.round(t.value * m)} {t.unit}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  onClick={closeCategoryPop}
+                  className="flex-1 py-3 rounded-xl border border-buddy-border text-buddy-text-secondary hover:bg-buddy-surface/50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => startTrackingWithTarget(trackingTarget, trackingTargetUnit)}
+                  disabled={!trackingTarget}
+                  className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 ${
+                    !trackingTarget
+                      ? 'bg-buddy-surface text-buddy-text-secondary border-buddy-border cursor-not-allowed'
+                      : 'bg-buddy-green text-buddy-green border-buddy-green hover:bg-buddy-green/20'
+                  }`}
+                >
+                  Start Tracking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Activity Tracking Modal */}
       {trackingOpen && trackingType && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -540,17 +711,23 @@ export default function ActivitiesPage() {
               <div className="flex items-center gap-3">
                 {(() => {
                   const Icon = ACTIVITY_ICONS[trackingType] ?? MapPin;
+                  const color = ACTIVITY_COLORS[trackingType];
                   return (
-                    <div className={`p-3 rounded-xl ${ACTIVITY_COLORS[trackingType].bg} ${ACTIVITY_COLORS[trackingType].text}`}>
+                    <div className={`p-3 rounded-xl ${color.bg} ${color.text}`}>
                       <Icon size={24} />
                     </div>
                   );
                 })()}
-              </div>
                 <div>
                   <h3 className="font-semibold text-buddy-text-primary">{ACTIVITY_LABELS[trackingType] ?? trackingType} Tracking</h3>
                   <p className="text-xs text-buddy-text-secondary">
                     {trackingGpsEnabled ? 'GPS enabled — route will be recorded' : 'GPS disabled — time only'}
+                    {trackingTarget && (
+                      <>
+                        <br />
+                        Target: {trackingTarget} {trackingTargetUnit}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -560,13 +737,35 @@ export default function ActivitiesPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Timer */}
+              {/* Big number display */}
               <div className="text-center">
-                <div className="text-6xl font-display font-bold text-buddy-text-primary mb-1">
-                  {Math.floor(trackingSeconds / 3600).toString().padStart(2, '0')}:{Math.floor((trackingSeconds % 3600) / 60).toString().padStart(2, '0')}:{(trackingSeconds % 60).toString().padStart(2, '0')}
+                <div className={`text-7xl font-display font-bold ${ACTIVITY_COLORS[trackingType].text} mb-1`}>
+                  {trackingTarget ? trackingSeconds : Math.floor(trackingSeconds / 60)}
                 </div>
-                <div className="text-buddy-text-secondary text-sm">{trackingActive ? 'Tracking…' : 'Paused'}</div>
+                <div className="text-buddy-text-secondary text-sm">
+                  {trackingTargetUnit || 'min'}
+                </div>
               </div>
+
+              {/* Progress bar if target set */}
+              {trackingTarget && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-buddy-text-secondary">Progress</span>
+                    <span className="text-buddy-text-secondary">
+                      {Math.min(100, Math.round(((trackingTargetUnit === 'steps' ? trackingSeconds : trackingSeconds / 60) / trackingTarget) * 100))}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-buddy-surface/50 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="h-full transition-all duration-500 bg-buddy-green"
+                      style={{ width: `${Math.min(100, Math.round(((trackingTargetUnit === 'steps' ? trackingSeconds : trackingSeconds / 60) / trackingTarget) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="text-buddy-text-secondary text-sm">{trackingActive ? 'Tracking…' : 'Paused'}</div>
 
               {/* Controls */}
               <div className="grid grid-cols-2 gap-3">
@@ -627,6 +826,7 @@ export default function ActivitiesPage() {
               </button>
             </div>
           </div>
+        </div>
       )}
 
       {/* Share Composer Modal */}
@@ -644,15 +844,10 @@ export default function ActivitiesPage() {
             <div className="space-y-4">
               {/* Activity preview */}
               <div className="flex items-center gap-3 p-3 bg-buddy-surface/50 rounded-lg border border-buddy-border/50">
-                <div className={`p-2 rounded-lg ${
-                  shareActivity.activity_type === 'run' ? 'bg-red-100 text-red-600' :
-                  shareActivity.activity_type === 'walk' ? 'bg-green-100 text-green-600' :
-                  shareActivity.activity_type === 'hike' ? 'bg-yellow-100 text-yellow-600' :
-                  'bg-blue-100 text-blue-600'
-                }`}>
+                <div className={`p-3 rounded-xl ${ACTIVITY_COLORS[shareActivity.activity_type]?.bg} ${ACTIVITY_COLORS[shareActivity.activity_type]?.text}`}>
                   {(() => {
                     const Icon = ACTIVITY_ICONS[shareActivity.activity_type] ?? MapPin;
-                    return <Icon size={20} />;
+                    return <Icon size={24} />;
                   })()}
                 </div>
                 <div className="flex-1 min-w-0">
