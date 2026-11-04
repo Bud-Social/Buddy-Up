@@ -34,14 +34,14 @@ const RAINBOW_STEPS = [
     color: 'bg-buddy-red',
     textColor: 'text-white',
     title: 'Step 1: The Broke Ass Era',
-    body: 'I hope this raises the bar for every other guys that says they like you. At my broke ass era, I have managed to pull up a welcome on this platform everytime you login on this app; imagine what the average finacially stronger guy has to do to earn your attention.',
+    body: 'I hope this raises the bar for every other guy who says they like you. At my broke ass era, I have managed to pull up a welcome on this platform every time you login on this app; imagine what the average financially stronger guy has to do to earn your attention.',
     punchline: 'Broke but ambitious. We like that energy. 💸✨',
   },
   {
     color: 'bg-buddy-orange',
     textColor: 'text-white',
     title: 'Step 2: You Deserve the Love',
-    body: 'And the countdown is there for you, do as you wish, just don\'t be harsh on yourself on the process. A reminder when you use this app, you deserve the love that you think straight people, law abiding and any version of perfect boy you can think of deserves.',
+    body: 'And the countdown is there for you, do as you wish, just don\'t be harsh on yourself in the process. A reminder when you use this app, you deserve the love that you think straight people, law-abiding and any version of perfect boy you can think of deserves.',
     punchline: 'You deserve love. Even if you\'re not perfect. Especially then. ❤️',
   },
   {
@@ -55,14 +55,14 @@ const RAINBOW_STEPS = [
     color: 'bg-buddy-green',
     textColor: 'text-white',
     title: 'Step 4: What Do You Want?',
-    body: 'You are the only one who can explain what it takes to be you. Finally, when you find yourself tearing or smiling, stop and ask, what do I want? Why this? I hope that scares you... yeap... had to scare you in the end.',
+    body: 'You are the only one who can explain what it takes to be you. Finally, when you find yourself tearing or smiling, stop and ask, what do I want? Why this? I hope that scares you... yep... had to scare you in the end.',
     punchline: 'Scared? Good. That means it\'s working. 😈',
   },
   {
     color: 'bg-buddy-electric',
     textColor: 'text-white',
     title: 'Step 5: Therapist First',
-    body: 'But hey, I hope this does the trick for you to book the next appointment to your therapist while I am still around rather than when I have flown away. You can go ahead and create a countdown! Enjoy No Nut November. You can create one of how long I\'ll last this talking stage before fucking it up or bringing in a third person, oh wait, I already did it, maybe.',
+    body: 'But hey, I hope this does the trick for you to book the next appointment to your therapist while I am still around rather than when I have flown away. You can go ahead and create a countdown! Enjoy No Nut November. You can create one for how long I\'ll last this talking stage before fucking it up or bringing in a third person, oh wait, I already did it, maybe.',
     punchline: 'Therapy first, countdowns second. Priorities! 🛋️',
   },
 ] as const;
@@ -425,7 +425,7 @@ export default function CountdownsPage() {
 
             <div className="bg-buddy-red/10 border border-buddy-red/30 rounded-xl p-4 mb-6">
               <p className="text-buddy-text-secondary text-sm leading-relaxed italic">
-                Oooops, Peter didn\'t think this would be enticing for you, go ahead and call him or prolly send him something nicer... And he means money and money only... not what you are thinking.
+                Oops, Peter didn\'t think this would be enticing for you, go ahead and call him or prolly send him something nicer... And he means money and money only... not what you\'re thinking.
               </p>
             </div>
 
