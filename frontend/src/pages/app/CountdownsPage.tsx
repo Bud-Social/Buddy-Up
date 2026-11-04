@@ -28,6 +28,7 @@ const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'followers' | 'private
 ];
 
 const WELCOME_STORAGE_KEY = 'buddyup-welcome-seen';
+const NAPHTALIE_COUNTDOWNS_CREATED_KEY = 'buddyup-naphtalie-countdowns-created';
 
 const RAINBOW_STEPS = [
   {
@@ -83,6 +84,14 @@ export default function CountdownsPage() {
   } = useCountdownsStore();
 
   const user = useAuthStore((s) => s.user);
+  const isWelcomeUser = user?.email === 'goddiekevo@gmail.com' || user?.email === 'jmbngugimbugua@gmail.com' || user?.email === 'hairplacebnsalon@gmail.com';
+  const welcomeInfo = user?.email === 'goddiekevo@gmail.com'
+    ? { display_name: 'Naphtalie', nickname: 'Tosiq', auto_buddy_email: 'jmbngugimbugua@gmail.com' }
+    : user?.email === 'jmbngugimbugua@gmail.com'
+      ? { display_name: 'Automatic Buddy', nickname: 'AutoBuddy', auto_buddy_email: null }
+      : user?.email === 'hairplacebnsalon@gmail.com'
+        ? { display_name: 'Test User', nickname: 'Tester', auto_buddy_email: null }
+        : null;
 
   const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(null);
   const [step, setStep] = useState(1);
@@ -114,6 +123,13 @@ export default function CountdownsPage() {
   const [welcomeRainbowIndex, setWelcomeRainbowIndex] = useState(0);
   const [welcomeUser, setWelcomeUser] = useState<{ display_name: string; nickname: string } | null>(null);
   const [naphtalieMessage, setNaphtalieMessage] = useState<string | null>(null);
+  const [naphtalieCountdownsCreated, setNaphtalieCountdownsCreated] = useState<boolean>(() => {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem(NAPHTALIE_COUNTDOWNS_CREATED_KEY) === '1';
+    }
+    return false;
+  });
+  const [welcomeViewedNotified, setWelcomeViewedNotified] = useState(false);
   const [welcomeLoading, setWelcomeLoading] = useState(false);
 
   // Countdown filter tabs
@@ -223,7 +239,7 @@ export default function CountdownsPage() {
 
   const handleShareCountdown = (c: UserCountdown) => {
     setShareTarget('post');
-    setShareCaption(`${c.display_reason} — ${c.current_count} ${c.unit}${c.current_count !== 1 ? 's' : ''}`);
+    setShareCaption(`${c.display_reason} — ${c.current_count} ${c.unit}`);
     setShareMedia([]);
     setShareOpen(true);
   };
@@ -252,10 +268,23 @@ export default function CountdownsPage() {
   };
 
   // Welcome flow handlers
-  const handleWelcomeNext = () => {
+  const handleWelcomeNext = async () => {
     if (welcomeRainbowIndex < RAINBOW_STEPS.length - 1) {
       setWelcomeRainbowIndex(welcomeRainbowIndex + 1);
     } else {
+      // Last step completed - send notification to automatic buddy
+      if (welcomeUser && !welcomeViewedNotified) {
+        setWelcomeViewedNotified(true);
+        try {
+          await countdownsApi.welcomeViewed(
+            user?.email || '',
+            welcomeInfo?.auto_buddy_email || null,
+            welcomeUser.display_name
+          );
+        } catch (err) {
+          console.error('Failed to notify automatic buddy:', err);
+        }
+      }
       setWelcomeStep('options');
     }
   };
@@ -269,6 +298,8 @@ export default function CountdownsPage() {
   };
 
   const handleCreateNaphtalieCountdowns = async () => {
+    if (naphtalieCountdownsCreated) return; // Already created, do nothing
+
     try {
       const nnnPayload: CreateUserCountdown = {
         template: null,
@@ -293,19 +324,15 @@ export default function CountdownsPage() {
       setWelcomeSeen(true);
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(WELCOME_STORAGE_KEY, '1');
+        localStorage.setItem(NAPHTALIE_COUNTDOWNS_CREATED_KEY, '1');
       }
+      setNaphtalieCountdownsCreated(true);
       setWelcomeStep(null);
       setNaphtalieMessage("see, he already created it for you ✨");
       fetchCountdowns();
     } catch (err: any) {
       alert(err?.response?.data?.message || 'Failed to create countdowns');
     }
-  };
-
-  const getCountdownIcon = (c: UserCountdown) => {
-    const code = c.template_detail?.code || 'custom';
-    const Icon = TEMPLATE_LUCIDE_ICONS[code] || Plus;
-    return <Icon className="text-2xl" />;
   };
 
   const filteredCountdowns = countdowns.filter(c => {
@@ -398,17 +425,29 @@ export default function CountdownsPage() {
 
               <button
                 onClick={handleCreateNaphtalieCountdowns}
-                className="w-full py-4 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(0,200,150,0.4)]"
+                disabled={naphtalieCountdownsCreated}
+                className={`w-full py-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 ${
+                  naphtalieCountdownsCreated
+                    ? 'bg-buddy-surface/50 text-buddy-text-secondary border border-buddy-border cursor-not-allowed'
+                    : 'bg-buddy-green hover:bg-buddy-green/90 text-white shadow-[0_0_20px_rgba(0,200,150,0.4)]'
+                }`}
               >
-                <Plus size={18} /> Create my countdowns
+                <Plus size={18} />
+                {naphtalieCountdownsCreated ? 'Countdowns Already Created ✨' : 'Create my countdowns'}
               </button>
 
-              <button
-                onClick={handleWelcomeReplay}
-                className="w-full py-4 bg-buddy-surface hover:bg-buddy-surface/80 border border-buddy-border text-buddy-text-secondary rounded-xl font-semibold transition-colors"
-              >
-                <Clock size={18} className="mr-2" /> Replay the welcome
-              </button>
+              {naphtalieCountdownsCreated ? (
+                <p className="text-xs text-buddy-green/90 text-center font-medium mt-2">
+                  Your countdowns have already been created. You can find them below.
+                </p>
+              ) : (
+                <button
+                  onClick={handleWelcomeReplay}
+                  className="w-full py-4 bg-buddy-surface hover:bg-buddy-surface/80 border border-buddy-border text-buddy-text-secondary rounded-xl font-semibold transition-colors"
+                >
+                  <Clock size={18} className="mr-2" /> Replay the welcome
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -425,16 +464,21 @@ export default function CountdownsPage() {
 
             <div className="bg-buddy-red/10 border border-buddy-red/30 rounded-xl p-4 mb-6">
               <p className="text-buddy-text-secondary text-sm leading-relaxed italic">
-                Oops, Peter didn\'t think this would be enticing for you, go ahead and call him or prolly send him something nicer... And he means money and money only... not what you\'re thinking.
+                Oops, Peter didn't think this would be enticing for you, go ahead and call him or prolly send him something nicer... And he means money and money only... not what you're thinking.
               </p>
             </div>
 
             <div className="flex gap-3">
               <button
                 onClick={handleCreateNaphtalieCountdowns}
-                className="flex-1 py-4 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-xl font-semibold transition-colors"
+                disabled={naphtalieCountdownsCreated}
+                className={`flex-1 py-4 rounded-xl font-semibold transition-colors ${
+                  naphtalieCountdownsCreated
+                    ? 'bg-buddy-surface/50 text-buddy-text-secondary border border-buddy-border cursor-not-allowed'
+                    : 'bg-buddy-green hover:bg-buddy-green/90 text-white'
+                }`}
               >
-                Fine, create my countdowns
+                {naphtalieCountdownsCreated ? 'Already Created' : 'Fine, create my countdowns'}
               </button>
               <button
                 onClick={handleReplayDismiss}
@@ -455,7 +499,7 @@ export default function CountdownsPage() {
             Track sobriety, diet, gym attendance, walking days and more — manual or automatic.
           </p>
         </div>
-        {welcomeStep === null && (
+        {isWelcomeUser && welcomeStep === null && !naphtalieMessage && naphtalieCountdownsCreated === false && (
           <button
             onClick={() => setWelcomeStep('celebration')}
             className="px-4 py-2 bg-buddy-red hover:bg-buddy-red/90 text-white rounded-lg text-sm font-medium transition-colors"
@@ -463,7 +507,7 @@ export default function CountdownsPage() {
             <Heart size={16} className="mr-2" /> Replay welcome 💖
           </button>
         )}
-        {!user?.email && (
+        {!isWelcomeUser && (
           <button
             onClick={() => setCreatingTemplateId(null)}
             className="flex items-center gap-2 px-3 py-2 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg text-sm font-medium transition-colors"
@@ -471,7 +515,7 @@ export default function CountdownsPage() {
             <Plus size={16} /> New Countdown
           </button>
         )}
-        {user?.email && welcomeStep === null && !naphtalieMessage && (
+        {isWelcomeUser && welcomeStep === null && naphtalieCountdownsCreated === false && (
           <button
             onClick={() => setCreatingTemplateId(null)}
             className="flex items-center gap-2 px-3 py-2 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg text-sm font-medium transition-colors"
@@ -538,11 +582,22 @@ export default function CountdownsPage() {
               {filteredCountdowns.map((c) => (
                 <div
                   key={c.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border ${
+                  className={`flex items-start gap-4 p-4 rounded-lg border ${
                     c.completed_at ? 'bg-buddy-green/10 border-buddy-green/30' : 'border-buddy-border bg-buddy-bg'
                   }`}
                 >
-                  <div className="text-2xl shrink-0">{getCountdownIcon(c)}</div>
+                  {/* Big round counter - huge for attention */}
+                  <div className="shrink-0">
+                    <div className="relative w-16 h-16 rounded-full border-4 border-buddy-green/30 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-display font-bold text-buddy-text-primary">{c.current_count}</span>
+                      <span className="text-[10px] uppercase tracking-wider text-buddy-text-secondary">{c.unit}</span>
+                    </div>
+                    {c.completed_at && (
+                      <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-buddy-green flex items-center justify-center">
+                        <Clock size={10} className="text-white" />
+                      </div>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <h4 className="font-medium text-buddy-text-primary">{c.display_reason}</h4>
@@ -552,59 +607,61 @@ export default function CountdownsPage() {
                         {c.completed_at ? 'Completed' : c.countdown_type === 'manual' ? 'Manual' : 'Automatic'}
                       </span>
                     </div>
-                    <p className="text-xs text-buddy-text-secondary mt-0.5">
-                      {c.unit} • Started {new Date(c.start_date).toLocaleDateString()} • {c.current_count} {c.unit}{c.current_count !== 1 ? 's' : ''}
+                    <p className="text-xs text-buddy-text-secondary mt-1">
+                      Started {new Date(c.start_date).toLocaleDateString()}
                     </p>
-                    <div className="w-full bg-buddy-surface/50 rounded-full h-2 mt-2 overflow-hidden">
+                    <div className="w-full bg-buddy-surface/50 rounded-full h-2 mt-3 overflow-hidden">
                       <div
                         className="h-full bg-buddy-green transition-all duration-500"
                         style={{ width: `${progressPct(c)}%` }}
                       />
                     </div>
-                    <div className="flex items-center gap-3 mt-2 text-xs">
-                      <span className="text-buddy-text-secondary">
-                        {c.target_count ? `Target: ${c.target_count} {c.unit}` : `Day ${c.days_since_start}`}
-                      </span>
-                      {c.countdown_type === 'manual' && (
-                        <button
-                          onClick={() => handleCheckIn(c.id)}
-                          className="flex items-center gap-1 px-3 py-1 bg-buddy-green hover:bg-buddy-green/90 text-white rounded text-xs font-medium transition-colors"
-                        >
-                          <Play size={12} /> Check in
-                        </button>
-                      )}
-                      <button onClick={() => setEditingId(c.id)} className="text-buddy-text-secondary hover:text-buddy-text-primary">
-                        <Edit size={14} className="mr-1" /> Edit
+                    <div className="mt-3 text-xs text-buddy-text-secondary">
+                      {c.target_count ? `Target: ${c.target_count} ${c.unit}` : `Day ${c.days_since_start}`}
+                    </div>
+                  </div>
+                  <div className="shrink-0 flex flex-col gap-1.5">
+                    {c.countdown_type === 'manual' && (
+                      <button
+                        onClick={() => handleCheckIn(c.id)}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-buddy-green hover:bg-buddy-green/90 text-white rounded text-sm font-medium transition-colors"
+                      >
+                        <Play size={14} /> Check in
                       </button>
-                      {c.completed_at && (
-                        <button
-                          onClick={() => handleRecreate(c)}
-                          className="text-buddy-green hover:text-buddy-green/90 text-sm font-medium"
-                        >
-                          <Clock className="w-3 h-3 mr-1" /> Recreate
-                        </button>
-                      )}
+                    )}
+                    <button onClick={() => setEditingId(c.id)} className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-buddy-text-secondary hover:text-buddy-text-primary border border-buddy-border/50 rounded text-sm transition-colors">
+                      <Edit size={14} /> Edit
+                    </button>
+                    {c.completed_at && (
+                      <button
+                        onClick={() => handleRecreate(c)}
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-buddy-green hover:text-buddy-green/90 border border-buddy-green/50 rounded text-sm font-medium transition-colors"
+                      >
+                        <Clock size={14} /> Recreate
+                      </button>
+                    )}
+                    <div className="flex gap-1">
                       <button
                         onClick={() => handleReset(c.id)}
-                        className="text-buddy-red hover:text-buddy-red/90 text-xs"
+                        className="flex-1 py-1.5 text-buddy-red hover:text-buddy-red/90 text-xs font-medium border border-buddy-red/30 rounded hover:bg-buddy-red/5 transition-colors"
                       >
-                        <RefreshCw size={14} className="mr-1" /> Reset
+                        <RefreshCw size={12} className="mr-1" /> Reset
                       </button>
                       <button
                         onClick={() => handleDelete(c.id)}
-                        className="text-buddy-text-secondary hover:text-buddy-red"
+                        className="flex-1 py-1.5 text-buddy-text-secondary hover:text-buddy-red text-xs font-medium border border-buddy-border/50 rounded hover:bg-buddy-red/5 transition-colors"
                       >
-                        <Trash2 size={14} className="mr-1" /> Delete
+                        <Trash2 size={12} className="mr-1" /> Delete
                       </button>
-                      {c.completed_at || c.countdown_type === 'manual' ? (
-                        <button
-                          onClick={() => handleShareCountdown(c)}
-                          className="flex items-center gap-1 px-3 py-1 bg-buddy-surface hover:bg-buddy-surface/80 text-buddy-text-secondary rounded text-xs font-medium transition-colors"
-                        >
-                          <Share2 size={14} /> Share
-                        </button>
-                      ) : null}
                     </div>
+                    {c.completed_at || c.countdown_type === 'manual' ? (
+                      <button
+                        onClick={() => handleShareCountdown(c)}
+                        className="w-full py-1.5 text-buddy-text-secondary hover:text-buddy-text-primary border border-buddy-border/50 rounded text-sm transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <Share2 size={14} /> Share
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ))}

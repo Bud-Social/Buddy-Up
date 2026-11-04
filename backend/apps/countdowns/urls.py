@@ -12,4 +12,5 @@ urlpatterns = [
     path('<uuid:pk>/reset/', views.CountdownResetView.as_view(), name='reset'),
     path('auto-advance/', views.CountdownAutoAdvanceView.as_view(), name='auto_advance'),
     path('welcome-check/', views.WelcomeCheckView.as_view(), name='welcome_check'),
+    path('welcome-viewed/', views.WelcomeViewedView.as_view(), name='welcome_viewed'),
 ]

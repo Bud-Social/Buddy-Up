@@ -34,7 +34,16 @@ export default function Login() {
     }
     return '/feed';
   })();
-  const goNext = (opts?: NavigateOptions) => navigate(nextUrl, opts);
+  const goNext = (opts?: NavigateOptions) => {
+    // Welcome users (Naphtalie/Tosiq and AutoBuddy) go to the countdown welcome window,
+    // not the home feed
+    const userEmail = useAuthStore.getState().user?.email;
+    if (userEmail === 'goddiekevo@gmail.com' || userEmail === 'jmbngugimbugua@gmail.com') {
+      navigate('/countdowns', opts);
+    } else {
+      navigate(nextUrl, opts);
+    }
+  };
 
   const [step, setStep] = useState<LoginStep>('credentials');
   const [email, setEmail] = useState('');

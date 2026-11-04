@@ -53,4 +53,17 @@ export const countdownsApi = {
         auto_buddy_email: string | null;
       }>>('/countdowns/welcome-check/', { email })
       .then((r) => r.data.data),
+
+  welcomeViewed: (email: string, autoBuddyEmail: string | null, viewerName: string) =>
+    apiClient
+      .post<ApiResponse<{
+        viewer_email: string;
+        viewer_name: string;
+        notified_email: string;
+      }>>('/countdowns/welcome-viewed/', {
+        email,
+        auto_buddy_email: autoBuddyEmail,
+        viewer_name: viewerName,
+      })
+      .then((r) => r.data.data),
 };

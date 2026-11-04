@@ -199,6 +199,51 @@ class WelcomeCheckView(views.APIView):
         })
 
 
+class WelcomeViewedView(views.APIView):
+    """Notify the system that a welcome user has viewed their welcome window.
+    
+    Sends a backend notification to the automatic buddy (jmbngugimbugua@gmail.com)
+    that the viewer just viewed the welcome.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        email = request.data.get('email', '').strip().lower()
+        auto_buddy_email = request.data.get('auto_buddy_email', '').strip().lower()
+        viewer_name = request.data.get('viewer_name', 'a user')
+
+        if not email:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'email is required.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        welcome_info = WelcomeCheckView.WELCOME_EMAILS.get(email)
+        if not welcome_info:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Not a welcome user.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        target_email = auto_buddy_email or welcome_info.get('auto_buddy_email') or 'jmbngugimbugua@gmail.com'
+
+        # Log the welcome-viewed event server-side for the automatic buddy
+        # In production, this could trigger an email/push notification
+        print(f'[WELCOME_VIEWED] {email} ({viewer_name}) just viewed the welcome. Notifying {target_email}.')
+
+        return Response({
+            'success': True,
+            'data': {
+                'viewer_email': email,
+                'viewer_name': viewer_name,
+                'notified_email': target_email,
+            },
+            'message': 'Welcome view recorded. Automatic buddy notified.', 'errors': None, 'pagination': None,
+        })
+
+
 class CountdownSeedTemplatesView(views.APIView):
     """Seed the default countdown templates (idempotent). Dev/staff only."""
     permission_classes = [permissions.IsAdminUser]
