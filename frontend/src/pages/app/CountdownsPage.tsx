@@ -6,16 +6,27 @@ import {
 import { useCountdownsStore } from '@/store/countdownsStore';
 import type { UserCountdown, CreateUserCountdown } from '@/types/countdowns';
 
-const COUNTDOWN_TEMPLATES: { id: string; code: string; title: string; description: string; icon: React.ComponentType<any>; color: string }[] = [
-  { id: 'sobriety', code: 'sobriety', title: 'Sobriety', description: 'Days since last drink', icon: Wine, color: 'bg-buddy-red/10 text-buddy-red' },
-  { id: 'no_artificial_sugars', code: 'no_artificial_sugars', title: 'No Artificial Sugars', description: 'Days without artificial sweeteners', icon: Minus, color: 'bg-buddy-orange/10 text-buddy-orange' },
-  { id: 'no_animal_proteins', code: 'no_animal_proteins', title: 'No Animal Proteins', description: 'Days without meat, fish, eggs, dairy', icon: Leaf, color: 'bg-buddy-green/10 text-buddy-green' },
-  { id: 'gym_attendance', code: 'gym_attendance', title: 'Gym Attendance', description: 'Consecutive gym visit days', icon: Dumbbell, color: 'bg-buddy-electric/10 text-buddy-electric' },
-  { id: 'walking_days', code: 'walking_days', title: 'Walking Days', description: 'Days with a logged walk', icon: MapPin, color: 'bg-buddy-green/10 text-buddy-green' },
-  { id: 'no_drugs', code: 'no_drugs', title: 'No Drugs', description: 'Days drug-free', icon: AlertCircle, color: 'bg-buddy-red/10 text-buddy-red' },
-  { id: 'no_nut_month', code: 'no_nut_month', title: 'No Nut Month', description: 'Days without nuts (30 day target)', icon: Leaf, color: 'bg-buddy-gold/10 text-buddy-gold' },
-  { id: 'custom', code: 'custom', title: 'Custom Reason', description: 'Your own countdown reason', icon: Plus, color: 'bg-buddy-text-secondary/10 text-buddy-text-secondary' },
-];
+const TEMPLATE_ICONS: Record<string, React.ComponentType<any>> = {
+  sobriety: Wine,
+  no_artificial_sugars: Minus,
+  no_animal_proteins: Leaf,
+  gym_attendance: Dumbbell,
+  walking_days: MapPin,
+  no_drugs: AlertCircle,
+  no_nut_month: Leaf,
+  custom: Plus,
+};
+
+const TEMPLATE_COLORS: Record<string, string> = {
+  sobriety: 'bg-buddy-red/10 text-buddy-red',
+  no_artificial_sugars: 'bg-buddy-orange/10 text-buddy-orange',
+  no_animal_proteins: 'bg-buddy-green/10 text-buddy-green',
+  gym_attendance: 'bg-buddy-electric/10 text-buddy-electric',
+  walking_days: 'bg-buddy-green/10 text-buddy-green',
+  no_drugs: 'bg-buddy-red/10 text-buddy-red',
+  no_nut_month: 'bg-buddy-gold/10 text-buddy-gold',
+  custom: 'bg-buddy-text-secondary/10 text-buddy-text-secondary',
+};
 
 const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'followers' | 'private'; label: string; labelText: string }[] = [
   { value: 'public', label: 'Public', labelText: 'Anyone can see' },
@@ -25,7 +36,7 @@ const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'followers' | 'private
 ];
 
 export default function CountdownsPage() {
-  const { countdowns, loading, error, fetchTemplates, fetchCountdowns, createCountdown, checkIn, resetCountdown, updateCountdown, deleteCountdown } = useCountdownsStore();
+  const { countdowns, loading, error, fetchTemplates, fetchCountdowns, createCountdown, checkIn, resetCountdown, updateCountdown, deleteCountdown, templates } = useCountdownsStore();
   const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [newReason, setNewReason] = useState('');
@@ -60,7 +71,6 @@ export default function CountdownsPage() {
     setCountdownType('manual');
     setUnit('days');
     setDirection('forward');
-    setVisibility('private');
     setStep(1);
     fetchCountdowns();
   };
@@ -133,7 +143,7 @@ export default function CountdownsPage() {
           <span className="text-xs text-buddy-text-secondary">Tap a template to begin</span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {COUNTDOWN_TEMPLATES.map((tmpl) => {
+          {templates.map((tmpl) => {
             const isSelected = creatingTemplateId === tmpl.id;
             return (
               <button
@@ -146,7 +156,7 @@ export default function CountdownsPage() {
                 }`}
               >
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${tmpl.color.replace('/10', '/20')} ${tmpl.color.split(' ')[0]}`}>
-                  <tmpl.icon className="text-2xl" />
+                  {(() => { const Icon = TEMPLATE_ICONS[tmpl.code]; return <Icon className="text-xl" />; })()}
                 </div>
                 <div className="font-medium text-sm text-buddy-text-primary">{tmpl.title}</div>
                 <div className="text-xs text-buddy-text-secondary">{tmpl.description}</div>
@@ -192,7 +202,7 @@ export default function CountdownsPage() {
                   <div className="mb-4">
                     <label className="text-sm font-medium text-buddy-text-secondary">Choose a template</label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {COUNTDOWN_TEMPLATES.map((tmpl) => {
+                      {templates.map((tmpl) => {
                         const isSel = creatingTemplateId === tmpl.id;
                         return (
                           <button
@@ -203,8 +213,8 @@ export default function CountdownsPage() {
                               isSel ? 'bg-buddy-green/10 border-buddy-green' : 'bg-buddy-surface border-buddy-border hover:border-buddy-border/50'
                             }`}
                           >
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tmpl.color.replace('/10', '/20')} ${tmpl.color.split(' ')[0]}`}>
-                              <tmpl.icon className="text-xl" />
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TEMPLATE_COLORS[tmpl.code]?.replace('/10', '/20')} ${TEMPLATE_COLORS[tmpl.code]?.split(' ')[0]}`}>
+                              {(() => { const Icon = TEMPLATE_ICONS[tmpl.code]; return <Icon className="text-xl" />; })()}
                             </div>
                             <div className="text-xs text-buddy-text-primary">{tmpl.title}</div>
                           </button>
@@ -217,7 +227,7 @@ export default function CountdownsPage() {
                     <input
                       value={newReason}
                       onChange={(e) => setNewReason(e.target.value)}
-                      placeholder={creatingTemplateId === 'custom' ? 'Enter a custom reason' : COUNTDOWN_TEMPLATES.find(t => t.id === creatingTemplateId)?.title || ''}
+                      placeholder={creatingTemplateId === 'custom' ? 'Enter a custom reason' : templates.find(t => t.id === creatingTemplateId)?.title || ''}
                       className="mt-1 px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green"
                     />
                   </div>
@@ -255,11 +265,11 @@ export default function CountdownsPage() {
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-buddy-text-secondary">Count unit</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {(['days', 'hours'] as const).map((u) => (
                         <button
                           key={u}
-                          onClick={() => setUnit(u)}
+                          onClick={() => setUnit(u as 'days' | 'hours')}
                           className={`px-3 py-2 rounded-lg text-sm transition-colors ${
                             unit === u
                               ? 'bg-buddy-green/10 border-buddy-green text-buddy-green'
