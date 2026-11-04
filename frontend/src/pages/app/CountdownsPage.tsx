@@ -1,26 +1,39 @@
 import { useState, useEffect } from 'react';
 import {
-  Plus, RefreshCw, Trash2, Edit, Play, Timer,
+  Plus, RefreshCw, Trash2, Edit, Play, Timer, X,
+  Wine, Minus, Leaf, Dumbbell, MapPin, AlertCircle,
 } from 'lucide-react';
 import { useCountdownsStore } from '@/store/countdownsStore';
 import type { UserCountdown, CreateUserCountdown } from '@/types/countdowns';
 
-const TEMPLATE_ICONS: Record<string, string> = {
-  sobriety: '🍻',
-  no_artificial_sugars: '🍬',
-  no_animal_proteins: '🌱',
-  gym_attendance: '🏋️',
-  walking_days: '🚶',
-  no_drugs: '💊',
-  no_nut_month: '🥜',
-  custom: '📅',
-};
+const COUNTDOWN_TEMPLATES: { id: string; code: string; title: string; description: string; icon: React.ComponentType<any>; color: string }[] = [
+  { id: 'sobriety', code: 'sobriety', title: 'Sobriety', description: 'Days since last drink', icon: Wine, color: 'bg-buddy-red/10 text-buddy-red' },
+  { id: 'no_artificial_sugars', code: 'no_artificial_sugars', title: 'No Artificial Sugars', description: 'Days without artificial sweeteners', icon: Minus, color: 'bg-buddy-orange/10 text-buddy-orange' },
+  { id: 'no_animal_proteins', code: 'no_animal_proteins', title: 'No Animal Proteins', description: 'Days without meat, fish, eggs, dairy', icon: Leaf, color: 'bg-buddy-green/10 text-buddy-green' },
+  { id: 'gym_attendance', code: 'gym_attendance', title: 'Gym Attendance', description: 'Consecutive gym visit days', icon: Dumbbell, color: 'bg-buddy-electric/10 text-buddy-electric' },
+  { id: 'walking_days', code: 'walking_days', title: 'Walking Days', description: 'Days with a logged walk', icon: MapPin, color: 'bg-buddy-green/10 text-buddy-green' },
+  { id: 'no_drugs', code: 'no_drugs', title: 'No Drugs', description: 'Days drug-free', icon: AlertCircle, color: 'bg-buddy-red/10 text-buddy-red' },
+  { id: 'no_nut_month', code: 'no_nut_month', title: 'No Nut Month', description: 'Days without nuts (30 day target)', icon: Leaf, color: 'bg-buddy-gold/10 text-buddy-gold' },
+  { id: 'custom', code: 'custom', title: 'Custom Reason', description: 'Your own countdown reason', icon: Plus, color: 'bg-buddy-text-secondary/10 text-buddy-text-secondary' },
+];
+
+const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'followers' | 'private'; label: string; labelText: string }[] = [
+  { value: 'public', label: 'Public', labelText: 'Anyone can see' },
+  { value: 'buddies', label: 'Buddies Only', labelText: 'Confirmed buddies' },
+  { value: 'followers', label: 'Followers', labelText: 'People who follow you' },
+  { value: 'private', label: 'Private', labelText: 'Only you can see' },
+];
 
 export default function CountdownsPage() {
-  const { templates, countdowns, loading, error, fetchTemplates, fetchCountdowns, createCountdown, checkIn, resetCountdown, updateCountdown, deleteCountdown } = useCountdownsStore();
-  const [creating, setCreating] = useState(false);
+  const { countdowns, loading, error, fetchTemplates, fetchCountdowns, createCountdown, checkIn, resetCountdown, updateCountdown, deleteCountdown } = useCountdownsStore();
+  const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(null);
+  const [step, setStep] = useState(1);
   const [newReason, setNewReason] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [targetCount, setTargetCount] = useState(0);
+  const [countdownType, setCountdownType] = useState<'manual' | 'automatic'>('manual');
+  const [unit, setUnit] = useState<'days' | 'hours'>('days');
+  const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
+  const [visibility, setVisibility] = useState<'public' | 'buddies' | 'followers' | 'private'>('private');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editReason, setEditReason] = useState('');
   const [editTarget, setEditTarget] = useState('');
@@ -29,21 +42,26 @@ export default function CountdownsPage() {
   useEffect(() => {
     fetchTemplates();
     fetchCountdowns();
-  }, []);
+  }, [fetchTemplates, fetchCountdowns]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTemplate && !newReason.trim()) return;
+  const handleCreate = async () => {
+    if (!creatingTemplateId && !newReason.trim()) return;
     const payload: CreateUserCountdown = {
-      template: selectedTemplate || null,
+      template: creatingTemplateId || null,
       custom_reason: newReason.trim() || undefined,
-      countdown_type: 'manual',
-      unit: 'days',
+      countdown_type: countdownType,
+      unit,
+      target_count: targetCount > 0 ? targetCount : undefined,
     };
     await createCountdown(payload);
-    setCreating(false);
+    setCreatingTemplateId(null);
     setNewReason('');
-    setSelectedTemplate(null);
+    setTargetCount(0);
+    setCountdownType('manual');
+    setUnit('days');
+    setDirection('forward');
+    setVisibility('private');
+    setStep(1);
     fetchCountdowns();
   };
 
@@ -61,6 +79,7 @@ export default function CountdownsPage() {
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this countdown?')) return;
     await deleteCountdown(id);
+    fetchCountdowns();
   };
 
   const startEdit = (c: UserCountdown) => {
@@ -96,65 +115,274 @@ export default function CountdownsPage() {
           </p>
         </div>
         <button
-          onClick={() => setCreating(!creating)}
+          onClick={() => setCreatingTemplateId(null)}
           className="flex items-center gap-2 px-3 py-2 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg text-sm font-medium transition-colors"
         >
-          <Plus size={16} /> {creating ? 'Close' : 'New Countdown'}
+          <Plus size={16} /> New Countdown
         </button>
       </div>
 
       {error && (
-        <div className="rounded-lg bg-buddy-error/10 p-3 border border-buddy-error/20 text-buddy-error text-sm">
-          {error}
-        </div>
+        <div className="rounded-lg bg-buddy-error/10 p-3 border border-buddy-error/20 text-buddy-error text-sm">{error}</div>
       )}
 
-      {/* Create countdown form */}
-      {creating && (
-        <div className="bg-buddy-surface rounded-xl p-4 border border-buddy-border">
-          <h3 className="font-semibold mb-3">New Countdown</h3>
-          <form onSubmit={handleCreate} className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                Template
-                <select
-                  value={selectedTemplate ?? ''}
-                  onChange={(e) => setSelectedTemplate(e.target.value || null)}
-                  className="mt-1 px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green"
-                >
-                  <option value="">Choose a reason…</option>
-                  {templates.map((t) => (
-                    <option key={t.code} value={t.code}>
-                      {TEMPLATE_ICONS[t.code] ?? '📅'} {t.title}
-                    </option>
-                  ))}
-                  <option value="custom">📅 Custom reason</option>
-                </select>
-              </label>
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                Custom reason (when "Custom reason" is selected)
-                <input
-                  value={newReason}
-                  onChange={(e) => setNewReason(e.target.value)}
-                  placeholder="e.g. Days without coffee"
-                  className="mt-1 px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green"
-                />
-              </label>
+      {/* Template cards */}
+      <div className="bg-buddy-surface rounded-xl border border-buddy-border p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-buddy-text-primary">Start a New Countdown</h3>
+          <span className="text-xs text-buddy-text-secondary">Tap a template to begin</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {COUNTDOWN_TEMPLATES.map((tmpl) => {
+            const isSelected = creatingTemplateId === tmpl.id;
+            return (
+              <button
+                key={tmpl.id}
+                onClick={() => setCreatingTemplateId(tmpl.id)}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border border-buddy-border transition-all duration-200 ${
+                  isSelected
+                    ? 'bg-buddy-green/10 border-buddy-green shadow-[0_0_20px_rgba(0,200,150,0.2)]'
+                    : tmpl.color + ' hover:border-buddy-green hover:bg-buddy-surface/50'
+                }`}
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${tmpl.color.replace('/10', '/20')} ${tmpl.color.split(' ')[0]}`}>
+                  <tmpl.icon className="text-2xl" />
+                </div>
+                <div className="font-medium text-sm text-buddy-text-primary">{tmpl.title}</div>
+                <div className="text-xs text-buddy-text-secondary">{tmpl.description}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Create countdown modal (multistep) */}
+      {creatingTemplateId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCreatingTemplateId(null)} />
+          <div className="relative bg-buddy-surface rounded-2xl border border-buddy-border p-6 w-full max-w-md max-h-[90vh] overflow-y-auto z-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-buddy-text-primary">Create Countdown</h3>
+              <button onClick={() => setCreatingTemplateId(null)} className="text-buddy-text-secondary hover:text-buddy-text-primary">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              type="submit"
-              disabled={!selectedTemplate && !newReason.trim()}
-              className="w-full py-2 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Create Countdown
-            </button>
-          </form>
+
+            {/* Stepper */}
+            <div className="flex items-center gap-2 mb-6">
+              {[1, 2, 3].map((s) => (
+                <div key={s} className="flex items-center gap-2">
+                  <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold ${
+                    step >= s ? 'bg-buddy-green text-buddy-white border-buddy-green' : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border'
+                  }`}>
+                    {s}
+                  </div>
+                  {s < 3 && <div className="h-px bg-buddy-border w-4"></div>}
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              handleCreate();
+            }} className="space-y-4">
+              {/* Step 1: Template selection */}
+              {step === 1 && (
+                <div className="space-y-4">
+                  <div className="mb-4">
+                    <label className="text-sm font-medium text-buddy-text-secondary">Choose a template</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {COUNTDOWN_TEMPLATES.map((tmpl) => {
+                        const isSel = creatingTemplateId === tmpl.id;
+                        return (
+                          <button
+                            key={tmpl.id}
+                            type="button"
+                            onClick={() => setCreatingTemplateId(tmpl.id)}
+                            className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-colors ${
+                              isSel ? 'bg-buddy-green/10 border-buddy-green' : 'bg-buddy-surface border-buddy-border hover:border-buddy-border/50'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tmpl.color.replace('/10', '/20')} ${tmpl.color.split(' ')[0]}`}>
+                              <tmpl.icon className="text-xl" />
+                            </div>
+                            <div className="text-xs text-buddy-text-primary">{tmpl.title}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-buddy-text-secondary">Reason</label>
+                    <input
+                      value={newReason}
+                      onChange={(e) => setNewReason(e.target.value)}
+                      placeholder={creatingTemplateId === 'custom' ? 'Enter a custom reason' : COUNTDOWN_TEMPLATES.find(t => t.id === creatingTemplateId)?.title || ''}
+                      className="mt-1 px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Configuration */}
+              {step === 2 && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-buddy-text-secondary">Counting method</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setCountdownType('manual')}
+                        className={`px-3 py-2 rounded-lg border transition-colors ${
+                          countdownType === 'manual'
+                            ? 'bg-buddy-green/10 border-buddy-green text-buddy-green'
+                            : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border'
+                        }`}
+                      >
+                        Manual — I check in manually
+                      </button>
+                      <button
+                        onClick={() => setCountdownType('automatic')}
+                        className={`px-3 py-2 rounded-lg border transition-colors ${
+                          countdownType === 'automatic'
+                            ? 'bg-buddy-green/10 border-buddy-green text-buddy-green'
+                            : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border'
+                        }`}
+                      >
+                        Automatic — count days automatically
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-buddy-text-secondary">Count unit</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['days', 'hours'] as const).map((u) => (
+                        <button
+                          key={u}
+                          onClick={() => setUnit(u)}
+                          className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                            unit === u
+                              ? 'bg-buddy-green/10 border-buddy-green text-buddy-green'
+                              : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border hover:bg-buddy-surface/50'
+                          }`}
+                        >
+                          {u.charAt(0).toUpperCase() + u.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-buddy-text-secondary">Direction</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setDirection('forward')}
+                        className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                          direction === 'forward'
+                            ? 'bg-buddy-green/10 border-buddy-green text-buddy-green'
+                            : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border hover:bg-buddy-surface/50'
+                        }`}
+                      >
+                        Count up
+                      </button>
+                      <button
+                        onClick={() => setDirection('backward')}
+                        className={`px-3 py-2 rounded-lg text-sm transition-colors ${
+                          direction === 'backward'
+                            ? 'bg-buddy-green/10 border-buddy-green text-buddy-green'
+                            : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border hover:bg-buddy-surface/50'
+                        }`}
+                      >
+                        Count down
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Target & Visibility */}
+              {step === 3 && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-buddy-text-secondary">Target value</label>
+                    <input
+                      type="number"
+                      value={targetCount}
+                      onChange={(e) => setTargetCount(parseInt(e.target.value) || 0)}
+                      placeholder="0 = no target"
+                      className="mt-1 px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green"
+                    />
+                    <p className="text-xs text-buddy-text-secondary mt-1">
+                      Leave at 0 to simply count up/down without a target.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-buddy-text-secondary">Who can see this countdown?</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {VISIBILITY_OPTIONS.map((v) => (
+                        <button
+                          key={v.value}
+                          onClick={() => setVisibility(v.value)}
+                          className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-colors ${
+                            visibility === v.value
+                              ? 'bg-buddy-green/10 border-buddy-green'
+                              : 'bg-buddy-surface border-buddy-border hover:bg-buddy-surface/50'
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-buddy-surface/50 text-buddy-text-secondary">
+                            <X className="text-sm" />
+                          </div>
+                          <div className="text-xs text-buddy-text-primary">{v.label}</div>
+                          <div className="text-xs text-buddy-text-secondary">{v.labelText}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-6 flex justify-between">
+                <button
+                  type="button"
+                  onClick={() => setStep(step > 1 ? step - 1 : step)}
+                  disabled={step === 1}
+                  className="flex-1 py-2 bg-buddy-surface hover:bg-buddy-surface/80 text-buddy-text-secondary rounded-lg font-medium disabled:opacity-50"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (step === 3) {
+                      handleCreate();
+                    } else {
+                      setStep(step + 1);
+                    }
+                  }}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    step === 3 ? 'bg-buddy-green text-buddy-green border-buddy-green hover:bg-buddy-green/20' : 'bg-buddy-green/20 text-buddy-green border-buddy-green/50 hover:bg-buddy-green/50'
+                  }`}
+                >
+                  {step === 3 ? 'Create Countdown' : 'Next →'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
       {/* Countdowns list */}
       <div className="bg-buddy-surface rounded-xl border border-buddy-border p-4">
-        <h3 className="font-semibold mb-4">Your Countdowns</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-buddy-text-primary">Your Countdowns</h3>
+          <button
+            onClick={() => fetchCountdowns()}
+            className="text-xs text-buddy-green hover:text-buddy-green/90 flex items-center gap-1"
+          >
+            <RefreshCw size={14} /> Refresh
+          </button>
+        </div>
 
         {loading && <div className="text-buddy-text-secondary">Loading…</div>}
 
