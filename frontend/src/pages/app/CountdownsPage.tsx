@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import {
   Plus, RefreshCw, Trash2, Edit, Play, Timer, X,
-  Wine, Minus, Leaf, Dumbbell, MapPin, AlertCircle,
+  Wine, Minus, Leaf, Dumbbell, MapPin, AlertCircle, Share2, Clock,
 } from 'lucide-react';
 import { useCountdownsStore } from '@/store/countdownsStore';
 import type { UserCountdown, CreateUserCountdown } from '@/types/countdowns';
 
-const TEMPLATE_ICONS: Record<string, React.ComponentType<any>> = {
+const TEMPLATE_LUCIDE_ICONS: Record<string, React.ComponentType<any>> = {
   sobriety: Wine,
   no_artificial_sugars: Minus,
   no_animal_proteins: Leaf,
@@ -17,16 +17,7 @@ const TEMPLATE_ICONS: Record<string, React.ComponentType<any>> = {
   custom: Plus,
 };
 
-const TEMPLATE_COLORS: Record<string, string> = {
-  sobriety: 'bg-buddy-red/10 text-buddy-red',
-  no_artificial_sugars: 'bg-buddy-orange/10 text-buddy-orange',
-  no_animal_proteins: 'bg-buddy-green/10 text-buddy-green',
-  gym_attendance: 'bg-buddy-electric/10 text-buddy-electric',
-  walking_days: 'bg-buddy-green/10 text-buddy-green',
-  no_drugs: 'bg-buddy-red/10 text-buddy-red',
-  no_nut_month: 'bg-buddy-gold/10 text-buddy-gold',
-  custom: 'bg-buddy-text-secondary/10 text-buddy-text-secondary',
-};
+
 
 const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'followers' | 'private'; label: string; labelText: string }[] = [
   { value: 'public', label: 'Public', labelText: 'Anyone can see' },
@@ -36,7 +27,20 @@ const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'followers' | 'private
 ];
 
 export default function CountdownsPage() {
-  const { countdowns, loading, error, fetchTemplates, fetchCountdowns, createCountdown, checkIn, resetCountdown, updateCountdown, deleteCountdown, templates } = useCountdownsStore();
+  const {
+    countdowns,
+    loading,
+    error,
+    fetchTemplates,
+    fetchCountdowns,
+    createCountdown,
+    checkIn,
+    resetCountdown,
+    updateCountdown,
+    deleteCountdown,
+    templates,
+  } = useCountdownsStore();
+
   const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [newReason, setNewReason] = useState('');
@@ -45,9 +49,17 @@ export default function CountdownsPage() {
   const [unit, setUnit] = useState<'days' | 'hours'>('days');
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [visibility, setVisibility] = useState<'public' | 'buddies' | 'followers' | 'private'>('private');
+  const [countdownFilter, setCountdownFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('all');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editReason, setEditReason] = useState('');
   const [editTarget, setEditTarget] = useState('');
+
+  // Share composer state
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareTarget, setShareTarget] = useState<'post' | 'dm' | 'gym' | 'community'>('post');
+  const [shareCaption, setShareCaption] = useState('');
+  const [shareMedia, setShareMedia] = useState<File[]>([]);
+  const [shareLoading, setShareLoading] = useState(false);
 
   // Initialize on mount
   useEffect(() => {
@@ -87,17 +99,6 @@ export default function CountdownsPage() {
     fetchCountdowns();
   };
 
-  const handleSaveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingId) return;
-    const payload: Partial<CreateUserCountdown> = {};
-    if (editReason.trim()) payload.custom_reason = editReason.trim();
-    if (editTarget.trim()) payload.target_count = parseInt(editTarget, 10) || 0;
-    await updateCountdown(editingId, payload);
-    setEditingId(null);
-    fetchCountdowns();
-  };
-
   const handleDelete = async (id: string) => {
     if (!window.confirm('Delete this countdown?')) return;
     await deleteCountdown(id);
@@ -124,10 +125,66 @@ export default function CountdownsPage() {
     fetchCountdowns();
   };
 
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    const payload: Partial<CreateUserCountdown> = {};
+    if (editReason.trim()) payload.custom_reason = editReason.trim();
+    if (editTarget.trim()) payload.target_count = parseInt(editTarget, 10) || 0;
+    await updateCountdown(editingId, payload);
+    setEditingId(null);
+    fetchCountdowns();
+  };
+
   const progressPct = (c: UserCountdown) => {
     if (!c.target_count) return Math.min(100, (c.current_count / Math.max(c.days_since_start, 1)) * 100);
     return Math.min(100, (c.current_count / c.target_count) * 100);
   };
+
+  const handleShareCountdown = (c: UserCountdown) => {
+    setShareTarget('post');
+    setShareCaption(`${c.display_reason} — ${c.current_count} ${c.unit}${c.current_count !== 1 ? 's' : ''}`);
+    setShareMedia([]);
+    setShareOpen(true);
+  };
+
+  const handleShareModalClose = () => {
+    setShareOpen(false);
+    setShareCaption('');
+    setShareMedia([]);
+  };
+
+  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setShareMedia(files);
+  };
+
+  const handleShareSubmit = async () => {
+    setShareLoading(true);
+    try {
+      console.log('Sharing countdown:', { target: shareTarget, caption: shareCaption, media: shareMedia });
+    } finally {
+      setShareLoading(false);
+      setShareOpen(false);
+      setShareCaption('');
+      setShareMedia([]);
+    }
+  };
+
+  const COUNTDOWN_FILTERS: { key: 'all' | 'active' | 'completed' | 'archived'; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'active', label: 'Active' },
+    { key: 'completed', label: 'Completed' },
+    { key: 'archived', label: 'Archived' },
+  ];
+
+  const filteredCountdowns = countdowns.filter(c => {
+    if (countdownFilter === 'all') return true;
+    if (countdownFilter === 'active') return !c.completed_at && c.is_active;
+    if (countdownFilter === 'completed') return !!c.completed_at;
+    if (countdownFilter === 'archived') return !c.is_active && !c.completed_at;
+    return true;
+  });
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-6">
@@ -165,15 +222,32 @@ export default function CountdownsPage() {
 
         {loading && <div className="text-buddy-text-secondary">Loading…</div>}
 
-        {countdowns.length === 0 && !loading && (
+        {/* Filter tabs */}
+        <div className="flex gap-1 mb-4">
+          {COUNTDOWN_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setCountdownFilter(f.key)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                countdownFilter === f.key
+                  ? 'bg-buddy-green/10 border-buddy-green text-buddy-green'
+                  : 'text-buddy-text-secondary hover:bg-buddy-surface/50 border-transparent'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {filteredCountdowns.length === 0 && !loading && (
           <div className="text-center py-8 text-buddy-text-secondary">
             <Timer size={32} className="mx-auto mb-2 opacity-50" />
-            <p>No countdowns yet. Create one above to start tracking.</p>
+            <p>{countdownFilter === 'all' ? 'No countdowns yet.' : `No ${countdownFilter} countdowns.`} Create one above to start tracking.</p>
           </div>
         )}
 
         <div className="space-y-3">
-          {countdowns.map((c) => (
+          {filteredCountdowns.map((c) => (
             <div
               key={c.id}
               className={`flex items-start gap-3 p-3 rounded-lg border ${
@@ -219,7 +293,7 @@ export default function CountdownsPage() {
                       onClick={() => handleRecreate(c)}
                       className="text-buddy-green hover:text-buddy-green/90 text-sm font-medium"
                     >
-                      <Timer className="w-3 h-3 mr-1" /> Recreate
+                      <Clock className="w-3 h-3 mr-1" /> Recreate
                     </button>
                   )}
                   <button
@@ -234,6 +308,14 @@ export default function CountdownsPage() {
                   >
                     <Trash2 size={14} className="mr-1" /> Delete
                   </button>
+                  {c.completed_at || c.countdown_type === 'manual' ? (
+                    <button
+                      onClick={() => handleShareCountdown(c)}
+                      className="flex items-center gap-1 px-3 py-1 bg-buddy-surface hover:bg-buddy-surface/80 text-buddy-text-secondary rounded text-xs font-medium transition-colors"
+                    >
+                      <Share2 size={14} /> Share
+                    </button>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -250,6 +332,7 @@ export default function CountdownsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {templates.map((tmpl) => {
             const isSelected = creatingTemplateId === tmpl.id;
+            const LucideIcon = TEMPLATE_LUCIDE_ICONS[tmpl.code];
             return (
               <button
                 key={tmpl.id}
@@ -260,11 +343,8 @@ export default function CountdownsPage() {
                     : tmpl.color + ' hover:border-buddy-green hover:bg-buddy-surface/50'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${tmpl.color.replace('/10', '/20')} ${tmpl.color.split(' ')[0]}`}>
-                  {(() => {
-                    const Icon = TEMPLATE_ICONS[tmpl.code] || Plus;
-                    return <Icon className="text-xl" />;
-                  })()}
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-buddy-surface/50 text-buddy-text-secondary">
+                  {LucideIcon ? <LucideIcon className="text-xl" /> : <span>{tmpl.icon}</span>}
                 </div>
                 <div className="font-medium text-sm text-buddy-text-primary">{tmpl.title}</div>
                 <div className="text-xs text-buddy-text-secondary">{tmpl.description}</div>
@@ -300,10 +380,7 @@ export default function CountdownsPage() {
               ))}
             </div>
 
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              handleCreate();
-            }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleCreate(); }} className="space-y-4">
               {/* Step 1: Template selection */}
               {step === 1 && (
                 <div className="space-y-4">
@@ -312,6 +389,7 @@ export default function CountdownsPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {templates.map((tmpl) => {
                         const isSel = creatingTemplateId === tmpl.id;
+                        const LucideIcon = TEMPLATE_LUCIDE_ICONS[tmpl.code];
                         return (
                           <button
                             key={tmpl.id}
@@ -321,12 +399,9 @@ export default function CountdownsPage() {
                               isSel ? 'bg-buddy-green/10 border-buddy-green' : 'bg-buddy-surface border-buddy-border hover:border-buddy-border/50'
                             }`}
                           >
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${TEMPLATE_COLORS[tmpl.code]?.replace('/10', '/20')} ${TEMPLATE_COLORS[tmpl.code]?.split(' ')[0]}`}>
-                  {(() => {
-                    const Icon = TEMPLATE_ICONS[tmpl.code] || Plus;
-                    return <Icon className="text-xl" />;
-                  })()}
-                </div>
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-buddy-surface/50 text-buddy-text-secondary`}>
+                              {LucideIcon ? <LucideIcon className="text-xl" /> : <span>{tmpl.icon}</span>}
+                            </div>
                             <div className="text-xs text-buddy-text-primary">{tmpl.title}</div>
                           </button>
                         );
@@ -527,6 +602,81 @@ export default function CountdownsPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Share composer modal */}
+      {shareOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={handleShareModalClose} />
+          <div className="relative bg-buddy-surface rounded-2xl border border-buddy-border p-6 w-full max-w-md max-h-[90vh] overflow-y-auto z-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-buddy-text-primary">Share Countdown</h3>
+              <button onClick={handleShareModalClose} className="text-buddy-text-secondary hover:text-buddy-text-primary">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-buddy-text-secondary">Share as</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { value: 'post' as const, label: 'Post', icon: Share2 },
+                    { value: 'dm' as const, label: 'DM', icon: X },
+                    { value: 'gym' as const, label: 'Gym Post', icon: X },
+                    { value: 'community' as const, label: 'Community Post', icon: X },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setShareTarget(opt.value)}
+                      className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium ${
+                        shareTarget === opt.value
+                          ? 'bg-buddy-green/10 border-buddy-green text-buddy-green'
+                          : 'bg-buddy-surface border-buddy-border text-buddy-text-secondary hover:bg-buddy-surface/50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-buddy-text-secondary">Caption</label>
+                <textarea
+                  value={shareCaption}
+                  onChange={(e) => setShareCaption(e.target.value)}
+                  rows={3}
+                  className="w-full mt-1 px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-buddy-text-secondary">Media attachments</label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,video/*"
+                  onChange={handleMediaChange}
+                  className="mt-1 block w-full text-sm text-buddy-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-buddy-green file:text-white hover:file:bg-buddy-green/90"
+                />
+                {shareMedia.length > 0 && (
+                  <p className="text-xs text-buddy-text-secondary">{shareMedia.length} file{shareMedia.length !== 1 ? 's' : ''} attached</p>
+                )}
+              </div>
+
+              <button
+                onClick={handleShareSubmit}
+                disabled={shareLoading}
+                className={`w-full py-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+                  shareLoading ? 'bg-buddy-surface text-buddy-text-secondary' : 'bg-buddy-green text-buddy-white hover:bg-buddy-green/90'
+                }`}
+              >
+                {shareLoading ? 'Sharing…' : 'Share'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
-  MapPin, Timer, Share2, X, Smartphone, Image,
+  MapPin, Timer, Share2, X, Smartphone, Image, Play,
+  Timer as TimerIcon,
 } from 'lucide-react';
 import { analyticsApi } from '@/api/analytics';
 import type { ActivityRecent } from '@/types/analytics';
@@ -18,6 +19,22 @@ const ACTIVITY_LABELS: Record<string, string> = {
   hike: 'Hiking',
   cycle: 'Cycling',
 };
+
+const ACTIVITY_COLORS: Record<string, { bg: string; text: string; border: string; icon: string }> = {
+  walk: { bg: 'bg-buddy-green/10', text: 'text-buddy-green', border: 'border-buddy-green/30', icon: '🚶' },
+  run: { bg: 'bg-buddy-red/10', text: 'text-buddy-red', border: 'border-buddy-red/30', icon: '🏃' },
+  cycle: { bg: 'bg-buddy-electric/10', text: 'text-buddy-electric', border: 'border-buddy-electric/30', icon: '🚴' },
+  hike: { bg: 'bg-buddy-orange/10', text: 'text-buddy-orange', border: 'border-buddy-orange/30', icon: '🥾' },
+  workout: { bg: 'bg-buddy-gold/10', text: 'text-buddy-gold', border: 'border-buddy-gold/30', icon: '💪' },
+};
+
+const ACTIVITY_CATEGORIES: { key: string; label: string; description: string; icon: React.ComponentType<any> }[] = [
+  { key: 'walk', label: 'Walking', description: 'Casual stroll or power walk', icon: MapPin },
+  { key: 'run', label: 'Running', description: 'Jog or sprint session', icon: Timer },
+  { key: 'cycle', label: 'Cycling', description: 'Road or mountain bike ride', icon: MapPin },
+  { key: 'hike', label: 'Hiking', description: 'Trail or mountain trek', icon: MapPin },
+  { key: 'workout', label: 'Workout', description: 'Gym or strength session', icon: Timer },
+];
 
 const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'gym_members' | 'private'; label: string }[] = [
   { value: 'public', label: 'Public' },
@@ -50,6 +67,15 @@ export default function ActivitiesPage() {
     error: string | null;
   }>({ postId: null, status: 'idle', videoUrl: null, error: null });
 
+  // Activity tracking state
+  const [trackingOpen, setTrackingOpen] = useState(false);
+  const [trackingType, setTrackingType] = useState<string | null>(null);
+  const [trackingActive, setTrackingActive] = useState(false);
+  const [trackingSeconds, setTrackingSeconds] = useState(0);
+  const [trackingRoute, setTrackingRoute] = useState<number[][]>([]);
+  const [trackingGpsEnabled, setTrackingGpsEnabled] = useState(false);
+  const [trackingWatchId, setTrackingWatchId] = useState<number | null>(null);
+
   useEffect(() => {
     analyticsApi.getActivities().then((res) => {
       const apiResponse = res.data as { data?: ActivityRecent[] } | undefined;
@@ -61,6 +87,39 @@ export default function ActivitiesPage() {
       setLoading(false);
     });
   }, []);
+
+  // Activity filter state (must be before any early returns per React hooks rules)
+  const [activityFilter, setActivityFilter] = useState<'all' | 'walk' | 'run' | 'hike' | 'cycle' | 'workout'>('all');
+
+  const ACTIVITY_FILTERS: { key: 'all' | 'walk' | 'run' | 'hike' | 'cycle' | 'workout'; label: string }[] = [
+    { key: 'all', label: 'All' },
+    { key: 'walk', label: 'Walking' },
+    { key: 'run', label: 'Running' },
+    { key: 'hike', label: 'Hiking' },
+    { key: 'cycle', label: 'Cycling' },
+    { key: 'workout', label: 'Workout' },
+  ];
+
+  // GPS tracking watch
+  useEffect(() => {
+    if (!trackingActive || !trackingGpsEnabled || !trackingWatchId) return;
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setTrackingRoute((prev) => [...prev, [latitude, longitude, Date.now() / 1000]]);
+      },
+      (err) => {
+        console.warn('GPS watch error:', err);
+      },
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 },
+    );
+    setTrackingWatchId(watchId);
+
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, [trackingActive, trackingGpsEnabled, trackingWatchId]);
 
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -136,11 +195,6 @@ export default function ActivitiesPage() {
     }
   };
 
-  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setShareMedia(files);
-  };
-
   const handleDownloadVideo = async (postId: string) => {
     setVideoDownloadState({ postId, status: 'processing', videoUrl: null, error: null });
     try {
@@ -148,7 +202,6 @@ export default function ActivitiesPage() {
       if (result.status === 'ready') {
         setVideoDownloadState({ postId, status: 'ready', videoUrl: result.video_url, error: null });
       } else {
-        // Poll for watermark readiness
         const poll = async () => {
           for (let i = 0; i < 10; i++) {
             await new Promise((r) => setTimeout(r, 2000));
@@ -171,6 +224,74 @@ export default function ActivitiesPage() {
     }
   };
 
+  // Activity tracking handlers
+  const startTracking = (type: string) => {
+    setTrackingType(type);
+    setTrackingActive(true);
+    setTrackingSeconds(0);
+    setTrackingRoute([]);
+    setTrackingOpen(true);
+  };
+
+  const startTimer = () => {
+    setTrackingActive(true);
+    const id = setInterval(() => setTrackingSeconds((s) => s + 1), 1000);
+    setTrackingWatchId(id as unknown as number);
+  };
+
+  const stopTracking = () => {
+    setTrackingActive(false);
+    if (trackingWatchId !== null) {
+      clearInterval(trackingWatchId as unknown as number);
+      setTrackingWatchId(null);
+    }
+  };
+
+  const saveActivity = async () => {
+    if (!trackingType) return;
+    setTrackingActive(false);
+    if (trackingWatchId !== null) {
+      clearInterval(trackingWatchId as unknown as number);
+    }
+
+    try {
+      await analyticsApi.createActivity({
+        activity_type: trackingType as 'walk' | 'run' | 'hike' | 'cycle',
+        duration_seconds: trackingSeconds,
+        distance_meters: trackingRoute.length > 1 ? 0 : 0, // Will be calculated from route if GPS
+        route: trackingGpsEnabled && trackingRoute.length > 0 ? trackingRoute : [],
+        notes: `Tracked via Buddy-Up mobile`,
+      });
+      setTrackingOpen(false);
+      setTrackingType(null);
+      setTrackingSeconds(0);
+      setTrackingRoute([]);
+      // Refresh activities list
+      analyticsApi.getActivities().then((res) => {
+        const apiResponse = res.data as { data?: ActivityRecent[] } | undefined;
+        setActivities(Array.isArray(apiResponse?.data) ? apiResponse.data : []);
+      });
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to save activity');
+    }
+  };
+
+  const cancelTracking = () => {
+    setTrackingActive(false);
+    if (trackingWatchId !== null) {
+      clearInterval(trackingWatchId as unknown as number);
+    }
+    setTrackingOpen(false);
+    setTrackingType(null);
+    setTrackingSeconds(0);
+    setTrackingRoute([]);
+  };
+
+  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setShareMedia(files);
+  };
+
   if (loading) {
     return (
       <div className="p-4 max-w-5xl mx-auto">
@@ -191,6 +312,10 @@ export default function ActivitiesPage() {
   const totalDuration = activities.reduce((sum, a) => sum + (a.duration_seconds || 0), 0);
   const totalCalories = activities.reduce((sum, a) => sum + (a.calories_burned || 0), 0);
 
+  const filteredActivities = activityFilter === 'all'
+    ? activities
+    : activities.filter(a => a.activity_type === activityFilter);
+
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-6">
       {/* Header + summary stats */}
@@ -198,7 +323,7 @@ export default function ActivitiesPage() {
         <div>
           <h1 className="font-display text-2xl font-bold">Activities</h1>
           <p className="text-sm text-buddy-text-secondary mt-0.5">
-            Your walk, run, hike and cycle sessions — with map replay and sharing.
+            Track walk, run, cycle, hike and workouts — with GPS route and sharing.
           </p>
         </div>
         <div className="flex gap-2 bg-buddy-surface rounded-xl p-1">
@@ -216,6 +341,51 @@ export default function ActivitiesPage() {
         </div>
       </div>
 
+      {/* Activity type tabs */}
+      <div className="bg-buddy-surface rounded-xl border border-buddy-border p-1">
+        <div className="flex gap-1 px-1 py-1">
+          {ACTIVITY_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setActivityFilter(f.key)}
+              className={`flex-1 py-2 text-xs font-medium transition-colors rounded-md ${
+                activityFilter === f.key
+                  ? 'bg-buddy-green text-white'
+                  : 'bg-buddy-surface text-buddy-text-secondary hover:bg-buddy-surface/50'
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Activity category cards */}
+      <div className="bg-buddy-surface rounded-xl border border-buddy-border p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-buddy-text-primary">Start New Activity</h3>
+          <span className="text-xs text-buddy-text-secondary">Tap a category to begin tracking</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {ACTIVITY_CATEGORIES.map((cat) => {
+            const color = ACTIVITY_COLORS[cat.key];
+            return (
+              <button
+                key={cat.key}
+                onClick={() => startTracking(cat.key)}
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl border border-buddy-border transition-all duration-200 hover:border-buddy-green hover:shadow-[0_0_20px_rgba(0,200,150,0.2)] ${color.bg} ${color.text}`}
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${color.bg.replace('/10', '/20')} ${color.text}`}>
+                  <cat.icon size={20} />
+                </div>
+                <div className="font-medium text-sm text-buddy-text-primary">{cat.label}</div>
+                <div className="text-xs text-buddy-text-secondary">{cat.description}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {error && (
         <div className="rounded-lg bg-buddy-error/10 p-3 border border-buddy-error/20 text-buddy-error text-sm">{error}</div>
       )}
@@ -223,12 +393,12 @@ export default function ActivitiesPage() {
       {/* Activities list */}
       <div className="bg-buddy-surface rounded-xl border border-buddy-border">
         <div className="p-4 border-b border-buddy-border flex items-center justify-between">
-          <h3 className="font-semibold">Recent Activities</h3>
+          <h3 className="font-semibold text-buddy-text-primary">Recent Activities</h3>
           <span className="text-xs text-buddy-text-secondary">{activities.length} session{activities.length !== 1 ? 's' : ''}</span>
         </div>
 
         <div className="divide-y divide-buddy-border">
-          {activities.map((activity) => (
+          {filteredActivities.map((activity) => (
             <div
               key={activity.id}
               onClick={() => setSelected(selected?.id === activity.id ? null : activity)}
@@ -359,6 +529,104 @@ export default function ActivitiesPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Activity Tracking Modal */}
+      {trackingOpen && trackingType && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={cancelTracking} />
+          <div className="relative bg-buddy-surface rounded-2xl border border-buddy-border p-6 w-full max-w-md max-h-[90vh] overflow-y-auto z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const Icon = ACTIVITY_ICONS[trackingType] ?? MapPin;
+                  return (
+                    <div className={`p-3 rounded-xl ${ACTIVITY_COLORS[trackingType].bg} ${ACTIVITY_COLORS[trackingType].text}`}>
+                      <Icon size={24} />
+                    </div>
+                  );
+                })()}
+              </div>
+                <div>
+                  <h3 className="font-semibold text-buddy-text-primary">{ACTIVITY_LABELS[trackingType] ?? trackingType} Tracking</h3>
+                  <p className="text-xs text-buddy-text-secondary">
+                    {trackingGpsEnabled ? 'GPS enabled — route will be recorded' : 'GPS disabled — time only'}
+                  </p>
+                </div>
+              </div>
+              <button onClick={cancelTracking} className="text-buddy-text-secondary hover:text-buddy-text-primary">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Timer */}
+              <div className="text-center">
+                <div className="text-6xl font-display font-bold text-buddy-text-primary mb-1">
+                  {Math.floor(trackingSeconds / 3600).toString().padStart(2, '0')}:{Math.floor((trackingSeconds % 3600) / 60).toString().padStart(2, '0')}:{(trackingSeconds % 60).toString().padStart(2, '0')}
+                </div>
+                <div className="text-buddy-text-secondary text-sm">{trackingActive ? 'Tracking…' : 'Paused'}</div>
+              </div>
+
+              {/* Controls */}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={trackingActive ? stopTracking : startTimer}
+                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    trackingActive
+                      ? 'bg-buddy-red text-buddy-red border-buddy-red hover:bg-buddy-red/20'
+                      : 'bg-buddy-green text-buddy-green border-buddy-green hover:bg-buddy-green/20'
+                  }`}
+                >
+                  {trackingActive ? <><Timer size={16} className="mr-2" />Pause</> : <><Play size={16} className="mr-2" />Start</>}
+                </button>
+                <button
+                  onClick={() => setTrackingGpsEnabled(!trackingGpsEnabled)}
+                  className={`px-6 py-3 rounded-xl text-sm font-medium border transition-colors ${
+                    trackingGpsEnabled
+                      ? 'bg-buddy-surface text-buddy-text-secondary border-buddy-border hover:bg-buddy-surface/80'
+                      : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border hover:bg-buddy-surface/80'
+                  }`}
+                >
+                  <TimerIcon size={16} className="mr-2" />
+                  GPS: {trackingGpsEnabled ? 'ON' : 'OFF'}
+                </button>
+              </div>
+
+              {/* Route preview */}
+              {trackingRoute.length > 0 && (
+                <div className="bg-buddy-surface/50 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-buddy-text-secondary">Route points</span>
+                    <span className="text-xs text-buddy-green">{trackingRoute.length}</span>
+                  </div>
+                  <div className="h-20 bg-buddy-bg rounded border border-buddy-border flex items-center justify-center">
+                    <div className="text-xs text-buddy-text-secondary">GPS trace captured</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={cancelTracking}
+                className="flex-1 py-3 rounded-xl border border-buddy-border text-buddy-text-secondary hover:bg-buddy-surface/50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveActivity}
+                disabled={trackingSeconds === 0}
+                className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
+                  trackingSeconds === 0
+                    ? 'bg-buddy-surface text-buddy-text-secondary border-buddy-border cursor-not-allowed'
+                    : 'bg-buddy-green text-buddy-green border-buddy-green hover:bg-buddy-green/20'
+                }`}
+              >
+                Save Activity
+              </button>
+            </div>
+          </div>
       )}
 
       {/* Share Composer Modal */}
