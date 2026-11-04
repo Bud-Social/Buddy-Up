@@ -43,8 +43,8 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
   }
 
   Color _colorFor(CountdownTemplate template) =>
-      _templateColors[template.code] ?? Color(int.tryParse(
-              template.color.replaceAll('#', '0xFF') ?? '0xFF6366f1') ??
+      _templateColors[template.code] ??
+      Color(int.tryParse(template.color.replaceAll('#', '0xFF')) ??
           0xFF6366f1);
 
   String _formatDate(String? iso) {
@@ -70,7 +70,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => Consumer(
-        builder: (__ref, _, ___) {
+        builder: (_, _, _) {
           final templates = ref.watch(countdownsProvider).templates;
           final isLoading = ref.watch(countdownsProvider).isLoading;
           return Padding(
