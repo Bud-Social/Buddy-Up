@@ -12,7 +12,6 @@ linter:
     require_trailing_commas: true
 
 analyzer:
-  fatal-infos: false
   errors:
     invalid_annotation_target: ignore
   exclude:

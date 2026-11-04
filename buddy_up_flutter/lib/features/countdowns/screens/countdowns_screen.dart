@@ -172,15 +172,15 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: BuddyColors.border),
+                            borderSide: const BorderSide(color: BuddyColors.border),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(color: BuddyColors.border),
+                            borderSide: const BorderSide(color: BuddyColors.border),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
+                            borderSide: const BorderSide(
                               color: BuddyColors.green,
                             ),
                           ),
@@ -207,7 +207,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                         onPressed: isLoading ? null : () => Navigator.pop(ctx),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: BuddyColors.textSecondary,
-                          side: BorderSide(color: BuddyColors.border),
+                          side: const BorderSide(color: BuddyColors.border),
                           minimumSize: const Size(double.infinity, 44),
                         ),
                         child: const Text('Cancel'),
@@ -289,11 +289,11 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: BuddyColors.border),
+          borderSide: const BorderSide(color: BuddyColors.border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: BuddyColors.green),
+          borderSide: const BorderSide(color: BuddyColors.green),
         ),
         fillColor: BuddyColors.surface,
         filled: true,
@@ -424,7 +424,8 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
 
   Widget _countdownCard(UserCountdown c, {required bool isCompleted}) {
     final color = _colorFor(
-      c.templateDetail ?? CountdownTemplate(code: '', title: '', color: '#6B7280'),
+      c.templateDetail ??
+          const CountdownTemplate(code: '', title: '', color: '#6B7280'),
     );
     final progress = c.progressPercent;
 
@@ -474,7 +475,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                           c.templateDetail!.description.isNotEmpty)
                         Text(
                           c.templateDetail!.description,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: BuddyColors.textSecondary,
                             fontSize: 12,
                           ),
@@ -531,14 +532,14 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 if (c.targetCount > 0)
                   Text(
                     'of ${c.targetCount}',
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: BuddyColors.textSecondary,
                       fontSize: 13,
                     ),
                   ),
                 Text(
                   'Day ${c.daysSinceStart}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: BuddyColors.textSecondary,
                     fontSize: 13,
                   ),
@@ -556,7 +557,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                       label: const Text('Check in'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: BuddyColors.green,
-                        side: BorderSide(color: BuddyColors.green),
+                        side: const BorderSide(color: BuddyColors.green),
                         minimumSize: const Size(double.infinity, 36),
                         padding: EdgeInsets.zero,
                       ),
@@ -571,7 +572,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                     label: const Text('Edit'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: BuddyColors.textSecondary,
-                      side: BorderSide(color: BuddyColors.border),
+                      side: const BorderSide(color: BuddyColors.border),
                       minimumSize: const Size(double.infinity, 36),
                       padding: EdgeInsets.zero,
                     ),
@@ -585,7 +586,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                     label: const Text('Reset'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
-                      side: BorderSide(color: Colors.red),
+                      side: const BorderSide(color: Colors.red),
                       minimumSize: const Size(double.infinity, 36),
                       padding: EdgeInsets.zero,
                     ),
@@ -703,11 +704,11 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: BuddyColors.border),
+                  borderSide: const BorderSide(color: BuddyColors.border),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: BuddyColors.green),
+                  borderSide: const BorderSide(color: BuddyColors.green),
                 ),
                 fillColor: BuddyColors.surface,
                 filled: true,
@@ -744,15 +745,15 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: BuddyColors.border),
+                        borderSide: const BorderSide(color: BuddyColors.border),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: BuddyColors.border),
+                        borderSide: const BorderSide(color: BuddyColors.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: BuddyColors.green),
+                        borderSide: const BorderSide(color: BuddyColors.green),
                       ),
                       fillColor: BuddyColors.surface,
                       filled: true,
@@ -777,7 +778,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                     onPressed: () => Navigator.pop(ctx),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: BuddyColors.textSecondary,
-                      side: BorderSide(color: BuddyColors.border),
+                      side: const BorderSide(color: BuddyColors.border),
                       minimumSize: const Size(double.infinity, 44),
                     ),
                     child: const Text('Cancel'),

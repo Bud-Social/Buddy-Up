@@ -860,7 +860,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                       label: const Text('Fix grammar', style: TextStyle(fontSize: 12)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: BuddyColors.green,
-                        side: BorderSide(color: BuddyColors.green),
+                        side: const BorderSide(color: BuddyColors.green),
                         minimumSize: Size.zero,
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -875,7 +875,7 @@ class _PostComposerScreenState extends ConsumerState<PostComposerScreen> {
                   label: const Text('Apply', style: TextStyle(fontSize: 12)),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: BuddyColors.green,
-                    side: BorderSide(color: BuddyColors.green),
+                    side: const BorderSide(color: BuddyColors.green),
                     minimumSize: Size.zero,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
