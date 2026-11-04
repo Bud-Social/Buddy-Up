@@ -291,7 +291,7 @@ class GymRoutinePostTests(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
 
     def test_create_routine_post(self):
-        response = self.client.post('/api/v1/gyms/schedulegym/schedule-posts/', {
+        response = self.client.post('/api/v1/gyms/schedulegym/routine-posts/', {
             'title': 'Morning Yoga',
             'activity_type': 'yoga',
             'location_mode': 'in_house',
@@ -306,7 +306,7 @@ class GymRoutinePostTests(TestCase):
             gym=self.gym, author=self.profile, title='Test Class',
             activity_type='yoga', location_mode='in_house',
         )
-        response = self.client.get('/api/v1/gyms/schedulegym/schedule-posts/')
+        response = self.client.get('/api/v1/gyms/schedulegym/routine-posts/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(len(response.data['data']) >= 1)
 
@@ -315,7 +315,7 @@ class GymRoutinePostTests(TestCase):
             gym=self.gym, author=self.profile, title='Original',
             activity_type='yoga', location_mode='in_house',
         )
-        response = self.client.patch(f'/api/v1/gyms/schedulegym/schedule-posts/{post.id}/',
+        response = self.client.patch(f'/api/v1/gyms/schedulegym/routine-posts/{post.id}/',
             {'title': 'Updated Title'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['data']['title'], 'Updated Title')
@@ -325,7 +325,7 @@ class GymRoutinePostTests(TestCase):
             gym=self.gym, author=self.profile, title='To Delete',
             activity_type='yoga', location_mode='in_house',
         )
-        response = self.client.delete(f'/api/v1/gyms/schedulegym/schedule-posts/{post.id}/')
+        response = self.client.delete(f'/api/v1/gyms/schedulegym/routine-posts/{post.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(GymRoutinePost.objects.filter(id=post.id).exists())
 
@@ -334,7 +334,7 @@ class GymRoutinePostTests(TestCase):
             gym=self.gym, author=self.profile, title='Enroll Class',
             activity_type='yoga', location_mode='in_house', max_slots=10,
         )
-        response = self.client.post(f'/api/v1/gyms/schedulegym/schedule-posts/{post.id}/enroll/', format='json')
+        response = self.client.post(f'/api/v1/gyms/schedulegym/routine-posts/{post.id}/enroll/', format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(RoutineSlotEnrollment.objects.filter(routine_post=post, member=self.profile).exists())
 
@@ -343,8 +343,8 @@ class GymRoutinePostTests(TestCase):
             gym=self.gym, author=self.profile, title='Unenroll Class',
             activity_type='yoga', location_mode='in_house',
         )
-        self.client.post(f'/api/v1/gyms/schedulegym/schedule-posts/{post.id}/enroll/', format='json')
-        response = self.client.delete(f'/api/v1/gyms/schedulegym/schedule-posts/{post.id}/enroll/')
+        self.client.post(f'/api/v1/gyms/schedulegym/routine-posts/{post.id}/enroll/', format='json')
+        response = self.client.delete(f'/api/v1/gyms/schedulegym/routine-posts/{post.id}/enroll/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
@@ -825,7 +825,7 @@ class GymRoutinePostModerationTests(TestCase):
     it down. Trainer deliberately keeps edit-without-delete.
     """
 
-    URL = '/api/v1/gyms/schedulegym/schedule-posts/'
+    URL = '/api/v1/gyms/schedulegym/routine-posts/'
 
     def setUp(self):
         self.client = APIClient()

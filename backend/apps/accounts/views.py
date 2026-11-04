@@ -465,10 +465,19 @@ class RegisterView(views.APIView):
                 privacy_level='private',
             )
 
+        # OTP token for email verification. The activation link is the primary
+        # path; the token keeps the OTP verification endpoint functional for
+        # new registrations without a separate resend step.
+        OTPToken.objects.create(
+            user=user,
+            code=_generate_otp(),
+            channel='email',
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+
         # Send activation link instead of OTP
         activation_token = _generate_activation_token(user)
         send_activation_email.delay(str(user.id), activation_token)
-
         _log_event(user, 'registration', request)
 
         # Return a token that can be used to track registration state

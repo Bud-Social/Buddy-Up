@@ -138,6 +138,7 @@ class PostSerializer(serializers.ModelSerializer):
     save_count = serializers.SerializerMethodField()
     is_saved = serializers.SerializerMethodField()
     is_reposted_by_me = serializers.SerializerMethodField()
+    is_repost = serializers.SerializerMethodField()
     poll = serializers.SerializerMethodField()
     gym_tag_name = serializers.SerializerMethodField()
     reposters = serializers.SerializerMethodField()
@@ -152,7 +153,7 @@ class PostSerializer(serializers.ModelSerializer):
         'media_urls', 'media', 'tags', 'view_count', 'share_count', 'moderation_status',
         'content_rating', 'comments_disabled',
         'author_data', 'reaction_counts', 'user_reaction',
-        'comment_count', 'repost_count', 'save_count', 'is_saved', 'is_reposted_by_me', 'is_pinned',
+        'comment_count', 'repost_count', 'save_count', 'is_saved', 'is_reposted_by_me', 'is_repost', 'is_pinned',
         'poll', 'reposters', 'created_at', 'updated_at',
         'ai_analysis',
         ]
@@ -205,6 +206,10 @@ class PostSerializer(serializers.ModelSerializer):
         if not (request and request.user.is_authenticated):
             return False
         return obj.reposts.filter(profile=request.user.profile, is_deleted=False).exists()
+
+    def get_is_repost(self, obj):
+        """A Post is never itself a repost; reposts are PostRepost log rows."""
+        return False
 
     def get_poll(self, obj):
         if hasattr(obj, 'poll'):

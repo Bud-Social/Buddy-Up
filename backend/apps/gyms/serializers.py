@@ -337,7 +337,7 @@ class GymRoutinePostSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not (request and request.user.is_authenticated):
             return False
-        return obj.enrollments.filter(profile=request.user.profile, is_active=True, is_deleted=False).exists()
+        return obj.enrollments.filter(member=request.user.profile, is_active=True).exists()
 
     def get_author_data(self, obj):
         return {

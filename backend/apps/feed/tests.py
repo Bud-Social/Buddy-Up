@@ -137,7 +137,7 @@ class SocialProvisioningTests(TestCase):
         )
         self.assertTrue(created)
         self.assertFalse(user.is_adult)          # age gate NOT bypassed
-        self.assertTrue(user.email_verified)
+        self.assertFalse(user.email_verified)    # new social users require activation
         self.assertEqual(user.google_id, 'gid-123')
         self.assertIsNotNone(user.profile)       # profile always provisioned
 

@@ -45,7 +45,7 @@ def build_candidates(
             'reactions': getattr(post, 'reaction_count', 0) or 0,
             'comments': getattr(post, 'comment_count', 0) or 0,
             'saves': getattr(post, 'save_count', 0) or 0,
-            'is_repost': bool(post.is_repost),
+            'is_repost': False,
             'age_hours': round(age_hours, 3),
             'has_media': bool(post.media_urls),
             'is_video': any(
@@ -149,7 +149,7 @@ def send_feedback(user_id: str, post, reward: float, extra: dict | None = None):
             'reactions': Reaction.objects.filter(post=post).count(),
             'comments': Comment.objects.filter(post=post).count(),
             'saves': Save.objects.filter(post=post).count(),
-            'is_repost': bool(post.is_repost),
+            'is_repost': False,
             'age_hours': round(age_hours, 3),
             'has_media': bool(post.media_urls),
             'is_video': _is_video(post),

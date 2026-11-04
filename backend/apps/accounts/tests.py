@@ -517,9 +517,10 @@ class AppleSignInFailClosedTests(TestCase):
                 finalize.return_value = ({'access': 'a', 'refresh': 'r'}, False)
                 resp = self.client.post(self.apple_url, {'identity_token': 'tok'}, format='json')
         self.assertEqual(
-            resp.status_code, status.HTTP_200_OK,
+            resp.status_code, status.HTTP_201_CREATED,
             f'unexpected response: {getattr(resp, "data", None)}',
         )
+        self.assertTrue(resp.data['data'].get('require_activation'))
 
         # Issuer was enforced on the decode call.
         _, kwargs = decode.call_args
