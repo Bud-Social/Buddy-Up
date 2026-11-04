@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus, RefreshCw, Trash2, Edit, Play, Timer,
 } from 'lucide-react';
@@ -26,12 +26,10 @@ export default function CountdownsPage() {
   const [editTarget, setEditTarget] = useState('');
 
   // Initialize on mount
-  const initialized = useState(false);
-  if (!initialized[0] && typeof window !== 'undefined') {
+  useEffect(() => {
     fetchTemplates();
     fetchCountdowns();
-    initialized[0] = true;
-  }
+  }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
