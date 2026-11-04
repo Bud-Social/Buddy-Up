@@ -803,7 +803,7 @@ class _CountdownsScreenState extends ConsumerState<CountdownsScreen> {
                                       : null,
                                 ),
                               );
-                          if (mounted) Navigator.pop(ctx);
+                          if (ctx.mounted) Navigator.pop(ctx);
                           _customReasonController.clear();
                           _targetCount = 0;
                           setState(() => _creatingTemplateId = null);
