@@ -38,3 +38,4 @@ urlpatterns = [
     path('trending-hashtags/', views.TrendingHashtagsView.as_view(), name='trending_hashtags'),
     path('location-consent/', views.UserLocationConsentView.as_view(), name='location_consent'),
     path('<uuid:post_id>/download/', views.PostDownloadView.as_view(), name='download'),
+]
