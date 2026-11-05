@@ -36,5 +36,5 @@ urlpatterns = [
     path('studio/captions/<str:item_id>/', views.StudioCaptionsView.as_view(), name='studio_captions'),
     path('comments/media/', views.CommentMediaUploadView.as_view(), name='comment_media_upload'),
     path('trending-hashtags/', views.TrendingHashtagsView.as_view(), name='trending_hashtags'),
+    path('location-consent/', views.UserLocationConsentView.as_view(), name='location_consent'),
     path('<uuid:post_id>/download/', views.PostDownloadView.as_view(), name='download'),
-]
