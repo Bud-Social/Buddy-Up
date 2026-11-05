@@ -105,6 +105,10 @@ export const feedApi = {
       channel ? { channel } : {},
     ).then((r) => r.data),
 
+  /** Get community posts. */
+  getCommunityPosts: (slug: string, cursor?: string) =>
+    apiClient.get<ApiResponse<Post[]>>(`/communities/${slug}/posts/`, { params: { cursor } }).then((r) => r.data),
+
   /** Download post media (proxy through backend to avoid CORS, adds watermark). */
   downloadPostMedia: (postId: string) =>
     apiClient.get(`/feed/${postId}/download/`, { responseType: 'blob' }).then((r) => r.data),

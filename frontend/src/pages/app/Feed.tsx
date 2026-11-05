@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
-  Loader2, Users, ArrowRight, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp, X,
+  Loader2, Users, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp, X,
 } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { VideoFeed } from '@/components/features/feed/VideoFeed';
-import { Card } from '@/components/ui/Card';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { feedApi, profilesApi } from '@/api';
 import { messagingApi, type Community } from '@/api/messaging';
@@ -169,18 +168,48 @@ export default function Feed() {
     }
   }, [location]);
 
-  const tabs: { key: FeedTab | string; label: string; to: string; community?: any }[] = [
+  const tabs: { key: FeedTab; label: string; to: string }[] = [
     { key: 'for_you', label: 'For You', to: '/feed' },
     { key: 'following', label: 'Following', to: '/feed/following' },
-    ...myCommunities.map((c) => ({
-      key: `community_${c.id}`,
-      label: c.group_name || 'Community',
-      to: `/communities/${c.id}`,
-      community: c,
-    })),
-    ...(myCommunities.length > 0 ? [{ key: 'communities' as FeedTab, label: 'All Communities', to: '/feed/communities' }] : []),
+    { key: 'communities' as FeedTab, label: 'Communities', to: '/feed/communities' },
     { key: 'videos', label: 'Bud Press', to: '/feed/bud-press' },
   ];
+
+  // Community sub-tab state (nested inside Communities tab)
+  const [communitySubTab, setCommunitySubTab] = useState<string | null>('all');
+
+  const fetchCommunityPosts = useCallback(async (slug: string, reset = false) => {
+    if (loadingPageRef.current && !reset) return;
+    loadingPageRef.current = true;
+    const hasContent = postsCountRef.current > 0;
+    if (!hasContent || !reset) setIsLoading(true);
+    else setIsRefreshing(true);
+    setFetchError(null);
+    const c = reset ? undefined : cursorRef.current;
+    try {
+      const res = await feedApi.getCommunityPosts(slug, c);
+      const newPosts = res.data || [];
+      if (reset) {
+        setPosts(newPosts);
+        knownIdsRef.current = new Set(newPosts.map(p => p.id));
+      } else {
+        const unseenPosts = newPosts.filter(p => !knownIdsRef.current.has(p.id));
+        unseenPosts.forEach(p => knownIdsRef.current.add(p.id));
+        setPosts((prev) => [...prev, ...unseenPosts]);
+      }
+      cursorRef.current = res.pagination?.next
+        ? new URLSearchParams(res.pagination.next.split('?')[1]).get('cursor') || undefined
+        : undefined;
+      setHasMore(!!res.pagination?.next);
+    } catch {
+      if (!reset) setHasMore(false);
+      setFetchError({ msg: reset ? 'Could not load community posts.' : 'Could not load more posts.', reset });
+    } finally {
+      loadingPageRef.current = false;
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
 
   const fetchPosts = useCallback(async (tab: FeedTab, reset = false) => {
     if (loadingPageRef.current && !reset) return;
@@ -238,6 +267,12 @@ export default function Feed() {
     setNewPostsCount(0);
     fetchPosts(activeTab === 'videos' ? 'for_you' : activeTab, true);
   }, [activeTab, fetchPosts]);
+
+  // Fetch community posts when sub-tab changes
+  useEffect(() => {
+    if (activeTab !== 'communities') return;
+    fetchCommunityPosts(communitySubTab || 'all', true);
+  }, [activeTab, communitySubTab, fetchCommunityPosts]);
 
   // Deep-link: /feed?post=:id (shared links) prepends the post and scrolls
   // it into view; notification links already clear the param first.
@@ -299,13 +334,15 @@ export default function Feed() {
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoading && !isVideoTab && activeTab !== 'communities') {
           fetchPosts(activeTab, false);
+        } else if (entries[0].isIntersecting && hasMore && !isLoading && activeTab === 'communities') {
+          fetchCommunityPosts(communitySubTab || 'all', false);
         }
       },
       { threshold: 0.1 },
     );
     if (observerRef.current) obs.observe(observerRef.current);
     return () => obs.disconnect();
-  }, [hasMore, isLoading, activeTab, isVideoTab, fetchPosts]);
+  }, [hasMore, isLoading, activeTab, isVideoTab, fetchPosts, fetchCommunityPosts, communitySubTab]);
 
   // ── Post impression tracking (50% visible for ≥1s, once per post) ──────────
   const activeTabRef = useRef(activeTab);
@@ -360,75 +397,123 @@ export default function Feed() {
       {/* Tab bar */}
       <div className={`sticky top-12 lg:top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3 transition-transform duration-300 ease-in-out ${tabBarHidden ? '-translate-y-full' : 'translate-y-0'}`}>
         <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 overflow-x-auto scrollbar-none">
-          {tabs.map((tab) => {
-            const isCommunity = tab.key.startsWith('community_');
-            return (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  if (tab.key !== activeTab) {
-                    track('feed.tab_selected', { surface: 'feed', properties: { feed_tab: tab.key } });
-                  }
-                  navigate(tab.to);
-                }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
-                  activeTab === tab.key
-                    ? 'bg-buddy-green text-buddy-black'
-                    : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface/50'
-                }`}
-              >
-                {isCommunity && tab.community?.cover_url ? (
-                  <img src={tab.community.cover_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
-                ) : isCommunity && tab.community?.avatar_url ? (
-                  <img src={tab.community.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
-                ) : null}
-                <span className={`truncate ${isCommunity ? 'max-w-[140px]' : ''}`}>{tab.label}</span>
-              </button>
-            );
-          })}
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                if (tab.key !== activeTab) {
+                  track('feed.tab_selected', { surface: 'feed', properties: { feed_tab: tab.key } });
+                }
+                navigate(tab.to);
+              }}
+              className={`flex items-center gap-2 px-3 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
+                activeTab === tab.key
+                  ? 'bg-buddy-green text-buddy-black'
+                  : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface/50'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {activeTab === 'communities' ? (
-        <div className="px-4 space-y-3 pb-8 pt-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-buddy-text-primary">Your Communities ({myCommunities.length})</h2>
-            <button
-              onClick={() => navigate('/communities')}
-              className="text-xs text-buddy-green font-semibold hover:underline flex items-center gap-1"
-            >
-              Discover More <ArrowRight size={12} />
-            </button>
-          </div>
-          <div className="grid gap-3">
-            {myCommunities.map((c) => (
-              <Card
-                key={c.id}
-                onClick={() => navigate(`/communities/${c.id}`)}
-                className="p-4 flex items-center justify-between gap-3 hover:border-buddy-green/50 cursor-pointer transition-colors"
+        <>
+          {/* Community sub-tabs: All Communities + individual communities */}
+          <div className="sticky top-12 lg:top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3 transition-transform duration-300 ease-in-out ${tabBarHidden ? '-translate-y-full' : 'translate-y-0'}">
+            <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 overflow-x-auto scrollbar-none">
+              <button
+                key="community_all"
+                onClick={() => {
+                  setCommunitySubTab('all');
+                  fetchCommunityPosts('all', true);
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
+                  communitySubTab === 'all'
+                    ? 'bg-buddy-green text-buddy-black'
+                    : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface/50'
+                }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
+                All Communities
+              </button>
+              {myCommunities.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setCommunitySubTab(c.id);
+                    fetchCommunityPosts(c.id, true);
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
+                    communitySubTab === c.id
+                      ? 'bg-buddy-green text-buddy-black'
+                      : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface/50'
+                  }`}
+                >
                   {c.group_avatar_url ? (
-                    <img src={c.group_avatar_url} alt="" className="w-11 h-11 rounded-full object-cover" />
+                    <img src={c.group_avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-11 h-11 rounded-full bg-buddy-surface-raised flex items-center justify-center">
-                      <Users size={20} className="text-buddy-green" />
+                    <div className="w-6 h-6 rounded-full bg-buddy-surface-raised flex items-center justify-center shrink-0">
+                      <Users size={16} className="text-buddy-green" />
                     </div>
                   )}
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate">{c.group_name || 'Community'}</p>
-                    <p className="text-xs text-buddy-text-secondary truncate">
-                      {c.description || c.last_message?.body || 'Open community feed & chat'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center text-xs text-buddy-green font-medium shrink-0">
-                  Open <ArrowRight size={14} className="ml-1" />
-                </div>
-              </Card>
-            ))}
+                  <span className="truncate max-w-[120px]">{c.group_name || 'Community'}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+
+          {/* Community Posts Feed */}
+          <div className="px-4 space-y-3 pb-8 pt-2">
+            {!isLoading && fetchError && (
+              <ErrorBanner
+                message={fetchError.msg}
+                onRetry={() => fetchCommunityPosts(communitySubTab || 'all', true)}
+              />
+            )}
+
+            {posts.length === 0 && !isLoading && !fetchError && (
+              <div className="text-center py-20">
+                <Users size={32} className="mx-auto mb-2 opacity-50" />
+                <p className="text-buddy-text-secondary text-lg">
+                  {communitySubTab === 'all'
+                    ? 'No community posts yet.'
+                    : `No posts in this community yet.`}
+                </p>
+                <p className="text-buddy-text-secondary/50 text-sm mt-1">
+                  Join a community or post something to get started.
+                </p>
+              </div>
+            )}
+
+            {posts.map((post) => (
+              <div key={post.id} data-post-id={post.id} ref={registerPostCard}>
+                <PostCard
+                  post={post}
+                  onRemove={handleRemovePost}
+                  onRemoveAuthor={handleRemoveAuthor}
+                  onComment={(id) => {
+                    track('feed.post_opened', {
+                      surface: 'feed',
+                      object_type: 'post',
+                      object_id: id,
+                      properties: { feed_tab: 'communities', via: 'comments' },
+                    });
+                    setCommentPostId(id);
+                  }}
+                />
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="flex justify-center py-8">
+                <Loader2 size={24} className="animate-spin text-buddy-green" />
+              </div>
+            )}
+
+            <div ref={observerRef} className="h-4" />
+          </div>
+        </>
       ) : activeTab === 'videos' ? (
         /* ── Bud Press — TikTok-style with FYP/Following switch ── */
         <div className="px-4 pt-3 pb-8">
