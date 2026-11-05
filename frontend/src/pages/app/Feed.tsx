@@ -421,21 +421,21 @@ export default function Feed() {
       {activeTab === 'communities' ? (
         <>
           {/* Community sub-tabs: All Communities + individual communities */}
-          <div className="sticky top-12 lg:top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3 transition-transform duration-300 ease-in-out ${tabBarHidden ? '-translate-y-full' : 'translate-y-0'}">
-            <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 overflow-x-auto scrollbar-none">
+          <div className="sticky top-12 lg:top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-2 transition-transform duration-300 ease-in-out ${tabBarHidden ? '-translate-y-full' : 'translate-y-0'}">
+            <div className="flex gap-0.5 bg-buddy-surface rounded-xl p-0.5 overflow-x-auto scrollbar-none">
               <button
                 key="community_all"
                 onClick={() => {
                   setCommunitySubTab('all');
                   fetchCommunityPosts('all', true);
                 }}
-                className={`flex items-center gap-2 px-3 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full font-medium text-xs whitespace-nowrap transition-colors ${
                   communitySubTab === 'all'
                     ? 'bg-buddy-green text-buddy-black'
                     : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface/50'
                 }`}
               >
-                All Communities
+                All
               </button>
               {myCommunities.map((c) => (
                 <button
@@ -444,20 +444,20 @@ export default function Feed() {
                     setCommunitySubTab(c.id);
                     fetchCommunityPosts(c.id, true);
                   }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
                     communitySubTab === c.id
                       ? 'bg-buddy-green text-buddy-black'
                       : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface/50'
                   }`}
                 >
                   {c.group_avatar_url ? (
-                    <img src={c.group_avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                    <img src={c.group_avatar_url} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-buddy-surface-raised flex items-center justify-center shrink-0">
-                      <Users size={16} className="text-buddy-green" />
+                    <div className="w-5 h-5 rounded-full bg-buddy-surface-raised flex items-center justify-center shrink-0">
+                      <Users size={14} className="text-buddy-green" />
                     </div>
                   )}
-                  <span className="truncate max-w-[100px]">{c.group_name || 'Community'}</span>
+                  <span className="truncate max-w-[90px]">{c.group_name || 'Community'}</span>
                 </button>
               ))}
             </div>

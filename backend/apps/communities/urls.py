@@ -11,4 +11,5 @@ urlpatterns = [
     path('<slug:slug>/leave/', views.CommunityLeaveView.as_view(), name='leave'),
     path('<slug:slug>/posts/', views.CommunityPostsView.as_view(), name='posts'),
     path('<slug:slug>/add-post/', views.CommunityPostCreateView.as_view(), name='add_post'),
+    path('posts/', views.AllCommunityPostsView.as_view(), name='all_posts'),
 ]

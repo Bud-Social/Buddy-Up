@@ -290,7 +290,7 @@ function VideoFeedSlide({
             <MoreHorizontal size={20} />
           </button>
           {moreOptionsOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-buddy-surface rounded-xl border border-buddy-border shadow-xl py-2 z-50">
+            <div className="absolute right-0 -mt-2 w-48 bg-buddy-surface rounded-xl border border-buddy-border shadow-xl pb-2 z-50 mb-2">
               <button
                 onClick={() => { setMoreOptionsOpen(false); handleReport(); }}
                 className="w-full text-left px-3 py-2 text-sm text-buddy-text-secondary hover:bg-buddy-red/10 hover:text-buddy-red transition-colors flex items-center gap-2"

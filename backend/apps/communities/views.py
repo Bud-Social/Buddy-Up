@@ -22,6 +22,19 @@ class CommunityListView(views.APIView):
         return Response({'success': True, 'data': data, 'message': 'Communities.', 'errors': None, 'pagination': None})
 
 
+class AllCommunityPostsView(views.APIView):
+    """List posts from all communities."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        cursor = request.GET.get('cursor')
+        qs = CommunityPost.objects.filter(is_deleted=False).select_related('post__author', 'post')
+        # Simple cursor-free pagination for now — return latest 20
+        qs = qs.order_by('-created_at')[:20]
+        data = CommunityPostSerializer(qs, many=True, context={'request': request}).data
+        return Response({'success': True, 'data': data, 'message': 'All community posts.', 'errors': None, 'pagination': None})
+
+
 class CommunityDetailView(views.APIView):
     """Get a single community with its posts."""
     permission_classes = [permissions.IsAuthenticated]
