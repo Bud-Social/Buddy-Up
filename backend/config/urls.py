@@ -3,7 +3,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from apps.feed.views import ShareOpenView
+from apps.feed.views import ShareOpenView, UserLocationConsentView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/v1/auth/', include('apps.accounts.urls')),
     path('api/v1/profiles/', include('apps.profiles.urls')),
     path('api/v1/feed/', include('apps.feed.urls')),
+    path('api/v1/feed/location-consent/', views.UserLocationConsentView.as_view(), name='location_consent'),
     path('api/v1/s/<str:code>/open/', ShareOpenView.as_view(), name='share_open'),
     path('api/v1/uploads/', include('apps.feed.urls_uploads')),
     path('api/v1/sounds/', include('apps.feed.urls_sounds')),
@@ -33,6 +34,7 @@ urlpatterns = [
     path('api/v1/portal/', include('apps.admin_portal.urls')),
     path('api/v1/governance/', include('apps.governance.urls')),
     path('api/v1/countdowns/', include('apps.countdowns.urls')),
+    path('api/v1/communities/', include('apps.communities.urls')),
     path('api/v1/communities/', include('apps.communities.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),

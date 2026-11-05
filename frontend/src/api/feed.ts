@@ -106,8 +106,10 @@ export const feedApi = {
     ).then((r) => r.data),
 
   /** Get community posts. */
-  getCommunityPosts: (slug: string, cursor?: string) =>
-    apiClient.get<ApiResponse<Post[]>>(`/communities/${slug}/posts/`, { params: { cursor } }).then((r) => r.data),
+  getCommunityPosts: (slug: string, cursor?: string) => {
+    const url = slug === 'all' ? '/communities/posts/' : `/communities/${slug}/posts/`;
+    return apiClient.get<ApiResponse<Post[]>>(url, { params: { cursor } }).then((r) => r.data);
+  },
 
   /** Download post media (proxy through backend to avoid CORS, adds watermark). */
   downloadPostMedia: (postId: string) =>
