@@ -13,7 +13,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
-  Volume2, VolumeX, Loader2, Share2, Eye, Flag,
+  Volume2, VolumeX, Loader2, Share2, Eye, Flag, MoreHorizontal,
+  Ban, UserX, EyeOff,
 } from 'lucide-react';
 import { SensitiveGate } from '@/components/features/feed/SensitiveGate';
 import { isSensitive, sensitiveKind } from '@/lib/sensitive';
@@ -53,6 +54,7 @@ function VideoFeedSlide({
   const [shareOpen, setShareOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
   const viewRef = useRecordPostView(post.id, {
     active: active && isPlaying,
     progress,
@@ -192,6 +194,26 @@ function VideoFeedSlide({
     } catch {}
   };
 
+  const handleHide = async (postId: string) => {
+    try {
+      await feedApi.hidePost(postId);
+    } catch {}
+  };
+
+  const handleMuteCreator = async (username?: string) => {
+    if (!username) return;
+    try {
+      await feedApi.muteAuthor(username);
+    } catch {}
+  };
+
+  const handleBlockCreator = async (username?: string) => {
+    if (!username) return;
+    try {
+      await profilesApi.block(username);
+    } catch {}
+  };
+
   return (
     <div
       key={post.id}
@@ -258,12 +280,44 @@ function VideoFeedSlide({
           icon={<Eye size={30} className="drop-shadow" />}
           count={post.view_count ?? 0}
         />
-        <RailAction
-          tone="onDark"
-          label="Report"
-          icon={<Flag size={26} className="drop-shadow" />}
-          onClick={() => void handleReport()}
-        />
+        {/* Three dots menu: report, block creator, not interested, don't suggest */}
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setMoreOptionsOpen(!moreOptionsOpen); }}
+            className="w-10 h-10 rounded-full bg-buddy-surface/50 hover:bg-buddy-surface/80 flex items-center justify-center text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
+            aria-label="More options"
+          >
+            <MoreHorizontal size={20} />
+          </button>
+          {moreOptionsOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-buddy-surface rounded-xl border border-buddy-border shadow-xl py-2 z-50">
+              <button
+                onClick={() => { setMoreOptionsOpen(false); handleReport(); }}
+                className="w-full text-left px-3 py-2 text-sm text-buddy-text-secondary hover:bg-buddy-red/10 hover:text-buddy-red transition-colors flex items-center gap-2"
+              >
+                <Flag size={14} className="mr-2" /> Report
+              </button>
+              <button
+                onClick={() => { setMoreOptionsOpen(false); handleBlockCreator(post.author_data?.username); }}
+                className="w-full text-left px-3 py-2 text-sm text-buddy-text-secondary hover:bg-buddy-red/10 hover:text-buddy-red transition-colors flex items-center gap-2"
+              >
+                <Ban size={14} className="mr-2" /> Block Creator
+              </button>
+              <button
+                onClick={() => { setMoreOptionsOpen(false); handleHide(post.id); }}
+                className="w-full text-left px-3 py-2 text-sm text-buddy-text-secondary hover:bg-buddy-surface/10 transition-colors flex items-center gap-2"
+              >
+                <EyeOff size={14} className="mr-2" /> Not Interested
+              </button>
+              <button
+                onClick={() => { setMoreOptionsOpen(false); handleMuteCreator(post.author_data?.username); }}
+                className="w-full text-left px-3 py-2 text-sm text-buddy-text-secondary hover:bg-buddy-surface/10 transition-colors flex items-center gap-2"
+              >
+                <UserX size={14} className="mr-2" /> Don't Suggest Similar
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bottom-left author info */}
@@ -297,7 +351,7 @@ export function VideoFeed({ variant = 'fyp' }: VideoFeedProps) {
   const [fetchError, setFetchError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastItemRef = useRef<HTMLDivElement | null>(null);

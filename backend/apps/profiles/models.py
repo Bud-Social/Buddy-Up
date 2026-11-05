@@ -74,6 +74,8 @@ class Profile(TimestampedModel):
     terms_accepted_at = models.DateTimeField(null=True, blank=True)
     marketing_consent = models.BooleanField(default=False)
     external_link = models.URLField(blank=True)
+    location_consent = models.BooleanField(default=False)
+    device_name = models.CharField(max_length=200, blank=True)
     content_rating = models.CharField(
         max_length=10, choices=CONTENT_RATING_CHOICES, default=CONTENT_RATING_DEFAULT,
     )

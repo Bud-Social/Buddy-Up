@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { X, Send, Heart, Flag } from 'lucide-react';
+import { X, Send, Heart, Flag, MoreHorizontal, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Avatar } from '@/components/ui/Avatar';
 import { RichText } from '@/components/ui/RichText';
 import { feedApi } from '@/api';
+import { profilesApi } from '@/api/profiles';
 import { track } from '@/lib/analytics';
 import { isProfanityFilterEnabled, maskProfanity } from '@/lib/profanity';
 import type { Comment } from '@/types';
@@ -19,6 +20,7 @@ export function CommentSheet({ postId, isOpen, onClose }: CommentSheetProps) {
   const [body, setBody] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sort, setSort] = useState<'newest' | 'oldest' | 'top'>('newest');
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -45,6 +47,26 @@ export function CommentSheet({ postId, isOpen, onClose }: CommentSheetProps) {
       setBody('');
       track('feed.comment_submit', { surface: 'feed', object_type: 'post', object_id: postId });
     } catch {} finally { setIsLoading(false); }
+  };
+
+  const handleFollowCommenter = async (username: string) => {
+    try {
+      await profilesApi.follow(username);
+      setMoreOptionsOpen(null);
+      track('feed.comment_follow', { object_id: username, properties: { post_id: postId } });
+    } catch {}
+  };
+
+  const handleReportComment = async (comment: Comment) => {
+    try {
+      await feedApi.submitReport({
+        target_user: comment.author_id,
+        reason: 'other',
+        description: `Comment ${comment.id} on post ${postId} — ${comment.body.slice(0, 200)}`,
+      });
+      setMoreOptionsOpen(null);
+      track('feed.comment_report', { object_id: comment.id, properties: { post_id: postId } });
+    } catch {}
   };
 
   if (!isOpen) return null;
@@ -101,23 +123,31 @@ export function CommentSheet({ postId, isOpen, onClose }: CommentSheetProps) {
                     <button className="text-xs text-buddy-text-secondary hover:text-buddy-green">
                       <Heart size={12} className="inline mr-0.5" /> Reply
                     </button>
-                    {c.author_id && (
+                    <div className="relative">
                       <button
-                        title="Report comment"
-                        aria-label="Report comment"
-                        className="text-xs text-buddy-text-secondary hover:text-buddy-red"
-                        onClick={() => {
-                          track('feed.comment_report', { object_id: c.id, properties: { post_id: postId } });
-                          void feedApi.submitReport({
-                            target_user: c.author_id,
-                            reason: 'other',
-                            description: `Comment ${c.id} on post ${postId} — ${c.body.slice(0, 200)}`,
-                          }).catch(() => {});
-                        }}
+                        onClick={(e) => { e.stopPropagation(); setMoreOptionsOpen(c.id); }}
+                        className="w-6 h-6 rounded-lg bg-buddy-surface hover:bg-buddy-surface/80 flex items-center justify-center text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
+                        aria-label="More options"
                       >
-                        <Flag size={12} className="inline mr-0.5" /> Report
+                        <MoreHorizontal size={14} />
                       </button>
-                    )}
+                      {moreOptionsOpen === c.id && (
+                        <div className="absolute right-0 mt-2 w-48 bg-buddy-surface rounded-xl border border-buddy-border shadow-xl py-2 z-50">
+                          <button
+                            onClick={() => { handleFollowCommenter(c.author_data?.username || ''); }}
+                            className="w-full text-left px-3 py-2 text-sm text-buddy-text-secondary hover:bg-buddy-green/10 hover:text-buddy-green transition-colors flex items-center gap-2"
+                          >
+                            <UserPlus size={14} className="mr-2" /> Follow {c.author_data?.display_name || 'user'}
+                          </button>
+                          <button
+                            onClick={() => { handleReportComment(c); }}
+                            className="w-full text-left px-3 py-2 text-sm text-buddy-text-secondary hover:bg-buddy-red/10 hover:text-buddy-red transition-colors flex items-center gap-2"
+                          >
+                            <Flag size={14} className="mr-2" /> Report Comment
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

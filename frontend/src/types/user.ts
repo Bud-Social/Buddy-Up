@@ -26,6 +26,8 @@ export interface Profile {
   pronouns: string;
   location_city: string;
   location_country: string;
+  location_consent?: boolean;
+  device_name?: string;
   external_link?: string;
   content_rating?: ContentRating;
   is_anonymous_posting?: boolean;

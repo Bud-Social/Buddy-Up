@@ -25,7 +25,7 @@ from apps.moderation.visibility import (
 from .models import (
     Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote,
     Draft, PostMedia, PostShare, Sound, HiddenPost, MutedAuthor, PostView,
-    StudioCaption, PostRepost,
+    StudioCaption, PostRepost, Tag, PostTag,
 )
 from .media_types import ALLOWED_EXTS, guess_media_type, url_extension
 from .serializers import (
@@ -1742,7 +1742,7 @@ class PostShareView(views.APIView):
         valid_channels = {c for c, _ in PostShare.CHANNEL_CHOICES}
         if channel not in valid_channels:
             channel = 'other'
-        record, _ = PostShare.objects.get_or_create(
+        record, created = PostShare.objects.get_or_create(
             post=post,
             sharer=request.user.profile,
             defaults={'channel': channel},
@@ -1750,8 +1750,10 @@ class PostShareView(views.APIView):
         if record.channel != channel:
             record.channel = channel
             record.save(update_fields=['channel'])
-        Post.objects.filter(id=post.id).update(share_count=F('share_count') + 1)
-        post.refresh_from_db(fields=['share_count'])
+        # Only increment the counter on a NEW share record — per user, not per action.
+        if created:
+            Post.objects.filter(id=post.id).update(share_count=F('share_count') + 1)
+            post.refresh_from_db(fields=['share_count'])
         return Response({
             'success': True,
             'data': {'share_count': post.share_count, 'code': record.code},
@@ -2500,3 +2502,206 @@ class SoundUseView(views.APIView):
             'errors': None,
             'pagination': None,
         })
+
+
+class TrendingHashtagsView(views.APIView):
+    """GET /api/v1/feed/trending-hashtags/ — trending hashtags with post counts.
+    
+    Returns hashtags ranked by recent usage (last 7 days), with each tag
+    carrying its post count and a sample of recent posts using it.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from django.utils import timezone
+        from datetime import timedelta
+
+        limit = int(request.query_params.get('limit', '20'))
+        days = int(request.query_params.get('days', '7'))
+
+        since = timezone.now() - timedelta(days=days)
+
+        tags = (
+            Tag.objects.filter(post_links__created_at__gte=since)
+            .annotate(post_count=db_models.Count('post_links', distinct=True))
+            .filter(post_count__gt=0)
+            .order_by('-post_count', '-post_links__created_at')[:limit]
+        )
+
+        data = []
+        for tag in tags:
+            recent_posts = (
+                Post.objects.filter(
+                    post_links__tag=tag,
+                    moderation_status='clean',
+                    is_deleted=False,
+                )
+                .select_related('author')
+                .order_by('-created_at')[:3]
+            )
+            data.append({
+                'tag': tag.name,
+                'post_count': tag.post_count,
+                'recent_posts': [
+                    {
+                        'id': str(p.id),
+                        'body': p.body[:100],
+                        'author': {
+                            'username': p.author.username,
+                            'display_name': p.author.display_name,
+                            'avatar_url': p.author.avatar_url,
+                        },
+                        'created_at': p.created_at.isoformat(),
+                    }
+                    for p in recent_posts
+                ],
+            })
+
+        return Response({
+            'success': True,
+            'data': data,
+            'message': 'Trending hashtags.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class UserLocationConsentView(views.APIView):
+    """POST /api/v1/profiles/location-consent/ — save location + device info with consent.
+    
+    Location requires explicit consent. Device name is collected automatically
+    from the User-Agent header (no consent needed — it's not precise location).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+        consent = request.data.get('location_consent', False)
+        location_city = request.data.get('location_city', '').strip()
+        location_country = request.data.get('location_country', '').strip()
+        device_name = request.data.get('device_name', '').strip()
+
+        # Update location consent
+        profile.location_consent = bool(consent)
+
+        if bool(consent) and (location_city or location_country):
+            profile.location_city = location_city
+            profile.location_country = location_country
+
+        if device_name:
+            profile.device_name = device_name
+
+        profile.save(update_fields=[
+            'location_consent', 'location_city', 'location_country', 'device_name',
+            'updated_at',
+        ])
+
+        return Response({
+            'success': True,
+            'data': {
+                'location_consent': profile.location_consent,
+                'location_city': profile.location_city,
+                'location_country': profile.location_country,
+                'device_name': profile.device_name,
+            },
+            'message': 'Location and device preferences saved.',
+            'errors': None,
+            'pagination': None,
+        })
+
+
+class PostDownloadView(views.APIView):
+    """GET /api/v1/feed/<post_id>/download/ — download post media with watermark.
+
+    Proxies the media file through the backend to avoid CORS issues, and
+    overlays a BuddyUp watermark on images (Pillow) when available.
+    Videos are proxied as-is (watermarking video requires ffmpeg).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+        viewer_profile = request.user.profile
+        if not _can_view_post(post, viewer_profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Find the first downloadable media URL.
+        media_url = None
+        media_type = None
+        if post.media_urls:
+            media_url = post.media_urls[0]
+            media_type = 'video' if any(ext in media_url.lower() for ext in ('.mp4', '.mov', '.webm', '.m4v')) else 'image'
+        elif post.media:
+            for m in post.media:
+                if m.get('url'):
+                    media_url = m['url']
+                    media_type = m.get('media_type', 'image')
+                    break
+
+        if not media_url:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No media available to download.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Proxy the file so the client never hits CORS on the media host.
+        import requests as http_requests
+        try:
+            resp = http_requests.get(media_url, stream=True, timeout=30)
+            resp.raise_for_status()
+        except Exception as e:
+            return Response({
+                'success': False, 'data': None,
+                'message': f'Failed to fetch media: {e}',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_502_BAD_GATEWAY)
+
+        content_type = resp.headers.get('Content-Type', 'application/octet-stream')
+        ext = 'jpg' if 'image' in content_type else 'mp4' if 'video' in content_type else 'bin'
+
+        # For images, try to add a watermark using Pillow.
+        if media_type == 'image' and ext == 'jpg':
+            try:
+                from PIL import Image, ImageDraw, ImageFont
+                import io
+                img = Image.open(io.BytesIO(resp.content)).convert('RGBA')
+                watermark = Image.new('RGBA', img.size, (0, 0, 0, 0))
+                draw = ImageDraw.Draw(watermark)
+                try:
+                    font = ImageFont.truetype('DejaVuSans-Bold.ttf', max(14, img.height // 20))
+                except Exception:
+                    font = ImageFont.load_default()
+                text = 'Downloaded from BuddyUp'
+                bbox = draw.textbbox((0, 0), text, font=font)
+                tw = bbox[2] - bbox[0]
+                th = bbox[3] - bbox[1]
+                draw.text((img.width - tw - 20, img.height - th - 20), text, font=font, fill=(255, 255, 255, 128))
+                img = Image.alpha_composite(img, watermark)
+                buf = io.BytesIO()
+                img.convert('RGB').save(buf, format='JPEG', quality=85)
+                resp.content = buf.getvalue()
+                content_type = 'image/jpeg'
+                ext = 'jpg'
+            except Exception:
+                pass  # Pillow not available — proxy as-is.
+
+        # Build a Django StreamingHttpResponse.
+        from django.http import StreamingHttpResponse
+        def iter_chunks(response, chunk_size=8192):
+            for chunk in response.iter_content(chunk_size):
+                yield chunk
+
+        django_resp = StreamingHttpResponse(
+            iter_chunks(resp),
+            content_type=content_type,
+        )
+        django_resp['Content-Disposition'] = f'attachment; filename="buddyup_{post.id}.{ext}"'
+        django_resp['X-Content-Type-Options'] = 'nosniff'
+        return django_resp
+
+

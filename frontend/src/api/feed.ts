@@ -105,6 +105,10 @@ export const feedApi = {
       channel ? { channel } : {},
     ).then((r) => r.data),
 
+  /** Download post media (proxy through backend to avoid CORS, adds watermark). */
+  downloadPostMedia: (postId: string) =>
+    apiClient.get(`/feed/${postId}/download/`, { responseType: 'blob' }).then((r) => r.data),
+
   /** Recent sharers, followed-first. Silent-friendly. */
   getPostShares: (postId: string) =>
     apiClient.get<ApiResponse<Array<{

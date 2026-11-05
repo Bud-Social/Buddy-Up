@@ -195,39 +195,25 @@ export function PostShareSheet({
   };
 
   const handleDownload = async () => {
-    // Find the first media URL to download
-    const mediaUrls = post.media_urls || [];
-    const media = post.media || [];
-    const videoMedia = media.find((m) => m.media_type === 'video');
-    const imageMedia = media.find((m) => m.media_type === 'image');
-    
-    let downloadUrl = '';
-    if (videoMedia?.url) {
-      downloadUrl = videoMedia.url;
-    } else if (imageMedia?.url) {
-      downloadUrl = imageMedia.url;
-    } else if (mediaUrls.length > 0) {
-      downloadUrl = mediaUrls[0];
-    }
-    
-    if (!downloadUrl) {
-      setError('No media available to download');
-      return;
-    }
-    
+    // Download through the backend proxy (avoids CORS, adds watermark).
+    setRecording(true);
+    setError(null);
     try {
-      const response = await fetch(downloadUrl);
-      const blob = await response.blob();
+      const res = await feedApi.downloadPostMedia(post.id);
+      // res.data is a Blob when responseType is 'blob'.
+      const blob = res.data as Blob;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `buddyup_${post.id}.${blob.type.split('/')[1] || 'mp4'}`;
+      a.download = `buddyup_${post.id}.${blob.type === 'image/jpeg' ? 'jpg' : 'mp4'}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch {
       setError('Failed to download media');
+    } finally {
+      setRecording(false);
     }
   };
 

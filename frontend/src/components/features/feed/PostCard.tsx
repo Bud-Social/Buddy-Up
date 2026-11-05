@@ -4,7 +4,7 @@ import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
   MoreHorizontal, Dumbbell, MapPin, BarChart2,
   Maximize2, FileText, CheckSquare, CircleDot, ChevronLeft, ChevronRight,
-  Volume2, VolumeX, Share2, Eye, EyeOff, Flag, Ban, Undo2,
+  Volume2, VolumeX, Share2, Eye, EyeOff, Flag, Ban, Undo2, Users,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi, profilesApi, moderationApi } from '@/api';
@@ -957,6 +957,11 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
                 {(displayPost as any).gym_tag_name && (
                   <span className="inline-flex items-center gap-1 text-[10px] bg-buddy-green/10 text-buddy-green px-2 py-0.5 rounded-full">
                     <Dumbbell size={9} /> {(displayPost as any).gym_tag_name}
+                  </span>
+                )}
+                {(displayPost as any).community_name && (
+                  <span className="inline-flex items-center gap-1 text-[10px] bg-buddy-electric/10 text-buddy-electric px-2 py-0.5 rounded-full">
+                    <Users size={9} /> #{(displayPost as any).community_name}
                   </span>
                 )}
                 {displayPost.location_label && (

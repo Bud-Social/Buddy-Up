@@ -111,6 +111,14 @@ export const profilesApi = {
   updateProfile: (data: Partial<Profile>) =>
     apiClient.patch<ApiResponse<Profile>>('/profiles/me/', data).then((r) => r.data),
 
+  locationConsent: (payload: {
+    location_consent: boolean;
+    location_city?: string;
+    location_country?: string;
+    device_name?: string;
+  }) =>
+    apiClient.post<ApiResponse<Profile>>('/feed/location-consent/', payload).then((r) => r.data),
+
   checkUsername: (username: string) =>
     apiClient.get<ApiResponse<{ available: boolean; reason: string | null }>>('/profiles/check-username/', { params: { username } }).then((r) => r.data),
 

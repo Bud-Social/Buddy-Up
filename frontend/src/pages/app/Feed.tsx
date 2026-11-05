@@ -67,7 +67,9 @@ export default function Feed() {
   const [pendingNewPosts, setPendingNewPosts] = useState<Post[]>([]);
   const feedTopRef = useRef<HTMLDivElement | null>(null);
 
-  // Tab bar scroll-hide: hide on scroll down, show on scroll up
+  // Tab bar scroll-hide: hide on scroll down, show on scroll up.
+  // Community tabs disappear LAST — they stay visible at higher scroll
+  // offsets than the main For You / Following tabs.
   const [tabBarHidden, setTabBarHidden] = useState(false);
   const lastScrollYRef = useRef(0);
 
@@ -77,7 +79,9 @@ export default function Feed() {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const currentScrollY = window.scrollY;
-          if (currentScrollY > lastScrollYRef.current && currentScrollY > 60) {
+          const isCommunityTab = activeTab.startsWith('community_');
+          const hideThreshold = isCommunityTab ? 140 : 60;
+          if (currentScrollY > lastScrollYRef.current && currentScrollY > hideThreshold) {
             setTabBarHidden(true);
           } else if (currentScrollY < lastScrollYRef.current) {
             setTabBarHidden(false);
@@ -90,7 +94,7 @@ export default function Feed() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [activeTab]);
 
   const cursorRef = useRef<string | undefined>(undefined);
   const loadingPageRef = useRef(false);
@@ -165,10 +169,16 @@ export default function Feed() {
     }
   }, [location]);
 
-  const tabs: { key: FeedTab; label: string; to: string }[] = [
+  const tabs: { key: FeedTab | string; label: string; to: string; community?: any }[] = [
     { key: 'for_you', label: 'For You', to: '/feed' },
     { key: 'following', label: 'Following', to: '/feed/following' },
-    ...(myCommunities.length > 0 ? [{ key: 'communities' as FeedTab, label: 'Communities', to: '/feed/communities' }] : []),
+    ...myCommunities.map((c) => ({
+      key: `community_${c.id}`,
+      label: c.group_name || 'Community',
+      to: `/communities/${c.id}`,
+      community: c,
+    })),
+    ...(myCommunities.length > 0 ? [{ key: 'communities' as FeedTab, label: 'All Communities', to: '/feed/communities' }] : []),
     { key: 'videos', label: 'Bud Press', to: '/feed/bud-press' },
   ];
 
@@ -350,24 +360,32 @@ export default function Feed() {
       {/* Tab bar */}
       <div className={`sticky top-12 lg:top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3 transition-transform duration-300 ease-in-out ${tabBarHidden ? '-translate-y-full' : 'translate-y-0'}`}>
         <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 overflow-x-auto scrollbar-none">
-          {tabs.map(({ key, label }) => (
-            <button
-              key={key}
-              onClick={() => {
-                if (key !== activeTab) {
-                  track('feed.tab_selected', { surface: 'feed', properties: { feed_tab: key } });
-                }
-                navigate(tabs.find(t => t.key === key)!.to);
-              }}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors whitespace-nowrap px-3 ${
-                activeTab === key
-                  ? 'bg-buddy-green text-buddy-black'
-                  : 'text-buddy-text-secondary hover:text-buddy-text-primary'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          {tabs.map((tab) => {
+            const isCommunity = tab.key.startsWith('community_');
+            return (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  if (tab.key !== activeTab) {
+                    track('feed.tab_selected', { surface: 'feed', properties: { feed_tab: tab.key } });
+                  }
+                  navigate(tab.to);
+                }}
+                className={`flex items-center gap-2 px-3 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-buddy-green text-buddy-black'
+                    : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface/50'
+                }`}
+              >
+                {isCommunity && tab.community?.cover_url ? (
+                  <img src={tab.community.cover_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                ) : isCommunity && tab.community?.avatar_url ? (
+                  <img src={tab.community.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                ) : null}
+                <span className={`truncate ${isCommunity ? 'max-w-[140px]' : ''}`}>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
