@@ -62,7 +62,6 @@ function combinedFilterCss(page: MediaPage): string {
 }
 import type { Post, PostCaption, PostMedia } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
-import { RichText } from '@/components/ui/RichText';
 import { PostMap } from './PostMap';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
