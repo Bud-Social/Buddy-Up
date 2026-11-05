@@ -187,7 +187,7 @@ export default function Discover() {
         </div>
       )}
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -195,10 +195,10 @@ export default function Discover() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
                 isActive
                   ? 'bg-buddy-green text-buddy-black'
-                  : 'bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary'
+                  : 'bg-buddy-surface text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface/50'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -239,7 +239,14 @@ export default function Discover() {
                 <TrendingUp className="w-4 h-4 text-buddy-green" /> Trending Posts
               </p>
               <div className="space-y-3">
-                {trending.posts.slice(0, 3).map((post) => (
+                {trending.posts
+                  .slice()
+                  .sort((a, b) => {
+                    const aScore = (a.reaction_counts ? Object.values(a.reaction_counts).reduce((s, v) => s + v, 0) : 0) + (a.comment_count || 0) + (a.repost_count || 0) + (a.save_count || 0);
+                    const bScore = (b.reaction_counts ? Object.values(b.reaction_counts).reduce((s, v) => s + v, 0) : 0) + (b.comment_count || 0) + (b.repost_count || 0) + (b.save_count || 0);
+                    return bScore - aScore;
+                  })
+                  .slice(0, 3).map((post) => (
                   <PostCard key={post.id} post={post} onComment={setCommentPostId} />
                 ))}
               </div>
