@@ -46,6 +46,11 @@ class CountdownTemplate(TimestampedModel):
         return self.title
 
 
+def default_start_date():
+    """Default start date for a new countdown: today's date."""
+    return timezone.now().date()
+
+
 class UserCountdown(TimestampedModel):
     """A user's active countdown for a specific reason."""
 
@@ -76,7 +81,7 @@ class UserCountdown(TimestampedModel):
     unit = models.CharField(max_length=20, choices=UNIT_CHOICES, default='days')
     current_count = models.PositiveIntegerField(default=0, help_text='Current streak / days counter')
     target_count = models.PositiveIntegerField(default=0, help_text='Goal target (0 = no fixed target)')
-    start_date = models.DateField(default=lambda: timezone.now().date(), help_text='Day counting began')
+    start_date = models.DateField(default=default_start_date, help_text='Day counting began')
     last_checkin_at = models.DateTimeField(null=True, blank=True, help_text='Last manual check-in')
     last_auto_advance_at = models.DateTimeField(
         null=True, blank=True, help_text='Last time an automatic signal advanced this countdown'
