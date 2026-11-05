@@ -1,11 +1,12 @@
 from django.db import models
 from common.models import TimestampedModel, SoftDeleteModel
+import uuid
 
 
 class Community(TimestampedModel, SoftDeleteModel):
     """A community — a topical hub with its own feed of posts."""
 
-    id = models.UUIDField(primary_key=True, default=models.UUIDField.default, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     description = models.TextField(blank=True)
@@ -46,7 +47,7 @@ class Community(TimestampedModel, SoftDeleteModel):
 class CommunityPost(TimestampedModel, SoftDeleteModel):
     """Links a Post to a Community so posts can be filtered by community."""
 
-    id = models.UUIDField(primary_key=True, default=models.UUIDField.default, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     community = models.ForeignKey(
         Community, on_delete=models.CASCADE, related_name='community_posts'
     )
