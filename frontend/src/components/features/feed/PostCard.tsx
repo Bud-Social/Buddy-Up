@@ -29,6 +29,31 @@ import { SensitiveGate } from '@/components/features/feed/SensitiveGate';
 import { isSensitive, sensitiveKind } from '@/lib/sensitive';
 import { useHandednessStore } from '@/store/handednessStore';
 
+// Hashtag text renderer: splits #tag patterns into clickable links.
+function HashtagText({ text }: { text: string }) {
+  const navigate = useNavigate();
+  const parts = text.split(/(#\w+)/g);
+  return (
+    <span className="whitespace-pre-wrap">
+      {parts.map((part, i) => {
+        if (part.startsWith('#') && part.length > 1) {
+          const tag = part.slice(1);
+          return (
+            <button
+              key={i}
+              onClick={() => navigate(`/discover?q=%23${encodeURIComponent(tag)}`)}
+              className="text-buddy-green font-medium hover:underline hover:text-buddy-green/90"
+            >
+              #{tag}
+            </button>
+          );
+        }
+        return part;
+      })}
+    </span>
+  );
+}
+
 function combinedFilterCss(page: MediaPage): string {
   const edits = page.edit_meta;
   if (!edits) return '';
@@ -1128,7 +1153,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
           {/* Body — masked client-side when the profanity filter is on */}
           {displayPost.body && (
             <p className="mt-2 text-sm text-buddy-text-primary whitespace-pre-wrap">
-              <RichText text={isProfanityFilterEnabled() ? maskProfanity(displayPost.body) : displayPost.body} />
+              <HashtagText text={isProfanityFilterEnabled() ? maskProfanity(displayPost.body) : displayPost.body} />
             </p>
           )}
 
