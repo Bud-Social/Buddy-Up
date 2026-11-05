@@ -33,6 +33,7 @@ urlpatterns = [
     path('api/v1/portal/', include('apps.admin_portal.urls')),
     path('api/v1/governance/', include('apps.governance.urls')),
     path('api/v1/countdowns/', include('apps.countdowns.urls')),
+    path('api/v1/communities/', include('apps.communities.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/schema/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('auth/social/', include('social_django.urls', namespace='social')),

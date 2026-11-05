@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'apps.alarms',
     'apps.waitlist',
     'apps.countdowns',
+    'apps.communities',
     # Staff read/act surface mounted at /api/v1/portal/. Deliberately NOT named
     # 'admin' — a top-level app called 'admin' would shadow django.contrib.admin.
     'apps.admin_portal',

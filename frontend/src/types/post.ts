@@ -183,6 +183,10 @@ export interface Post {
   updated_at: string;
   poll?: Poll | null;
   gym_tag_name?: string | null;
+  community_id?: string | null;
+  community_name?: string | null;
+  community_cover_url?: string | null;
+  community_slug?: string | null;
   original_post_data?: {
     id: string;
     author_data: AuthorData;

@@ -507,6 +507,18 @@ export function PostComposer({ gymId, gymName, placeholder, onPost, fullScreen, 
 
       taggedUsers.forEach(u => formData.append('mentioned_users', u.user_id));
 
+      // Extract hashtags from content and send them as tags[] so the backend
+      // can create Tag / PostTag rows for trending and topic clustering.
+      const hashtagMatches = content.match(/#(\w+)/g);
+      if (hashtagMatches) {
+        hashtagMatches.forEach((tag) => {
+          const tagName = tag.slice(1).toLowerCase();
+          if (tagName.length > 0) {
+            formData.append('tags[]', tagName);
+          }
+        });
+      }
+
       const idempotencyKey = submitIdempotencyKeyRef.current ?? crypto.randomUUID();
       submitIdempotencyKeyRef.current = idempotencyKey;
       const res = await feedApi.createPost(formData, idempotencyKey);
