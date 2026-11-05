@@ -67,6 +67,31 @@ export default function Feed() {
   const [pendingNewPosts, setPendingNewPosts] = useState<Post[]>([]);
   const feedTopRef = useRef<HTMLDivElement | null>(null);
 
+  // Tab bar scroll-hide: hide on scroll down, show on scroll up
+  const [tabBarHidden, setTabBarHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
+
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY;
+          if (currentScrollY > lastScrollYRef.current && currentScrollY > 60) {
+            setTabBarHidden(true);
+          } else if (currentScrollY < lastScrollYRef.current) {
+            setTabBarHidden(false);
+          }
+          lastScrollYRef.current = currentScrollY;
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const cursorRef = useRef<string | undefined>(undefined);
   const loadingPageRef = useRef(false);
   const [hasMore, setHasMore] = useState(true);
@@ -323,7 +348,7 @@ export default function Feed() {
   return (
     <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto">
       {/* Tab bar */}
-      <div className="sticky top-12 lg:top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3">
+      <div className={`sticky top-12 lg:top-0 z-10 bg-buddy-black border-b border-buddy-surface px-4 py-3 transition-transform duration-300 ease-in-out ${tabBarHidden ? '-translate-y-full' : 'translate-y-0'}`}>
         <div className="flex gap-1 bg-buddy-surface rounded-xl p-1 overflow-x-auto scrollbar-none">
           {tabs.map(({ key, label }) => (
             <button

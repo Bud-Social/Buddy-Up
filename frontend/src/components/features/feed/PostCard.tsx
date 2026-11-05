@@ -496,6 +496,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
   const { toast } = useToast();
   const viewerAvatar = useAuthStore((s) => s.profile?.avatar_url);
   const viewerName = useAuthStore((s) => s.profile?.display_name);
+  const viewer = useAuthStore((s) => s.user);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuView, setMenuView] = useState<'main' | 'report' | 'block'>('main');
   const [selectedReason, setSelectedReason] = useState<string>('spam');
@@ -853,7 +854,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     <article
       id={`post-${post.id}`}
       ref={setCardRefs}
-      className={`flex gap-1 bg-buddy-surface rounded-2xl border ${post.is_repost ? 'border-buddy-green/30 shadow-[0_0_15px_rgba(0,255,157,0.05)]' : 'border-buddy-surface-raised hover:border-buddy-green/20'} transition-colors select-none flex-col`}
+      className={`flex gap-1 bg-buddy-surface rounded-2xl border ${post.is_repost ? 'border-buddy-green/50 shadow-[0_0_25px_rgba(0,200,150,0.4)]' : 'border-buddy-surface-raised hover:border-buddy-green/20'} transition-colors select-none flex-col`}
     >
       {/* Repost ribbon: shown when the viewer has reposted this post. Persistent
        * (does not auto-hide); reposts are logged properties of the post, never
@@ -865,9 +866,12 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
         >
           <AvatarPopStyle />
           <div className="flex items-center -space-x-2 flex-shrink-0">
-            {(post.reposters || []).slice(0, 3).map((reposter: any, idx: number) => (
-              <Avatar key={reposter.user_id || idx} src={reposter.avatar_url} alt={reposter.display_name} size="xs" className="ring-2 ring-buddy-green/30" style={{ zIndex: 3 - idx }} verificationStatus={reposter.verification_status} />
-            ))}
+            {(post.reposters || [])
+              .filter((r: any) => r.user_id !== viewer?.id)
+              .slice(0, 3)
+              .map((reposter: any, idx: number) => (
+                <Avatar key={reposter.user_id || idx} src={reposter.avatar_url} alt={reposter.display_name} size="xs" className="ring-2 ring-buddy-green/30" style={{ zIndex: 3 - idx }} verificationStatus={reposter.verification_status} />
+              ))}
             <span
               data-testid="repost-viewer-avatar"
               title={viewerName || 'You'}
@@ -875,9 +879,9 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
             >
               <Avatar src={viewerAvatar} alt={viewerName || 'You'} size="xs" className="ring-2 ring-buddy-green" />
             </span>
-            {(post.reposters || []).length > 3 && (
+            {(post.reposters || []).filter((r: any) => r.user_id !== viewer?.id).length > 3 && (
               <div className="w-6 h-6 rounded-full bg-buddy-surface-raised text-[10px] font-bold flex items-center justify-center ring-2 ring-buddy-green/30">
-                +{(post.reposters || []).length - 3}
+                +{(post.reposters || []).filter((r: any) => r.user_id !== viewer?.id).length - 3}
               </div>
             )}
           </div>

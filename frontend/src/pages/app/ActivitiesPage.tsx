@@ -146,7 +146,13 @@ export default function ActivitiesPage() {
 
   const handleShare = (activity: ActivityRecent) => {
     setShareActivity(activity);
-    setShareCaption(`🏃 Just finished a ${ACTIVITY_LABELS[activity.activity_type] ?? activity.activity_type} — ${activity.distance_km?.toFixed(1) ?? 0} km in ${formatDuration(activity.duration_seconds)}.`);
+    const target = ACTIVITY_TARGETS[activity.activity_type];
+    const progress = activity.distance_km && target
+      ? Math.min(100, (activity.distance_km / target.value) * 100)
+      : activity.duration_seconds && target
+        ? Math.min(100, (activity.duration_seconds / (target.value * 60)) * 100)
+        : 0;
+    setShareCaption(`🏃 ${ACTIVITY_LABELS[activity.activity_type] ?? activity.activity_type}\n${activity.distance_km?.toFixed(1) ?? 0} ${target?.unit || 'km'} in ${formatDuration(activity.duration_seconds)}\nProgress: ${Math.round(progress)}%\n\n#BuddyUp #Activity #${ACTIVITY_LABELS[activity.activity_type] ?? 'Fitness'}`);
     setShareVisibility('public');
     setShareDraftId(null);
     setCaptionCorrected('');
@@ -842,21 +848,27 @@ export default function ActivitiesPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Activity preview */}
-              <div className="flex items-center gap-3 p-3 bg-buddy-surface/50 rounded-lg border border-buddy-border/50">
-                <div className={`p-3 rounded-xl ${ACTIVITY_COLORS[shareActivity.activity_type]?.bg} ${ACTIVITY_COLORS[shareActivity.activity_type]?.text}`}>
-                  {(() => {
-                    const Icon = ACTIVITY_ICONS[shareActivity.activity_type] ?? MapPin;
-                    return <Icon size={24} />;
-                  })()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-buddy-text-primary">{ACTIVITY_LABELS[shareActivity.activity_type] ?? shareActivity.activity_type}</div>
-                  <div className="text-xs text-buddy-text-secondary">
-                    {shareActivity.distance_km?.toFixed(1)} km • {formatDuration(shareActivity.duration_seconds)}
+              {/* Activity card preview */}
+              {shareActivity && (
+                <div className="bg-buddy-surface/50 rounded-xl p-4 border border-buddy-border/50 flex items-start gap-4">
+                  <div className="shrink-0">
+                    <div className={`w-16 h-16 rounded-2xl ${ACTIVITY_COLORS[shareActivity.activity_type]?.bg} ${ACTIVITY_COLORS[shareActivity.activity_type]?.text} flex items-center justify-center`}>
+                      <Timer size={24} />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-medium text-buddy-text-primary">{ACTIVITY_LABELS[shareActivity.activity_type] ?? shareActivity.activity_type}</h4>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-buddy-surface text-buddy-text-secondary border border-buddy-border">
+                        {shareActivity.distance_km?.toFixed(1) ?? 0} km
+                      </span>
+                    </div>
+                    <p className="text-xs text-buddy-text-secondary mt-1">
+                      {formatDuration(shareActivity.duration_seconds)} • {new Date(shareActivity.started_at || '').toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Caption editor */}
               <div className="space-y-2">

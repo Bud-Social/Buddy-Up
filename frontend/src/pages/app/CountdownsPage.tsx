@@ -110,6 +110,7 @@ export default function CountdownsPage() {
   const [shareCaption, setShareCaption] = useState('');
   const [shareMedia, setShareMedia] = useState<File[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
+  const [shareCountdown, setShareCountdown] = useState<UserCountdown | null>(null);
 
   // Welcome flow state
   const [welcomeSeen, setWelcomeSeen] = useState<boolean>(() => {
@@ -254,8 +255,17 @@ export default function CountdownsPage() {
   };
 
   const handleShareCountdown = (c: UserCountdown) => {
+    setShareCountdown(c);
     setShareTarget('post');
-    setShareCaption(`${c.display_reason} — ${c.current_count} ${c.unit}`);
+    const pct = progressPct(c);
+    const daysText = c.target_count
+      ? `${c.current_count} / ${c.target_count} ${c.unit}`
+      : `${c.current_count} ${c.unit}${c.current_count !== 1 ? 's' : ''}`;
+    setShareCaption(`📊 ${c.display_reason}
+${daysText}
+Progress: ${Math.round(pct)}%
+
+#BuddyUp #Countdown #Streak`);
     setShareMedia([]);
     setShareOpen(true);
   };
@@ -264,6 +274,7 @@ export default function CountdownsPage() {
     setShareOpen(false);
     setShareCaption('');
     setShareMedia([]);
+    setShareCountdown(null);
   };
 
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -982,6 +993,28 @@ export default function CountdownsPage() {
             </div>
 
             <div className="space-y-4">
+              {/* Countdown card preview */}
+              {shareCountdown && (
+                <div className="bg-buddy-surface/50 rounded-xl p-4 border border-buddy-border/50 flex items-start gap-4">
+                  <div className="shrink-0">
+                    <div className="w-16 h-16 rounded-2xl bg-buddy-green/10 text-buddy-green flex items-center justify-center">
+                      <Timer size={24} />
+                    </div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-medium text-buddy-text-primary">{shareCountdown.display_reason}</h4>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-buddy-surface text-buddy-text-secondary border border-buddy-border">
+                        {shareCountdown.countdown_type === 'manual' ? 'Manual' : 'Automatic'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-buddy-text-secondary mt-1">
+                      {shareCountdown.unit} • {shareCountdown.current_count} {shareCountdown.unit}{shareCountdown.current_count !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-buddy-text-secondary">Share as</label>
                 <div className="grid grid-cols-2 gap-2">

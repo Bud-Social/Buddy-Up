@@ -47,15 +47,15 @@ export function AppShell() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile / tablet top bar with hamburger */}
         {!hideTopBar && !isDesktop && (
-          <header className="sticky top-0 z-40 flex items-center gap-3 h-12 px-3 bg-buddy-black/90 backdrop-blur-md border-b border-buddy-surface">
+          <header className="sticky top-0 z-40 flex items-center gap-3 h-16 px-4 bg-buddy-black/90 backdrop-blur-md border-b border-buddy-surface">
             <button
               onClick={onMenu}
               className="p-2 -ml-1 rounded-lg text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-surface transition-colors"
               aria-label="Toggle navigation"
             >
-              {mobileOpen && !isTablet ? <X size={20} /> : <Menu size={20} />}
+              {mobileOpen && !isTablet ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <span className="font-display font-bold text-sm text-buddy-text-primary">BuddyUp Fit</span>
+            <span className="font-display font-bold text-base text-buddy-text-primary tracking-tight">BuddyUp Fit</span>
           </header>
         )}
         <main className={`flex-1 pb-20 md:pb-0 transition-all duration-300 ${sidebarMargin}`}>
