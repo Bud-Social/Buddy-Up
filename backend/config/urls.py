@@ -3,13 +3,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from apps.feed.views import ShareOpenView
+from apps.feed.views import ShareOpenView, UserLocationConsentView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/health/', include('apps.accounts.urls_health')),
     path('api/v1/auth/', include('apps.accounts.urls')),
     path('api/v1/profiles/', include('apps.profiles.urls')),
+    path('api/v1/feed/location-consent/', views.UserLocationConsentView.as_view(), name='location_consent'),
     path('api/v1/feed/', include('apps.feed.urls')),
     path('api/v1/s/<str:code>/open/', ShareOpenView.as_view(), name='share_open'),
     path('api/v1/uploads/', include('apps.feed.urls_uploads')),
