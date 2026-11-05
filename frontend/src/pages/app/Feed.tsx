@@ -439,7 +439,7 @@ export default function Feed() {
               </button>
               {myCommunities.map((c) => (
                 <button
-                  key={c.id}
+                  key={`community-${c.id}`}
                   onClick={() => {
                     setCommunitySubTab(c.id);
                     fetchCommunityPosts(c.id, true);
@@ -457,7 +457,7 @@ export default function Feed() {
                       <Users size={16} className="text-buddy-green" />
                     </div>
                   )}
-                  <span className="truncate max-w-[120px]">{c.group_name || 'Community'}</span>
+                  <span className="truncate max-w-[100px]">{c.group_name || 'Community'}</span>
                 </button>
               ))}
             </div>
