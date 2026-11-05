@@ -10,7 +10,7 @@ urlpatterns = [
     path('api/v1/health/', include('apps.accounts.urls_health')),
     path('api/v1/auth/', include('apps.accounts.urls')),
     path('api/v1/profiles/', include('apps.profiles.urls')),
-    path('api/v1/feed/location-consent/', views.UserLocationConsentView.as_view(), name='location_consent'),
+    path('api/v1/feed/location-consent/', UserLocationConsentView.as_view(), name='location_consent'),
     path('api/v1/feed/', include('apps.feed.urls')),
     path('api/v1/s/<str:code>/open/', ShareOpenView.as_view(), name='share_open'),
     path('api/v1/uploads/', include('apps.feed.urls_uploads')),
