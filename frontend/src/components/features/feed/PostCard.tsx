@@ -854,7 +854,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     <article
       id={`post-${post.id}`}
       ref={setCardRefs}
-      className={`flex gap-1 bg-buddy-surface rounded-2xl ${post.is_repost ? 'border-l-buddy-green/60 border-r-buddy-green/60 border-b-buddy-green/60 border-t-transparent shadow-[0_0_30px_rgba(0,200,150,0.5)]' : 'border-buddy-surface-raised hover:border-buddy-green/20'} transition-colors select-none flex-col`}
+      className={`flex gap-1 bg-buddy-surface rounded-2xl ${post.is_repost ? 'border-buddy-green/60 drop-shadow-[0_0_15px_rgba(0,200,150,0.4)]' : 'border-buddy-surface-raised hover:border-buddy-green/20'} transition-colors select-none flex-col`}
     >
       {/* Repost ribbon: shown when the viewer has reposted this post. Persistent
        * (does not auto-hide); reposts are logged properties of the post, never
