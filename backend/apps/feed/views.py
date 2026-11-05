@@ -25,7 +25,7 @@ from apps.moderation.visibility import (
 from .models import (
     Post, FeedPost, Comment, Reaction, Save, Poll, PollOption, PollVote,
     Draft, PostMedia, PostShare, Sound, HiddenPost, MutedAuthor, PostView,
-    StudioCaption, PostRepost, Tag, PostTag,
+    StudioCaption, PostRepost, Tag,
 )
 from .media_types import ALLOWED_EXTS, guess_media_type, url_extension
 from .serializers import (

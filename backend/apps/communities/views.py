@@ -27,7 +27,6 @@ class AllCommunityPostsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        cursor = request.GET.get('cursor')
         qs = CommunityPost.objects.filter(is_deleted=False).select_related('post__author', 'post')
         # Simple cursor-free pagination for now — return latest 20
         qs = qs.order_by('-created_at')[:20]
@@ -75,7 +74,6 @@ class CommunityPostsView(views.APIView):
 
     def get(self, request, slug):
         community = get_object_or_404(Community, slug=slug, is_deleted=False)
-        cursor = request.GET.get('cursor')
         qs = CommunityPost.objects.filter(community=community, is_deleted=False).select_related('post__author', 'post')
         # Simple cursor-free pagination for now — return latest 20
         qs = qs.order_by('-created_at')[:20]

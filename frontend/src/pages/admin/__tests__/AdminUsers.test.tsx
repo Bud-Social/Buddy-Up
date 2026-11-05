@@ -146,7 +146,7 @@ describe('AdminUsers filter interaction', () => {
     renderPage();
     await waitFor(() => expect(getUsers).toHaveBeenCalledTimes(1));
 
-    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'trainer' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'trainer' } });
 
     await waitFor(() => expect(getUsers).toHaveBeenCalledTimes(2));
     expect(getUsers.mock.calls[1][0]).toMatchObject({ role: 'trainer', page: 1 });
@@ -172,7 +172,7 @@ describe('AdminUsers filter interaction', () => {
     renderPage();
     await waitFor(() => expect(getUsers).toHaveBeenCalledTimes(1));
 
-    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'trainer' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role' }), { target: { value: 'trainer' } });
     await waitFor(() => expect(screen.getByRole('button', { name: /clear filters/i })).toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: /clear filters/i }));
