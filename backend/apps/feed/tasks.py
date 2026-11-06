@@ -39,7 +39,7 @@ def generate_feed_cache():
         visibility='public',
     ).annotate(
         reaction_score=Subquery(reaction_count, output_field=IntegerField()),
-    ).only('pk', 'created_at', 'is_repost')
+    ).only('pk', 'created_at')
 
     client = redis.Redis.from_url(settings.REDIS_URL)
     pipeline = client.pipeline()
@@ -52,7 +52,7 @@ def generate_feed_cache():
         rcount = post.reaction_score or 0
         ccount = Comment.objects.filter(post=post).count()
         scount = Save.objects.filter(post=post).count()
-        repost_bonus = weight_repost if post.is_repost else 0.0
+        repost_bonus = 0.0
 
         score = (
             rcount * weight_reaction
