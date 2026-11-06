@@ -29,7 +29,7 @@ class AllCommunityPostsView(views.APIView):
 
     def get(self, request):
         # Return messaging community posts as Post-like objects
-        messaging_posts = MessagingCommunityPost.objects.filter(is_deleted=False).select_related('author', 'conversation')
+        messaging_posts = MessagingCommunityPost.objects.filter().select_related('author', 'conversation')
         messaging_posts = messaging_posts.order_by('-created_at')[:20]
 
         data = []
@@ -145,7 +145,7 @@ class CommunityPostsView(views.APIView):
     def get(self, request, slug):
         # Try to find the community in messaging system
         try:
-            conv = Conversation.objects.get(id=slug, is_community=True, is_deleted=False)
+            conv = Conversation.objects.get(id=slug, is_community=True)
         except (Conversation.DoesNotExist, ValueError):
             # Fall back to communities app
             try:
@@ -164,7 +164,7 @@ class CommunityPostsView(views.APIView):
 
         # Return messaging community posts as Post-like objects
         messaging_posts = MessagingCommunityPost.objects.filter(
-            conversation=conv, is_deleted=False
+            conversation=conv
         ).select_related('author').order_by('-created_at')[:20]
 
         data = []
