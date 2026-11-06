@@ -151,7 +151,7 @@ export default function Onboarding() {
         setPlan(data.onboarding_plan);
         setStep(8);
       } else {
-        navigate('/feed');
+        navigate('/feed?walkthrough=1');
       }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data;
@@ -468,7 +468,7 @@ export default function Onboarding() {
               <p className="text-sm">{plan.buddy_matching_hint}</p>
             </div>
 
-            <Button className="w-full" size="lg" onClick={() => navigate('/feed')}>
+            <Button className="w-full" size="lg" onClick={() => navigate('/feed?walkthrough=1')}>
               Start Your Journey
             </Button>
           </div>

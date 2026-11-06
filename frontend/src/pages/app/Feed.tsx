@@ -7,6 +7,7 @@ import { PostCard } from '@/components/features/feed/PostCard';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { VideoFeed } from '@/components/features/feed/VideoFeed';
+import { WalkthroughOverlay, shouldShowWalkthrough } from '@/components/features/onboarding/WalkthroughOverlay';
 import { ErrorBanner } from '@/components/ui/ErrorBanner';
 import { feedApi, profilesApi } from '@/api';
 import { messagingApi, type Community } from '@/api/messaging';
@@ -115,6 +116,17 @@ export default function Feed() {
     const t = setTimeout(() => setRemovedBanner(null), REMOVED_BANNER_MS);
     return () => clearTimeout(t);
   }, [removedBanner]);
+
+  // First-time user walkthrough (skippable, shows once after onboarding)
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('walkthrough') === '1' && shouldShowWalkthrough()) {
+      setShowWalkthrough(true);
+      params.delete('walkthrough');
+      window.history.replaceState({}, '', `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
+    }
+  }, []);
 
   const handleRemovePost = (postId: string) => {
     const gone = postsRef.current.filter((p) => p.id === postId);
@@ -696,6 +708,8 @@ export default function Feed() {
           onClose={() => setCommentPostId(null)}
         />
       )}
+
+      {showWalkthrough && <WalkthroughOverlay onClose={() => setShowWalkthrough(false)} />}
     </div>
   );
 }

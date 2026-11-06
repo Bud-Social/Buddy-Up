@@ -1,17 +1,15 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Search, Radio, Bell, User } from 'lucide-react';
-import { useNotificationStore } from '@/store/notificationStore';
+import { Home, Search, Radio, Timer, User } from 'lucide-react';
 
 const items = [
   { to: '/feed', icon: Home, label: 'Home' },
   { to: '/discover', icon: Search, label: 'Find' },
   { to: '/lives', icon: Radio, label: 'Live', center: true } as { to: string; icon: typeof Home; label: string; center?: boolean },
-  { to: '/notifications', icon: Bell, label: 'Notif.' },
+  { to: '/countdowns', icon: Timer, label: 'Countdowns' },
   { to: '/profile', icon: User, label: 'Profile' },
 ];
 
 export function BottomNav() {
-  const unread = useNotificationStore((s) => s.unreadCount);
   const loc = useLocation();
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-buddy-black/95 backdrop-blur-lg border-t border-buddy-surface z-40">
@@ -27,7 +25,6 @@ export function BottomNav() {
               ) : (
                 <Icon size={22} strokeWidth={active ? 2.5 : 1.5} className={active ? 'text-buddy-green' : 'text-buddy-text-secondary'} />
               )}
-              {label === 'Notif.' && unread > 0 && <span className="absolute top-1 right-1/4 w-4 h-4 rounded-full bg-buddy-red text-white text-[10px] font-bold flex items-center justify-center">{unread > 9 ? '9+' : unread}</span>}
               <span className={`text-[10px] font-medium ${center ? 'mt-0.5' : ''} ${active ? 'text-buddy-green' : 'text-buddy-text-secondary'}`}>{label}</span>
             </NavLink>
           );

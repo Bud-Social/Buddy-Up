@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, Bell } from 'lucide-react';
 import { BottomNav } from './BottomNav';
 import { Sidebar } from './Sidebar';
 import { StandingBanner } from './StandingBanner';
@@ -9,9 +9,12 @@ import { AlarmWatcher } from './AlarmWatcher';
 import { UploadPill } from './UploadPill';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useSidebarStore } from '@/store/sidebarStore';
+import { useNotificationStore } from '@/store/notificationStore';
 
 export function AppShell() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const unread = useNotificationStore((s) => s.unreadCount);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const isTablet = useMediaQuery('(min-width: 768px)');
   const collapsed = useSidebarStore((s) => s.collapsed);
@@ -41,6 +44,21 @@ export function AppShell() {
   const sidebarMargin = isTablet ? (collapsed ? 'md:ml-16' : 'md:ml-64') : '';
   const onMenu = isTablet ? toggle : openMobile;
 
+  const NotificationBell = () => (
+    <button
+      onClick={() => navigate('/notifications')}
+      className="relative p-2 rounded-full text-buddy-text-secondary hover:text-buddy-green hover:bg-buddy-surface transition-colors"
+      aria-label="Notifications"
+    >
+      <Bell size={20} />
+      {unread > 0 && (
+        <span className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-buddy-red text-white text-[10px] font-bold flex items-center justify-center">
+          {unread > 9 ? '9+' : unread}
+        </span>
+      )}
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-buddy-black flex">
       {isTablet && <Sidebar />}
@@ -55,7 +73,14 @@ export function AppShell() {
             >
               {mobileOpen && !isTablet ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <span className="font-display font-bold text-base text-buddy-text-primary tracking-tight">BuddyUp Fit</span>
+            <span className="font-display font-bold text-base text-buddy-text-primary tracking-tight flex-1">BuddyUp Fit</span>
+            <NotificationBell />
+          </header>
+        )}
+        {/* Desktop slim top bar */}
+        {!hideTopBar && isDesktop && (
+          <header className={`sticky top-0 z-40 flex items-center justify-end h-14 px-6 bg-buddy-black/90 backdrop-blur-md border-b border-buddy-surface transition-all duration-300 ${sidebarMargin}`}>
+            <NotificationBell />
           </header>
         )}
         <main className={`flex-1 pb-20 md:pb-0 transition-all duration-300 ${sidebarMargin}`}>

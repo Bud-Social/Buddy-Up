@@ -5,6 +5,8 @@ import type {
   UserCountdown,
   CreateUserCountdown,
   UpdateUserCountdown,
+  Routine,
+  CreateRoutine,
 } from '@/types/countdowns';
 
 export const countdownsApi = {
@@ -44,26 +46,17 @@ export const countdownsApi = {
       .post<ApiResponse<{ advanced_ids: string[]; count: number }>>('/countdowns/auto-advance/', { signal })
       .then((r) => r.data.data),
 
-  welcomeCheck: (email: string) =>
+  listRoutines: () =>
     apiClient
-      .post<ApiResponse<{
-        is_welcome_user: boolean;
-        display_name: string;
-        nickname: string;
-        auto_buddy_email: string | null;
-      }>>('/countdowns/welcome-check/', { email })
+      .get<ApiResponse<Routine[]>>('/countdowns/routines/')
       .then((r) => r.data.data),
 
-  welcomeViewed: (email: string, autoBuddyEmail: string | null, viewerName: string) =>
-    apiClient
-      .post<ApiResponse<{
-        viewer_email: string;
-        viewer_name: string;
-        notified_email: string;
-      }>>('/countdowns/welcome-viewed/', {
-        email,
-        auto_buddy_email: autoBuddyEmail,
-        viewer_name: viewerName,
-      })
-      .then((r) => r.data.data),
+  createRoutine: (payload: CreateRoutine) =>
+    apiClient.post<ApiResponse<Routine>>('/countdowns/routines/', payload).then((r) => r.data.data),
+
+  updateRoutine: (id: string, payload: Partial<CreateRoutine>) =>
+    apiClient.patch<ApiResponse<Routine>>(`/countdowns/routines/${id}/`, payload).then((r) => r.data.data),
+
+  deleteRoutine: (id: string) =>
+    apiClient.delete(`/countdowns/routines/${id}/`).then((r) => r.data),
 };

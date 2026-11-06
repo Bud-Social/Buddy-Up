@@ -11,6 +11,6 @@ urlpatterns = [
     path('<uuid:pk>/checkin/', views.CountdownCheckInView.as_view(), name='checkin'),
     path('<uuid:pk>/reset/', views.CountdownResetView.as_view(), name='reset'),
     path('auto-advance/', views.CountdownAutoAdvanceView.as_view(), name='auto_advance'),
-    path('welcome-check/', views.WelcomeCheckView.as_view(), name='welcome_check'),
-    path('welcome-viewed/', views.WelcomeViewedView.as_view(), name='welcome_viewed'),
+    path('routines/', views.RoutineListView.as_view(), name='routines_list'),
+    path('routines/<uuid:pk>/', views.RoutineDetailView.as_view(), name='routines_detail'),
 ]

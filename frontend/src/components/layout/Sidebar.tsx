@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, CalendarDays, MessageCircle, Bell, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, LayoutDashboard, Activity, UsersRound, HeartHandshake, Footprints, Bike, MapPin, CalendarRange, Store, Timer, Map as MapIcon } from 'lucide-react';
-import { useNotificationStore } from '@/store/notificationStore';
+import { Home, Search, Radio, Dumbbell, Users, ShoppingBag, Calendar, CalendarDays, MessageCircle, Wallet, User, Settings, HelpCircle, ChevronLeft, ChevronRight, LayoutDashboard, Activity, UsersRound, HeartHandshake, Footprints, Bike, MapPin, CalendarRange, Store, Timer, Map as MapIcon } from 'lucide-react';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useAuthStore } from '@/store/authStore';
 import { useBusinessRoles } from '@/hooks/useBusinessRoles';
@@ -20,7 +19,7 @@ const main = [
   { to: '/trainers', icon: Users, label: 'Trainers' }, { to: '/marketplace', icon: ShoppingBag, label: 'Marketplace' },
   { to: '/routines', icon: CalendarDays, label: 'Routines' }, { to: '/sessions', icon: Calendar, label: 'Sessions' }, { to: '/messages', icon: MessageCircle, label: 'Messages' },
   { to: '/communities', icon: UsersRound, label: 'Communities' },
-  { to: '/notifications', icon: Bell, label: 'Notifications' }, { to: '/wallet', icon: Wallet, label: 'Wallet' },
+  { to: '/wallet', icon: Wallet, label: 'Wallet' },
   { to: '/profile', icon: User, label: 'Profile' },
 ];
 const bottom = [{ to: '/settings', icon: Settings, label: 'Settings' }, { to: '/help', icon: HelpCircle, label: 'Help' }];
@@ -48,7 +47,6 @@ type NavEntry = { to: string; icon: typeof Store; label: string; shortLabel: str
 export function Sidebar({ inDrawer = false }: { inDrawer?: boolean }) {
   const [supportOpen, setSupportOpen] = useState(false);
   const navigate = useNavigate();
-  const unread = useNotificationStore((s) => s.unreadCount);
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
   const isStaff = useAuthStore((s) => s.user?.is_staff);
@@ -64,11 +62,10 @@ export function Sidebar({ inDrawer = false }: { inDrawer?: boolean }) {
   const itemCls = ({ isActive }: { isActive: boolean }) =>
     `flex items-center justify-start gap-3 px-3 py-2.5 rounded-xl mb-1 text-sm font-medium transition-colors ${isActive ? 'bg-buddy-green/15 text-buddy-green' : 'text-buddy-text-secondary hover:text-buddy-text-primary hover:bg-buddy-surface-raised'}`;
 
-  function NavItem({ to, icon: Icon, label, badge }: { to: string; icon: typeof Home; label: string; badge?: number }) {
+  function NavItem({ to, icon: Icon, label }: { to: string; icon: typeof Home; label: string }) {
     return (
       <NavLink to={to} className={itemCls}>
         <span className="w-[18px] shrink-0 flex justify-center"><Icon size={18} /></span><span className={`${labelCls} transition-all duration-300`}>{label}</span>
-        {badge !== undefined && badge > 0 && !isCollapsed && <span className="ml-auto bg-buddy-red text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{badge > 99 ? '99+' : badge}</span>}
       </NavLink>
     );
   }
@@ -86,7 +83,7 @@ export function Sidebar({ inDrawer = false }: { inDrawer?: boolean }) {
       <nav className="flex-1 overflow-y-auto py-3 px-3 scrollbar-hide">
         <SectionLabel>Main</SectionLabel>
         {main.map(({ to, icon, label }) => (
-          <NavItem key={to} to={to} icon={icon} label={label} badge={label === 'Notifications' ? unread : undefined} />
+          <NavItem key={to} to={to} icon={icon} label={label} />
         ))}
 
         {/* Your business — only the roles this operator actually holds. */}

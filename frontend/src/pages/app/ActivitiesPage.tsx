@@ -503,7 +503,7 @@ export default function ActivitiesPage() {
                     </div>
                     <div className="w-full bg-buddy-surface/50 rounded-full h-2 overflow-hidden">
                       <div
-                        className={`h-full transition-all duration-500 ${achieved ? 'bg-buddy-gold' : color.bg.replace('/10', '')} ${achieved ? 'text-black' : color.text.replace('text-', '')}`}
+                        className={`h-full transition-all duration-500 ${achieved ? 'bg-buddy-gold' : color.bg.replace('/10', '')}`}
                         style={{ width: `${progress}%` }}
                       />
                     </div>

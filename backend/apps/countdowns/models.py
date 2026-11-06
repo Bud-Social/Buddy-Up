@@ -150,3 +150,39 @@ class UserCountdown(TimestampedModel):
         self.last_auto_advance_at = None
         self.save(update_fields=['current_count', 'completed_at', 'last_checkin_at', 'last_auto_advance_at', 'updated_at'])
         return self
+
+
+class Routine(TimestampedModel):
+    """A recurring habit routine (walk, run, cycle, hike, workout)."""
+
+    ROUTINE_TYPES = [
+        ('walk', 'Walking'),
+        ('run', 'Running'),
+        ('cycle', 'Cycling'),
+        ('hike', 'Hiking'),
+        ('workout', 'Workout'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='routines',
+    )
+    type = models.CharField(max_length=15, choices=ROUTINE_TYPES)
+    name = models.CharField(max_length=120)
+    target = models.PositiveIntegerField(default=30, help_text='Target value per session')
+    unit = models.CharField(max_length=20, default='min', help_text='steps, km, min')
+    days = models.JSONField(default=list, help_text='Active days of week [0-6, 0=Sunday]')
+    streak = models.PositiveIntegerField(default=0)
+    completed_today = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'countdowns_routine'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'is_active']),
+        ]
+
+    def __str__(self):
+        return f'{self.name}: {self.target} {self.unit}'

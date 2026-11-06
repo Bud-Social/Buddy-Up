@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, MapPin, Activity, Dumbbell, Heart, X, Plus } from 'lucide-react';
+import { countdownsApi } from '@/api/countdowns';
+import type { Routine, CreateRoutine } from '@/types/countdowns';
 
 const ROUTINE_TYPES = [
   { key: 'walk', label: 'Walking', icon: MapPin, color: 'text-buddy-green', bg: 'bg-buddy-green/10' },
@@ -25,44 +27,69 @@ function RoutineIcon({ type, size = 20 }: { type: string; size?: number }) {
 }
 
 export default function Routines() {
-  const [routines, setRoutines] = useState<Array<{
-    id: string;
-    type: string;
-    name: string;
-    target: number;
-    unit: string;
-    days: number[];
-    streak: number;
-    completedToday: boolean;
-  }>>([
-    { id: '1', type: 'walk', name: 'Morning Walk', target: 5000, unit: 'steps', days: [0,1,2,3,4,5,6], streak: 5, completedToday: false },
-    { id: '2', type: 'workout', name: 'Gym Session', target: 45, unit: 'min', days: [1,3,5], streak: 3, completedToday: true },
-  ]);
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const toggleDay = (routineId: string, dayIndex: number) => {
-    setRoutines(routines.map(r => {
-      if (r.id !== routineId) return r;
-      const days = r.days.includes(dayIndex)
-        ? r.days.filter(d => d !== dayIndex)
-        : [...r.days, dayIndex].sort((a, b) => a - b);
-      return { ...r, days };
-    }));
+  const fetchRoutines = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await countdownsApi.listRoutines();
+      setRoutines(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setError(err?.response?.data?.message || 'Failed to load routines');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const addRoutine = () => {
-    const id = String(Date.now());
-    setRoutines([...routines, {
-      id, type: 'walk', name: 'New Routine', target: 30, unit: 'min',
-      days: [], streak: 0, completedToday: false,
-    }]);
+  useEffect(() => {
+    fetchRoutines();
+  }, []);
+
+  const toggleDay = async (routineId: string, dayIndex: number) => {
+    const routine = routines.find(r => r.id === routineId);
+    if (!routine) return;
+    const newDays = routine.days.includes(dayIndex)
+      ? routine.days.filter(d => d !== dayIndex)
+      : [...routine.days, dayIndex].sort((a, b) => a - b);
+    try {
+      const updated = await countdownsApi.updateRoutine(routineId, { days: newDays });
+      setRoutines(routines.map(r => r.id === routineId ? updated : r));
+    } catch {
+      alert('Failed to update routine');
+    }
   };
 
-  const deleteRoutine = (id: string) => {
+  const addRoutine = async (typeKey?: string, customName?: string) => {
+    const typeInfo = ROUTINE_TYPES.find(t => t.key === (typeKey || 'walk')) || ROUTINE_TYPES[0];
+    const payload: CreateRoutine = {
+      type: (typeKey || 'walk') as Routine['type'],
+      name: customName || typeInfo.label,
+      target: typeKey === 'walk' ? 5000 : typeKey === 'run' ? 5 : typeKey === 'cycle' ? 10 : typeKey === 'hike' ? 5 : 30,
+      unit: typeKey === 'walk' ? 'steps' : typeKey === 'run' || typeKey === 'cycle' || typeKey === 'hike' ? 'km' : 'min',
+      days: [],
+    };
+    try {
+      const created = await countdownsApi.createRoutine(payload);
+      setRoutines([...routines, created]);
+    } catch (err: any) {
+      alert(err?.response?.data?.message || 'Failed to create routine');
+    }
+  };
+
+  const deleteRoutine = async (id: string) => {
     if (!window.confirm('Delete this routine?')) return;
-    setRoutines(routines.filter(r => r.id !== id));
+    try {
+      await countdownsApi.deleteRoutine(id);
+      setRoutines(routines.filter(r => r.id !== id));
+    } catch {
+      alert('Failed to delete routine');
+    }
   };
 
-  const isDayActive = (routine: { days: number[] }, dayIndex: number) =>
+  const isDayActive = (routine: Routine, dayIndex: number) =>
     routine.days.includes(dayIndex);
 
   const today = new Date().getDay();
@@ -77,16 +104,22 @@ export default function Routines() {
           </p>
         </div>
         <button
-          onClick={addRoutine}
+          onClick={() => addRoutine()}
           className="flex items-center gap-2 px-3 py-2 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg text-sm font-medium transition-colors"
         >
           <Plus size={16} /> New Routine
         </button>
       </div>
 
+      {error && (
+        <div className="rounded-lg bg-buddy-red/10 p-3 border border-buddy-red/20 text-buddy-red text-sm">{error}</div>
+      )}
+
       <div className="bg-buddy-surface rounded-xl border border-buddy-border p-5 space-y-4">
         <h3 className="font-semibold text-buddy-text-primary">Your Routines</h3>
-        {routines.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-buddy-text-secondary">Loading routines…</div>
+        ) : routines.length === 0 ? (
           <div className="text-center py-12 text-buddy-text-secondary">
             <Calendar size={48} className="mx-auto mb-3 opacity-50" />
             <p>No routines yet. Create one to start building habits.</p>
@@ -98,7 +131,7 @@ export default function Routines() {
               return (
                 <div
                   key={routine.id}
-                  className={`p-4 rounded-xl border ${routine.completedToday ? 'bg-buddy-green/10 border-buddy-green/30' : 'border-buddy-border bg-buddy-bg'} transition-colors`}
+                  className={`p-4 rounded-xl border ${routine.completed_today ? 'bg-buddy-green/10 border-buddy-green/30' : 'border-buddy-border bg-buddy-bg'} transition-colors`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3 shrink-0">
@@ -106,7 +139,7 @@ export default function Routines() {
                         <RoutineIcon type={routine.type} size={20} />
                       </div>
                       <div>
-                        <h4 className={`font-medium text-buddy-text-primary ${routine.completedToday ? 'line-through text-buddy-text-secondary' : ''}`}>
+                        <h4 className={`font-medium text-buddy-text-primary ${routine.completed_today ? 'line-through text-buddy-text-secondary' : ''}`}>
                           {routine.name}
                         </h4>
                         <p className="text-xs text-buddy-text-secondary">
@@ -115,8 +148,8 @@ export default function Routines() {
                       </div>
                     </div>
                     <div className="flex items-end gap-2">
-                      <span className={`text-2xl font-display font-bold ${routine.completedToday ? 'text-buddy-green' : typeInfo.color}`}>
-                        {routine.completedToday ? '✓' : routine.streak}
+                      <span className={`text-2xl font-display font-bold ${routine.completed_today ? 'text-buddy-green' : typeInfo.color}`}>
+                        {routine.completed_today ? '✓' : routine.streak}
                       </span>
                       <button
                         onClick={() => deleteRoutine(routine.id)}
@@ -144,7 +177,7 @@ export default function Routines() {
                     ))}
                   </div>
 
-                  {routine.completedToday && (
+                  {routine.completed_today && (
                     <div className="mt-3 flex items-center gap-2 text-xs text-buddy-green">
                       <Heart size={14} className="fill-buddy-green" />
                       <span>Completed today</span>
@@ -166,14 +199,7 @@ export default function Routines() {
           {ROUTINE_TYPES.map((t) => (
             <button
               key={t.key}
-              onClick={() => {
-                const id = String(Date.now());
-                setRoutines([...routines, {
-                  id, type: t.key, name: t.label, target: t.key === 'walk' ? 5000 : t.key === 'run' ? 5 : t.key === 'cycle' ? 10 : t.key === 'hike' ? 5 : 30,
-                  unit: t.key === 'walk' ? 'steps' : t.key === 'run' || t.key === 'cycle' || t.key === 'hike' ? 'km' : 'min',
-                  days: [], streak: 0, completedToday: false,
-                }]);
-              }}
+              onClick={() => addRoutine(t.key)}
               className={`flex flex-col items-center gap-2 p-4 rounded-xl border border-buddy-border transition-all duration-200 hover:border-buddy-green hover:shadow-lg ${t.bg} ${t.color}`}
             >
               <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${t.bg.replace('/10', '/20')} ${t.color}`}>

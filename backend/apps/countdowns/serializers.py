@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CountdownTemplate, UserCountdown
+from .models import CountdownTemplate, UserCountdown, Routine
 
 
 class CountdownTemplateSerializer(serializers.ModelSerializer):
@@ -41,3 +41,13 @@ class UserCountdownSerializer(serializers.ModelSerializer):
                 'custom_reason': 'A custom reason is required when no template is selected.',
             })
         return attrs
+
+
+class RoutineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Routine
+        fields = [
+            'id', 'type', 'name', 'target', 'unit', 'days', 'streak',
+            'completed_today', 'is_active', 'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']

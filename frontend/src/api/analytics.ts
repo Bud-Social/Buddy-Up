@@ -39,7 +39,7 @@ export const analyticsApi = {
     apiClient.post<ApiResponse<{ post_id: string }>>(`/analytics/${kind}/${id}/share/`, body ? { body } : {}).then((r) => r.data),
 
   /** Prepare a share draft (edit caption/media before publishing). */
-  sharePrepare: (payload: { kind: 'activity' | 'workout'; obj_id: string; visibility?: string; body?: string }) =>
+  sharePrepare: (payload: { kind: 'activity' | 'workout' | 'countdown'; obj_id: string; visibility?: string; body?: string }) =>
     apiClient.post<ApiResponse<{ draft_id: string; body: string; visibility: string; source_kind: string; tags: string[] }>>('/analytics/share/prepare/', payload).then((r) => r.data.data),
 
   /** Publish a prepared share draft to the feed. */

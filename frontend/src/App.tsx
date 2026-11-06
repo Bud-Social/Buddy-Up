@@ -132,6 +132,11 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
+      // Show once only — persisted to localStorage after first view
+      if (localStorage.getItem('locationConsentSeen') === '1') {
+        setLoading(false);
+        return;
+      }
       try {
         if (!useAuthStore.getState().accessToken) {
           await refreshAccessToken();
@@ -142,6 +147,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
           setUser(user, profileRes.data);
           if (!profileRes.data.location_consent) {
             setShowLocationConsent(true);
+            localStorage.setItem('locationConsentSeen', '1');
           }
         }
       } catch (e) {

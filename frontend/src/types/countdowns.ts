@@ -56,6 +56,32 @@ export interface UpdateUserCountdown {
   is_active?: boolean;
 }
 
+export type RoutineType = 'walk' | 'run' | 'cycle' | 'hike' | 'workout';
+
+export interface Routine {
+  id: string;
+  type: RoutineType;
+  name: string;
+  target: number;
+  unit: string;
+  days: number[];
+  streak: number;
+  completed_today: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateRoutine {
+  type: RoutineType;
+  name: string;
+  target: number;
+  unit: string;
+  days?: number[];
+  streak?: number;
+  completed_today?: boolean;
+}
+
 export interface CountdownCheckInResult {
   success: boolean;
   data: UserCountdown;

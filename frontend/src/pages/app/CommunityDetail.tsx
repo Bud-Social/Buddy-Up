@@ -122,7 +122,7 @@ function PostCard({
         {community && (
           <div className="flex items-center gap-2 mb-3">
             <div className="w-2 h-2 rounded-full bg-buddy-green" />
-            <Badge variant="green" label={community.group_name} icon="👥" size="sm" />
+            <Badge variant="green" label={community.group_name} size="sm" />
             <span className="text-[10px] text-buddy-text-secondary uppercase tracking-wider">Community post</span>
           </div>
         )}
