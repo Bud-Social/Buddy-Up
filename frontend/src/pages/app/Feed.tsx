@@ -119,14 +119,19 @@ export default function Feed() {
 
   // First-time user walkthrough (skippable, shows once after onboarding)
   const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('walkthrough') === '1' && shouldShowWalkthrough()) {
       setShowWalkthrough(true);
-      params.delete('walkthrough');
-      window.history.replaceState({}, '', `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`);
+      // Use React Router to clear the param
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('walkthrough');
+        return next;
+      }, { replace: true });
     }
-  }, []);
+  }, [setSearchParams]);
 
   const handleRemovePost = (postId: string) => {
     const gone = postsRef.current.filter((p) => p.id === postId);
@@ -288,7 +293,6 @@ export default function Feed() {
 
   // Deep-link: /feed?post=:id (shared links) prepends the post and scrolls
   // it into view; notification links already clear the param first.
-  const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const postId = searchParams.get('post');
     if (!postId) return;

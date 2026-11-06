@@ -147,7 +147,6 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
           setUser(user, profileRes.data);
           if (!profileRes.data.location_consent) {
             setShowLocationConsent(true);
-            localStorage.setItem('locationConsentSeen', '1');
           }
         }
       } catch (e) {
@@ -156,6 +155,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
           return;
         }
       } finally {
+        localStorage.setItem('locationConsentSeen', '1');
         setLoading(false);
       }
     };

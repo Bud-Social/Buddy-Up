@@ -84,7 +84,6 @@ export default function ActivitiesPage() {
   const [trackingSeconds, setTrackingSeconds] = useState(0);
   const [trackingRoute, setTrackingRoute] = useState<number[][]>([]);
   const [trackingGpsEnabled, setTrackingGpsEnabled] = useState(false);
-  const [trackingWatchId, setTrackingWatchId] = useState<number | null>(null);
   const [trackingTarget, setTrackingTarget] = useState<number | null>(null);
   const [trackingTargetUnit, setTrackingTargetUnit] = useState<string | null>(null);
 
@@ -118,7 +117,7 @@ export default function ActivitiesPage() {
 
   // GPS tracking watch
   useEffect(() => {
-    if (!trackingActive || !trackingGpsEnabled || !trackingWatchId) return;
+    if (!trackingActive || !trackingGpsEnabled) return;
 
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
@@ -130,12 +129,11 @@ export default function ActivitiesPage() {
       },
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 },
     );
-    setTrackingWatchId(watchId);
 
     return () => {
       if (watchId) navigator.geolocation.clearWatch(watchId);
     };
-  }, [trackingActive, trackingGpsEnabled, trackingWatchId]);
+  }, [trackingActive, trackingGpsEnabled]);
 
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -263,24 +261,15 @@ export default function ActivitiesPage() {
 
   const startTimer = () => {
     setTrackingActive(true);
-    const id = setInterval(() => setTrackingSeconds((s) => s + 1), 1000);
-    setTrackingWatchId(id as unknown as number);
   };
 
   const stopTracking = () => {
     setTrackingActive(false);
-    if (trackingWatchId !== null) {
-      clearInterval(trackingWatchId as unknown as number);
-      setTrackingWatchId(null);
-    }
   };
 
   const saveActivity = async () => {
     if (!trackingType) return;
     setTrackingActive(false);
-    if (trackingWatchId !== null) {
-      clearInterval(trackingWatchId as unknown as number);
-    }
 
     try {
       const targetDef = ACTIVITY_TARGETS[trackingType as keyof typeof ACTIVITY_TARGETS];
@@ -312,9 +301,6 @@ export default function ActivitiesPage() {
 
   const cancelTracking = () => {
     setTrackingActive(false);
-    if (trackingWatchId !== null) {
-      clearInterval(trackingWatchId as unknown as number);
-    }
     setTrackingOpen(false);
     setTrackingType(null);
     setTrackingTarget(null);

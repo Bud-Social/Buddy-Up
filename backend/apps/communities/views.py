@@ -27,10 +27,13 @@ class AllCommunityPostsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        qs = CommunityPost.objects.filter(is_deleted=False).select_related('post__author', 'post')
-        # Simple cursor-free pagination for now — return latest 20
+        from apps.feed.serializers import PostSerializer
+        qs = Post.objects.filter(
+            is_deleted=False,
+            community_links__is_deleted=False,
+        ).select_related('author').distinct()
         qs = qs.order_by('-created_at')[:20]
-        data = CommunityPostSerializer(qs, many=True, context={'request': request}).data
+        data = PostSerializer(qs, many=True, context={'request': request}).data
         return Response({'success': True, 'data': data, 'message': 'All community posts.', 'errors': None, 'pagination': None})
 
 
@@ -73,11 +76,18 @@ class CommunityPostsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, slug):
-        community = get_object_or_404(Community, slug=slug, is_deleted=False)
-        qs = CommunityPost.objects.filter(community=community, is_deleted=False).select_related('post__author', 'post')
-        # Simple cursor-free pagination for now — return latest 20
+        try:
+            community = Community.objects.get(id=slug, is_deleted=False)
+        except Community.DoesNotExist:
+            community = get_object_or_404(Community, slug=slug, is_deleted=False)
+        from apps.feed.serializers import PostSerializer
+        qs = Post.objects.filter(
+            is_deleted=False,
+            community_links__community=community,
+            community_links__is_deleted=False,
+        ).select_related('author')
         qs = qs.order_by('-created_at')[:20]
-        data = CommunityPostSerializer(qs, many=True, context={'request': request}).data
+        data = PostSerializer(qs, many=True, context={'request': request}).data
         return Response({'success': True, 'data': data, 'message': 'Community posts.', 'errors': None, 'pagination': None})
 
 
