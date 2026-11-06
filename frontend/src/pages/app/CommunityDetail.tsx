@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft, Users, MessageCircle, Heart, Pin, Copy,
   Shield, ShieldCheck, MoreHorizontal, Send, Settings2, X,
+  Share2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { messagingApi, type Community, type CommunityPost } from '@/api/messaging';
 import { useAuthStore } from '@/store/authStore';
@@ -78,86 +80,106 @@ function PostCard({
   };
 
   return (
-    <Card className="p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {post.author_data.avatar_url ? (
-            <img src={post.author_data.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-buddy-surface-raised flex items-center justify-center">
-              <Users size={16} className="text-buddy-green" />
+    <Card className="p-0 rounded-xl border border-buddy-border overflow-hidden transition-colors hover:border-buddy-green/50">
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {post.author_data.avatar_url ? (
+              <img src={post.author_data.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-buddy-surface-raised flex items-center justify-center">
+                <Users size={16} className="text-buddy-green" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="font-semibold text-sm">{post.author_data.display_name}</p>
+                {post.is_pinned && <Pin size={12} className="text-buddy-gold shrink-0" />}
+              </div>
+              <p className="text-xs text-buddy-text-secondary">
+                @{post.author_data.username} · {timeAgo(post.created_at)}
+              </p>
+            </div>
+          </div>
+          {canManage && (
+            <div className="relative group">
+              <button className="p-1.5 rounded-full hover:bg-buddy-surface transition-colors text-buddy-text-secondary">
+                <MoreHorizontal size={16} />
+              </button>
+              <div className="hidden group-hover:block absolute right-0 top-8 z-10 bg-buddy-surface rounded-xl shadow-2xl border border-buddy-surface-raised p-1.5 min-w-[140px]">
+                <button onClick={togglePin} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs hover:bg-buddy-surface-raised">
+                  {post.is_pinned ? 'Unpin' : 'Pin'} post
+                </button>
+                <button onClick={deletePost} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs text-buddy-red hover:bg-buddy-surface-raised">
+                  Delete post
+                </button>
+              </div>
             </div>
           )}
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="font-semibold text-sm">{post.author_data.display_name}</p>
-              {post.is_pinned && <Pin size={12} className="text-buddy-gold shrink-0" />}
-            </div>
-            <p className="text-xs text-buddy-text-secondary">@{post.author_data.username} · {timeAgo(post.created_at)}</p>
-          </div>
         </div>
-        {canManage && (
-          <div className="relative group">
-            <button className="p-1.5 rounded-full hover:bg-buddy-surface transition-colors text-buddy-text-secondary">
-              <MoreHorizontal size={16} />
-            </button>
-            <div className="hidden group-hover:block absolute right-0 top-8 z-10 bg-buddy-surface rounded-xl shadow-2xl border border-buddy-surface-raised p-1.5 min-w-[140px]">
-              <button onClick={togglePin} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs hover:bg-buddy-surface-raised">
-                {post.is_pinned ? 'Unpin' : 'Pin'} post
-              </button>
-              <button onClick={deletePost} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs text-buddy-red hover:bg-buddy-surface-raised">
-                Delete post
+
+        {/* Community source badge */}
+        {community && (
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-2 h-2 rounded-full bg-buddy-green" />
+            <Badge variant="green" label={community.group_name} icon="👥" size="sm" />
+            <span className="text-[10px] text-buddy-text-secondary uppercase tracking-wider">Community post</span>
+          </div>
+        )}
+
+        {post.body && <p className="mt-1 mb-3 text-sm whitespace-pre-wrap text-buddy-text-primary leading-relaxed">{post.body}</p>}
+        {post.media_url && (
+          <img src={post.media_url} alt="" className="mt-2 rounded-xl w-full object-cover max-h-96" />
+        )}
+
+        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-buddy-surface">
+          <button onClick={onLike} className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${post.is_liked ? 'text-buddy-red' : 'text-buddy-text-secondary hover:text-buddy-red'}`}>
+            <Heart size={15} fill={post.is_liked ? 'currentColor' : 'none'} />
+            {post.like_count}
+          </button>
+          <button onClick={() => setShowComments((s) => !s)} className="flex items-center gap-1.5 text-xs font-medium text-buddy-text-secondary hover:text-buddy-green transition-colors">
+            <MessageCircle size={15} />
+            {post.comment_count}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); }}
+            className="flex items-center gap-1.5 text-xs font-medium text-buddy-text-secondary hover:text-buddy-green transition-colors"
+          >
+            <Share2 size={15} />
+            Share
+          </button>
+          {isAuthor && <span className="text-[11px] text-buddy-text-secondary/60 ml-auto">You</span>}
+        </div>
+
+        {showComments && (
+          <div className="mt-3 space-y-2.5">
+            {comments.map((c) => (
+              <div key={c.id} className="flex gap-2">
+                <div className="min-w-0 flex-1 bg-buddy-surface rounded-xl px-3 py-2">
+                  <p className="text-xs font-semibold">{c.author_data.display_name}</p>
+                  <p className="text-sm">{c.body}</p>
+                </div>
+              </div>
+            ))}
+            <div className="flex items-center gap-2">
+              <input
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addComment(); }}
+                placeholder="Write a comment…"
+                className="flex-1 px-3 py-2 rounded-xl bg-buddy-surface-raised text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40"
+              />
+              <button
+                onClick={addComment}
+                disabled={busy || !commentText.trim()}
+                className="p-2 rounded-full bg-buddy-green text-buddy-black disabled:opacity-40"
+              >
+                <Send size={15} />
               </button>
             </div>
           </div>
         )}
       </div>
-
-      {post.body && <p className="mt-3 text-sm whitespace-pre-wrap">{post.body}</p>}
-      {post.media_url && (
-        <img src={post.media_url} alt="" className="mt-3 rounded-xl w-full object-cover max-h-96" />
-      )}
-
-      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-buddy-surface">
-        <button onClick={onLike} className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${post.is_liked ? 'text-buddy-red' : 'text-buddy-text-secondary hover:text-buddy-red'}`}>
-          <Heart size={15} fill={post.is_liked ? 'currentColor' : 'none'} />
-          {post.like_count}
-        </button>
-        <button onClick={() => setShowComments((s) => !s)} className="flex items-center gap-1.5 text-xs font-medium text-buddy-text-secondary hover:text-buddy-green transition-colors">
-          <MessageCircle size={15} />
-          {post.comment_count}
-        </button>
-        {isAuthor && <span className="text-[11px] text-buddy-text-secondary/60 ml-auto">You</span>}
-      </div>
-
-      {showComments && (
-        <div className="mt-3 space-y-2.5">
-          {comments.map((c) => (
-            <div key={c.id} className="flex gap-2">
-              <div className="min-w-0 flex-1 bg-buddy-surface rounded-xl px-3 py-2">
-                <p className="text-xs font-semibold">{c.author_data.display_name}</p>
-                <p className="text-sm">{c.body}</p>
-              </div>
-            </div>
-          ))}
-          <div className="flex items-center gap-2">
-            <input
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') addComment(); }}
-              placeholder="Write a comment…"
-              className="flex-1 px-3 py-2 rounded-xl bg-buddy-surface-raised text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40"
-            />
-            <button
-              onClick={addComment}
-              disabled={busy || !commentText.trim()}
-              className="p-2 rounded-full bg-buddy-green text-buddy-black disabled:opacity-40"
-            >
-              <Send size={15} />
-            </button>
-          </div>
-        </div>
-      )}
     </Card>
   );
 }

@@ -484,7 +484,7 @@ export default function ActivitiesPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="font-semibold text-buddy-text-primary">
+                    <div className={`font-semibold ${achieved ? 'text-buddy-gold' : 'text-buddy-text-primary'}`}>
                       {progress > 0 ? `${Math.round(progress)}%` : '—'}
                     </div>
                     <div className="text-xs text-buddy-text-secondary">
@@ -497,7 +497,7 @@ export default function ActivitiesPage() {
                   <div className="mt-3 pt-3 border-t border-buddy-border/50">
                     <div className="flex items-center justify-between mb-1 text-xs">
                       <span className="text-buddy-text-secondary">Target</span>
-                      <span className={achieved ? 'text-buddy-green font-medium' : 'text-buddy-text-secondary'}>
+                      <span className={achieved ? 'text-buddy-gold font-medium' : 'text-buddy-text-secondary'}>
                         {target.label}: {target.value} {target.unit}
                       </span>
                     </div>
