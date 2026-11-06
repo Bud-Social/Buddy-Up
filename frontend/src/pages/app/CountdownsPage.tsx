@@ -653,7 +653,7 @@ Progress: ${Math.round(pct)}%
                         {moreOptionsOpen === c.id && (
                           <div className="absolute right-0 mt-2 w-48 bg-buddy-surface rounded-lg border border-buddy-border shadow-xl py-2 z-50">
                             <button
-                              onClick={() => { setEditingId(c.id); setMoreOptionsOpen(null); }}
+                              onClick={() => { setEditingId(editingId === c.id ? null : c.id); setMoreOptionsOpen(null); }}
                               className="w-full text-left px-3 py-2 text-sm text-buddy-text-secondary hover:bg-buddy-surface/50 hover:text-buddy-text-primary transition-colors flex items-center gap-2"
                             >
                               <Edit size={14} className="w-4 h-4" /> Edit
