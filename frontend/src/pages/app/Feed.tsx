@@ -193,7 +193,32 @@ export default function Feed() {
   ];
 
   // Community sub-tab state (nested inside Communities tab)
-  const [communitySubTab, setCommunitySubTab] = useState<string | null>('all');
+  const [communitySubTab, setCommunitySubTab] = useState<string | null>(null);
+
+  // Initialize community sub-tab from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const communityParam = params.get('community');
+    if (communityParam) {
+      setCommunitySubTab(communityParam);
+    } else {
+      setCommunitySubTab('all');
+    }
+  }, []);
+
+  // Update URL when community sub-tab changes
+  const updateCommunitySubTab = useCallback((slug: string) => {
+    setCommunitySubTab(slug);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (slug === 'all') {
+        next.delete('community');
+      } else {
+        next.set('community', slug);
+      }
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
 
   const fetchCommunityPosts = useCallback(async (slug: string, reset = false) => {
     if (loadingPageRef.current && !reset) return;
@@ -290,7 +315,8 @@ export default function Feed() {
   // Fetch community posts when sub-tab changes
   useEffect(() => {
     if (activeTab !== 'communities') return;
-    fetchCommunityPosts(communitySubTab || 'all', true);
+    if (communitySubTab === null) return;
+    fetchCommunityPosts(communitySubTab, true);
   }, [activeTab, communitySubTab, fetchCommunityPosts]);
 
   // Deep-link: /feed?post=:id (shared links) prepends the post and scrolls
@@ -444,7 +470,7 @@ export default function Feed() {
               <button
                 key="community_all"
                 onClick={() => {
-                  setCommunitySubTab('all');
+                  updateCommunitySubTab('all');
                   fetchCommunityPosts('all', true);
                 }}
                 className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full font-medium text-xs whitespace-nowrap transition-colors ${
@@ -459,7 +485,7 @@ export default function Feed() {
                 <button
                   key={`community-${c.id}`}
                   onClick={() => {
-                    setCommunitySubTab(c.id);
+                    updateCommunitySubTab(c.id);
                     fetchCommunityPosts(c.id, true);
                   }}
                   className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full font-medium text-sm whitespace-nowrap transition-colors ${
