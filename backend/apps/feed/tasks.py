@@ -25,7 +25,6 @@ def generate_feed_cache():
     weight_reaction = 3.0
     weight_comment = 2.0
     weight_save = 4.0
-    weight_repost = 5.0
     recency_base = 10.0
 
     reaction_count = Reaction.objects.filter(
