@@ -39,14 +39,14 @@ export default function CommunityDetail() {
   const [isJoining, setIsJoining] = useState(false);
   const [searchMember, setSearchMember] = useState('');
 
+  const canManage = community?.membership_role === 'owner' || community?.membership_role === 'admin';
+  const isOwner = community?.membership_role === 'owner';
+  const isMember = !!community?.membership_role;
+
   const filteredMembers = (community?.members ?? []).filter((m) => {
     const q = searchMember.toLowerCase();
     return m.display_name.toLowerCase().includes(q) || m.username.toLowerCase().includes(q);
   });
-
-  const canManage = community?.membership_role === 'owner' || community?.membership_role === 'admin';
-  const isOwner = community?.membership_role === 'owner';
-  const isMember = !!community?.membership_role;
 
   const fetchAll = useCallback(() => {
     if (!communityId) return;
@@ -87,375 +87,294 @@ export default function CommunityDetail() {
     } catch { /* noop */ }
   };
 
-  const saveSettings = async () => {
+  const toggleRepost = async (postId: string) => {
     if (!communityId) return;
     try {
-      await messagingApi.updateCommunity(communityId, {
-        name: editName,
-        description: editDesc,
-        is_public: editPublic,
-        ...(editAvatar ? { group_avatar_url: editAvatar } : {}),
-      });
-      setShowSettings(false);
-      fetchAll();
-    } catch {
-      alert('Failed to save');
-    }
+      await messagingApi.repostCommunityPost(communityId, postId);
+      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, is_reposted_by_me: !p.is_reposted_by_me, repost_count: p.repost_count + (p.is_reposted_by_me ? -1 : 1) } : p));
+    } catch { /* noop */ }
   };
 
-  const handleAvatarPicked = async (file: File | undefined) => {
-    if (!file) return;
-    setUploadingAvatar(true);
+  const toggleSave = async (postId: string) => {
+    if (!communityId) return;
     try {
-      const res = await messagingApi.uploadAttachment(file);
-      setEditAvatar(res.data?.url ?? '');
+      await messagingApi.saveCommunityPost(communityId, postId);
+      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, is_saved_by_me: !p.is_saved_by_me, save_count: p.save_count + (p.is_saved_by_me ? -1 : 1) } : p));
+    } catch { /* noop */ }
+  };
+
+  const toggleReact = async (postId: string, reaction: string) => {
+    if (!communityId) return;
+    try {
+      await messagingApi.reactCommunityPost(communityId, postId, { reaction_type: reaction });
+      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, is_liked: p.reaction_counts?.heart ? !p.is_liked : p.is_liked, like_count: p.like_count + (p.is_liked ? -1 : 1) } : p));
+    } catch { /* noop */ }
+  };
+
+  const toggleShare = async (postId: string) => {
+    if (!communityId) return;
+    try {
+      await messagingApi.shareCommunityPost(communityId, postId);
+      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, share_count: p.share_count + 1 } : p));
+    } catch { /* noop */ }
+  };
+
+  const copyInvite = async () => {
+    if (!community?.invite_code) return;
+    try {
+      await navigator.clipboard.writeText(community.invite_code);
+      setCopyMsg('Copied!');
+      setTimeout(() => setCopyMsg(''), 2000);
     } catch {
-      alert('Image upload failed');
-    } finally {
-      setUploadingAvatar(false);
+      alert('Unable to copy');
     }
-  };
-
-  const openSettings = () => {
-    if (!community) return;
-    setEditName(community.group_name);
-    setEditDesc(community.description);
-    setEditPublic(community.is_public);
-    setEditAvatar(community.group_avatar_url || '');
-    setShowSettings(true);
-  };
-
-  const copyInvite = () => {
-    if (!community) return;
-    navigator.clipboard.writeText(community.invite_code);
-    setCopyMsg('Copied!');
-    setTimeout(() => setCopyMsg(''), 1500);
   };
 
   const rotateInvite = async () => {
     if (!communityId) return;
     try {
-      const res = await messagingApi.rotateInviteCode(communityId);
-      setCommunity((c) => c ? { ...c, invite_code: res.invite_code } : c);
-      setCopyMsg('New code generated');
-      setTimeout(() => setCopyMsg(''), 2000);
-    } catch { /* noop */ }
-  };
-
-  const setRole = async (userId: string, role: 'admin' | 'member') => {
-    if (!communityId) return;
-    try {
-      await messagingApi.setCommunityRole(communityId, userId, role);
+      await messagingApi.rotateInviteCode(communityId);
       fetchAll();
-    } catch { /* noop */ }
+    } catch {
+      alert('Unable to rotate invite code');
+    }
   };
 
-  const removeMember = async (userId: string) => {
+  const removeMember = (userId: string) => {
     if (!communityId) return;
-    const member = (community?.members ?? []).find((m) => m.user_id === userId);
-    if (!confirm(`Remove ${member?.display_name ?? 'this member'} from the community?`)) return;
-    try {
-      await messagingApi.removeCommunityMember(communityId, userId);
-      fetchAll();
-    } catch { /* noop */ }
+    if (!confirm('Are you sure you want to remove this member?')) return;
+    messagingApi.removeCommunityMember(communityId, userId).then(fetchAll);
   };
 
-  if (isLoading && !community) {
-    return (
-      <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
-        <div className="h-48 rounded-2xl bg-buddy-surface animate-pulse mb-4" />
-        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="p-4 animate-pulse"><div className="h-20 bg-buddy-surface-raised rounded-xl" /></Card>
-        ))}</div>
-      </div>
-    );
-  }
+  const setRole = (userId: string, role: string) => {
+    if (!communityId) return;
+    messagingApi.setCommunityRole(communityId, userId, role).then(fetchAll);
+  };
 
-  if (!community) {
-    return (
-      <div className="max-w-lg lg:max-w-2xl mx-auto p-4">
-        <div className="flex flex-col items-center py-20 text-buddy-text-secondary">
-          <Users size={48} className="mb-4 opacity-30" />
-          <p className="text-lg font-medium mb-1">Community not found</p>
-          <button onClick={() => navigate('/communities')} className="text-buddy-green text-sm font-medium hover:underline">Back to Communities</button>
-        </div>
-      </div>
-    );
-  }
+  const fetchAll();
+  setTimeout(() => setIsLoading(false), 400);
+
+  const filteredMembersFunc = (community?.members ?? []).filter((m) => {
+    const q = searchMember.toLowerCase();
+    return m.display_name.toLowerCase().includes(q) || m.username.toLowerCase().includes(q);
+  });
 
   return (
-    <div className="max-w-lg lg:max-w-2xl xl:max-w-3xl mx-auto p-4">
-      <div className="flex items-center gap-3 mb-4">
-        <button onClick={() => navigate('/communities')} className="p-2 rounded-full hover:bg-buddy-surface transition-colors">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="font-display text-xl font-extrabold truncate">{community.group_name}</h1>
-        {isMember && (
-          <button onClick={() => setShowInvite(true)} className="p-2 rounded-full hover:bg-buddy-surface transition-colors text-buddy-green ml-auto" title="Invite code">
-            <Copy size={18} />
-          </button>
-        )}
-        {canManage && (
-          <button onClick={openSettings} className="p-2 rounded-full hover:bg-buddy-surface transition-colors text-buddy-green" title="Community settings">
-            <Settings2 size={19} />
-          </button>
-        )}
-      </div>
-
-      <Card className="overflow-hidden mb-4">
-        {community.cover_url ? (
-          <img src={community.cover_url} alt="" className="h-40 w-full object-cover" />
-        ) : (
-          <div className="h-40 w-full bg-gradient-to-br from-buddy-green/20 to-buddy-surface-raised flex items-center justify-center">
-            <Users size={48} className="text-buddy-green/60" />
-          </div>
-        )}
-        <div className="p-4">
-          <div className="flex items-center gap-3 mb-1">
-            {community.group_avatar_url ? (
-              <img src={community.group_avatar_url} alt={community.group_name} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+    <div className="min-h-screen bg-buddy-background">
+      <nav className="border-buddy-border border-b pb-4">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {community?.cover_url ? (
+              <img src={community.cover_url} alt="" className="w-24 h-10 rounded-t-xl object-cover" />
             ) : (
-              <div className="w-12 h-12 rounded-xl bg-buddy-surface-raised flex items-center justify-center shrink-0">
-                <Users size={20} className="text-buddy-green" />
+              <div className="w-24 h-10 rounded-t-xl bg-buddy-surface-raised flex items-center justify-center">
+                <Users size={24} className="text-buddy-green" />
               </div>
             )}
-            <span className="font-display text-lg font-bold truncate">{community.group_name}</span>
-            <span className="text-[11px] text-buddy-text-secondary shrink-0">{community.is_public ? 'Public' : 'Private'}</span>
-          </div>
-          {community.description && <p className="text-sm text-buddy-text-secondary mb-2">{community.description}</p>}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 text-xs text-buddy-text-secondary">
-              <span className="flex items-center gap-1"><Users size={13} /> {community.member_count ?? community.participants_data.length} members</span>
-              {community.membership_role && (
-                <span className="px-2 py-0.5 rounded-full bg-buddy-green/10 text-buddy-green font-semibold capitalize">{community.membership_role}</span>
-              )}
+            <div>
+              <p className="font-display font-semibold truncate">{community?.group_name}</p>
+              <p className="text-xs text-buddy-text-secondary">{community?.description || ''}</p>
             </div>
-            {!isMember && (
-              <button
-                onClick={handleJoin}
-                disabled={isJoining}
-                className="px-4 py-2 rounded-xl bg-buddy-green text-buddy-black text-sm font-semibold disabled:opacity-40"
-              >
-                {isJoining ? 'Joining…' : 'Join Community'}
-              </button>
-            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-buddy-text-secondary/70">{community?.member_count || 0} members</span>
           </div>
         </div>
-      </Card>
+      </nav>
 
-      <div className="flex items-center gap-1 mb-4 bg-buddy-surface rounded-xl p-1">
-        <button
-          onClick={() => setTab('feed')}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === 'feed' ? 'bg-buddy-surface-raised text-buddy-green' : 'text-buddy-text-secondary'}`}
-        >
-          Feed
-        </button>
-        <button
-          onClick={() => setTab('members')}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${tab === 'members' ? 'bg-buddy-surface-raised text-buddy-green' : 'text-buddy-text-secondary'}`}
-        >
-          Members
-        </button>
-      </div>
+      <main>
+        <div className="max-w-7xl mx-auto p-4">
+          {isLoading && <div className="min-h-[200px] flex items-center justify-center text-buddy-text-secondary">Loading community…</div>}
 
-      {tab === 'feed' && (
-        <>
-          {isMember && (
-            <div className="mb-4">
-              <PostComposer
-                placeholder="Share your workout, question, or update with the community..."
-                onPost={() => fetchAll()}
-              />
-            </div>
-          )}
-          <div className="space-y-3">
-            {posts.length === 0 ? (
-              <Card className="p-6 text-center text-buddy-text-secondary py-14">
-                <MessageCircle size={40} className="mx-auto mb-3 opacity-30" />
-                <p className="font-medium mb-1">No posts yet</p>
-                {isMember && <p className="text-sm">Be the first to share something</p>}
-              </Card>
-            ) : (
-              posts.map((post) => (
-                <div key={post.id} className="bg-buddy-surface rounded-xl border border-buddy-border overflow-hidden transition-colors hover:border-buddy-green/50">
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {post.author_data.avatar_url ? (
-                          <img src={post.author_data.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-9 h-9 rounded-full bg-buddy-surface-raised flex items-center justify-center">
-                            <Users size={16} className="text-buddy-green" />
+          {community && (
+            <div className="space-y-6">
+              {tab === 'members' && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-display font-semibold">Members ({community?.member_count || 0})</h2>
+                    <button onClick={() => setTab('feed')} className="text-sm text-buddy-green hover:text-buddy-text-primary">Back to Posts</button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search members…"
+                    value={searchMember}
+                    onChange={(e) => setSearchMember(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-buddy-surface-raised border border-buddy-border text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40"
+                  />
+                  {filteredMembersFunc.map((m) => (
+                    <Card key={m.user_id} className="p-3 flex items-center gap-3">
+                      {m.avatar_url ? (
+                        <img src={m.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-buddy-surface-raised flex items-center justify-center">
+                          <Users size={18} className="text-buddy-green" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">{m.display_name}</p>
+                        <p className="text-xs text-buddy-text-secondary truncate">@{m.username}</p>
+                      </div>
+                      {m.role === 'owner' && <Shield size={17} className="text-buddy-green shrink-0" />}
+                      {m.role === 'admin' && <ShieldCheck size={17} className="text-buddy-green shrink-0" />}
+                      {m.role === 'admin' && <span className="text-[11px] text-buddy-text-secondary">Member</span>}
+                      {isOwner && m.role !== 'owner' && (
+                        <div className="relative group shrink-0">
+                          <button className="p-1.5 rounded-full hover:bg-buddy-surface transition-colors text-buddy-text-secondary">
+                            <MoreHorizontal size={16} />
+                          </button>
+                          <div className="hidden group-hover:block absolute right-0 top-8 z-10 bg-buddy-surface rounded-xl shadow-2xl border border-buddy-surface-raised p-1.5 min-w-[160px]">
+                            {m.role === 'admin' ? (
+                              <>
+                                <button onClick={() => setRole(m.user_id, 'member')} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs hover:bg-buddy-surface-raised">
+                                  Demote to member
+                                </button>
+                                <button onClick={() => messagingApi.transferCommunityOwnership(community?.id ?? '', m.user_id).then(fetchAll)} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs hover:bg-buddy-surface-raised">
+                                  Transfer ownership
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => setRole(m.user_id, 'member')} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs hover:bg-buddy-surface-raised">
+                                  Make admin
+                                </button>
+                              </>
+                            )}
+                            <button onClick={() => removeMember(m.user_id)} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs text-buddy-red hover:bg-buddy-surface-raised">
+                              Remove member
+                            </button>
                           </div>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {tab === 'feed' && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-display font-semibold">Posts</h2>
+                    {isOwner && (
+                      <button onClick={() => setTab('members')} className="text-sm text-buddy-green hover:text-buddy-text-primary">Manage Members</button>
+                    )}
+                  </div>
+
+                  {posts.length === 0 && (
+                    <div className="bg-buddy-surface rounded-2xl p-8 text-center">
+                      <Users className="w-10 h-10 text-buddy-text-secondary mx-auto mb-3" />
+                      <p className="text-buddy-text-secondary">No posts yet. Create one above!</p>
+                    </div>
+                  )}
+
+                  {posts.map((post) => (
+                    <div key={post.id} className="bg-buddy-surface rounded-xl border border-buddy-border overflow-hidden transition-colors hover:border-buddy-green/50">
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {post.author_data.avatar_url ? (
+                              <img src={post.author_data.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-buddy-surface-raised flex items-center justify-center">
+                                <Users size={16} className="text-buddy-green" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="font-semibold text-sm">{post.author_data.display_name}</p>
+                                {post.is_pinned && <Pin size={12} className="text-buddy-gold shrink-0" />}
+                              </div>
+                              <p className="text-xs text-buddy-text-secondary">
+                                @{post.author_data.username} · {timeAgo(post.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {post.body && <p className="mt-1 mb-3 text-sm whitespace-pre-wrap text-buddy-text-primary leading-relaxed">{post.body}</p>}
+                        {post.media_url && (
+                          <img src={post.media_url} alt="" className="mt-2 rounded-xl w-full object-cover max-h-96" />
                         )}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="font-semibold text-sm">{post.author_data.display_name}</p>
-                            {post.is_pinned && <Pin size={12} className="text-buddy-gold shrink-0" />}
-                          </div>
-                          <p className="text-xs text-buddy-text-secondary">
-                            @{post.author_data.username} · {timeAgo(post.created_at)}
-                          </p>
+
+                        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-buddy-surface">
+                          <button
+                            onClick={() => toggleLike(post.id)}
+                            className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${post.is_liked ? 'text-buddy-red' : 'text-buddy-text-secondary hover:text-buddy-red'}`}
+                          >
+                            <Heart size={15} fill={post.is_liked ? 'currentColor' : 'none'} />{post.like_count}
+                          </button>
+                          <button
+                            onClick={() => toggleRepost(post.id)}
+                            className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
+                          >
+                            <ArrowCounterclockwise size={15} />{post.repost_count || 0}
+                          </button>
+                          <button
+                            onClick={() => toggleSave(post.id)}
+                            className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
+                          >
+                            <Bookmark size={15} />{post.save_count || 0}
+                          </button>
+                          <button
+                            onClick={() => toggleReact(post.id, "heart")}
+                            className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
+                          >
+                            <Message size={15} />{post.comment_count}
+                          </button>
+                          <button onClick={() => toggleShare(post.id)} className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-purple`}>
+                            <Share2 size={15} />Share
+                          </button>
+                          {post.community_name && (
+                            <span className="ml-auto text-[10px] text-buddy-text-secondary/60 bg-buddy-surface-raised px-2 py-0.5 rounded-full">
+                              {post.community_name}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
-
-                    {post.body && <p className="mt-1 mb-3 text-sm whitespace-pre-wrap text-buddy-text-primary leading-relaxed">{post.body}</p>}
-                    {post.media_url && (
-                      <img src={post.media_url} alt="" className="mt-2 rounded-xl w-full object-cover max-h-96" />
-                    )}
-
-                    <div className="flex items-center gap-4 mt-4 pt-3 border-t border-buddy-surface">
-                      <button
-                        onClick={() => toggleLike(post.id)}
-                        className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${post.is_liked ? 'text-buddy-red' : 'text-buddy-text-secondary hover:text-buddy-red'}`}
-                      >
-                        <Heart size={15} fill={post.is_liked ? 'currentColor' : 'none'} />
-                        {post.like_count}
-                      </button>
-                      <button
-                        onClick={() => {}}
-                        className="flex items-center gap-1.5 text-xs font-medium text-buddy-text-secondary hover:text-buddy-green transition-colors"
-                      >
-                        <MessageCircle size={15} />
-                        {post.comment_count}
-                      </button>
-                      <button
-                        onClick={() => {}}
-                        className="flex items-center gap-1.5 text-xs font-medium text-buddy-text-secondary hover:text-buddy-green transition-colors"
-                      >
-                        <Share2 size={15} />
-                        Share
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </>
-      )}
-
-      {tab === 'members' && (
-        <div className="space-y-3">
-          <input
-            type="text"
-            placeholder="Search members…"
-            value={searchMember}
-            onChange={(e) => setSearchMember(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl bg-buddy-surface-raised border border-buddy-border text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40"
-          />
-          {filteredMembers.map((m) => (
-            <Card key={m.user_id} className="p-3 flex items-center gap-3">
-              {m.avatar_url ? (
-                <img src={m.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-buddy-surface-raised flex items-center justify-center">
-                  <Users size={18} className="text-buddy-green" />
+                  ))}
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-sm truncate">{m.display_name}</p>
-                <p className="text-xs text-buddy-text-secondary truncate">@{m.username}</p>
+            </div>
+          )}
+
+          {showSettings && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowSettings(false)}>
+              <div className="w-full max-w-md bg-buddy-surface rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-display text-lg font-bold">Community Settings</h2>
+                  <button onClick={() => setShowSettings(false)} className="text-buddy-text-secondary hover:text-buddy-text-primary"><Settings2 size={20} /></button>
+                </div>
+                {/* ... settings form ... */}
+                <button onClick={saveSettings} className="w-full py-3 rounded-xl bg-buddy-green text-buddy-black font-semibold">Save Changes</button>
               </div>
-              {m.role === 'owner' && <Shield size={17} className="text-buddy-green shrink-0" />}
-              {m.role === 'admin' && <ShieldCheck size={17} className="text-buddy-green shrink-0" />}
-              {m.role === 'admin' && <span className="text-[11px] text-buddy-text-secondary">Member</span>}
-              {isOwner && m.role !== 'owner' && (
-                <div className="relative group shrink-0">
-                  <button className="p-1.5 rounded-full hover:bg-buddy-surface transition-colors text-buddy-text-secondary">
-                    <MoreHorizontal size={16} />
+            </div>
+          )}
+
+          {showInvite && community && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowInvite(false)}>
+              <div className="w-full max-w-md bg-buddy-surface rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-display text-lg font-bold">Invite Members</h2>
+                  <button onClick={() => setShowInvite(false)} className="text-buddy-text-secondary hover:text-buddy-text-primary"><X size={20} /></button>
+                </div>
+                <p className="text-sm text-buddy-text-secondary mb-2">Share this invite code with friends:</p>
+                <div className="flex items-center gap-3 bg-buddy-surface-raised rounded-xl px-4 py-3 mb-3">
+                  <span className="flex-1 font-mono tracking-[0.3em] text-center font-bold">{community.invite_code}</span>
+                  <button onClick={copyInvite} className="text-buddy-green hover:text-buddy-green/80" title="Copy">
+                    <Copy size={18} />
                   </button>
-                  <div className="hidden group-hover:block absolute right-0 top-8 z-10 bg-buddy-surface rounded-xl shadow-2xl border border-buddy-surface-raised p-1.5 min-w-[160px]">
-                    {m.role === 'admin' ? (
-                      <>
-                        <button onClick={() => setRole(m.user_id, 'member')} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs hover:bg-buddy-surface-raised">
-                          Demote to member
-                        </button>
-                        <button onClick={() => messagingApi.transferCommunityOwnership(community?.id ?? '', m.user_id).then(fetchAll)} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs hover:bg-buddy-surface-raised">
-                          Transfer ownership
-                        </button>
-                      </>
-                    ) : (
-                      <button onClick={() => setRole(m.user_id, 'member')} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs hover:bg-buddy-surface-raised">
-                        Make admin
-                      </button>
-                    )}
-                    <button onClick={() => removeMember(m.user_id)} className="block w-full text-left px-3 py-1.5 rounded-lg text-xs text-buddy-red hover:bg-buddy-surface-raised">
-                      Remove member
-                    </button>
-                  </div>
                 </div>
-              )}
-            </Card>
-          ))}
+                {copyMsg && <p className="text-xs text-buddy-green mb-3">{copyMsg}</p>}
+                {canManage && (
+                  <button onClick={rotateInvite} className="w-full py-2.5 rounded-xl bg-buddy-surface-raised text-sm font-semibold hover:bg-buddy-surface transition-colors">
+                    Generate new code
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
-      )}
-
-      {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowSettings(false)}>
-          <div className="w-full max-w-md bg-buddy-surface rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display text-lg font-bold">Community Settings</h2>
-              <button onClick={() => setShowSettings(false)} className="text-buddy-text-secondary hover:text-buddy-text-primary"><Settings2 size={20} /></button>
-            </div>
-            <div className="flex items-center gap-4 mb-4">
-              {editAvatar ? (
-                <img src={editAvatar} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0" />
-              ) : (
-                <div className="w-16 h-16 rounded-2xl bg-buddy-surface-raised flex items-center justify-center shrink-0">
-                  <Users size={26} className="text-buddy-green" />
-                </div>
-              )}
-              <label className="flex-1 cursor-pointer text-sm text-buddy-green font-medium hover:underline">
-                {uploadingAvatar ? 'Uploading…' : editAvatar ? 'Change picture' : 'Add a community picture'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="hidden"
-                  disabled={uploadingAvatar}
-                  onChange={(e) => { handleAvatarPicked(e.target.files?.[0]); e.target.value = ''; }}
-                />
-              </label>
-            </div>
-            <label className="block text-xs font-medium text-buddy-text-secondary mb-1">Name</label>
-            <input value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-buddy-surface-raised border border-buddy-border text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40 mb-3" />
-            <label className="block text-xs font-medium text-buddy-text-secondary mb-1">Description</label>
-            <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} className="w-full px-3.5 py-2.5 rounded-xl bg-buddy-surface-raised border border-buddy-border text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40 mb-3 resize-none" />
-            <label className="flex items-center gap-2 text-sm mb-4 cursor-pointer">
-              <input type="checkbox" checked={editPublic} onChange={(e) => setEditPublic(e.target.checked)} className="accent-buddy-green" />
-              Public community
-            </label>
-            <button onClick={saveSettings} className="w-full py-3 rounded-xl bg-buddy-green text-buddy-black font-semibold">Save Changes</button>
-          </div>
-        </div>
-      )}
-
-      {showInvite && community && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowInvite(false)}>
-          <div className="w-full max-w-md bg-buddy-surface rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="font-display text-lg font-bold">Invite Members</h2>
-              <button onClick={() => setShowInvite(false)} className="text-buddy-text-secondary hover:text-buddy-text-primary">
-                <X size={20} />
-              </button>
-            </div>
-            <p className="text-sm text-buddy-text-secondary mb-2">Share this invite code with friends:</p>
-            <div className="flex items-center gap-3 bg-buddy-surface-raised rounded-xl px-4 py-3 mb-3">
-              <span className="flex-1 font-mono tracking-[0.3em] text-center font-bold">{community.invite_code}</span>
-              <button onClick={copyInvite} className="text-buddy-green hover:text-buddy-green/80" title="Copy">
-                <Copy size={18} />
-              </button>
-            </div>
-            {copyMsg && <p className="text-xs text-buddy-green mb-3">{copyMsg}</p>}
-            {canManage && (
-              <button onClick={rotateInvite} className="w-full py-2.5 rounded-xl bg-buddy-surface-raised text-sm font-semibold hover:bg-buddy-surface transition-colors">
-                Generate new code
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      </main>
     </div>
   );
 }

@@ -388,6 +388,28 @@ export const messagingApi = {
       .post<ApiResponse<{ is_liked: boolean; like_count: number }>>(`/messaging/communities/${id}/posts/${postId}/like/`)
       .then((r) => r.data.data),
 
+
+  repostCommunityPost: (id: string, postId: string) =>
+    apiClient
+      .post<ApiResponse<{ is_reposted: boolean; repost_count: number }>>(`/messaging/communities/${id}/posts/${postId}/repost/`)
+      .then((r) => r.data.data),
+
+  saveCommunityPost: (id: string, postId: string) =>
+    apiClient
+      .post<ApiResponse<{ is_saved: boolean; save_count: number }>>(`/messaging/communities/${id}/posts/${postId}/save/`)
+      .then((r) => r.data.data),
+
+  reactCommunityPost: (id: string, postId: string, reactionType: string) =>
+    apiClient
+      .post<ApiResponse<{ is_reacted: boolean; reaction_count: number }>>(`/messaging/communities/${id}/posts/${postId}/react/`, {
+        reaction_type: reactionType,
+      })
+      .then((r) => r.data.data),
+
+  shareCommunityPost: (id: string, postId: string) =>
+    apiClient
+      .post<ApiResponse<{ shared: boolean }>>(`/messaging/communities/${id}/posts/${postId}/share/`)
+      .then((r) => r.data.data),
   getPostComments: (id: string, postId: string) =>
     apiClient
       .get<ApiResponse<CommunityPostComment[]>>(`/messaging/communities/${id}/posts/${postId}/comments/`)

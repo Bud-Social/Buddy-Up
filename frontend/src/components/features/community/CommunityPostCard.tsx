@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Heart, MessageCircle, Share2, Pin,
+  Heart, ArrowCounterclockwise, Bookmark, Message, Share2, Pin,
   Users,
 } from 'lucide-react';
 import { messagingApi } from '@/api/messaging';
@@ -35,12 +35,23 @@ interface CommunityPostCardProps {
     };
     community_id?: string;
     community_name?: string;
+    like_count?: number;
+    repost_count?: number;
+    save_count?: number;
+    share_count?: number;
+    reaction_counts?: { [key: string]: number };
+    is_reposted_by_me?: boolean;
+    is_saved_by_me?: boolean;
   };
   communityId?: string;
   onLike?: () => void;
+  onRepost?: () => void;
+  onSave?: () => void;
+  onReact?: (reaction: string) => void;
+  onShare?: () => void;
 }
 
-export function CommunityPostCard({ post, communityId, onLike }: CommunityPostCardProps) {
+export function CommunityPostCard({ post, communityId, onLike, onRepost, onSave, onReact, onShare }: CommunityPostCardProps) {
   const [isLiked, setIsLiked] = useState(post.is_liked);
   const [likeCount, setLikeCount] = useState(post.like_count);
 
@@ -88,16 +99,32 @@ export function CommunityPostCard({ post, communityId, onLike }: CommunityPostCa
             onClick={handleLike}
             className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${isLiked ? 'text-buddy-red' : 'text-buddy-text-secondary hover:text-buddy-red'}`}
           >
-            <Heart size={15} fill={isLiked ? 'currentColor' : 'none'} />
-            {likeCount}
+            <Heart size={15} fill={isLiked ? 'currentColor' : 'none'} />{post.like_count}
           </button>
-          <button className="flex items-center gap-1.5 text-xs font-medium text-buddy-text-secondary hover:text-buddy-green transition-colors">
-            <MessageCircle size={15} />
-            {post.comment_count}
+          <button
+            onClick={() => onRepost?.()}
+            className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
+          >
+            <ArrowCounterclockwise size={15} />{post.repost_count || 0}
           </button>
-          <button className="flex items-center gap-1.5 text-xs font-medium text-buddy-text-secondary hover:text-buddy-green transition-colors">
-            <Share2 size={15} />
-            Share
+          <button
+            onClick={() => onSave?.()}
+            className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
+          >
+            <Bookmark size={15} />{post.save_count || 0}
+          </button>
+          <button
+            onClick={() => {
+              const reactions = Object.keys(post.reaction_counts ?? {});
+              if (reactions.length > 0) onReact?.(reactions[0]);
+              else onLike?.();
+            }}
+            className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
+          >
+            <Message size={15} />{post.comment_count}
+          </button>
+          <button onClick={onShare} className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-purple`}>
+            <Share2 size={15} />Share
           </button>
           {post.community_name && (
             <span className="ml-auto text-[10px] text-buddy-text-secondary/60 bg-buddy-surface-raised px-2 py-0.5 rounded-full">
