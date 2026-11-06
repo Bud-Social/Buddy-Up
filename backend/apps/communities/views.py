@@ -43,6 +43,10 @@ class AllCommunityPostsView(views.APIView):
                     'avatar_url': cp.author.avatar_url if hasattr(cp.author, 'avatar_url') else '',
                     'verification_status': 'verified',
                 }
+            # Get community name from conversation
+            community_name = ''
+            if cp.conversation:
+                community_name = cp.conversation.group_name or ''
             data.append({
                 'id': str(cp.id),
                 'post_type': 'text',
@@ -80,6 +84,7 @@ class AllCommunityPostsView(views.APIView):
                 'updated_at': cp.updated_at.isoformat() if cp.updated_at else None,
                 'ai_analysis': {},
                 'community_id': str(cp.conversation_id),
+                'community_name': community_name,
             })
 
         return Response({'success': True, 'data': data, 'message': 'All community posts.', 'errors': None, 'pagination': None})
@@ -215,6 +220,7 @@ class CommunityPostsView(views.APIView):
                 'updated_at': cp.updated_at.isoformat() if cp.updated_at else None,
                 'ai_analysis': {},
                 'community_id': str(conv.id),
+                'community_name': conv.group_name or '',
             })
 
         return Response({'success': True, 'data': data, 'message': 'Community posts.', 'errors': None, 'pagination': None})
