@@ -282,7 +282,9 @@ export default function Feed() {
     cursorRef.current = undefined;
     setPendingNewPosts([]);
     setNewPostsCount(0);
-    fetchPosts(activeTab === 'videos' ? 'for_you' : activeTab, true);
+    if (activeTab !== 'communities') {
+      fetchPosts(activeTab === 'videos' ? 'for_you' : activeTab, true);
+    }
   }, [activeTab, fetchPosts]);
 
   // Fetch community posts when sub-tab changes
