@@ -49,11 +49,11 @@ extension CommunityPostToPost on CommunityPost {
       commentCount: commentCount,
       isPinned: isPinned,
       createdAt: createdAt,
-      viewCount: viewCount,
-      isRepostedByMe: isRepostedByMe,
-      repostCount: repostCount,
-      shareCount: shareCount,
-      saveCount: saveCount,
+      viewCount: post.viewCount,
+      isRepostedByMe: post.isRepost,
+      repostCount: post.repostCount,
+      shareCount: post.shareCount,
+      saveCount: post.saveCount,
     );
   }
 }
@@ -153,9 +153,9 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
         .share(postId);
   }
 
-  Future<void> _addComment(String postId, String body) async {
+  Future<void> _addComment(String communityId, String postId, String body) async {
     await ref
-        .read(communityFeedProvider(widget.communityId).notifier)
+        .read(communityFeedProvider(communityId).notifier)
         .addComment(postId, body);
   }
 
@@ -352,7 +352,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     );
   }
 
-  Future<void> _commentSheet(CommunityPost post) async {
+  Future<void> _commentSheet(String communityId, CommunityPost post) async {
     final controller = TextEditingController();
     final cs = Theme.of(context).colorScheme;
 
@@ -414,7 +414,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   icon: const Icon(Icons.send, color: BuddyColors.green),
                   onPressed: () {
                     if (controller.text.trim().isNotEmpty) {
-                      _addComment(post.id, controller.text.trim());
+                      _addComment(communityId, post.id, controller.text.trim());
                       controller.clear();
                       Navigator.pop(ctx);
                     }
@@ -755,7 +755,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                 return PostCard(
                   post: p.toPost(),
                   onLike: (_) => _toggleLike(community.id, p.id),
-                  onComment: (_) => _commentSheet(p),
+                  onComment: (_) => _commentSheet(community.id, p),
                   onRepost: (_) => _toggleRepost(community.id, p.id),
                   onSave: (_) => _toggleSave(community.id, p.id),
                   onShare: (_) => _toggleShare(p.id),
@@ -827,7 +827,7 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   communityName: entry.communityName,
                   communityCoverUrl: entry.communityCoverUrl,
                   onLike: (_) => _toggleLike(entry.communityId, p.id),
-                  onComment: (_) => _commentSheet(p),
+                  onComment: (_) => _commentSheet(entry.communityId, p),
                   onRepost: (_) => _toggleRepost(entry.communityId, p.id),
                   onSave: (_) => _toggleSave(entry.communityId, p.id),
                   onShare: (_) => _toggleShare(p.id),
