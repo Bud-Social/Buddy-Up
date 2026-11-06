@@ -34,8 +34,8 @@ class AllCommunityPostsView(views.APIView):
 
         data = []
         for cp in messaging_posts:
-            author_data = cp.author_data or {}
-            if not author_data and cp.author:
+            author_data = {}
+            if cp.author:
                 author_data = {
                     'user_id': str(cp.author.user_id) if hasattr(cp.author, 'user_id') else str(cp.author.id),
                     'username': cp.author.username if hasattr(cp.author, 'username') else '',
@@ -169,8 +169,8 @@ class CommunityPostsView(views.APIView):
 
         data = []
         for cp in messaging_posts:
-            author_data = cp.author_data or {}
-            if not author_data and cp.author:
+            author_data = {}
+            if cp.author:
                 author_data = {
                     'user_id': str(cp.author.user_id) if hasattr(cp.author, 'user_id') else str(cp.author.id),
                     'username': cp.author.username if hasattr(cp.author, 'username') else '',
