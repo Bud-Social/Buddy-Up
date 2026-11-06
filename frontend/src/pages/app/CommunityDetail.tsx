@@ -1,21 +1,31 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Users, Copy, MessageCircle,
+  ArrowLeft, Users, MessageCircle, Heart, Pin, Copy,
   Shield, ShieldCheck, MoreHorizontal, Settings2, X,
+  Share2,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { PostComposer } from '@/components/features/feed/PostComposer';
-import { PostCard } from '@/components/features/feed/PostCard';
-import { feedApi } from '@/api';
-import { messagingApi, type Community } from '@/api/messaging';
-import type { Post } from '@/types';
+import { messagingApi, type Community, type CommunityPost } from '@/api/messaging';
+
+function timeAgo(iso: string): string {
+  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 export default function CommunityDetail() {
   const { communityId } = useParams<{ communityId: string }>();
   const navigate = useNavigate();
   const [community, setCommunity] = useState<Community | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState<'feed' | 'members'>('feed');
   const [showSettings, setShowSettings] = useState(false);
@@ -43,9 +53,8 @@ export default function CommunityDetail() {
     messagingApi.getCommunity(communityId)
       .then(setCommunity)
       .catch(() => {});
-    feedApi.getCommunityPosts(communityId)
-      .then((res) => {
-        const data = res.data || [];
+    messagingApi.getCommunityPosts(communityId)
+      .then((data) => {
         setPosts(Array.isArray(data) ? data : []);
       })
       .catch(() => {});
@@ -68,6 +77,14 @@ export default function CommunityDetail() {
     } finally {
       setIsJoining(false);
     }
+  };
+
+  const toggleLike = async (postId: string) => {
+    if (!communityId) return;
+    try {
+      await messagingApi.togglePostLike(communityId, postId);
+      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, is_liked: !p.is_liked, like_count: p.like_count + (p.is_liked ? -1 : 1) } : p));
+    } catch { /* noop */ }
   };
 
   const saveSettings = async () => {
@@ -260,7 +277,59 @@ export default function CommunityDetail() {
               </Card>
             ) : (
               posts.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <div key={post.id} className="bg-buddy-surface rounded-xl border border-buddy-border overflow-hidden transition-colors hover:border-buddy-green/50">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {post.author_data.avatar_url ? (
+                          <img src={post.author_data.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-buddy-surface-raised flex items-center justify-center">
+                            <Users size={16} className="text-buddy-green" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-semibold text-sm">{post.author_data.display_name}</p>
+                            {post.is_pinned && <Pin size={12} className="text-buddy-gold shrink-0" />}
+                          </div>
+                          <p className="text-xs text-buddy-text-secondary">
+                            @{post.author_data.username} · {timeAgo(post.created_at)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {post.body && <p className="mt-1 mb-3 text-sm whitespace-pre-wrap text-buddy-text-primary leading-relaxed">{post.body}</p>}
+                    {post.media_url && (
+                      <img src={post.media_url} alt="" className="mt-2 rounded-xl w-full object-cover max-h-96" />
+                    )}
+
+                    <div className="flex items-center gap-4 mt-4 pt-3 border-t border-buddy-surface">
+                      <button
+                        onClick={() => toggleLike(post.id)}
+                        className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${post.is_liked ? 'text-buddy-red' : 'text-buddy-text-secondary hover:text-buddy-red'}`}
+                      >
+                        <Heart size={15} fill={post.is_liked ? 'currentColor' : 'none'} />
+                        {post.like_count}
+                      </button>
+                      <button
+                        onClick={() => {}}
+                        className="flex items-center gap-1.5 text-xs font-medium text-buddy-text-secondary hover:text-buddy-green transition-colors"
+                      >
+                        <MessageCircle size={15} />
+                        {post.comment_count}
+                      </button>
+                      <button
+                        onClick={() => {}}
+                        className="flex items-center gap-1.5 text-xs font-medium text-buddy-text-secondary hover:text-buddy-green transition-colors"
+                      >
+                        <Share2 size={15} />
+                        Share
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ))
             )}
           </div>
