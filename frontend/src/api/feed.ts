@@ -106,8 +106,8 @@ export const feedApi = {
     ).then((r) => r.data),
 
   /** Get community posts. */
-  getCommunityPosts: (slug: string, cursor?: string) => {
-    const url = slug === 'all' ? '/communities/posts/' : `/communities/${slug}/posts/`;
+  getCommunityPosts: (id: string, cursor?: string) => {
+    const url = id === 'all' ? '/communities/posts/' : `/communities/${id}/posts/`;
     return apiClient.get<ApiResponse<Post[]>>(url, { params: { cursor } }).then((r) => r.data);
   },
 

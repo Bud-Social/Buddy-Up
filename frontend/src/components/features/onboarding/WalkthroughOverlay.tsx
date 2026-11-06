@@ -24,6 +24,11 @@ const STEPS = [
   },
 ];
 
+export function shouldShowWalkthrough(): boolean {
+  if (typeof localStorage === 'undefined') return false;
+  return localStorage.getItem(WALKTHROUGH_KEY) !== '1';
+}
+
 export function WalkthroughOverlay({ onClose }: { onClose: () => void }) {
   const [currentStep, setCurrentStep] = useState(0);
   const isLast = currentStep === STEPS.length - 1;
@@ -95,9 +100,4 @@ export function WalkthroughOverlay({ onClose }: { onClose: () => void }) {
       </div>
     </div>
   );
-}
-
-export function shouldShowWalkthrough(): boolean {
-  if (typeof localStorage === 'undefined') return false;
-  return localStorage.getItem(WALKTHROUGH_KEY) !== '1';
 }
