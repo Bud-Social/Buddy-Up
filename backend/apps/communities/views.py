@@ -4,7 +4,8 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Count
 
 from .models import Community, CommunityPost
-from .serializers import CommunitySerializer, CommunityPostSerializer
+from .serializers import CommunitySerializer
+from apps.messaging.models import Conversation, CommunityPost as MessagingCommunityPost
 from apps.feed.models import Post
 
 
@@ -27,13 +28,60 @@ class AllCommunityPostsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        from apps.feed.serializers import PostSerializer
-        qs = Post.objects.filter(
-            is_deleted=False,
-            community_links__is_deleted=False,
-        ).select_related('author').distinct()
-        qs = qs.order_by('-created_at')[:20]
-        data = PostSerializer(qs, many=True, context={'request': request}).data
+        # Return messaging community posts as Post-like objects
+        messaging_posts = MessagingCommunityPost.objects.filter(is_deleted=False).select_related('author', 'conversation')
+        messaging_posts = messaging_posts.order_by('-created_at')[:20]
+
+        data = []
+        for cp in messaging_posts:
+            author_data = cp.author_data or {}
+            if not author_data and cp.author:
+                author_data = {
+                    'user_id': str(cp.author.user_id) if hasattr(cp.author, 'user_id') else str(cp.author.id),
+                    'username': cp.author.username if hasattr(cp.author, 'username') else '',
+                    'display_name': cp.author.display_name if hasattr(cp.author, 'display_name') else '',
+                    'avatar_url': cp.author.avatar_url if hasattr(cp.author, 'avatar_url') else '',
+                    'verification_status': 'verified',
+                }
+            data.append({
+                'id': str(cp.id),
+                'post_type': 'text',
+                'body': cp.body or '',
+                'is_anonymous': False,
+                'gym_tag_id': None,
+                'gym_tag_name': None,
+                'visibility': 'public',
+                'location_label': '',
+                'location_lat': None,
+                'location_lng': None,
+                'workout_log_data': None,
+                'media_urls': [cp.media_url] if cp.media_url else [],
+                'media': [],
+                'tags': [],
+                'view_count': 0,
+                'share_count': 0,
+                'moderation_status': 'clean',
+                'content_rating': 'safe',
+                'comments_disabled': False,
+                'author_data': author_data,
+                'reaction_counts': {},
+                'user_reaction': 'like' if cp.is_liked else None,
+                'comment_count': cp.comment_count or 0,
+                'repost_count': 0,
+                'save_count': 0,
+                'is_saved': False,
+                'is_reposted_by_me': False,
+                'is_repost': False,
+                'original_post_data': None,
+                'is_pinned': cp.is_pinned,
+                'poll': None,
+                'reposters': [],
+                'created_at': cp.created_at.isoformat() if cp.created_at else None,
+                'updated_at': cp.updated_at.isoformat() if cp.updated_at else None,
+                'ai_analysis': {},
+                'community_id': str(cp.conversation_id),
+            })
+
         return Response({'success': True, 'data': data, 'message': 'All community posts.', 'errors': None, 'pagination': None})
 
 
@@ -42,7 +90,26 @@ class CommunityDetailView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, slug):
-        community = get_object_or_404(Community, slug=slug, is_deleted=False)
+        try:
+            community = Community.objects.get(id=slug, is_deleted=False)
+        except (Community.DoesNotExist, ValueError):
+            # Fall back to messaging conversation
+            try:
+                conv = Conversation.objects.get(id=slug, is_community=True, is_deleted=False)
+                community = Community.objects.create(
+                    id=conv.id,
+                    name=conv.group_name or 'Community',
+                    slug=conv.group_name.lower().replace(' ', '-') if conv.group_name else str(conv.id),
+                    description=conv.description or '',
+                    cover_url=conv.cover_url or '',
+                    avatar_url=conv.group_avatar_url or '',
+                    creator=conv.created_by,
+                    is_private=not conv.is_public,
+                )
+                community.members.add(request.user.profile)
+            except Exception:
+                community = get_object_or_404(Community, slug=slug, is_deleted=False)
+
         data = CommunitySerializer(community, context={'request': request}).data
         return Response({'success': True, 'data': data, 'message': 'Community.', 'errors': None, 'pagination': None})
 
@@ -76,18 +143,80 @@ class CommunityPostsView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, slug):
+        # Try to find the community in messaging system
         try:
-            community = Community.objects.get(id=slug, is_deleted=False)
-        except Community.DoesNotExist:
-            community = get_object_or_404(Community, slug=slug, is_deleted=False)
-        from apps.feed.serializers import PostSerializer
-        qs = Post.objects.filter(
-            is_deleted=False,
-            community_links__community=community,
-            community_links__is_deleted=False,
-        ).select_related('author')
-        qs = qs.order_by('-created_at')[:20]
-        data = PostSerializer(qs, many=True, context={'request': request}).data
+            conv = Conversation.objects.get(id=slug, is_community=True, is_deleted=False)
+        except (Conversation.DoesNotExist, ValueError):
+            # Fall back to communities app
+            try:
+                community = Community.objects.get(id=slug, is_deleted=False)
+            except Community.DoesNotExist:
+                community = get_object_or_404(Community, slug=slug, is_deleted=False)
+            qs = Post.objects.filter(
+                is_deleted=False,
+                community_links__community=community,
+                community_links__is_deleted=False,
+            ).select_related('author')
+            qs = qs.order_by('-created_at')[:20]
+            from apps.feed.serializers import PostSerializer
+            data = PostSerializer(qs, many=True, context={'request': request}).data
+            return Response({'success': True, 'data': data, 'message': 'Community posts.', 'errors': None, 'pagination': None})
+
+        # Return messaging community posts as Post-like objects
+        messaging_posts = MessagingCommunityPost.objects.filter(
+            conversation=conv, is_deleted=False
+        ).select_related('author').order_by('-created_at')[:20]
+
+        data = []
+        for cp in messaging_posts:
+            author_data = cp.author_data or {}
+            if not author_data and cp.author:
+                author_data = {
+                    'user_id': str(cp.author.user_id) if hasattr(cp.author, 'user_id') else str(cp.author.id),
+                    'username': cp.author.username if hasattr(cp.author, 'username') else '',
+                    'display_name': cp.author.display_name if hasattr(cp.author, 'display_name') else '',
+                    'avatar_url': cp.author.avatar_url if hasattr(cp.author, 'avatar_url') else '',
+                    'verification_status': 'verified',
+                }
+            data.append({
+                'id': str(cp.id),
+                'post_type': 'text',
+                'body': cp.body or '',
+                'is_anonymous': False,
+                'gym_tag_id': None,
+                'gym_tag_name': None,
+                'visibility': 'public',
+                'location_label': '',
+                'location_lat': None,
+                'location_lng': None,
+                'workout_log_data': None,
+                'media_urls': [cp.media_url] if cp.media_url else [],
+                'media': [],
+                'tags': [],
+                'view_count': 0,
+                'share_count': 0,
+                'moderation_status': 'clean',
+                'content_rating': 'safe',
+                'comments_disabled': False,
+                'author_data': author_data,
+                'reaction_counts': {},
+                'user_reaction': 'like' if cp.is_liked else None,
+                'comment_count': cp.comment_count or 0,
+                'repost_count': 0,
+                'save_count': 0,
+                'is_saved': False,
+                'is_reposted_by_me': False,
+                'is_repost': False,
+                'original_post_data': None,
+                'is_pinned': cp.is_pinned,
+                'poll': None,
+                'reposters': [],
+                'created_at': cp.created_at.isoformat() if cp.created_at else None,
+                'updated_at': cp.updated_at.isoformat() if cp.updated_at else None,
+                'ai_analysis': {},
+                'community_id': str(conv.id),
+            })
+
         return Response({'success': True, 'data': data, 'message': 'Community posts.', 'errors': None, 'pagination': None})
 
 
@@ -109,12 +238,12 @@ class CommunityCreateView(views.APIView):
         community = Community.objects.create(
             name=name,
             slug=name.lower().replace(' ', '-'),
-            description=description,
-            category=category,
+            creator=request.user.profile,
             is_private=is_private,
             is_nsfw=is_nsfw,
             tags=tags if isinstance(tags, list) else [],
-            creator=request.user.profile,
+            description=description,
+            category=category,
         )
         community.members.add(request.user.profile)
         data = CommunitySerializer(community, context={'request': request}).data
@@ -138,5 +267,6 @@ class CommunityPostCreateView(views.APIView):
         if created:
             community.post_count = CommunityPost.objects.filter(community=community, is_deleted=False).count()
             community.save(update_fields=['post_count'])
-        data = CommunityPostSerializer(cp, context={'request': request}).data
+        from apps.feed.serializers import PostSerializer
+        data = PostSerializer(post, context={'request': request}).data
         return Response({'success': True, 'data': data, 'message': 'Post added to community.', 'errors': None, 'pagination': None})
