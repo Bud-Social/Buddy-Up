@@ -23,6 +23,7 @@ from common.utils import validate_file_signature
 from .models import (
     Conversation, ConversationPromotion, Message, MessageReaction, CallLog,
     ConversationMembership, CommunityPost, CommunityPostLike, CommunityPostComment,
+    CommunityPostRepost, CommunityPostSave, CommunityPostReaction,
     CallSession, CallParticipant,
 )
 from .serializers import (
@@ -1740,3 +1741,138 @@ class CommunityPostCommentView(views.APIView):
         post.save(update_fields=['comment_count', 'updated_at'])
         return Response({'success': True, 'data': None, 'message': 'Comment deleted.',
                          'errors': None, 'pagination': None})
+
+
+class CommunityPostRepostView(views.APIView):
+    """Repost or unrepost a community post."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+
+        repost = CommunityPostRepost.objects.filter(
+            post=post, profile=request.user.profile
+        ).first()
+        if repost:
+            repost.delete()
+            post.repost_count = max(0, post.repost_count - 1)
+            post.save(update_fields=['repost_count', 'updated_at'])
+            reposted = False
+        else:
+            CommunityPostRepost.objects.create(post=post, profile=request.user.profile)
+            post.repost_count += 1
+            post.save(update_fields=['repost_count', 'updated_at'])
+            reposted = True
+            if post.author_id != request.user.profile.user_id:
+                _push_community_notification(
+                    post.author.user_id, 'community_repost',
+                    f'{request.user.profile.display_name} reposted your post',
+                    post.body[:100],
+                    {'community_id': str(conv.id), 'post_id': str(post.id)},
+                )
+        return Response({
+            'success': True,
+            'data': {'is_reposted': reposted, 'repost_count': post.repost_count},
+            'message': 'Repost toggled.', 'errors': None, 'pagination': None,
+        })
+
+
+
+class CommunityPostSaveView(views.APIView):
+    """Save or unsave a community post."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+
+        save = CommunityPostSave.objects.filter(
+            post=post, profile=request.user.profile
+        ).first()
+        if save:
+            save.delete()
+            post.save_count = max(0, post.save_count - 1)
+            post.save(update_fields=['save_count', 'updated_at'])
+            saved = False
+        else:
+            CommunityPostSave.objects.create(post=post, profile=request.user.profile)
+            post.save_count += 1
+            post.save(update_fields=['save_count', 'updated_at'])
+            saved = True
+        return Response({
+            'success': True,
+            'data': {'is_saved': saved, 'save_count': post.save_count},
+            'message': 'Save toggled.', 'errors': None, 'pagination': None,
+        })
+
+
+
+class CommunityPostReactView(views.APIView):
+    """React or unreact to a community post (reaction types beyond like)."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+
+        reaction_type = request.data.get('reaction_type', 'fire')
+        reaction = CommunityPostReaction.objects.filter(
+            post=post, profile=request.user.profile, reaction_type=reaction_type
+        ).first()
+        if reaction:
+            reaction.delete()
+            reacted = False
+        else:
+            CommunityPostReaction.objects.create(
+                post=post, profile=request.user.profile, reaction_type=reaction_type
+            )
+            reacted = True
+            if post.author_id != request.user.profile.user_id:
+                _push_community_notification(
+                    post.author.user_id, 'community_reaction',
+                    f'{request.user.profile.display_name} reacted to your post',
+                    post.body[:100],
+                    {'community_id': str(conv.id), 'post_id': str(post.id)},
+                )
+        reaction_count = post.reactions.filter(reaction_type=reaction_type).count()
+        return Response({
+            'success': True,
+            'data': {
+                'is_reacted': reacted,
+                'reaction_type': reaction_type,
+                'reaction_count': reaction_count,
+            },
+            'message': 'Reaction toggled.', 'errors': None, 'pagination': None,
+        })
+
+
+
+class CommunityPostViewView(views.APIView):
+    """Record a view impression for a community post."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+
+        post.view_count += 1
+        post.save(update_fields=['view_count', 'updated_at'])
+        return Response({
+            'success': True,
+            'data': {'view_count': post.view_count},
+            'message': 'View recorded.', 'errors': None, 'pagination': None,
+        })
+

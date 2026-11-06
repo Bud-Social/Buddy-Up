@@ -206,4 +206,29 @@ abstract class MessagingRepository {
     @Path('pid') String postId,
     @Path('cid') String commentId,
   );
+
+  @POST('/messaging/communities/{id}/posts/{pid}/repost/')
+  Future<dynamic> repostCommunityPost(
+    @Path('id') String communityId,
+    @Path('pid') String postId,
+  );
+
+  @POST('/messaging/communities/{id}/posts/{pid}/save/')
+  Future<dynamic> saveCommunityPost(
+    @Path('id') String communityId,
+    @Path('pid') String postId,
+  );
+
+  @POST('/messaging/communities/{id}/posts/{pid}/react/')
+  Future<dynamic> reactCommunityPost(
+    @Path('id') String communityId,
+    @Path('pid') String postId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('/messaging/communities/{id}/posts/{pid}/view/')
+  Future<dynamic> recordCommunityPostView(
+    @Path('id') String communityId,
+    @Path('pid') String postId,
+  );
 }

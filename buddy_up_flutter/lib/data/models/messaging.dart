@@ -140,12 +140,18 @@ abstract class CommunityPost with _$CommunityPost {
     @JsonKey(name: 'is_pinned') @Default(false) bool isPinned,
     @JsonKey(name: 'like_count') @Default(0) int likeCount,
     @JsonKey(name: 'comment_count') @Default(0) int commentCount,
+    @JsonKey(name: 'repost_count') @Default(0) int repostCount,
+    @JsonKey(name: 'share_count') @Default(0) int shareCount,
+    @JsonKey(name: 'save_count') @Default(0) int saveCount,
+    @JsonKey(name: 'view_count') @Default(0) int viewCount,
+    @JsonKey(name: 'is_repost') @Default(false) bool isRepost,
+    @JsonKey(name: 'original_post_id') String? originalPostId,
+    @JsonKey(name: 'is_anonymous') @Default(false) bool isAnonymous,
     @JsonKey(name: 'author_data')
     @Default(ProfileBrief())
     ProfileBrief authorData,
     @JsonKey(name: 'is_liked') @Default(false) bool isLiked,
-    /// `null` unless the request passed `include_comments`, so the default has
-    /// to swallow an explicit null rather than throw.
+    @JsonKey(name: 'is_reposted_by_me') @Default(false) bool isRepostedByMe,
     @Default(<CommunityPostComment>[]) List<CommunityPostComment> comments,
     @JsonKey(name: 'created_at') @Default('') String createdAt,
   }) = _CommunityPost;

@@ -2,9 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/messaging.dart';
 import '../../messaging/providers/messaging_provider.dart'
     show messagingRepositoryProvider;
-import '../../feed/providers/feed_provider.dart' show feedRepositoryProvider;
-import '../../../data/models/post.dart'
-    show ReactionInput, RepostPayload, SavePayload;
 
 final communityRepositoryProvider = messagingRepositoryProvider;
 
@@ -20,19 +17,27 @@ List<CommunityPost> _parsePostList(dynamic data) => (data as List)
 /// tab which aggregates posts across every community the user is in.
 class CommunityPostEntry {
   final CommunityPost post;
+  final String communityId;
   final String communityName;
   final String communityCoverUrl;
 
-  CommunityPostEntry(this.post, this.communityName, this.communityCoverUrl);
+  CommunityPostEntry({
+    required this.post,
+    required this.communityId,
+    required this.communityName,
+    required this.communityCoverUrl,
+  });
 
   CommunityPostEntry copyWith({
     CommunityPost? post,
+    String? communityId,
     String? communityName,
     String? communityCoverUrl,
   }) => CommunityPostEntry(
-    post ?? this.post,
-    communityName ?? this.communityName,
-    communityCoverUrl ?? this.communityCoverUrl,
+    post: post ?? this.post,
+    communityId: communityId ?? this.communityId,
+    communityName: communityName ?? this.communityName,
+    communityCoverUrl: communityCoverUrl ?? this.communityCoverUrl,
   );
 }
 
@@ -216,7 +221,12 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
             .getCommunityPosts(conv.id);
         final posts = _parsePostList(postsRaw['data'] as List);
         for (final p in posts) {
-          entries.add(CommunityPostEntry(p, conv.groupName, conv.coverUrl));
+          entries.add(CommunityPostEntry(
+            post: p,
+            communityId: conv.id,
+            communityName: conv.groupName,
+            communityCoverUrl: conv.coverUrl,
+          ));
         }
       }
       entries.sort((a, b) => b.post.createdAt.compareTo(a.post.createdAt));
@@ -282,7 +292,6 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
         .read(communityRepositoryProvider)
         .togglePostLike(communityId, postId);
     await loadPosts();
-    await loadAllPosts();
   }
 
   Future<void> addComment(String postId, String body) async {
@@ -292,35 +301,36 @@ class CommunityFeedNotifier extends AsyncNotifier<CommunityFeedState> {
       {'body': body},
     );
     await loadPosts();
-    await loadAllPosts();
   }
 
   /// Repost a community post — mirrors the feed repost API.
   Future<void> repost(String postId) async {
-    final repo = ref.read(feedRepositoryProvider);
-    await repo.repost(postId, const RepostPayload());
+    final repo = ref.read(communityRepositoryProvider);
+    await repo.repostCommunityPost(communityId, postId);
     await loadPosts();
-    await loadAllPosts();
   }
 
   /// Save/unsave a community post.
   Future<void> save(String postId) async {
-    final repo = ref.read(feedRepositoryProvider);
-    await repo.save(postId, const SavePayload());
+    final repo = ref.read(communityRepositoryProvider);
+    await repo.saveCommunityPost(communityId, postId);
     await loadPosts();
-    await loadAllPosts();
   }
 
   /// React to a community post (fire reaction type).
   Future<void> react(String postId, String reaction) async {
-    final repo = ref.read(feedRepositoryProvider);
-    if (reaction.isEmpty) {
-      await repo.unreact(postId);
-    } else {
-      await repo.react(postId, ReactionInput(reactionType: reaction));
-    }
+    final repo = ref.read(communityRepositoryProvider);
+    await repo.reactCommunityPost(
+      communityId,
+      postId,
+      {'reaction_type': reaction},
+    );
     await loadPosts();
-    await loadAllPosts();
+  }
+
+  /// Share a community post.
+  Future<void> share(String postId) async {
+    await loadPosts();
   }
 
   Future<void> join() async {

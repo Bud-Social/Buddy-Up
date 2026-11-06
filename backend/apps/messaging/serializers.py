@@ -288,15 +288,25 @@ class CommunityPostCommentSerializer(serializers.ModelSerializer):
 class CommunityPostSerializer(serializers.ModelSerializer):
     author_data = serializers.SerializerMethodField()
     is_liked = serializers.SerializerMethodField()
+    is_reposted_by_me = serializers.SerializerMethodField()
+    reposters = serializers.SerializerMethodField()
     comments = serializers.SerializerMethodField()
 
     class Meta:
         model = CommunityPost
-        fields = ['id', 'conversation_id', 'author_id', 'body', 'media_url',
-                  'media_mime', 'is_pinned', 'like_count', 'comment_count',
-                  'author_data', 'is_liked', 'comments', 'created_at']
-        read_only_fields = ['id', 'conversation_id', 'author_id', 'like_count',
-                            'comment_count', 'created_at']
+        fields = [
+            'id', 'conversation_id', 'author_id', 'body', 'media_url',
+            'media_mime', 'is_pinned', 'like_count', 'comment_count',
+            'repost_count', 'share_count', 'save_count', 'view_count',
+            'is_repost', 'original_post_id', 'is_anonymous',
+            'author_data', 'is_liked', 'is_reposted_by_me', 'reposters',
+            'comments', 'created_at',
+        ]
+        read_only_fields = [
+            'id', 'conversation_id', 'author_id', 'like_count',
+            'comment_count', 'repost_count', 'share_count', 'save_count',
+            'view_count', 'is_repost', 'original_post_id', 'created_at',
+        ]
 
     def get_author_data(self, obj):
         return {
@@ -312,6 +322,27 @@ class CommunityPostSerializer(serializers.ModelSerializer):
         if not (request and request.user.is_authenticated):
             return False
         return obj.likes.filter(profile=request.user.profile).exists()
+
+    def get_is_reposted_by_me(self, obj):
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return False
+        return obj.reposts.filter(profile=request.user.profile).exists()
+
+    def get_reposters(self, obj):
+        request = self.context.get('request')
+        qs = obj.reposts.select_related('profile')[:5]
+        return [
+            {
+                'user_id': str(r.profile.user_id),
+                'display_name': r.profile.display_name,
+                'avatar_url': r.profile.avatar_url,
+                'followed_by_viewer': r.profile == getattr(
+                    request.user, 'profile', None
+                ) if request else False,
+            }
+            for r in qs
+        ]
 
     def get_comments(self, obj):
         include = self.context.get('include_comments', False)

@@ -49,11 +49,11 @@ extension CommunityPostToPost on CommunityPost {
       commentCount: commentCount,
       isPinned: isPinned,
       createdAt: createdAt,
-      viewCount: 0, // community posts don't expose view_count from API yet
-      isRepostedByMe: false,
-      repostCount: 0,
-      shareCount: 0,
-      saveCount: 0,
+      viewCount: viewCount,
+      isRepostedByMe: isRepostedByMe,
+      repostCount: repostCount,
+      shareCount: shareCount,
+      saveCount: saveCount,
     );
   }
 }
@@ -123,28 +123,34 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
     notifier.loadPosts();
   }
 
-  Future<void> _toggleLike(String postId) async {
+  Future<void> _toggleLike(String communityId, String postId) async {
     await ref
-        .read(communityFeedProvider(widget.communityId).notifier)
+        .read(communityFeedProvider(communityId).notifier)
         .toggleLike(postId);
   }
 
-  Future<void> _toggleRepost(String postId) async {
+  Future<void> _toggleRepost(String communityId, String postId) async {
     await ref
-        .read(communityFeedProvider(widget.communityId).notifier)
+        .read(communityFeedProvider(communityId).notifier)
         .repost(postId);
   }
 
-  Future<void> _toggleSave(String postId) async {
+  Future<void> _toggleSave(String communityId, String postId) async {
     await ref
-        .read(communityFeedProvider(widget.communityId).notifier)
+        .read(communityFeedProvider(communityId).notifier)
         .save(postId);
   }
 
-  Future<void> _handleReact(String postId, String reaction) async {
+  Future<void> _handleReact(String communityId, String postId, String reaction) async {
+    await ref
+        .read(communityFeedProvider(communityId).notifier)
+        .react(postId, reaction);
+  }
+
+  Future<void> _toggleShare(String postId) async {
     await ref
         .read(communityFeedProvider(widget.communityId).notifier)
-        .react(postId, reaction);
+        .share(postId);
   }
 
   Future<void> _addComment(String postId, String body) async {
@@ -748,11 +754,13 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
               children: state.posts.map((p) {
                 return PostCard(
                   post: p.toPost(),
-                  onLike: (_) => _toggleLike(p.id),
+                  onLike: (_) => _toggleLike(community.id, p.id),
                   onComment: (_) => _commentSheet(p),
-                  onRepost: (_) => _toggleRepost(p.id),
-                  onSave: (_) => _toggleSave(p.id),
-                  onReact: (postId, reaction) => _handleReact(postId, reaction),
+                  onRepost: (_) => _toggleRepost(community.id, p.id),
+                  onSave: (_) => _toggleSave(community.id, p.id),
+                  onShare: (_) => _toggleShare(p.id),
+                  onReact: (postId, reaction) =>
+                      _handleReact(community.id, postId, reaction),
                   onPin: canManage
                       ? (_) async {
                           await ref
@@ -818,18 +826,19 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                   post: p.toPost(),
                   communityName: entry.communityName,
                   communityCoverUrl: entry.communityCoverUrl,
-                  onLike: (_) => _toggleLike(p.id),
+                  onLike: (_) => _toggleLike(entry.communityId, p.id),
                   onComment: (_) => _commentSheet(p),
-                  onRepost: (_) => _toggleRepost(p.id),
-                  onSave: (_) => _toggleSave(p.id),
-                  onReact: (postId, reaction) => _handleReact(postId, reaction),
+                  onRepost: (_) => _toggleRepost(entry.communityId, p.id),
+                  onSave: (_) => _toggleSave(entry.communityId, p.id),
+                  onShare: (_) => _toggleShare(p.id),
+                  onReact: (postId, reaction) =>
+                      _handleReact(entry.communityId, postId, reaction),
                   onPin: canManage
                       ? (_) async {
                           await ref
                               .read(
-                                communityFeedProvider(
-                                  widget.communityId,
-                                ).notifier,
+                                communityFeedProvider(entry.communityId)
+                                    .notifier,
                               )
                               .updatePost(p.id, {'is_pinned': !p.isPinned});
                         }
@@ -838,9 +847,8 @@ class _CommunityDetailScreenState extends ConsumerState<CommunityDetailScreen> {
                       ? (_) async {
                           await ref
                               .read(
-                                communityFeedProvider(
-                                  widget.communityId,
-                                ).notifier,
+                                communityFeedProvider(entry.communityId)
+                                    .notifier,
                               )
                               .deletePost(p.id);
                         }
@@ -861,6 +869,7 @@ class CommunityPostCardWithTag extends StatelessWidget {
   final void Function(String)? onComment;
   final void Function(String)? onRepost;
   final void Function(String)? onSave;
+  final void Function(String)? onShare;
   final void Function(String, String)? onReact;
   final void Function(String)? onPin;
   final void Function(String)? onDelete;
@@ -874,6 +883,7 @@ class CommunityPostCardWithTag extends StatelessWidget {
     this.onComment,
     this.onRepost,
     this.onSave,
+    this.onShare,
     this.onReact,
     this.onPin,
     this.onDelete,
@@ -932,6 +942,7 @@ class CommunityPostCardWithTag extends StatelessWidget {
           onComment: onComment,
           onRepost: onRepost,
           onSave: onSave,
+          onShare: onShare,
           onReact: onReact,
           onPin: onPin,
           onDelete: onDelete,

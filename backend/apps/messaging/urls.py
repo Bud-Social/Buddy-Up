@@ -35,4 +35,8 @@ urlpatterns = [
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/like/', views.CommunityPostLikeView.as_view(), name='community_post_like'),
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/comments/', views.CommunityPostCommentView.as_view(), name='community_post_comments'),
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/comments/<uuid:comment_id>/', views.CommunityPostCommentView.as_view(), name='community_post_comment_delete'),
+    path('communities/<uuid:community_id>/posts/<uuid:post_id>/repost/', views.CommunityPostRepostView.as_view(), name='community_post_repost'),
+    path('communities/<uuid:community_id>/posts/<uuid:post_id>/save/', views.CommunityPostSaveView.as_view(), name='community_post_save'),
+    path('communities/<uuid:community_id>/posts/<uuid:post_id>/react/', views.CommunityPostReactView.as_view(), name='community_post_react'),
+    path('communities/<uuid:community_id>/posts/<uuid:post_id>/view/', views.CommunityPostViewView.as_view(), name='community_post_view'),
 ]

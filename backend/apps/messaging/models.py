@@ -265,6 +265,70 @@ class CallParticipant(TimestampedModel):
         return f'{self.profile} in {self.session_id}'
 
 
+class CommunityPostRepost(models.Model):
+    """Link table: a user reposted a community post."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    post = models.ForeignKey(
+        CommunityPost, on_delete=models.CASCADE, related_name='reposts'
+    )
+    profile = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_reposts'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'messaging_community_post_repost'
+        unique_together = ('post', 'profile')
+        indexes = [
+            models.Index(fields=['post', '-created_at']),
+            models.Index(fields=['profile', '-created_at']),
+        ]
+
+
+class CommunityPostSave(models.Model):
+    """Link table: a user saved a community post."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    post = models.ForeignKey(
+        CommunityPost, on_delete=models.CASCADE, related_name='saves'
+    )
+    profile = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_saves'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'messaging_community_post_save'
+        unique_together = ('post', 'profile')
+        indexes = [
+            models.Index(fields=['post', '-created_at']),
+            models.Index(fields=['profile', '-created_at']),
+        ]
+
+
+class CommunityPostReaction(models.Model):
+    """Link table: a user reacted to a community post (beyond like)."""
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    post = models.ForeignKey(
+        CommunityPost, on_delete=models.CASCADE, related_name='reactions'
+    )
+    profile = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_reactions'
+    )
+    reaction_type = models.CharField(max_length=20, default='fire')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'messaging_community_post_reaction'
+        unique_together = ('post', 'profile', 'reaction_type')
+        indexes = [
+            models.Index(fields=['post', 'reaction_type']),
+            models.Index(fields=['profile', '-created_at']),
+        ]
+
+
 class CommunityPost(TimestampedModel):
     """A post in a community's feed (announcements, updates, discussions)."""
 
@@ -282,6 +346,13 @@ class CommunityPost(TimestampedModel):
     # Denormalised for cheap feed sorting/filtering
     like_count = models.PositiveIntegerField(default=0)
     comment_count = models.PositiveIntegerField(default=0)
+    repost_count = models.PositiveIntegerField(default=0)
+    share_count = models.PositiveIntegerField(default=0)
+    save_count = models.PositiveIntegerField(default=0)
+    view_count = models.PositiveIntegerField(default=0)
+    is_repost = models.BooleanField(default=False)
+    original_post_id = models.UUIDField(null=True, blank=True)
+    is_anonymous = models.BooleanField(default=False)
 
     def __str__(self):
         return f'Post {self.id} in {self.conversation}'
@@ -292,6 +363,7 @@ class CommunityPost(TimestampedModel):
         indexes = [
             models.Index(fields=['conversation', '-created_at']),
             models.Index(fields=['conversation', 'author']),
+            models.Index(fields=['conversation', 'is_repost']),
         ]
 
 
