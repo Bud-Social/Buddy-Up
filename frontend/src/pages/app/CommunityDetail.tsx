@@ -1,29 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
-  ArrowLeft, Users, MessageCircle, Heart, Pin, Copy,
-  Shield, ShieldCheck, MoreHorizontal, Settings2, X,
-  Share2,
+  Users, Shield, ShieldCheck, MoreHorizontal, Settings2, X,
+  Copy,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { PostComposer } from '@/components/features/feed/PostComposer';
+import { CommunityPostCard } from '@/components/features/community/CommunityPostCard';
 import { messagingApi, type Community, type CommunityPost } from '@/api/messaging';
-
-function timeAgo(iso: string): string {
-  const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const mins = Math.floor(seconds / 60);
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
 
 export default function CommunityDetail() {
   const { communityId } = useParams<{ communityId: string }>();
-  const navigate = useNavigate();
   const [community, setCommunity] = useState<Community | null>(null);
   const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,13 +21,11 @@ export default function CommunityDetail() {
   const [editDesc, setEditDesc] = useState('');
   const [editPublic, setEditPublic] = useState(false);
   const [editAvatar, setEditAvatar] = useState('');
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [isJoining, setIsJoining] = useState(false);
+  const [uploadingAvatar] = useState(false);
   const [searchMember, setSearchMember] = useState('');
 
   const canManage = community?.membership_role === 'owner' || community?.membership_role === 'admin';
   const isOwner = community?.membership_role === 'owner';
-  const isMember = !!community?.membership_role;
 
   const filteredMembers = (community?.members ?? []).filter((m) => {
     const q = searchMember.toLowerCase();
@@ -65,59 +49,6 @@ export default function CommunityDetail() {
     const done = setTimeout(() => setIsLoading(false), 400);
     return () => clearTimeout(done);
   }, [fetchAll]);
-
-  const handleJoin = async () => {
-    if (!communityId) return;
-    setIsJoining(true);
-    try {
-      await messagingApi.joinCommunity(communityId);
-      fetchAll();
-    } catch {
-      alert('Unable to join');
-    } finally {
-      setIsJoining(false);
-    }
-  };
-
-  const toggleLike = async (postId: string) => {
-    if (!communityId) return;
-    try {
-      await messagingApi.togglePostLike(communityId, postId);
-      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, is_liked: !p.is_liked, like_count: p.like_count + (p.is_liked ? -1 : 1) } : p));
-    } catch { /* noop */ }
-  };
-
-  const toggleRepost = async (postId: string) => {
-    if (!communityId) return;
-    try {
-      await messagingApi.repostCommunityPost(communityId, postId);
-      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, is_reposted_by_me: !p.is_reposted_by_me, repost_count: p.repost_count + (p.is_reposted_by_me ? -1 : 1) } : p));
-    } catch { /* noop */ }
-  };
-
-  const toggleSave = async (postId: string) => {
-    if (!communityId) return;
-    try {
-      await messagingApi.saveCommunityPost(communityId, postId);
-      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, is_saved_by_me: !p.is_saved_by_me, save_count: p.save_count + (p.is_saved_by_me ? -1 : 1) } : p));
-    } catch { /* noop */ }
-  };
-
-  const toggleReact = async (postId: string, reaction: string) => {
-    if (!communityId) return;
-    try {
-      await messagingApi.reactCommunityPost(communityId, postId, { reaction_type: reaction });
-      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, is_liked: p.reaction_counts?.heart ? !p.is_liked : p.is_liked, like_count: p.like_count + (p.is_liked ? -1 : 1) } : p));
-    } catch { /* noop */ }
-  };
-
-  const toggleShare = async (postId: string) => {
-    if (!communityId) return;
-    try {
-      await messagingApi.shareCommunityPost(communityId, postId);
-      setPosts((prev) => prev.map((p) => p.id === postId ? { ...p, share_count: p.share_count + 1 } : p));
-    } catch { /* noop */ }
-  };
 
   const copyInvite = async () => {
     if (!community?.invite_code) return;
@@ -146,18 +77,26 @@ export default function CommunityDetail() {
     messagingApi.removeCommunityMember(communityId, userId).then(fetchAll);
   };
 
-  const setRole = (userId: string, role: string) => {
+  const setRole = (userId: string, role: 'member' | 'admin') => {
     if (!communityId) return;
     messagingApi.setCommunityRole(communityId, userId, role).then(fetchAll);
   };
 
-  const fetchAll();
-  setTimeout(() => setIsLoading(false), 400);
-
-  const filteredMembersFunc = (community?.members ?? []).filter((m) => {
-    const q = searchMember.toLowerCase();
-    return m.display_name.toLowerCase().includes(q) || m.username.toLowerCase().includes(q);
-  });
+  const saveSettings = async () => {
+    if (!communityId) return;
+    try {
+      await messagingApi.updateCommunity(communityId, {
+        name: editName,
+        description: editDesc,
+        is_public: editPublic,
+        ...(editAvatar ? { group_avatar_url: editAvatar } : {}),
+      });
+      setShowSettings(false);
+      fetchAll();
+    } catch {
+      alert('Failed to save');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-buddy-background">
@@ -201,7 +140,7 @@ export default function CommunityDetail() {
                     onChange={(e) => setSearchMember(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-buddy-surface-raised border border-buddy-border text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40"
                   />
-                  {filteredMembersFunc.map((m) => (
+                  {filteredMembers.map((m) => (
                     <Card key={m.user_id} className="p-3 flex items-center gap-3">
                       {m.avatar_url ? (
                         <img src={m.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
@@ -267,70 +206,12 @@ export default function CommunityDetail() {
                   )}
 
                   {posts.map((post) => (
-                    <div key={post.id} className="bg-buddy-surface rounded-xl border border-buddy-border overflow-hidden transition-colors hover:border-buddy-green/50">
-                      <div className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            {post.author_data.avatar_url ? (
-                              <img src={post.author_data.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-9 h-9 rounded-full bg-buddy-surface-raised flex items-center justify-center">
-                                <Users size={16} className="text-buddy-green" />
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <p className="font-semibold text-sm">{post.author_data.display_name}</p>
-                                {post.is_pinned && <Pin size={12} className="text-buddy-gold shrink-0" />}
-                              </div>
-                              <p className="text-xs text-buddy-text-secondary">
-                                @{post.author_data.username} · {timeAgo(post.created_at)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        {post.body && <p className="mt-1 mb-3 text-sm whitespace-pre-wrap text-buddy-text-primary leading-relaxed">{post.body}</p>}
-                        {post.media_url && (
-                          <img src={post.media_url} alt="" className="mt-2 rounded-xl w-full object-cover max-h-96" />
-                        )}
-
-                        <div className="flex items-center gap-4 mt-4 pt-3 border-t border-buddy-surface">
-                          <button
-                            onClick={() => toggleLike(post.id)}
-                            className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${post.is_liked ? 'text-buddy-red' : 'text-buddy-text-secondary hover:text-buddy-red'}`}
-                          >
-                            <Heart size={15} fill={post.is_liked ? 'currentColor' : 'none'} />{post.like_count}
-                          </button>
-                          <button
-                            onClick={() => toggleRepost(post.id)}
-                            className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
-                          >
-                            <ArrowCounterclockwise size={15} />{post.repost_count || 0}
-                          </button>
-                          <button
-                            onClick={() => toggleSave(post.id)}
-                            className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
-                          >
-                            <Bookmark size={15} />{post.save_count || 0}
-                          </button>
-                          <button
-                            onClick={() => toggleReact(post.id, "heart")}
-                            className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
-                          >
-                            <Message size={15} />{post.comment_count}
-                          </button>
-                          <button onClick={() => toggleShare(post.id)} className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-purple`}>
-                            <Share2 size={15} />Share
-                          </button>
-                          {post.community_name && (
-                            <span className="ml-auto text-[10px] text-buddy-text-secondary/60 bg-buddy-surface-raised px-2 py-0.5 rounded-full">
-                              {post.community_name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    <CommunityPostCard
+                      key={post.id}
+                      post={post}
+                      communityId={communityId}
+                      onLike={() => {}}
+                    />
                   ))}
                 </div>
               )}
@@ -344,7 +225,33 @@ export default function CommunityDetail() {
                   <h2 className="font-display text-lg font-bold">Community Settings</h2>
                   <button onClick={() => setShowSettings(false)} className="text-buddy-text-secondary hover:text-buddy-text-primary"><Settings2 size={20} /></button>
                 </div>
-                {/* ... settings form ... */}
+                <div className="flex items-center gap-4 mb-4">
+                  {editAvatar ? (
+                    <img src={editAvatar} alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-2xl bg-buddy-surface-raised flex items-center justify-center shrink-0">
+                      <Users size={26} className="text-buddy-green" />
+                    </div>
+                  )}
+                  <label className="flex-1 cursor-pointer text-sm text-buddy-green font-hover:text-buddy-green/90 hover:underline">
+                    {uploadingAvatar ? 'Uploading…' : editAvatar ? 'Change picture' : 'Add a community picture'}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      disabled={uploadingAvatar}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) setEditAvatar(URL.createObjectURL(f)); e.target.value = ''; }}
+                    />
+                  </label>
+                </div>
+                <label className="block text-xs font-medium text-buddy-text-secondary mb-1">Name</label>
+                <input value={editName} onChange={(e) => setEditName(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl bg-buddy-surface-raised border border-buddy-border text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40 mb-3" />
+                <label className="block text-xs font-medium text-buddy-text-secondary mb-1">Description</label>
+                <textarea value={editDesc} onChange={(e) => setEditDesc(e.target.value)} rows={3} className="w-full px-3.5 py-2.5 rounded-xl bg-buddy-surface-raised border border-buddy-border text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green/40 mb-3 resize-none" />
+                <label className="flex items-center gap-2 text-sm mb-4 cursor-pointer">
+                  <input type="checkbox" checked={editPublic} onChange={(e) => setEditPublic(e.target.checked)} className="accent-buddy-green" />
+                  Public community
+                </label>
                 <button onClick={saveSettings} className="w-full py-3 rounded-xl bg-buddy-green text-buddy-black font-semibold">Save Changes</button>
               </div>
             </div>

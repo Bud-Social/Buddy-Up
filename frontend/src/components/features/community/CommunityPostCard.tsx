@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Heart, ArrowCounterclockwise, Bookmark, Message, Share2, Pin,
+  Heart, RotateCcw, Bookmark, MessageCircle, Share2, Pin,
   Users,
 } from 'lucide-react';
 import { messagingApi } from '@/api/messaging';
@@ -23,9 +23,9 @@ interface CommunityPostCardProps {
     body: string;
     media_url?: string;
     is_pinned?: boolean;
-    like_count: number;
-    comment_count: number;
-    is_liked: boolean;
+    like_count?: number;
+    comment_count?: number;
+    is_liked?: boolean;
     created_at: string;
     author_data: {
       user_id?: string;
@@ -35,7 +35,6 @@ interface CommunityPostCardProps {
     };
     community_id?: string;
     community_name?: string;
-    like_count?: number;
     repost_count?: number;
     save_count?: number;
     share_count?: number;
@@ -53,7 +52,7 @@ interface CommunityPostCardProps {
 
 export function CommunityPostCard({ post, communityId, onLike, onRepost, onSave, onReact, onShare }: CommunityPostCardProps) {
   const [isLiked, setIsLiked] = useState(post.is_liked);
-  const [likeCount, setLikeCount] = useState(post.like_count);
+  const [likeCount, setLikeCount] = useState(post.like_count ?? 0);
 
   const handleLike = async () => {
     if (!communityId) return;
@@ -99,13 +98,13 @@ export function CommunityPostCard({ post, communityId, onLike, onRepost, onSave,
             onClick={handleLike}
             className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${isLiked ? 'text-buddy-red' : 'text-buddy-text-secondary hover:text-buddy-red'}`}
           >
-            <Heart size={15} fill={isLiked ? 'currentColor' : 'none'} />{post.like_count}
+            <Heart size={15} fill={isLiked ? 'currentColor' : 'none'} />{likeCount}
           </button>
           <button
             onClick={() => onRepost?.()}
             className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
           >
-            <ArrowCounterclockwise size={15} />{post.repost_count || 0}
+            <RotateCcw size={15} />{post.repost_count || 0}
           </button>
           <button
             onClick={() => onSave?.()}
@@ -121,7 +120,7 @@ export function CommunityPostCard({ post, communityId, onLike, onRepost, onSave,
             }}
             className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-green`}
           >
-            <Message size={15} />{post.comment_count}
+            <MessageCircle size={15} />{post.comment_count || 0}
           </button>
           <button onClick={onShare} className={`flex items-center gap-1.5 text-xs font-medium transition-colors text-buddy-text-secondary hover:text-buddy-purple`}>
             <Share2 size={15} />Share
