@@ -4,7 +4,6 @@ import {
   Loader2, Users, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp, X,
 } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
-import { CommunityPostCard } from '@/components/features/community/CommunityPostCard';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { VideoFeed } from '@/components/features/feed/VideoFeed';
@@ -531,16 +530,17 @@ export default function Feed() {
               </div>
             )}
 
-            {posts.map((post) => (
-              <div key={post.id} data-post-id={post.id} ref={registerPostCard}>
-                <CommunityPostCard
-                  post={post as any}
-                  communityId={post.community_id ?? undefined}
-                  onLike={() => {}}
-                />
-              </div>
-            ))}
-
+              {posts.map((post) => (
+                <div key={post.id} data-post-id={post.id} ref={registerPostCard}>
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onComment={() => {}}
+                    onRemove={() => {}}
+                    onRemoveAuthor={() => {}}
+                  />
+                </div>
+              ))}
             {isLoading && (
               <div className="flex justify-center py-8">
                 <Loader2 size={24} className="animate-spin text-buddy-green" />
