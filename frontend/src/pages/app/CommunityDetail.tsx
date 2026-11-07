@@ -5,13 +5,65 @@ import {
   Copy,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { CommunityPostCard } from '@/components/features/community/CommunityPostCard';
+import { PostCard } from '@/components/features/feed/PostCard';
 import { messagingApi, type Community, type CommunityPost } from '@/api/messaging';
+import type { Post } from '@/types/post';
+
+interface CommunityPostExtended extends CommunityPost {
+  community_id?: string;
+  community_name?: string;
+  repost_count?: number;
+  is_saved_by_me?: boolean;
+  updated_at?: string;
+}
+
+function mapCommunityPostToPost(cp: CommunityPostExtended): Post {
+  return {
+    id: cp.id,
+    author_data: cp.author_data,
+    post_type: 'text',
+    body: cp.body,
+    is_anonymous: false,
+    media_urls: cp.media_url ? [cp.media_url] : [],
+    media: [],
+    captions: [],
+    tags: [],
+    workout_log_data: null,
+    meal_data: null,
+    progress_data: null,
+    location_label: '',
+    visibility: 'public',
+    moderation_status: 'clean',
+    comments_disabled: false,
+    view_count: 0,
+    reaction_counts: {},
+    user_reaction: cp.is_liked ? 'like' : null,
+    comment_count: cp.comment_count || 0,
+    repost_count: cp.repost_count || 0,
+    is_repost: false,
+    original_post_id: null,
+    quote_body: '',
+    is_saved: cp.is_saved_by_me || false,
+    is_pinned: cp.is_pinned || false,
+    content_rating: 'general',
+    created_at: cp.created_at || new Date().toISOString(),
+    updated_at: cp.updated_at || cp.created_at || new Date().toISOString(),
+    community_id: cp.community_id,
+    community_name: cp.community_name,
+    gym_tag_id: null,
+    gym_tag_name: null,
+    shares: [],
+    original_post_data: null,
+    community_cover_url: null,
+    community_slug: null,
+    poll: null,
+  } as unknown as Post;
+}
 
 export default function CommunityDetail() {
   const { communityId } = useParams<{ communityId: string }>();
   const [community, setCommunity] = useState<Community | null>(null);
-  const [posts, setPosts] = useState<CommunityPost[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [tab, setTab] = useState<'feed' | 'members'>('feed');
   const [showSettings, setShowSettings] = useState(false);
@@ -21,7 +73,6 @@ export default function CommunityDetail() {
   const [editDesc, setEditDesc] = useState('');
   const [editPublic, setEditPublic] = useState(false);
   const [editAvatar, setEditAvatar] = useState('');
-  const [uploadingAvatar] = useState(false);
   const [searchMember, setSearchMember] = useState('');
 
   const canManage = community?.membership_role === 'owner' || community?.membership_role === 'admin';
@@ -39,7 +90,8 @@ export default function CommunityDetail() {
       .catch(() => {});
     messagingApi.getCommunityPosts(communityId)
       .then((data) => {
-        setPosts(Array.isArray(data) ? data : []);
+        const communityPosts = Array.isArray(data) ? data : [];
+        setPosts(communityPosts.map(mapCommunityPostToPost));
       })
       .catch(() => {});
   }, [communityId]);
@@ -206,11 +258,12 @@ export default function CommunityDetail() {
                   )}
 
                   {posts.map((post) => (
-                    <CommunityPostCard
+                    <PostCard
                       key={post.id}
                       post={post}
-                      communityId={communityId}
-                      onLike={() => {}}
+                      onComment={() => {}}
+                      onRemove={() => {}}
+                      onRemoveAuthor={() => {}}
                     />
                   ))}
                 </div>
@@ -234,12 +287,12 @@ export default function CommunityDetail() {
                     </div>
                   )}
                   <label className="flex-1 cursor-pointer text-sm text-buddy-green font-hover:text-buddy-green/90 hover:underline">
-                    {uploadingAvatar ? 'Uploading…' : editAvatar ? 'Change picture' : 'Add a community picture'}
+                    {editAvatar ? 'Change picture' : 'Add a community picture'}
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp,image/gif"
                       className="hidden"
-                      disabled={uploadingAvatar}
+                      disabled={false}
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) setEditAvatar(URL.createObjectURL(f)); e.target.value = ''; }}
                     />
                   </label>
