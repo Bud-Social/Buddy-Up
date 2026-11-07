@@ -538,6 +538,31 @@ export default function Feed() {
                     onComment={() => {}}
                     onRemove={() => {}}
                     onRemoveAuthor={() => {}}
+                    onLike={(id) => {
+                      if (post.community_id) {
+                        messagingApi.togglePostLike(post.community_id, id);
+                      }
+                    }}
+                    onRepost={(id) => {
+                      if (post.community_id) {
+                        messagingApi.repostCommunityPost(post.community_id, id);
+                      }
+                    }}
+                    onSave={(id) => {
+                      if (post.community_id) {
+                        messagingApi.saveCommunityPost(post.community_id, id);
+                      }
+                    }}
+                    onReact={(id, reaction) => {
+                      if (post.community_id) {
+                        messagingApi.reactCommunityPost(post.community_id, id, reaction);
+                      }
+                    }}
+                    onShare={(id) => {
+                      if (post.community_id) {
+                        messagingApi.shareCommunityPost(post.community_id, id);
+                      }
+                    }}
                   />
                 </div>
               ))}

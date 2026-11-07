@@ -96,6 +96,53 @@ export default function CommunityDetail() {
       .catch(() => {});
   }, [communityId]);
 
+  const toggleLike = async (postId: string) => {
+    if (!communityId) return;
+    try {
+      await messagingApi.togglePostLike(communityId, postId);
+      setPosts((prev) => prev.map((p) => {
+        if (p.id !== postId) return p;
+        const wasLiked = p.user_reaction === 'like';
+        return {
+          ...p,
+          user_reaction: wasLiked ? null : 'like',
+          reaction_counts: {
+            ...p.reaction_counts,
+            like: (p.reaction_counts?.like || 0) + (wasLiked ? -1 : 1),
+          },
+        };
+      }));
+    } catch { /* noop */ }
+  };
+
+  const toggleRepost = async (postId: string) => {
+    if (!communityId) return;
+    try {
+      await messagingApi.repostCommunityPost(communityId, postId);
+    } catch { /* noop */ }
+  };
+
+  const toggleSave = async (postId: string) => {
+    if (!communityId) return;
+    try {
+      await messagingApi.saveCommunityPost(communityId, postId);
+    } catch { /* noop */ }
+  };
+
+  const toggleReact = async (postId: string, reaction: string) => {
+    if (!communityId) return;
+    try {
+      await messagingApi.reactCommunityPost(communityId, postId, reaction);
+    } catch { /* noop */ }
+  };
+
+  const toggleShare = async (postId: string) => {
+    if (!communityId) return;
+    try {
+      await messagingApi.shareCommunityPost(communityId, postId);
+    } catch { /* noop */ }
+  };
+
   useEffect(() => {
     fetchAll();
     const done = setTimeout(() => setIsLoading(false), 400);
@@ -261,6 +308,11 @@ export default function CommunityDetail() {
                     <PostCard
                       key={post.id}
                       post={post}
+                      onLike={() => toggleLike(post.id)}
+                      onRepost={() => toggleRepost(post.id)}
+                      onSave={() => toggleSave(post.id)}
+                      onReact={(reaction) => toggleReact(post.id, reaction)}
+                      onShare={() => toggleShare(post.id)}
                       onComment={() => {}}
                       onRemove={() => {}}
                       onRemoveAuthor={() => {}}

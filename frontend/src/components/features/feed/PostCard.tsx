@@ -460,16 +460,35 @@ interface PostCardProps {
   onRemove?: (postId: string) => void;
   /** Remove every card by this author from the surrounding list (mute). */
   onRemoveAuthor?: (username: string) => void;
+  /** Optional override for like action (e.g. community posts use messagingApi) */
+  onLike?: (postId: string) => void;
+  /** Optional override for repost action */
+  onRepost?: (postId: string) => void;
+  /** Optional override for save action */
+  onSave?: (postId: string) => void;
+  /** Optional override for react action */
+  onReact?: (postId: string, reaction: string) => void;
+  /** Optional override for share action */
+  onShare?: (postId: string) => void;
 }
 
-export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAuthor }: PostCardProps) {
+export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAuthor, onLike, onRepost, onSave, onReact, onShare }: PostCardProps) {
   const navigate = useNavigate();
   const handedness = useHandednessStore((s) => s.handedness);
-  const [post] = useState(initialPost);
+  const [post, setPost] = useState(initialPost);
   // Engagement reflects the post itself; reposts are logged properties on the
   // original post, not separate rows.
   const engagementSource = post;
   const engagementId = post.id;
+  // Sync post prop to internal state when parent re-renders with updated data
+  useEffect(() => {
+    setPost(initialPost);
+    setIsSaved(initialPost.is_saved ?? false);
+    setSaveCount(initialPost.save_count ?? 0);
+    setUserReaction(initialPost.user_reaction ? toEmoji(initialPost.user_reaction) : null);
+    setReactionCounts(initialPost.reaction_counts || {});
+    setIsRepostedByMe(initialPost.is_reposted_by_me ?? false);
+  }, [initialPost]);
   const [isSaved, setIsSaved] = useState(post.is_saved ?? false);
   const [saveCount, setSaveCount] = useState<number | undefined>(
     (engagementSource as { save_count?: number }).save_count ?? post.save_count,
@@ -637,6 +656,10 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     setReactionCounts(next.counts);
     setUserReaction(next.userReaction);
     interact('like');
+    if (onLike) {
+      onLike(engagementId);
+      return;
+    }
     try {
       if (next.removed) await feedApi.unreact(engagementId);
       else await feedApi.react(engagementId, '💪');
@@ -660,7 +683,11 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
         return next;
       });
       try {
-        await feedApi.unreact(engagementId);
+        if (onReact) {
+          onReact(engagementId, emoji);
+        } else {
+          await feedApi.unreact(engagementId);
+        }
       } catch {
         setUserReaction(emoji);
         setReactionCounts(prevCounts);
@@ -673,7 +700,11 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     setReactionCounts(next.counts);
     setUserReaction(next.userReaction);
     try {
-      await feedApi.react(engagementId, emoji);
+      if (onReact) {
+        onReact(engagementId, emoji);
+      } else {
+        await feedApi.react(engagementId, emoji);
+      }
     } catch {
       setReactionCounts(prevCounts);
       setUserReaction(prevReaction);
@@ -699,6 +730,10 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     setIsSaved(!prev);
     if (saveCount !== undefined) setSaveCount(Math.max(0, saveCount + (prev ? -1 : 1)));
     interact('save');
+    if (onSave) {
+      onSave(engagementId);
+      return;
+    }
     try {
       if (prev) await feedApi.unsave(engagementId);
       else await feedApi.save(engagementId);
@@ -715,6 +750,10 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     setIsRepostedByMe(!wasReposted);
     setRepostCount(c => wasReposted ? Math.max(0, c - 1) : c + 1);
     interact('repost');
+    if (onRepost) {
+      onRepost(engagementId);
+      return;
+    }
     try {
       const res = await feedApi.repost(post.id);
       if (res.data) {
@@ -1276,6 +1315,10 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
             count={shareCount}
             testId="rail-share"
             onClick={(e) => {
+              if (onShare) {
+                onShare(engagementId);
+                return;
+              }
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
               setShareAnchor({ top: r.top, left: r.left, bottom: r.bottom });
               setShowShareSheet(true);
