@@ -1309,24 +1309,22 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
           />
 
           {/* Share */}
-          {!post.community_id && (
-            <RailAction
-              label="Share"
-              icon={<Share2 size={RAIL_ICON_SIZE} />}
-              count={shareCount}
-              testId="rail-share"
-              onClick={(e) => {
-                if (onShare) {
-                  onShare(engagementId);
-                  return;
-                }
-                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                setShareAnchor({ top: r.top, left: r.left, bottom: r.bottom });
-                setShowShareSheet(true);
-                interact('share');
-              }}
-            />
-          )}
+          <RailAction
+            label="Share"
+            icon={<Share2 size={RAIL_ICON_SIZE} />}
+            count={shareCount}
+            testId="rail-share"
+            onClick={(e) => {
+              if (onShare) {
+                onShare(engagementId);
+                return;
+              }
+              const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+              setShareAnchor({ top: r.top, left: r.left, bottom: r.bottom });
+              setShowShareSheet(true);
+              interact('share');
+            }}
+          />
         </div>
       </div>
 

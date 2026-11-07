@@ -1876,3 +1876,39 @@ class CommunityPostViewView(views.APIView):
             'message': 'View recorded.', 'errors': None, 'pagination': None,
         })
 
+
+class CommunityPostShareView(views.APIView):
+    """Share a community post."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+
+        share = CommunityPostShare.objects.filter(post=post, profile=request.user.profile).first()
+        if share:
+            share.delete()
+            post.share_count = max(0, post.share_count - 1)
+            post.save(update_fields=['share_count', 'updated_at'])
+            shared = False
+        else:
+            CommunityPostShare.objects.create(post=post, profile=request.user.profile)
+            post.share_count += 1
+            post.save(update_fields=['share_count', 'updated_at'])
+            shared = True
+            if post.author_id != request.user.profile.user_id:
+                _push_community_notification(
+                    post.author.user_id, 'community_share',
+                    f'{request.user.profile.display_name} shared your post',
+                    post.body[:100],
+                    {'community_id': str(conv.id), 'post_id': str(post.id)},
+                )
+        return Response({
+            'success': True,
+            'data': {'shared': shared, 'share_count': post.share_count},
+            'message': 'Share toggled.', 'errors': None, 'pagination': None,
+        })
+

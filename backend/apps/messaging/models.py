@@ -397,3 +397,16 @@ class CommunityPostComment(TimestampedModel):
         indexes = [
             models.Index(fields=['post', 'created_at']),
         ]
+
+
+class CommunityPostShare(TimestampedModel):
+    post = models.ForeignKey(
+        CommunityPost, on_delete=models.CASCADE, related_name='shares'
+    )
+    profile = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_shares'
+    )
+
+    class Meta:
+        db_table = 'messaging_community_post_share'
+        unique_together = ('post', 'profile')

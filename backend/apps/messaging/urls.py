@@ -39,4 +39,5 @@ urlpatterns = [
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/save/', views.CommunityPostSaveView.as_view(), name='community_post_save'),
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/react/', views.CommunityPostReactView.as_view(), name='community_post_react'),
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/view/', views.CommunityPostViewView.as_view(), name='community_post_view'),
+    path('communities/<uuid:community_id>/posts/<uuid:post_id>/share/', views.CommunityPostShareView.as_view(), name='community_post_share'),
 ]
