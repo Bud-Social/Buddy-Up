@@ -12,6 +12,15 @@ import 'leaflet/dist/leaflet.css';
 interface OsmRouteMapProps {
   route: number[][];
   height?: number;
+  /**
+   * Follow the route instead of fitting it to the view.
+   *
+   * While a session is being tracked the route grows under the user, so
+   * fitting the bounds would keep zooming out; following keeps the map on
+   * the current position and lets the trail grow behind it.
+   */
+  follow?: boolean;
+  zoom?: number;
 }
 
 interface LatLng {
@@ -25,7 +34,7 @@ function toLatLngs(route: number[][]): LatLng[] {
     .map((p) => ({ lat: p[0], lng: p[1] }));
 }
 
-export function OsmRouteMap({ route, height = 220 }: OsmRouteMapProps) {
+export function OsmRouteMap({ route, height = 220, follow = false, zoom = 16 }: OsmRouteMapProps) {
   const points = useMemo(() => toLatLngs(route), [route]);
 
   const bounds = useMemo(() => {
@@ -37,11 +46,14 @@ export function OsmRouteMap({ route, height = 220 }: OsmRouteMapProps) {
     ] as [[number, number], [number, number]];
   }, [points]);
 
+  // The current position is the last point recorded.
+  const current = points.length ? points[points.length - 1] : null;
+
   if (points.length === 1) {
     // Zero-movement session — show a pin at the recorded position.
     return (
       <div style={{ height }} className="rounded-xl overflow-hidden border border-buddy-surface-raised">
-        <MapContainer center={[points[0].lat, points[0].lng]} zoom={15} scrollWheelZoom={false} className="w-full h-full">
+        <MapContainer center={[points[0].lat, points[0].lng]} zoom={zoom} scrollWheelZoom={false} className="w-full h-full">
           <TileLayerWithFallback />
           <CircleMarker center={[points[0].lat, points[0].lng]} radius={8} pathOptions={{ color: '#00C896', fillColor: '#00C896', fillOpacity: 0.9 }} />
         </MapContainer>
@@ -51,7 +63,13 @@ export function OsmRouteMap({ route, height = 220 }: OsmRouteMapProps) {
 
   return (
     <div style={{ height }} className="relative rounded-xl overflow-hidden border border-buddy-surface-raised">
-      <MapContainer bounds={bounds} scrollWheelZoom={false} className="w-full h-full">
+      <MapContainer
+        {...(follow && current
+          ? { center: [current.lat, current.lng] as [number, number], zoom }
+          : { bounds })}
+        scrollWheelZoom={false}
+        className="w-full h-full"
+      >
         <TileLayerWithFallback />
         <Polyline positions={points.map((p) => [p.lat, p.lng] as [number, number])} pathOptions={{ color: '#00C896', weight: 4, opacity: 0.95 }} />
         <CircleMarker center={[points[0].lat, points[0].lng]} radius={6} pathOptions={{ color: '#00C896', fillColor: '#00C896', fillOpacity: 1 }} />

@@ -123,6 +123,7 @@ const CategoryApplication = lazy(() => import('@/pages/app/CategoryApplication')
 const AnalyticsPage = lazy(() => import('@/pages/app/AnalyticsPage'));
 const CountdownsPage = lazy(() => import('@/pages/app/CountdownsPage'));
 const ActivitiesPage = lazy(() => import('@/pages/app/ActivitiesPage'));
+const NewActivity = lazy(() => import('@/pages/app/NewActivity'));
 const AdminDashboard = lazy(() => import('@/pages/app/AdminDashboard'));
 const ModerationQueue = lazy(() => import('@/pages/app/ModerationQueue'));
 const AdminVerification = lazy(() => import('@/pages/app/AdminVerification'));
@@ -295,6 +296,7 @@ export const router = createBrowserRouter([
           { path: '/analytics', element: <SWrapper><AnalyticsPage /></SWrapper> },
           { path: '/countdowns', element: <SWrapper><CountdownsPage /></SWrapper> },
           { path: '/activities', element: <SWrapper><ActivitiesPage /></SWrapper> },
+          { path: '/activities/new', element: <SWrapper><NewActivity /></SWrapper> },
           // Canonical share deep-link for workout/activity rows.
           { path: '/app/analytics', element: <Navigate to="/analytics" replace /> },
         ],

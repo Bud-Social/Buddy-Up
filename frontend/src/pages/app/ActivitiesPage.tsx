@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  MapPin, Timer, Share2, X, Smartphone, Image, Play,
-  Timer as TimerIcon, Activity,
+  MapPin, Timer, Share2, X, Smartphone, Image,
+  Activity,
 } from 'lucide-react';
 import { analyticsApi } from '@/api/analytics';
+import { RouteMap } from '@/components/analytics/RouteMap';
+import { activityMetrics } from '@/lib/activityMetrics';
 import type { ActivityRecent } from '@/types/analytics';
 
 const ACTIVITY_ICONS: Record<string, React.ComponentType<any>> = {
@@ -54,6 +57,7 @@ const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'gym_members' | 'priva
 ];
 
 export default function ActivitiesPage() {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState<ActivityRecent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<ActivityRecent | null>(null);
@@ -77,24 +81,22 @@ export default function ActivitiesPage() {
     error: string | null;
   }>({ postId: null, status: 'idle', videoUrl: null, error: null });
 
-  // Activity tracking state
-  const [trackingOpen, setTrackingOpen] = useState(false);
-  const [trackingType, setTrackingType] = useState<string | null>(null);
-  const [trackingActive, setTrackingActive] = useState(false);
-  const [trackingSeconds, setTrackingSeconds] = useState(0);
-  const [trackingRoute, setTrackingRoute] = useState<number[][]>([]);
-  const [trackingGpsEnabled, setTrackingGpsEnabled] = useState(false);
-  const [trackingTarget, setTrackingTarget] = useState<number | null>(null);
-  const [trackingTargetUnit, setTrackingTargetUnit] = useState<string | null>(null);
-
-  // Blur pop state for category selection on mobile
+  // Tracking lives on its own page (/activities/new) — see NewActivity.tsx.
+  // The target is still chosen here, and carries over to that page.
   const [categoryPopOpen, setCategoryPopOpen] = useState(false);
   const [categoryPopType, setCategoryPopType] = useState<string | null>(null);
+  const [trackingTarget, setTrackingTarget] = useState<number | null>(null);
+
+  const closeCategoryPop = () => {
+    setCategoryPopOpen(false);
+    setCategoryPopType(null);
+  };
 
   useEffect(() => {
     analyticsApi.getActivities().then((res) => {
-      const apiResponse = res.data as { data?: ActivityRecent[] } | undefined;
-      const data = apiResponse?.data ?? [];
+      // The client hands back the response envelope, so the list is the
+      // `data` on it — unwrapping it a second time left the page empty.
+      const data = (res.data as ActivityRecent[] | undefined) ?? [];
       setActivities(Array.isArray(data) ? data : []);
       setLoading(false);
     }).catch((err) => {
@@ -114,26 +116,6 @@ export default function ActivitiesPage() {
     { key: 'cycle', label: 'Cycling' },
     { key: 'workout', label: 'Workout' },
   ];
-
-  // GPS tracking watch
-  useEffect(() => {
-    if (!trackingActive || !trackingGpsEnabled) return;
-
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setTrackingRoute((prev) => [...prev, [latitude, longitude, Date.now() / 1000]]);
-      },
-      (err) => {
-        console.warn('GPS watch error:', err);
-      },
-      { enableHighAccuracy: true, maximumAge: 1000, timeout: 5000 },
-    );
-
-    return () => {
-      if (watchId) navigator.geolocation.clearWatch(watchId);
-    };
-  }, [trackingActive, trackingGpsEnabled]);
 
   const formatDuration = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -237,76 +219,10 @@ export default function ActivitiesPage() {
     }
   };
 
-  // Activity tracking handlers
   const openCategoryPop = (type: string) => {
     setCategoryPopType(type);
+    setTrackingTarget(ACTIVITY_TARGETS[type as keyof typeof ACTIVITY_TARGETS]?.value ?? null);
     setCategoryPopOpen(true);
-  };
-
-  const closeCategoryPop = () => {
-    setCategoryPopOpen(false);
-    setCategoryPopType(null);
-  };
-
-  const startTrackingWithTarget = (targetValue: number | null, targetUnit: string | null) => {
-    closeCategoryPop();
-    setTrackingType(categoryPopType || '');
-    setTrackingTarget(targetValue);
-    setTrackingTargetUnit(targetUnit);
-    setTrackingActive(true);
-    setTrackingSeconds(0);
-    setTrackingRoute([]);
-    setTrackingOpen(true);
-  };
-
-  const startTimer = () => {
-    setTrackingActive(true);
-  };
-
-  const stopTracking = () => {
-    setTrackingActive(false);
-  };
-
-  const saveActivity = async () => {
-    if (!trackingType) return;
-    setTrackingActive(false);
-
-    try {
-      const targetDef = ACTIVITY_TARGETS[trackingType as keyof typeof ACTIVITY_TARGETS];
-      const finalTarget = trackingTarget ?? targetDef?.value ?? 0;
-      const finalUnit = trackingTargetUnit ?? targetDef?.unit ?? '';
-
-      await analyticsApi.createActivity({
-        activity_type: trackingType as 'walk' | 'run' | 'hike' | 'cycle',
-        duration_seconds: trackingSeconds,
-        distance_meters: trackingRoute.length > 1 ? 0 : 0,
-        route: trackingGpsEnabled && trackingRoute.length > 0 ? trackingRoute : [],
-        notes: `Tracked via Buddy-Up mobile | Target: ${finalTarget} ${finalUnit}`,
-      });
-      setTrackingOpen(false);
-      setTrackingType(null);
-      setTrackingTarget(null);
-      setTrackingTargetUnit(null);
-      setTrackingSeconds(0);
-      setTrackingRoute([]);
-      // Refresh activities list
-      analyticsApi.getActivities().then((res) => {
-        const apiResponse = res.data as { data?: ActivityRecent[] } | undefined;
-        setActivities(Array.isArray(apiResponse?.data) ? apiResponse.data : []);
-      });
-    } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to save activity');
-    }
-  };
-
-  const cancelTracking = () => {
-    setTrackingActive(false);
-    setTrackingOpen(false);
-    setTrackingType(null);
-    setTrackingTarget(null);
-    setTrackingTargetUnit(null);
-    setTrackingSeconds(0);
-    setTrackingRoute([]);
   };
 
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -395,7 +311,14 @@ export default function ActivitiesPage() {
             return (
               <button
                 key={cat.key}
-                onClick={() => openCategoryPop(cat.key)}
+                onClick={() => {
+                  // A workout is not a tracked activity — it has its own form.
+                  if (cat.key === 'workout') {
+                    navigate('/workout-form');
+                    return;
+                  }
+                  openCategoryPop(cat.key);
+                }}
                 className={`flex flex-col items-center gap-3 p-5 rounded-2xl border border-buddy-border transition-all duration-200 hover:border-buddy-green hover:shadow-lg ${color.bg} ${color.text} ${color.glow}`}
               >
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${color.bg.replace('/10', '/20')} ${color.text}`}>
@@ -496,16 +419,26 @@ export default function ActivitiesPage() {
                   </div>
                 )}
 
+                {/* The numbers that matter for this kind of activity. */}
+                {activityMetrics(activity).length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-buddy-border/50 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {activityMetrics(activity).map((m) => (
+                      <div key={m.label} className="bg-buddy-surface/50 rounded-lg px-2.5 py-2">
+                        <p className="text-[10px] uppercase tracking-wider text-buddy-text-secondary">{m.label}</p>
+                        <p className={`text-sm font-bold font-mono ${m.tone === 'orange' ? 'text-buddy-gold' : 'text-buddy-text-primary'}`}>
+                          {m.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {activity.route && activity.route.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-buddy-border/50">
                     <div className="flex items-center gap-2 mb-2 text-xs font-medium text-buddy-text-secondary">
                       <MapPin size={12} /> Route map ({activity.route.length} trackpoints)
                     </div>
-                    <div className="aspect-video bg-buddy-surface rounded-lg border border-buddy-border flex items-center justify-center min-h-[200px]">
-                      <div className="text-sm text-buddy-text-secondary">
-                        Interactive map — tap to view full route replay
-                      </div>
-                    </div>
+                    <RouteMap route={activity.route} height={200} />
                   </div>
                 )}
                 <div className="mt-3 flex items-center gap-2 text-xs text-buddy-text-secondary">
@@ -598,7 +531,7 @@ export default function ActivitiesPage() {
         </div>
       )}
 
-      {/* Category Pop - Blur overlay on mobile */}
+      {/* Target picker — the target carries over to the tracking page. */}
       {categoryPopOpen && categoryPopType && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center">
           <div className="fixed inset-0 bg-black/80 backdrop-blur-md" onClick={closeCategoryPop} />
@@ -678,12 +611,18 @@ export default function ActivitiesPage() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => startTrackingWithTarget(trackingTarget, trackingTargetUnit)}
+                  onClick={() => {
+                    closeCategoryPop();
+                    navigate(
+                      `/activities/new?type=${categoryPopType}`
+                      + (trackingTarget ? `&target=${trackingTarget}` : ''),
+                    );
+                  }}
                   disabled={!trackingTarget}
                   className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 ${
                     !trackingTarget
                       ? 'bg-buddy-surface text-buddy-text-secondary border-buddy-border cursor-not-allowed'
-                      : 'bg-buddy-green text-buddy-green border-buddy-green hover:bg-buddy-green/20'
+                      : 'bg-buddy-green text-buddy-black border-buddy-green hover:bg-buddy-green/90'
                   }`}
                 >
                   Start Tracking
@@ -694,132 +633,7 @@ export default function ActivitiesPage() {
         </div>
       )}
 
-      {/* Activity Tracking Modal */}
-      {trackingOpen && trackingType && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={cancelTracking} />
-          <div className="relative bg-buddy-surface rounded-2xl border border-buddy-border p-6 w-full max-w-md max-h-[90vh] overflow-y-auto z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                {(() => {
-                  const Icon = ACTIVITY_ICONS[trackingType] ?? MapPin;
-                  const color = ACTIVITY_COLORS[trackingType];
-                  return (
-                    <div className={`p-3 rounded-xl ${color.bg} ${color.text}`}>
-                      <Icon size={24} />
-                    </div>
-                  );
-                })()}
-                <div>
-                  <h3 className="font-semibold text-buddy-text-primary">{ACTIVITY_LABELS[trackingType] ?? trackingType} Tracking</h3>
-                  <p className="text-xs text-buddy-text-secondary">
-                    {trackingGpsEnabled ? 'GPS enabled — route will be recorded' : 'GPS disabled — time only'}
-                    {trackingTarget && (
-                      <>
-                        <br />
-                        Target: {trackingTarget} {trackingTargetUnit}
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-              <button onClick={cancelTracking} className="text-buddy-text-secondary hover:text-buddy-text-primary">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Big number display */}
-              <div className="text-center">
-                <div className={`text-7xl font-display font-bold ${ACTIVITY_COLORS[trackingType].text} mb-1`}>
-                  {trackingTarget ? trackingSeconds : Math.floor(trackingSeconds / 60)}
-                </div>
-                <div className="text-buddy-text-secondary text-sm">
-                  {trackingTargetUnit || 'min'}
-                </div>
-              </div>
-
-              {/* Progress bar if target set */}
-              {trackingTarget && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-buddy-text-secondary">Progress</span>
-                    <span className="text-buddy-text-secondary">
-                      {Math.min(100, Math.round(((trackingTargetUnit === 'steps' ? trackingSeconds : trackingSeconds / 60) / trackingTarget) * 100))}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-buddy-surface/50 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="h-full transition-all duration-500 bg-buddy-green"
-                      style={{ width: `${Math.min(100, Math.round(((trackingTargetUnit === 'steps' ? trackingSeconds : trackingSeconds / 60) / trackingTarget) * 100))}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="text-buddy-text-secondary text-sm">{trackingActive ? 'Tracking…' : 'Paused'}</div>
-
-              {/* Controls */}
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={trackingActive ? stopTracking : startTimer}
-                  className={`px-6 py-3 rounded-xl text-sm font-medium transition-colors ${
-                    trackingActive
-                      ? 'bg-buddy-red text-buddy-red border-buddy-red hover:bg-buddy-red/20'
-                      : 'bg-buddy-green text-buddy-green border-buddy-green hover:bg-buddy-green/20'
-                  }`}
-                >
-                  {trackingActive ? <><Timer size={16} className="mr-2" />Pause</> : <><Play size={16} className="mr-2" />Start</>}
-                </button>
-                <button
-                  onClick={() => setTrackingGpsEnabled(!trackingGpsEnabled)}
-                  className={`px-6 py-3 rounded-xl text-sm font-medium border transition-colors ${
-                    trackingGpsEnabled
-                      ? 'bg-buddy-surface text-buddy-text-secondary border-buddy-border hover:bg-buddy-surface/80'
-                      : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border hover:bg-buddy-surface/80'
-                  }`}
-                >
-                  <TimerIcon size={16} className="mr-2" />
-                  GPS: {trackingGpsEnabled ? 'ON' : 'OFF'}
-                </button>
-              </div>
-
-              {/* Route preview */}
-              {trackingRoute.length > 0 && (
-                <div className="bg-buddy-surface/50 rounded-lg p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-buddy-text-secondary">Route points</span>
-                    <span className="text-xs text-buddy-green">{trackingRoute.length}</span>
-                  </div>
-                  <div className="h-20 bg-buddy-bg rounded border border-buddy-border flex items-center justify-center">
-                    <div className="text-xs text-buddy-text-secondary">GPS trace captured</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={cancelTracking}
-                className="flex-1 py-3 rounded-xl border border-buddy-border text-buddy-text-secondary hover:bg-buddy-surface/50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveActivity}
-                disabled={trackingSeconds === 0}
-                className={`flex-1 py-3 rounded-xl text-sm font-medium transition-colors ${
-                  trackingSeconds === 0
-                    ? 'bg-buddy-surface text-buddy-text-secondary border-buddy-border cursor-not-allowed'
-                    : 'bg-buddy-green text-buddy-green border-buddy-green hover:bg-buddy-green/20'
-                }`}
-              >
-                Save Activity
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Activity Tracking Modal — replaced by the dedicated tracking page. */}
 
       {/* Share Composer Modal */}
       {shareOpen && shareActivity && (

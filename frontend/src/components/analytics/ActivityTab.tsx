@@ -157,12 +157,12 @@ export function ActivityTab() {
           // Record the first fix immediately so zero-movement sessions still
           // show the user's location on the map.
           const p: TrackPoint = { lat: pos.coords.latitude, lng: pos.coords.longitude, ts: Date.now() };
-          setPoints((prev) => {
-            if (lastPos && lastPos.lat === p.lat && lastPos.lng === p.lng) return prev;
-            const next = lastPos ? [...prev, p] : [p];
-            lastPos = p;
-            return next;
-          });
+          // The dedupe lives outside the state updater: React may call an
+          // updater more than once, and a side effect inside one would then
+          // be applied twice — dropping the point it had just added.
+          if (lastPos && lastPos.lat === p.lat && lastPos.lng === p.lng) return;
+          lastPos = p;
+          setPoints((prev) => [...prev, p]);
         },
         (err) => setError(
           err.code === err.PERMISSION_DENIED

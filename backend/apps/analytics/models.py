@@ -154,7 +154,7 @@ class ActivityRecord(TimestampedModel):
     source = models.CharField(max_length=10, choices=SOURCE_CHOICES, default='gps')
     source_event_id = models.CharField(max_length=120, null=True, blank=True)
     provenance = models.JSONField(default=dict, blank=True)
-    started_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(default=timezone.now)
     duration_seconds = models.IntegerField(default=0)
     distance_meters = models.FloatField(default=0.0)
     avg_pace = models.FloatField(null=True, blank=True, help_text='Seconds per kilometre')

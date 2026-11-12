@@ -3,6 +3,9 @@ import { lazy, Suspense, useMemo } from 'react';
 interface RouteMapProps {
   route: number[][];
   height?: number;
+  /** Keep the map centred on the current position while the route grows. */
+  follow?: boolean;
+  zoom?: number;
 }
 
 interface LatLng {
@@ -37,7 +40,10 @@ const OsmRouteMap = lazy(() =>
 export function SvgRouteMap({ route, height = 220 }: RouteMapProps) {
   const { points, paths } = useMemo(() => {
     const pts = toLatLngs(route);
-    if (pts.length < 2) return { points: [] as LatLng[], paths: '' };
+    if (pts.length === 0) return { points: [] as LatLng[], paths: '' };
+    // A single point has no line to draw, but it is still worth showing —
+    // that is where the session started.
+    if (pts.length === 1) return { points: pts, paths: '' };
     const lats = pts.map((p) => p.lat);
     const lngs = pts.map((p) => p.lng);
     const minLat = Math.min(...lats);
@@ -113,17 +119,17 @@ export function SvgRouteMap({ route, height = 220 }: RouteMapProps) {
  * configured; otherwise defers to SvgRouteMap. The maps module is imported
  * lazily so the app never pulls in the Google Maps SDK without a key.
  */
-export function RouteMap({ route, height = 220 }: RouteMapProps) {
+export function RouteMap({ route, height = 220, follow = false, zoom = 16 }: RouteMapProps) {
   const mapsKey = import.meta.env.VITE_GOOGLE_MAPS_KEY;
   const hasKey = mapsKey && mapsKey.trim() !== '' && mapsKey !== 'xxxxx';
 
   const points = useMemo(() => toLatLngs(route), [route]);
-  if (!hasKey || points.length < 2) {
-    if (points.length >= 2) {
+  if (!hasKey || points.length < 1) {
+    if (points.length >= 1) {
       // No Google key but a real route — render keyless OSM tiles.
       return (
         <Suspense fallback={<SvgRouteMap route={route} height={height} />}>
-          <OsmRouteMap route={route} height={height} />
+          <OsmRouteMap route={route} height={height} follow={follow} zoom={zoom} />
         </Suspense>
       );
     }
