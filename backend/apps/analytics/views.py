@@ -1,5 +1,6 @@
 import os
 import uuid
+import logging
 from django.conf import settings
 
 from django.core.files.storage import default_storage
@@ -22,6 +23,8 @@ from .serializers import (
 from . import engine
 from . import report as report_service
 from .tasks import watermark_video
+
+logger = logging.getLogger(__name__)
 
 
 class BaseOwnedView(views.APIView):
@@ -72,6 +75,15 @@ class ActivityRecordView(BaseOwnedView):
     serializer_class = ActivityRecordSerializer
     date_field = 'started_at'
 
+    #: The signal each activity type raises, so an automatic countdown can
+    #: follow it (e.g. a "Walking Days" countdown that advances on a walk).
+    ACTIVITY_SIGNALS = {
+        'walk': 'activity_walk',
+        'run': 'activity_run',
+        'hike': 'activity_hike',
+        'cycle': 'activity_cycle',
+    }
+
     def post(self, request, pk=None):
         if pk:
             obj = self.get_object(pk)
@@ -91,7 +103,23 @@ class ActivityRecordView(BaseOwnedView):
             obj, created = ActivityRecord.objects.get_or_create(user=request.user.profile, source_event_id=serializer.validated_data['source_event_id'], defaults=serializer.validated_data)
         else:
             obj, created = serializer.save(user=request.user.profile), True
+        if created:
+            # The activity is what an automatic countdown waits for.
+            self._advance_countdowns(obj)
         return Response({'success': True, 'data': ActivityRecordSerializer(obj).data, 'message': 'Activity recorded.', 'errors': None, 'pagination': None}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    @staticmethod
+    def _advance_countdowns(activity):
+        """Move any automatic countdown bound to this activity's signal."""
+        from apps.countdowns.services import advance_matching_countdowns
+
+        signal = ActivityRecordView.ACTIVITY_SIGNALS.get(activity.activity_type)
+        if not signal:
+            return
+        try:
+            advance_matching_countdowns(activity.user, signal)
+        except Exception:  # noqa: BLE001 — a countdown must never fail the activity
+            logger.warning('could not advance countdowns for %s', signal, exc_info=True)
 
 
 class WorkoutLogView(BaseOwnedView):
@@ -107,6 +135,13 @@ class WorkoutLogView(BaseOwnedView):
             user=request.user.profile, source_event_id=event_id,
             defaults=serializer.validated_data,
         ) if event_id else (serializer.save(user=request.user.profile), True)
+        if created:
+            from apps.countdowns.services import advance_matching_countdowns
+
+            try:
+                advance_matching_countdowns(obj.user, 'workout_logged')
+            except Exception:  # noqa: BLE001 — a countdown must never fail the workout
+                logger.warning('could not advance countdowns for workout_logged', exc_info=True)
         return Response({
             'success': True, 'data': WorkoutLogSerializer(obj).data,
             'message': 'Workout logged.', 'errors': None, 'pagination': None,

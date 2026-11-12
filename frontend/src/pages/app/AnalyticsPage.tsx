@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Activity as ActivityIcon, Dumbbell, Scale, FileBarChart2, LayoutDashboard } from 'lucide-react';
+import { Activity as ActivityIcon, Dumbbell, Scale, FileBarChart2, LayoutDashboard, Timer } from 'lucide-react';
 import type { AnalyticsPeriod } from '@/types/analytics';
 import { OverviewTab } from '@/components/analytics/OverviewTab';
 import { ActivityTab } from '@/components/analytics/ActivityTab';
 import { WorkoutsTab } from '@/components/analytics/WorkoutsTab';
 import { BodyTab } from '@/components/analytics/BodyTab';
 import { ReportTab } from '@/components/analytics/ReportTab';
+import { CountdownTab } from '@/components/analytics/CountdownTab';
 
 const PERIODS: { key: AnalyticsPeriod; label: string }[] = [
   { key: 'week', label: 'Week' },
@@ -19,6 +20,7 @@ const TABS = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard },
   { key: 'activity', label: 'Activity', icon: ActivityIcon },
   { key: 'workouts', label: 'Workouts', icon: Dumbbell },
+  { key: 'countdowns', label: 'Countdowns', icon: Timer },
   { key: 'body', label: 'Body', icon: Scale },
   { key: 'report', label: 'Report', icon: FileBarChart2 },
 ] as const;
@@ -78,6 +80,7 @@ export default function AnalyticsPage() {
         {tab === 'overview' && <OverviewTab period={period} />}
         {tab === 'activity' && <ActivityTab />}
         {tab === 'workouts' && <WorkoutsTab period={period} />}
+        {tab === 'countdowns' && <CountdownTab period={period} />}
         {tab === 'body' && <BodyTab />}
         {tab === 'report' && <ReportTab period={period} />}
       </div>

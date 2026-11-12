@@ -126,6 +126,57 @@ export interface ProgrammesSummary {
   avg_progress_pct: number | null;
 }
 
+export interface CountdownSummary {
+  count: number;
+  active_count: number;
+  total_checkins: number;
+  total_resets: number;
+  total_completions: number;
+  current_streak_units: number;
+  longest_streak_units: number;
+  total_streak_days: number;
+  by_countdown: Array<{
+    id: string;
+    reason: string;
+    icon: string;
+    unit: string;
+    countdown_type: string;
+    current_count: number;
+    target_count: number;
+    elapsed_units: number;
+    longest_run_units: number;
+    checkins: number;
+    resets: number;
+    completed: boolean;
+    is_active: boolean;
+    last_event_at: string | null;
+  }>;
+  recent_events: Array<{
+    id: string;
+    countdown_id: string;
+    event_type: string;
+    count_after: number;
+    elapsed_seconds: number;
+    run_elapsed_seconds: number;
+    unit: string;
+    occurred_at: string;
+  }>;
+  resets: Array<{
+    id: string;
+    countdown_id: string;
+    reason: string;
+    occurred_at: string;
+    run_elapsed_seconds: number;
+    run_elapsed_units: number;
+    count_after: number;
+  }>;
+  cadence: {
+    median_gap_seconds: number | null;
+    on_time_checkins: number;
+    late_checkins: number;
+  };
+}
+
 export interface AnalyticsSummaryData {
   period: AnalyticsPeriod;
   user: {
@@ -136,6 +187,7 @@ export interface AnalyticsSummaryData {
   };
   workouts: WorkoutSummary;
   activity: ActivitySummary;
+  countdowns?: CountdownSummary;
   nutrition?: NutritionSummary;
   body: BodySummary;
   lives: LivesSummary;

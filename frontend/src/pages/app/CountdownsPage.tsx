@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import {
   Plus, RefreshCw, Trash2, Edit, Play, Timer, X,
   Wine, Minus, Leaf, Dumbbell, MapPin, AlertCircle, Share2, Clock,
-  MoreHorizontal,
+  MoreHorizontal, History, Zap,
 } from 'lucide-react';
 import { useCountdownsStore } from '@/store/countdownsStore';
 import { analyticsApi } from '@/api/analytics';
-import type { UserCountdown, CreateUserCountdown } from '@/types/countdowns';
+import { countdownsApi } from '@/api/countdowns';
+import {
+  checkInState, countdownHeadline, progressPct, signalLabel, typeTag,
+} from '@/lib/countdownFormat';
+import type { UserCountdown, CreateUserCountdown, CountdownEvent } from '@/types/countdowns';
 
 const TEMPLATE_LUCIDE_ICONS: Record<string, React.ComponentType<any>> = {
   sobriety: Wine,
@@ -40,12 +44,14 @@ export default function CountdownsPage() {
     error,
     fetchTemplates,
     fetchCountdowns,
+    fetchSignals,
     createCountdown,
     checkIn,
     resetCountdown,
     updateCountdown,
     deleteCountdown,
     templates,
+    signals,
   } = useCountdownsStore();
 
   const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(null);
@@ -54,11 +60,19 @@ export default function CountdownsPage() {
   const [targetCount, setTargetCount] = useState(0);
   const [countdownType, setCountdownType] = useState<'manual' | 'automatic'>('manual');
   const [unit, setUnit] = useState<'days' | 'hours'>('days');
+  const [autoSignal, setAutoSignal] = useState('');
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward');
   const [visibility, setVisibility] = useState<'public' | 'buddies' | 'followers' | 'private'>('private');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editReason, setEditReason] = useState('');
   const [editTarget, setEditTarget] = useState('');
+
+  // The stream for one countdown at a time.
+  const [historyId, setHistoryId] = useState<string | null>(null);
+  const [history, setHistory] = useState<CountdownEvent[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [checkInBusy, setCheckInBusy] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Share composer state
   const [shareOpen, setShareOpen] = useState(false);
@@ -84,16 +98,24 @@ export default function CountdownsPage() {
   useEffect(() => {
     fetchTemplates();
     fetchCountdowns();
-  }, [fetchTemplates, fetchCountdowns]);
+    fetchSignals();
+  }, [fetchTemplates, fetchCountdowns, fetchSignals]);
 
   const handleCreate = async () => {
     if (!creatingTemplateId && !newReason.trim()) return;
+    // An automatic countdown is defined by what advances it, so it needs a
+    // signal before it can be created.
+    if (countdownType === 'automatic' && !autoSignal) {
+      setActionError('Pick what should advance this countdown.');
+      return;
+    }
     const payload: CreateUserCountdown = {
       template: creatingTemplateId || null,
       custom_reason: newReason.trim() || undefined,
       countdown_type: countdownType,
       unit,
       target_count: targetCount > 0 ? targetCount : undefined,
+      ...(countdownType === 'automatic' ? { auto_advance_signal: autoSignal } : {}),
     };
     await createCountdown(payload);
     setCreatingTemplateId(null);
@@ -101,6 +123,7 @@ export default function CountdownsPage() {
     setTargetCount(0);
     setCountdownType('manual');
     setUnit('days');
+    setAutoSignal('');
     setDirection('forward');
     setVisibility('private');
     setStep(1);
@@ -108,14 +131,51 @@ export default function CountdownsPage() {
   };
 
   const handleCheckIn = async (id: string) => {
-    await checkIn(id);
-    fetchCountdowns();
+    setCheckInBusy(id);
+    setActionError(null);
+    try {
+      await checkIn(id);
+      await fetchCountdowns();
+    } catch (err: any) {
+      setActionError(err?.response?.data?.message || 'Could not check in.');
+    } finally {
+      setCheckInBusy(null);
+    }
   };
 
   const handleReset = async (id: string) => {
-    if (!window.confirm('Reset this countdown to zero?')) return;
-    await resetCountdown(id);
-    fetchCountdowns();
+    if (!window.confirm('Reset this countdown to zero? The streak restarts from now, and the history is kept.')) return;
+    setActionError(null);
+    try {
+      await resetCountdown(id);
+      await fetchCountdowns();
+      if (historyId === id) await loadHistory(id);
+    } catch (err: any) {
+      setActionError(err?.response?.data?.message || 'Could not reset.');
+    }
+  };
+
+  /** Load a countdown's stream — the log of every check-in and reset. */
+  const loadHistory = async (id: string) => {
+    setHistoryLoading(true);
+    try {
+      const events = await countdownsApi.listEvents(id, { limit: 50 });
+      setHistory(events);
+    } catch {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const toggleHistory = async (id: string) => {
+    if (historyId === id) {
+      setHistoryId(null);
+      setHistory([]);
+      return;
+    }
+    setHistoryId(id);
+    await loadHistory(id);
   };
 
   const handleDelete = async (id: string) => {
@@ -131,6 +191,9 @@ export default function CountdownsPage() {
       countdown_type: c.countdown_type,
       unit: c.unit,
       target_count: c.target_count,
+      ...(c.countdown_type === 'automatic' && c.auto_advance_signal
+        ? { auto_advance_signal: c.auto_advance_signal }
+        : {}),
     };
     await createCountdown(payload);
     setCreatingTemplateId(null);
@@ -138,6 +201,7 @@ export default function CountdownsPage() {
     setTargetCount(0);
     setCountdownType('manual');
     setUnit('days');
+    setAutoSignal('');
     setDirection('forward');
     setVisibility('private');
     setStep(1);
@@ -155,10 +219,7 @@ export default function CountdownsPage() {
     fetchCountdowns();
   };
 
-  const progressPct = (c: UserCountdown) => {
-    if (!c.target_count) return Math.min(100, (c.current_count / Math.max(c.days_since_start, 1)) * 100);
-    return Math.min(100, (c.current_count / c.target_count) * 100);
-  };
+  const progressPctFor = (c: UserCountdown) => progressPct(c);
 
   // Progress-based counter color: 25%, 50%, 75%, 100% changes color. Gold at 100%.
   const counterColorForProgress = (pct: number) => {
@@ -172,10 +233,11 @@ export default function CountdownsPage() {
   const handleShareCountdown = (c: UserCountdown) => {
     setShareCountdown(c);
     setShareTarget('post');
-    const pct = progressPct(c);
+    const pct = progressPctFor(c);
+    const head = countdownHeadline(c);
     const daysText = c.target_count
-      ? `${c.current_count} / ${c.target_count} ${c.unit}`
-      : `${c.current_count} ${c.unit}${c.current_count !== 1 ? 's' : ''}`;
+      ? `${head.value} / ${c.target_count} ${c.unit}`
+      : `${head.value} ${c.unit}${head.value !== 1 ? 's' : ''}`;
     setShareCaption(`${c.display_reason}
 ${daysText}
 Progress: ${Math.round(pct)}%
@@ -245,7 +307,7 @@ Progress: ${Math.round(pct)}%
         </div>
         <button
           onClick={() => setCreatingTemplateId(templates[0]?.id || 'custom')}
-          className="flex items-center gap-2 px-3 py-2 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center gap-2 px-3 py-2 bg-buddy-green hover:bg-buddy-green/90 text-buddy-black rounded-lg text-sm font-medium transition-colors"
         >
           <Plus size={16} /> New Countdown
         </button>
@@ -253,6 +315,13 @@ Progress: ${Math.round(pct)}%
 
       {error && (
         <div className="rounded-lg bg-buddy-red/10 p-3 border border-buddy-red/20 text-buddy-red text-sm">{error}</div>
+      )}
+
+      {actionError && (
+        <div className="rounded-lg bg-buddy-red/10 p-3 border border-buddy-red/20 text-buddy-red text-sm flex items-start gap-2">
+          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+          <span>{actionError}</span>
+        </div>
       )}
 
       {/* Countdowns list - FIRST */}
@@ -294,39 +363,48 @@ Progress: ${Math.round(pct)}%
 
         <div className="space-y-3">
           {filteredCountdowns.map((c) => {
-            const pct = progressPct(c);
+            const pct = progressPctFor(c);
             const { bg, text, border } = counterColorForProgress(pct);
-            const actualDays = c.days_since_start;
+            // The counter is what the user completed; the streak's wall-clock
+            // length is shown beside it, because the two move at different
+            // times.
+            const head = countdownHeadline(c);
+            const checkIn = checkInState(c);
+            const tag = typeTag(c, signals);
             const showShare = c.completed_at || c.countdown_type === 'manual';
 
             return (
               <div
                 key={c.id}
-                className={`flex items-start gap-4 p-4 rounded-lg border ${
+                className={`flex flex-col sm:flex-row sm:items-start gap-4 p-4 rounded-lg border ${
                   c.completed_at ? 'bg-buddy-green/10 border-buddy-green/30' : 'border-buddy-border bg-buddy-bg'
                 }`}
               >
+                <div className="flex items-start gap-4 flex-1 min-w-0">
                 {/* Big round counter - huge for attention, color changes with progress */}
                 <div className="shrink-0 relative">
                   <div className={`w-24 h-24 rounded-full border-6 ${bg} ${border} flex flex-col items-center justify-center shadow-lg`}>
-                    <span className={`text-4xl font-display font-bold ${text}`}>{actualDays}</span>
-                    <span className={`text-[11px] uppercase tracking-wider font-bold ${text}`}>{c.unit}</span>
+                    <span className={`text-4xl font-display font-bold ${text}`}>{head.value}</span>
+                    <span className={`text-[11px] uppercase tracking-wider font-bold ${text}`}>{head.unit}</span>
                   </div>
                   {c.completed_at && (
                     <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-buddy-green flex items-center justify-center shadow-lg">
-                      <Clock size={14} className="text-white" />
+                      <Clock size={14} className="text-buddy-black" />
                     </div>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
                     <h4 className="font-medium text-buddy-text-primary">{c.display_reason}</h4>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${c.completed_at ? 'bg-buddy-green text-white' : 'bg-buddy-surface text-buddy-text-secondary border border-buddy-border'}`}>
-                      {c.completed_at ? 'Completed' : c.countdown_type === 'manual' ? 'Manual' : 'Automatic'}
+                    <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${c.completed_at ? 'bg-buddy-green text-buddy-black' : tag.className}`}>
+                      {c.completed_at ? 'Completed' : tag.text}
                     </span>
                   </div>
                   <p className="text-xs text-buddy-text-secondary mt-1">
                     Started {new Date(c.start_date).toLocaleDateString()}
+                    {c.last_reset_at && (
+                      <> · last reset {new Date(c.last_reset_at).toLocaleDateString()}</>
+                    )}
                   </p>
                   <div className="w-full bg-buddy-surface/50 rounded-full h-2.5 mt-3 overflow-hidden">
                     <div
@@ -334,25 +412,102 @@ Progress: ${Math.round(pct)}%
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <div className="mt-3 text-xs text-buddy-text-secondary font-medium">
-                    {c.target_count ? `Target: ${c.target_count} ${c.unit}` : `Day ${actualDays}`}
+                  <div className="mt-3 text-xs text-buddy-text-secondary font-medium flex flex-wrap items-center gap-x-3 gap-y-1">
+                    {c.target_count ? (
+                      <span>Target: {c.target_count} {c.unit}</span>
+                    ) : (
+                      <span>No target</span>
+                    )}
+                    <span>
+                      Streak: {head.streakUnits} {head.unit}
+                      {head.streakUnits !== head.value && (
+                        <span className="text-buddy-text-secondary/70"> ({head.value} checked in)</span>
+                      )}
+                    </span>
                   </div>
+
+                  {/* The stream — every check-in, advance and reset. */}
+                  <button
+                    onClick={() => toggleHistory(c.id)}
+                    aria-expanded={historyId === c.id}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs text-buddy-text-secondary hover:text-buddy-green transition-colors"
+                  >
+                    <History size={13} />
+                    {historyId === c.id ? 'Hide history' : 'History'}
+                  </button>
+                  {historyId === c.id && (
+                    <div className="mt-2 rounded-lg border border-buddy-border bg-buddy-surface/50 p-3">
+                      {historyLoading ? (
+                        <p className="text-xs text-buddy-text-secondary">Loading history…</p>
+                      ) : history.length === 0 ? (
+                        <p className="text-xs text-buddy-text-secondary">Nothing recorded yet.</p>
+                      ) : (
+                        <ol className="space-y-1.5">
+                          {history.map((e) => (
+                            <li key={e.id} className="flex items-center gap-2 text-xs">
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                  e.event_type === 'reset'
+                                    ? 'bg-buddy-red'
+                                    : e.event_type === 'auto_advance'
+                                      ? 'bg-buddy-electric'
+                                      : e.event_type === 'complete'
+                                        ? 'bg-buddy-gold'
+                                        : 'bg-buddy-green'
+                                }`}
+                              />
+                              <span className="text-buddy-text-primary capitalize">
+                                {e.event_type.replace('_', ' ')}
+                              </span>
+                              <span className="text-buddy-text-secondary">
+                                → {e.count_after} {e.unit}
+                              </span>
+                              {e.run_elapsed_seconds > 0 && (
+                                <span className="text-buddy-text-secondary/70">
+                                  (ran {Math.round(e.run_elapsed_seconds / 3600)}h)
+                                </span>
+                              )}
+                              <span className="ml-auto text-buddy-text-secondary/60 whitespace-nowrap">
+                                {new Date(e.occurred_at).toLocaleString()}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="shrink-0">
+                </div>
+                <div className="shrink-0 flex items-center gap-2 sm:flex-col sm:items-stretch">
+                  {/* Check in — the primary action for a manual countdown. */}
+                  {c.countdown_type === 'manual' && (
+                    <button
+                      onClick={() => handleCheckIn(c.id)}
+                      disabled={checkIn.locked || checkInBusy === c.id}
+                      className={`flex-1 sm:w-full py-2 px-3 rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                        checkIn.locked
+                          ? 'bg-buddy-surface text-buddy-text-secondary cursor-not-allowed shadow-none'
+                          : 'bg-buddy-green hover:bg-buddy-green/90 text-buddy-black'
+                      }`}
+                    >
+                      <Play size={16} /> {checkIn.locked ? checkIn.label : 'Check in'}
+                    </button>
+                  )}
                   {/* Share button - standalone, prominent */}
                   {showShare && (
                     <button
                       onClick={() => handleShareCountdown(c)}
-                      className="w-full py-2 px-3 bg-buddy-green hover:bg-buddy-green/90 text-white rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center gap-1.5"
+                      className="flex-1 sm:w-full sm:mt-2 py-2 px-3 bg-buddy-green hover:bg-buddy-green/90 text-buddy-black rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center gap-1.5 whitespace-nowrap"
                     >
                       <Share2 size={16} /> Share
                     </button>
                   )}
                   {/* Three dots - More options */}
-                  <div className="relative mt-2">
+                  <div className="relative mt-0 sm:mt-2">
                     <button
                       onClick={(e) => { e.stopPropagation(); setMoreOptionsOpen(moreOptionsOpen === c.id ? null : c.id); }}
-                      className="w-8 h-8 rounded-lg bg-buddy-surface hover:bg-buddy-surface/80 flex items-center justify-center text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
+                      aria-label="More options"
+                      className="w-8 h-8 shrink-0 rounded-lg bg-buddy-surface hover:bg-buddy-surface/80 flex items-center justify-center text-buddy-text-secondary hover:text-buddy-text-primary transition-colors"
                     >
                       <MoreHorizontal size={16} />
                     </button>
@@ -372,13 +527,11 @@ Progress: ${Math.round(pct)}%
                             <Clock size={14} className="w-4 h-4" /> Recreate
                           </button>
                         )}
-                        {c.countdown_type === 'manual' && (
-                          <button
-                            onClick={() => { handleCheckIn(c.id); setMoreOptionsOpen(null); }}
-                            className="w-full text-left px-3 py-2 text-sm text-buddy-green hover:bg-buddy-green/5 hover:text-buddy-green transition-colors flex items-center gap-2"
-                          >
-                            <Play size={14} className="w-4 h-4" /> Check in
-                          </button>
+                        {c.countdown_type === 'automatic' && (
+                          <p className="px-3 py-2 text-xs text-buddy-text-secondary flex items-start gap-2">
+                            <Zap size={13} className="w-4 h-4 mt-0.5 shrink-0 text-buddy-electric" />
+                            Advances on: {signalLabel(signals, c.auto_advance_signal)}
+                          </p>
                         )}
                         <button
                           onClick={() => { handleReset(c.id); setMoreOptionsOpen(null); }}
@@ -450,7 +603,7 @@ Progress: ${Math.round(pct)}%
               {[1, 2, 3].map((s) => (
                 <div key={s} className="flex items-center gap-2">
                   <div className={`w-6 h-6 rounded-full border flex items-center justify-center text-xs font-bold ${
-                    step >= s ? 'bg-buddy-green text-buddy-white border-buddy-green' : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border'
+                    step >= s ? 'bg-buddy-green text-buddy-black border-buddy-green' : 'bg-buddy-surface text-buddy-text-secondary border-buddy-border'
                   }`}>
                     {s}
                   </div>
@@ -545,7 +698,42 @@ Progress: ${Math.round(pct)}%
                         </button>
                       ))}
                     </div>
+                    <p className="text-xs text-buddy-text-secondary mt-1">
+                      A check-in unlocks once per {unit === 'hours' ? 'hour' : 'day'}, so the
+                      counter follows what you have actually completed.
+                    </p>
                   </div>
+
+                  {/* An automatic countdown is defined by what advances it. */}
+                  {countdownType === 'automatic' && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-buddy-text-secondary">
+                        What should advance it?
+                      </label>
+                      <div className="grid grid-cols-1 gap-2">
+                        {signals.map((s) => (
+                          <button
+                            key={s.key}
+                            type="button"
+                            onClick={() => setAutoSignal(s.key)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-left transition-colors ${
+                              autoSignal === s.key
+                                ? 'bg-buddy-electric/10 border-buddy-electric text-buddy-text-primary'
+                                : 'bg-buddy-surface border-buddy-border text-buddy-text-secondary hover:border-buddy-border/50'
+                            }`}
+                          >
+                            <Zap size={14} className={autoSignal === s.key ? 'text-buddy-electric' : ''} />
+                            <span className="text-sm">{s.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {signals.length === 0 && (
+                        <p className="text-xs text-buddy-text-secondary">
+                          Loading the signals this countdown can follow…
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-buddy-text-secondary">Direction</label>
@@ -771,7 +959,7 @@ Progress: ${Math.round(pct)}%
                 onClick={handleShareSubmit}
                 disabled={shareLoading}
                 className={`w-full py-3 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
-                  shareLoading ? 'bg-buddy-surface text-buddy-text-secondary' : 'bg-buddy-green text-buddy-white hover:bg-buddy-green/90'
+                  shareLoading ? 'bg-buddy-surface text-buddy-text-secondary' : 'bg-buddy-green text-buddy-black hover:bg-buddy-green/90'
                 }`}
               >
                 {shareLoading ? 'Sharing…' : 'Share'}

@@ -36,6 +36,38 @@ export interface UserCountdown {
   display_icon: string;
   created_at: string;
   updated_at: string;
+  /** Whole units completed since the current streak began. */
+  elapsed_units: number;
+  /** When the current streak began. */
+  run_started_at: string | null;
+  /** How long the current streak has lasted, in seconds. */
+  run_elapsed_seconds: number;
+  /** When the next manual check-in unlocks (null when it is open). */
+  next_checkin_at: string | null;
+  /** When the countdown was last reset. */
+  last_reset_at: string | null;
+}
+
+/** One entry in a countdown's stream. */
+export interface CountdownEvent {
+  id: string;
+  countdown: string;
+  event_type: 'create' | 'checkin' | 'reset' | 'auto_advance' | 'complete' | 'edit';
+  count_after: number;
+  /** Seconds since the previous event on this countdown. */
+  elapsed_seconds: number;
+  /** Seconds since the current streak began. */
+  run_elapsed_seconds: number;
+  unit: CountdownUnit;
+  note: string;
+  occurred_at: string;
+}
+
+/** A signal an automatic countdown can advance on. */
+export interface CountdownSignal {
+  key: string;
+  label: string;
+  unit: CountdownUnit;
 }
 
 export interface CreateUserCountdown {
@@ -45,6 +77,8 @@ export interface CreateUserCountdown {
   unit?: CountdownUnit;
   target_count?: number;
   start_date?: string;
+  /** Required for automatic countdowns — what advances them. */
+  auto_advance_signal?: string;
 }
 
 export interface UpdateUserCountdown {
@@ -54,6 +88,7 @@ export interface UpdateUserCountdown {
   target_count?: number;
   start_date?: string;
   is_active?: boolean;
+  auto_advance_signal?: string;
 }
 
 export type RoutineType = 'walk' | 'run' | 'cycle' | 'hike' | 'workout';

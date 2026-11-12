@@ -3,6 +3,8 @@ import type { ApiResponse } from '@/types';
 import type {
   CountdownTemplate,
   UserCountdown,
+  CountdownEvent,
+  CountdownSignal,
   CreateUserCountdown,
   UpdateUserCountdown,
   Routine,
@@ -18,6 +20,12 @@ export const countdownsApi = {
   seedTemplates: () =>
     apiClient.post<ApiResponse<{ created: number; total: number }>>('/countdowns/templates/seed/').then((r) => r.data.data),
 
+  /** The signals an automatic countdown can advance on. */
+  listSignals: () =>
+    apiClient
+      .get<ApiResponse<CountdownSignal[]>>('/countdowns/signals/')
+      .then((r) => r.data.data),
+
   listCountdowns: (params?: { is_active?: boolean }) =>
     apiClient
       .get<ApiResponse<UserCountdown[]>>('/countdowns/', { params })
@@ -28,6 +36,12 @@ export const countdownsApi = {
 
   getCountdown: (id: string) =>
     apiClient.get<ApiResponse<UserCountdown>>(`/countdowns/${id}/`).then((r) => r.data.data),
+
+  /** A countdown's stream — every check-in, advance and reset. */
+  listEvents: (id: string, params?: { event_type?: string; limit?: number }) =>
+    apiClient
+      .get<ApiResponse<CountdownEvent[]>>(`/countdowns/${id}/events/`, { params })
+      .then((r) => r.data.data),
 
   updateCountdown: (id: string, payload: UpdateUserCountdown) =>
     apiClient.patch<ApiResponse<UserCountdown>>(`/countdowns/${id}/`, payload).then((r) => r.data.data),

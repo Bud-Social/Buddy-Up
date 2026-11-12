@@ -1,16 +1,23 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { countdownsApi } from '@/api/countdowns';
-import type { UserCountdown, CountdownTemplate, CreateUserCountdown } from '@/types/countdowns';
+import type {
+  UserCountdown,
+  CountdownTemplate,
+  CountdownSignal,
+  CreateUserCountdown,
+} from '@/types/countdowns';
 
 interface CountdownsState {
   templates: CountdownTemplate[];
   countdowns: UserCountdown[];
+  signals: CountdownSignal[];
   loading: boolean;
   error: string | null;
 
   fetchTemplates: () => Promise<void>;
   fetchCountdowns: (is_active?: boolean) => Promise<void>;
+  fetchSignals: () => Promise<void>;
   createCountdown: (payload: CreateUserCountdown) => Promise<UserCountdown>;
   checkIn: (id: string) => Promise<void>;
   resetCountdown: (id: string) => Promise<void>;
@@ -24,6 +31,7 @@ export const useCountdownsStore = create<CountdownsState>()(
     (set) => ({
       templates: [],
       countdowns: [],
+      signals: [],
       loading: false,
       error: null,
 
@@ -34,6 +42,15 @@ export const useCountdownsStore = create<CountdownsState>()(
           set({ templates, loading: false });
         } catch (err: any) {
           set({ error: err?.response?.data?.message || 'Failed to load templates', loading: false });
+        }
+      },
+
+      fetchSignals: async () => {
+        try {
+          const signals = await countdownsApi.listSignals();
+          set({ signals });
+        } catch {
+          // The picker falls back to a static list when this is unavailable.
         }
       },
 

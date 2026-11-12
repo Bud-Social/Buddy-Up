@@ -108,6 +108,131 @@ def summarize_workouts(profile, cutoff):
     }
 
 
+def summarize_countdowns(profile, cutoff):
+    """Countdown streaks, check-in cadence and the reset history.
+
+    Reads the countdown event stream rather than the counters alone: a reset
+    clears the counter but not the history, and the history is where the
+    interesting numbers live — how long each streak lasted, how regularly
+    the user checked in, and how many times they started over.
+    """
+    from apps.countdowns.models import CountdownEvent, UserCountdown
+
+    countdowns = list(UserCountdown.objects.filter(user=profile))
+    if not countdowns:
+        return {
+            'count': 0,
+            'active_count': 0,
+            'total_checkins': 0,
+            'total_resets': 0,
+            'total_completions': 0,
+            'current_streak_units': 0,
+            'longest_streak_units': 0,
+            'total_streak_days': 0,
+            'by_countdown': [],
+            'recent_events': [],
+            'resets': [],
+            'cadence': {},
+        }
+
+    countdown_ids = [c.id for c in countdowns]
+    events = list(
+        CountdownEvent.objects.filter(countdown_id__in=countdown_ids)
+        .order_by('-occurred_at')
+    )
+    if cutoff:
+        events = [e for e in events if e.occurred_at >= cutoff]
+
+    checkins = [e for e in events if e.event_type in ('checkin', 'auto_advance')]
+    resets = [e for e in events if e.event_type == 'reset']
+    completions = [e for e in events if e.event_type == 'complete']
+
+    # ── Per countdown ────────────────────────────────────────────────────────
+    by_countdown = []
+    for c in countdowns:
+        own = [e for e in events if e.countdown_id == c.id]
+        own_checkins = [e for e in own if e.event_type in ('checkin', 'auto_advance')]
+        own_resets = [e for e in own if e.event_type == 'reset']
+        # The longest this countdown ever ran: the biggest run length seen
+        # on the stream, plus the run that is still going.
+        run_lengths = [e.run_elapsed_seconds for e in own] + [c.run_elapsed_seconds]
+        longest = max(run_lengths) if run_lengths else 0
+        unit_seconds = UserCountdown.UNIT_SECONDS.get(c.unit, UserCountdown.UNIT_SECONDS['days'])
+        by_countdown.append({
+            'id': str(c.id),
+            'reason': c.display_reason,
+            'icon': c.display_icon,
+            'unit': c.unit,
+            'countdown_type': c.countdown_type,
+            'current_count': c.current_count,
+            'target_count': c.target_count,
+            'elapsed_units': c.elapsed_units,
+            'longest_run_units': round(longest / unit_seconds, 1),
+            'checkins': len(own_checkins),
+            'resets': len(own_resets),
+            'completed': bool(c.completed_at),
+            'is_active': c.is_active,
+            'last_event_at': own[0].occurred_at.isoformat() if own else None,
+        })
+
+    # ── Cadence: how regularly the user checks in ───────────────────────────
+    gaps = sorted(e.elapsed_seconds for e in checkins if e.elapsed_seconds > 0)
+    median_gap = gaps[len(gaps) // 2] if gaps else None
+    on_time = 0
+    for c in countdowns:
+        unit_seconds = UserCountdown.UNIT_SECONDS.get(c.unit, UserCountdown.UNIT_SECONDS['days'])
+        on_time += sum(1 for e in checkins if e.countdown_id == c.id and e.elapsed_seconds >= unit_seconds)
+
+    # ── The resets ──────────────────────────────────────────────────────────
+    resets_view = []
+    for e in resets:
+        countdown = next((c for c in countdowns if c.id == e.countdown_id), None)
+        resets_view.append({
+            'id': str(e.id),
+            'countdown_id': str(e.countdown_id),
+            'reason': countdown.display_reason if countdown else '',
+            'occurred_at': e.occurred_at.isoformat(),
+            'run_elapsed_seconds': e.run_elapsed_seconds,
+            'run_elapsed_units': round(
+                e.run_elapsed_seconds / UserCountdown.UNIT_SECONDS.get(
+                    e.unit, UserCountdown.UNIT_SECONDS['days'],
+                ), 1,
+            ),
+            'count_after': e.count_after,
+        })
+
+    recent_events = [{
+        'id': str(e.id),
+        'countdown_id': str(e.countdown_id),
+        'event_type': e.event_type,
+        'count_after': e.count_after,
+        'elapsed_seconds': e.elapsed_seconds,
+        'run_elapsed_seconds': e.run_elapsed_seconds,
+        'unit': e.unit,
+        'occurred_at': e.occurred_at.isoformat(),
+    } for e in events[:50]]
+
+    longest_run = max((b['longest_run_units'] for b in by_countdown), default=0)
+    return {
+        'count': len(countdowns),
+        'active_count': sum(1 for c in countdowns if c.is_active and not c.completed_at),
+        'total_checkins': len(checkins),
+        'total_resets': len(resets),
+        'total_completions': len(completions),
+        'current_streak_units': sum(b['elapsed_units'] for b in by_countdown),
+        'longest_streak_units': longest_run,
+        'total_streak_days': round(longest_run, 1),
+        'by_countdown': by_countdown,
+        'recent_events': recent_events,
+        'resets': resets_view[:50],
+        'cadence': {
+            'median_gap_seconds': median_gap,
+            'on_time_checkins': on_time,
+            'late_checkins': max(0, len(checkins) - on_time),
+        },
+    }
+
+
 def summarize_activity(profile, cutoff):
     """Walking/running/hiking tracker summaries."""
     qs = ActivityRecord.objects.filter(user=profile)
@@ -283,6 +408,7 @@ def build_summary(profile, period='all'):
     cutoff = period_cutoff(period)
     workouts = summarize_workouts(profile, cutoff)
     activity = summarize_activity(profile, cutoff)
+    countdowns = summarize_countdowns(profile, cutoff)
     body = summarize_body(profile)
     lives = summarize_lives(profile, cutoff)
     spending = summarize_spending(profile, cutoff)
@@ -299,6 +425,7 @@ def build_summary(profile, period='all'):
         },
         'workouts': workouts,
         'activity': activity,
+        'countdowns': countdowns,
         'body': body,
         'lives': lives,
         'spending': spending,
