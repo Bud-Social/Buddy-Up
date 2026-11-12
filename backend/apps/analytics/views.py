@@ -494,26 +494,60 @@ class PrepareShareView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        from apps.feed.models import Draft
-        from .models import ActivityRecord, WorkoutLog
-
         profile = request.user.profile
         kind = request.data.get('kind')
         obj_id = request.data.get('obj_id')
 
-        if kind not in ('activity', 'workout') or not obj_id:
+        if kind not in ('activity', 'workout', 'countdown') or not obj_id:
             return Response({'success': False, 'data': None,
-                             'message': 'kind (activity|workout) and obj_id are required.',
+                             'message': 'kind (activity|workout|countdown) and obj_id are required.',
                              'errors': None, 'pagination': None},
                             status=status.HTTP_400_BAD_REQUEST)
+
+        if kind == 'countdown':
+            draft, obj = self._prepare_countdown(request, profile, obj_id)
+        else:
+            draft, obj = self._prepare_activity_or_workout(profile, kind, obj_id)
+            # A caption the share sheet wrote wins over the generated one.
+            body = (request.data.get('body') or '').strip()
+            if body:
+                draft.body = body
+
+        # A location travels with the source when it has one. An activity
+        # keeps a route rather than a single point, so there is nothing to
+        # copy here — reading a field it does not have used to raise.
+        lat = getattr(obj, 'location_lat', None)
+        lng = getattr(obj, 'location_lng', None)
+        if lat and lng:
+            draft.location_lat = lat
+            draft.location_lng = lng
+            draft.location_label = getattr(obj, 'notes', '') or ''
+
+        draft.save()
+        return Response({
+            'success': True,
+            'data': {
+                'draft_id': str(draft.id),
+                'body': draft.body,
+                'visibility': draft.visibility,
+                'source_kind': draft.source_kind,
+                'post_type': draft.post_type,
+                'tags': draft.tags,
+            },
+            'message': 'Share draft prepared. Edit and publish when ready.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+    def _prepare_activity_or_workout(self, profile, kind, obj_id):
+        from apps.feed.models import Draft
+        from .models import ActivityRecord, WorkoutLog
 
         draft = Draft(
             author=profile,
             post_type='workout_log',
-            visibility=request.data.get('visibility', 'public'),
+            visibility='public',
             source_kind=kind,
         )
-
         if kind == 'activity':
             obj = get_object_or_404(ActivityRecord, id=obj_id, user=profile)
             draft.source_activity = obj
@@ -532,25 +566,32 @@ class PrepareShareView(views.APIView):
                 + (f' @ {obj.weight_kg}kg' if obj.weight_kg else '')
             )
             draft.tags = ['workout', obj.workout_type]
+        return draft, obj
 
-        if obj.location_lat and obj.location_lng:
-            draft.location_lat = obj.location_lat
-            draft.location_lng = obj.location_lng
-            draft.location_label = obj.notes or ''
+    def _prepare_countdown(self, request, profile, obj_id):
+        """A countdown shares as its own post type, carrying its streak."""
+        from apps.countdowns.models import UserCountdown
+        from apps.feed.models import Draft
 
-        draft.save()
-        return Response({
-            'success': True,
-            'data': {
-                'draft_id': str(draft.id),
-                'body': draft.body,
-                'visibility': draft.visibility,
-                'source_kind': draft.source_kind,
-                'tags': draft.tags,
-            },
-            'message': 'Share draft prepared. Edit and publish when ready.',
-            'errors': None, 'pagination': None,
-        }, status=status.HTTP_201_CREATED)
+        obj = get_object_or_404(UserCountdown, id=obj_id, user=profile)
+        draft = Draft(
+            author=profile,
+            post_type='countdown',
+            visibility=request.data.get('visibility', 'public'),
+            source_kind='countdown',
+        )
+        draft.source_countdown = obj
+        count = obj.current_count
+        # The unit is stored plural ('days'); singularise it for a count of 1.
+        unit = obj.unit[:-1] if count == 1 and obj.unit.endswith('s') else obj.unit
+        body = (request.data.get('body') or '').strip()
+        draft.body = body or (
+            f'⏳ {obj.display_reason} — {count} {unit}'
+            + (f' of {obj.target_count}' if obj.target_count else '')
+            + '.'
+        )
+        draft.tags = ['countdown', obj.countdown_type]
+        return draft, obj
 
 
 class PublishDraftView(views.APIView):
@@ -582,10 +623,7 @@ class PublishDraftView(views.APIView):
             visibility=visibility,
             media_urls=media_urls,
             tags=tags,
-            workout_log_data={
-                'source': 'share_draft',
-                'source_kind': draft.source_kind,
-            } if draft.source_kind else None,
+            workout_log_data=_source_metrics(draft),
             location_label=draft.location_label or '',
             location_lat=draft.location_lat,
             location_lng=draft.location_lng,
@@ -594,14 +632,68 @@ class PublishDraftView(views.APIView):
         # Clear the draft's source link so it isn't re-published.
         draft.source_activity = None
         draft.source_workout = None
+        draft.source_countdown = None
         draft.source_kind = ''
-        draft.save(update_fields=['source_activity', 'source_workout', 'source_kind', 'updated_at'])
+        draft.save(update_fields=[
+            'source_activity', 'source_workout', 'source_countdown',
+            'source_kind', 'updated_at',
+        ])
 
         return Response({
             'success': True,
             'data': {'post_id': str(post.id), 'draft_id': str(draft.id)},
             'message': 'Published to feed.', 'errors': None, 'pagination': None,
         }, status=status.HTTP_201_CREATED)
+
+
+def _source_metrics(draft):
+    """The source's real numbers, so the post card can show them.
+
+    A shared activity or workout used to publish a placeholder that carried
+    no metrics at all, so the card could not show what was actually done.
+    """
+    if draft.source_kind == 'activity' and draft.source_activity:
+        obj = draft.source_activity
+        return {
+            'source': 'share_draft',
+            'source_kind': 'activity',
+            'activity_type': obj.activity_type,
+            'distance_km': round((obj.distance_meters or 0) / 1000, 2),
+            'duration_minutes': round((obj.duration_seconds or 0) / 60),
+            'calories': obj.calories_burned,
+            'steps': obj.steps,
+            'avg_pace': obj.avg_pace,
+            'avg_speed_kmh': obj.avg_speed_kmh,
+            'elevation_gain_m': obj.elevation_gain_m,
+        }
+    if draft.source_kind == 'workout' and draft.source_workout:
+        obj = draft.source_workout
+        return {
+            'source': 'share_draft',
+            'source_kind': 'workout',
+            'workout_type': obj.workout_type,
+            'exercise': obj.exercise,
+            'sets': obj.sets,
+            'reps': obj.reps,
+            'weight_kg': obj.weight_kg,
+            'duration_minutes': obj.duration_minutes,
+            'calories': obj.calories_burned,
+        }
+    if draft.source_kind == 'countdown' and draft.source_countdown:
+        obj = draft.source_countdown
+        return {
+            'source': 'share_draft',
+            'source_kind': 'countdown',
+            'countdown_reason': obj.display_reason,
+            'countdown_type': obj.countdown_type,
+            'countdown_unit': obj.unit,
+            'count': obj.current_count,
+            'target_count': obj.target_count,
+            'elapsed_units': obj.elapsed_units,
+        }
+    if draft.source_kind:
+        return {'source': 'share_draft', 'source_kind': draft.source_kind}
+    return None
 
 
 class CaptionCorrectView(views.APIView):

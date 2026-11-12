@@ -599,7 +599,7 @@ function computeLayout(ctx: CanvasRenderingContext2D, post: Post, plan: MediaPla
   const bodyLines = body ? wrapLines(ctx, body, frameW - padding * 2, 4) : [];
   const bodyH = bodyLines.length * 46;
 
-  const metrics = post.post_type === 'workout_log'
+  const metrics = (post.post_type === 'workout_log' || post.post_type === 'countdown')
     ? parseWorkoutMetrics(post.workout_log_data)
     : null;
   const metricsH = metrics ? 150 : 0;

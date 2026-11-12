@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus, RefreshCw, Trash2, Edit, Play, Timer, X,
   Wine, Minus, Leaf, Dumbbell, MapPin, AlertCircle, Share2, Clock,
@@ -30,14 +31,8 @@ const VISIBILITY_OPTIONS: { value: 'public' | 'buddies' | 'followers' | 'private
   { value: 'private', label: 'Private', labelText: 'Only you can see' },
 ];
 
-const SHARE_VISIBILITY_MAP: Record<string, 'public' | 'buddies' | 'gym_members' | 'private'> = {
-  post: 'public',
-  dm: 'private',
-  gym: 'public',
-  community: 'public',
-};
-
 export default function CountdownsPage() {
+  const navigate = useNavigate();
   const {
     countdowns,
     loading,
@@ -76,9 +71,8 @@ export default function CountdownsPage() {
 
   // Share composer state
   const [shareOpen, setShareOpen] = useState(false);
-  const [shareTarget, setShareTarget] = useState<'post' | 'dm' | 'gym' | 'community'>('post');
+  const [shareVisibility, setShareVisibility] = useState<'public' | 'buddies' | 'private'>('public');
   const [shareCaption, setShareCaption] = useState('');
-  const [shareMedia, setShareMedia] = useState<File[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
   const [shareCountdown, setShareCountdown] = useState<UserCountdown | null>(null);
 
@@ -232,7 +226,7 @@ export default function CountdownsPage() {
 
   const handleShareCountdown = (c: UserCountdown) => {
     setShareCountdown(c);
-    setShareTarget('post');
+    setShareVisibility('public');
     const pct = progressPctFor(c);
     const head = countdownHeadline(c);
     const daysText = c.target_count
@@ -243,45 +237,33 @@ ${daysText}
 Progress: ${Math.round(pct)}%
 
 #BuddyUp #Countdown #Streak`);
-    setShareMedia([]);
     setShareOpen(true);
   };
 
   const handleShareModalClose = () => {
     setShareOpen(false);
     setShareCaption('');
-    setShareMedia([]);
     setShareCountdown(null);
-  };
-
-  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setShareMedia(files);
   };
 
   const handleShareSubmit = async () => {
     if (!shareCountdown) return;
     setShareLoading(true);
+    setActionError(null);
     try {
-      const visibility = SHARE_VISIBILITY_MAP[shareTarget] || 'public';
+      // The countdown is prepared as a draft and handed to the composer,
+      // where the user can edit the caption, attach media and choose who
+      // sees it before it is published.
       const draft = await analyticsApi.sharePrepare({
         kind: 'countdown',
         obj_id: shareCountdown.id,
-        visibility,
+        visibility: shareVisibility,
         body: shareCaption,
       });
-      await analyticsApi.sharePublish(draft.draft_id, {
-        body: shareCaption,
-        visibility,
-        media_urls: shareMedia.map((f) => URL.createObjectURL(f)),
-        tags: ['countdown', shareCountdown.countdown_type],
-      });
-      setShareOpen(false);
-      setShareCaption('');
-      setShareMedia([]);
-      setShareCountdown(null);
+      handleShareModalClose();
+      navigate(`/create?draft=${draft.draft_id}`);
     } catch (err: any) {
-      alert(err?.response?.data?.message || 'Failed to share countdown');
+      setActionError(err?.response?.data?.message || 'Could not prepare the countdown for sharing.');
     } finally {
       setShareLoading(false);
     }
@@ -908,19 +890,18 @@ Progress: ${Math.round(pct)}%
               )}
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-buddy-text-secondary">Share as</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { value: 'post' as const, label: 'Post', icon: Share2 },
-                    { value: 'dm' as const, label: 'DM', icon: X },
-                    { value: 'gym' as const, label: 'Gym Post', icon: X },
-                    { value: 'community' as const, label: 'Community Post', icon: X },
-                  ].map((opt) => (
+                <label className="text-sm font-medium text-buddy-text-secondary">Who can see it?</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { value: 'public' as const, label: 'Public' },
+                    { value: 'buddies' as const, label: 'Buddies' },
+                    { value: 'private' as const, label: 'Only me' },
+                  ]).map((opt) => (
                     <button
                       key={opt.value}
-                      onClick={() => setShareTarget(opt.value)}
-                      className={`px-4 py-2 rounded-lg border transition-colors text-sm font-medium ${
-                        shareTarget === opt.value
+                      onClick={() => setShareVisibility(opt.value)}
+                      className={`px-3 py-2 rounded-lg border transition-colors text-sm font-medium ${
+                        shareVisibility === opt.value
                           ? 'bg-buddy-green/10 border-buddy-green text-buddy-green'
                           : 'bg-buddy-surface border-buddy-border text-buddy-text-secondary hover:bg-buddy-surface/50'
                       }`}
@@ -939,20 +920,9 @@ Progress: ${Math.round(pct)}%
                   rows={3}
                   className="w-full mt-1 px-3 py-2 bg-buddy-bg border border-buddy-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-buddy-green"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-buddy-text-secondary">Media attachments</label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,video/*"
-                  onChange={handleMediaChange}
-                  className="mt-1 block w-full text-sm text-buddy-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-buddy-green file:text-white hover:file:bg-buddy-green/90"
-                />
-                {shareMedia.length > 0 && (
-                  <p className="text-xs text-buddy-text-secondary">{shareMedia.length} file{shareMedia.length !== 1 ? 's' : ''} attached</p>
-                )}
+                <p className="text-xs text-buddy-text-secondary">
+                  You&apos;ll be taken to the composer to add media and review before posting.
+                </p>
               </div>
 
               <button
@@ -962,7 +932,7 @@ Progress: ${Math.round(pct)}%
                   shareLoading ? 'bg-buddy-surface text-buddy-text-secondary' : 'bg-buddy-green text-buddy-black hover:bg-buddy-green/90'
                 }`}
               >
-                {shareLoading ? 'Sharing…' : 'Share'}
+                {shareLoading ? 'Preparing…' : 'Continue to composer'}
               </button>
             </div>
           </div>

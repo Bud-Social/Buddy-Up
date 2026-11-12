@@ -1206,7 +1206,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
           )}
 
           {/* Rich content */}
-          {displayPost.post_type === 'workout_log' && displayPost.workout_log_data && <WorkoutLogCard data={displayPost.workout_log_data as Record<string, unknown>} />}
+          {(displayPost.post_type === 'workout_log' || displayPost.post_type === 'countdown') && displayPost.workout_log_data && <WorkoutLogCard data={displayPost.workout_log_data as Record<string, unknown>} />}
           {displayPost.post_type === 'poll' && (displayPost as any).poll && <PollCard poll={(displayPost as any).poll} postId={displayPost.id} />}
 
           {/* Media — X/IG-style gate. Moderation state lives on the wrapper

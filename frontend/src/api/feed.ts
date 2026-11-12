@@ -1,6 +1,7 @@
 import type { AxiosProgressEvent } from 'axios';
 import { apiClient } from './client';
 import type { ApiResponse, Post, Comment, CreatorInsightItem, CreatorInsightSummary } from '@/types';
+import type { SharedDraft } from '@/types/draft';
 
 export type FeedTab = 'for_you' | 'following' | 'videos' | 'videos_following' | 'communities';
 
@@ -210,6 +211,10 @@ export const feedApi = {
 
   getDrafts: () =>
     apiClient.get<ApiResponse<unknown[]>>('/feed/drafts/').then((r) => r.data),
+
+  /** One draft, with the source it shares — used to review it in the composer. */
+  getDraft: (draftId: string) =>
+    apiClient.get<ApiResponse<SharedDraft>>(`/feed/drafts/${draftId}/`).then((r) => r.data.data),
 
   saveDraft: (data: Record<string, unknown>) =>
     apiClient.post<ApiResponse<unknown>>('/feed/drafts/', data).then((r) => r.data),

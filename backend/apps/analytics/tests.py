@@ -40,6 +40,119 @@ class SummaryContractTests(TestCase):
         self.assertIn('nutrition', resp.data['data'])
 
 
+class SharedPostDraftTests(TestCase):
+    """A shared countdown/activity/workout is reviewed before it is posted."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='share@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='shareuser', display_name='Share User')
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    def _countdown(self):
+        from apps.countdowns.models import CountdownTemplate, UserCountdown
+
+        template = CountdownTemplate.objects.create(
+            code='sobriety', title='Sobriety', unit='days',
+            description='Days since last drink.', icon='🍻', color='#ef4444',
+            default_target=0, sort_order=1,
+        )
+        return UserCountdown.objects.create(
+            user=self.profile, template=template,
+            countdown_type='manual', unit='days', current_count=12, target_count=30,
+        )
+
+    def test_a_countdown_prepares_a_countdown_post(self):
+        countdown = self._countdown()
+        resp = self.client.post('/api/v1/analytics/share/prepare/', {
+            'kind': 'countdown',
+            'obj_id': str(countdown.id),
+            'visibility': 'public',
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.data['data']['source_kind'], 'countdown')
+        self.assertEqual(resp.data['data']['post_type'], 'countdown')
+        self.assertIn('Sobriety', resp.data['data']['body'])
+
+    def test_the_prepared_draft_carries_the_countdowns_numbers(self):
+        countdown = self._countdown()
+        resp = self.client.post('/api/v1/analytics/share/prepare/', {
+            'kind': 'countdown',
+            'obj_id': str(countdown.id),
+        }, format='json')
+        draft_id = resp.data['data']['draft_id']
+
+        publish = self.client.post(f'/api/v1/analytics/share/draft/{draft_id}/publish/', {
+            'body': 'Twelve days in.',
+            'visibility': 'public',
+        }, format='json')
+        self.assertEqual(publish.status_code, status.HTTP_201_CREATED)
+
+        from apps.feed.models import Post
+        post = Post.objects.get(id=publish.data['data']['post_id'])
+        self.assertEqual(post.post_type, 'countdown')
+        # The metrics survive the publish — the card can show them.
+        self.assertEqual(post.workout_log_data['count'], 12)
+        self.assertEqual(post.workout_log_data['target_count'], 30)
+        self.assertEqual(post.workout_log_data['countdown_reason'], 'Sobriety')
+
+    def test_the_draft_can_be_read_for_the_composer(self):
+        countdown = self._countdown()
+        resp = self.client.post('/api/v1/analytics/share/prepare/', {
+            'kind': 'countdown',
+            'obj_id': str(countdown.id),
+        }, format='json')
+        draft_id = resp.data['data']['draft_id']
+
+        detail = self.client.get(f'/api/v1/feed/drafts/{draft_id}/')
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        source = detail.data['data']['source']
+        self.assertEqual(source['kind'], 'countdown')
+        self.assertEqual(source['count'], 12)
+        self.assertEqual(source['title'], 'Sobriety')
+
+    def test_an_activity_prepares_without_the_location_crash(self):
+        resp = self.client.post('/api/v1/analytics/activities/', {
+            'activity_type': 'walk',
+            'duration_seconds': 1800,
+            'distance_meters': 2000,
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        activity_id = resp.data['data']['id']
+
+        prepared = self.client.post('/api/v1/analytics/share/prepare/', {
+            'kind': 'activity',
+            'obj_id': activity_id,
+        }, format='json')
+        self.assertEqual(prepared.status_code, status.HTTP_201_CREATED)
+
+    def test_a_shared_activity_keeps_its_metrics(self):
+        resp = self.client.post('/api/v1/analytics/activities/', {
+            'activity_type': 'run',
+            'duration_seconds': 1800,
+            'distance_meters': 5000,
+            'calories_burned': 300,
+            'avg_pace': 360,
+        }, format='json')
+        activity_id = resp.data['data']['id']
+
+        prepared = self.client.post('/api/v1/analytics/share/prepare/', {
+            'kind': 'activity',
+            'obj_id': activity_id,
+        }, format='json')
+        draft_id = prepared.data['data']['draft_id']
+        publish = self.client.post(f'/api/v1/analytics/share/draft/{draft_id}/publish/', {
+            'body': 'A good one.',
+        }, format='json')
+        self.assertEqual(publish.status_code, status.HTTP_201_CREATED)
+
+        from apps.feed.models import Post
+        post = Post.objects.get(id=publish.data['data']['post_id'])
+        self.assertEqual(post.workout_log_data['distance_km'], 5.0)
+        self.assertEqual(post.workout_log_data['calories'], 300)
+        self.assertEqual(post.workout_log_data['activity_type'], 'run')
+
+
 class EventIngestionTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(email='events@example.com', password='TestPass123!')

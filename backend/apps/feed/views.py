@@ -2190,6 +2190,20 @@ class DraftDetailView(views.APIView):
     def get_object(self, draft_id, user_profile):
         return get_object_or_404(Draft, id=draft_id, author=user_profile)
 
+    def get(self, request, draft_id):
+        """The draft, with enough of its source to preview it.
+
+        A shared countdown, activity or workout is reviewed in the composer
+        before it is published, so the composer needs to show what is being
+        shared.
+        """
+        draft = self.get_object(draft_id, request.user.profile)
+        return Response({
+            'success': True,
+            'data': _draft_payload(draft),
+            'message': 'Draft.', 'errors': None, 'pagination': None,
+        })
+
     def delete(self, request, draft_id):
         draft = self.get_object(draft_id, request.user.profile)
         draft.delete()
@@ -2197,6 +2211,58 @@ class DraftDetailView(views.APIView):
             'success': True, 'data': None,
             'message': 'Draft deleted.', 'errors': None, 'pagination': None,
         })
+
+
+def _draft_payload(draft):
+    """A draft plus a summary of the thing it shares."""
+    payload = {
+        'id': str(draft.id),
+        'post_type': draft.post_type,
+        'body': draft.body or '',
+        'visibility': draft.visibility,
+        'tags': draft.tags or [],
+        'media_urls': draft.media_urls or [],
+        'source_kind': draft.source_kind or '',
+        'source': None,
+    }
+
+    if draft.source_kind == 'countdown' and draft.source_countdown:
+        obj = draft.source_countdown
+        payload['source'] = {
+            'kind': 'countdown',
+            'id': str(obj.id),
+            'title': obj.display_reason,
+            'icon': obj.display_icon,
+            'count': obj.current_count,
+            'unit': obj.unit,
+            'target_count': obj.target_count,
+            'elapsed_units': obj.elapsed_units,
+            'countdown_type': obj.countdown_type,
+        }
+    elif draft.source_kind == 'activity' and draft.source_activity:
+        obj = draft.source_activity
+        payload['source'] = {
+            'kind': 'activity',
+            'id': str(obj.id),
+            'title': obj.get_activity_type_display(),
+            'distance_km': round((obj.distance_meters or 0) / 1000, 2),
+            'duration_minutes': round((obj.duration_seconds or 0) / 60),
+            'calories': obj.calories_burned,
+            'steps': obj.steps,
+        }
+    elif draft.source_kind == 'workout' and draft.source_workout:
+        obj = draft.source_workout
+        payload['source'] = {
+            'kind': 'workout',
+            'id': str(obj.id),
+            'title': obj.exercise or obj.get_workout_type_display(),
+            'sets': obj.sets,
+            'reps': obj.reps,
+            'weight_kg': obj.weight_kg,
+            'duration_minutes': obj.duration_minutes,
+            'calories': obj.calories_burned,
+        }
+    return payload
 
 
 class WorkoutAnalysisView(views.APIView):

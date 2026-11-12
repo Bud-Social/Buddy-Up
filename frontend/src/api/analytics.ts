@@ -40,7 +40,7 @@ export const analyticsApi = {
 
   /** Prepare a share draft (edit caption/media before publishing). */
   sharePrepare: (payload: { kind: 'activity' | 'workout' | 'countdown'; obj_id: string; visibility?: string; body?: string }) =>
-    apiClient.post<ApiResponse<{ draft_id: string; body: string; visibility: string; source_kind: string; tags: string[] }>>('/analytics/share/prepare/', payload).then((r) => r.data.data),
+    apiClient.post<ApiResponse<{ draft_id: string; body: string; visibility: string; source_kind: string; post_type: string; tags: string[] }>>('/analytics/share/prepare/', payload).then((r) => r.data.data),
 
   /** Publish a prepared share draft to the feed. */
   sharePublish: (draftId: string, payload: { body?: string; visibility?: string; media_urls?: string[]; tags?: string[] }) =>

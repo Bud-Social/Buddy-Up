@@ -2,6 +2,47 @@ import { describe, expect, it } from 'vitest';
 import { parseWorkoutMetrics } from '../workoutMetrics';
 
 describe('parseWorkoutMetrics', () => {
+  it('reads a shared countdown', () => {
+    const parsed = parseWorkoutMetrics({
+      source: 'share_draft',
+      source_kind: 'countdown',
+      countdown_reason: 'Sobriety',
+      countdown_type: 'manual',
+      countdown_unit: 'days',
+      count: 12,
+      target_count: 30,
+      elapsed_units: 12,
+    });
+    expect(parsed).not.toBeNull();
+    expect(parsed!.title).toBe('Sobriety');
+    expect(parsed!.metrics).toEqual([
+      { label: 'days / 30', value: '12', tone: 'green' },
+    ]);
+  });
+
+  it('shows the streak when it differs from the count', () => {
+    const parsed = parseWorkoutMetrics({
+      countdown_reason: 'Walking Days',
+      countdown_type: 'automatic',
+      countdown_unit: 'days',
+      count: 5,
+      elapsed_units: 9,
+    });
+    expect(parsed!.metrics.map((m) => m.label)).toEqual(['days', 'Streak', 'Mode']);
+    expect(parsed!.metrics[1].value).toBe('9');
+  });
+
+  it('hides a streak that says nothing the count does not', () => {
+    const parsed = parseWorkoutMetrics({
+      countdown_reason: 'Sobriety',
+      countdown_unit: 'days',
+      count: 1,
+      target_count: 30,
+      elapsed_units: 0,
+    });
+    expect(parsed!.metrics.map((m) => m.label)).toEqual(['days / 30']);
+  });
+
   it('reads the flat exercise log shape', () => {
     const parsed = parseWorkoutMetrics({
       exercise: 'OHP',

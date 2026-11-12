@@ -12,6 +12,7 @@ class Post(TimestampedModel, SoftDeleteModel):
         ('short_video', 'Short Video (BuddyClip)'),
         ('long_video', 'Long Video (BuddySession)'),
         ('workout_log', 'Workout Log'),
+        ('countdown', 'Countdown'),
         ('moment', 'Moment (Story)'),
         ('poll', 'Poll'),
     ]
@@ -255,9 +256,13 @@ class Draft(TimestampedModel):
         'analytics.WorkoutLog', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='share_drafts',
     )
+    source_countdown = models.ForeignKey(
+        'countdowns.UserCountdown', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='share_drafts',
+    )
     source_kind = models.CharField(
         max_length=10, blank=True,
-        help_text='"activity" or "workout" — which source this draft previews.',
+        help_text='"activity", "workout" or "countdown" — which source this draft previews.',
     )
 
     class Meta:

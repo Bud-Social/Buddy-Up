@@ -10,10 +10,11 @@
  * Captions are owned per clip (captionsByItem) and ship with each video.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, Camera, Captions, ChevronLeft, ChevronRight, Clapperboard, Copy, Image as ImageIcon,
-  Loader2, Music, Pause, Play, Plus, RotateCcw, Redo2, Scissors, Trash2, Type, Undo2, Users, X,
+  Loader2, Music, Pause, Play, Plus, RotateCcw, Redo2, Scissors, Timer, Trash2, Type, Undo2, Users, X,
+  Activity as ActivityIcon, Dumbbell,
 } from 'lucide-react';
 import { feedApi, type Sound } from '@/api/feed';
 import { getOrExportTrimmedVideo } from '@/lib/uploader';
@@ -30,6 +31,8 @@ import {
   type DraftMediaItem,
 } from '@/lib/createDrafts';
 import { uploadManager, type EnqueueSpec, type JobSnapshot, type PersistedSession } from '@/lib/uploadManager';
+import { analyticsApi } from '@/api/analytics';
+import type { SharedDraft } from '@/types/draft';
 import { track } from '@/lib/analytics';
 import { EditStage } from '@/components/create/EditStage';
 import { SoundPicker, type SelectedSound } from '@/components/create/SoundPicker';
@@ -111,6 +114,16 @@ export default function CreateStudio() {
   const [sessions, setSessions] = useState<PersistedSession[]>([]);
   const [, setHistTick] = useState(0);
 
+  // ── A shared countdown/activity/workout, reviewed here before posting ────
+  // The share sheet prepares a draft and sends the user here; the composer
+  // is where the caption is edited and the post is submitted.
+  const [searchParams] = useSearchParams();
+  const draftId = searchParams.get('draft');
+  const [sharedDraft, setSharedDraft] = useState<SharedDraft | null>(null);
+  const [draftMedia, setDraftMedia] = useState<string[]>([]);
+  const [draftPublishing, setDraftPublishing] = useState(false);
+  const draftFileRef = useRef<HTMLInputElement>(null);
+
   const autoCtrlRef = useRef<Map<string, AbortController>>(new Map());
   const itemsRef = useRef<StudioItem[]>([]);
   const captionsRef = useRef<CaptionsByItem>({});
@@ -137,12 +150,15 @@ export default function CreateStudio() {
   useEffect(() => { stylesRef.current = captionStylesByItem; }, [captionStylesByItem]);
   useEffect(() => { soundRef.current = sound; }, [sound]);
   const steps: StepKey[] = useMemo(() => {
+    // A shared countdown/activity is a text-first post: there are no clips
+    // to edit, so it goes straight to the post step.
+    if (sharedDraft) return ['post'];
     const s: StepKey[] = ['pick'];
     if (hasVideo) s.push('edit', 'sound', 'cover', 'captions');
     else if (hasAudio) s.push('sound');
     s.push('post');
     return s;
-  }, [hasVideo, hasAudio]);
+  }, [hasVideo, hasAudio, sharedDraft]);
   const step = steps[stepIdx] ?? steps[steps.length - 1];
   const isLastStep = stepIdx === steps.length - 1;
 
@@ -185,6 +201,31 @@ export default function CreateStudio() {
       setHistTick((t) => t + 1);
     }
   };
+
+  // ── A shared countdown/activity/workout ───────────────────────────────────
+  // The share sheet prepares a draft and sends the user here. The composer
+  // is where the caption is edited and the post is submitted, so the draft
+  // is loaded and its source previewed.
+  useEffect(() => {
+    if (!draftId) {
+      setSharedDraft(null);
+      return;
+    }
+    let cancelled = false;
+    feedApi.getDraft(draftId)
+      .then((draft) => {
+        if (cancelled || !draft) return;
+        setSharedDraft(draft);
+        setDraftMedia(draft.media_urls || []);
+        if (draft.body) setBody(draft.body);
+        if (draft.visibility) setVisibility(draft.visibility as Visibility);
+        setStepIdx(0);
+      })
+      .catch(() => {
+        if (!cancelled) setPublishError('Could not open that shared countdown.');
+      });
+    return () => { cancelled = true; };
+  }, [draftId]);
 
   // ── Local draft (IndexedDB): load once, autosave on change ────────────────
   // Cleared only by the upload manager after post-create success.
@@ -651,7 +692,11 @@ export default function CreateStudio() {
   };
 
   const canProceed =
-    step === 'pick' ? items.length > 0 : step === 'post' ? items.length > 0 : true;
+    sharedDraft
+      // A shared countdown/activity is published from its draft, so it needs
+      // a caption but not a media item.
+      ? body.trim().length > 0
+      : step === 'pick' ? items.length > 0 : step === 'post' ? items.length > 0 : true;
 
   const goBack = () => {
     if (stepIdx === 0) {
@@ -675,6 +720,10 @@ export default function CreateStudio() {
 
   // ── Publish: enqueue a background job (finalize → upload → create) ────────
   const publish = () => {
+    if (sharedDraft) {
+      void publishSharedDraft();
+      return;
+    }
     if (items.length === 0 || jobActive) return;
     setPublishError('');
     const spec: EnqueueSpec = {
@@ -730,6 +779,53 @@ export default function CreateStudio() {
     if (jobId) uploadManager.dismissJob(jobId);
     setJobId(null);
     setJobSnap(null);
+  };
+
+  /**
+   * Publish a shared countdown/activity/workout.
+   *
+   * The post comes from the draft, so it carries the source's real metrics
+   * rather than a placeholder.
+   */
+  const publishSharedDraft = async () => {
+    if (!sharedDraft || draftPublishing) return;
+    setDraftPublishing(true);
+    setPublishError('');
+    try {
+      const res = await analyticsApi.sharePublish(sharedDraft.id, {
+        body,
+        visibility,
+        media_urls: draftMedia,
+        tags: sharedDraft.tags,
+      });
+      const postId = res?.post_id;
+      track('create.published', {
+        surface: 'create',
+        properties: { post_id: postId, source_kind: sharedDraft.source_kind },
+      });
+      navigate(postId ? `/feed?post=${postId}` : '/feed');
+    } catch (err: any) {
+      setPublishError(err?.response?.data?.message || 'Could not publish the shared post.');
+    } finally {
+      setDraftPublishing(false);
+    }
+  };
+
+  /** Attach media to a shared post — uploaded straight away so the draft
+   * can carry the URLs. */
+  const attachDraftMedia = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setPublishError('');
+    try {
+      const uploaded: string[] = [];
+      for (const file of Array.from(files).slice(0, 4 - draftMedia.length)) {
+        const res = await feedApi.uploadPostMedia(file);
+        if (res.data?.url) uploaded.push(res.data.url);
+      }
+      setDraftMedia((prev) => [...prev, ...uploaded].slice(0, 4));
+    } catch {
+      setPublishError('Could not attach that file.');
+    }
   };
 
   const tryResumeSession = (s: PersistedSession) => {
@@ -1066,6 +1162,99 @@ export default function CreateStudio() {
 
   const renderPost = () => (
     <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4">
+      {/* What is being shared — a countdown, an activity or a workout. */}
+      {sharedDraft?.source && (
+        <div className="rounded-2xl bg-buddy-green/10 border border-buddy-green/25 p-4 flex items-start gap-3">
+          <div className="w-11 h-11 rounded-xl bg-buddy-green/20 text-buddy-green flex items-center justify-center shrink-0">
+            {sharedDraft.source.kind === 'countdown'
+              ? <Timer size={20} />
+              : sharedDraft.source.kind === 'activity'
+                ? <ActivityIcon size={20} />
+                : <Dumbbell size={20} />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-buddy-green">
+              Sharing {sharedDraft.source.kind}
+            </p>
+            <p className="text-sm font-medium text-buddy-text-primary mt-0.5">
+              {sharedDraft.source.title}
+            </p>
+            <p className="text-xs text-buddy-text-secondary mt-1">
+              {sharedDraft.source.kind === 'countdown' && (
+                <>
+                  {sharedDraft.source.count} {sharedDraft.source.unit}
+                  {sharedDraft.source.count === 1 ? '' : 's'}
+                  {sharedDraft.source.target_count
+                    ? ` of ${sharedDraft.source.target_count}`
+                    : ''}
+                  {sharedDraft.source.elapsed_units != null
+                    && sharedDraft.source.elapsed_units !== sharedDraft.source.count && (
+                    <> · {sharedDraft.source.elapsed_units} {sharedDraft.source.unit} streak</>
+                  )}
+                </>
+              )}
+              {sharedDraft.source.kind === 'activity' && (
+                <>
+                  {sharedDraft.source.distance_km} km
+                  {sharedDraft.source.duration_minutes ? ` in ${sharedDraft.source.duration_minutes} min` : ''}
+                  {sharedDraft.source.calories ? ` · ${Math.round(sharedDraft.source.calories)} kcal` : ''}
+                </>
+              )}
+              {sharedDraft.source.kind === 'workout' && (
+                <>
+                  {sharedDraft.source.sets ?? 0}×{sharedDraft.source.reps ?? 0}
+                  {sharedDraft.source.weight_kg ? ` @ ${sharedDraft.source.weight_kg}kg` : ''}
+                </>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Attachments for a shared post. */}
+      {sharedDraft && (
+        <div className="rounded-2xl bg-buddy-surface-raised p-3">
+          <div className="flex items-center gap-1.5 mb-2 text-buddy-text-secondary">
+            <ImageIcon size={13} />
+            <span className="text-xs font-semibold uppercase tracking-wide">Attachments</span>
+          </div>
+          {draftMedia.length > 0 && (
+            <div className="flex gap-2 flex-wrap mb-2">
+              {draftMedia.map((url, i) => (
+                <div key={`${url}-${i}`} className="relative w-16 h-16 rounded-xl overflow-hidden">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => setDraftMedia((prev) => prev.filter((u) => u !== url))}
+                    aria-label="Remove attachment"
+                    className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/60 text-white"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {draftMedia.length < 4 && (
+            <>
+              <button
+                onClick={() => draftFileRef.current?.click()}
+                className="w-16 h-16 rounded-xl border border-dashed border-buddy-surface-raised flex items-center justify-center text-buddy-text-secondary hover:text-buddy-green"
+              >
+                <ImageIcon size={16} />
+              </button>
+              <input
+                ref={draftFileRef}
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                className="hidden"
+                onChange={(e) => { void attachDraftMedia(e.target.files); e.target.value = ''; }}
+              />
+            </>
+          )}
+        </div>
+      )}
+
       <div className="rounded-2xl bg-buddy-surface-raised p-3">
         <div className="flex items-center gap-1.5 mb-2 text-buddy-text-secondary">
           <Type size={13} />
@@ -1082,6 +1271,7 @@ export default function CreateStudio() {
       </div>
 
       {/* Accessibility: alt text per item */}
+      {items.length > 0 && (
       <div className="space-y-2">
         <p className="text-xs font-semibold text-buddy-text-secondary uppercase tracking-wide flex items-center gap-1.5">
           <ImageIcon size={13} /> Alt text
@@ -1098,6 +1288,7 @@ export default function CreateStudio() {
           />
         ))}
       </div>
+      )}
 
       <div>
         <p className="text-xs font-semibold text-buddy-text-secondary uppercase tracking-wide flex items-center gap-1.5 mb-2">
