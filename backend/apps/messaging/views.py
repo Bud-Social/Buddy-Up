@@ -2055,3 +2055,124 @@ class CommunityPostMediaView(views.APIView):
         from common.media_download import build_download_response
         return build_download_response(post.media_url, media_type, filename_stem=post.id)
 
+
+class CommunityPostVideoCardView(views.APIView):
+    """POST /messaging/communities/<id>/posts/<id>/video-card/ — video card.
+
+    Mirrors the feed's video card: the client uploads the rendered chrome and
+    this endpoint composites the community post's clip into it with ffmpeg,
+    keeping the whole clip and its original audio.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership and not conv.is_public:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+        if not post.media_url or not any(
+            ext in post.media_url.lower() for ext in ('.mp4', '.mov', '.webm', '.m4v', '.mkv')
+        ):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No video available to compose.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        from common.video_card import (
+            VideoCardError, new_job_id, parse_radius, parse_rect,
+            submit_video_card,
+        )
+
+        base_png = request.FILES.get('base')
+        if not base_png:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Missing card artwork.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        over_png = request.FILES.get('over')
+
+        try:
+            rect = parse_rect(request.data.get('rect'))
+        except VideoCardError as exc:
+            return Response({
+                'success': False, 'data': None,
+                'message': str(exc),
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        radius = parse_radius(request.data.get('radius'))
+        base_bytes = base_png.read()
+        over_bytes = over_png.read() if over_png else None
+        link = f"{request.build_absolute_uri('/')[:-1]}/communities/{conv.id}?post={post.id}"
+        caption = post.body or ''
+        author = post.author.username
+
+        def render():
+            from common.video_card import compose_video_card
+
+            return compose_video_card(
+                post.media_url, base_bytes, over_bytes, rect, radius=radius,
+                link=link, caption=caption, author=author,
+            )
+
+        job_id = new_job_id()
+        submit_video_card(job_id, render)
+        return Response({
+            'success': True,
+            'data': {'job_id': job_id, 'status': 'pending'},
+            'message': 'Rendering the video card.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_202_ACCEPTED)
+
+
+class CommunityPostVideoCardStatusView(views.APIView):
+    """GET /messaging/communities/<id>/posts/<id>/video-card/<job_id>/ — progress."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, community_id, post_id, job_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership and not conv.is_public:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+
+        from common.video_card import (
+            video_card_response, video_card_result, video_card_status,
+        )
+
+        job = video_card_status(job_id)
+        if not job:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Unknown video card job.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        if job.get('status') == 'failed':
+            return Response({
+                'success': False, 'data': None,
+                'message': job.get('error') or 'Video composition failed.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        if job.get('status') != 'ready':
+            return Response({
+                'success': True,
+                'data': {'job_id': job_id, 'status': 'pending'},
+                'message': 'Still rendering.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_202_ACCEPTED)
+
+        data = video_card_result(job_id)
+        if not data:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'The rendered card is no longer available.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        return video_card_response(data, post.id)
+

@@ -38,3 +38,8 @@ requests>=2.32
 # the export endpoint answers 503 naming this package rather than 500.
 openpyxl>=3.1
 django_extensions>=3.2
+# ffmpeg for the branded video share card (common/video_card.py). The Docker
+# image installs a system ffmpeg; this ships a static binary as a fallback so
+# the composer also works on hosts without one. Absent at runtime, the video
+# card endpoint answers 503 and the client falls back to the still PNG card.
+imageio-ffmpeg>=0.6

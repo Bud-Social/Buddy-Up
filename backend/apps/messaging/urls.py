@@ -43,4 +43,6 @@ urlpatterns = [
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/share/', views.CommunityPostShareView.as_view(), name='community_post_share'),
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/shares/', views.CommunityPostSharesView.as_view(), name='community_post_shares'),
     path('communities/<uuid:community_id>/posts/<uuid:post_id>/media/', views.CommunityPostMediaView.as_view(), name='community_post_media'),
+    path('communities/<uuid:community_id>/posts/<uuid:post_id>/video-card/', views.CommunityPostVideoCardView.as_view(), name='community_post_video_card'),
+    path('communities/<uuid:community_id>/posts/<uuid:post_id>/video-card/<str:job_id>/', views.CommunityPostVideoCardStatusView.as_view(), name='community_post_video_card_status'),
 ]

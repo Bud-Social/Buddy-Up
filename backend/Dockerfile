@@ -7,10 +7,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # Cache-buster: forces clean rebuild for Render external Redis integration
+# ffmpeg is required by the video share card composer (apps/common/video_card.py):
+# it composites a post's clip into the branded card with the original audio.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     curl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

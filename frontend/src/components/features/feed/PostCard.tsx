@@ -62,25 +62,24 @@ function combinedFilterCss(page: MediaPage): string {
 }
 import type { Post, PostCaption, PostMedia } from '@/types';
 import EmojiPicker, { Theme, EmojiStyle } from 'emoji-picker-react';
+import { parseWorkoutMetrics } from '@/lib/workoutMetrics';
 import { PostMap } from './PostMap';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function WorkoutLogCard({ data }: { data: Record<string, unknown> }) {
+  const parsed = parseWorkoutMetrics(data);
+  if (!parsed) return null;
   return (
     <div className="bg-buddy-surface-raised rounded-xl p-4 mt-3 border border-buddy-surface">
       <div className="flex items-center gap-2 mb-3">
         <Dumbbell size={15} className="text-buddy-green" />
-        <span className="font-heading font-semibold text-sm">{data.exercise as string || 'Workout'}</span>
+        <span className="font-heading font-semibold text-sm">{parsed.title}</span>
       </div>
       <div className="grid grid-cols-3 gap-3 text-center">
-        {[
-          { label: 'Sets',  value: data.sets,     color: 'text-buddy-green' },
-          { label: 'Reps',  value: data.reps,     color: 'text-buddy-green' },
-          { label: 'Cal',   value: data.calories,  color: 'text-buddy-orange' },
-        ].map(({ label, value, color }) => (
-          <div key={label}>
-            <p className={`font-mono font-bold text-lg ${color}`}>{(value as string) || '—'}</p>
-            <p className="text-xs text-buddy-text-secondary mt-0.5">{label}</p>
+        {parsed.metrics.slice(0, 3).map((metric) => (
+          <div key={metric.label}>
+            <p className={`font-mono font-bold text-lg ${metric.tone === 'orange' ? 'text-buddy-orange' : 'text-buddy-green'}`}>{metric.value}</p>
+            <p className="text-xs text-buddy-text-secondary mt-0.5">{metric.label}</p>
           </div>
         ))}
       </div>

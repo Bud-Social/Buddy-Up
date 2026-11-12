@@ -7,7 +7,12 @@ import {
 import { feedApi } from '@/api/feed';
 import { messagingApi } from '@/api/messaging';
 import { Avatar } from '@/components/ui/Avatar';
-import { createShareCard, downloadShareCard } from '@/lib/shareCard';
+import {
+  createShareCard,
+  downloadShareCard,
+  hasVideoMedia,
+  renderShareCardLayers,
+} from '@/lib/shareCard';
 import type { Post } from '@/types';
 
 const VIDEO_EXT = /\.(mp4|mov|webm|m4v|mpeg|mkv)(\?|$)/i;
@@ -118,6 +123,7 @@ export function PostShareSheet({
   const [error, setError] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [preparingCard, setPreparingCard] = useState(false);
+  const [cardStatus, setCardStatus] = useState<string | null>(null);
   const [sharers, setSharers] = useState<Sharer[]>([]);
   const popRef = useRef<HTMLDivElement>(null);
   const [popTop, setPopTop] = useState<number | null>(null);
@@ -132,6 +138,7 @@ export function PostShareSheet({
     setError(null);
     setCopied(false);
     setDownloaded(false);
+    setCardStatus(null);
     if (communityId) {
       messagingApi
         .getPostShares(communityId, post.id)
@@ -206,8 +213,87 @@ export function PostShareSheet({
   };
 
   /**
-   * Share the branded card as an image. Native file sharing is how the card
-   * reaches WhatsApp Status / Instagram / AirDrop with the watermark intact;
+   * Build the branded card.
+   *
+   * Video posts get a video card: the backend composites the whole clip —
+   * sound intact — into the card chrome, so the shared file is the complete
+   * video rather than a preview. Everything else is a PNG card.
+   */
+  const buildCard = async (url: string): Promise<File> => {
+    if (hasVideoMedia(post)) {
+      try {
+        const layers = await renderShareCardLayers(post);
+        if (layers) {
+          const payload = {
+            base: layers.base,
+            over: layers.over,
+            rect: `${layers.rect.x},${layers.rect.y},${layers.rect.w},${layers.rect.h}`,
+            radius: layers.radius,
+          };
+          const job = communityId
+            ? await messagingApi.createCommunityVideoShareCard(communityId, post.id, payload)
+            : await feedApi.createVideoShareCard(post.id, payload);
+          const blob = await pollForVideoCard(job.job_id);
+          return new File([blob], `buddyup-${post.id}.mp4`, {
+            type: blob.type || 'video/mp4',
+          });
+        }
+      } catch {
+        // Composition unavailable (no ffmpeg, network hiccup): fall back to
+        // the still card so the user still gets a shareable file.
+      }
+    }
+    return createShareCard(post, { url });
+  };
+
+  /**
+   * Wait for the server-side render to finish.
+   *
+   * The render takes about as long as the clip, so this polls until the job
+   * reports the finished file.
+   */
+  const pollForVideoCard = async (jobId: string): Promise<Blob> => {
+    const deadline = Date.now() + 10 * 60 * 1000;
+    while (Date.now() < deadline) {
+      let blob: Blob;
+      try {
+        blob = communityId
+          ? await messagingApi.getCommunityVideoShareCard(communityId, post.id, jobId)
+          : await feedApi.getVideoShareCard(post.id, jobId);
+      } catch (err) {
+        // A failed job answers with a JSON body; surface its message rather
+        // than a generic network error.
+        const message = await errorMessage(err);
+        if (message) throw new Error(message);
+        throw err;
+      }
+      // A pending job answers 202 with a JSON body, so the content type is
+      // what tells "still rendering" apart from "finished".
+      if (blob.type.includes('json')) {
+        setCardStatus('Rendering the video card…');
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        continue;
+      }
+      return blob;
+    }
+    throw new Error('Timed out waiting for the video card.');
+  };
+
+  /** Pull a human-readable message out of a failed API response. */
+  const errorMessage = async (err: unknown): Promise<string | null> => {
+    const response = (err as { response?: { data?: Blob } })?.response;
+    if (!response?.data || typeof response.data.text !== 'function') return null;
+    try {
+      const parsed = JSON.parse(await response.data.text());
+      return typeof parsed?.message === 'string' ? parsed.message : null;
+    } catch {
+      return null;
+    }
+  };
+
+  /**
+   * Share the branded card. Native file sharing is how the card reaches
+   * WhatsApp Status / Instagram / AirDrop with the watermark intact;
    * browsers without file sharing get the card downloaded plus the link
    * copied so it can be attached manually.
    */
@@ -221,7 +307,7 @@ export function PostShareSheet({
     setDownloaded(false);
     try {
       const url = await trackedLink('native');
-      const file = await createShareCard(post, { url });
+      const file = await buildCard(url);
       const payload: ShareData = {
         files: [file],
         title: 'BuddyUp Fit',
@@ -249,6 +335,21 @@ export function PostShareSheet({
     setError(null);
     setDownloaded(false);
     try {
+      const file = await buildCard(link);
+      downloadShareCard(file);
+      setDownloaded(true);
+    } catch {
+      setError('Could not build the share card.');
+    } finally {
+      setPreparingCard(false);
+    }
+  };
+
+  const handleDownloadImageCard = async () => {
+    setPreparingCard(true);
+    setError(null);
+    setDownloaded(false);
+    try {
       const file = await createShareCard(post, { url: link });
       downloadShareCard(file);
       setDownloaded(true);
@@ -267,6 +368,7 @@ export function PostShareSheet({
   };
 
   const hasMedia = (post.media_urls?.length || 0) > 0 || (post.media?.length || 0) > 0;
+  const isVideo = hasVideoMedia(post);
 
   const handleDownload = async () => {
     // Download through the backend proxy (avoids CORS, adds watermark).
@@ -365,7 +467,11 @@ export function PostShareSheet({
         <div className="px-2 pb-2">
           <button className={rowCls} onClick={handleShareCard} disabled={recording || preparingCard}>
             <Share2 size={18} className="text-buddy-green shrink-0" />
-            <span className="flex-1">{preparingCard ? 'Preparing card…' : 'Share as card'}</span>
+            <span className="flex-1">
+              {preparingCard
+                ? (cardStatus ?? (isVideo ? 'Building video card…' : 'Preparing card…'))
+                : (isVideo ? 'Share as video card' : 'Share as card')}
+            </span>
           </button>
           <button className={rowCls} onClick={handleCopyLink} aria-label="Copy post link" disabled={recording}>
             {copied ? (
@@ -392,7 +498,7 @@ export function PostShareSheet({
           <button
             className={rowCls}
             onClick={handleDownloadCard}
-            aria-label="Download card"
+            aria-label={isVideo ? 'Download video card' : 'Download card'}
             disabled={preparingCard}
           >
             {downloaded ? (
@@ -400,9 +506,22 @@ export function PostShareSheet({
             ) : (
               <Download size={18} className="text-buddy-text-secondary shrink-0" />
             )}
-            <span className="flex-1">{downloaded ? 'Card downloaded!' : 'Download card'}</span>
-          </button>
-          {hasMedia && (
+            <span className="flex-1">
+              {downloaded
+                ? 'Card downloaded!'
+                : (isVideo ? 'Download video card' : 'Download card')}
+            </span>          </button>
+          {isVideo && (
+            <button
+              className={rowCls}
+              onClick={handleDownloadImageCard}
+              aria-label="Download card image"
+              disabled={preparingCard}
+            >
+              <Download size={18} className="text-buddy-text-secondary shrink-0" />
+              <span className="flex-1">Download card image</span>
+            </button>
+          )}          {hasMedia && (
             <button
               className={rowCls}
               onClick={handleDownload}

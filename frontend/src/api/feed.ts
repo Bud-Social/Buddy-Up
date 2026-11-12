@@ -125,6 +125,40 @@ export const feedApi = {
   downloadPostMedia: (postId: string) =>
     apiClient.get(`/feed/${postId}/download/`, { responseType: 'blob' }).then((r) => r.data),
 
+  /**
+   * Compose a branded video card for a post.
+   *
+   * The browser renders the card chrome; the backend composites the whole
+   * clip (with its original audio) into it with ffmpeg. The render takes
+   * about as long as the clip, so this starts a job and the caller polls
+   * `getVideoShareCard` for the finished file.
+   */
+  createVideoShareCard: (postId: string, layers: {
+    base: Blob;
+    over: Blob;
+    rect: string;
+    radius: number;
+  }) => {
+    const form = new FormData();
+    form.append('base', layers.base, 'base.png');
+    form.append('over', layers.over, 'over.png');
+    form.append('rect', layers.rect);
+    form.append('radius', String(layers.radius));
+    return apiClient
+      .post<ApiResponse<{ job_id: string; status: string }>>(
+        `/feed/${postId}/video-card/`,
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 },
+      )
+      .then((r) => r.data.data);
+  },
+
+  /** Poll a video card job. Resolves with the rendered MP4 once ready. */
+  getVideoShareCard: (postId: string, jobId: string) =>
+    apiClient
+      .get(`/feed/${postId}/video-card/${jobId}/`, { responseType: 'blob', timeout: 120000 })
+      .then((r) => r.data as Blob),
+
   /** Recent sharers, followed-first. Silent-friendly. */
   getPostShares: (postId: string) =>
     apiClient.get<ApiResponse<Array<{

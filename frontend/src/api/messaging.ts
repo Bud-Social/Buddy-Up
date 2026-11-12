@@ -420,6 +420,34 @@ export const messagingApi = {
     apiClient.get(`/messaging/communities/${id}/posts/${postId}/media/`, {
       responseType: 'blob',
     }),
+  /** Compose a branded video card for a community post (whole clip + audio). */
+  createCommunityVideoShareCard: (id: string, postId: string, layers: {
+    base: Blob;
+    over: Blob;
+    rect: string;
+    radius: number;
+  }) => {
+    const form = new FormData();
+    form.append('base', layers.base, 'base.png');
+    form.append('over', layers.over, 'over.png');
+    form.append('rect', layers.rect);
+    form.append('radius', String(layers.radius));
+    return apiClient
+      .post<ApiResponse<{ job_id: string; status: string }>>(
+        `/messaging/communities/${id}/posts/${postId}/video-card/`,
+        form,
+        { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 },
+      )
+      .then((r) => r.data.data);
+  },
+  /** Poll a community video card job. Resolves with the rendered MP4 once ready. */
+  getCommunityVideoShareCard: (id: string, postId: string, jobId: string) =>
+    apiClient
+      .get(`/messaging/communities/${id}/posts/${postId}/video-card/${jobId}/`, {
+        responseType: 'blob',
+        timeout: 120000,
+      })
+      .then((r) => r.data as Blob),
   viewCommunityPost: (communityId: string, postId: string) =>
     apiClient.post(`/messaging/communities/${communityId}/posts/${postId}/view/`).then((r) => r.data.data),
   getPostComments: (id: string, postId: string) =>

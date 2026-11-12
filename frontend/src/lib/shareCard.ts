@@ -1,25 +1,68 @@
 import type { Post } from '@/types';
+import { parseWorkoutMetrics, type WorkoutMetrics } from './workoutMetrics';
 
 /**
- * Social share card: a 4:5 PNG with the post content inside a BuddyUp post
- * frame, a BuddyUp Fit watermark header, a bottom-left watermark, and the
- * post permalink embedded as PNG/XMP metadata (not printed on the card).
+ * Social share card: a 4:5 canvas with the post content inside a BuddyUp
+ * post frame, a BuddyUp Fit watermark header, a bottom-left watermark, and
+ * the post permalink embedded as PNG/XMP metadata (not printed on the card).
+ *
+ * Two outputs share one layout:
+ *   - `createShareCard`       → PNG card (still image, photo or video poster)
+ *   - `renderShareCardLayers` → chrome + overlay layers for a video card.
+ *     The server composites the *whole* clip between those layers, so the
+ *     exported video plays in full with its original audio track.
  *
  * Sharing the file through the native share sheet (WhatsApp Status,
  * Instagram Stories, AirDrop, …) keeps the branding intact when the post is
- * re-shared as an image. The link also travels in the share text so apps that
- * only read captions still get it.
+ * re-shared as an image or a clip. The link also travels in the share text
+ * so apps that only read captions still get it.
  */
 
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1350;
+
+/** Corner radius of the media block and the post frame. */
+const MEDIA_RADIUS = 36;
 
 const GREEN = '#22C55E';
 const INK = '#0B0F0D';
 const TEXT = '#F4F7F5';
 const MUTED = '#9BA69F';
 
+/** Media block heights, in card pixels. */
+const IMAGE_MEDIA_HEIGHT = 540;
+const MAX_VIDEO_MEDIA_HEIGHT = 780;
+const MIN_VIDEO_MEDIA_HEIGHT = 320;
+
 type Media = { type: 'image' | 'video'; url: string; poster?: string | null };
+
+interface Rect { x: number; y: number; w: number; h: number }
+
+interface CardLayout {
+  frameX: number;
+  frameY: number;
+  frameW: number;
+  frameH: number;
+  padding: number;
+  /** Media region inside the post frame (null for text-only posts). */
+  media: Rect | null;
+  mediaKind: 'image' | 'video' | null;
+  bodyLines: string[];
+  metrics: WorkoutMetrics | null;
+  hasCommunity: boolean;
+  communityLabel: string;
+  communityPillW: number;
+}
+
+/** What we know about the post's media before anything is rendered. */
+interface MediaPlan {
+  kind: 'image' | 'video' | null;
+  url: string | null;
+  poster: string | null;
+  /** Natural pixel size of the clip, when it could be determined. */
+  naturalWidth: number | null;
+  naturalHeight: number | null;
+}
 
 function mediaOf(post: Post): Media | null {
   const structured = post.media?.[0];
@@ -36,6 +79,11 @@ function mediaOf(post: Post): Media | null {
     || post.post_type === 'long_video'
     || /\.(mp4|mov|webm|m4v|mpeg|mkv)(\?|$)/i.test(url);
   return { type: isVideo ? 'video' : 'image', url };
+}
+
+/** True when the post carries a video we can render into a card. */
+export function hasVideoMedia(post: Post): boolean {
+  return mediaOf(post)?.type === 'video';
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -73,12 +121,37 @@ async function loadBitmap(src: string): Promise<ImageBitmap | HTMLImageElement |
   }
 }
 
+/** Natural size of a video, so the card can frame it without cropping. */
+async function loadVideoSize(url: string): Promise<{ width: number; height: number } | null> {
+  return new Promise((resolve) => {
+    const el = document.createElement('video');
+    el.crossOrigin = 'anonymous';
+    el.muted = true;
+    el.playsInline = true;
+    el.preload = 'metadata';
+    let settled = false;
+    const finish = (value: { width: number; height: number } | null) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    el.onloadedmetadata = () => {
+      finish(el.videoWidth && el.videoHeight
+        ? { width: el.videoWidth, height: el.videoHeight }
+        : null);
+    };
+    el.onerror = () => finish(null);
+    el.src = url;
+    setTimeout(() => finish(null), 8000);
+  });
+}
+
 async function loadVideoPoster(video: Media): Promise<ImageBitmap | HTMLImageElement | HTMLVideoElement | null> {
   if (video.poster) {
     const poster = await loadBitmap(video.poster);
     if (poster) return poster;
   }
-  return new Promise<HTMLVideoElement | null>((resolve) => {
+  return new Promise((resolve) => {
     const el = document.createElement('video');
     el.crossOrigin = 'anonymous';
     el.muted = true;
@@ -125,7 +198,7 @@ function roundedRect(
 /** Cover-fit `source` into the box, preserving aspect ratio. */
 function drawCover(
   ctx: CanvasRenderingContext2D,
-  source: CanvasImageSource & { width?: number; height?: number },
+  source: CanvasImageSource,
   x: number,
   y: number,
   w: number,
@@ -136,9 +209,44 @@ function drawCover(
     videoWidth?: number; videoHeight?: number;
     width?: number; height?: number;
   };
-  const sw = sized.naturalWidth || sized.videoWidth || Number(source.width) || CARD_WIDTH;
-  const sh = sized.naturalHeight || sized.videoHeight || Number(source.height) || CARD_HEIGHT;
+  const sw = sized.naturalWidth || sized.videoWidth || Number(sized.width) || CARD_WIDTH;
+  const sh = sized.naturalHeight || sized.videoHeight || Number(sized.height) || CARD_HEIGHT;
   const scale = Math.max(w / sw, h / sh);
+  const dw = sw * scale;
+  const dh = sh * scale;
+  ctx.drawImage(source, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+/**
+ * Fit-fit `source` into the box, preserving the whole frame.
+ *
+ * The video is centred and the leftover space is filled with a blurred copy
+ * of it, so the shot stays whole — a crop could slice the subject in half.
+ */
+function drawFitted(
+  ctx: CanvasRenderingContext2D,
+  source: CanvasImageSource,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+) {
+  const sized = source as unknown as {
+    naturalWidth?: number; naturalHeight?: number;
+    videoWidth?: number; videoHeight?: number;
+    width?: number; height?: number;
+  };
+  const sw = sized.naturalWidth || sized.videoWidth || Number(sized.width) || CARD_WIDTH;
+  const sh = sized.naturalHeight || sized.videoHeight || Number(sized.height) || CARD_HEIGHT;
+
+  // Blurred backdrop so the letterbox area is not a dead black bar.
+  ctx.save();
+  ctx.filter = 'blur(28px)';
+  ctx.globalAlpha = 0.55;
+  drawCover(ctx, source, x, y, w, h);
+  ctx.restore();
+
+  const scale = Math.min(w / sw, h / sh);
   const dw = sw * scale;
   const dh = sh * scale;
   ctx.drawImage(source, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
@@ -205,6 +313,16 @@ function drawAvatar(
   ctx.strokeStyle = 'rgba(255,255,255,0.16)';
   ctx.lineWidth = 2;
   ctx.stroke();
+  ctx.restore();
+}
+
+/** A tiny dumbbell glyph for the workout metrics block. */
+function drawDumbbell(ctx: CanvasRenderingContext2D, x: number, y: number, color: string) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y - 3, 20, 6);
+  ctx.fillRect(x - 2, y - 10, 6, 20);
+  ctx.fillRect(x + 16, y - 10, 6, 20);
   ctx.restore();
 }
 
@@ -372,30 +490,138 @@ async function withPngMetadata(blob: Blob, post: Post, url: string): Promise<Blo
   return new Blob(parts as unknown as BlobPart[], { type: 'image/png' });
 }
 
-export interface ShareCardOptions {
-  /** Canonical permalink embedded in the image metadata + share payload. */
-  url: string;
+// --- Card layout + painting ------------------------------------------------
+
+async function ensureFonts() {
+  if (typeof document === 'undefined' || !('fonts' in document)) return;
+  try {
+    await Promise.all([
+      document.fonts.load('800 38px Syne'),
+      document.fonts.load('700 34px Inter'),
+      document.fonts.load('500 30px Inter'),
+    ]);
+    await document.fonts.ready;
+  } catch {
+    // System fallbacks are fine.
+  }
 }
 
-export async function createShareCard(post: Post, options: ShareCardOptions): Promise<File> {
-  if (typeof document !== 'undefined' && 'fonts' in document) {
-    try {
-      await Promise.all([
-        document.fonts.load('800 38px Syne'),
-        document.fonts.load('700 34px Inter'),
-        document.fonts.load('500 30px Inter'),
-      ]);
-      await document.fonts.ready;
-    } catch {
-      // System fallbacks are fine.
-    }
+async function planMedia(post: Post): Promise<MediaPlan> {
+  const media = mediaOf(post);
+  if (!media) {
+    return { kind: null, url: null, poster: null, naturalWidth: null, naturalHeight: null };
   }
+  if (media.type !== 'video') {
+    return { kind: 'image', url: media.url, poster: null, naturalWidth: null, naturalHeight: null };
+  }
+  const size = await loadVideoSize(media.url);
+  return {
+    kind: 'video',
+    url: media.url,
+    poster: media.poster ?? null,
+    naturalWidth: size?.width ?? null,
+    naturalHeight: size?.height ?? null,
+  };
+}
 
-  const canvas = document.createElement('canvas');
-  canvas.width = CARD_WIDTH;
-  canvas.height = CARD_HEIGHT;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas not supported');
+/**
+ * Size the media block.
+ *
+ * Images fill the frame width and are cropped to a fixed band. Videos get
+ * the room that is left over after the chrome, and the clip is *fitted*
+ * inside it (blurred backdrop behind), so the whole shot stays visible
+ * rather than being cropped down to whatever the band happens to show.
+ */
+function mediaRectFor(
+  plan: MediaPlan,
+  frameX: number,
+  frameY: number,
+  frameW: number,
+  available: number,
+): Rect | null {
+  if (!plan.kind || !plan.url) return null;
+  if (plan.kind === 'image') {
+    return { x: frameX, y: frameY, w: frameW, h: Math.min(IMAGE_MEDIA_HEIGHT, available) };
+  }
+  const h = Math.round(
+    Math.min(MAX_VIDEO_MEDIA_HEIGHT, Math.max(MIN_VIDEO_MEDIA_HEIGHT, available)),
+  );
+  return { x: frameX, y: frameY, w: frameW, h };
+}
+
+function computeLayout(ctx: CanvasRenderingContext2D, post: Post, plan: MediaPlan): CardLayout {
+  const frameX = 48;
+  const frameW = CARD_WIDTH - 96;
+  const padding = 32;
+  const authorH = 92;
+  const hasCommunity = !!post.community_name;
+  const pillH = hasCommunity ? 50 : 0;
+  const body = (post.body || '').trim();
+
+  ctx.font = '500 34px Inter, sans-serif';
+  const bodyLines = body ? wrapLines(ctx, body, frameW - padding * 2, 4) : [];
+  const bodyH = bodyLines.length * 46;
+
+  const metrics = post.post_type === 'workout_log'
+    ? parseWorkoutMetrics(post.workout_log_data)
+    : null;
+  const metricsH = metrics ? 150 : 0;
+
+  // Everything in the frame that is not the media block.
+  const chromeH = 8
+    + authorH
+    + (hasCommunity ? pillH + 8 : 0)
+    + bodyH
+    + (metricsH ? metricsH + 10 : 0)
+    + 94;
+
+  const topLabelH = 54;
+  const frameY = 150;
+  // Leave room for the footer branding under the frame.
+  const roomForMedia = Math.max(MIN_VIDEO_MEDIA_HEIGHT, CARD_HEIGHT - 64 - frameY - chromeH);
+
+  const media = mediaRectFor(plan, frameX, frameY, frameW, roomForMedia);
+  const mediaH = media?.h ?? 0;
+
+  const frameH = (media ? 0 : topLabelH) + mediaH + chromeH;
+  // Text-only posts float the frame in the space below the header.
+  const settledFrameY = media
+    ? frameY
+    : Math.max(frameY, frameY + (1060 - frameH) / 2);
+
+  ctx.font = '600 20px Inter, sans-serif';
+  const communityLabel = post.community_name || '';
+  const communityPillW = hasCommunity
+    ? Math.min(ctx.measureText(communityLabel).width + 34, 500)
+    : 0;
+
+  return {
+    frameX,
+    frameY: settledFrameY,
+    frameW,
+    frameH,
+    padding,
+    media,
+    mediaKind: plan.kind,
+    bodyLines,
+    metrics,
+    hasCommunity,
+    communityLabel,
+    communityPillW,
+  };
+}
+
+/**
+ * Paint the card chrome: background, post frame, author, community tag,
+ * caption, workout metrics and the footer.
+ */
+function paintChrome(
+  ctx: CanvasRenderingContext2D,
+  post: Post,
+  layout: CardLayout,
+  avatar: HTMLImageElement | null,
+) {
+  const { frameX, frameY, frameW, frameH, padding } = layout;
 
   // Background with a soft green glow.
   ctx.fillStyle = INK;
@@ -408,28 +634,9 @@ export async function createShareCard(post: Post, options: ShareCardOptions): Pr
 
   drawHeader(ctx);
 
-  const media = mediaOf(post);
-  const frameX = 48;
-  const frameW = CARD_WIDTH - 96;
-  const padding = 32;
-  const mediaH = media ? 540 : 0;
-  const authorH = 92;
-  const hasCommunity = !!post.community_name;
-  const pillH = hasCommunity ? 50 : 0;
-  const body = (post.body || '').trim();
-
-  ctx.font = '500 34px Inter, sans-serif';
-  const bodyLines = body ? wrapLines(ctx, body, frameW - padding * 2, 4) : [];
-  const bodyH = bodyLines.length * 46;
-  const topLabelH = media ? 0 : 54;
-  const frameH = topLabelH + mediaH + 8 + authorH + (hasCommunity ? pillH + 8 : 0) + bodyH + 94;
-
-  // Compact post cards sit centered in the space below the header.
-  const frameY = media ? 150 : Math.max(150, 150 + (1060 - frameH) / 2);
-
   // Post frame.
   ctx.save();
-  roundedRect(ctx, frameX, frameY, frameW, frameH, 36);
+  roundedRect(ctx, frameX, frameY, frameW, frameH, MEDIA_RADIUS);
   ctx.clip();
   const panel = ctx.createLinearGradient(frameX, frameY, frameX + frameW, frameY + frameH);
   panel.addColorStop(0, '#13241A');
@@ -438,85 +645,20 @@ export async function createShareCard(post: Post, options: ShareCardOptions): Pr
   ctx.fillRect(frameX, frameY, frameW, frameH);
 
   let cursorY = frameY + padding;
-  if (!media) {
+  if (!layout.media) {
     ctx.font = '700 20px Inter, sans-serif';
     ctx.fillStyle = 'rgba(34,197,94,0.9)';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.fillText('BUDDYUP POST', frameX + padding, cursorY + 10);
-    cursorY += topLabelH;
-  }
-
-  if (media) {
-    // Media fills the top of the post frame so the post content stays
-    // wrapped in one BuddyUp post card.
-    const mx = frameX;
-    const my = frameY;
-    ctx.save();
-    roundedRect(ctx, mx, my, frameW, mediaH, 36);
-    ctx.clip();
-    ctx.fillStyle = '#14201A';
-    ctx.fillRect(mx, my, frameW, mediaH);
-
-    const mediaImage = media.type === 'video'
-      ? await loadVideoPoster(media)
-      : await loadBitmap(media.url);
-
-    if (mediaImage) {
-      drawCover(ctx, mediaImage, mx, my, frameW, mediaH);
-      const fade = ctx.createLinearGradient(0, my + mediaH * 0.58, 0, my + mediaH);
-      fade.addColorStop(0, 'rgba(0,0,0,0)');
-      fade.addColorStop(1, 'rgba(0,0,0,0.68)');
-      ctx.fillStyle = fade;
-      ctx.fillRect(mx, my + mediaH * 0.58, frameW, mediaH * 0.42);
-    } else {
-      ctx.font = '800 60px Syne, Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(244,247,245,0.9)';
-      ctx.fillText('BuddyUp', mx + frameW / 2, my + mediaH / 2 - 14);
-      ctx.font = '500 24px Inter, sans-serif';
-      ctx.fillStyle = 'rgba(155,166,159,0.9)';
-      ctx.fillText(media.type === 'video' ? 'Video post' : 'Post', mx + frameW / 2, my + mediaH / 2 + 44);
-    }
-
-    if (media.type === 'video') {
-      ctx.beginPath();
-      ctx.arc(mx + frameW / 2, my + mediaH / 2, 48, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(mx + frameW / 2 - 13, my + mediaH / 2 - 20);
-      ctx.lineTo(mx + frameW / 2 + 21, my + mediaH / 2);
-      ctx.lineTo(mx + frameW / 2 - 13, my + mediaH / 2 + 20);
-      ctx.closePath();
-      ctx.fillStyle = TEXT;
-      ctx.fill();
-    }
-
-    // Post-type badge over the media.
-    ctx.font = '700 18px Inter, sans-serif';
-    const badge = 'BUDDYUP POST';
-    const badgeW = ctx.measureText(badge).width + 28;
-    roundedRect(ctx, mx + padding, my + padding, badgeW, 36, 18);
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fill();
-    ctx.fillStyle = 'rgba(34,197,94,0.95)';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(badge, mx + padding + 14, my + padding + 19);
-
-    // Bottom-left watermark on the media.
-    drawWatermark(ctx, mx + padding, my + mediaH - 26, true);
-    ctx.restore();
-
-    cursorY = frameY + mediaH + 8;
+    cursorY += 54;
+  } else {
+    cursorY = frameY + layout.media.h + 8;
   }
 
   // Author row inside the post frame.
   const author = post.author_data;
-  const avatarImage = author?.avatar_url ? await loadBitmap(author.avatar_url) : null;
-  drawAvatar(ctx, avatarImage as HTMLImageElement | null, author?.display_name || '', frameX + padding, cursorY + 12, 64);
+  drawAvatar(ctx, avatar, author?.display_name || '', frameX + padding, cursorY + 12, 64);
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
@@ -526,13 +668,11 @@ export async function createShareCard(post: Post, options: ShareCardOptions): Pr
   ctx.font = '500 23px Inter, sans-serif';
   ctx.fillStyle = MUTED;
   ctx.fillText(author?.username ? `@${author.username}` : '', frameX + padding + 82, cursorY + 74);
-  cursorY += authorH;
+  cursorY += 92;
 
-  if (hasCommunity) {
+  if (layout.hasCommunity) {
     ctx.font = '600 20px Inter, sans-serif';
-    const label = post.community_name as string;
-    const pillW = Math.min(ctx.measureText(label).width + 34, 500);
-    roundedRect(ctx, frameX + padding, cursorY - 4, pillW, 38, 19);
+    roundedRect(ctx, frameX + padding, cursorY - 4, layout.communityPillW, 38, 19);
     ctx.fillStyle = 'rgba(34,197,94,0.14)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(34,197,94,0.35)';
@@ -540,25 +680,60 @@ export async function createShareCard(post: Post, options: ShareCardOptions): Pr
     ctx.stroke();
     ctx.fillStyle = GREEN;
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, frameX + padding + 17, cursorY + 15, pillW - 34);
-    cursorY += pillH + 8;
+    ctx.fillText(layout.communityLabel, frameX + padding + 17, cursorY + 15, layout.communityPillW - 34);
+    cursorY += 58;
   }
 
   // Caption inside the post frame.
-  if (bodyLines.length) {
+  if (layout.bodyLines.length) {
     ctx.font = '500 34px Inter, sans-serif';
     ctx.fillStyle = TEXT;
     ctx.textBaseline = 'top';
     let y = cursorY + 10;
-    for (const line of bodyLines) {
+    for (const line of layout.bodyLines) {
       ctx.fillText(line, frameX + padding, y);
       y += 46;
     }
     cursorY = y;
   }
 
+  // Workout metrics card inside the post frame.
+  if (layout.metrics) {
+    const cardX = frameX + padding;
+    const cardW = frameW - padding * 2;
+    const cardY = cursorY + 4;
+    const cardH = 140;
+    roundedRect(ctx, cardX, cardY, cardW, cardH, 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    drawDumbbell(ctx, cardX + 24, cardY + 34, GREEN);
+    ctx.font = '700 26px Inter, sans-serif';
+    ctx.fillStyle = TEXT;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(layout.metrics.title, cardX + 60, cardY + 34, cardW - 84);
+
+    const shown = layout.metrics.metrics.slice(0, 3);
+    const colW = (cardW - 48) / Math.max(shown.length, 1);
+    shown.forEach((metric, index) => {
+      const cx = cardX + 24 + colW * index + colW / 2;
+      ctx.textAlign = 'center';
+      ctx.font = '700 40px JetBrains Mono, Inter, monospace';
+      ctx.fillStyle = metric.tone === 'orange' ? '#F59E0B' : GREEN;
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(metric.value, cx, cardY + 96);
+      ctx.font = '500 19px Inter, sans-serif';
+      ctx.fillStyle = MUTED;
+      ctx.fillText(metric.label, cx, cardY + 122);
+    });
+  }
+
   // Bottom-left watermark inside the post frame when there is no media.
-  if (!media) {
+  if (!layout.media) {
     drawWatermark(ctx, frameX + padding, frameY + frameH - 28);
   }
   ctx.restore();
@@ -578,16 +753,184 @@ export async function createShareCard(post: Post, options: ShareCardOptions): Pr
   accent.addColorStop(1, 'rgba(34,197,94,0)');
   ctx.fillStyle = accent;
   ctx.fillRect(0, 0, CARD_WIDTH, 6);
+}
 
-  const blob = await new Promise<Blob>((resolve, reject) => {
+/** Paint the still image (photo or video poster) into the media block. */
+function paintMediaImage(
+  ctx: CanvasRenderingContext2D,
+  layout: CardLayout,
+  source: CanvasImageSource | null,
+  isVideoFrame: boolean,
+) {
+  const rect = layout.media;
+  if (!rect) return;
+
+  ctx.save();
+  roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, MEDIA_RADIUS);
+  ctx.clip();
+  ctx.fillStyle = '#14201A';
+  ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+
+  if (source) {
+    if (isVideoFrame) {
+      drawFitted(ctx, source, rect.x, rect.y, rect.w, rect.h);
+    } else {
+      drawCover(ctx, source, rect.x, rect.y, rect.w, rect.h);
+    }
+  } else {
+    // No media / media blocked: a branded panel still makes a valid card.
+    const panel = ctx.createLinearGradient(rect.x, rect.y, rect.x + rect.w, rect.y + rect.h);
+    panel.addColorStop(0, '#12261B');
+    panel.addColorStop(1, '#0D1712');
+    ctx.fillStyle = panel;
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.font = '800 60px Syne, Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(244,247,245,0.9)';
+    ctx.fillText('BuddyUp', rect.x + rect.w / 2, rect.y + rect.h / 2 - 14);
+    ctx.font = '500 24px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(155,166,159,0.9)';
+    ctx.fillText(isVideoFrame ? 'Video post' : 'Post', rect.x + rect.w / 2, rect.y + rect.h / 2 + 44);
+  }
+  ctx.restore();
+}
+
+/**
+ * Paint the decorations that sit *on top* of the media: the fade, the
+ * post badge and the bottom-left watermark.
+ */
+function paintMediaDecorations(ctx: CanvasRenderingContext2D, layout: CardLayout) {
+  const rect = layout.media;
+  if (!rect) return;
+
+  ctx.save();
+  roundedRect(ctx, rect.x, rect.y, rect.w, rect.h, MEDIA_RADIUS);
+  ctx.clip();
+
+  const fade = ctx.createLinearGradient(0, rect.y + rect.h * 0.58, 0, rect.y + rect.h);
+  fade.addColorStop(0, 'rgba(0,0,0,0)');
+  fade.addColorStop(1, 'rgba(0,0,0,0.68)');
+  ctx.fillStyle = fade;
+  ctx.fillRect(rect.x, rect.y + rect.h * 0.58, rect.w, rect.h * 0.42);
+
+  // Post-type badge over the media.
+  ctx.font = '700 18px Inter, sans-serif';
+  const badge = 'BUDDYUP POST';
+  const badgeW = ctx.measureText(badge).width + 28;
+  roundedRect(ctx, rect.x + layout.padding, rect.y + layout.padding, badgeW, 36, 18);
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fill();
+  ctx.fillStyle = 'rgba(34,197,94,0.95)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(badge, rect.x + layout.padding + 14, rect.y + layout.padding + 19);
+
+  // Bottom-left watermark on the media.
+  drawWatermark(ctx, rect.x + layout.padding, rect.y + rect.h - 26, true);
+  ctx.restore();
+}
+
+export interface ShareCardOptions {
+  /** Canonical permalink embedded in the image metadata + share payload. */
+  url: string;
+}
+
+function makeCanvas(): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
+  const canvas = document.createElement('canvas');
+  canvas.width = CARD_WIDTH;
+  canvas.height = CARD_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas not supported');
+  return { canvas, ctx };
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, type = 'image/png'): Promise<Blob> {
+  return new Promise((resolve, reject) => {
     canvas.toBlob((result) => {
       if (result) resolve(result);
       else reject(new Error('Could not render the share card'));
-    }, 'image/png');
+    }, type);
   });
+}
 
+/** Render the still card (PNG). */
+export async function createShareCard(post: Post, options: ShareCardOptions): Promise<File> {
+  await ensureFonts();
+
+  const plan = await planMedia(post);
+  const { canvas, ctx } = makeCanvas();
+  const layout = computeLayout(ctx, post, plan);
+  const author = post.author_data;
+  const avatar = author?.avatar_url ? await loadBitmap(author.avatar_url) : null;
+
+  paintChrome(ctx, post, layout, avatar as HTMLImageElement | null);
+
+  const mediaSource = plan.kind === 'video'
+    ? await loadVideoPoster({ type: 'video', url: plan.url as string, poster: plan.poster })
+    : plan.kind === 'image'
+      ? await loadBitmap(plan.url as string)
+      : null;
+  paintMediaImage(ctx, layout, mediaSource, plan.kind === 'video');
+  paintMediaDecorations(ctx, layout);
+
+  const blob = await canvasToBlob(canvas);
   const withMeta = await withPngMetadata(blob, post, options.url);
   return new File([withMeta], `buddyup-${post.id}.png`, { type: 'image/png' });
+}
+
+export interface ShareCardLayers {
+  /** Card chrome: background, frame, author, caption, metrics, footer. */
+  base: Blob;
+  /** Decorations that belong on top of the clip. */
+  over: Blob;
+  /** Where the clip goes, in card pixels. */
+  rect: { x: number; y: number; w: number; h: number };
+  /** Corner radius of the media block. */
+  radius: number;
+}
+
+/**
+ * Render the card as two layers for a video card.
+ *
+ * The chrome carries the full card (the media area is left as the panel
+ * background) and the decoration layer holds only what belongs *over* the
+ * clip. The server composites the clip between them, so the exported video
+ * plays the whole clip with its original audio.
+ */
+export async function renderShareCardLayers(post: Post): Promise<ShareCardLayers | null> {
+  await ensureFonts();
+
+  const plan = await planMedia(post);
+  if (plan.kind !== 'video' || !plan.url) return null;
+
+  const { canvas, ctx } = makeCanvas();
+  const layout = computeLayout(ctx, post, plan);
+  if (!layout.media) return null;
+
+  const author = post.author_data;
+  const avatar = author?.avatar_url ? await loadBitmap(author.avatar_url) : null;
+
+  paintChrome(ctx, post, layout, avatar as HTMLImageElement | null);
+  const base = await canvasToBlob(canvas);
+
+  // Decoration layer: transparent except the media overlay.
+  const { canvas: overCanvas, ctx: overCtx } = makeCanvas();
+  overCtx.clearRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
+  paintMediaDecorations(overCtx, layout);
+  const over = await canvasToBlob(overCanvas);
+
+  return {
+    base,
+    over,
+    rect: {
+      x: layout.media.x,
+      y: layout.media.y,
+      w: layout.media.w,
+      h: layout.media.h,
+    },
+    radius: MEDIA_RADIUS,
+  };
 }
 
 /** Trigger a local file download for a generated card. */

@@ -2697,3 +2697,143 @@ class PostDownloadView(views.APIView):
         return build_download_response(media_url, media_type or 'image', filename_stem=post.id)
 
 
+class PostVideoCardView(views.APIView):
+    """POST /api/v1/feed/<post_id>/video-card/ — a branded video card.
+
+    The client uploads the rendered card chrome as PNG layers and this
+    endpoint composites the post's clip into it with ffmpeg: the whole clip,
+    fitted so the shot stays visible, with its original audio track intact.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, post_id):
+        post = get_object_or_404(Post, id=post_id)
+        viewer_profile = request.user.profile
+        if not _can_view_post(post, viewer_profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        media_url = None
+        # post.media is the related manager of PostMedia rows (the serializer
+        # flattens it into dicts, but here it is still the model relation).
+        for row in post.media.all():
+            if row.media_type == 'video' and row.url:
+                media_url = row.url
+                break
+        if not media_url and post.media_urls:
+            candidate = post.media_urls[0]
+            if any(ext in candidate.lower() for ext in ('.mp4', '.mov', '.webm', '.m4v', '.mkv')):
+                media_url = candidate
+        if not media_url:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No video available to compose.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        from common.video_card import (
+            VideoCardError, new_job_id, parse_radius, parse_rect,
+            submit_video_card,
+        )
+
+        base_png = request.FILES.get('base')
+        if not base_png:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Missing card artwork.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+        over_png = request.FILES.get('over')
+
+        try:
+            rect = parse_rect(request.data.get('rect'))
+        except VideoCardError as exc:
+            return Response({
+                'success': False, 'data': None,
+                'message': str(exc),
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        radius = parse_radius(request.data.get('radius'))
+        base_bytes = base_png.read()
+        over_bytes = over_png.read() if over_png else None
+        link = f"{request.build_absolute_uri('/')[:-1]}/videos?start={post.id}"
+        caption = post.body or ''
+        author = post.author.username
+
+        def render():
+            from common.video_card import compose_video_card
+
+            return compose_video_card(
+                media_url, base_bytes, over_bytes, rect, radius=radius,
+                link=link, caption=caption, author=author,
+            )
+
+        job_id = new_job_id()
+        submit_video_card(job_id, render)
+        return Response({
+            'success': True,
+            'data': {'job_id': job_id, 'status': 'pending'},
+            'message': 'Rendering the video card.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_202_ACCEPTED)
+
+
+class PostVideoCardStatusView(views.APIView):
+    """GET /api/v1/feed/<post_id>/video-card/<job_id>/ — render progress.
+
+    Returns the finished MP4 once the job completes; ``status`` is
+    ``pending`` while it is still rendering and ``failed`` if it broke.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, post_id, job_id):
+        post = get_object_or_404(Post, id=post_id)
+        if not _can_view_post(post, request.user.profile):
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Not found.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        from common.video_card import (
+            video_card_response, video_card_result, video_card_status,
+        )
+
+        job = video_card_status(job_id)
+        if not job:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'Unknown video card job.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        if job.get('status') == 'failed':
+            return Response({
+                'success': False, 'data': None,
+                'message': job.get('error') or 'Video composition failed.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        if job.get('status') != 'ready':
+            return Response({
+                'success': True,
+                'data': {'job_id': job_id, 'status': 'pending'},
+                'message': 'Still rendering.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_202_ACCEPTED)
+
+        data = video_card_result(job_id)
+        if not data:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'The rendered card is no longer available.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        return video_card_response(data, post.id)
+
+

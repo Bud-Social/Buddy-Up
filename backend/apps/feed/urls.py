@@ -37,5 +37,7 @@ urlpatterns = [
     path('comments/media/', views.CommentMediaUploadView.as_view(), name='comment_media_upload'),
     path('trending-hashtags/', views.TrendingHashtagsView.as_view(), name='trending_hashtags'),
     path('location-consent/', views.UserLocationConsentView.as_view(), name='location_consent'),
-    path('<uuid:post_id>/download/', views.PostDownloadView.as_view(), name='download')
+    path('<uuid:post_id>/download/', views.PostDownloadView.as_view(), name='download'),
+    path('<uuid:post_id>/video-card/', views.PostVideoCardView.as_view(), name='video_card'),
+    path('<uuid:post_id>/video-card/<str:job_id>/', views.PostVideoCardStatusView.as_view(), name='video_card_status'),
 ]
