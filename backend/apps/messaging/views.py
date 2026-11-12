@@ -2140,7 +2140,7 @@ class CommunityPostVideoCardStatusView(views.APIView):
         post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
 
         from common.video_card import (
-            video_card_response, video_card_result, video_card_status,
+            video_card_path, video_card_response, video_card_status,
         )
 
         job = video_card_status(job_id)
@@ -2166,13 +2166,13 @@ class CommunityPostVideoCardStatusView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_202_ACCEPTED)
 
-        data = video_card_result(job_id)
-        if not data:
+        path = video_card_path(job_id)
+        if not path:
             return Response({
                 'success': False, 'data': None,
                 'message': 'The rendered card is no longer available.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_404_NOT_FOUND)
 
-        return video_card_response(data, post.id)
+        return video_card_response(path, post.id)
 

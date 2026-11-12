@@ -2717,11 +2717,15 @@ class PostVideoCardView(views.APIView):
             }, status=status.HTTP_404_NOT_FOUND)
 
         media_url = None
+        trim_start_ms = None
         # post.media is the related manager of PostMedia rows (the serializer
         # flattens it into dicts, but here it is still the model relation).
         for row in post.media.all():
             if row.media_type == 'video' and row.url:
                 media_url = row.url
+                # Where the author kept the clip when they trimmed it; the
+                # feed player seeks to the same offset.
+                trim_start_ms = row.trim_start_ms
                 break
         if not media_url and post.media_urls:
             candidate = post.media_urls[0]
@@ -2770,6 +2774,7 @@ class PostVideoCardView(views.APIView):
             return compose_video_card(
                 media_url, base_bytes, over_bytes, rect, radius=radius,
                 link=link, caption=caption, author=author,
+                trim_start_ms=trim_start_ms,
             )
 
         job_id = new_job_id()
@@ -2800,7 +2805,7 @@ class PostVideoCardStatusView(views.APIView):
             }, status=status.HTTP_404_NOT_FOUND)
 
         from common.video_card import (
-            video_card_response, video_card_result, video_card_status,
+            video_card_path, video_card_response, video_card_status,
         )
 
         job = video_card_status(job_id)
@@ -2826,14 +2831,14 @@ class PostVideoCardStatusView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_202_ACCEPTED)
 
-        data = video_card_result(job_id)
-        if not data:
+        path = video_card_path(job_id)
+        if not path:
             return Response({
                 'success': False, 'data': None,
                 'message': 'The rendered card is no longer available.',
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_404_NOT_FOUND)
 
-        return video_card_response(data, post.id)
+        return video_card_response(path, post.id)
 
 

@@ -29,9 +29,8 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-import requests
 from django.core.cache import cache
-from django.http import HttpResponse
+from django.http import FileResponse, HttpResponse
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -46,8 +45,8 @@ MEDIA_RADIUS = 36
 #: Frames per second in the exported card.
 CARD_FPS = 24
 
-#: Refuse absurd inputs rather than tying up a worker for minutes.
-MAX_SOURCE_BYTES = 400 * 1024 * 1024
+#: The longest a card may run, and the longest a render may take. A clip
+#: longer than this is cut there rather than tying up a worker for minutes.
 MAX_RENDER_SECONDS = 600
 
 #: How long a finished render stays downloadable.
@@ -55,6 +54,13 @@ RESULT_TTL = 3600
 
 #: How long a job may sit pending before it is considered lost.
 PENDING_TTL = 900
+
+
+def result_ttl() -> int:
+    """How long a finished card stays downloadable."""
+    from django.conf import settings
+
+    return int(getattr(settings, 'VIDEO_CARD_TTL', RESULT_TTL) or RESULT_TTL)
 
 
 class VideoCardError(Exception):
@@ -99,12 +105,17 @@ def _resolve_local_media(media_url: str) -> Path | None:
     return None
 
 
-def _fetch_source(media_url: str, dest: Path) -> None:
-    """Copy the source clip into `dest` (local file or remote download)."""
+def _resolve_source_input(media_url: str) -> str:
+    """Return a path or URL ffmpeg can read the clip from directly.
+
+    The source is handed to ffmpeg rather than copied: a clip can be
+    hundreds of megabytes, and a copy would need that much scratch space.
+    Local '/media/…' paths resolve to the file on disk; remote URLs are
+    passed through for ffmpeg to fetch.
+    """
     local = _resolve_local_media(media_url)
     if local is not None:
-        shutil.copyfile(local, dest)
-        return
+        return str(local)
 
     url = media_url
     if not url.startswith(('http://', 'https://')):
@@ -113,23 +124,7 @@ def _fetch_source(media_url: str, dest: Path) -> None:
         if not base:
             raise VideoCardError('Source media could not be located.')
         url = f"{base}{url if url.startswith('/') else '/' + url}"
-
-    try:
-        with requests.get(url, stream=True, timeout=120) as resp:
-            resp.raise_for_status()
-            written = 0
-            with dest.open('wb') as fh:
-                for chunk in resp.iter_content(65536):
-                    if not chunk:
-                        continue
-                    written += len(chunk)
-                    if written > MAX_SOURCE_BYTES:
-                        raise VideoCardError('Source video is too large to compose.')
-                    fh.write(chunk)
-    except VideoCardError:
-        raise
-    except Exception as exc:
-        raise VideoCardError(f'Could not fetch source video: {exc}')
+    return url
 
 
 def _rounded_mask(width: int, height: int, radius: int) -> bytes:
@@ -174,6 +169,24 @@ def parse_radius(value) -> int:
     return max(0, min(radius, 200))
 
 
+def trim_start_seconds(trim_start_ms: int | None) -> float | None:
+    """Return the offset the post's clip starts at, in seconds.
+
+    A post records where the author kept the video when they trimmed it in
+    the studio, and the stored asset can still hold the footage before that
+    point. The card starts at the same offset the feed player seeks to, so
+    the shared file shows the same clip the post shows.
+
+    The end is deliberately left alone: the player runs the clip out to its
+    natural end, and cutting it short would drop footage the post still
+    shows.
+    """
+    start_ms = max(0, int(trim_start_ms or 0))
+    if start_ms <= 0:
+        return None
+    return start_ms / 1000.0
+
+
 def compose_video_card(
     media_url: str,
     base_png: bytes,
@@ -183,6 +196,7 @@ def compose_video_card(
     link: str = '',
     caption: str = '',
     author: str = '',
+    trim_start_ms: int | None = None,
 ) -> bytes:
     """Return an MP4 of the clip composed into the BuddyUp card.
 
@@ -196,10 +210,10 @@ def compose_video_card(
         raise VideoCardError('Video composition is not available on this server.')
 
     x, y, w, h = rect
+    trim_start = trim_start_seconds(trim_start_ms)
 
     with tempfile.TemporaryDirectory() as tmp:
         tmpdir = Path(tmp)
-        src = tmpdir / 'source'
         base_path = tmpdir / 'base.png'
         over_path = tmpdir / 'over.png'
         mask_path = tmpdir / 'mask.png'
@@ -210,11 +224,17 @@ def compose_video_card(
         if over_png:
             over_path.write_bytes(over_png)
 
-        _fetch_source(media_url, src)
+        source = _resolve_source_input(media_url)
 
         command = [
             ffmpeg, '-y', '-hide_banner', '-loglevel', 'error',
-            '-i', str(src),
+        ]
+        # An input seek is frame-accurate when the stream is re-encoded, and
+        # it avoids decoding the footage before the post's start.
+        if trim_start:
+            command += ['-ss', f'{trim_start:.3f}']
+        command += [
+            '-i', source,
             '-i', str(base_path),
         ]
         base_index = 1
@@ -257,9 +277,10 @@ def compose_video_card(
             '-pix_fmt', 'yuv420p',
             '-c:a', 'aac', '-b:a', '128k',
             '-movflags', '+faststart',
-            '-t', str(MAX_RENDER_SECONDS),
-            '-shortest',
         ]
+        # The safety cap keeps a render bounded; a shorter clip keeps all of
+        # it, so nothing the post shows is ever dropped.
+        command += ['-t', f'{MAX_RENDER_SECONDS:.3f}', '-shortest']
 
         metadata = [
             '-metadata', f'title=BuddyUp Fit{(" — " + author) if author else ""}',
@@ -305,9 +326,28 @@ def compose_video_card(
 # request: Django's ASGI handler runs synchronous views on one shared thread
 # and a long render there stalls every other API request. The job runs on a
 # worker thread instead and the client polls for the result.
+#
+# The rendered file is written to disk rather than kept in the cache: a card
+# is several megabytes, and the cache is a small Redis with an LRU policy
+# that other features depend on.
 
 _render_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix='videocard')
 _render_lock = threading.Lock()
+
+
+def _render_dir() -> Path:
+    """Where finished cards are written. Kept outside MEDIA_ROOT so the
+    files are only reachable through the authenticated status endpoint."""
+    from django.conf import settings
+
+    configured = getattr(settings, 'VIDEO_CARD_TMP_DIR', '')
+    path = (
+        Path(configured)
+        if configured
+        else Path(settings.MEDIA_ROOT).parent / 'tmp' / 'video_cards'
+    )
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def _result_key(job_id: str) -> str:
@@ -318,10 +358,28 @@ def _status_key(job_id: str) -> str:
     return f'videocard:status:{job_id}'
 
 
+def _prune_old_cards() -> None:
+    """Drop cards older than the result TTL so the directory cannot grow
+    without bound on a server that never gets read."""
+    import time
+
+    cutoff = time.time() - result_ttl()
+    try:
+        for entry in _render_dir().iterdir():
+            try:
+                if entry.is_file() and entry.stat().st_mtime < cutoff:
+                    entry.unlink()
+            except OSError:
+                continue
+    except OSError:
+        return
+
+
 def submit_video_card(job_id: str, render) -> None:
     """Run `render()` on a worker thread and record the outcome."""
 
     def run() -> None:
+        ttl = result_ttl()
         try:
             data = render()
         except Exception as exc:  # noqa: BLE001 — surfaced to the client
@@ -329,11 +387,23 @@ def submit_video_card(job_id: str, render) -> None:
             cache.set(
                 _status_key(job_id),
                 {'status': 'failed', 'error': str(exc)},
-                RESULT_TTL,
+                ttl,
             )
             return
-        cache.set(_result_key(job_id), data, RESULT_TTL)
-        cache.set(_status_key(job_id), {'status': 'ready', 'size': len(data)}, RESULT_TTL)
+        try:
+            target = _render_dir() / f'{job_id}.mp4'
+            target.write_bytes(data)
+        except OSError as exc:
+            logger.warning('could not store the rendered video card: %s', exc)
+            cache.set(
+                _status_key(job_id),
+                {'status': 'failed', 'error': 'The rendered card could not be stored.'},
+                ttl,
+            )
+            return
+        cache.set(_result_key(job_id), str(target), ttl)
+        cache.set(_status_key(job_id), {'status': 'ready', 'size': len(data)}, ttl)
+        _prune_old_cards()
 
     with _render_lock:
         cache.set(_status_key(job_id), {'status': 'pending'}, PENDING_TTL)
@@ -345,21 +415,31 @@ def video_card_status(job_id: str) -> dict | None:
     return cache.get(_status_key(job_id))
 
 
-def video_card_result(job_id: str) -> bytes | None:
-    """Return the rendered bytes once the job has finished."""
-    return cache.get(_result_key(job_id))
+def video_card_path(job_id: str) -> Path | None:
+    """Return the path of the rendered card, or None when it is gone."""
+    stored = cache.get(_result_key(job_id))
+    if not stored:
+        return None
+    path = Path(stored)
+    try:
+        return path if path.is_file() else None
+    except OSError:
+        return None
 
 
 def new_job_id() -> str:
     return uuid.uuid4().hex
 
 
-def video_card_response(data: bytes, filename_stem: str) -> HttpResponse:
-    """Wrap composed bytes in a downloadable MP4 response."""
-    response = HttpResponse(data, content_type='video/mp4')
-    response['Content-Disposition'] = f'attachment; filename="buddyup_{filename_stem}.mp4"'
+def video_card_response(path: Path, filename_stem: str) -> HttpResponse:
+    """Stream a rendered card back as a downloadable MP4."""
+    response = FileResponse(
+        path.open('rb'),
+        content_type='video/mp4',
+        as_attachment=True,
+        filename=f'buddyup_{filename_stem}.mp4',
+    )
     response['X-Content-Type-Options'] = 'nosniff'
-    response['Content-Length'] = str(len(data))
     return response
 
 

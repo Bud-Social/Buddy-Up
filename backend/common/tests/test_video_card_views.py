@@ -31,6 +31,16 @@ def _png_file(name='base.png'):
     return SimpleUploadedFile(name, _png_bytes(), content_type='image/png')
 
 
+def _render_file(data: bytes):
+    """A file standing in for a finished render."""
+    import tempfile
+    from pathlib import Path
+
+    path = Path(tempfile.mkdtemp()) / 'card.mp4'
+    path.write_bytes(data)
+    return path
+
+
 class VideoCardEndpointTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -100,16 +110,19 @@ class VideoCardEndpointTests(TestCase):
 
     def test_status_endpoint_returns_the_rendered_file(self):
         job_id = new_job_id()
+        rendered = _render_file(b'video')
         with mock.patch(
             'common.video_card.video_card_status',
             return_value={'status': 'ready', 'size': 5},
         ), mock.patch(
-            'common.video_card.video_card_result', return_value=b'video'
+            'common.video_card.video_card_path', return_value=rendered
         ):
             res = self.client.get(f'/api/v1/feed/{self.post.id}/video-card/{job_id}/')
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res['Content-Type'], 'video/mp4')
         self.assertIn(f'buddyup_{self.post.id}.mp4', res['Content-Disposition'])
+        b''.join(res.streaming_content)
+        rendered.unlink(missing_ok=True)
 
     def test_status_endpoint_reports_pending(self):
         job_id = new_job_id()
@@ -181,14 +194,17 @@ class CommunityVideoCardEndpointTests(TestCase):
 
     def test_status_endpoint_returns_the_rendered_file(self):
         job_id = new_job_id()
+        rendered = _render_file(b'video')
         with mock.patch(
             'common.video_card.video_card_status',
             return_value={'status': 'ready', 'size': 5},
         ), mock.patch(
-            'common.video_card.video_card_result', return_value=b'video'
+            'common.video_card.video_card_path', return_value=rendered
         ):
             res = self.client.get(
                 f'/api/v1/messaging/communities/{self.conv.id}/posts/{self.post.id}/video-card/{job_id}/'
             )
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res['Content-Type'], 'video/mp4')
+        b''.join(res.streaming_content)
+        rendered.unlink(missing_ok=True)

@@ -327,6 +327,7 @@ export function PostShareSheet({
       setError('Could not build the share card. Try Download card instead.');
     } finally {
       setPreparingCard(false);
+      setCardStatus(null);
     }
   };
 
@@ -342,6 +343,7 @@ export function PostShareSheet({
       setError('Could not build the share card.');
     } finally {
       setPreparingCard(false);
+      setCardStatus(null);
     }
   };
 

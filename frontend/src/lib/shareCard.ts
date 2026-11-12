@@ -34,7 +34,14 @@ const IMAGE_MEDIA_HEIGHT = 540;
 const MAX_VIDEO_MEDIA_HEIGHT = 780;
 const MIN_VIDEO_MEDIA_HEIGHT = 320;
 
-type Media = { type: 'image' | 'video'; url: string; poster?: string | null };
+type Media = {
+  type: 'image' | 'video';
+  url: string;
+  poster?: string | null;
+  /** Natural pixel size of the attachment, when the API reports it. */
+  width?: number | null;
+  height?: number | null;
+};
 
 interface Rect { x: number; y: number; w: number; h: number }
 
@@ -64,13 +71,24 @@ interface MediaPlan {
   naturalHeight: number | null;
 }
 
-function mediaOf(post: Post): Media | null {
-  const structured = post.media?.[0];
+/**
+ * The media the card should show.
+ *
+ * A post can carry several attachments; the server composites the first
+ * *video* one into a video card, so the card picks the same item. That
+ * keeps the media block the right shape for the clip that ends up in it.
+ */
+export function selectCardMedia(post: Post): Media | null {
+  const items = post.media ?? [];
+  const video = items.find((m) => m.media_type === 'video' && m.url);
+  const structured = video ?? items[0];
   if (structured?.url) {
     return {
       type: structured.media_type === 'video' ? 'video' : 'image',
       url: structured.url,
       poster: structured.poster_url,
+      width: structured.width ?? null,
+      height: structured.height ?? null,
     };
   }
   const url = post.media_urls?.[0];
@@ -78,12 +96,12 @@ function mediaOf(post: Post): Media | null {
   const isVideo = post.post_type === 'short_video'
     || post.post_type === 'long_video'
     || /\.(mp4|mov|webm|m4v|mpeg|mkv)(\?|$)/i.test(url);
-  return { type: isVideo ? 'video' : 'image', url };
+  return { type: isVideo ? 'video' : 'image', url, width: null, height: null };
 }
 
 /** True when the post carries a video we can render into a card. */
 export function hasVideoMedia(post: Post): boolean {
-  return mediaOf(post)?.type === 'video';
+  return selectCardMedia(post)?.type === 'video';
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -507,12 +525,24 @@ async function ensureFonts() {
 }
 
 async function planMedia(post: Post): Promise<MediaPlan> {
-  const media = mediaOf(post);
+  const media = selectCardMedia(post);
   if (!media) {
     return { kind: null, url: null, poster: null, naturalWidth: null, naturalHeight: null };
   }
   if (media.type !== 'video') {
     return { kind: 'image', url: media.url, poster: null, naturalWidth: null, naturalHeight: null };
+  }
+  // The API already reports the clip's dimensions for structured media, so the
+  // card can be laid out without probing the file. Only fall back to loading
+  // the metadata when they are missing.
+  if (media.width && media.height) {
+    return {
+      kind: 'video',
+      url: media.url,
+      poster: media.poster ?? null,
+      naturalWidth: media.width,
+      naturalHeight: media.height,
+    };
   }
   const size = await loadVideoSize(media.url);
   return {
@@ -527,10 +557,10 @@ async function planMedia(post: Post): Promise<MediaPlan> {
 /**
  * Size the media block.
  *
- * Images fill the frame width and are cropped to a fixed band. Videos get
- * the room that is left over after the chrome, and the clip is *fitted*
- * inside it (blurred backdrop behind), so the whole shot stays visible
- * rather than being cropped down to whatever the band happens to show.
+ * Images fill the frame width and are cropped to a fixed band. Videos get a
+ * block sized to the clip's aspect ratio (capped to the space the rest of
+ * the card leaves), so a wide clip fills its block instead of floating in a
+ * band of blurred filler.
  */
 function mediaRectFor(
   plan: MediaPlan,
@@ -543,8 +573,15 @@ function mediaRectFor(
   if (plan.kind === 'image') {
     return { x: frameX, y: frameY, w: frameW, h: Math.min(IMAGE_MEDIA_HEIGHT, available) };
   }
+  const aspect = plan.naturalWidth && plan.naturalHeight
+    ? plan.naturalWidth / plan.naturalHeight
+    : 9 / 16;
   const h = Math.round(
-    Math.min(MAX_VIDEO_MEDIA_HEIGHT, Math.max(MIN_VIDEO_MEDIA_HEIGHT, available)),
+    Math.min(
+      MAX_VIDEO_MEDIA_HEIGHT,
+      available,
+      Math.max(MIN_VIDEO_MEDIA_HEIGHT, frameW / aspect),
+    ),
   );
   return { x: frameX, y: frameY, w: frameW, h };
 }

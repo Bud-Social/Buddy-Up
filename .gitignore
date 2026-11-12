@@ -14,6 +14,10 @@ venv/
 # ── Django ──────────────────────────────────────────────────────────
 backend/staticfiles/
 backend/media/
+# Rendered video share cards (common/video_card.py). The composer writes
+# finished MP4s next to MEDIA_ROOT; they are short-lived and served only
+# through the authenticated status endpoint.
+backend/tmp/
 *.log
 db.sqlite3
 db.sqlite3-journal

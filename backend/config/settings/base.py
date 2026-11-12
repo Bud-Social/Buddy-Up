@@ -345,6 +345,12 @@ STORAGES = {
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Rendered video share cards (common/video_card.py). Finished cards are
+# written here and streamed back through the authenticated status endpoint;
+# they are pruned after VIDEO_CARD_TTL. Defaults to a sibling of MEDIA_ROOT.
+VIDEO_CARD_TMP_DIR = os.environ.get('VIDEO_CARD_TMP_DIR', '') or str(BASE_DIR / 'tmp' / 'video_cards')
+VIDEO_CARD_TTL = int(os.environ.get('VIDEO_CARD_TTL', 3600))
+
 # Upload limits — allow larger post media (photos, videos, documents).
 DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('DATA_UPLOAD_MAX_MEMORY_SIZE', 52428800))
 FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('FILE_UPLOAD_MAX_MEMORY_SIZE', 52428800))
