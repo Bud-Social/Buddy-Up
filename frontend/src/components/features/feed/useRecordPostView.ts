@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { feedApi } from '@/api/feed';
+import { messagingApi } from '@/api/messaging';
 
 // Once per post per session. Module-level so every mounted instance shares it.
 const recordedThisSession = new Set<string>();
@@ -22,6 +23,8 @@ interface RecordViewOpts {
   inViewThreshold?: number;
   /** Called with the authoritative count after a successful record. */
   onRecorded?: (viewCount: number) => void;
+  /** Community ID when the post is a community post (vs. feed post). */
+  communityId?: string;
 }
 
 /**
@@ -33,7 +36,7 @@ interface RecordViewOpts {
  */
 export function useRecordPostView(
   postId: string | undefined,
-  { active, progress = 0, progressThreshold = 0.25, activeMs = 2000, inViewThreshold = 0.5, onRecorded }: RecordViewOpts,
+  { active, progress = 0, progressThreshold = 0.25, activeMs = 2000, inViewThreshold = 0.5, onRecorded, communityId }: RecordViewOpts,
 ): (node: HTMLDivElement | null) => void {
   const [el, setEl] = useState<HTMLDivElement | null>(null);
   const [inView, setInView] = useState(false);
@@ -62,19 +65,33 @@ export function useRecordPostView(
       const t = setTimeout(() => {
         if (recordedThisSession.has(postId)) return;
         recordedThisSession.add(postId);
-        feedApi.recordView(postId).then((res) => {
-          const n = res.data?.view_count;
-          if (typeof n === 'number') onRecorded?.(n);
-        }).catch(() => {});
+        if (communityId) {
+          messagingApi.viewCommunityPost(communityId, postId).then((res) => {
+            const n = (res as any)?.view_count;
+            if (typeof n === 'number') onRecorded?.(n);
+          }).catch(() => {});
+        } else {
+          feedApi.recordView(postId).then((res) => {
+            const n = (res as any)?.view_count;
+            if (typeof n === 'number') onRecorded?.(n);
+          }).catch(() => {});
+        }
       }, activeMs);
       return () => clearTimeout(t);
     }
     recordedThisSession.add(postId);
-    feedApi.recordView(postId).then((res) => {
-      const n = res.data?.view_count;
-      if (typeof n === 'number') onRecorded?.(n);
-    }).catch(() => {});
-  }, [postId, active, inView, qualifiedByProgress, activeMs, onRecorded]);
+    if (communityId) {
+      messagingApi.viewCommunityPost(communityId, postId).then((res) => {
+        const n = (res as any)?.view_count;
+        if (typeof n === 'number') onRecorded?.(n);
+      }).catch(() => {});
+    } else {
+      feedApi.recordView(postId).then((res) => {
+        const n = (res as any)?.view_count;
+        if (typeof n === 'number') onRecorded?.(n);
+      }).catch(() => {});
+    }
+  }, [postId, communityId, active, inView, qualifiedByProgress, activeMs, onRecorded]);
 
   return ref;
 }

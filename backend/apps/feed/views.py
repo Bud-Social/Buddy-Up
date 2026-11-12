@@ -1663,10 +1663,54 @@ class SavedPostsView(views.APIView):
         paginator = CursorPagination()
         page = paginator.paginate_queryset(posts, request)
         serializer = PostSerializer(page, many=True, context={'request': request})
+        data = list(serializer.data)
+
+        # Community posts are saved in their own table. Merge them into the
+        # first page (the Saved tab does not paginate) so saving a community
+        # post actually puts it in the list.
+        if not collection and not request.query_params.get('cursor'):
+            from apps.messaging.models import (
+                CommunityPostLike, CommunityPostRepost, CommunityPostSave,
+            )
+            from apps.communities.post_payload import community_post_payload
+
+            profile = request.user.profile
+            community_saves = list(
+                CommunityPostSave.objects.filter(profile=profile)
+                .select_related('post__author', 'post__conversation')
+                .order_by('-created_at')[:100]
+            )
+            community_posts = []
+            for save in community_saves:
+                cp = save.post
+                reaction_counts = {}
+                if cp.like_count:
+                    reaction_counts['💪'] = cp.like_count
+                for row in cp.reactions.values('reaction_type').annotate(c=db_models.Count('pk')):
+                    reaction_counts[row['reaction_type']] = (
+                        reaction_counts.get(row['reaction_type'], 0) + row['c']
+                    )
+                community_posts.append(community_post_payload(
+                    cp,
+                    reaction_counts=reaction_counts,
+                    user_reaction=(
+                        '💪' if CommunityPostLike.objects.filter(post=cp, profile=profile).exists()
+                        else cp.reactions.filter(profile=profile)
+                        .values_list('reaction_type', flat=True).first()
+                    ),
+                    is_saved=True,
+                    is_reposted_by_me=CommunityPostRepost.objects.filter(
+                        post=cp, profile=profile
+                    ).exists(),
+                ))
+            if community_posts:
+                data.extend(community_posts)
+                data.sort(key=lambda p: p.get('created_at') or '', reverse=True)
+                count += len(community_posts)
 
         return Response({
             'success': True,
-            'data': serializer.data,
+            'data': data,
             'message': 'OK',
             'errors': None,
             'pagination': {
@@ -2649,59 +2693,7 @@ class PostDownloadView(views.APIView):
                 'errors': None, 'pagination': None,
             }, status=status.HTTP_404_NOT_FOUND)
 
-        # Proxy the file so the client never hits CORS on the media host.
-        import requests as http_requests
-        try:
-            resp = http_requests.get(media_url, stream=True, timeout=30)
-            resp.raise_for_status()
-        except Exception as e:
-            return Response({
-                'success': False, 'data': None,
-                'message': f'Failed to fetch media: {e}',
-                'errors': None, 'pagination': None,
-            }, status=status.HTTP_502_BAD_GATEWAY)
-
-        content_type = resp.headers.get('Content-Type', 'application/octet-stream')
-        ext = 'jpg' if 'image' in content_type else 'mp4' if 'video' in content_type else 'bin'
-
-        # For images, try to add a watermark using Pillow.
-        if media_type == 'image' and ext == 'jpg':
-            try:
-                from PIL import Image, ImageDraw, ImageFont
-                import io
-                img = Image.open(io.BytesIO(resp.content)).convert('RGBA')
-                watermark = Image.new('RGBA', img.size, (0, 0, 0, 0))
-                draw = ImageDraw.Draw(watermark)
-                try:
-                    font = ImageFont.truetype('DejaVuSans-Bold.ttf', max(14, img.height // 20))
-                except Exception:
-                    font = ImageFont.load_default()
-                text = 'Downloaded from BuddyUp'
-                bbox = draw.textbbox((0, 0), text, font=font)
-                tw = bbox[2] - bbox[0]
-                th = bbox[3] - bbox[1]
-                draw.text((img.width - tw - 20, img.height - th - 20), text, font=font, fill=(255, 255, 255, 128))
-                img = Image.alpha_composite(img, watermark)
-                buf = io.BytesIO()
-                img.convert('RGB').save(buf, format='JPEG', quality=85)
-                resp.content = buf.getvalue()
-                content_type = 'image/jpeg'
-                ext = 'jpg'
-            except Exception:
-                pass  # Pillow not available — proxy as-is.
-
-        # Build a Django StreamingHttpResponse.
-        from django.http import StreamingHttpResponse
-        def iter_chunks(response, chunk_size=8192):
-            for chunk in response.iter_content(chunk_size):
-                yield chunk
-
-        django_resp = StreamingHttpResponse(
-            iter_chunks(resp),
-            content_type=content_type,
-        )
-        django_resp['Content-Disposition'] = f'attachment; filename="buddyup_{post.id}.{ext}"'
-        django_resp['X-Content-Type-Options'] = 'nosniff'
-        return django_resp
+        from common.media_download import build_download_response
+        return build_download_response(media_url, media_type or 'image', filename_stem=post.id)
 
 

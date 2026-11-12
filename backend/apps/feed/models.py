@@ -135,6 +135,7 @@ class Comment(TimestampedModel):
         ('image', 'Image'),
         ('gif', 'GIF'),
         ('sticker', 'Sticker'),
+        ('video', 'Video'),
     ]
 
     post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='comments')

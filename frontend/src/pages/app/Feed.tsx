@@ -4,6 +4,7 @@ import {
   Loader2, Users, ArrowUp, Plus, Search, Flame, UserCheck, PenLine, ChevronUp, X,
 } from 'lucide-react';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { CommunityPostCard } from '@/components/features/feed/CommunityPostCard';
 import { PostComposer } from '@/components/features/feed/PostComposer';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { VideoFeed } from '@/components/features/feed/VideoFeed';
@@ -51,7 +52,7 @@ export default function Feed() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [myCommunities, setMyCommunities] = useState<Community[]>([]);
-  const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  const [commentPostId, setCommentPostId] = useState<{ postId: string; communityId?: string } | null>(null);
   const [fetchError, setFetchError] = useState<{ msg: string; reset: boolean } | null>(null);
 
   // Bud Press
@@ -232,8 +233,10 @@ export default function Feed() {
       const res = await feedApi.getCommunityPosts(slug, c);
       const newPosts = res.data || [];
       if (reset) {
-        setPosts(newPosts);
-        knownIdsRef.current = new Set(newPosts.map(p => p.id));
+        const seen = new Set<string>();
+        const unique = newPosts.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
+        setPosts(unique);
+        knownIdsRef.current = seen;
       } else {
         const unseenPosts = newPosts.filter(p => !knownIdsRef.current.has(p.id));
         unseenPosts.forEach(p => knownIdsRef.current.add(p.id));
@@ -268,8 +271,10 @@ export default function Feed() {
       const res = await feedApi.getFeed(tab, c);
       const newPosts = res.data || [];
       if (reset) {
-        setPosts(newPosts);
-        knownIdsRef.current = new Set(newPosts.map(p => p.id));
+        const seen = new Set<string>();
+        const unique = newPosts.filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)));
+        setPosts(unique);
+        knownIdsRef.current = seen;
       } else {
         const unseenPosts = newPosts.filter(p => !knownIdsRef.current.has(p.id));
         unseenPosts.forEach(p => knownIdsRef.current.add(p.id));
@@ -332,7 +337,7 @@ export default function Feed() {
         knownIdsRef.current.add(post.id);
         setPosts((prev) => (prev.some((p) => p.id === post.id) ? prev : [post, ...prev]));
         if (searchParams.get('comments') === '1') {
-          setCommentPostId(post.id);
+          setCommentPostId({ postId: post.id, communityId: post.community_id ?? undefined });
           return;
         }
         requestAnimationFrame(() => {
@@ -530,42 +535,99 @@ export default function Feed() {
               </div>
             )}
 
-              {posts.map((post) => (
-                <div key={post.id} data-post-id={post.id} ref={registerPostCard}>
-                  <PostCard
-                    key={post.id}
-                    post={post}
-                    onComment={() => {}}
-                    onRemove={() => {}}
-                    onRemoveAuthor={() => {}}
-                    onLike={(id) => {
-                      if (post.community_id) {
-                        messagingApi.togglePostLike(post.community_id, id);
-                      }
-                    }}
-                    onRepost={(id) => {
-                      if (post.community_id) {
-                        messagingApi.repostCommunityPost(post.community_id, id);
-                      }
-                    }}
-                    onSave={(id) => {
-                      if (post.community_id) {
-                        messagingApi.saveCommunityPost(post.community_id, id);
-                      }
-                    }}
-                    onReact={(id, reaction) => {
-                      if (post.community_id) {
-                        messagingApi.reactCommunityPost(post.community_id, id, reaction);
-                      }
-                    }}
-                    onShare={(id) => {
-                      if (post.community_id) {
-                        messagingApi.shareCommunityPost(post.community_id, id);
-                      }
-                    }}
-                  />
-                </div>
-              ))}
+              {posts.map((post) => {
+                const communityId = post.community_id ?? undefined;
+                return (
+                  <div key={post.id} data-post-id={post.id} ref={registerPostCard}>
+                    <CommunityPostCard
+                      key={post.id}
+                      post={post}
+                      communityId={communityId}
+                      isMember={post.is_member ?? false}
+                      onComment={() => {
+                        setCommentPostId({ postId: post.id, communityId: post.community_id ?? undefined });
+                      }}
+                      onRemove={() => {}}
+                      onRemoveAuthor={() => {}}
+                      onLike={(id) => {
+                        if (!communityId) return;
+                        setPosts((prev) =>
+                          prev.map((p) => {
+                            if (p.id !== id) return p;
+                            const wasLiked = p.user_reaction === '💪';
+                            return {
+                              ...p,
+                              user_reaction: wasLiked ? null : '💪',
+                              reaction_counts: {
+                                ...p.reaction_counts,
+                                '💪': (p.reaction_counts?.['💪'] || 0) + (wasLiked ? -1 : 1),
+                              },
+                            };
+                          })
+                        );
+                        messagingApi.togglePostLike(communityId, id).catch(() => {});
+                      }}
+                      onRepost={(id) => {
+                        if (!communityId) return;
+                        setPosts((prev) =>
+                          prev.map((p) => {
+                            if (p.id !== id) return p;
+                            const wasReposted = p.is_reposted_by_me;
+                            return {
+                              ...p,
+                              is_reposted_by_me: !wasReposted,
+                              repost_count: Math.max(
+                                0,
+                                (p.repost_count || 0) + (wasReposted ? -1 : 1),
+                              ),
+                            };
+                          })
+                        );
+                        messagingApi.repostCommunityPost(communityId, id).catch(() => {});
+                      }}
+                      onSave={(id) => {
+                        if (!communityId) return;
+                        setPosts((prev) =>
+                          prev.map((p) => {
+                            if (p.id !== id) return p;
+                            const wasSaved = p.is_saved;
+                            return {
+                              ...p,
+                              is_saved: !wasSaved,
+                              save_count: Math.max(
+                                0,
+                                (p.save_count || 0) + (wasSaved ? -1 : 1),
+                              ),
+                            };
+                          })
+                        );
+                        messagingApi.saveCommunityPost(communityId, id).catch(() => {});
+                      }}
+                      onReact={(id, reaction) => {
+                        if (!communityId) return;
+                        setPosts((prev) =>
+                          prev.map((p) => {
+                            if (p.id !== id) return p;
+                            const wasReacted = p.user_reaction === reaction;
+                            const counts = { ...p.reaction_counts };
+                            if (wasReacted) {
+                              counts[reaction] = Math.max(0, (counts[reaction] || 1) - 1);
+                              if (counts[reaction] === 0) delete counts[reaction];
+                            } else {
+                              counts[reaction] = (counts[reaction] || 0) + 1;
+                            }
+                            return {
+                              ...p,
+                              user_reaction: wasReacted ? null : reaction,
+                              reaction_counts: counts,
+                            };
+                          })
+                        );
+                        messagingApi.reactCommunityPost(communityId, id, reaction).catch(() => {});
+                      }}
+                    />
+                  </div>
+                )})}
             {isLoading && (
               <div className="flex justify-center py-8">
                 <Loader2 size={24} className="animate-spin text-buddy-green" />
@@ -711,7 +773,7 @@ export default function Feed() {
                       object_id: id,
                       properties: { feed_tab: activeTab, via: 'comments' },
                     });
-                    setCommentPostId(id);
+                    setCommentPostId({ postId: id });
                   }}
                 />
               </div>
@@ -752,7 +814,8 @@ export default function Feed() {
 
       {commentPostId && (
         <CommentSheet
-          postId={commentPostId}
+          postId={commentPostId.postId}
+          communityId={commentPostId.communityId}
           isOpen={!!commentPostId}
           onClose={() => setCommentPostId(null)}
         />

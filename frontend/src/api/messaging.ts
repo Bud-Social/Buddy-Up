@@ -156,6 +156,8 @@ export interface CommunityPostComment {
   reply_to_id: string | null;
   reply_count: number;
   author_data: { user_id: string; username: string; display_name: string; avatar_url: string };
+  reaction_counts?: Record<string, number>;
+  user_reaction?: string | null;
   created_at: string;
 }
 
@@ -408,21 +410,45 @@ export const messagingApi = {
 
   shareCommunityPost: (id: string, postId: string) =>
     apiClient
-      .post<ApiResponse<{ shared: boolean }>>(`/messaging/communities/${id}/posts/${postId}/share/`)
+      .post<ApiResponse<{ shared: boolean; share_count: number }>>(`/messaging/communities/${id}/posts/${postId}/share/`)
       .then((r) => r.data.data),
+  getPostShares: (id: string, postId: string) =>
+    apiClient
+      .get<ApiResponse<{ sharers: any[] }>>(`/messaging/communities/${id}/posts/${postId}/shares/`)
+      .then((r) => r.data.data?.sharers || []),
+  downloadCommunityPostMedia: (id: string, postId: string) =>
+    apiClient.get(`/messaging/communities/${id}/posts/${postId}/media/`, {
+      responseType: 'blob',
+    }),
+  viewCommunityPost: (communityId: string, postId: string) =>
+    apiClient.post(`/messaging/communities/${communityId}/posts/${postId}/view/`).then((r) => r.data.data),
   getPostComments: (id: string, postId: string) =>
     apiClient
       .get<ApiResponse<CommunityPostComment[]>>(`/messaging/communities/${id}/posts/${postId}/comments/`)
       .then((r) => r.data.data),
 
-  addPostComment: (id: string, postId: string, body: string, replyToId?: string) =>
+  addPostComment: (
+    id: string,
+    postId: string,
+    body: string,
+    replyToId?: string,
+    media?: { media_type?: string; media_url?: string; sticker_pack?: string },
+  ) =>
     apiClient
       .post<ApiResponse<CommunityPostComment>>(`/messaging/communities/${id}/posts/${postId}/comments/`, {
         body,
         reply_to_id: replyToId,
+        ...media,
       })
       .then((r) => r.data.data),
 
   deletePostComment: (id: string, postId: string, commentId: string) =>
     apiClient.delete(`/messaging/communities/${id}/posts/${postId}/comments/${commentId}/`).then((r) => r.data),
+
+  toggleCommunityCommentLike: (id: string, postId: string, commentId: string) =>
+    apiClient
+      .post<ApiResponse<{ is_liked: boolean; like_count: number; reaction_counts: Record<string, number>; user_reaction: string | null }>>(
+        `/messaging/communities/${id}/posts/${postId}/comments/${commentId}/like/`,
+      )
+      .then((r) => r.data.data),
 };

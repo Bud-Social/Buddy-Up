@@ -5,16 +5,23 @@ import {
   Copy,
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { PostCard } from '@/components/features/feed/PostCard';
+import { CommunityPostCard } from '@/components/features/feed/CommunityPostCard';
+import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { messagingApi, type Community, type CommunityPost } from '@/api/messaging';
 import type { Post } from '@/types/post';
 
 interface CommunityPostExtended extends CommunityPost {
   community_id?: string;
   community_name?: string;
+  community_cover_url?: string;
   repost_count?: number;
   is_saved_by_me?: boolean;
   updated_at?: string;
+  view_count?: number;
+  is_reposted_by_me?: boolean;
+  reposters?: any[];
+  reaction_counts?: Record<string, number>;
+  user_reaction?: string | null;
 }
 
 function mapCommunityPostToPost(cp: CommunityPostExtended): Post {
@@ -35,11 +42,13 @@ function mapCommunityPostToPost(cp: CommunityPostExtended): Post {
     visibility: 'public',
     moderation_status: 'clean',
     comments_disabled: false,
-    view_count: 0,
-    reaction_counts: {},
-    user_reaction: cp.is_liked ? 'like' : null,
+    view_count: cp.view_count ?? 0,
+    reaction_counts: cp.reaction_counts || {},
+    user_reaction: cp.user_reaction ?? null,
     comment_count: cp.comment_count || 0,
     repost_count: cp.repost_count || 0,
+    is_reposted_by_me: cp.is_reposted_by_me || false,
+    reposters: cp.reposters || [],
     is_repost: false,
     original_post_id: null,
     quote_body: '',
@@ -54,7 +63,7 @@ function mapCommunityPostToPost(cp: CommunityPostExtended): Post {
     gym_tag_name: null,
     shares: [],
     original_post_data: null,
-    community_cover_url: null,
+    community_cover_url: cp.community_cover_url ?? null,
     community_slug: null,
     poll: null,
   } as unknown as Post;
@@ -69,6 +78,7 @@ export default function CommunityDetail() {
   const [showSettings, setShowSettings] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [copyMsg, setCopyMsg] = useState('');
+  const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editPublic, setEditPublic] = useState(false);
@@ -102,13 +112,13 @@ export default function CommunityDetail() {
       await messagingApi.togglePostLike(communityId, postId);
       setPosts((prev) => prev.map((p) => {
         if (p.id !== postId) return p;
-        const wasLiked = p.user_reaction === 'like';
+        const wasLiked = p.user_reaction === '💪';
         return {
           ...p,
-          user_reaction: wasLiked ? null : 'like',
+          user_reaction: wasLiked ? null : '💪',
           reaction_counts: {
             ...p.reaction_counts,
-            like: (p.reaction_counts?.like || 0) + (wasLiked ? -1 : 1),
+            '💪': (p.reaction_counts?.['💪'] || 0) + (wasLiked ? -1 : 1),
           },
         };
       }));
@@ -119,6 +129,20 @@ export default function CommunityDetail() {
     if (!communityId) return;
     try {
       await messagingApi.repostCommunityPost(communityId, postId);
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
+          const wasReposted = p.is_reposted_by_me;
+          return {
+            ...p,
+            is_reposted_by_me: !wasReposted,
+            repost_count: Math.max(
+              0,
+              (p.repost_count || 0) + (wasReposted ? -1 : 1),
+            ),
+          };
+        })
+      );
     } catch { /* noop */ }
   };
 
@@ -126,6 +150,20 @@ export default function CommunityDetail() {
     if (!communityId) return;
     try {
       await messagingApi.saveCommunityPost(communityId, postId);
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
+          const wasSaved = p.is_saved;
+          return {
+            ...p,
+            is_saved: !wasSaved,
+            save_count: Math.max(
+              0,
+              (p.save_count || 0) + (wasSaved ? -1 : 1),
+            ),
+          };
+        })
+      );
     } catch { /* noop */ }
   };
 
@@ -133,13 +171,24 @@ export default function CommunityDetail() {
     if (!communityId) return;
     try {
       await messagingApi.reactCommunityPost(communityId, postId, reaction);
-    } catch { /* noop */ }
-  };
-
-  const toggleShare = async (postId: string) => {
-    if (!communityId) return;
-    try {
-      await messagingApi.shareCommunityPost(communityId, postId);
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
+          const wasReacted = p.user_reaction === reaction;
+          const counts = { ...p.reaction_counts };
+          if (wasReacted) {
+            counts[reaction] = Math.max(0, (counts[reaction] || 1) - 1);
+            if (counts[reaction] === 0) delete counts[reaction];
+          } else {
+            counts[reaction] = (counts[reaction] || 0) + 1;
+          }
+          return {
+            ...p,
+            user_reaction: wasReacted ? null : reaction,
+            reaction_counts: counts,
+          };
+        })
+      );
     } catch { /* noop */ }
   };
 
@@ -198,6 +247,7 @@ export default function CommunityDetail() {
   };
 
   return (
+    <>
     <div className="min-h-screen bg-buddy-background">
       <nav className="border-buddy-border border-b pb-4">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
@@ -305,15 +355,16 @@ export default function CommunityDetail() {
                   )}
 
                   {posts.map((post) => (
-                    <PostCard
+                    <CommunityPostCard
                       key={post.id}
                       post={post}
+                      communityId={communityId}
+                      isMember={!!community?.membership_role}
                       onLike={() => toggleLike(post.id)}
                       onRepost={() => toggleRepost(post.id)}
                       onSave={() => toggleSave(post.id)}
                       onReact={(reaction) => toggleReact(post.id, reaction)}
-                      onShare={() => toggleShare(post.id)}
-                      onComment={() => {}}
+                      onComment={() => setCommentPostId(post.id)}
                       onRemove={() => {}}
                       onRemoveAuthor={() => {}}
                     />
@@ -388,5 +439,15 @@ export default function CommunityDetail() {
         </div>
       </main>
     </div>
+
+      {commentPostId && (
+        <CommentSheet
+          postId={commentPostId!}
+          communityId={communityId}
+          isOpen={!!commentPostId}
+          onClose={() => setCommentPostId(null)}
+        />
+      )}
+    </>
   );
 }

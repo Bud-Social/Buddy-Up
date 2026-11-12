@@ -1,11 +1,14 @@
 from rest_framework import views, permissions, status
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from django.db.models import Count
+from django.db import models as db_models
+from django.db import transaction
+from django.utils import timezone
 
 from .models import Community, CommunityPost
 from .serializers import CommunitySerializer
-from apps.messaging.models import Conversation, CommunityPost as MessagingCommunityPost
+from .post_payload import community_post_payload
+from apps.messaging.models import Conversation, ConversationMembership, CommunityPost as MessagingCommunityPost, CommunityPostSave, CommunityPostRepost, CommunityPostLike, CommunityPostReaction, _generate_invite_code
 from apps.feed.models import Post
 
 
@@ -18,74 +21,103 @@ class CommunityListView(views.APIView):
         if not request.GET.get('include_private'):
             qs = qs.filter(is_private=False)
         # Order by member count descending (most popular first)
-        qs = qs.annotate(member_cnt=Count('members')).order_by('-member_cnt', '-created_at')
+        qs = qs.annotate(member_cnt=db_models.Count('members')).order_by('-member_cnt', '-created_at')
         data = CommunitySerializer(qs, many=True, context={'request': request}).data
         return Response({'success': True, 'data': data, 'message': 'Communities.', 'errors': None, 'pagination': None})
 
 
 class AllCommunityPostsView(views.APIView):
-    """List posts from all communities."""
+    """List posts from communities the user has joined or that are public."""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        # Return messaging community posts as Post-like objects
-        messaging_posts = MessagingCommunityPost.objects.filter().select_related('author', 'conversation')
-        messaging_posts = messaging_posts.order_by('-created_at')[:20]
+        profile = request.user.profile
+        # Return messaging community posts from communities the user has joined
+        # OR that are public (read-only access, join button shown on frontend)
+        messaging_posts = MessagingCommunityPost.objects.filter(
+            conversation__is_community=True
+        ).filter(
+            db_models.Q(conversation__participants=profile) |
+            db_models.Q(conversation__is_public=True)
+        ).select_related('author', 'conversation')
+        # The OR across the participants M2M join otherwise returns one row per
+        # participant, duplicating posts in the feed (and React keys).
+        messaging_posts = messaging_posts.distinct().order_by('-created_at')[:20]
+
+        # Precompute user engagement state for all posts at once
+        post_ids = [str(cp.id) for cp in messaging_posts]
+        saved_ids = {
+            str(x) for x in CommunityPostSave.objects.filter(
+                post_id__in=post_ids, profile=profile
+            ).values_list('post_id', flat=True)
+        }
+        reposted_ids = {
+            str(x) for x in CommunityPostRepost.objects.filter(
+                post_id__in=post_ids, profile=profile
+            ).values_list('post_id', flat=True)
+        }
+        liked_ids = {
+            str(x) for x in CommunityPostLike.objects.filter(
+                post_id__in=post_ids, profile=profile
+            ).values_list('post_id', flat=True)
+        }
+        # Reaction counts by type per post
+        reaction_counts_qs = CommunityPostReaction.objects.filter(
+            post_id__in=post_ids
+        ).values('post_id', 'reaction_type').annotate(
+            cnt=db_models.Count('pk')
+        )
+        reaction_counts_map = {}
+        for rc in reaction_counts_qs:
+            reaction_counts_map.setdefault(str(rc['post_id']), {})[rc['reaction_type']] = rc['cnt']
+        # User reactions per post
+        user_reactions_qs = CommunityPostReaction.objects.filter(
+            post_id__in=post_ids, profile=profile
+        ).values('post_id', 'reaction_type')
+        user_reaction_map = {str(ur['post_id']): ur['reaction_type'] for ur in user_reactions_qs}
+        # Likes live in their own table; surface them as 💪 so the count and
+        # the viewer's like state survive a refresh.
+        for cp in messaging_posts:
+            pid = str(cp.id)
+            if cp.like_count:
+                counts = reaction_counts_map.setdefault(pid, {})
+                counts['💪'] = counts.get('💪', 0) + cp.like_count
+            if pid in liked_ids:
+                user_reaction_map[pid] = '💪'
+
+        # Reposters per post (bulk query to avoid N+1)
+        reposters_qs = CommunityPostRepost.objects.filter(
+            post_id__in=post_ids
+        ).select_related('profile').order_by('created_at')
+        reposters_map = {}
+        for rp in reposters_qs:
+            reposters_map.setdefault(str(rp.post_id), []).append({
+                'user_id': str(rp.profile.user_id),
+                'username': rp.profile.username or '',
+                'display_name': rp.profile.display_name or '',
+                'avatar_url': rp.profile.avatar_url or '',
+                'verification_status': rp.profile.verification_status or 'verified',
+            })
+
+        # Precompute membership per conversation (community)
+        joined_community_ids = {
+            str(x) for x in Conversation.objects.filter(
+                is_community=True, participants=profile
+            ).values_list('id', flat=True)
+        }
 
         data = []
         for cp in messaging_posts:
-            author_data = {}
-            if cp.author:
-                author_data = {
-                    'user_id': str(cp.author.user_id) if hasattr(cp.author, 'user_id') else str(cp.author.id),
-                    'username': cp.author.username if hasattr(cp.author, 'username') else '',
-                    'display_name': cp.author.display_name if hasattr(cp.author, 'display_name') else '',
-                    'avatar_url': cp.author.avatar_url if hasattr(cp.author, 'avatar_url') else '',
-                    'verification_status': 'verified',
-                }
-            # Get community name from conversation
-            community_name = ''
-            if cp.conversation:
-                community_name = cp.conversation.group_name or ''
-            data.append({
-                'id': str(cp.id),
-                'post_type': 'text',
-                'body': cp.body or '',
-                'is_anonymous': False,
-                'gym_tag_id': None,
-                'gym_tag_name': None,
-                'visibility': 'public',
-                'location_label': '',
-                'location_lat': None,
-                'location_lng': None,
-                'workout_log_data': None,
-                'media_urls': [cp.media_url] if cp.media_url else [],
-                'media': [],
-                'tags': [],
-                'view_count': 0,
-                'share_count': 0,
-                'moderation_status': 'clean',
-                'content_rating': 'safe',
-                'comments_disabled': False,
-                'author_data': author_data,
-                'reaction_counts': {},
-                'user_reaction': None,
-                'comment_count': cp.comment_count or 0,
-                'repost_count': 0,
-                'save_count': 0,
-                'is_saved': False,
-                'is_reposted_by_me': False,
-                'is_repost': False,
-                'original_post_data': None,
-                'is_pinned': cp.is_pinned,
-                'poll': None,
-                'reposters': [],
-                'created_at': cp.created_at.isoformat() if cp.created_at else None,
-                'updated_at': cp.updated_at.isoformat() if cp.updated_at else None,
-                'ai_analysis': {},
-                'community_id': str(cp.conversation_id),
-                'community_name': community_name,
-            })
+            pid = str(cp.id)
+            data.append(community_post_payload(
+                cp,
+                reaction_counts=reaction_counts_map.get(pid, {}),
+                user_reaction=user_reaction_map.get(pid),
+                is_saved=pid in saved_ids,
+                is_reposted_by_me=pid in reposted_ids,
+                reposters=reposters_map.get(pid, []),
+                is_member=str(cp.conversation_id) in joined_community_ids,
+            ))
 
         return Response({'success': True, 'data': data, 'message': 'All community posts.', 'errors': None, 'pagination': None})
 
@@ -173,56 +205,73 @@ class CommunityPostsView(views.APIView):
         ).select_related('author').order_by('-created_at')[:20]
 
         data = []
+
+        # Precompute user engagement state for all posts at once
+        profile = request.user.profile
+        post_ids = [str(cp.id) for cp in messaging_posts]
+        saved_ids = {
+            str(x) for x in CommunityPostSave.objects.filter(
+                post_id__in=post_ids, profile=profile
+            ).values_list('post_id', flat=True)
+        }
+        reposted_ids = {
+            str(x) for x in CommunityPostRepost.objects.filter(
+                post_id__in=post_ids, profile=profile
+            ).values_list('post_id', flat=True)
+        }
+        liked_ids = {
+            str(x) for x in CommunityPostLike.objects.filter(
+                post_id__in=post_ids, profile=profile
+            ).values_list('post_id', flat=True)
+        }
+        # Reaction counts by type per post
+        reaction_counts_qs = CommunityPostReaction.objects.filter(
+            post_id__in=post_ids
+        ).values('post_id', 'reaction_type').annotate(
+            cnt=db_models.Count('pk')
+        )
+        reaction_counts_map = {}
+        for rc in reaction_counts_qs:
+            reaction_counts_map.setdefault(str(rc['post_id']), {})[rc['reaction_type']] = rc['cnt']
+        # User reactions per post
+        user_reactions_qs = CommunityPostReaction.objects.filter(
+            post_id__in=post_ids, profile=profile
+        ).values('post_id', 'reaction_type')
+        user_reaction_map = {str(ur['post_id']): ur['reaction_type'] for ur in user_reactions_qs}
+        # Likes live in their own table; surface them as 💪 so the count and
+        # the viewer's like state survive a refresh.
         for cp in messaging_posts:
-            author_data = {}
-            if cp.author:
-                author_data = {
-                    'user_id': str(cp.author.user_id) if hasattr(cp.author, 'user_id') else str(cp.author.id),
-                    'username': cp.author.username if hasattr(cp.author, 'username') else '',
-                    'display_name': cp.author.display_name if hasattr(cp.author, 'display_name') else '',
-                    'avatar_url': cp.author.avatar_url if hasattr(cp.author, 'avatar_url') else '',
-                    'verification_status': 'verified',
-                }
-            data.append({
-                'id': str(cp.id),
-                'post_type': 'text',
-                'body': cp.body or '',
-                'is_anonymous': False,
-                'gym_tag_id': None,
-                'gym_tag_name': None,
-                'visibility': 'public',
-                'location_label': '',
-                'location_lat': None,
-                'location_lng': None,
-                'workout_log_data': None,
-                'media_urls': [cp.media_url] if cp.media_url else [],
-                'media': [],
-                'tags': [],
-                'view_count': 0,
-                'share_count': 0,
-                'moderation_status': 'clean',
-                'content_rating': 'safe',
-                'comments_disabled': False,
-                'author_data': author_data,
-                'reaction_counts': {},
-                'user_reaction': None,
-                'comment_count': cp.comment_count or 0,
-                'repost_count': 0,
-                'save_count': 0,
-                'is_saved': False,
-                'is_reposted_by_me': False,
-                'is_repost': False,
-                'original_post_data': None,
-                'is_pinned': cp.is_pinned,
-                'poll': None,
-                'reposters': [],
-                'created_at': cp.created_at.isoformat() if cp.created_at else None,
-                'updated_at': cp.updated_at.isoformat() if cp.updated_at else None,
-                'ai_analysis': {},
-                'community_id': str(conv.id),
-                'community_name': conv.group_name or '',
+            pid = str(cp.id)
+            if cp.like_count:
+                counts = reaction_counts_map.setdefault(pid, {})
+                counts['💪'] = counts.get('💪', 0) + cp.like_count
+            if pid in liked_ids:
+                user_reaction_map[pid] = '💪'
+
+        # Reposters per post (bulk query to avoid N+1)
+        reposters_qs = CommunityPostRepost.objects.filter(
+            post_id__in=post_ids
+        ).select_related('profile').order_by('created_at')
+        reposters_map = {}
+        for rp in reposters_qs:
+            reposters_map.setdefault(str(rp.post_id), []).append({
+                'user_id': str(rp.profile.user_id),
+                'username': rp.profile.username or '',
+                'display_name': rp.profile.display_name or '',
+                'avatar_url': rp.profile.avatar_url or '',
+                'verification_status': rp.profile.verification_status or 'verified',
             })
 
+        for cp in messaging_posts:
+            pid = str(cp.id)
+            data.append(community_post_payload(
+                cp,
+                reaction_counts=reaction_counts_map.get(pid, {}),
+                user_reaction=user_reaction_map.get(pid),
+                is_saved=pid in saved_ids,
+                is_reposted_by_me=pid in reposted_ids,
+                reposters=reposters_map.get(pid, []),
+            ))
         return Response({'success': True, 'data': data, 'message': 'Community posts.', 'errors': None, 'pagination': None})
 
 
@@ -241,17 +290,38 @@ class CommunityCreateView(views.APIView):
         if not name:
             return Response({'success': False, 'data': None, 'message': 'Name is required.', 'errors': None, 'pagination': None}, status=status.HTTP_400_BAD_REQUEST)
 
-        community = Community.objects.create(
-            name=name,
-            slug=name.lower().replace(' ', '-'),
-            creator=request.user.profile,
-            is_private=is_private,
-            is_nsfw=is_nsfw,
-            tags=tags if isinstance(tags, list) else [],
-            description=description,
-            category=category,
-        )
-        community.members.add(request.user.profile)
+        with transaction.atomic():
+            community = Community.objects.create(
+                name=name,
+                slug=name.lower().replace(' ', '-'),
+                creator=request.user.profile,
+                is_private=is_private,
+                is_nsfw=is_nsfw,
+                tags=tags if isinstance(tags, list) else [],
+                description=description,
+                category=category,
+            )
+            community.members.add(request.user.profile)
+
+            # Also create a matching messaging Conversation so that the
+            # messaging app's community post endpoints (like, repost, save, react,
+            # view, share) can resolve this community by UUID. Uses the same UUID
+            # as the Community so both models share one identifier.
+            conv = Conversation.objects.create(
+                id=community.id,
+                is_group=True,
+                is_community=True,
+                group_name=name[:100],
+                description=description,
+                is_public=not is_private,
+                invite_code=_generate_invite_code(),
+                created_by=request.user.profile,
+                last_message_at=timezone.now(),
+            )
+            conv.participants.add(request.user.profile)
+            ConversationMembership.objects.create(
+                conversation=conv, profile=request.user.profile, role='owner',
+            )
         data = CommunitySerializer(community, context={'request': request}).data
         return Response({'success': True, 'data': data, 'message': 'Community created.', 'errors': None, 'pagination': None}, status=status.HTTP_201_CREATED)
 

@@ -270,7 +270,7 @@ class CommunityPostRepost(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     post = models.ForeignKey(
-        CommunityPost, on_delete=models.CASCADE, related_name='reposts'
+        'CommunityPost', on_delete=models.CASCADE, related_name='reposts'
     )
     profile = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_reposts'
@@ -291,7 +291,7 @@ class CommunityPostSave(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     post = models.ForeignKey(
-        CommunityPost, on_delete=models.CASCADE, related_name='saves'
+        'CommunityPost', on_delete=models.CASCADE, related_name='saves'
     )
     profile = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_saves'
@@ -312,7 +312,7 @@ class CommunityPostReaction(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     post = models.ForeignKey(
-        CommunityPost, on_delete=models.CASCADE, related_name='reactions'
+        'CommunityPost', on_delete=models.CASCADE, related_name='reactions'
     )
     profile = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_reactions'
@@ -379,6 +379,14 @@ class CommunityPostLike(TimestampedModel):
 
 
 class CommunityPostComment(TimestampedModel):
+    MEDIA_TYPE_CHOICES = [
+        ('text', 'Text'),
+        ('image', 'Image'),
+        ('gif', 'GIF'),
+        ('sticker', 'Sticker'),
+        ('video', 'Video'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     post = models.ForeignKey(
         CommunityPost, on_delete=models.CASCADE, related_name='comments'
@@ -386,7 +394,10 @@ class CommunityPostComment(TimestampedModel):
     author = models.ForeignKey(
         'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_comments'
     )
-    body = models.TextField()
+    body = models.TextField(blank=True)
+    media_type = models.CharField(max_length=10, choices=MEDIA_TYPE_CHOICES, default='text')
+    media_url = models.URLField(blank=True, max_length=1000)
+    sticker_pack = models.CharField(max_length=50, blank=True)
     reply_to = models.ForeignKey(
         'self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies'
     )
@@ -397,6 +408,19 @@ class CommunityPostComment(TimestampedModel):
         indexes = [
             models.Index(fields=['post', 'created_at']),
         ]
+
+
+class CommunityPostCommentLike(TimestampedModel):
+    comment = models.ForeignKey(
+        CommunityPostComment, on_delete=models.CASCADE, related_name='likes'
+    )
+    profile = models.ForeignKey(
+        'profiles.Profile', on_delete=models.CASCADE, related_name='community_post_comment_likes'
+    )
+
+    class Meta:
+        db_table = 'messaging_community_post_comment_like'
+        unique_together = ('comment', 'profile')
 
 
 class CommunityPostShare(TimestampedModel):

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.db.models import Count
 from .models import (
     Conversation, Message, CallLog,
     ConversationMembership, CommunityPost, CommunityPostComment,
@@ -267,11 +268,14 @@ class CommunityMemberSerializer(serializers.ModelSerializer):
 class CommunityPostCommentSerializer(serializers.ModelSerializer):
     author_data = serializers.SerializerMethodField()
     reply_count = serializers.SerializerMethodField()
+    reaction_counts = serializers.SerializerMethodField()
+    user_reaction = serializers.SerializerMethodField()
 
     class Meta:
         model = CommunityPostComment
         fields = ['id', 'post_id', 'body', 'reply_to_id', 'author_data',
-                  'reply_count', 'created_at']
+                  'reply_count', 'media_type', 'media_url', 'sticker_pack',
+                  'reaction_counts', 'user_reaction', 'created_at']
 
     def get_author_data(self, obj):
         return {
@@ -284,6 +288,19 @@ class CommunityPostCommentSerializer(serializers.ModelSerializer):
     def get_reply_count(self, obj):
         return obj.replies.count()
 
+    def get_reaction_counts(self, obj):
+        # Community comments only support a single "like" reaction today.
+        count = obj.likes.count()
+        return {'❤️': count} if count else {}
+
+    def get_user_reaction(self, obj):
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return None
+        if obj.likes.filter(profile=request.user.profile).exists():
+            return '❤️'
+        return None
+
 
 class CommunityPostSerializer(serializers.ModelSerializer):
     author_data = serializers.SerializerMethodField()
@@ -291,6 +308,11 @@ class CommunityPostSerializer(serializers.ModelSerializer):
     is_reposted_by_me = serializers.SerializerMethodField()
     reposters = serializers.SerializerMethodField()
     comments = serializers.SerializerMethodField()
+    reaction_counts = serializers.SerializerMethodField()
+    user_reaction = serializers.SerializerMethodField()
+    is_saved_by_me = serializers.SerializerMethodField()
+    community_name = serializers.SerializerMethodField()
+    community_cover_url = serializers.SerializerMethodField()
 
     class Meta:
         model = CommunityPost
@@ -301,6 +323,8 @@ class CommunityPostSerializer(serializers.ModelSerializer):
             'is_repost', 'original_post_id', 'is_anonymous',
             'author_data', 'is_liked', 'is_reposted_by_me', 'reposters',
             'comments', 'created_at',
+            'reaction_counts', 'user_reaction', 'is_saved_by_me',
+            'community_name', 'community_cover_url',
         ]
         read_only_fields = [
             'id', 'conversation_id', 'author_id', 'like_count',
@@ -343,6 +367,40 @@ class CommunityPostSerializer(serializers.ModelSerializer):
             }
             for r in qs
         ]
+
+    def get_reaction_counts(self, obj):
+        counts = {}
+        if obj.like_count:
+            counts['💪'] = obj.like_count
+        for row in obj.reactions.values('reaction_type').annotate(c=Count('pk')):
+            reaction = row['reaction_type']
+            counts[reaction] = counts.get(reaction, 0) + row['c']
+        return counts
+
+    def get_user_reaction(self, obj):
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return None
+        profile = request.user.profile
+        if obj.likes.filter(profile=profile).exists():
+            return '💪'
+        return (
+            obj.reactions.filter(profile=profile)
+            .values_list('reaction_type', flat=True)
+            .first()
+        )
+
+    def get_is_saved_by_me(self, obj):
+        request = self.context.get('request')
+        if not (request and request.user.is_authenticated):
+            return False
+        return obj.saves.filter(profile=request.user.profile).exists()
+
+    def get_community_name(self, obj):
+        return obj.conversation.group_name or ''
+
+    def get_community_cover_url(self, obj):
+        return obj.conversation.cover_url or ''
 
     def get_comments(self, obj):
         include = self.context.get('include_comments', False)

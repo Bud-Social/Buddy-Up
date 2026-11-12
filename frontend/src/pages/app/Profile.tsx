@@ -20,10 +20,12 @@ import type { BuddyLive } from '@/types/live';
 import type { Post } from '@/types';
 import type { Gym } from '@/types';
 import { PostCard } from '@/components/features/feed/PostCard';
+import { CommunityPostCard } from '@/components/features/feed/CommunityPostCard';
 import { CommentSheet } from '@/components/features/feed/CommentSheet';
 import { CreatorInsights } from '@/components/features/feed/CreatorInsights';
 import { AchievementsTab } from '@/components/profile/AchievementsTab';
 import { feedApi } from '@/api/feed';
+import { messagingApi } from '@/api/messaging';
 
 type ProfileTab = 'posts' | 'reposts' | 'saved' | 'lives' | 'gyms' | 'achievements';
 
@@ -37,7 +39,7 @@ export default function Profile() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('posts');
-  const [commentPostId, setCommentPostId] = useState<string | null>(null);
+  const [commentPostId, setCommentPostId] = useState<{ postId: string; communityId?: string } | null>(null);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
@@ -327,7 +329,7 @@ export default function Profile() {
           ) : (
             <div className="col-span-3 space-y-2">
               {posts.filter((p) => !p.is_repost).map((post) => (
-                <PostCard key={post.id} post={post} onComment={setCommentPostId} />
+                <PostCard key={post.id} post={post} onComment={(id) => setCommentPostId({ postId: id })} />
               ))}
             </div>
           )
@@ -344,7 +346,7 @@ export default function Profile() {
           ) : (
             <div className="col-span-3 space-y-2">
               {posts.filter((p) => p.is_repost).map((post) => (
-                <PostCard key={post.id} post={post} onComment={setCommentPostId} />
+                <PostCard key={post.id} post={post} onComment={(id) => setCommentPostId({ postId: id })} />
               ))}
             </div>
           )
@@ -364,7 +366,24 @@ export default function Profile() {
           ) : (
             <div className="col-span-3 space-y-2">
               {savedPosts.map((post) => (
-                <PostCard key={post.id} post={post} onComment={setCommentPostId} />
+                post.community_id ? (
+                  <CommunityPostCard
+                    key={post.id}
+                    post={post}
+                    communityId={post.community_id}
+                    isMember={post.is_member ?? false}
+                    onComment={() => setCommentPostId({ postId: post.id, communityId: post.community_id ?? undefined })}
+                    onLike={(id) => { void messagingApi.togglePostLike(post.community_id!, id); }}
+                    onRepost={(id) => { void messagingApi.repostCommunityPost(post.community_id!, id); }}
+                    onSave={(id) => {
+                      void messagingApi.saveCommunityPost(post.community_id!, id)
+                        .then(() => setSavedPosts((prev) => prev.filter((p) => p.id !== id)));
+                    }}
+                    onReact={(id, reaction) => { void messagingApi.reactCommunityPost(post.community_id!, id, reaction); }}
+                  />
+                ) : (
+                  <PostCard key={post.id} post={post} onComment={(id) => setCommentPostId({ postId: id })} />
+                )
               ))}
             </div>
           )
@@ -457,7 +476,8 @@ export default function Profile() {
           fires analytics and appears to do nothing. */}
       {commentPostId && (
         <CommentSheet
-          postId={commentPostId}
+          postId={commentPostId.postId}
+          communityId={commentPostId.communityId}
           isOpen
           onClose={() => setCommentPostId(null)}
         />

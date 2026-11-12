@@ -273,7 +273,7 @@ class PostSerializer(serializers.ModelSerializer):
 
 class CommentCreateSerializer(serializers.Serializer):
     body = serializers.CharField(max_length=500, required=False, allow_blank=True, default='')
-    media_type = serializers.ChoiceField(choices=['text', 'image', 'gif', 'sticker'], default='text')
+    media_type = serializers.ChoiceField(choices=['text', 'image', 'gif', 'sticker', 'video'], default='text')
     media_url = serializers.URLField(required=False, allow_blank=True, default='')
     sticker_pack = serializers.CharField(max_length=50, required=False, allow_blank=True, default='')
     parent_id = serializers.CharField(required=False, allow_null=True)
@@ -287,9 +287,13 @@ class CommentCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError({
                 'body': 'Text comments cannot be empty.'
             })
-        if media_type in ('image', 'gif', 'sticker') and not media_url:
+        if media_type in ('image', 'gif', 'video') and not media_url:
             raise serializers.ValidationError({
                 'media_url': f'{media_type} comments require a media URL.'
+            })
+        if media_type == 'sticker' and not (media_url or body.strip()):
+            raise serializers.ValidationError({
+                'body': 'Sticker comments require a sticker.'
             })
         return attrs
 

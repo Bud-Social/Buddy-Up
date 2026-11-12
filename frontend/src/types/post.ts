@@ -160,6 +160,7 @@ export interface Post {
   original_post_id: string | null;
   quote_body: string;
   is_saved: boolean;
+  is_member?: boolean;
   is_pinned?: boolean;
   visibility: string;
   moderation_status: string;

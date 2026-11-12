@@ -77,8 +77,18 @@ export const feedApi = {
   getComments: (postId: string) =>
     apiClient.get<ApiResponse<Comment[]>>(`/feed/${postId}/comments/`).then((r) => r.data),
 
-  comment: (postId: string, payload: { body: string; parent_id?: string }) =>
+  comment: (postId: string, payload: { body: string; parent_id?: string; media_type?: string; media_url?: string; sticker_pack?: string }) =>
     apiClient.post<ApiResponse<Comment>>(`/feed/${postId}/comments/`, payload).then((r) => r.data),
+
+  uploadCommentMedia: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return apiClient
+      .post<ApiResponse<{ url: string }>>('/feed/comments/media/', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data.data);
+  },
 
   deleteComment: (postId: string, commentId: string) =>
     apiClient.delete(`/feed/${postId}/comments/${commentId}/`).then((r) => r.data),

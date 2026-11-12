@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Heart, MessageCircle, Repeat2, Bookmark, BookmarkCheck,
   MoreHorizontal, Dumbbell, MapPin, BarChart2,
   Maximize2, FileText, CheckSquare, CircleDot, ChevronLeft, ChevronRight,
-  Volume2, VolumeX, Share2, Eye, EyeOff, Flag, Ban, Undo2, Users,
+  Volume2, VolumeX, Share2, Eye, EyeOff, Flag, Ban, Undo2,
 } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { feedApi, profilesApi, moderationApi } from '@/api';
@@ -453,8 +453,13 @@ export function AvatarPopStyle() {
 type InteractAction = 'like' | 'comment' | 'repost' | 'save' | 'share' | 'profile_open' | 'cover';
 
 // ─── Main PostCard ────────────────────────────────────────────────────────────
-interface PostCardProps {
+export interface PostCardProps {
   post: Post;
+  communityId?: string;
+  /** Extra control rendered next to the view counter (e.g. community Join). */
+  headerAction?: ReactNode;
+  /** Extra content rendered at the bottom-left of the card (e.g. community tag). */
+  footerSlot?: ReactNode;
   onComment?: (postId: string) => void;
   /** Remove this card from the surrounding list (block). */
   onRemove?: (postId: string) => void;
@@ -468,11 +473,9 @@ interface PostCardProps {
   onSave?: (postId: string) => void;
   /** Optional override for react action */
   onReact?: (postId: string, reaction: string) => void;
-  /** Optional override for share action */
-  onShare?: (postId: string) => void;
 }
 
-export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAuthor, onLike, onRepost, onSave, onReact, onShare }: PostCardProps) {
+export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAuthor, onLike, onRepost, onSave, onReact, communityId, headerAction, footerSlot }: PostCardProps) {
   const navigate = useNavigate();
   const handedness = useHandednessStore((s) => s.handedness);
   const [post, setPost] = useState(initialPost);
@@ -594,7 +597,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
   // carousel records the same post id on playback — the hook dedupes per
   // session, and both paths update the shared count.
   const handleViewRecorded = useCallback((n: number) => setViewCount(n), []);
-  const recordRef = useRecordPostView(post.id, { active: true, onRecorded: handleViewRecorded });
+  const recordRef = useRecordPostView(post.id, { active: true, onRecorded: handleViewRecorded, communityId });
   const setCardRefs = useCallback((node: HTMLElement | null) => {
     cardRef.current = node;
     recordRef(node as unknown as HTMLDivElement | null);
@@ -673,6 +676,19 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
     const emoji = toEmoji(emojiStr);
     setShowReactionPicker(false);
     interact('like', emoji === '💪' ? undefined : { reaction: emoji });
+    // Community likes are stored in a dedicated table; always route 💪 there
+    // so a post can never be both "liked" and "reacted 💪" after a refresh.
+    if (emoji === '💪' && onLike) {
+      const prevReaction = userReaction;
+      if (prevReaction && prevReaction !== '💪' && onReact) {
+        onReact(engagementId, prevReaction);
+      }
+      const next = nextReactionState(reactionCounts, prevReaction, '💪');
+      setReactionCounts(next.counts);
+      setUserReaction(next.userReaction);
+      onLike(engagementId);
+      return;
+    }
     if (emoji === userReaction) {
       const prevCounts = reactionCounts;
       setUserReaction(null);
@@ -951,7 +967,6 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
           <div className="flex-1 min-w-0 flex items-center gap-1.5">
             <Repeat2 size={13} className="text-buddy-green shrink-0" />
             <span className="font-semibold text-buddy-green truncate">You reposted</span>
-            <span className="text-buddy-text-secondary flex-shrink-0">your repost</span>
           </div>
         </div>
       )}
@@ -1022,11 +1037,6 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
                     <Dumbbell size={9} /> {(displayPost as any).gym_tag_name}
                   </span>
                 )}
-                {(displayPost as any).community_name && (
-                  <span className="inline-flex items-center gap-1 text-[10px] bg-buddy-electric/10 text-buddy-electric px-2 py-0.5 rounded-full">
-                    <Users size={9} /> #{(displayPost as any).community_name}
-                  </span>
-                )}
                 {displayPost.location_label && (
                   <span className="inline-flex items-center gap-0.5 text-[10px] text-buddy-text-secondary">
                     <MapPin size={9} /> {displayPost.location_label}
@@ -1043,6 +1053,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
               >
                 <Eye size={13} aria-hidden /> {formatCount(viewCount)}
               </span>
+              {headerAction}
               <div className="relative" ref={menuRef}>
                 <button
                   ref={menuButtonRef}
@@ -1216,6 +1227,8 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
             <PostMap lat={displayPost.location_lat} lng={displayPost.location_lng} label={displayPost.location_label} />
           )}
 
+          {footerSlot}
+
           {/* Heart pop overlay */}
           {heartPop?.show && (
             <span
@@ -1315,16 +1328,13 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
             count={shareCount}
             testId="rail-share"
             onClick={(e) => {
-              if (onShare) {
-                onShare(engagementId);
-                return;
-              }
               const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
               setShareAnchor({ top: r.top, left: r.left, bottom: r.bottom });
               setShowShareSheet(true);
               interact('share');
             }}
           />
+
         </div>
       </div>
 
@@ -1332,6 +1342,7 @@ export function PostCard({ post: initialPost, onComment, onRemove, onRemoveAutho
         <PostShareSheet
           post={post}
           isOpen={showShareSheet}
+          communityId={communityId}
           onClose={() => { setShowShareSheet(false); setShareAnchor(null); }}
           isSaved={isSaved}
           onToggleSave={() => void handleSave()}

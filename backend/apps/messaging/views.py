@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.db import models as db_models, transaction
 from django.http import FileResponse, Http404
 from django.utils import timezone
+from django.core.cache import cache
 from django.core.files.storage import default_storage
 
 from rest_framework import views, permissions, status
@@ -23,7 +24,8 @@ from common.utils import validate_file_signature
 from .models import (
     Conversation, ConversationPromotion, Message, MessageReaction, CallLog,
     ConversationMembership, CommunityPost, CommunityPostLike, CommunityPostComment,
-    CommunityPostRepost, CommunityPostSave, CommunityPostReaction,
+    CommunityPostCommentLike,
+    CommunityPostRepost, CommunityPostSave, CommunityPostReaction, CommunityPostShare,
     CallSession, CallParticipant,
 )
 from .serializers import (
@@ -1524,13 +1526,11 @@ class CommunityPostListView(views.APIView):
     def _conv(self, request, community_id):
         conv = get_object_or_404(Conversation, id=community_id, is_community=True)
         membership = _get_membership(conv, request.user.profile)
-        if not membership and not conv.is_public:
-            return conv, None
         return conv, membership
 
     def get(self, request, community_id):
         conv, membership = self._conv(request, community_id)
-        if membership is None:
+        if membership is None and not conv.is_public:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
 
         posts = conv.community_posts.select_related('author').prefetch_related('likes')
@@ -1595,14 +1595,14 @@ class CommunityPostDetailView(views.APIView):
     def _post(self, request, community_id, post_id):
         conv = get_object_or_404(Conversation, id=community_id, is_community=True)
         membership = _get_membership(conv, request.user.profile)
-        if not membership:
+        if not membership and not conv.is_public:
             return None, None
         post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
         return post, membership
 
     def get(self, request, community_id, post_id):
         post, membership = self._post(request, community_id, post_id)
-        if membership is None:
+        if post is None:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
         serializer = CommunityPostSerializer(
             post, context={'request': request, 'include_comments': True}
@@ -1648,7 +1648,7 @@ class CommunityPostLikeView(views.APIView):
     def post(self, request, community_id, post_id):
         conv = get_object_or_404(Conversation, id=community_id, is_community=True)
         membership = _get_membership(conv, request.user.profile)
-        if not membership:
+        if not membership and not conv.is_public:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
         post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
 
@@ -1682,33 +1682,43 @@ class CommunityPostCommentView(views.APIView):
     def _post(self, request, community_id, post_id):
         conv = get_object_or_404(Conversation, id=community_id, is_community=True)
         membership = _get_membership(conv, request.user.profile)
-        if not membership:
+        if not membership and not conv.is_public:
             return None, None
         post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
         return post, membership
 
     def get(self, request, community_id, post_id):
-        post, membership = self._post(request, community_id, post_id)
-        if membership is None:
+        post, _membership = self._post(request, community_id, post_id)
+        if post is None:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
         comments = post.comments.select_related('author').prefetch_related('replies').order_by('created_at')
-        serializer = CommunityPostCommentSerializer(comments, many=True)
+        serializer = CommunityPostCommentSerializer(comments, many=True, context={'request': request})
         return Response({'success': True, 'data': serializer.data, 'message': 'OK',
                          'errors': None, 'pagination': None})
 
     def post(self, request, community_id, post_id):
-        post, membership = self._post(request, community_id, post_id)
-        if membership is None:
+        post, _membership = self._post(request, community_id, post_id)
+        if post is None:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
         body = (request.data.get('body') or '').strip()
-        if not body:
+        media_type = request.data.get('media_type') or ('text' if body else '')
+        if media_type not in {'text', 'image', 'gif', 'sticker', 'video'}:
+            media_type = 'text'
+        media_url = _safe_media_url(request.data.get('media_url'))
+        sticker_pack = (request.data.get('sticker_pack') or '')[:50]
+        if media_type == 'text' and not body:
             return Response({'success': False, 'message': 'Comment body required.'}, status=400)
+        if media_type in {'image', 'gif', 'video'} and not media_url:
+            return Response({'success': False, 'message': 'A media URL is required.'}, status=400)
+        if media_type == 'sticker' and not (media_url or body):
+            return Response({'success': False, 'message': 'A sticker is required.'}, status=400)
         reply_to_id = request.data.get('reply_to_id')
         if reply_to_id and not post.comments.filter(id=reply_to_id).exists():
             return Response({'success': False, 'message': 'Invalid reply target.'}, status=400)
 
         comment = CommunityPostComment.objects.create(
             post=post, author=request.user.profile, body=body,
+            media_type=media_type, media_url=media_url, sticker_pack=sticker_pack,
             reply_to_id=reply_to_id,
         )
         post.comment_count += 1
@@ -1718,11 +1728,11 @@ class CommunityPostCommentView(views.APIView):
             _push_community_notification(
                 post.author.user_id, 'community_comment',
                 f'{request.user.profile.display_name} commented on your post',
-                body[:100],
+                body[:100] or f'[{media_type} attachment]',
                 {'community_id': str(post.conversation_id),
                  'post_id': str(post.id), 'comment_id': str(comment.id)},
             )
-        serializer = CommunityPostCommentSerializer(comment)
+        serializer = CommunityPostCommentSerializer(comment, context={'request': request})
         return Response({
             'success': True, 'data': serializer.data, 'message': 'Comment added.',
             'errors': None, 'pagination': None,
@@ -1743,6 +1753,42 @@ class CommunityPostCommentView(views.APIView):
                          'errors': None, 'pagination': None})
 
 
+class CommunityPostCommentLikeView(views.APIView):
+    """Toggle a like on a community post comment."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, community_id, post_id, comment_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership and not conv.is_public:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        comment = get_object_or_404(
+            CommunityPostComment, id=comment_id, post_id=post_id, post__conversation=conv
+        )
+
+        like = CommunityPostCommentLike.objects.filter(
+            comment=comment, profile=request.user.profile
+        ).first()
+        if like:
+            like.delete()
+            liked = False
+        else:
+            CommunityPostCommentLike.objects.create(comment=comment, profile=request.user.profile)
+            liked = True
+
+        like_count = comment.likes.count()
+        return Response({
+            'success': True,
+            'data': {
+                'is_liked': liked,
+                'like_count': like_count,
+                'reaction_counts': {'❤️': like_count} if like_count else {},
+                'user_reaction': '❤️' if liked else None,
+            },
+            'message': 'Comment like toggled.', 'errors': None, 'pagination': None,
+        })
+
+
 class CommunityPostRepostView(views.APIView):
     """Repost or unrepost a community post."""
     permission_classes = [permissions.IsAuthenticated]
@@ -1750,9 +1796,17 @@ class CommunityPostRepostView(views.APIView):
     def post(self, request, community_id, post_id):
         conv = get_object_or_404(Conversation, id=community_id, is_community=True)
         membership = _get_membership(conv, request.user.profile)
-        if not membership:
+        if not membership and not conv.is_public:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
         post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+
+        # Cannot repost your own post
+        if post.author_id == request.user.profile.user_id:
+            return Response({
+                'success': False,
+                'message': 'Cannot repost your own post.',
+                'errors': None, 'pagination': None,
+            }, status=403)
 
         repost = CommunityPostRepost.objects.filter(
             post=post, profile=request.user.profile
@@ -1776,10 +1830,14 @@ class CommunityPostRepostView(views.APIView):
                 )
         return Response({
             'success': True,
-            'data': {'is_reposted': reposted, 'repost_count': post.repost_count},
+            'data': {
+                'is_reposted': reposted,
+                'repost_count': post.repost_count,
+                'is_self': post.author_id == request.user.profile.user_id,
+                'is_buddy': _is_confirmed_buddy(request.user.profile, post.author),
+            },
             'message': 'Repost toggled.', 'errors': None, 'pagination': None,
         })
-
 
 
 class CommunityPostSaveView(views.APIView):
@@ -1789,7 +1847,7 @@ class CommunityPostSaveView(views.APIView):
     def post(self, request, community_id, post_id):
         conv = get_object_or_404(Conversation, id=community_id, is_community=True)
         membership = _get_membership(conv, request.user.profile)
-        if not membership:
+        if not membership and not conv.is_public:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
         post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
 
@@ -1821,7 +1879,7 @@ class CommunityPostReactView(views.APIView):
     def post(self, request, community_id, post_id):
         conv = get_object_or_404(Conversation, id=community_id, is_community=True)
         membership = _get_membership(conv, request.user.profile)
-        if not membership:
+        if not membership and not conv.is_public:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
         post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
 
@@ -1864,10 +1922,26 @@ class CommunityPostViewView(views.APIView):
     def post(self, request, community_id, post_id):
         conv = get_object_or_404(Conversation, id=community_id, is_community=True)
         membership = _get_membership(conv, request.user.profile)
-        if not membership:
+        if not membership and not conv.is_public:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
         post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
 
+        # Unique view per user: count once per 24h window, like feed posts
+        viewer_profile = request.user.profile
+        if viewer_profile.user_id == post.author_id:
+            return Response({
+                'success': True,
+                'data': {'view_count': post.view_count},
+                'message': 'View recorded.', 'errors': None, 'pagination': None,
+            })
+        key = f'community:post_view:{post.id}:{viewer_profile.user_id}'
+        first_in_window = cache.add(key, 1, timeout=24 * 60 * 60)
+        if not first_in_window:
+            return Response({
+                'success': True,
+                'data': {'view_count': post.view_count},
+                'message': 'View recorded.', 'errors': None, 'pagination': None,
+            })
         post.view_count += 1
         post.save(update_fields=['view_count', 'updated_at'])
         return Response({
@@ -1884,16 +1958,15 @@ class CommunityPostShareView(views.APIView):
     def post(self, request, community_id, post_id):
         conv = get_object_or_404(Conversation, id=community_id, is_community=True)
         membership = _get_membership(conv, request.user.profile)
-        if not membership:
+        if not membership and not conv.is_public:
             return Response({'success': False, 'message': 'Not a member.'}, status=403)
         post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
 
         share = CommunityPostShare.objects.filter(post=post, profile=request.user.profile).first()
         if share:
-            share.delete()
-            post.share_count = max(0, post.share_count - 1)
-            post.save(update_fields=['share_count', 'updated_at'])
-            shared = False
+            # Sharing is an action, not a toggle: repeat shares must not
+            # decrement the counter.
+            shared = True
         else:
             CommunityPostShare.objects.create(post=post, profile=request.user.profile)
             post.share_count += 1
@@ -1909,6 +1982,76 @@ class CommunityPostShareView(views.APIView):
         return Response({
             'success': True,
             'data': {'shared': shared, 'share_count': post.share_count},
-            'message': 'Share toggled.', 'errors': None, 'pagination': None,
+            'message': 'Share recorded.', 'errors': None, 'pagination': None,
         })
+
+
+class CommunityPostSharesView(views.APIView):
+    """GET /messaging/communities/<id>/posts/<id>/shares/ — who shared this post.
+
+    Mirrors the feed share list (recent first, followed accounts floated up) so
+    the share sheet can show familiar faces for community posts too.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership and not conv.is_public:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+
+        profile = request.user.profile
+        followed_ids = set(
+            profile.following.values_list('followee_id', flat=True)
+        ) if hasattr(profile, 'following') else set()
+
+        records = list(
+            post.shares.select_related('profile').order_by('-created_at')[:20]
+        )
+        records.sort(
+            key=lambda r: (r.profile_id not in followed_ids, -r.created_at.timestamp())
+        )
+        return Response({
+            'success': True,
+            'data': {
+                'sharers': [{
+                    'username': r.profile.username or '',
+                    'display_name': r.profile.display_name or '',
+                    'avatar_url': r.profile.avatar_url or '',
+                    'channel': 'link',
+                    'shared_at': r.created_at.isoformat(),
+                    'followed_by_viewer': r.profile_id in followed_ids,
+                } for r in records],
+            },
+            'message': 'OK', 'errors': None, 'pagination': None,
+        })
+
+
+class CommunityPostMediaView(views.APIView):
+    """GET /messaging/communities/<id>/posts/<id>/media/ — download post media.
+
+    Proxies the attachment through the backend (CORS-free) and watermarks
+    images, matching the feed's download behaviour.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, community_id, post_id):
+        conv = get_object_or_404(Conversation, id=community_id, is_community=True)
+        membership = _get_membership(conv, request.user.profile)
+        if not membership and not conv.is_public:
+            return Response({'success': False, 'message': 'Not a member.'}, status=403)
+        post = get_object_or_404(CommunityPost, id=post_id, conversation=conv)
+        if not post.media_url:
+            return Response({
+                'success': False, 'data': None,
+                'message': 'No media available to download.',
+                'errors': None, 'pagination': None,
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        media_type = 'video' if any(
+            ext in post.media_url.lower() for ext in ('.mp4', '.mov', '.webm', '.m4v')
+        ) else 'image'
+        from common.media_download import build_download_response
+        return build_download_response(post.media_url, media_type, filename_stem=post.id)
 
