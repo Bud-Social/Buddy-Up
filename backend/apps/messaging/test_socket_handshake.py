@@ -298,6 +298,84 @@ class ChatConsumerHandshakeTests(TransactionTestCase):
         self.assertNotIn('super-secret-token-value', joined)
 
 
+class SubprotocolNegotiationTests(TransactionTestCase):
+    """Browsers require the 101 to echo one of the subprotocols they offered.
+
+    A client that offers ``['bearer', <token>]`` and gets a 101 *without* a
+    ``Sec-WebSocket-Protocol`` header kills the handshake itself and reports
+    an abnormal close (1006) — it never reads the close code, which is why
+    every browser socket in the app died while REST polling masked it for
+    chat. These tests pin the echo on the accept path, on the reject path,
+    and in the live room.
+    """
+
+    def setUp(self):
+        _silence_consumer_logger(self)
+        from apps.lives.models import BuddyLive
+        self.user = User.objects.create_user(
+            email='ws-subproto@example.com', password='TestPass123!',
+        )
+        self.profile = Profile.objects.create(
+            user=self.user, username='ws-subproto', display_name='Sub Proto',
+        )
+        self.conv = Conversation.objects.create(is_group=False)
+        self.conv.participants.add(self.profile)
+        self.live = BuddyLive.objects.create(
+            host=self.profile, title='Sub Proto Live',
+            live_type='open_sweat', category='other', status='live',
+        )
+        self.app = native_friendly_origin_validator(_stack())
+
+    def _connect(self, path, subprotocols):
+        return _run(self.app, path, subprotocols=subprotocols)
+
+    def test_chat_socket_echoes_bearer(self):
+        token = str(RefreshToken.for_user(self.user).access_token)
+        accepted, subprotocol, _ = self._connect(
+            f'/ws/conversation/{self.conv.id}/', ['bearer', token],
+        )
+        self.assertTrue(accepted)
+        self.assertEqual(subprotocol, 'bearer')
+
+    def test_rejected_handshake_still_echoes_bearer(self):
+        # The browser must see the 101 before it can read the refusal code.
+        accepted, subprotocol, messages = self._connect(
+            f'/ws/conversation/{self.conv.id}/', ['bearer', 'not-a-real-token'],
+        )
+        self.assertTrue(accepted)
+        self.assertEqual(subprotocol, 'bearer')
+        self.assertEqual(
+            [m for m in messages if m['type'] == 'websocket.close'],
+            [{'type': 'websocket.close', 'code': 4001}],
+        )
+
+    def test_live_room_socket_echoes_bearer(self):
+        token = str(RefreshToken.for_user(self.user).access_token)
+        accepted, subprotocol, _ = self._connect(
+            f'/ws/live/{self.live.id}/', ['bearer', token],
+        )
+        self.assertTrue(accepted)
+        self.assertEqual(subprotocol, 'bearer')
+
+    def test_user_socket_echoes_bearer(self):
+        token = str(RefreshToken.for_user(self.user).access_token)
+        accepted, subprotocol, _ = self._connect(
+            f'/ws/user/{self.user.id}/', ['bearer', token],
+        )
+        self.assertTrue(accepted)
+        self.assertEqual(subprotocol, 'bearer')
+
+    def test_handshake_without_subprotocols_still_works(self):
+        # Native clients (dart:io) offer nothing; autobahn cannot select a
+        # protocol the client did not send, so the accept stays plain.
+        token = str(RefreshToken.for_user(self.user).access_token)
+        accepted, subprotocol, _ = self._connect(
+            f'/ws/conversation/{self.conv.id}/?token={token}', [],
+        )
+        self.assertTrue(accepted)
+        self.assertIsNone(subprotocol)
+
+
 class ChatTokenCarrierTests(TestCase):
     """The token rides Sec-WebSocket-Protocol, with ?token= kept as a fallback."""
 

@@ -95,7 +95,11 @@ services:
       - AGORA_APP_ID=${AGORA_APP_ID}
       - AGORA_APP_CERTIFICATE=${AGORA_APP_CERTIFICATE}
       - LIVEKIT_URL=${LIVEKIT_URL:-ws://localhost:7880}
-      - LIVEKIT_INTERNAL_URL=http://livekit:7880
+      # Server-side LiveKit API calls (egress for replays) sign with this URL's
+      # keys. Default to LIVEKIT_URL so local dev stays consistent — previously
+      # hard-coded to the internal container, which meant Cloud keys met the
+      # container's devkey and every egress call failed locally.
+      - LIVEKIT_INTERNAL_URL=${LIVEKIT_INTERNAL_URL:-${LIVEKIT_URL:-http://livekit:7880}}
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-devkey}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-secret}
       - MUX_TOKEN_ID=${MUX_TOKEN_ID}
@@ -146,7 +150,10 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/api/v1/health/"]
+      # The previous check curled port 8002 inside the livekit container —
+      # nothing listens on 8002 there and curl isn't installed, so the service
+      # was permanently "unhealthy". wget exists and 7880 serves a 200.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:7880/"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -77,9 +77,29 @@ class HandshakeRejectMixin:
     to a group, no handler is registered and no frame is read before the close,
     so that socket is inert — and it is only ever granted to a peer we are
     already refusing.
+
+    Browsers also require the 101 to echo one of the subprotocols they
+    offered: a browser sending ``['bearer', <token>]`` that gets a 101 *without*
+    a ``Sec-WebSocket-Protocol`` header kills the handshake itself and surfaces
+    it as an abnormal close (1006), with no chance to read the close code. So
+    no accept in this module is ever called with no arguments when the client
+    offered ``bearer`` — every accept selects it (see :meth:`accept_ws`).
     """
 
     rejected = False
+
+    def accept_ws(self):
+        """Accept the socket, echoing ``bearer`` when the client offered it.
+
+        Native clients that send no subprotocols keep the plain accept;
+        autobahn refuses to select a protocol the client did not offer, so the
+        only protocol ever selected is ``bearer``.
+        """
+        subs = self.scope.get('subprotocols') or []
+        offered = [s.decode() if isinstance(s, bytes) else str(s) for s in subs]
+        if 'bearer' in offered:
+            return self.accept('bearer')
+        return self.accept()
 
     async def reject(self, code: int, reason: str, **context) -> None:
         """Log why the handshake is being refused, then close with ``code``.
@@ -93,7 +113,7 @@ class HandshakeRejectMixin:
             '%s ws rejected: %s (%s)', type(self).__name__, reason, detail or 'no context',
         )
         self.rejected = True
-        await self.accept()
+        await self.accept_ws()
         await self.close(code=code)
 
 
@@ -120,17 +140,17 @@ async def _viewer_remove(live_id, user_id):
 
 # ─── User presence consumer ──────────────────────────────────────────────────
 
-class UserConsumer(AsyncJsonWebsocketConsumer):
+class UserConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
     async def connect(self):
         self.user_id = self.scope['url_route']['kwargs']['user_id']
         token = get_token_from_scope(self.scope)
         user = await get_user_from_token(token) if token else None
         if not user or user.is_anonymous or str(user.id) != self.user_id:
-            await self.close(code=4001)
+            await self.reject(4001, 'bad token', user_id=self.user_id)
             return
         self.group_name = f'user_{self.user_id}'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
-        await self.accept()
+        await self.accept_ws()
 
         # Mark user as online in cache
         from django.core.cache import cache
@@ -143,6 +163,8 @@ class UserConsumer(AsyncJsonWebsocketConsumer):
         })
 
     async def disconnect(self, close_code):
+        if getattr(self, 'rejected', False):
+            return
         if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
         
@@ -229,7 +251,7 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
         self.group_name = f'conversation_{self.conversation_id}'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         self._limiter = _RateLimiter()
-        await self.accept()
+        await self.accept_ws()
 
     async def disconnect(self, close_code):
         # A rejected handshake was never added to a group, so there is no
@@ -563,7 +585,7 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
 
 # ─── Live stream consumer ────────────────────────────────────────────────────
 
-class LiveConsumer(AsyncJsonWebsocketConsumer):
+class LiveConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
     # Event types a live-room client may send. Anything else is dropped.
     ALLOWED_EVENT_TYPES = {
         'chat', 'reaction', 'gift', 'cohost_invite', 'cohost_request',
@@ -583,18 +605,18 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
         self.user = await get_user_from_token(token) if token else None
 
         if not self.user or self.user.is_anonymous:
-            await self.close(code=4001)
+            await self.reject(4001, 'bad token', live=self.live_id)
             return
 
         self.user_id = str(self.user.id)
         self._limiter = _RateLimiter()
         self.profile = await database_sync_to_async(lambda: getattr(self.user, 'profile', None))()
         if not await database_sync_to_async(self._may_connect)():
-            await self.close(code=4003)
+            await self.reject(4003, 'not allowed to view live', live=self.live_id, user=self.user_id)
             return
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
-        await self.accept()
+        await self.accept_ws()
 
         viewer_count = await _viewer_add(self.live_id, self.user_id)
         await self.channel_layer.group_send(self.group_name, {
@@ -608,6 +630,8 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
         })
 
     async def disconnect(self, close_code):
+        if getattr(self, 'rejected', False):
+            return
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
         if hasattr(self, 'user_id'):
             viewer_count = await _viewer_remove(self.live_id, self.user_id)
@@ -891,27 +915,27 @@ class LiveConsumer(AsyncJsonWebsocketConsumer):
 
 # ─── Gym group chat consumer ─────────────────────────────────────────────────
 
-class GymChatConsumer(AsyncJsonWebsocketConsumer):
+class GymChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
     async def connect(self):
+        self.gym_id = self.scope['url_route']['kwargs']['gym_id']
         token = get_token_from_scope(self.scope)
         user = await get_user_from_token(token) if token else None
         if not user or user.is_anonymous:
-            await self.close(code=4001)
+            await self.reject(4001, 'bad token', gym=self.gym_id)
             return
         self.user_id = str(user.id)
         self.profile = await database_sync_to_async(lambda: getattr(user, 'profile', None))()
         if not self.profile:
-            await self.close(code=4001)
+            await self.reject(4001, 'no profile', gym=self.gym_id, user=self.user_id)
             return
-        self.gym_id = self.scope['url_route']['kwargs']['gym_id']
         # Authorization: only gym members may read/write gym chat.
         if not await database_sync_to_async(self._is_gym_member)():
-            await self.close(code=4003)
+            await self.reject(4003, 'not a gym member', gym=self.gym_id, user=self.user_id)
             return
         self.group_name = f'gym_chat_{self.gym_id}'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         self._limiter = _RateLimiter()
-        await self.accept()
+        await self.accept_ws()
 
     def _is_gym_member(self):
         from apps.gyms.models import Gym, GymMembership
@@ -924,6 +948,8 @@ class GymChatConsumer(AsyncJsonWebsocketConsumer):
         ).exists()
 
     async def disconnect(self, close_code):
+        if getattr(self, 'rejected', False):
+            return
         if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
@@ -953,21 +979,23 @@ class GymChatConsumer(AsyncJsonWebsocketConsumer):
 RANDOM_DROP_EVENTS = {'join_pool', 'leave_pool', 'ready', 'match_found'}
 
 
-class RandomDropConsumer(AsyncJsonWebsocketConsumer):
+class RandomDropConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
     async def connect(self):
         token = get_token_from_scope(self.scope)
         user = await get_user_from_token(token) if token else None
         if not user or user.is_anonymous:
-            await self.close(code=4001)
+            await self.reject(4001, 'bad token')
             return
         self.user_id = str(user.id)
         self.profile = await database_sync_to_async(lambda: getattr(user, 'profile', None))()
         self.group_name = 'random_drop_pool'
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         self._limiter = _RateLimiter()
-        await self.accept()
+        await self.accept_ws()
 
     async def disconnect(self, close_code):
+        if getattr(self, 'rejected', False):
+            return
         if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
