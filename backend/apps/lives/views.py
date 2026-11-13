@@ -1199,8 +1199,6 @@ class LiveRecordingDownloadView(views.APIView):
 
 # ─── Live visibility, feedback, polls, mutes ──────────────────────────────────
 
-from datetime import timedelta  # noqa: E402
-
 from django.db.models import Count  # noqa: E402
 
 from .models import LiveFeedback, LiveHostMute, LiveNotInterested, LivePoll, LivePollVote  # noqa: E402

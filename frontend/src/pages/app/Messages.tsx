@@ -657,7 +657,6 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
       .then((res) => setStoryReels(res.data ?? []))
       .catch(() => setStoryReels([]))
       .finally(() => setStoryReelsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

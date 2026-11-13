@@ -197,6 +197,9 @@ jobs:
       # present so Firebase degrades (see push_notification_service.dart).
       # CODE_SIGNING_ALLOWED/REQUIRED=NO are set in ios/Flutter/Release.xcconfig
       # to prevent Xcode's Automatic signing mode from overriding --no-codesign.
-      - name: Build iOS (no codesign)
+      # Device builds still hard-require a Development Team at packaging time
+      # (Flutter reports this as an error even with --no-codesign), so the
+      # validation target is the simulator, where signing is never required.
+      - name: Build iOS (simulator)
         working-directory: buddy_up_flutter
-        run: flutter build ios --no-codesign --release
+        run: flutter build ios --simulator --release --no-codesign

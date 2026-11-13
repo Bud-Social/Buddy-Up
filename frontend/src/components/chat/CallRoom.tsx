@@ -350,7 +350,7 @@ export function CallRoom({
       })
       .catch(() => setBuddies([]))
       .finally(() => setBuddiesLoading(false));
-  }, [showAddPeople, username]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [showAddPeople, username]);
 
   if (callState === 'idle') return null;
 
