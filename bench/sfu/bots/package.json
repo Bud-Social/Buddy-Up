@@ -1,0 +1,12 @@
+{
+  "name": "sfu-bench-bot",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@playwright/test": "^1.65.0",
+    "livekit-client": "^2.20.0",
+    "mediasoup-client": "^3.6.59",
+    "ws": "^8.18.0"
+  }
+}

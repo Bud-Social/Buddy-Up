@@ -1,0 +1,8 @@
+# Node dependencies — reinstall with `npm install` in bots/
+bots/node_modules/
+
+# 122 MB static copy of the Jitsi Meet web app — regenerate with:
+#   docker compose up -d jitsi-web
+#   docker cp bench_jitsi_web:/usr/share/jitsi-meet/. bots/www/jitsi-app/
+#   (then write config.js + interface_config.js as documented in README.md)
+bots/www/jitsi-app/

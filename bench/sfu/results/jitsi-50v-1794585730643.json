@@ -1,0 +1,26 @@
+{
+  "stack": "jitsi",
+  "viewers": 50,
+  "durationS": 20,
+  "runs": [
+    {
+      "stack": "jitsi",
+      "viewers": 50,
+      "publisherErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "subscriberErrors": [],
+      "ttffMedianMs": 4541,
+      "ttffP95Ms": 7536,
+      "rttMedianMs": null,
+      "jitterMedianMs": null,
+      "lossMedianPct": null,
+      "sfuCpuAvgPct": 3.34,
+      "sfuCpuPeakPct": 3.42,
+      "sfuMemPeakPerc": 0.76,
+      "samples": 30,
+      "run": 1
+    }
+  ],
+  "at": "2026-11-13T16:02:10.643Z"
+}

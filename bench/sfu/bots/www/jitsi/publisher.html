@@ -1,0 +1,10 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Jitsi publisher bench</title>
+<script>
+// Redirect to the real Jitsi Meet shell with media ENABLED — a publisher
+// must send the fake camera. bench.mjs injects the __published poller via
+// addInitScript before this page (and its redirect target) loads.
+const room = new URLSearchParams(location.search).get('room') || 'benchroom';
+location.replace('/jitsi-app/' + encodeURIComponent(room));
+</script>
+</head><body></body></html>

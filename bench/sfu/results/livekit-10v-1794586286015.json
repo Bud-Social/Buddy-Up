@@ -1,0 +1,38 @@
+{
+  "stack": "livekit",
+  "viewers": 10,
+  "durationS": 10,
+  "runs": [
+    {
+      "stack": "livekit",
+      "viewers": 10,
+      "publisherErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "subscriberErrors": [],
+      "ttffMedianMs": 13303,
+      "ttffP95Ms": 18542,
+      "ttffValues": [
+        18542,
+        17306,
+        16018,
+        14620,
+        13303,
+        13061,
+        12947,
+        12811,
+        11282,
+        9048
+      ],
+      "rttMedianMs": 1457,
+      "jitterMedianMs": 11,
+      "lossMedianPct": 17.81,
+      "sfuCpuAvgPct": 0.22,
+      "sfuCpuPeakPct": 0.22,
+      "sfuMemPeakPerc": 0.14,
+      "samples": 20,
+      "run": 1
+    }
+  ],
+  "at": "2026-11-13T16:11:26.015Z"
+}

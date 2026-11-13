@@ -1,0 +1,21 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>LiveKit subscriber bench</title></head>
+<body><video id="remote" autoplay playsinline></video>
+<script type="module">
+import { Room, RoomEvent } from '/livekit-client/dist/livekit-client.esm.mjs';
+const room = new URLSearchParams(location.search).get('room') || 'benchroom';
+const creds = await fetch('/livekit-bench/token?role=subscriber&room=' + encodeURIComponent(room)).then(r => r.json());
+const roomObj = new Room({ adaptiveStream: true, dynacast: true });
+window.__pcs = [];
+roomObj.on(RoomEvent.TrackSubscribed, (track) => {
+  if (track.kind === 'video') track.attach(document.getElementById('remote'));
+});
+try {
+  await roomObj.connect(creds.url, creds.token);
+  const pcm = roomObj.engine.pcManager;
+  window.__pcs = [pcm.publisher, pcm.subscriber].filter(Boolean);
+  console.log('subscribed');
+} catch (e) {
+  console.error('subscribe failed', e);
+}
+</script></body></html>

@@ -1,0 +1,79 @@
+name: sfu-bench
+
+services:
+  # ── LiveKit self-hosted (the incumbent's self-host leg) ──────────────
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: bench_livekit
+    command: --config /etc/livekit.yaml
+    ports:
+      - "7890:7890"
+      - "7891:7891/tcp"
+      - "50200-50220:50200-50220/udp"
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    networks: [sfu]
+
+  # ── Jitsi Meet — web + prosody + jicofo + JVB ────────────────────────
+  jitsi-prosody:
+    image: docker.io/jitsi/prosody:stable
+    container_name: bench_jitsi_prosody
+    environment:
+      - XMPP_DOMAIN=meet.jitsi
+      - JICOFO_AUTH_PASSWORD=sfu-bench
+      - JVB_AUTH_PASSWORD=sfu-bench
+      - DOCKER_HOST_ADDRESS=127.0.0.1
+    networks: [sfu]
+
+  jitsi-jicofo:
+    image: docker.io/jitsi/jicofo:stable
+    container_name: bench_jitsi_jicofo
+    environment:
+      - XMPP_DOMAIN=meet.jitsi
+      - XMPP_SERVER=jitsi-prosody
+      - XMPP_BOSH_URL_BASE=http://jitsi-prosody:5280
+      - JICOFO_AUTH_PASSWORD=sfu-bench
+      - ENABLE_AUTH=0
+      # Stock template leaves max senders EMPTY → resolves to 0 → Jicofo reports
+      # "sender limit reached" for everyone and participants can never unmute.
+      - JICOFO_CONF_MAX_AUDIO_SENDERS=1000
+      - JICOFO_CONF_MAX_VIDEO_SENDERS=1000
+    depends_on: [jitsi-prosody]
+    networks: [sfu]
+
+  jitsi-jvb:
+    image: docker.io/jitsi/jvb:stable
+    container_name: bench_jitsi_jvb
+    environment:
+      - XMPP_DOMAIN=meet.jitsi
+      - XMPP_SERVER=jitsi-prosody
+      - JVB_AUTH_PASSWORD=sfu-bench
+      - DOCKER_HOST_ADDRESS=127.0.0.1
+      - JVB_PORT=10000
+      - JVB_TCP_PORT=10000
+    depends_on: [jitsi-prosody, jitsi-jicofo]
+    ports:
+      - "10000:10000/udp"
+      - "10000:10000/tcp"
+    networks: [sfu]
+
+  jitsi-web:
+    image: docker.io/jitsi/web:stable
+    container_name: bench_jitsi_web
+    environment:
+      - XMPP_DOMAIN=meet.jitsi
+      - XMPP_AUTH_DOMAIN=auth.meet.jitsi
+      - XMPP_BOSH_URL_BASE=http://jitsi-prosody:5280
+      - ENABLE_AUTH=0
+      - ENABLE_GUESTS=1
+      - PUBLIC_URL=http://localhost:8080
+      - JVB_TCP_MAPPED_PORT=10000
+      - DOCKER_HOST_ADDRESS=127.0.0.1
+    depends_on: [jitsi-prosody, jitsi-jicofo, jitsi-jvb]
+    ports:
+      - "8080:80"
+    networks: [sfu]
+
+networks:
+  sfu:
+    driver: bridge

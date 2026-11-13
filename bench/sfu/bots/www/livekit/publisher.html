@@ -1,0 +1,30 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>LiveKit publisher bench</title></head>
+<body><video id="local" autoplay playsinline muted></video>
+<script type="module">
+import { Room, RoomEvent, VideoPresets } from '/livekit-client/dist/livekit-client.esm.mjs';
+const room = new URLSearchParams(location.search).get('room') || 'benchroom';
+const creds = await fetch('/livekit-bench/token?role=publisher&room=' + encodeURIComponent(room)).then(r => r.json());
+const roomObj = new Room({
+  adaptiveStream: true,
+  dynacast: true,
+  videoCaptureDefaults: { resolution: VideoPresets.h720.resolution },
+  publishDefaults: { videoCodec: 'vp8' },
+});
+window.__pcs = [];
+try {
+  await roomObj.connect(creds.url, creds.token);
+  await roomObj.localParticipant.enableCameraAndMicrophone();
+  const cam = roomObj.localParticipant.getTrackPublication('camera');
+  if (cam?.track?.mediaStreamTrack) {
+    document.getElementById('local').srcObject = new MediaStream([cam.track.mediaStreamTrack]);
+  }
+  const pcm = roomObj.engine.pcManager;
+  window.__pcs = [pcm.publisher, pcm.subscriber].filter(Boolean);
+  window.__published = true;
+  console.log('published');
+} catch (e) {
+  console.error('publish failed', e);
+  window.__published = false;
+}
+</script></body></html>
