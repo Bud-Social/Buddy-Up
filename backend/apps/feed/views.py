@@ -1794,10 +1794,11 @@ class PostShareView(views.APIView):
         if record.channel != channel:
             record.channel = channel
             record.save(update_fields=['channel'])
-        # Only increment the counter on a NEW share record — per user, not per action.
-        if created:
-            Post.objects.filter(id=post.id).update(share_count=F('share_count') + 1)
-            post.refresh_from_db(fields=['share_count'])
+        # Count every POST: each share is a deliberate action (unlike passive
+        # views), so repeats increment too. One attribution row per
+        # (post, sharer) for clicks/referral tracking.
+        Post.objects.filter(id=post.id).update(share_count=F('share_count') + 1)
+        post.refresh_from_db(fields=['share_count'])
         return Response({
             'success': True,
             'data': {'share_count': post.share_count, 'code': record.code},

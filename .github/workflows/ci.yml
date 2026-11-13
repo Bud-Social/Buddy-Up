@@ -34,6 +34,8 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
           # NOT requirements-lock.txt, and that is a known gap rather than an
           # oversight. The lock is the right answer -- development.txt floats
           # every range, and pip leaves an already-installed version in place
@@ -195,11 +197,11 @@ jobs:
       # Compile validation only — no signing, no simulator test, no upload.
       # Pod install runs as part of the build; no google-services.json is
       # present so Firebase degrades (see push_notification_service.dart).
-      # CODE_SIGNING_ALLOWED/REQUIRED=NO are set in ios/Flutter/Release.xcconfig
-      # to prevent Xcode's Automatic signing mode from overriding --no-codesign.
       # Device builds still hard-require a Development Team at packaging time
       # (Flutter reports this as an error even with --no-codesign), so the
       # validation target is the simulator, where signing is never required.
+      # Release mode is not supported for simulators; Debug is the valid
+      # validation mode there.
       - name: Build iOS (simulator)
         working-directory: buddy_up_flutter
-        run: flutter build ios --simulator --release --no-codesign
+        run: flutter build ios --simulator --debug --no-codesign
