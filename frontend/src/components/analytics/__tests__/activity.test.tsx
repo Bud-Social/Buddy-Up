@@ -10,12 +10,14 @@ vi.mock('@/api/analytics', () => ({
     getActivities: vi.fn(),
     createActivity: vi.fn(),
     deleteActivity: vi.fn(),
+    getSummary: vi.fn(),
   },
 }));
 
 const mockGet = analyticsApi.getActivities as unknown as ReturnType<typeof vi.fn>;
 const mockCreate = analyticsApi.createActivity as unknown as ReturnType<typeof vi.fn>;
 const mockDelete = analyticsApi.deleteActivity as unknown as ReturnType<typeof vi.fn>;
+const mockSummary = analyticsApi.getSummary as unknown as ReturnType<typeof vi.fn>;
 
 const ROUTE = [
   [36.8219, -1.2921, 1000],
@@ -26,6 +28,15 @@ const ROUTE = [
 beforeEach(() => {
   vi.clearAllMocks();
   mockGet.mockResolvedValue({ data: [] });
+  // The insights panel reads the summary alongside the session list.
+  mockSummary.mockResolvedValue({
+    data: {
+      period: 'all',
+      user: { username: 'u', display_name: 'U', avatar_url: '', streak_days: 0 },
+      workouts: {}, activity: { count: 0, by_type: [], recent: [] },
+      countdowns: {}, body: {}, lives: {}, spending: {}, programmes: {},
+    },
+  });
 });
 
 describe('RouteReplayMap', () => {

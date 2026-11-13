@@ -2,10 +2,11 @@
  * TileLayerWithFallback – Leaflet tile layer that automatically fails over
  * through a chain of free, key-less providers when tiles error out.
  *
- * Order chosen for speed + coverage:
- *   1. CARTO Voyager  – fast, clean, worldwide (recommended default)
- *   2. OSM Standard   – canonical, occasionally rate-limited
- *   3. Esri World     – satellite-style fallback, very reliable
+ * Order chosen for coverage + reliability:
+ *   1. OSM Standard   – the canonical open map, genuinely key-less
+ *   2. Esri World     – very reliable, wide coverage
+ *   3. CARTO Voyager  – clean style, but its raster tiles now watermark
+ *                       key-less use, so it is the last resort
  */
 import { useState } from 'react';
 import { TileLayer } from 'react-leaflet';
@@ -19,12 +20,6 @@ export interface TileProvider {
 
 export const TILE_PROVIDERS: TileProvider[] = [
   {
-    id: 'carto',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 20,
-  },
-  {
     id: 'osm',
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: '&copy; OpenStreetMap contributors',
@@ -35,6 +30,12 @@ export const TILE_PROVIDERS: TileProvider[] = [
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
     attribution: 'Tiles &copy; Esri',
     maxZoom: 19,
+  },
+  {
+    id: 'carto',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    maxZoom: 20,
   },
 ];
 

@@ -234,7 +234,12 @@ def summarize_countdowns(profile, cutoff):
 
 
 def summarize_activity(profile, cutoff):
-    """Walking/running/hiking tracker summaries."""
+    """Walking/running/hiking tracker summaries.
+
+    More than a set of totals: the records, the trends and the shape of the
+    sessions, so the analytics page can show how the week went and not just
+    how much was done in total.
+    """
     qs = ActivityRecord.objects.filter(user=profile)
     if cutoff:
         qs = qs.filter(started_at__gte=cutoff)
@@ -243,17 +248,20 @@ def summarize_activity(profile, cutoff):
     total_duration = qs.aggregate(d=Sum('duration_seconds'))['d'] or 0
     total_calories = qs.aggregate(c=Sum('calories_burned'))['c'] or 0.0
     total_steps = qs.aggregate(s=Sum('steps'))['s'] or 0
+    total_climb = qs.aggregate(c=Sum('elevation_gain_m'))['c'] or 0.0
 
     by_type = list(
         qs.values('activity_type').annotate(
             count=Count('id'),
             distance=Sum('distance_meters'),
             duration=Sum('duration_seconds'),
+            calories=Sum('calories_burned'),
         ).order_by('-distance')
     )
     for entry in by_type:
         entry['label'] = dict(ActivityRecord.ACTIVITY_TYPES).get(entry['activity_type'], entry['activity_type'])
         entry['distance_km'] = round((entry['distance'] or 0) / 1000, 2)
+        entry['duration_minutes'] = round((entry['duration'] or 0) / 60, 1)
 
     recent = list(
         qs.order_by('-started_at')[:10].values(
@@ -265,16 +273,179 @@ def summarize_activity(profile, cutoff):
         entry['distance_km'] = round((entry['distance_meters'] or 0) / 1000, 2)
 
     avg_pace = qs.exclude(avg_pace__isnull=True).aggregate(a=Avg('avg_pace'))['a']
+
     return {
         'count': qs.count(),
         'total_distance_km': round(total_distance / 1000, 2),
         'total_duration_seconds': total_duration,
         'total_calories_burned': round(total_calories, 1),
         'total_steps': total_steps,
+        'total_climb_m': round(total_climb, 1),
         'avg_pace': round(avg_pace, 1) if avg_pace else None,
         'by_type': by_type,
         'recent': recent,
+        **_activity_detail(profile, cutoff),
     }
+
+
+#: The distance bands a session is counted into, for the distribution chart.
+DISTANCE_BANDS = [
+    (1000, 'Under 1 km'),
+    (3000, '1–3 km'),
+    (5000, '3–5 km'),
+    (10000, '5–10 km'),
+    (21097, '10–21 km'),
+    (42195, 'Half marathon'),
+    (float('inf'), 'Beyond'),
+]
+
+
+def _activity_detail(profile, cutoff):
+    """The records, trends and shape of a user's activity."""
+    qs = ActivityRecord.objects.filter(user=profile)
+    if cutoff:
+        qs = qs.filter(started_at__gte=cutoff)
+
+    rows = list(qs.values(
+        'id', 'activity_type', 'started_at', 'duration_seconds',
+        'distance_meters', 'avg_pace', 'avg_speed_kmh', 'calories_burned',
+        'steps', 'elevation_gain_m', 'route',
+    ))
+
+    # ── Records ─────────────────────────────────────────────────────────────
+    records = {
+        'longest_distance_km': 0,
+        'longest_distance_id': None,
+        'longest_duration_seconds': 0,
+        'longest_duration_id': None,
+        'fastest_pace': None,
+        'fastest_pace_id': None,
+        'biggest_climb_m': 0,
+        'biggest_climb_id': None,
+        'most_steps': 0,
+        'most_steps_id': None,
+    }
+    for row in rows:
+        km = (row['distance_meters'] or 0) / 1000
+        if km > records['longest_distance_km']:
+            records['longest_distance_km'] = round(km, 2)
+            records['longest_distance_id'] = row['id']
+        if (row['duration_seconds'] or 0) > records['longest_duration_seconds']:
+            records['longest_duration_seconds'] = row['duration_seconds']
+            records['longest_duration_id'] = row['id']
+        pace = row['avg_pace']
+        if pace and (records['fastest_pace'] is None or pace < records['fastest_pace']):
+            records['fastest_pace'] = round(pace, 1)
+            records['fastest_pace_id'] = row['id']
+        if (row['elevation_gain_m'] or 0) > records['biggest_climb_m']:
+            records['biggest_climb_m'] = round(row['elevation_gain_m'], 1)
+            records['biggest_climb_id'] = row['id']
+        if (row['steps'] or 0) > records['most_steps']:
+            records['most_steps'] = row['steps']
+            records['most_steps_id'] = row['id']
+
+    # ── Weekly trend ─────────────────────────────────────────────────────────
+    weeks = defaultdict(lambda: {'count': 0, 'distance': 0.0, 'duration': 0, 'pace_weighted': 0.0, 'pace_weight': 0})
+    days = defaultdict(int)
+    for row in rows:
+        started = row['started_at']
+        if not started:
+            continue
+        week = started.strftime('%G-W%V')
+        bucket = weeks[week]
+        bucket['count'] += 1
+        bucket['distance'] += (row['distance_meters'] or 0) / 1000
+        bucket['duration'] += (row['duration_seconds'] or 0) / 60
+        if row['avg_pace']:
+            # Weighted by distance, so a short fast run does not outvote a
+            # long slow one.
+            weight = max((row['distance_meters'] or 0) / 1000, 0.1)
+            bucket['pace_weighted'] += row['avg_pace'] * weight
+            bucket['pace_weight'] += weight
+        days[started.date().isoformat()] += 1
+
+    weekly = []
+    for week in sorted(weeks):
+        bucket = weeks[week]
+        weekly.append({
+            'week': week,
+            'count': bucket['count'],
+            'distance_km': round(bucket['distance'], 2),
+            'duration_minutes': round(bucket['duration'], 1),
+            'avg_pace': round(bucket['pace_weighted'] / bucket['pace_weight'], 1) if bucket['pace_weight'] else None,
+        })
+
+    # ── Distribution by distance ─────────────────────────────────────────────
+    distribution = [{'band': label, 'count': 0} for _, label in DISTANCE_BANDS]
+    for row in rows:
+        metres = row['distance_meters'] or 0
+        for index, (limit, label) in enumerate(DISTANCE_BANDS):
+            if metres < limit:
+                distribution[index]['count'] += 1
+                break
+
+    # ── The sessions worth showing with their routes ─────────────────────────
+    gallery = [
+        {
+            'id': row['id'],
+            'activity_type': row['activity_type'],
+            'started_at': row['started_at'].isoformat() if row['started_at'] else None,
+            'distance_km': round((row['distance_meters'] or 0) / 1000, 2),
+            'duration_minutes': round((row['duration_seconds'] or 0) / 60, 1),
+            'route_points': len(row['route'] or []),
+            'route': (row['route'] or [])[:400],
+        }
+        for row in sorted(
+            rows,
+            key=lambda r: r['distance_meters'] or 0,
+            reverse=True,
+        )[:8] if row['route']
+    ]
+
+    # ── Goals ────────────────────────────────────────────────────────────────
+    goals = _activity_goals(profile, cutoff, rows)
+
+    return {
+        'records': records,
+        'weekly': weekly,
+        'distribution': distribution,
+        'calendar': [{'date': day, 'count': count} for day, count in sorted(days.items())],
+        'days_active': len(days),
+        'gallery': gallery,
+        'goals': goals,
+    }
+
+
+#: The daily target for each kind of activity.
+ACTIVITY_GOALS = {
+    'walk': {'value': 5000, 'unit': 'steps'},
+    'run': {'value': 2, 'unit': 'km'},
+    'hike': {'value': 5, 'unit': 'km'},
+    'cycle': {'value': 10, 'unit': 'km'},
+}
+
+
+def _activity_goals(profile, cutoff, rows):
+    """How the user is doing against each kind's daily goal."""
+    goals = []
+    for kind, goal in ACTIVITY_GOALS.items():
+        kind_rows = [r for r in rows if r['activity_type'] == kind]
+        if not kind_rows:
+            continue
+        if goal['unit'] == 'steps':
+            reached = sum(r['steps'] or 0 for r in kind_rows)
+        else:
+            reached = sum((r['distance_meters'] or 0) / 1000 for r in kind_rows)
+        goals.append({
+            'activity_type': kind,
+            'label': dict(ActivityRecord.ACTIVITY_TYPES).get(kind, kind),
+            'target': goal['value'],
+            'unit': goal['unit'],
+            'reached': round(reached, 2),
+            'sessions': len(kind_rows),
+            'pct': min(100, round(reached / goal['value'] * 100)) if goal['value'] else 0,
+        })
+    return goals
 
 
 def summarize_body(profile, cutoff=None):

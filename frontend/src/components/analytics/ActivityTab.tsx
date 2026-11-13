@@ -9,7 +9,8 @@ import { formatDuration, formatKm, formatPace, titleCase, formatDateTime } from 
 import { analyticsApi } from '@/api/analytics';
 import { useToast } from '@/components/ui/Toast';
 import { analyticsShareUrl, buildShareText, shareActivity } from '@/lib/shareWorkout';
-import type { ActivityRecordInput, ActivitySummary } from '@/types/analytics';
+import { ActivityInsights } from '@/components/analytics/ActivityInsights';
+import type { ActivityRecordInput, ActivitySummary, AnalyticsPeriod } from '@/types/analytics';
 
 const ACTIVITY_TYPES: { key: ActivityRecordInput['activity_type']; label: string; icon: typeof Footprints }[] = [
   { key: 'walk', label: 'Walk', icon: Footprints },
@@ -22,7 +23,7 @@ interface TrackPoint { lat: number; lng: number; ts: number; }
 
 type ActivityRow = ActivitySummary['recent'][number];
 
-export function ActivityTab() {
+export function ActivityTab({ period }: { period: AnalyticsPeriod }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activities, setActivities] = useState<ActivityRow[]>([]);
@@ -292,6 +293,9 @@ export function ActivityTab() {
 
   return (
     <div className="space-y-4">
+      {/* What the numbers say — records, trends, goals and routes. */}
+      <ActivityInsights period={period} />
+
       {/* Live tracker */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-3">

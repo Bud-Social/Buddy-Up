@@ -78,7 +78,7 @@ export default function AnalyticsPage() {
       {/* Tab content */}
       <div className="pb-8">
         {tab === 'overview' && <OverviewTab period={period} />}
-        {tab === 'activity' && <ActivityTab />}
+        {tab === 'activity' && <ActivityTab period={period} />}
         {tab === 'workouts' && <WorkoutsTab period={period} />}
         {tab === 'countdowns' && <CountdownTab period={period} />}
         {tab === 'body' && <BodyTab />}

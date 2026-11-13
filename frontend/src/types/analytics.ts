@@ -39,15 +39,64 @@ export interface ActivityRecent {
   route: number[][];
 }
 
+export interface ActivityRecords {
+  longest_distance_km: number;
+  longest_distance_id: string | null;
+  longest_duration_seconds: number;
+  longest_duration_id: string | null;
+  fastest_pace: number | null;
+  fastest_pace_id: string | null;
+  biggest_climb_m: number;
+  biggest_climb_id: string | null;
+  most_steps: number;
+  most_steps_id: string | null;
+}
+
+export interface ActivityWeekly {
+  week: string;
+  count: number;
+  distance_km: number;
+  duration_minutes: number;
+  avg_pace: number | null;
+}
+
+export interface ActivityGalleryItem {
+  id: string;
+  activity_type: string;
+  started_at: string | null;
+  distance_km: number;
+  duration_minutes: number;
+  route_points: number;
+  route: number[][];
+}
+
+export interface ActivityGoal {
+  activity_type: string;
+  label: string;
+  target: number;
+  unit: string;
+  reached: number;
+  sessions: number;
+  pct: number;
+}
+
 export interface ActivitySummary {
   count: number;
   total_distance_km: number;
   total_duration_seconds: number;
   total_calories_burned: number;
   total_steps: number;
+  total_climb_m?: number;
   avg_pace: number | null;
   by_type: ActivityTypeBreakdown[];
   recent: ActivityRecent[];
+  records?: ActivityRecords;
+  weekly?: ActivityWeekly[];
+  distribution?: { band: string; count: number }[];
+  calendar?: { date: string; count: number }[];
+  days_active?: number;
+  gallery?: ActivityGalleryItem[];
+  goals?: ActivityGoal[];
 }
 
 export interface MealRecent {

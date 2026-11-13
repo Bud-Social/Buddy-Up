@@ -153,6 +153,83 @@ class SharedPostDraftTests(TestCase):
         self.assertEqual(post.workout_log_data['activity_type'], 'run')
 
 
+class ActivityAnalyticsDetailTests(TestCase):
+    """The activity summary carries more than totals."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email='actdetail@example.com', password='TestPass123!')
+        self.profile = Profile.objects.create(user=self.user, username='actdetail', display_name='Act Detail')
+        self.client = APIClient()
+        self.client.force_authenticate(self.user)
+
+    def _activity(self, **kwargs):
+        from .models import ActivityRecord
+
+        defaults = {
+            'activity_type': 'run',
+            'duration_seconds': 1800,
+            'distance_meters': 5000,
+            'avg_pace': 360,
+            'avg_speed_kmh': 10,
+            'calories_burned': 300,
+            'route': [[-1.29, 36.82, 1], [-1.28, 36.83, 2]],
+        }
+        defaults.update(kwargs)
+        return ActivityRecord.objects.create(user=self.profile, **defaults)
+
+    def test_the_summary_carries_records_trends_and_goals(self):
+        from . import engine
+
+        self._activity(distance_meters=5000, duration_seconds=1800, avg_pace=360, steps=1000)
+        self._activity(
+            activity_type='hike', distance_meters=12000, duration_seconds=7200,
+            avg_pace=600, elevation_gain_m=650,
+        )
+        self._activity(activity_type='walk', distance_meters=2000, duration_seconds=1200, steps=3000)
+
+        summary = engine.build_summary(self.profile, 'all')
+        activity = summary['activity']
+
+        self.assertIn('records', activity)
+        self.assertIn('weekly', activity)
+        self.assertIn('distribution', activity)
+        self.assertIn('calendar', activity)
+        self.assertIn('goals', activity)
+        self.assertIn('gallery', activity)
+
+        # The records pick the best of each.
+        self.assertEqual(activity['records']['longest_distance_km'], 12.0)
+        self.assertEqual(activity['records']['biggest_climb_m'], 650)
+        self.assertEqual(activity['records']['most_steps'], 3000)
+        self.assertEqual(activity['records']['fastest_pace'], 360)
+
+        # The gallery holds the sessions that have a route.
+        self.assertEqual(len(activity['gallery']), 3)
+        self.assertTrue(all(g['route_points'] == 2 for g in activity['gallery']))
+
+        # Goals are set for each kind that was recorded.
+        kinds = {g['activity_type'] for g in activity['goals']}
+        self.assertEqual(kinds, {'run', 'hike', 'walk'})
+
+    def test_an_empty_history_does_not_break_the_summary(self):
+        from . import engine
+
+        summary = engine.build_summary(self.profile, 'all')
+        activity = summary['activity']
+        self.assertEqual(activity['count'], 0)
+        self.assertEqual(activity['records']['longest_distance_km'], 0)
+        self.assertEqual(activity['weekly'], [])
+        self.assertEqual(activity['goals'], [])
+
+    def test_the_endpoint_returns_the_detail(self):
+        self._activity()
+        resp = self.client.get('/api/v1/analytics/summary/', {'period': 'all'})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        activity = resp.data['data']['activity']
+        self.assertIn('records', activity)
+        self.assertIn('weekly', activity)
+
+
 class EventIngestionTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(email='events@example.com', password='TestPass123!')
