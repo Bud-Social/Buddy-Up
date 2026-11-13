@@ -64,8 +64,8 @@ class _CallRoomScreenState extends ConsumerState<CallRoomScreen> {
           switch (signalType) {
             case 'call_switch_request':
               if (!mounted) return;
-              setState(() =>
-                  _switchRequestFrom = (data['from_display_name'] ?? data['from_username'] ?? 'Someone') as String);
+              setState(() => _switchRequestFrom =
+                  '${data['from_display_name'] ?? data['from_username'] ?? 'Someone'}');
               Ringtone.playLoop('switch-request', 'assets/ringtones/ringback.wav');
               Future<void>.delayed(const Duration(seconds: 2),
                   () => Ringtone.stop('switch-request'));

@@ -986,7 +986,7 @@ class _LiveRoomScreenState extends ConsumerState<LiveRoomScreen> with WidgetsBin
     if (_feedbackPinDismissed) return const SizedBox.shrink();
     return Positioned(
       left: 12,
-      right: 12,
+      right: 76, // clear of the gift/rate FAB rail
       bottom: 12,
       child: Material(
         color: Colors.black.withValues(alpha: 0.78),
