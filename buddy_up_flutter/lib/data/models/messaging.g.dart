@@ -193,6 +193,12 @@ _CommunityPost _$CommunityPostFromJson(Map<String, dynamic> json) =>
               .toList() ??
           const <CommunityPostComment>[],
       createdAt: json['created_at'] as String? ?? '',
+      viewCount: (json['viewCount'] as num?)?.toInt() ?? 0,
+      repostCount: (json['repostCount'] as num?)?.toInt() ?? 0,
+      shareCount: (json['shareCount'] as num?)?.toInt() ?? 0,
+      saveCount: (json['saveCount'] as num?)?.toInt() ?? 0,
+      isRepost: json['isRepost'] as bool? ?? false,
+      isAnonymous: json['isAnonymous'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$CommunityPostToJson(_CommunityPost instance) =>
@@ -210,6 +216,12 @@ Map<String, dynamic> _$CommunityPostToJson(_CommunityPost instance) =>
       'is_liked': instance.isLiked,
       'comments': instance.comments,
       'created_at': instance.createdAt,
+      'viewCount': instance.viewCount,
+      'repostCount': instance.repostCount,
+      'shareCount': instance.shareCount,
+      'saveCount': instance.saveCount,
+      'isRepost': instance.isRepost,
+      'isAnonymous': instance.isAnonymous,
     };
 
 _CommunityListData _$CommunityListDataFromJson(Map<String, dynamic> json) =>
@@ -326,6 +338,8 @@ _Message _$MessageFromJson(Map<String, dynamic> json) => _Message(
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
+  viewOnce: json['view_once'] as bool? ?? false,
+  viewOnceOpenedAt: json['view_once_opened_at'] as String?,
   senderData: ParticipantData.fromJson(
     json['sender_data'] as Map<String, dynamic>,
   ),
@@ -353,6 +367,8 @@ Map<String, dynamic> _$MessageToJson(_Message instance) => <String, dynamic>{
   'metadata': instance.metadata,
   'is_read': instance.isRead,
   'deleted_for': instance.deletedFor,
+  'view_once': instance.viewOnce,
+  'view_once_opened_at': instance.viewOnceOpenedAt,
   'sender_data': instance.senderData,
   'reply_data': instance.replyData,
   'reactions': instance.reactions,
@@ -384,6 +400,93 @@ Map<String, dynamic> _$CallLogToJson(_CallLog instance) => <String, dynamic>{
   'created_at': instance.createdAt,
   'ended_at': instance.endedAt,
 };
+
+_Story _$StoryFromJson(Map<String, dynamic> json) => _Story(
+  id: json['id'] as String,
+  body: json['body'] as String? ?? '',
+  mediaUrls:
+      (json['media_urls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
+  visibility: json['visibility'] as String? ?? 'public',
+  createdAt: json['created_at'] as String? ?? '',
+);
+
+Map<String, dynamic> _$StoryToJson(_Story instance) => <String, dynamic>{
+  'id': instance.id,
+  'body': instance.body,
+  'media_urls': instance.mediaUrls,
+  'visibility': instance.visibility,
+  'created_at': instance.createdAt,
+};
+
+_StoryAuthor _$StoryAuthorFromJson(Map<String, dynamic> json) => _StoryAuthor(
+  userId: json['user_id'] as String? ?? '',
+  username: json['username'] as String? ?? '',
+  displayName: json['display_name'] as String? ?? '',
+  avatarUrl: json['avatar_url'] as String? ?? '',
+  verificationStatus: json['verification_status'] as String? ?? 'none',
+);
+
+Map<String, dynamic> _$StoryAuthorToJson(_StoryAuthor instance) =>
+    <String, dynamic>{
+      'user_id': instance.userId,
+      'username': instance.username,
+      'display_name': instance.displayName,
+      'avatar_url': instance.avatarUrl,
+      'verification_status': instance.verificationStatus,
+    };
+
+_StoryReel _$StoryReelFromJson(Map<String, dynamic> json) => _StoryReel(
+  user: StoryAuthor.fromJson(json['user'] as Map<String, dynamic>),
+  stories:
+      (json['stories'] as List<dynamic>?)
+          ?.map((e) => Story.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <Story>[],
+  latestAt: json['latest_at'] as String? ?? '',
+);
+
+Map<String, dynamic> _$StoryReelToJson(_StoryReel instance) =>
+    <String, dynamic>{
+      'user': instance.user,
+      'stories': instance.stories,
+      'latest_at': instance.latestAt,
+    };
+
+_CallHistoryEntry _$CallHistoryEntryFromJson(Map<String, dynamic> json) =>
+    _CallHistoryEntry(
+      id: json['id'] as String,
+      conversationId: json['conversation_id'] as String? ?? '',
+      conversationLabel:
+          json['conversation_label'] as String? ?? 'Conversation',
+      counterpartName: json['counterpart_name'] as String? ?? '',
+      counterpartUsername: json['counterpart_username'] as String? ?? '',
+      counterpartAvatarUrl: json['counterpart_avatar_url'] as String? ?? '',
+      callType: json['call_type'] as String? ?? 'audio',
+      status: json['status'] as String? ?? '',
+      durationSeconds: (json['duration_seconds'] as num?)?.toInt() ?? 0,
+      isOutgoing: json['is_outgoing'] as bool? ?? false,
+      activeCall: json['active_call'] as Map<String, dynamic>?,
+      createdAt: json['created_at'] as String? ?? '',
+    );
+
+Map<String, dynamic> _$CallHistoryEntryToJson(_CallHistoryEntry instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'conversation_id': instance.conversationId,
+      'conversation_label': instance.conversationLabel,
+      'counterpart_name': instance.counterpartName,
+      'counterpart_username': instance.counterpartUsername,
+      'counterpart_avatar_url': instance.counterpartAvatarUrl,
+      'call_type': instance.callType,
+      'status': instance.status,
+      'duration_seconds': instance.durationSeconds,
+      'is_outgoing': instance.isOutgoing,
+      'active_call': instance.activeCall,
+      'created_at': instance.createdAt,
+    };
 
 _LinkPreviewData _$LinkPreviewDataFromJson(Map<String, dynamic> json) =>
     _LinkPreviewData(
@@ -432,6 +535,7 @@ _SendMessagePayload _$SendMessagePayloadFromJson(Map<String, dynamic> json) =>
       mediaMime: json['mediaMime'] as String?,
       fileName: json['fileName'] as String?,
       replyToId: json['replyToId'] as String?,
+      viewOnce: json['view_once'] as bool? ?? false,
       metadata:
           json['metadata'] as Map<String, dynamic>? ??
           const <String, dynamic>{},
@@ -445,6 +549,7 @@ Map<String, dynamic> _$SendMessagePayloadToJson(_SendMessagePayload instance) =>
       'mediaMime': instance.mediaMime,
       'fileName': instance.fileName,
       'replyToId': instance.replyToId,
+      'view_once': instance.viewOnce,
       'metadata': instance.metadata,
     };
 

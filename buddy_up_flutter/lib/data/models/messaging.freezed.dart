@@ -1797,7 +1797,7 @@ mixin _$CommunityPost {
 
  String get id;@JsonKey(name: 'conversation_id') String get conversationId;@JsonKey(name: 'author_id') String get authorId; String get body;@JsonKey(name: 'media_url') String get mediaUrl;@JsonKey(name: 'media_mime') String get mediaMime;@JsonKey(name: 'is_pinned') bool get isPinned;@JsonKey(name: 'like_count') int get likeCount;@JsonKey(name: 'comment_count') int get commentCount;@JsonKey(name: 'author_data') ProfileBrief get authorData;@JsonKey(name: 'is_liked') bool get isLiked;/// `null` unless the request passed `include_comments`, so the default has
 /// to swallow an explicit null rather than throw.
- List<CommunityPostComment> get comments;@JsonKey(name: 'created_at') String get createdAt;
+ List<CommunityPostComment> get comments;@JsonKey(name: 'created_at') String get createdAt; int get viewCount; int get repostCount; int get shareCount; int get saveCount; bool get isRepost; bool get isAnonymous;
 /// Create a copy of CommunityPost
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1810,16 +1810,16 @@ $CommunityPostCopyWith<CommunityPost> get copyWith => _$CommunityPostCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunityPost&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.authorId, authorId) || other.authorId == authorId)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.likeCount, likeCount) || other.likeCount == likeCount)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.isLiked, isLiked) || other.isLiked == isLiked)&&const DeepCollectionEquality().equals(other.comments, comments)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CommunityPost&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.authorId, authorId) || other.authorId == authorId)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.likeCount, likeCount) || other.likeCount == likeCount)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.isLiked, isLiked) || other.isLiked == isLiked)&&const DeepCollectionEquality().equals(other.comments, comments)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,conversationId,authorId,body,mediaUrl,mediaMime,isPinned,likeCount,commentCount,authorData,isLiked,const DeepCollectionEquality().hash(comments),createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,conversationId,authorId,body,mediaUrl,mediaMime,isPinned,likeCount,commentCount,authorData,isLiked,const DeepCollectionEquality().hash(comments),createdAt,viewCount,repostCount,shareCount,saveCount,isRepost,isAnonymous]);
 
 @override
 String toString() {
-  return 'CommunityPost(id: $id, conversationId: $conversationId, authorId: $authorId, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, isPinned: $isPinned, likeCount: $likeCount, commentCount: $commentCount, authorData: $authorData, isLiked: $isLiked, comments: $comments, createdAt: $createdAt)';
+  return 'CommunityPost(id: $id, conversationId: $conversationId, authorId: $authorId, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, isPinned: $isPinned, likeCount: $likeCount, commentCount: $commentCount, authorData: $authorData, isLiked: $isLiked, comments: $comments, createdAt: $createdAt, viewCount: $viewCount, repostCount: $repostCount, shareCount: $shareCount, saveCount: $saveCount, isRepost: $isRepost, isAnonymous: $isAnonymous)';
 }
 
 
@@ -1830,7 +1830,7 @@ abstract mixin class $CommunityPostCopyWith<$Res>  {
   factory $CommunityPostCopyWith(CommunityPost value, $Res Function(CommunityPost) _then) = _$CommunityPostCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'author_id') String authorId, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'is_pinned') bool isPinned,@JsonKey(name: 'like_count') int likeCount,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'author_data') ProfileBrief authorData,@JsonKey(name: 'is_liked') bool isLiked, List<CommunityPostComment> comments,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'author_id') String authorId, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'is_pinned') bool isPinned,@JsonKey(name: 'like_count') int likeCount,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'author_data') ProfileBrief authorData,@JsonKey(name: 'is_liked') bool isLiked, List<CommunityPostComment> comments,@JsonKey(name: 'created_at') String createdAt, int viewCount, int repostCount, int shareCount, int saveCount, bool isRepost, bool isAnonymous
 });
 
 
@@ -1847,7 +1847,7 @@ class _$CommunityPostCopyWithImpl<$Res>
 
 /// Create a copy of CommunityPost
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? conversationId = null,Object? authorId = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? isPinned = null,Object? likeCount = null,Object? commentCount = null,Object? authorData = null,Object? isLiked = null,Object? comments = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? conversationId = null,Object? authorId = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? isPinned = null,Object? likeCount = null,Object? commentCount = null,Object? authorData = null,Object? isLiked = null,Object? comments = null,Object? createdAt = null,Object? viewCount = null,Object? repostCount = null,Object? shareCount = null,Object? saveCount = null,Object? isRepost = null,Object? isAnonymous = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
@@ -1862,7 +1862,13 @@ as int,authorData: null == authorData ? _self.authorData : authorData // ignore:
 as ProfileBrief,isLiked: null == isLiked ? _self.isLiked : isLiked // ignore: cast_nullable_to_non_nullable
 as bool,comments: null == comments ? _self.comments : comments // ignore: cast_nullable_to_non_nullable
 as List<CommunityPostComment>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as String,
+as String,viewCount: null == viewCount ? _self.viewCount : viewCount // ignore: cast_nullable_to_non_nullable
+as int,repostCount: null == repostCount ? _self.repostCount : repostCount // ignore: cast_nullable_to_non_nullable
+as int,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
+as int,saveCount: null == saveCount ? _self.saveCount : saveCount // ignore: cast_nullable_to_non_nullable
+as int,isRepost: null == isRepost ? _self.isRepost : isRepost // ignore: cast_nullable_to_non_nullable
+as bool,isAnonymous: null == isAnonymous ? _self.isAnonymous : isAnonymous // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of CommunityPost
@@ -1956,10 +1962,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'author_id')  String authorId,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'is_pinned')  bool isPinned, @JsonKey(name: 'like_count')  int likeCount, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'is_liked')  bool isLiked,  List<CommunityPostComment> comments, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'author_id')  String authorId,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'is_pinned')  bool isPinned, @JsonKey(name: 'like_count')  int likeCount, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'is_liked')  bool isLiked,  List<CommunityPostComment> comments, @JsonKey(name: 'created_at')  String createdAt,  int viewCount,  int repostCount,  int shareCount,  int saveCount,  bool isRepost,  bool isAnonymous)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CommunityPost() when $default != null:
-return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt);case _:
+return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt,_that.viewCount,_that.repostCount,_that.shareCount,_that.saveCount,_that.isRepost,_that.isAnonymous);case _:
   return orElse();
 
 }
@@ -1977,10 +1983,10 @@ return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.me
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'author_id')  String authorId,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'is_pinned')  bool isPinned, @JsonKey(name: 'like_count')  int likeCount, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'is_liked')  bool isLiked,  List<CommunityPostComment> comments, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'author_id')  String authorId,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'is_pinned')  bool isPinned, @JsonKey(name: 'like_count')  int likeCount, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'is_liked')  bool isLiked,  List<CommunityPostComment> comments, @JsonKey(name: 'created_at')  String createdAt,  int viewCount,  int repostCount,  int shareCount,  int saveCount,  bool isRepost,  bool isAnonymous)  $default,) {final _that = this;
 switch (_that) {
 case _CommunityPost():
-return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt);case _:
+return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt,_that.viewCount,_that.repostCount,_that.shareCount,_that.saveCount,_that.isRepost,_that.isAnonymous);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1997,10 +2003,10 @@ return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.me
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'author_id')  String authorId,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'is_pinned')  bool isPinned, @JsonKey(name: 'like_count')  int likeCount, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'is_liked')  bool isLiked,  List<CommunityPostComment> comments, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'author_id')  String authorId,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'is_pinned')  bool isPinned, @JsonKey(name: 'like_count')  int likeCount, @JsonKey(name: 'comment_count')  int commentCount, @JsonKey(name: 'author_data')  ProfileBrief authorData, @JsonKey(name: 'is_liked')  bool isLiked,  List<CommunityPostComment> comments, @JsonKey(name: 'created_at')  String createdAt,  int viewCount,  int repostCount,  int shareCount,  int saveCount,  bool isRepost,  bool isAnonymous)?  $default,) {final _that = this;
 switch (_that) {
 case _CommunityPost() when $default != null:
-return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt);case _:
+return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.mediaUrl,_that.mediaMime,_that.isPinned,_that.likeCount,_that.commentCount,_that.authorData,_that.isLiked,_that.comments,_that.createdAt,_that.viewCount,_that.repostCount,_that.shareCount,_that.saveCount,_that.isRepost,_that.isAnonymous);case _:
   return null;
 
 }
@@ -2012,7 +2018,7 @@ return $default(_that.id,_that.conversationId,_that.authorId,_that.body,_that.me
 @JsonSerializable()
 
 class _CommunityPost implements CommunityPost {
-  const _CommunityPost({required this.id, @JsonKey(name: 'conversation_id') this.conversationId = '', @JsonKey(name: 'author_id') this.authorId = '', this.body = '', @JsonKey(name: 'media_url') this.mediaUrl = '', @JsonKey(name: 'media_mime') this.mediaMime = '', @JsonKey(name: 'is_pinned') this.isPinned = false, @JsonKey(name: 'like_count') this.likeCount = 0, @JsonKey(name: 'comment_count') this.commentCount = 0, @JsonKey(name: 'author_data') this.authorData = const ProfileBrief(), @JsonKey(name: 'is_liked') this.isLiked = false, final  List<CommunityPostComment> comments = const <CommunityPostComment>[], @JsonKey(name: 'created_at') this.createdAt = ''}): _comments = comments;
+  const _CommunityPost({required this.id, @JsonKey(name: 'conversation_id') this.conversationId = '', @JsonKey(name: 'author_id') this.authorId = '', this.body = '', @JsonKey(name: 'media_url') this.mediaUrl = '', @JsonKey(name: 'media_mime') this.mediaMime = '', @JsonKey(name: 'is_pinned') this.isPinned = false, @JsonKey(name: 'like_count') this.likeCount = 0, @JsonKey(name: 'comment_count') this.commentCount = 0, @JsonKey(name: 'author_data') this.authorData = const ProfileBrief(), @JsonKey(name: 'is_liked') this.isLiked = false, final  List<CommunityPostComment> comments = const <CommunityPostComment>[], @JsonKey(name: 'created_at') this.createdAt = '', this.viewCount = 0, this.repostCount = 0, this.shareCount = 0, this.saveCount = 0, this.isRepost = false, this.isAnonymous = false}): _comments = comments;
   factory _CommunityPost.fromJson(Map<String, dynamic> json) => _$CommunityPostFromJson(json);
 
 @override final  String id;
@@ -2038,6 +2044,12 @@ class _CommunityPost implements CommunityPost {
 }
 
 @override@JsonKey(name: 'created_at') final  String createdAt;
+@override@JsonKey() final  int viewCount;
+@override@JsonKey() final  int repostCount;
+@override@JsonKey() final  int shareCount;
+@override@JsonKey() final  int saveCount;
+@override@JsonKey() final  bool isRepost;
+@override@JsonKey() final  bool isAnonymous;
 
 /// Create a copy of CommunityPost
 /// with the given fields replaced by the non-null parameter values.
@@ -2052,16 +2064,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunityPost&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.authorId, authorId) || other.authorId == authorId)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.likeCount, likeCount) || other.likeCount == likeCount)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.isLiked, isLiked) || other.isLiked == isLiked)&&const DeepCollectionEquality().equals(other._comments, _comments)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CommunityPost&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.authorId, authorId) || other.authorId == authorId)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.isPinned, isPinned) || other.isPinned == isPinned)&&(identical(other.likeCount, likeCount) || other.likeCount == likeCount)&&(identical(other.commentCount, commentCount) || other.commentCount == commentCount)&&(identical(other.authorData, authorData) || other.authorData == authorData)&&(identical(other.isLiked, isLiked) || other.isLiked == isLiked)&&const DeepCollectionEquality().equals(other._comments, _comments)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.viewCount, viewCount) || other.viewCount == viewCount)&&(identical(other.repostCount, repostCount) || other.repostCount == repostCount)&&(identical(other.shareCount, shareCount) || other.shareCount == shareCount)&&(identical(other.saveCount, saveCount) || other.saveCount == saveCount)&&(identical(other.isRepost, isRepost) || other.isRepost == isRepost)&&(identical(other.isAnonymous, isAnonymous) || other.isAnonymous == isAnonymous));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,conversationId,authorId,body,mediaUrl,mediaMime,isPinned,likeCount,commentCount,authorData,isLiked,const DeepCollectionEquality().hash(_comments),createdAt);
+int get hashCode => Object.hashAll([runtimeType,id,conversationId,authorId,body,mediaUrl,mediaMime,isPinned,likeCount,commentCount,authorData,isLiked,const DeepCollectionEquality().hash(_comments),createdAt,viewCount,repostCount,shareCount,saveCount,isRepost,isAnonymous]);
 
 @override
 String toString() {
-  return 'CommunityPost(id: $id, conversationId: $conversationId, authorId: $authorId, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, isPinned: $isPinned, likeCount: $likeCount, commentCount: $commentCount, authorData: $authorData, isLiked: $isLiked, comments: $comments, createdAt: $createdAt)';
+  return 'CommunityPost(id: $id, conversationId: $conversationId, authorId: $authorId, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, isPinned: $isPinned, likeCount: $likeCount, commentCount: $commentCount, authorData: $authorData, isLiked: $isLiked, comments: $comments, createdAt: $createdAt, viewCount: $viewCount, repostCount: $repostCount, shareCount: $shareCount, saveCount: $saveCount, isRepost: $isRepost, isAnonymous: $isAnonymous)';
 }
 
 
@@ -2072,7 +2084,7 @@ abstract mixin class _$CommunityPostCopyWith<$Res> implements $CommunityPostCopy
   factory _$CommunityPostCopyWith(_CommunityPost value, $Res Function(_CommunityPost) _then) = __$CommunityPostCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'author_id') String authorId, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'is_pinned') bool isPinned,@JsonKey(name: 'like_count') int likeCount,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'author_data') ProfileBrief authorData,@JsonKey(name: 'is_liked') bool isLiked, List<CommunityPostComment> comments,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'author_id') String authorId, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'is_pinned') bool isPinned,@JsonKey(name: 'like_count') int likeCount,@JsonKey(name: 'comment_count') int commentCount,@JsonKey(name: 'author_data') ProfileBrief authorData,@JsonKey(name: 'is_liked') bool isLiked, List<CommunityPostComment> comments,@JsonKey(name: 'created_at') String createdAt, int viewCount, int repostCount, int shareCount, int saveCount, bool isRepost, bool isAnonymous
 });
 
 
@@ -2089,7 +2101,7 @@ class __$CommunityPostCopyWithImpl<$Res>
 
 /// Create a copy of CommunityPost
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? conversationId = null,Object? authorId = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? isPinned = null,Object? likeCount = null,Object? commentCount = null,Object? authorData = null,Object? isLiked = null,Object? comments = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? conversationId = null,Object? authorId = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? isPinned = null,Object? likeCount = null,Object? commentCount = null,Object? authorData = null,Object? isLiked = null,Object? comments = null,Object? createdAt = null,Object? viewCount = null,Object? repostCount = null,Object? shareCount = null,Object? saveCount = null,Object? isRepost = null,Object? isAnonymous = null,}) {
   return _then(_CommunityPost(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
@@ -2104,7 +2116,13 @@ as int,authorData: null == authorData ? _self.authorData : authorData // ignore:
 as ProfileBrief,isLiked: null == isLiked ? _self.isLiked : isLiked // ignore: cast_nullable_to_non_nullable
 as bool,comments: null == comments ? _self._comments : comments // ignore: cast_nullable_to_non_nullable
 as List<CommunityPostComment>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as String,
+as String,viewCount: null == viewCount ? _self.viewCount : viewCount // ignore: cast_nullable_to_non_nullable
+as int,repostCount: null == repostCount ? _self.repostCount : repostCount // ignore: cast_nullable_to_non_nullable
+as int,shareCount: null == shareCount ? _self.shareCount : shareCount // ignore: cast_nullable_to_non_nullable
+as int,saveCount: null == saveCount ? _self.saveCount : saveCount // ignore: cast_nullable_to_non_nullable
+as int,isRepost: null == isRepost ? _self.isRepost : isRepost // ignore: cast_nullable_to_non_nullable
+as bool,isAnonymous: null == isAnonymous ? _self.isAnonymous : isAnonymous // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -3036,7 +3054,9 @@ as String,
 /// @nodoc
 mixin _$Message {
 
- String get id;@JsonKey(name: 'conversation_id') String get conversationId;@JsonKey(name: 'sender_id') String get senderId;@JsonKey(name: 'message_type') String get messageType; String get body;@JsonKey(name: 'media_url') String get mediaUrl;@JsonKey(name: 'media_mime') String get mediaMime;@JsonKey(name: 'file_name') String get fileName;@JsonKey(name: 'reply_to_id') String? get replyToId; Map<String, dynamic> get metadata;@JsonKey(name: 'is_read') bool get isRead;@JsonKey(name: 'deleted_for') List<String> get deletedFor;@JsonKey(name: 'sender_data') ParticipantData get senderData;@JsonKey(name: 'reply_data') ReplyData? get replyData; Map<String, int> get reactions;@JsonKey(name: 'created_at') String get createdAt;
+ String get id;@JsonKey(name: 'conversation_id') String get conversationId;@JsonKey(name: 'sender_id') String get senderId;@JsonKey(name: 'message_type') String get messageType; String get body;@JsonKey(name: 'media_url') String get mediaUrl;@JsonKey(name: 'media_mime') String get mediaMime;@JsonKey(name: 'file_name') String get fileName;@JsonKey(name: 'reply_to_id') String? get replyToId; Map<String, dynamic> get metadata;@JsonKey(name: 'is_read') bool get isRead;@JsonKey(name: 'deleted_for') List<String> get deletedFor;/// View-once media: the recipient may open the payload exactly once,
+/// after which the serializer withholds the media URL from them.
+@JsonKey(name: 'view_once') bool get viewOnce;@JsonKey(name: 'view_once_opened_at') String? get viewOnceOpenedAt;@JsonKey(name: 'sender_data') ParticipantData get senderData;@JsonKey(name: 'reply_data') ReplyData? get replyData; Map<String, int> get reactions;@JsonKey(name: 'created_at') String get createdAt;
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -3049,16 +3069,16 @@ $MessageCopyWith<Message> get copyWith => _$MessageCopyWithImpl<Message>(this as
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Message&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.messageType, messageType) || other.messageType == messageType)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&const DeepCollectionEquality().equals(other.metadata, metadata)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&const DeepCollectionEquality().equals(other.deletedFor, deletedFor)&&(identical(other.senderData, senderData) || other.senderData == senderData)&&(identical(other.replyData, replyData) || other.replyData == replyData)&&const DeepCollectionEquality().equals(other.reactions, reactions)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Message&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.messageType, messageType) || other.messageType == messageType)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&const DeepCollectionEquality().equals(other.metadata, metadata)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&const DeepCollectionEquality().equals(other.deletedFor, deletedFor)&&(identical(other.viewOnce, viewOnce) || other.viewOnce == viewOnce)&&(identical(other.viewOnceOpenedAt, viewOnceOpenedAt) || other.viewOnceOpenedAt == viewOnceOpenedAt)&&(identical(other.senderData, senderData) || other.senderData == senderData)&&(identical(other.replyData, replyData) || other.replyData == replyData)&&const DeepCollectionEquality().equals(other.reactions, reactions)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,conversationId,senderId,messageType,body,mediaUrl,mediaMime,fileName,replyToId,const DeepCollectionEquality().hash(metadata),isRead,const DeepCollectionEquality().hash(deletedFor),senderData,replyData,const DeepCollectionEquality().hash(reactions),createdAt);
+int get hashCode => Object.hash(runtimeType,id,conversationId,senderId,messageType,body,mediaUrl,mediaMime,fileName,replyToId,const DeepCollectionEquality().hash(metadata),isRead,const DeepCollectionEquality().hash(deletedFor),viewOnce,viewOnceOpenedAt,senderData,replyData,const DeepCollectionEquality().hash(reactions),createdAt);
 
 @override
 String toString() {
-  return 'Message(id: $id, conversationId: $conversationId, senderId: $senderId, messageType: $messageType, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, fileName: $fileName, replyToId: $replyToId, metadata: $metadata, isRead: $isRead, deletedFor: $deletedFor, senderData: $senderData, replyData: $replyData, reactions: $reactions, createdAt: $createdAt)';
+  return 'Message(id: $id, conversationId: $conversationId, senderId: $senderId, messageType: $messageType, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, fileName: $fileName, replyToId: $replyToId, metadata: $metadata, isRead: $isRead, deletedFor: $deletedFor, viewOnce: $viewOnce, viewOnceOpenedAt: $viewOnceOpenedAt, senderData: $senderData, replyData: $replyData, reactions: $reactions, createdAt: $createdAt)';
 }
 
 
@@ -3069,7 +3089,7 @@ abstract mixin class $MessageCopyWith<$Res>  {
   factory $MessageCopyWith(Message value, $Res Function(Message) _then) = _$MessageCopyWithImpl;
 @useResult
 $Res call({
- String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'sender_id') String senderId,@JsonKey(name: 'message_type') String messageType, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'file_name') String fileName,@JsonKey(name: 'reply_to_id') String? replyToId, Map<String, dynamic> metadata,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'deleted_for') List<String> deletedFor,@JsonKey(name: 'sender_data') ParticipantData senderData,@JsonKey(name: 'reply_data') ReplyData? replyData, Map<String, int> reactions,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'sender_id') String senderId,@JsonKey(name: 'message_type') String messageType, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'file_name') String fileName,@JsonKey(name: 'reply_to_id') String? replyToId, Map<String, dynamic> metadata,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'deleted_for') List<String> deletedFor,@JsonKey(name: 'view_once') bool viewOnce,@JsonKey(name: 'view_once_opened_at') String? viewOnceOpenedAt,@JsonKey(name: 'sender_data') ParticipantData senderData,@JsonKey(name: 'reply_data') ReplyData? replyData, Map<String, int> reactions,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -3086,7 +3106,7 @@ class _$MessageCopyWithImpl<$Res>
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? conversationId = null,Object? senderId = null,Object? messageType = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? fileName = null,Object? replyToId = freezed,Object? metadata = null,Object? isRead = null,Object? deletedFor = null,Object? senderData = null,Object? replyData = freezed,Object? reactions = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? conversationId = null,Object? senderId = null,Object? messageType = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? fileName = null,Object? replyToId = freezed,Object? metadata = null,Object? isRead = null,Object? deletedFor = null,Object? viewOnce = null,Object? viewOnceOpenedAt = freezed,Object? senderData = null,Object? replyData = freezed,Object? reactions = null,Object? createdAt = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
@@ -3100,7 +3120,9 @@ as String,replyToId: freezed == replyToId ? _self.replyToId : replyToId // ignor
 as String?,metadata: null == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>,isRead: null == isRead ? _self.isRead : isRead // ignore: cast_nullable_to_non_nullable
 as bool,deletedFor: null == deletedFor ? _self.deletedFor : deletedFor // ignore: cast_nullable_to_non_nullable
-as List<String>,senderData: null == senderData ? _self.senderData : senderData // ignore: cast_nullable_to_non_nullable
+as List<String>,viewOnce: null == viewOnce ? _self.viewOnce : viewOnce // ignore: cast_nullable_to_non_nullable
+as bool,viewOnceOpenedAt: freezed == viewOnceOpenedAt ? _self.viewOnceOpenedAt : viewOnceOpenedAt // ignore: cast_nullable_to_non_nullable
+as String?,senderData: null == senderData ? _self.senderData : senderData // ignore: cast_nullable_to_non_nullable
 as ParticipantData,replyData: freezed == replyData ? _self.replyData : replyData // ignore: cast_nullable_to_non_nullable
 as ReplyData?,reactions: null == reactions ? _self.reactions : reactions // ignore: cast_nullable_to_non_nullable
 as Map<String, int>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
@@ -3210,10 +3232,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'sender_id')  String senderId, @JsonKey(name: 'message_type')  String messageType,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'file_name')  String fileName, @JsonKey(name: 'reply_to_id')  String? replyToId,  Map<String, dynamic> metadata, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'deleted_for')  List<String> deletedFor, @JsonKey(name: 'sender_data')  ParticipantData senderData, @JsonKey(name: 'reply_data')  ReplyData? replyData,  Map<String, int> reactions, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'sender_id')  String senderId, @JsonKey(name: 'message_type')  String messageType,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'file_name')  String fileName, @JsonKey(name: 'reply_to_id')  String? replyToId,  Map<String, dynamic> metadata, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'deleted_for')  List<String> deletedFor, @JsonKey(name: 'view_once')  bool viewOnce, @JsonKey(name: 'view_once_opened_at')  String? viewOnceOpenedAt, @JsonKey(name: 'sender_data')  ParticipantData senderData, @JsonKey(name: 'reply_data')  ReplyData? replyData,  Map<String, int> reactions, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
-return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata,_that.isRead,_that.deletedFor,_that.senderData,_that.replyData,_that.reactions,_that.createdAt);case _:
+return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata,_that.isRead,_that.deletedFor,_that.viewOnce,_that.viewOnceOpenedAt,_that.senderData,_that.replyData,_that.reactions,_that.createdAt);case _:
   return orElse();
 
 }
@@ -3231,10 +3253,10 @@ return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'sender_id')  String senderId, @JsonKey(name: 'message_type')  String messageType,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'file_name')  String fileName, @JsonKey(name: 'reply_to_id')  String? replyToId,  Map<String, dynamic> metadata, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'deleted_for')  List<String> deletedFor, @JsonKey(name: 'sender_data')  ParticipantData senderData, @JsonKey(name: 'reply_data')  ReplyData? replyData,  Map<String, int> reactions, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'sender_id')  String senderId, @JsonKey(name: 'message_type')  String messageType,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'file_name')  String fileName, @JsonKey(name: 'reply_to_id')  String? replyToId,  Map<String, dynamic> metadata, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'deleted_for')  List<String> deletedFor, @JsonKey(name: 'view_once')  bool viewOnce, @JsonKey(name: 'view_once_opened_at')  String? viewOnceOpenedAt, @JsonKey(name: 'sender_data')  ParticipantData senderData, @JsonKey(name: 'reply_data')  ReplyData? replyData,  Map<String, int> reactions, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
 switch (_that) {
 case _Message():
-return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata,_that.isRead,_that.deletedFor,_that.senderData,_that.replyData,_that.reactions,_that.createdAt);case _:
+return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata,_that.isRead,_that.deletedFor,_that.viewOnce,_that.viewOnceOpenedAt,_that.senderData,_that.replyData,_that.reactions,_that.createdAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -3251,10 +3273,10 @@ return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'sender_id')  String senderId, @JsonKey(name: 'message_type')  String messageType,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'file_name')  String fileName, @JsonKey(name: 'reply_to_id')  String? replyToId,  Map<String, dynamic> metadata, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'deleted_for')  List<String> deletedFor, @JsonKey(name: 'sender_data')  ParticipantData senderData, @JsonKey(name: 'reply_data')  ReplyData? replyData,  Map<String, int> reactions, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'sender_id')  String senderId, @JsonKey(name: 'message_type')  String messageType,  String body, @JsonKey(name: 'media_url')  String mediaUrl, @JsonKey(name: 'media_mime')  String mediaMime, @JsonKey(name: 'file_name')  String fileName, @JsonKey(name: 'reply_to_id')  String? replyToId,  Map<String, dynamic> metadata, @JsonKey(name: 'is_read')  bool isRead, @JsonKey(name: 'deleted_for')  List<String> deletedFor, @JsonKey(name: 'view_once')  bool viewOnce, @JsonKey(name: 'view_once_opened_at')  String? viewOnceOpenedAt, @JsonKey(name: 'sender_data')  ParticipantData senderData, @JsonKey(name: 'reply_data')  ReplyData? replyData,  Map<String, int> reactions, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Message() when $default != null:
-return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata,_that.isRead,_that.deletedFor,_that.senderData,_that.replyData,_that.reactions,_that.createdAt);case _:
+return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata,_that.isRead,_that.deletedFor,_that.viewOnce,_that.viewOnceOpenedAt,_that.senderData,_that.replyData,_that.reactions,_that.createdAt);case _:
   return null;
 
 }
@@ -3266,7 +3288,7 @@ return $default(_that.id,_that.conversationId,_that.senderId,_that.messageType,_
 @JsonSerializable()
 
 class _Message implements Message {
-  const _Message({required this.id, @JsonKey(name: 'conversation_id') required this.conversationId, @JsonKey(name: 'sender_id') required this.senderId, @JsonKey(name: 'message_type') this.messageType = 'text', this.body = '', @JsonKey(name: 'media_url') this.mediaUrl = '', @JsonKey(name: 'media_mime') this.mediaMime = '', @JsonKey(name: 'file_name') this.fileName = '', @JsonKey(name: 'reply_to_id') this.replyToId, final  Map<String, dynamic> metadata = const <String, dynamic>{}, @JsonKey(name: 'is_read') this.isRead = false, @JsonKey(name: 'deleted_for') final  List<String> deletedFor = const <String>[], @JsonKey(name: 'sender_data') required this.senderData, @JsonKey(name: 'reply_data') this.replyData, final  Map<String, int> reactions = const <String, int>{}, @JsonKey(name: 'created_at') this.createdAt = ''}): _metadata = metadata,_deletedFor = deletedFor,_reactions = reactions;
+  const _Message({required this.id, @JsonKey(name: 'conversation_id') required this.conversationId, @JsonKey(name: 'sender_id') required this.senderId, @JsonKey(name: 'message_type') this.messageType = 'text', this.body = '', @JsonKey(name: 'media_url') this.mediaUrl = '', @JsonKey(name: 'media_mime') this.mediaMime = '', @JsonKey(name: 'file_name') this.fileName = '', @JsonKey(name: 'reply_to_id') this.replyToId, final  Map<String, dynamic> metadata = const <String, dynamic>{}, @JsonKey(name: 'is_read') this.isRead = false, @JsonKey(name: 'deleted_for') final  List<String> deletedFor = const <String>[], @JsonKey(name: 'view_once') this.viewOnce = false, @JsonKey(name: 'view_once_opened_at') this.viewOnceOpenedAt, @JsonKey(name: 'sender_data') required this.senderData, @JsonKey(name: 'reply_data') this.replyData, final  Map<String, int> reactions = const <String, int>{}, @JsonKey(name: 'created_at') this.createdAt = ''}): _metadata = metadata,_deletedFor = deletedFor,_reactions = reactions;
   factory _Message.fromJson(Map<String, dynamic> json) => _$MessageFromJson(json);
 
 @override final  String id;
@@ -3293,6 +3315,10 @@ class _Message implements Message {
   return EqualUnmodifiableListView(_deletedFor);
 }
 
+/// View-once media: the recipient may open the payload exactly once,
+/// after which the serializer withholds the media URL from them.
+@override@JsonKey(name: 'view_once') final  bool viewOnce;
+@override@JsonKey(name: 'view_once_opened_at') final  String? viewOnceOpenedAt;
 @override@JsonKey(name: 'sender_data') final  ParticipantData senderData;
 @override@JsonKey(name: 'reply_data') final  ReplyData? replyData;
  final  Map<String, int> _reactions;
@@ -3317,16 +3343,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Message&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.messageType, messageType) || other.messageType == messageType)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&const DeepCollectionEquality().equals(other._metadata, _metadata)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&const DeepCollectionEquality().equals(other._deletedFor, _deletedFor)&&(identical(other.senderData, senderData) || other.senderData == senderData)&&(identical(other.replyData, replyData) || other.replyData == replyData)&&const DeepCollectionEquality().equals(other._reactions, _reactions)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Message&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.messageType, messageType) || other.messageType == messageType)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&const DeepCollectionEquality().equals(other._metadata, _metadata)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&const DeepCollectionEquality().equals(other._deletedFor, _deletedFor)&&(identical(other.viewOnce, viewOnce) || other.viewOnce == viewOnce)&&(identical(other.viewOnceOpenedAt, viewOnceOpenedAt) || other.viewOnceOpenedAt == viewOnceOpenedAt)&&(identical(other.senderData, senderData) || other.senderData == senderData)&&(identical(other.replyData, replyData) || other.replyData == replyData)&&const DeepCollectionEquality().equals(other._reactions, _reactions)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,conversationId,senderId,messageType,body,mediaUrl,mediaMime,fileName,replyToId,const DeepCollectionEquality().hash(_metadata),isRead,const DeepCollectionEquality().hash(_deletedFor),senderData,replyData,const DeepCollectionEquality().hash(_reactions),createdAt);
+int get hashCode => Object.hash(runtimeType,id,conversationId,senderId,messageType,body,mediaUrl,mediaMime,fileName,replyToId,const DeepCollectionEquality().hash(_metadata),isRead,const DeepCollectionEquality().hash(_deletedFor),viewOnce,viewOnceOpenedAt,senderData,replyData,const DeepCollectionEquality().hash(_reactions),createdAt);
 
 @override
 String toString() {
-  return 'Message(id: $id, conversationId: $conversationId, senderId: $senderId, messageType: $messageType, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, fileName: $fileName, replyToId: $replyToId, metadata: $metadata, isRead: $isRead, deletedFor: $deletedFor, senderData: $senderData, replyData: $replyData, reactions: $reactions, createdAt: $createdAt)';
+  return 'Message(id: $id, conversationId: $conversationId, senderId: $senderId, messageType: $messageType, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, fileName: $fileName, replyToId: $replyToId, metadata: $metadata, isRead: $isRead, deletedFor: $deletedFor, viewOnce: $viewOnce, viewOnceOpenedAt: $viewOnceOpenedAt, senderData: $senderData, replyData: $replyData, reactions: $reactions, createdAt: $createdAt)';
 }
 
 
@@ -3337,7 +3363,7 @@ abstract mixin class _$MessageCopyWith<$Res> implements $MessageCopyWith<$Res> {
   factory _$MessageCopyWith(_Message value, $Res Function(_Message) _then) = __$MessageCopyWithImpl;
 @override @useResult
 $Res call({
- String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'sender_id') String senderId,@JsonKey(name: 'message_type') String messageType, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'file_name') String fileName,@JsonKey(name: 'reply_to_id') String? replyToId, Map<String, dynamic> metadata,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'deleted_for') List<String> deletedFor,@JsonKey(name: 'sender_data') ParticipantData senderData,@JsonKey(name: 'reply_data') ReplyData? replyData, Map<String, int> reactions,@JsonKey(name: 'created_at') String createdAt
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'sender_id') String senderId,@JsonKey(name: 'message_type') String messageType, String body,@JsonKey(name: 'media_url') String mediaUrl,@JsonKey(name: 'media_mime') String mediaMime,@JsonKey(name: 'file_name') String fileName,@JsonKey(name: 'reply_to_id') String? replyToId, Map<String, dynamic> metadata,@JsonKey(name: 'is_read') bool isRead,@JsonKey(name: 'deleted_for') List<String> deletedFor,@JsonKey(name: 'view_once') bool viewOnce,@JsonKey(name: 'view_once_opened_at') String? viewOnceOpenedAt,@JsonKey(name: 'sender_data') ParticipantData senderData,@JsonKey(name: 'reply_data') ReplyData? replyData, Map<String, int> reactions,@JsonKey(name: 'created_at') String createdAt
 });
 
 
@@ -3354,7 +3380,7 @@ class __$MessageCopyWithImpl<$Res>
 
 /// Create a copy of Message
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? conversationId = null,Object? senderId = null,Object? messageType = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? fileName = null,Object? replyToId = freezed,Object? metadata = null,Object? isRead = null,Object? deletedFor = null,Object? senderData = null,Object? replyData = freezed,Object? reactions = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? conversationId = null,Object? senderId = null,Object? messageType = null,Object? body = null,Object? mediaUrl = null,Object? mediaMime = null,Object? fileName = null,Object? replyToId = freezed,Object? metadata = null,Object? isRead = null,Object? deletedFor = null,Object? viewOnce = null,Object? viewOnceOpenedAt = freezed,Object? senderData = null,Object? replyData = freezed,Object? reactions = null,Object? createdAt = null,}) {
   return _then(_Message(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
@@ -3368,7 +3394,9 @@ as String,replyToId: freezed == replyToId ? _self.replyToId : replyToId // ignor
 as String?,metadata: null == metadata ? _self._metadata : metadata // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>,isRead: null == isRead ? _self.isRead : isRead // ignore: cast_nullable_to_non_nullable
 as bool,deletedFor: null == deletedFor ? _self._deletedFor : deletedFor // ignore: cast_nullable_to_non_nullable
-as List<String>,senderData: null == senderData ? _self.senderData : senderData // ignore: cast_nullable_to_non_nullable
+as List<String>,viewOnce: null == viewOnce ? _self.viewOnce : viewOnce // ignore: cast_nullable_to_non_nullable
+as bool,viewOnceOpenedAt: freezed == viewOnceOpenedAt ? _self.viewOnceOpenedAt : viewOnceOpenedAt // ignore: cast_nullable_to_non_nullable
+as String?,senderData: null == senderData ? _self.senderData : senderData // ignore: cast_nullable_to_non_nullable
 as ParticipantData,replyData: freezed == replyData ? _self.replyData : replyData // ignore: cast_nullable_to_non_nullable
 as ReplyData?,reactions: null == reactions ? _self._reactions : reactions // ignore: cast_nullable_to_non_nullable
 as Map<String, int>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
@@ -3699,6 +3727,1159 @@ as Map<String, dynamic>,calleeData: null == calleeData ? _self._calleeData : cal
 as Map<String, dynamic>,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
 as String,endedAt: freezed == endedAt ? _self.endedAt : endedAt // ignore: cast_nullable_to_non_nullable
 as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$Story {
+
+ String get id; String get body;@JsonKey(name: 'media_urls') List<String> get mediaUrls; String get visibility;@JsonKey(name: 'created_at') String get createdAt;
+/// Create a copy of Story
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$StoryCopyWith<Story> get copyWith => _$StoryCopyWithImpl<Story>(this as Story, _$identity);
+
+  /// Serializes this Story to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Story&&(identical(other.id, id) || other.id == id)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other.mediaUrls, mediaUrls)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,body,const DeepCollectionEquality().hash(mediaUrls),visibility,createdAt);
+
+@override
+String toString() {
+  return 'Story(id: $id, body: $body, mediaUrls: $mediaUrls, visibility: $visibility, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $StoryCopyWith<$Res>  {
+  factory $StoryCopyWith(Story value, $Res Function(Story) _then) = _$StoryCopyWithImpl;
+@useResult
+$Res call({
+ String id, String body,@JsonKey(name: 'media_urls') List<String> mediaUrls, String visibility,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$StoryCopyWithImpl<$Res>
+    implements $StoryCopyWith<$Res> {
+  _$StoryCopyWithImpl(this._self, this._then);
+
+  final Story _self;
+  final $Res Function(Story) _then;
+
+/// Create a copy of Story
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? body = null,Object? mediaUrls = null,Object? visibility = null,Object? createdAt = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,mediaUrls: null == mediaUrls ? _self.mediaUrls : mediaUrls // ignore: cast_nullable_to_non_nullable
+as List<String>,visibility: null == visibility ? _self.visibility : visibility // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [Story].
+extension StoryPatterns on Story {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _Story value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _Story() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _Story value)  $default,){
+final _that = this;
+switch (_that) {
+case _Story():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _Story value)?  $default,){
+final _that = this;
+switch (_that) {
+case _Story() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  String visibility, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _Story() when $default != null:
+return $default(_that.id,_that.body,_that.mediaUrls,_that.visibility,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  String visibility, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _Story():
+return $default(_that.id,_that.body,_that.mediaUrls,_that.visibility,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String body, @JsonKey(name: 'media_urls')  List<String> mediaUrls,  String visibility, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _Story() when $default != null:
+return $default(_that.id,_that.body,_that.mediaUrls,_that.visibility,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _Story implements Story {
+  const _Story({required this.id, this.body = '', @JsonKey(name: 'media_urls') final  List<String> mediaUrls = const <String>[], this.visibility = 'public', @JsonKey(name: 'created_at') this.createdAt = ''}): _mediaUrls = mediaUrls;
+  factory _Story.fromJson(Map<String, dynamic> json) => _$StoryFromJson(json);
+
+@override final  String id;
+@override@JsonKey() final  String body;
+ final  List<String> _mediaUrls;
+@override@JsonKey(name: 'media_urls') List<String> get mediaUrls {
+  if (_mediaUrls is EqualUnmodifiableListView) return _mediaUrls;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_mediaUrls);
+}
+
+@override@JsonKey() final  String visibility;
+@override@JsonKey(name: 'created_at') final  String createdAt;
+
+/// Create a copy of Story
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$StoryCopyWith<_Story> get copyWith => __$StoryCopyWithImpl<_Story>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$StoryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Story&&(identical(other.id, id) || other.id == id)&&(identical(other.body, body) || other.body == body)&&const DeepCollectionEquality().equals(other._mediaUrls, _mediaUrls)&&(identical(other.visibility, visibility) || other.visibility == visibility)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,body,const DeepCollectionEquality().hash(_mediaUrls),visibility,createdAt);
+
+@override
+String toString() {
+  return 'Story(id: $id, body: $body, mediaUrls: $mediaUrls, visibility: $visibility, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$StoryCopyWith<$Res> implements $StoryCopyWith<$Res> {
+  factory _$StoryCopyWith(_Story value, $Res Function(_Story) _then) = __$StoryCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String body,@JsonKey(name: 'media_urls') List<String> mediaUrls, String visibility,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$StoryCopyWithImpl<$Res>
+    implements _$StoryCopyWith<$Res> {
+  __$StoryCopyWithImpl(this._self, this._then);
+
+  final _Story _self;
+  final $Res Function(_Story) _then;
+
+/// Create a copy of Story
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? body = null,Object? mediaUrls = null,Object? visibility = null,Object? createdAt = null,}) {
+  return _then(_Story(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,body: null == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
+as String,mediaUrls: null == mediaUrls ? _self._mediaUrls : mediaUrls // ignore: cast_nullable_to_non_nullable
+as List<String>,visibility: null == visibility ? _self.visibility : visibility // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$StoryAuthor {
+
+@JsonKey(name: 'user_id') String get userId; String get username;@JsonKey(name: 'display_name') String get displayName;@JsonKey(name: 'avatar_url') String get avatarUrl;@JsonKey(name: 'verification_status') String get verificationStatus;
+/// Create a copy of StoryAuthor
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$StoryAuthorCopyWith<StoryAuthor> get copyWith => _$StoryAuthorCopyWithImpl<StoryAuthor>(this as StoryAuthor, _$identity);
+
+  /// Serializes this StoryAuthor to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StoryAuthor&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,verificationStatus);
+
+@override
+String toString() {
+  return 'StoryAuthor(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, verificationStatus: $verificationStatus)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $StoryAuthorCopyWith<$Res>  {
+  factory $StoryAuthorCopyWith(StoryAuthor value, $Res Function(StoryAuthor) _then) = _$StoryAuthorCopyWithImpl;
+@useResult
+$Res call({
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus
+});
+
+
+
+
+}
+/// @nodoc
+class _$StoryAuthorCopyWithImpl<$Res>
+    implements $StoryAuthorCopyWith<$Res> {
+  _$StoryAuthorCopyWithImpl(this._self, this._then);
+
+  final StoryAuthor _self;
+  final $Res Function(StoryAuthor) _then;
+
+/// Create a copy of StoryAuthor
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? verificationStatus = null,}) {
+  return _then(_self.copyWith(
+userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [StoryAuthor].
+extension StoryAuthorPatterns on StoryAuthor {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _StoryAuthor value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _StoryAuthor() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _StoryAuthor value)  $default,){
+final _that = this;
+switch (_that) {
+case _StoryAuthor():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _StoryAuthor value)?  $default,){
+final _that = this;
+switch (_that) {
+case _StoryAuthor() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _StoryAuthor() when $default != null:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus)  $default,) {final _that = this;
+switch (_that) {
+case _StoryAuthor():
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(name: 'user_id')  String userId,  String username, @JsonKey(name: 'display_name')  String displayName, @JsonKey(name: 'avatar_url')  String avatarUrl, @JsonKey(name: 'verification_status')  String verificationStatus)?  $default,) {final _that = this;
+switch (_that) {
+case _StoryAuthor() when $default != null:
+return $default(_that.userId,_that.username,_that.displayName,_that.avatarUrl,_that.verificationStatus);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _StoryAuthor implements StoryAuthor {
+  const _StoryAuthor({@JsonKey(name: 'user_id') this.userId = '', this.username = '', @JsonKey(name: 'display_name') this.displayName = '', @JsonKey(name: 'avatar_url') this.avatarUrl = '', @JsonKey(name: 'verification_status') this.verificationStatus = 'none'});
+  factory _StoryAuthor.fromJson(Map<String, dynamic> json) => _$StoryAuthorFromJson(json);
+
+@override@JsonKey(name: 'user_id') final  String userId;
+@override@JsonKey() final  String username;
+@override@JsonKey(name: 'display_name') final  String displayName;
+@override@JsonKey(name: 'avatar_url') final  String avatarUrl;
+@override@JsonKey(name: 'verification_status') final  String verificationStatus;
+
+/// Create a copy of StoryAuthor
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$StoryAuthorCopyWith<_StoryAuthor> get copyWith => __$StoryAuthorCopyWithImpl<_StoryAuthor>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$StoryAuthorToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StoryAuthor&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.username, username) || other.username == username)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl)&&(identical(other.verificationStatus, verificationStatus) || other.verificationStatus == verificationStatus));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,userId,username,displayName,avatarUrl,verificationStatus);
+
+@override
+String toString() {
+  return 'StoryAuthor(userId: $userId, username: $username, displayName: $displayName, avatarUrl: $avatarUrl, verificationStatus: $verificationStatus)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$StoryAuthorCopyWith<$Res> implements $StoryAuthorCopyWith<$Res> {
+  factory _$StoryAuthorCopyWith(_StoryAuthor value, $Res Function(_StoryAuthor) _then) = __$StoryAuthorCopyWithImpl;
+@override @useResult
+$Res call({
+@JsonKey(name: 'user_id') String userId, String username,@JsonKey(name: 'display_name') String displayName,@JsonKey(name: 'avatar_url') String avatarUrl,@JsonKey(name: 'verification_status') String verificationStatus
+});
+
+
+
+
+}
+/// @nodoc
+class __$StoryAuthorCopyWithImpl<$Res>
+    implements _$StoryAuthorCopyWith<$Res> {
+  __$StoryAuthorCopyWithImpl(this._self, this._then);
+
+  final _StoryAuthor _self;
+  final $Res Function(_StoryAuthor) _then;
+
+/// Create a copy of StoryAuthor
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? username = null,Object? displayName = null,Object? avatarUrl = null,Object? verificationStatus = null,}) {
+  return _then(_StoryAuthor(
+userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,username: null == username ? _self.username : username // ignore: cast_nullable_to_non_nullable
+as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
+as String,avatarUrl: null == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String,verificationStatus: null == verificationStatus ? _self.verificationStatus : verificationStatus // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$StoryReel {
+
+ StoryAuthor get user; List<Story> get stories;@JsonKey(name: 'latest_at') String get latestAt;
+/// Create a copy of StoryReel
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$StoryReelCopyWith<StoryReel> get copyWith => _$StoryReelCopyWithImpl<StoryReel>(this as StoryReel, _$identity);
+
+  /// Serializes this StoryReel to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StoryReel&&(identical(other.user, user) || other.user == user)&&const DeepCollectionEquality().equals(other.stories, stories)&&(identical(other.latestAt, latestAt) || other.latestAt == latestAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,user,const DeepCollectionEquality().hash(stories),latestAt);
+
+@override
+String toString() {
+  return 'StoryReel(user: $user, stories: $stories, latestAt: $latestAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $StoryReelCopyWith<$Res>  {
+  factory $StoryReelCopyWith(StoryReel value, $Res Function(StoryReel) _then) = _$StoryReelCopyWithImpl;
+@useResult
+$Res call({
+ StoryAuthor user, List<Story> stories,@JsonKey(name: 'latest_at') String latestAt
+});
+
+
+$StoryAuthorCopyWith<$Res> get user;
+
+}
+/// @nodoc
+class _$StoryReelCopyWithImpl<$Res>
+    implements $StoryReelCopyWith<$Res> {
+  _$StoryReelCopyWithImpl(this._self, this._then);
+
+  final StoryReel _self;
+  final $Res Function(StoryReel) _then;
+
+/// Create a copy of StoryReel
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? user = null,Object? stories = null,Object? latestAt = null,}) {
+  return _then(_self.copyWith(
+user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
+as StoryAuthor,stories: null == stories ? _self.stories : stories // ignore: cast_nullable_to_non_nullable
+as List<Story>,latestAt: null == latestAt ? _self.latestAt : latestAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+/// Create a copy of StoryReel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$StoryAuthorCopyWith<$Res> get user {
+  
+  return $StoryAuthorCopyWith<$Res>(_self.user, (value) {
+    return _then(_self.copyWith(user: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [StoryReel].
+extension StoryReelPatterns on StoryReel {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _StoryReel value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _StoryReel() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _StoryReel value)  $default,){
+final _that = this;
+switch (_that) {
+case _StoryReel():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _StoryReel value)?  $default,){
+final _that = this;
+switch (_that) {
+case _StoryReel() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( StoryAuthor user,  List<Story> stories, @JsonKey(name: 'latest_at')  String latestAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _StoryReel() when $default != null:
+return $default(_that.user,_that.stories,_that.latestAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( StoryAuthor user,  List<Story> stories, @JsonKey(name: 'latest_at')  String latestAt)  $default,) {final _that = this;
+switch (_that) {
+case _StoryReel():
+return $default(_that.user,_that.stories,_that.latestAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( StoryAuthor user,  List<Story> stories, @JsonKey(name: 'latest_at')  String latestAt)?  $default,) {final _that = this;
+switch (_that) {
+case _StoryReel() when $default != null:
+return $default(_that.user,_that.stories,_that.latestAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _StoryReel implements StoryReel {
+  const _StoryReel({required this.user, final  List<Story> stories = const <Story>[], @JsonKey(name: 'latest_at') this.latestAt = ''}): _stories = stories;
+  factory _StoryReel.fromJson(Map<String, dynamic> json) => _$StoryReelFromJson(json);
+
+@override final  StoryAuthor user;
+ final  List<Story> _stories;
+@override@JsonKey() List<Story> get stories {
+  if (_stories is EqualUnmodifiableListView) return _stories;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_stories);
+}
+
+@override@JsonKey(name: 'latest_at') final  String latestAt;
+
+/// Create a copy of StoryReel
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$StoryReelCopyWith<_StoryReel> get copyWith => __$StoryReelCopyWithImpl<_StoryReel>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$StoryReelToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _StoryReel&&(identical(other.user, user) || other.user == user)&&const DeepCollectionEquality().equals(other._stories, _stories)&&(identical(other.latestAt, latestAt) || other.latestAt == latestAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,user,const DeepCollectionEquality().hash(_stories),latestAt);
+
+@override
+String toString() {
+  return 'StoryReel(user: $user, stories: $stories, latestAt: $latestAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$StoryReelCopyWith<$Res> implements $StoryReelCopyWith<$Res> {
+  factory _$StoryReelCopyWith(_StoryReel value, $Res Function(_StoryReel) _then) = __$StoryReelCopyWithImpl;
+@override @useResult
+$Res call({
+ StoryAuthor user, List<Story> stories,@JsonKey(name: 'latest_at') String latestAt
+});
+
+
+@override $StoryAuthorCopyWith<$Res> get user;
+
+}
+/// @nodoc
+class __$StoryReelCopyWithImpl<$Res>
+    implements _$StoryReelCopyWith<$Res> {
+  __$StoryReelCopyWithImpl(this._self, this._then);
+
+  final _StoryReel _self;
+  final $Res Function(_StoryReel) _then;
+
+/// Create a copy of StoryReel
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? user = null,Object? stories = null,Object? latestAt = null,}) {
+  return _then(_StoryReel(
+user: null == user ? _self.user : user // ignore: cast_nullable_to_non_nullable
+as StoryAuthor,stories: null == stories ? _self._stories : stories // ignore: cast_nullable_to_non_nullable
+as List<Story>,latestAt: null == latestAt ? _self.latestAt : latestAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+/// Create a copy of StoryReel
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$StoryAuthorCopyWith<$Res> get user {
+  
+  return $StoryAuthorCopyWith<$Res>(_self.user, (value) {
+    return _then(_self.copyWith(user: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$CallHistoryEntry {
+
+ String get id;@JsonKey(name: 'conversation_id') String get conversationId;@JsonKey(name: 'conversation_label') String get conversationLabel;@JsonKey(name: 'counterpart_name') String get counterpartName;@JsonKey(name: 'counterpart_username') String get counterpartUsername;@JsonKey(name: 'counterpart_avatar_url') String get counterpartAvatarUrl;@JsonKey(name: 'call_type') String get callType; String get status;@JsonKey(name: 'duration_seconds') int get durationSeconds;@JsonKey(name: 'is_outgoing') bool get isOutgoing;@JsonKey(name: 'active_call') Map<String, dynamic>? get activeCall;@JsonKey(name: 'created_at') String get createdAt;
+/// Create a copy of CallHistoryEntry
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CallHistoryEntryCopyWith<CallHistoryEntry> get copyWith => _$CallHistoryEntryCopyWithImpl<CallHistoryEntry>(this as CallHistoryEntry, _$identity);
+
+  /// Serializes this CallHistoryEntry to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CallHistoryEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.conversationLabel, conversationLabel) || other.conversationLabel == conversationLabel)&&(identical(other.counterpartName, counterpartName) || other.counterpartName == counterpartName)&&(identical(other.counterpartUsername, counterpartUsername) || other.counterpartUsername == counterpartUsername)&&(identical(other.counterpartAvatarUrl, counterpartAvatarUrl) || other.counterpartAvatarUrl == counterpartAvatarUrl)&&(identical(other.callType, callType) || other.callType == callType)&&(identical(other.status, status) || other.status == status)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.isOutgoing, isOutgoing) || other.isOutgoing == isOutgoing)&&const DeepCollectionEquality().equals(other.activeCall, activeCall)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,conversationId,conversationLabel,counterpartName,counterpartUsername,counterpartAvatarUrl,callType,status,durationSeconds,isOutgoing,const DeepCollectionEquality().hash(activeCall),createdAt);
+
+@override
+String toString() {
+  return 'CallHistoryEntry(id: $id, conversationId: $conversationId, conversationLabel: $conversationLabel, counterpartName: $counterpartName, counterpartUsername: $counterpartUsername, counterpartAvatarUrl: $counterpartAvatarUrl, callType: $callType, status: $status, durationSeconds: $durationSeconds, isOutgoing: $isOutgoing, activeCall: $activeCall, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CallHistoryEntryCopyWith<$Res>  {
+  factory $CallHistoryEntryCopyWith(CallHistoryEntry value, $Res Function(CallHistoryEntry) _then) = _$CallHistoryEntryCopyWithImpl;
+@useResult
+$Res call({
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'conversation_label') String conversationLabel,@JsonKey(name: 'counterpart_name') String counterpartName,@JsonKey(name: 'counterpart_username') String counterpartUsername,@JsonKey(name: 'counterpart_avatar_url') String counterpartAvatarUrl,@JsonKey(name: 'call_type') String callType, String status,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'is_outgoing') bool isOutgoing,@JsonKey(name: 'active_call') Map<String, dynamic>? activeCall,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$CallHistoryEntryCopyWithImpl<$Res>
+    implements $CallHistoryEntryCopyWith<$Res> {
+  _$CallHistoryEntryCopyWithImpl(this._self, this._then);
+
+  final CallHistoryEntry _self;
+  final $Res Function(CallHistoryEntry) _then;
+
+/// Create a copy of CallHistoryEntry
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? conversationId = null,Object? conversationLabel = null,Object? counterpartName = null,Object? counterpartUsername = null,Object? counterpartAvatarUrl = null,Object? callType = null,Object? status = null,Object? durationSeconds = null,Object? isOutgoing = null,Object? activeCall = freezed,Object? createdAt = null,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
+as String,conversationLabel: null == conversationLabel ? _self.conversationLabel : conversationLabel // ignore: cast_nullable_to_non_nullable
+as String,counterpartName: null == counterpartName ? _self.counterpartName : counterpartName // ignore: cast_nullable_to_non_nullable
+as String,counterpartUsername: null == counterpartUsername ? _self.counterpartUsername : counterpartUsername // ignore: cast_nullable_to_non_nullable
+as String,counterpartAvatarUrl: null == counterpartAvatarUrl ? _self.counterpartAvatarUrl : counterpartAvatarUrl // ignore: cast_nullable_to_non_nullable
+as String,callType: null == callType ? _self.callType : callType // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,durationSeconds: null == durationSeconds ? _self.durationSeconds : durationSeconds // ignore: cast_nullable_to_non_nullable
+as int,isOutgoing: null == isOutgoing ? _self.isOutgoing : isOutgoing // ignore: cast_nullable_to_non_nullable
+as bool,activeCall: freezed == activeCall ? _self.activeCall : activeCall // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CallHistoryEntry].
+extension CallHistoryEntryPatterns on CallHistoryEntry {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CallHistoryEntry value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CallHistoryEntry() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CallHistoryEntry value)  $default,){
+final _that = this;
+switch (_that) {
+case _CallHistoryEntry():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CallHistoryEntry value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CallHistoryEntry() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'conversation_label')  String conversationLabel, @JsonKey(name: 'counterpart_name')  String counterpartName, @JsonKey(name: 'counterpart_username')  String counterpartUsername, @JsonKey(name: 'counterpart_avatar_url')  String counterpartAvatarUrl, @JsonKey(name: 'call_type')  String callType,  String status, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'is_outgoing')  bool isOutgoing, @JsonKey(name: 'active_call')  Map<String, dynamic>? activeCall, @JsonKey(name: 'created_at')  String createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CallHistoryEntry() when $default != null:
+return $default(_that.id,_that.conversationId,_that.conversationLabel,_that.counterpartName,_that.counterpartUsername,_that.counterpartAvatarUrl,_that.callType,_that.status,_that.durationSeconds,_that.isOutgoing,_that.activeCall,_that.createdAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'conversation_label')  String conversationLabel, @JsonKey(name: 'counterpart_name')  String counterpartName, @JsonKey(name: 'counterpart_username')  String counterpartUsername, @JsonKey(name: 'counterpart_avatar_url')  String counterpartAvatarUrl, @JsonKey(name: 'call_type')  String callType,  String status, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'is_outgoing')  bool isOutgoing, @JsonKey(name: 'active_call')  Map<String, dynamic>? activeCall, @JsonKey(name: 'created_at')  String createdAt)  $default,) {final _that = this;
+switch (_that) {
+case _CallHistoryEntry():
+return $default(_that.id,_that.conversationId,_that.conversationLabel,_that.counterpartName,_that.counterpartUsername,_that.counterpartAvatarUrl,_that.callType,_that.status,_that.durationSeconds,_that.isOutgoing,_that.activeCall,_that.createdAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id, @JsonKey(name: 'conversation_id')  String conversationId, @JsonKey(name: 'conversation_label')  String conversationLabel, @JsonKey(name: 'counterpart_name')  String counterpartName, @JsonKey(name: 'counterpart_username')  String counterpartUsername, @JsonKey(name: 'counterpart_avatar_url')  String counterpartAvatarUrl, @JsonKey(name: 'call_type')  String callType,  String status, @JsonKey(name: 'duration_seconds')  int durationSeconds, @JsonKey(name: 'is_outgoing')  bool isOutgoing, @JsonKey(name: 'active_call')  Map<String, dynamic>? activeCall, @JsonKey(name: 'created_at')  String createdAt)?  $default,) {final _that = this;
+switch (_that) {
+case _CallHistoryEntry() when $default != null:
+return $default(_that.id,_that.conversationId,_that.conversationLabel,_that.counterpartName,_that.counterpartUsername,_that.counterpartAvatarUrl,_that.callType,_that.status,_that.durationSeconds,_that.isOutgoing,_that.activeCall,_that.createdAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CallHistoryEntry implements CallHistoryEntry {
+  const _CallHistoryEntry({required this.id, @JsonKey(name: 'conversation_id') this.conversationId = '', @JsonKey(name: 'conversation_label') this.conversationLabel = 'Conversation', @JsonKey(name: 'counterpart_name') this.counterpartName = '', @JsonKey(name: 'counterpart_username') this.counterpartUsername = '', @JsonKey(name: 'counterpart_avatar_url') this.counterpartAvatarUrl = '', @JsonKey(name: 'call_type') this.callType = 'audio', this.status = '', @JsonKey(name: 'duration_seconds') this.durationSeconds = 0, @JsonKey(name: 'is_outgoing') this.isOutgoing = false, @JsonKey(name: 'active_call') final  Map<String, dynamic>? activeCall, @JsonKey(name: 'created_at') this.createdAt = ''}): _activeCall = activeCall;
+  factory _CallHistoryEntry.fromJson(Map<String, dynamic> json) => _$CallHistoryEntryFromJson(json);
+
+@override final  String id;
+@override@JsonKey(name: 'conversation_id') final  String conversationId;
+@override@JsonKey(name: 'conversation_label') final  String conversationLabel;
+@override@JsonKey(name: 'counterpart_name') final  String counterpartName;
+@override@JsonKey(name: 'counterpart_username') final  String counterpartUsername;
+@override@JsonKey(name: 'counterpart_avatar_url') final  String counterpartAvatarUrl;
+@override@JsonKey(name: 'call_type') final  String callType;
+@override@JsonKey() final  String status;
+@override@JsonKey(name: 'duration_seconds') final  int durationSeconds;
+@override@JsonKey(name: 'is_outgoing') final  bool isOutgoing;
+ final  Map<String, dynamic>? _activeCall;
+@override@JsonKey(name: 'active_call') Map<String, dynamic>? get activeCall {
+  final value = _activeCall;
+  if (value == null) return null;
+  if (_activeCall is EqualUnmodifiableMapView) return _activeCall;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableMapView(value);
+}
+
+@override@JsonKey(name: 'created_at') final  String createdAt;
+
+/// Create a copy of CallHistoryEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CallHistoryEntryCopyWith<_CallHistoryEntry> get copyWith => __$CallHistoryEntryCopyWithImpl<_CallHistoryEntry>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CallHistoryEntryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CallHistoryEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.conversationLabel, conversationLabel) || other.conversationLabel == conversationLabel)&&(identical(other.counterpartName, counterpartName) || other.counterpartName == counterpartName)&&(identical(other.counterpartUsername, counterpartUsername) || other.counterpartUsername == counterpartUsername)&&(identical(other.counterpartAvatarUrl, counterpartAvatarUrl) || other.counterpartAvatarUrl == counterpartAvatarUrl)&&(identical(other.callType, callType) || other.callType == callType)&&(identical(other.status, status) || other.status == status)&&(identical(other.durationSeconds, durationSeconds) || other.durationSeconds == durationSeconds)&&(identical(other.isOutgoing, isOutgoing) || other.isOutgoing == isOutgoing)&&const DeepCollectionEquality().equals(other._activeCall, _activeCall)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,conversationId,conversationLabel,counterpartName,counterpartUsername,counterpartAvatarUrl,callType,status,durationSeconds,isOutgoing,const DeepCollectionEquality().hash(_activeCall),createdAt);
+
+@override
+String toString() {
+  return 'CallHistoryEntry(id: $id, conversationId: $conversationId, conversationLabel: $conversationLabel, counterpartName: $counterpartName, counterpartUsername: $counterpartUsername, counterpartAvatarUrl: $counterpartAvatarUrl, callType: $callType, status: $status, durationSeconds: $durationSeconds, isOutgoing: $isOutgoing, activeCall: $activeCall, createdAt: $createdAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CallHistoryEntryCopyWith<$Res> implements $CallHistoryEntryCopyWith<$Res> {
+  factory _$CallHistoryEntryCopyWith(_CallHistoryEntry value, $Res Function(_CallHistoryEntry) _then) = __$CallHistoryEntryCopyWithImpl;
+@override @useResult
+$Res call({
+ String id,@JsonKey(name: 'conversation_id') String conversationId,@JsonKey(name: 'conversation_label') String conversationLabel,@JsonKey(name: 'counterpart_name') String counterpartName,@JsonKey(name: 'counterpart_username') String counterpartUsername,@JsonKey(name: 'counterpart_avatar_url') String counterpartAvatarUrl,@JsonKey(name: 'call_type') String callType, String status,@JsonKey(name: 'duration_seconds') int durationSeconds,@JsonKey(name: 'is_outgoing') bool isOutgoing,@JsonKey(name: 'active_call') Map<String, dynamic>? activeCall,@JsonKey(name: 'created_at') String createdAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$CallHistoryEntryCopyWithImpl<$Res>
+    implements _$CallHistoryEntryCopyWith<$Res> {
+  __$CallHistoryEntryCopyWithImpl(this._self, this._then);
+
+  final _CallHistoryEntry _self;
+  final $Res Function(_CallHistoryEntry) _then;
+
+/// Create a copy of CallHistoryEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? conversationId = null,Object? conversationLabel = null,Object? counterpartName = null,Object? counterpartUsername = null,Object? counterpartAvatarUrl = null,Object? callType = null,Object? status = null,Object? durationSeconds = null,Object? isOutgoing = null,Object? activeCall = freezed,Object? createdAt = null,}) {
+  return _then(_CallHistoryEntry(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
+as String,conversationLabel: null == conversationLabel ? _self.conversationLabel : conversationLabel // ignore: cast_nullable_to_non_nullable
+as String,counterpartName: null == counterpartName ? _self.counterpartName : counterpartName // ignore: cast_nullable_to_non_nullable
+as String,counterpartUsername: null == counterpartUsername ? _self.counterpartUsername : counterpartUsername // ignore: cast_nullable_to_non_nullable
+as String,counterpartAvatarUrl: null == counterpartAvatarUrl ? _self.counterpartAvatarUrl : counterpartAvatarUrl // ignore: cast_nullable_to_non_nullable
+as String,callType: null == callType ? _self.callType : callType // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,durationSeconds: null == durationSeconds ? _self.durationSeconds : durationSeconds // ignore: cast_nullable_to_non_nullable
+as int,isOutgoing: null == isOutgoing ? _self.isOutgoing : isOutgoing // ignore: cast_nullable_to_non_nullable
+as bool,activeCall: freezed == activeCall ? _self._activeCall : activeCall // ignore: cast_nullable_to_non_nullable
+as Map<String, dynamic>?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,
   ));
 }
 
@@ -4271,7 +5452,7 @@ as Map<String, dynamic>,
 /// @nodoc
 mixin _$SendMessagePayload {
 
- String get messageType; String? get body; String? get mediaUrl; String? get mediaMime; String? get fileName; String? get replyToId; Map<String, dynamic> get metadata;
+ String get messageType; String? get body; String? get mediaUrl; String? get mediaMime; String? get fileName; String? get replyToId;@JsonKey(name: 'view_once') bool get viewOnce; Map<String, dynamic> get metadata;
 /// Create a copy of SendMessagePayload
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -4284,16 +5465,16 @@ $SendMessagePayloadCopyWith<SendMessagePayload> get copyWith => _$SendMessagePay
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SendMessagePayload&&(identical(other.messageType, messageType) || other.messageType == messageType)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&const DeepCollectionEquality().equals(other.metadata, metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SendMessagePayload&&(identical(other.messageType, messageType) || other.messageType == messageType)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&(identical(other.viewOnce, viewOnce) || other.viewOnce == viewOnce)&&const DeepCollectionEquality().equals(other.metadata, metadata));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,messageType,body,mediaUrl,mediaMime,fileName,replyToId,const DeepCollectionEquality().hash(metadata));
+int get hashCode => Object.hash(runtimeType,messageType,body,mediaUrl,mediaMime,fileName,replyToId,viewOnce,const DeepCollectionEquality().hash(metadata));
 
 @override
 String toString() {
-  return 'SendMessagePayload(messageType: $messageType, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, fileName: $fileName, replyToId: $replyToId, metadata: $metadata)';
+  return 'SendMessagePayload(messageType: $messageType, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, fileName: $fileName, replyToId: $replyToId, viewOnce: $viewOnce, metadata: $metadata)';
 }
 
 
@@ -4304,7 +5485,7 @@ abstract mixin class $SendMessagePayloadCopyWith<$Res>  {
   factory $SendMessagePayloadCopyWith(SendMessagePayload value, $Res Function(SendMessagePayload) _then) = _$SendMessagePayloadCopyWithImpl;
 @useResult
 $Res call({
- String messageType, String? body, String? mediaUrl, String? mediaMime, String? fileName, String? replyToId, Map<String, dynamic> metadata
+ String messageType, String? body, String? mediaUrl, String? mediaMime, String? fileName, String? replyToId,@JsonKey(name: 'view_once') bool viewOnce, Map<String, dynamic> metadata
 });
 
 
@@ -4321,7 +5502,7 @@ class _$SendMessagePayloadCopyWithImpl<$Res>
 
 /// Create a copy of SendMessagePayload
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? messageType = null,Object? body = freezed,Object? mediaUrl = freezed,Object? mediaMime = freezed,Object? fileName = freezed,Object? replyToId = freezed,Object? metadata = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? messageType = null,Object? body = freezed,Object? mediaUrl = freezed,Object? mediaMime = freezed,Object? fileName = freezed,Object? replyToId = freezed,Object? viewOnce = null,Object? metadata = null,}) {
   return _then(_self.copyWith(
 messageType: null == messageType ? _self.messageType : messageType // ignore: cast_nullable_to_non_nullable
 as String,body: freezed == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
@@ -4329,7 +5510,8 @@ as String?,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: 
 as String?,mediaMime: freezed == mediaMime ? _self.mediaMime : mediaMime // ignore: cast_nullable_to_non_nullable
 as String?,fileName: freezed == fileName ? _self.fileName : fileName // ignore: cast_nullable_to_non_nullable
 as String?,replyToId: freezed == replyToId ? _self.replyToId : replyToId // ignore: cast_nullable_to_non_nullable
-as String?,metadata: null == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
+as String?,viewOnce: null == viewOnce ? _self.viewOnce : viewOnce // ignore: cast_nullable_to_non_nullable
+as bool,metadata: null == metadata ? _self.metadata : metadata // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>,
   ));
 }
@@ -4415,10 +5597,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String messageType,  String? body,  String? mediaUrl,  String? mediaMime,  String? fileName,  String? replyToId,  Map<String, dynamic> metadata)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String messageType,  String? body,  String? mediaUrl,  String? mediaMime,  String? fileName,  String? replyToId, @JsonKey(name: 'view_once')  bool viewOnce,  Map<String, dynamic> metadata)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SendMessagePayload() when $default != null:
-return $default(_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata);case _:
+return $default(_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.viewOnce,_that.metadata);case _:
   return orElse();
 
 }
@@ -4436,10 +5618,10 @@ return $default(_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String messageType,  String? body,  String? mediaUrl,  String? mediaMime,  String? fileName,  String? replyToId,  Map<String, dynamic> metadata)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String messageType,  String? body,  String? mediaUrl,  String? mediaMime,  String? fileName,  String? replyToId, @JsonKey(name: 'view_once')  bool viewOnce,  Map<String, dynamic> metadata)  $default,) {final _that = this;
 switch (_that) {
 case _SendMessagePayload():
-return $default(_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata);case _:
+return $default(_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.viewOnce,_that.metadata);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -4456,10 +5638,10 @@ return $default(_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String messageType,  String? body,  String? mediaUrl,  String? mediaMime,  String? fileName,  String? replyToId,  Map<String, dynamic> metadata)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String messageType,  String? body,  String? mediaUrl,  String? mediaMime,  String? fileName,  String? replyToId, @JsonKey(name: 'view_once')  bool viewOnce,  Map<String, dynamic> metadata)?  $default,) {final _that = this;
 switch (_that) {
 case _SendMessagePayload() when $default != null:
-return $default(_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.metadata);case _:
+return $default(_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_that.fileName,_that.replyToId,_that.viewOnce,_that.metadata);case _:
   return null;
 
 }
@@ -4471,7 +5653,7 @@ return $default(_that.messageType,_that.body,_that.mediaUrl,_that.mediaMime,_tha
 @JsonSerializable()
 
 class _SendMessagePayload implements SendMessagePayload {
-  const _SendMessagePayload({this.messageType = 'text', this.body, this.mediaUrl, this.mediaMime, this.fileName, this.replyToId, final  Map<String, dynamic> metadata = const <String, dynamic>{}}): _metadata = metadata;
+  const _SendMessagePayload({this.messageType = 'text', this.body, this.mediaUrl, this.mediaMime, this.fileName, this.replyToId, @JsonKey(name: 'view_once') this.viewOnce = false, final  Map<String, dynamic> metadata = const <String, dynamic>{}}): _metadata = metadata;
   factory _SendMessagePayload.fromJson(Map<String, dynamic> json) => _$SendMessagePayloadFromJson(json);
 
 @override@JsonKey() final  String messageType;
@@ -4480,6 +5662,7 @@ class _SendMessagePayload implements SendMessagePayload {
 @override final  String? mediaMime;
 @override final  String? fileName;
 @override final  String? replyToId;
+@override@JsonKey(name: 'view_once') final  bool viewOnce;
  final  Map<String, dynamic> _metadata;
 @override@JsonKey() Map<String, dynamic> get metadata {
   if (_metadata is EqualUnmodifiableMapView) return _metadata;
@@ -4501,16 +5684,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SendMessagePayload&&(identical(other.messageType, messageType) || other.messageType == messageType)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&const DeepCollectionEquality().equals(other._metadata, _metadata));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _SendMessagePayload&&(identical(other.messageType, messageType) || other.messageType == messageType)&&(identical(other.body, body) || other.body == body)&&(identical(other.mediaUrl, mediaUrl) || other.mediaUrl == mediaUrl)&&(identical(other.mediaMime, mediaMime) || other.mediaMime == mediaMime)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.replyToId, replyToId) || other.replyToId == replyToId)&&(identical(other.viewOnce, viewOnce) || other.viewOnce == viewOnce)&&const DeepCollectionEquality().equals(other._metadata, _metadata));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,messageType,body,mediaUrl,mediaMime,fileName,replyToId,const DeepCollectionEquality().hash(_metadata));
+int get hashCode => Object.hash(runtimeType,messageType,body,mediaUrl,mediaMime,fileName,replyToId,viewOnce,const DeepCollectionEquality().hash(_metadata));
 
 @override
 String toString() {
-  return 'SendMessagePayload(messageType: $messageType, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, fileName: $fileName, replyToId: $replyToId, metadata: $metadata)';
+  return 'SendMessagePayload(messageType: $messageType, body: $body, mediaUrl: $mediaUrl, mediaMime: $mediaMime, fileName: $fileName, replyToId: $replyToId, viewOnce: $viewOnce, metadata: $metadata)';
 }
 
 
@@ -4521,7 +5704,7 @@ abstract mixin class _$SendMessagePayloadCopyWith<$Res> implements $SendMessageP
   factory _$SendMessagePayloadCopyWith(_SendMessagePayload value, $Res Function(_SendMessagePayload) _then) = __$SendMessagePayloadCopyWithImpl;
 @override @useResult
 $Res call({
- String messageType, String? body, String? mediaUrl, String? mediaMime, String? fileName, String? replyToId, Map<String, dynamic> metadata
+ String messageType, String? body, String? mediaUrl, String? mediaMime, String? fileName, String? replyToId,@JsonKey(name: 'view_once') bool viewOnce, Map<String, dynamic> metadata
 });
 
 
@@ -4538,7 +5721,7 @@ class __$SendMessagePayloadCopyWithImpl<$Res>
 
 /// Create a copy of SendMessagePayload
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? messageType = null,Object? body = freezed,Object? mediaUrl = freezed,Object? mediaMime = freezed,Object? fileName = freezed,Object? replyToId = freezed,Object? metadata = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? messageType = null,Object? body = freezed,Object? mediaUrl = freezed,Object? mediaMime = freezed,Object? fileName = freezed,Object? replyToId = freezed,Object? viewOnce = null,Object? metadata = null,}) {
   return _then(_SendMessagePayload(
 messageType: null == messageType ? _self.messageType : messageType // ignore: cast_nullable_to_non_nullable
 as String,body: freezed == body ? _self.body : body // ignore: cast_nullable_to_non_nullable
@@ -4546,7 +5729,8 @@ as String?,mediaUrl: freezed == mediaUrl ? _self.mediaUrl : mediaUrl // ignore: 
 as String?,mediaMime: freezed == mediaMime ? _self.mediaMime : mediaMime // ignore: cast_nullable_to_non_nullable
 as String?,fileName: freezed == fileName ? _self.fileName : fileName // ignore: cast_nullable_to_non_nullable
 as String?,replyToId: freezed == replyToId ? _self.replyToId : replyToId // ignore: cast_nullable_to_non_nullable
-as String?,metadata: null == metadata ? _self._metadata : metadata // ignore: cast_nullable_to_non_nullable
+as String?,viewOnce: null == viewOnce ? _self.viewOnce : viewOnce // ignore: cast_nullable_to_non_nullable
+as bool,metadata: null == metadata ? _self._metadata : metadata // ignore: cast_nullable_to_non_nullable
 as Map<String, dynamic>,
   ));
 }

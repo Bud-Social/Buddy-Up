@@ -73,4 +73,83 @@ abstract class LiveRepository {
     @Path('id') String liveId,
     @Body() Map<String, dynamic> body,
   );
+
+  // ── Replay ───────────────────────────────────────────────────────────
+  /// The `replay` sub-object on a live detail is what the player reads; the
+  /// viewer increments a unique-viewer counter for the host's stats.
+  @POST('/lives/{id}/replay/view/')
+  Future<dynamic> recordReplayView(@Path('id') String liveId);
+
+  // ── Audience controls ────────────────────────────────────────────────
+  @PATCH('/lives/{id}/visibility/')
+  Future<dynamic> updateVisibility(
+    @Path('id') String liveId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('/lives/{id}/feedback/')
+  Future<dynamic> submitFeedback(
+    @Path('id') String liveId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @GET('/lives/{id}/feedback/')
+  Future<dynamic> getFeedback(@Path('id') String liveId);
+
+  @POST('/lives/{id}/polls/')
+  Future<dynamic> createPoll(
+    @Path('id') String liveId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @GET('/lives/{id}/polls/current/')
+  Future<dynamic> getCurrentPoll(@Path('id') String liveId);
+
+  @POST('/lives/{id}/polls/{pollId}/vote/')
+  Future<dynamic> votePoll(
+    @Path('id') String liveId,
+    @Path('pollId') String pollId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('/lives/{id}/not-interested/')
+  Future<dynamic> toggleNotInterested(@Path('id') String liveId);
+
+  /// "Never recommend this host again" — the feed mute list.
+  @POST('/lives/{id}/mute-host/')
+  Future<dynamic> toggleMuteHost(@Path('id') String liveId);
+
+  @GET('/lives/{id}/attendees/')
+  Future<dynamic> getAttendees(@Path('id') String liveId);
+
+  // ── Co-host ladder (invite / request to speak) ───────────────────────
+  @POST('/lives/{id}/co-host/invite/')
+  Future<dynamic> inviteCohost(
+    @Path('id') String liveId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @DELETE('/lives/{id}/co-host/invite/')
+  Future<dynamic> cancelCohostInvite(
+    @Path('id') String liveId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('/lives/{id}/co-host/respond/')
+  Future<dynamic> respondCohostInvite(
+    @Path('id') String liveId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  @POST('/lives/{id}/co-host/request/')
+  Future<dynamic> requestToSpeak(@Path('id') String liveId);
+
+  @GET('/lives/{id}/co-host/requests/')
+  Future<dynamic> getCohostRequests(@Path('id') String liveId);
+
+  @POST('/lives/{id}/co-host/respond-request/')
+  Future<dynamic> respondToSpeakRequest(
+    @Path('id') String liveId,
+    @Body() Map<String, dynamic> body,
+  );
 }

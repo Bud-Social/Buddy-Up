@@ -296,6 +296,19 @@ class MessagesNotifier extends Notifier<MessagesState> {
     state = state.copyWith(replyToId: msg?.id, replyToMessage: msg);
   }
 
+  /// Recipient tapped "open" on a view-once message: flip the local copy to
+  /// opened right away; the caller fires the endpoint best effort.
+  void markViewOnceOpened(String messageId) {
+    state = state.copyWith(
+      messages: state.messages.map((m) {
+        if (m.id == messageId && m.viewOnceOpenedAt == null) {
+          return m.copyWith(viewOnceOpenedAt: DateTime.now().toUtc().toIso8601String());
+        }
+        return m;
+      }).toList(),
+    );
+  }
+
   void clearReply() {
     state = state.copyWith(replyToId: null, replyToMessage: null);
   }

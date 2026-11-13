@@ -235,6 +235,10 @@ abstract class Message with _$Message {
     @Default(<String, dynamic>{}) Map<String, dynamic> metadata,
     @JsonKey(name: 'is_read') @Default(false) bool isRead,
     @JsonKey(name: 'deleted_for') @Default(<String>[]) List<String> deletedFor,
+    /// View-once media: the recipient may open the payload exactly once,
+    /// after which the serializer withholds the media URL from them.
+    @JsonKey(name: 'view_once') @Default(false) bool viewOnce,
+    @JsonKey(name: 'view_once_opened_at') String? viewOnceOpenedAt,
     @JsonKey(name: 'sender_data') required ParticipantData senderData,
     @JsonKey(name: 'reply_data') ReplyData? replyData,
     @Default(<String, int>{}) Map<String, int> reactions,
@@ -265,6 +269,73 @@ abstract class CallLog with _$CallLog {
   }) = _CallLog;
 
   factory CallLog.fromJson(Map<String, dynamic> json) => _$CallLogFromJson(json);
+}
+
+/// One author's moment posts from the last 24h — the stories strip.
+@freezed
+abstract class Story with _$Story {
+  const factory Story({
+    required String id,
+    @Default('') String body,
+    @JsonKey(name: 'media_urls') @Default(<String>[]) List<String> mediaUrls,
+    @Default('public') String visibility,
+    @JsonKey(name: 'created_at') @Default('') String createdAt,
+  }) = _Story;
+
+  factory Story.fromJson(Map<String, dynamic> json) => _$StoryFromJson(json);
+}
+
+@freezed
+abstract class StoryAuthor with _$StoryAuthor {
+  const factory StoryAuthor({
+    @JsonKey(name: 'user_id') @Default('') String userId,
+    @Default('') String username,
+    @JsonKey(name: 'display_name') @Default('') String displayName,
+    @JsonKey(name: 'avatar_url') @Default('') String avatarUrl,
+    @JsonKey(name: 'verification_status') @Default('none') String verificationStatus,
+  }) = _StoryAuthor;
+
+  factory StoryAuthor.fromJson(Map<String, dynamic> json) =>
+      _$StoryAuthorFromJson(json);
+}
+
+@freezed
+abstract class StoryReel with _$StoryReel {
+  const factory StoryReel({
+    required StoryAuthor user,
+    @Default(<Story>[]) List<Story> stories,
+    @JsonKey(name: 'latest_at') @Default('') String latestAt,
+  }) = _StoryReel;
+
+  factory StoryReel.fromJson(Map<String, dynamic> json) =>
+      _$StoryReelFromJson(json);
+}
+
+/// A call row on the Calls tab. Unlike [CallLog] (which only knows both
+/// parties as maps), this one is built for the cross-conversation history
+/// and carries the conversation label plus any live session so the tab can
+/// render a Rejoin pill.
+@freezed
+abstract class CallHistoryEntry with _$CallHistoryEntry {
+  const factory CallHistoryEntry({
+    required String id,
+    @JsonKey(name: 'conversation_id') @Default('') String conversationId,
+    @JsonKey(name: 'conversation_label') @Default('Conversation') String conversationLabel,
+    @JsonKey(name: 'counterpart_name') @Default('') String counterpartName,
+    @JsonKey(name: 'counterpart_username') @Default('') String counterpartUsername,
+    @JsonKey(name: 'counterpart_avatar_url') @Default('') String counterpartAvatarUrl,
+    @JsonKey(name: 'call_type') @Default('audio') String callType,
+    @Default('') String status,
+    @JsonKey(name: 'duration_seconds') @Default(0) int durationSeconds,
+    @JsonKey(name: 'is_outgoing') @Default(false) bool isOutgoing,
+    // `{session_id, call_type, status}` while a call in that conversation is
+    // ringing/active; null otherwise.
+    @JsonKey(name: 'active_call') Map<String, dynamic>? activeCall,
+    @JsonKey(name: 'created_at') @Default('') String createdAt,
+  }) = _CallHistoryEntry;
+
+  factory CallHistoryEntry.fromJson(Map<String, dynamic> json) =>
+      _$CallHistoryEntryFromJson(json);
 }
 
 /// `LinkPreviewView` returns exactly these five lower-case keys, so the Dart
@@ -313,6 +384,7 @@ abstract class SendMessagePayload with _$SendMessagePayload {
     String? mediaMime,
     String? fileName,
     String? replyToId,
+    @JsonKey(name: 'view_once') @Default(false) bool viewOnce,
     @Default(<String, dynamic>{}) Map<String, dynamic> metadata,
   }) = _SendMessagePayload;
 

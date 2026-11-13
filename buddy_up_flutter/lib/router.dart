@@ -853,7 +853,15 @@ GoRouter buildRouter(WidgetRef ref, AuthState authState) {
             builder: (_, state) {
               final conversationId =
                   state.pathParameters['conversationId'] ?? '';
-              return ChatScreen(conversationId: conversationId);
+              // ?call=audio|video auto-starts the call after the thread
+              // loads — the Calls tab's Rejoin pill lands here.
+              final autoCall = state.uri.queryParameters['call'];
+              return ChatScreen(
+                conversationId: conversationId,
+                autoStartCall: (autoCall == 'audio' || autoCall == 'video')
+                    ? autoCall
+                    : null,
+              );
             },
           ),
           GoRoute(

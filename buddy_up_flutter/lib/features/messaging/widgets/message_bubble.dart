@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:media_kit/media_kit.dart';
 import '../../../data/models/messaging.dart';
 import '../../../shared/widgets/avatar.dart';
 import '../../../core/theme/app_theme.dart';
@@ -13,6 +16,7 @@ class MessageBubble extends StatelessWidget {
   final void Function(String emoji)? onReact;
   final void Function()? onDelete;
   final void Function()? onForward;
+  final void Function(Message message)? onOpenViewOnce;
   final Color? senderBubbleColor;
   final Color? receiverBubbleColor;
 
@@ -25,6 +29,7 @@ class MessageBubble extends StatelessWidget {
     this.onReact,
     this.onDelete,
     this.onForward,
+    this.onOpenViewOnce,
     this.senderBubbleColor,
     this.receiverBubbleColor,
   });
@@ -144,7 +149,148 @@ class MessageBubble extends StatelessWidget {
     );
   }
 
+  /// View-once, recipient side: a pill until opened; a tombstone after. The
+  /// sender always sees the media itself with a 1× badge.
+  Widget? _buildViewOnceGate() {
+    if (isMine || !message.viewOnce) return null;
+    final opened = message.viewOnceOpenedAt != null;
+    if (opened) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.visibility_off_outlined,
+              size: 17, color: BuddyColors.textSecondary.withValues(alpha: 0.75)),
+          const SizedBox(width: 8),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Opened',
+                  style: TextStyle(
+                      color: BuddyColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('View-once · media no longer available',
+                  style: TextStyle(color: BuddyColors.textSecondary, fontSize: 10)),
+            ],
+          ),
+        ],
+      );
+    }
+    return InkWell(
+      onTap: onOpenViewOnce == null ? null : () => onOpenViewOnce!(message),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(
+                color: Color(0x264ADE80), // buddy green ~15%
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.visibility_outlined, color: BuddyColors.green, size: 18),
+            ),
+            const SizedBox(width: 8),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('View once',
+                    style: TextStyle(
+                        color: BuddyColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+                Text('Tap to view',
+                    style: TextStyle(color: BuddyColors.textSecondary, fontSize: 10)),
+              ],
+            ),
+            const SizedBox(width: 10),
+            Container(
+              width: 20,
+              height: 20,
+              decoration: const BoxDecoration(color: BuddyColors.green, shape: BoxShape.circle),
+              child: const Center(
+                child: Text('1×', style: TextStyle(color: BuddyColors.black, fontSize: 9, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPhoto() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Image.network(
+        message.mediaUrl,
+        fit: BoxFit.cover,
+        width: 200,
+        height: 200,
+        errorBuilder: (_, _, _) => Container(
+          width: 200, height: 200,
+          color: BuddyColors.surfaceRaised,
+          child: const Icon(Icons.broken_image, color: BuddyColors.textSecondary),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideo() {
+    final thumb = message.mediaUrl.isNotEmpty ? message.mediaUrl : null;
+    return Container(
+      width: 200, height: 150,
+      decoration: BoxDecoration(
+        color: BuddyColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (thumb != null)
+            Image.network(thumb, fit: BoxFit.cover, width: 200, height: 150,
+              errorBuilder: (_, _, _) => Container(color: BuddyColors.surfaceRaised),
+            ),
+          Container(
+            decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
+            padding: const EdgeInsets.all(8),
+            child: const Icon(Icons.play_arrow, color: Colors.white, size: 28),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sender's own view-once media: normal media + a 1× badge + the state.
+  Widget _withViewOnceBadge(Widget child) {
+    if (!message.viewOnce || !isMine) return child;
+    final opened = message.viewOnceOpenedAt != null;
+    return Stack(
+      alignment: Alignment.bottomLeft,
+      children: [
+        child,
+        Padding(
+          padding: const EdgeInsets.all(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '1× · ${opened ? 'Opened' : 'Not opened'}',
+              style: const TextStyle(color: BuddyColors.green, fontSize: 9, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildContent() {
+    final gated = _buildViewOnceGate();
+    if (gated != null) return gated;
+
     switch (message.messageType) {
       case 'text':
         return Text(
@@ -152,43 +298,12 @@ class MessageBubble extends StatelessWidget {
           style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 15),
         );
       case 'image':
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            message.mediaUrl,
-            fit: BoxFit.cover,
-            width: 200,
-            height: 200,
-            errorBuilder: (_, _, _) => Container(
-              width: 200, height: 200,
-              color: BuddyColors.surfaceRaised,
-              child: const Icon(Icons.broken_image, color: BuddyColors.textSecondary),
-            ),
-          ),
-        );
+      case 'photo':
+        return _withViewOnceBadge(_buildPhoto());
       case 'video':
-        return Container(
-          width: 200, height: 150,
-          decoration: BoxDecoration(
-            color: BuddyColors.surfaceRaised,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              if (message.mediaUrl.isNotEmpty)
-                Image.network(message.mediaUrl, fit: BoxFit.cover, width: 200, height: 150,
-                  errorBuilder: (_, _, _) => Container(color: BuddyColors.surfaceRaised),
-                ),
-              Container(
-                decoration: const BoxDecoration(color: Colors.black38, shape: BoxShape.circle),
-                padding: const EdgeInsets.all(8),
-                child: const Icon(Icons.play_arrow, color: Colors.white, size: 28),
-              ),
-            ],
-          ),
-        );
+        return _withViewOnceBadge(_buildVideo());
       case 'file':
+      case 'document':
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -211,22 +326,10 @@ class MessageBubble extends StatelessWidget {
           ],
         );
       case 'voice':
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.mic, color: BuddyColors.green, size: 20),
-            const SizedBox(width: 8),
-            Container(
-              width: 100, height: 30,
-              decoration: BoxDecoration(
-                color: BuddyColors.surfaceRaised,
-                borderRadius: BorderRadius.circular(15),
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Text('0:12', style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
-          ],
-        );
+        final durMs = (message.metadata['duration_ms'] as num?)?.toInt()
+            ?? (message.metadata['duration'] as num?)?.toInt()
+            ?? 0;
+        return _withViewOnceBadge(_VoiceBubble(message: message, durationMs: durMs, isMine: isMine));
       case 'location':
         return Container(
           width: 200,
@@ -305,5 +408,96 @@ class MessageBubble extends StatelessWidget {
     final dt = DateTime.tryParse(iso);
     if (dt == null) return '';
     return DateFormat.jm().format(dt);
+  }
+}
+
+/// Compact voice bubble: play/pause + duration. Tap once to play.
+class _VoiceBubble extends StatefulWidget {
+  final Message message;
+  final int durationMs;
+  final bool isMine;
+
+  const _VoiceBubble({required this.message, required this.durationMs, required this.isMine});
+
+  @override
+  State<_VoiceBubble> createState() => _VoiceBubbleState();
+}
+
+class _VoiceBubbleState extends State<_VoiceBubble> {
+  Player? _player;
+  bool _playing = false;
+  bool _loading = false;
+  StreamSubscription<bool>? _playingSub;
+
+  @override
+  void dispose() {
+    _playingSub?.cancel();
+    _player?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle() async {
+    if (_loading) return;
+    if (_player != null) {
+      if (_playing) {
+        await _player!.pause();
+      } else {
+        await _player!.play();
+      }
+      return;
+    }
+    setState(() => _loading = true);
+    final player = Player();
+    _playingSub = player.stream.playing.listen((playing) {
+      if (mounted) setState(() => _playing = playing);
+    });
+    await player.setVolume(100);
+    await player.open(Media(widget.message.mediaUrl), play: true);
+    if (!mounted) {
+      await player.dispose();
+      return;
+    }
+    setState(() {
+      _player = player;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dur = widget.durationMs ~/ 1000;
+    final formatted =
+        '${(dur ~/ 60).toString().padLeft(2, '0')}:${(dur % 60).toString().padLeft(2, '0')}';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: _toggle,
+          child: _loading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: BuddyColors.green),
+                )
+              : Icon(
+                  _playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                  color: BuddyColors.green,
+                  size: 26,
+                ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          width: 100,
+          height: 6,
+          decoration: BoxDecoration(
+            color: BuddyColors.surfaceRaised,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(formatted,
+            style: const TextStyle(color: BuddyColors.textSecondary, fontSize: 11)),
+      ],
+    );
   }
 }

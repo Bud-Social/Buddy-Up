@@ -8,7 +8,7 @@ abstract class MessagingRepository {
   factory MessagingRepository(Dio dio, {String baseUrl}) = _MessagingRepository;
 
   @GET('/messaging/conversations/')
-  Future<dynamic> getConversations();
+  Future<dynamic> getConversations({@Query('kind') String? kind});
 
   @POST('/messaging/conversations/start/')
   Future<dynamic> startConversation(@Body() Map<String, dynamic> body);
@@ -53,6 +53,36 @@ abstract class MessagingRepository {
 
   @POST('/messaging/conversations/{id}/calls/')
   Future<dynamic> logCall(
+    @Path('id') String conversationId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  /// Every call touching the viewer, newest first, with each conversation's
+  /// currently-live session folded in (`active_call`) — powers the Calls
+  /// tab and its Rejoin pill.
+  @GET('/messaging/calls/')
+  Future<dynamic> getCallHistory();
+
+  /// Last 24h of `moment` posts from buddies + followed users, grouped by
+  /// author — the stories strip on the messages surface.
+  @GET('/messaging/stories/')
+  Future<dynamic> getStories();
+
+  /// Mark a view-once message as opened by the recipient. The serializer
+  /// withholds the media URL from everyone but the sender afterwards.
+  @POST('/messaging/messages/{mid}/view-once/')
+  Future<dynamic> markViewOnceOpened(@Path('mid') String messageId);
+
+  /// Ring a buddy into the live call for this conversation.
+  @POST('/messaging/conversations/{id}/calls/session/add/')
+  Future<dynamic> addCallBuddy(
+    @Path('id') String conversationId,
+    @Body() Map<String, dynamic> body,
+  );
+
+  /// Accept or reject a pending voice→video (or video→voice) switch.
+  @POST('/messaging/conversations/{id}/calls/session/switch/')
+  Future<dynamic> switchCallType(
     @Path('id') String conversationId,
     @Body() Map<String, dynamic> body,
   );

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,7 @@ import '../widgets/typing_indicator.dart';
 import '../widgets/reply_preview.dart';
 import '../widgets/attachment_menu.dart';
 import '../widgets/voice_note_recorder.dart';
+import '../widgets/view_once_viewer.dart';
 import 'package:dio/dio.dart';
 import '../../../data/models/messaging.dart';
 import '../../../core/theme/app_theme.dart';
@@ -96,7 +98,12 @@ class ChatScreen extends ConsumerStatefulWidget {
     super.key,
     required this.conversationId,
     this.fromBuddyMessages = false,
+    /// Set by the Calls tab's Rejoin pill (the `?call=audio|video` query on
+    /// the route) — dials immediately once the screen exists.
+    this.autoStartCall,
   });
+
+  final String? autoStartCall;
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -109,6 +116,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _imagePicker = ImagePicker();
   Message? _replyToMessage;
   bool _promoting = false;
+
+  /// A picked attachment waiting for send — mirrors the web's pending
+  /// preview bar: thumbnail + file name + the 1× toggle + cancel. Nothing
+  /// uploads until the user taps send.
+  XFile? _pendingMedia;
+  bool _pendingMediaIsImage = false;
+  bool _viewOncePending = false;
+  bool _uploadingMedia = false;
 
   /// Conversation the header reads when the list provider does not carry this
   /// thread — a Buddy-messages deep link, or a conversation the discovery
@@ -154,6 +169,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ref.read(messagesProvider(widget.conversationId).notifier).loadMessages();
       _ensureConversation();
       _connectSocket();
+      if (widget.autoStartCall != null) {
+        // One-shot: the Rejoin pill's deep link. Small delay lets the
+        // socket/notification listener wire up before the join dialog-free.
+        unawaited(_startCall(widget.autoStartCall!));
+      }
     });
     _scrollController.addListener(_onScroll);
   }
@@ -213,6 +233,35 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  /// Recipient tapped the view-once pill. Flip the local copy first (the
+  /// media URL is still in this in-memory message), fire the endpoint best
+  /// effort, then open the fullscreen viewer — after the next fetch the
+  /// server withholds the URL and the bubble becomes a tombstone.
+  void _openViewOnce(Message msg) {
+    ref.read(messagesProvider(widget.conversationId).notifier).markViewOnceOpened(msg.id);
+    ref.read(messagingRepositoryProvider).markViewOnceOpened(msg.id).catchError((_) => null);
+
+    final isAudio = msg.mediaMime.startsWith('audio/');
+    if (isAudio) {
+      // Voice notes play in the bubble itself — it is now a one-tap player.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tap the voice note to play it')),
+      );
+      return;
+    }
+    if (msg.mediaUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Media no longer available')),
+      );
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ViewOnceViewer(message: msg),
+      ),
+    );
+  }
+
   Future<void> _startCall(String callType) async {
     await ref.read(liveKitCallProvider.notifier).join(widget.conversationId, callType);
   }
@@ -240,9 +289,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.dispose();
   }
 
-  void _sendMessage({String? mediaUrl, String? mediaMime, String? fileName, String? messageType}) {
+  void _sendMessage() {
+    // A pending attachment sends with the send button, exactly like the web.
+    if (_pendingMedia != null) {
+      unawaited(_sendPendingMedia());
+      return;
+    }
     final body = _textController.text.trim();
-    if (body.isEmpty && mediaUrl == null) return;
+    if (body.isEmpty) return;
 
     final socket = ref.read(chatSocketProvider(widget.conversationId));
     if (socket == null) return;
@@ -253,10 +307,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     socket.sendMessagePayload({
       'body': body,
-      'message_type': messageType ?? 'text',
-      'media_url': mediaUrl ?? '',
-      'media_mime': mediaMime ?? '',
-      'file_name': fileName ?? '',
+      'message_type': 'text',
+      'media_url': '',
+      'media_mime': '',
+      'file_name': '',
       'reply_to_id': replyTo?.id,
       'metadata': replyTo != null ? {'reply_sender_name': replyTo.senderData.displayName, 'reply_body': replyTo.body} : {},
     });
@@ -277,15 +331,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     switch (type) {
       case 'camera':
         final file = await _imagePicker.pickImage(source: ImageSource.camera, imageQuality: 85);
-        if (file != null) _uploadAndSend(XFile(file.path));
+        if (file != null) _setPendingMedia(file, isImage: true);
         break;
       case 'photo':
         final file = await _imagePicker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-        if (file != null) _uploadAndSend(file);
+        if (file != null) _setPendingMedia(file, isImage: true);
         break;
       case 'video':
         final file = await _imagePicker.pickVideo(source: ImageSource.gallery);
-        if (file != null) _uploadAndSend(file);
+        if (file != null) _setPendingMedia(file, isImage: false);
         break;
       case 'location':
         break;
@@ -293,6 +347,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         _showVoiceRecorder();
         break;
     }
+  }
+
+  void _setPendingMedia(XFile file, {required bool isImage}) {
+    setState(() {
+      _pendingMedia = file;
+      _pendingMediaIsImage = isImage;
+      _viewOncePending = false;
+    });
+  }
+
+  void _clearPendingMedia() {
+    setState(() {
+      _pendingMedia = null;
+      _viewOncePending = false;
+    });
   }
 
   void _showThemePicker() {
@@ -319,7 +388,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Future<void> _uploadAndSend(XFile file) async {
+  Future<void> _sendPendingMedia() async {
+    final file = _pendingMedia;
+    if (file == null || _uploadingMedia) return;
+    setState(() => _uploadingMedia = true);
     try {
       final dio = ref.read(apiClientProvider4).dio;
       final form = FormData.fromMap({
@@ -327,15 +399,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       });
       final response = await dio.post('/messaging/upload/', data: form);
       final data = response.data['data'] as Map<String, dynamic>;
+      final mime = (data['mime'] as String?) ?? '';
+      final kind = mime.startsWith('image/')
+          ? 'photo'
+          : mime.startsWith('video/')
+              ? 'video'
+              : mime.startsWith('audio/')
+                  ? 'voice'
+                  : 'document';
+      // View-once only makes sense for photo/video/voice — the server
+      // enforces nothing, but the toggle already only renders for those.
+      final viewOnce = _viewOncePending && kind != 'document';
       final socket = ref.read(chatSocketProvider(widget.conversationId));
       socket?.sendMessagePayload({
         'body': '',
-        'message_type': file.name.endsWith('.mp4') ? 'video' : 'photo',
+        'message_type': kind,
         'media_url': data['url'],
-        'media_mime': data['mime'],
+        'media_mime': mime,
         'file_name': file.name,
+        'view_once': viewOnce,
       });
-    } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _pendingMedia = null;
+          _viewOncePending = false;
+          _uploadingMedia = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _uploadingMedia = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   void _showVoiceRecorder() {
@@ -535,6 +633,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             senderBubbleColor: _senderColor,
                             receiverBubbleColor: _receiverColor,
                             onReply: () => setState(() => _replyToMessage = msg),
+                            onOpenViewOnce: _openViewOnce,
                             onReact: (emoji) {
                               final socket = ref.read(chatSocketProvider(widget.conversationId));
                               socket?.sendReact(msg.id, emoji);
@@ -548,6 +647,96 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       ),
                     ),
           ),
+          // Pending attachment preview — send with the send button.
+          if (_pendingMedia != null)
+            Container(
+              decoration: const BoxDecoration(
+                color: BuddyColors.surface,
+                border: Border(top: BorderSide(color: BuddyColors.border)),
+              ),
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: _pendingMediaIsImage
+                        ? Image.file(
+                            File(_pendingMedia!.path),
+                            width: 52,
+                            height: 52,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const _AttachmentThumbIcon(),
+                          )
+                        : const _AttachmentThumbIcon(),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _pendingMedia!.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: BuddyColors.textPrimary, fontSize: 13),
+                        ),
+                        const Text(
+                          'Attachment',
+                          style: TextStyle(color: BuddyColors.textSecondary, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // View-once toggle — image/video/audio only
+                  GestureDetector(
+                    onTap: () => setState(() => _viewOncePending = !_viewOncePending),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _viewOncePending
+                            ? BuddyColors.green
+                            : BuddyColors.black,
+                        borderRadius: BorderRadius.circular(14),
+                        border: _viewOncePending
+                            ? null
+                            : Border.all(color: BuddyColors.border),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.visibility_outlined,
+                            size: 12,
+                            color: _viewOncePending
+                                ? BuddyColors.black
+                                : BuddyColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '1×',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: _viewOncePending
+                                  ? BuddyColors.black
+                                  : BuddyColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18, color: BuddyColors.textSecondary),
+                    onPressed: _clearPendingMedia,
+                    tooltip: 'Discard',
+                  ),
+                ],
+              ),
+            ),
           if (_replyToMessage != null)
             ReplyPreview(
               message: _replyToMessage!,
@@ -591,7 +780,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                       ),
                     ),
-                    if (_textController.text.trim().isEmpty)
+                    if (_uploadingMedia)
+                      const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: BuddyColors.green,
+                          ),
+                        ),
+                      )
+                    else if (_textController.text.trim().isEmpty && _pendingMedia == null)
                       IconButton(
                         icon: const Icon(Icons.mic_outlined, color: BuddyColors.textSecondary),
                         onPressed: _showVoiceRecorder,
@@ -608,6 +809,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AttachmentThumbIcon extends StatelessWidget {
+  const _AttachmentThumbIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: BuddyColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Icon(Icons.videocam_outlined, color: BuddyColors.textSecondary),
     );
   }
 }

@@ -49,11 +49,11 @@ extension CommunityPostToPost on CommunityPost {
       commentCount: commentCount,
       isPinned: isPinned,
       createdAt: createdAt,
-      viewCount: post.viewCount,
-      isRepostedByMe: post.isRepost,
-      repostCount: post.repostCount,
-      shareCount: post.shareCount,
-      saveCount: post.saveCount,
+      viewCount: viewCount,
+      isRepostedByMe: isRepost,
+      repostCount: repostCount,
+      shareCount: shareCount,
+      saveCount: saveCount,
     );
   }
 }
