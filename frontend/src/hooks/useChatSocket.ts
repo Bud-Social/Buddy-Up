@@ -11,7 +11,8 @@ export type ChatEvent =
   | { type: 'typing_stop'; user_id: string; username: string }
   | { type: 'read'; conversation_id: string; reader_id: string; message_id?: string; count: number }
   | { type: 'react'; conversation_id: string; message_id: string; reactions: Record<string, number> }
-  | { type: 'call_offer' | 'call_answer' | 'call_ice' | 'call_end' | 'call_decline' | 'call_ringing'; [key: string]: unknown };
+  | { type: 'call_offer' | 'call_answer' | 'call_ice' | 'call_end' | 'call_decline' | 'call_ringing'
+      | 'call_switch_request' | 'call_switch_response' | 'call_switched_to_video'; [key: string]: unknown };
 
 interface Options {
   conversationId: string | null;
@@ -78,7 +79,8 @@ export function useChatSocket({ conversationId, onEvent, enabled = true }: Optio
 
   const sendCallSignal = useCallback(
     (
-      signalType: 'call_offer' | 'call_answer' | 'call_ice' | 'call_end' | 'call_decline',
+      signalType: 'call_offer' | 'call_answer' | 'call_ice' | 'call_end' | 'call_decline'
+        | 'call_switch_request' | 'call_switch_response',
       data: object,
       callType: 'audio' | 'video' = 'audio',
     ) => {

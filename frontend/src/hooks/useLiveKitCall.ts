@@ -19,6 +19,15 @@ import type { CallSessionCredentials, CallParticipantInfo } from '@/api/messagin
 
 export type LkCallState = 'idle' | 'calling' | 'ringing' | 'in_call' | 'ended';
 
+/** Events other participants publish over the room's data channel. */
+export interface RemoteCallEvent {
+  kind: 'text' | 'caption';
+  text: string;
+  from: string;
+  final?: boolean;
+  at: number;
+}
+
 /** Minimal shape of a livekit participant we hand to the UI (opaque). */
 export interface CallTile {
   identity: string;
@@ -54,6 +63,7 @@ export function useLiveKitCall(conversationId: string | null) {
   const [tiles, setTiles] = useState<CallTile[]>([]);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [remoteCallEvent, setRemoteCallEvent] = useState<RemoteCallEvent | null>(null);
 
   const roomRef = useRef<any>(null);
   const attemptRef = useRef(0);
@@ -145,6 +155,20 @@ export function useLiveKitCall(conversationId: string | null) {
       .on('trackUnpublished', onChange)
       .on('trackMuted', onChange)
       .on('trackUnmuted', onChange)
+      .on('dataReceived', (payload: Uint8Array, participant?: { identity?: string }) => {
+        try {
+          const parsed = JSON.parse(new TextDecoder().decode(payload)) as Partial<RemoteCallEvent>;
+          if (parsed && (parsed.kind === 'text' || parsed.kind === 'caption') && typeof parsed.text === 'string') {
+            setRemoteCallEvent({
+              kind: parsed.kind,
+              text: parsed.text.slice(0, 300),
+              from: String(parsed.from ?? participant?.identity ?? 'Someone'),
+              final: Boolean(parsed.final),
+              at: Date.now(),
+            });
+          }
+        } catch { /* not a call event — ignore */ }
+      })
       .on('connectionStateChanged', (state: string) => {
         if (state === 'disconnected') {
           if (attempt === attemptRef.current) {
@@ -230,6 +254,14 @@ export function useLiveKitCall(conversationId: string | null) {
     rebuildTiles(roomRef.current);
   }, [rebuildTiles]);
 
+  /** Explicitly enable/disable the camera (used by the voice→video switch). */
+  const setCameraEnabled = useCallback(async (enabled: boolean) => {
+    const lp = roomRef.current?.localParticipant;
+    if (!lp) return;
+    try { await lp.setCameraEnabled(enabled); } catch { /* noop */ }
+    rebuildTiles(roomRef.current);
+  }, [rebuildTiles]);
+
   const toggleScreenShare = useCallback(async () => {
     const lp = roomRef.current?.localParticipant;
     if (!lp) return;
@@ -243,6 +275,43 @@ export function useLiveKitCall(conversationId: string | null) {
     await join(type);
   }, [join]);
 
+  /** Publish a call event (on-screen text / captions) to everyone in the room. */
+  const publishCallEvent = useCallback((event: Omit<RemoteCallEvent, 'at'>) => {
+    const room = roomRef.current;
+    if (!room) return false;
+    try {
+      const bytes = new TextEncoder().encode(JSON.stringify({ ...event, from: event.from || 'You' }));
+      void room.localParticipant.publishData(bytes, { reliable: true, topic: 'call-events' });
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  /** A read of the current media streams for recording/snapshotting. */
+  const mediaSnapshot = useCallback(() => {
+    const room = roomRef.current;
+    if (!room) return null;
+    const local = room.localParticipant;
+    const track = (src: string) => {
+      const pub = local.getTrackPublication?.(src);
+      return pub?.track?.mediaStreamTrack ?? null;
+    };
+    const remoteTracks: MediaStreamTrack[] = [];
+    for (const rp of Array.from(room.remoteParticipants?.values() ?? [])) {
+      for (const pub of Array.from((rp as { getTrackPublications?: () => Array<{ track?: { mediaStreamTrack?: MediaStreamTrack } }> }).getTrackPublications?.() ?? [])) {
+        const t = pub?.track?.mediaStreamTrack;
+        if (t) remoteTracks.push(t);
+      }
+    }
+    return {
+      mic: track('microphone'),
+      camera: track('camera'),
+      screen: track('screen_share'),
+      remoteTracks,
+    };
+  }, []);
+
   return {
     callState,
     callType,
@@ -250,12 +319,16 @@ export function useLiveKitCall(conversationId: string | null) {
     cameraError,
     sessionId,
     myUserId,
+    remoteCallEvent,
+    publishCallEvent,
+    mediaSnapshot,
     join,
     acceptRinging,
     leave,
     toggleMute,
     toggleCamera,
     toggleScreenShare,
+    setCameraEnabled,
   };
 }
 

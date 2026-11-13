@@ -323,6 +323,22 @@ export const messagingApi = {
       .delete<ApiResponse<{ ended: boolean }>>(`/messaging/conversations/${conversationId}/calls/session/`)
       .then((r) => r.data),
 
+  addCallBuddy: (conversationId: string, buddyUserId: string) =>
+    apiClient
+      .post<ApiResponse<{ participants: Array<{ user_id: string; display_name: string; username: string; avatar_url: string }> }>>(
+        `/messaging/conversations/${conversationId}/calls/session/add/`,
+        { buddy_user_id: buddyUserId },
+      )
+      .then((r) => r.data),
+
+  switchCallToVideo: (conversationId: string, accept: boolean) =>
+    apiClient
+      .post<ApiResponse<{ call_type: string; accepted: boolean }>>(
+        `/messaging/conversations/${conversationId}/calls/session/switch/`,
+        { accept },
+      )
+      .then((r) => r.data),
+
   forwardMessage: (messageId: string, targetConversationId: string) =>
     apiClient
       .post<ApiResponse<Message>>(`/messaging/messages/${messageId}/forward/`, { conversation_id: targetConversationId })

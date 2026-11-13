@@ -745,7 +745,7 @@ class CallLogView(views.APIView):
         conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
         callee_id = request.data.get('callee_id')
         callee = get_object_or_404(Profile, user_id=callee_id)
-        if callee == request.user.profile or not conv.participants.filter(id=callee.id).exists():
+        if callee == request.user.profile or not conv.participants.filter(pk=callee.pk).exists():
             return Response({
                 'success': False, 'data': None,
                 'message': 'The callee must be another participant in this conversation.',
@@ -771,26 +771,48 @@ class CallLogView(views.APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+def _active_call_session(conv):
+    cutoff = timezone.now() - timedelta(hours=6)
+    return (
+        CallSession.objects
+        .filter(conversation=conv, status__in=('ringing', 'active'), created_at__gte=cutoff)
+        .select_related('initiated_by')
+        .first()
+    )
+
+
+def _notify_call_members(conv, payload, exclude_user_id=None):
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+    try:
+        layer = get_channel_layer()
+        recipients = conv.participants.all()
+        if exclude_user_id:
+            recipients = recipients.exclude(user_id=exclude_user_id)
+        for participant in recipients:
+            async_to_sync(layer.group_send)(
+                f'user_{participant.user_id}',
+                {'type': 'event_notification', 'data': payload},
+            )
+    except Exception:  # noqa: BLE001
+        logger.exception('call notify failed for conversation=%s', conv.id)
+
 class ConversationCallSessionView(views.APIView):
     """Secure multi-party LiveKit calls for a conversation.
 
     POST   – start or join the conversation's live call; returns short-lived
              LiveKit credentials scoped to this room and membership-verified.
     GET    – fetch the current live session + fresh credentials (rejoin/refresh).
-    DELETE – leave the call; ends the session when the last participant leaves.
+    DELETE – leave the call; ends the session when the last participant leaves,
+             or immediately when a two-person call drops to one. A log message
+             is written to the chat on the caller's side.
     """
     permission_classes = [permissions.IsAuthenticated]
 
     MAX_SESSION_AGE = timedelta(hours=6)
 
     def _active_session(self, conv):
-        cutoff = timezone.now() - self.MAX_SESSION_AGE
-        return (
-            CallSession.objects
-            .filter(conversation=conv, status__in=('ringing', 'active'), created_at__gte=cutoff)
-            .select_related('initiated_by')
-            .first()
-        )
+        return _active_call_session(conv)
 
     @staticmethod
     def _notify_members(conv, payload, exclude_user_id=None):
@@ -931,8 +953,12 @@ class ConversationCallSessionView(views.APIView):
         CallParticipant.objects.filter(session=session, profile=request.user.profile).update(left_at=now)
 
         remaining = session.participants.filter(left_at__isnull=True).count()
-        ended = remaining == 0
+        ended = remaining < 2
         if ended:
+            # Nobody is left alone on a line to nowhere — the call ends when
+            # fewer than two people remain.
+            if remaining == 1:
+                CallParticipant.objects.filter(session=session, left_at__isnull=True).update(left_at=now)
             session.status = 'ended'
             session.ended_at = now
             session.save(update_fields=['status', 'ended_at'])
@@ -940,18 +966,22 @@ class ConversationCallSessionView(views.APIView):
             conv.save(update_fields=['call_in_progress'])
             # Summary row so call history keeps working for DMs and groups alike.
             initiator_id = session.initiated_by_id
+            other = (session.participants.exclude(profile_id=initiator_id)
+                     .select_related('profile').first())
+            # A start only exists once two people were on the line together,
+            # so it doubles as the "was the call actually answered" signal.
+            was_answered = bool(session.started_at)
             CallLog.objects.create(
                 conversation=conv,
                 caller=session.initiated_by or request.user.profile,
-                callee=(session.participants.exclude(profile_id=initiator_id)
-                        .select_related('profile').first().profile
-                        if session.participants.exclude(profile_id=initiator_id).exists()
+                callee=(other.profile if other
                         else request.user.profile),
                 call_type=session.call_type,
-                status='answered' if session.started_at else ('missed' if not session.participants.exclude(profile_id=initiator_id).exists() else 'ended'),
+                status='answered' if was_answered else 'missed',
                 duration_seconds=session.duration_seconds,
                 ended_at=now,
             )
+            _write_call_log_message(conv, session, was_answered)
         self._notify_members(conv, {
             'type': 'call_ended' if ended else 'call_participant_left',
             'session_id': str(session.id),
@@ -2192,3 +2222,172 @@ class CommunityPostVideoCardStatusView(views.APIView):
 
         return video_card_response(path, post.id)
 
+
+
+def _write_call_log_message(conv, session, was_answered):
+    """Record the call in the chat as one event message on the caller's side.
+
+    The sender is the caller, so it lands on their sent side (green/right)
+    and on the recipient's received side — both colours come free from the
+    existing bubble styles. Tapping the bubble offers call-back actions.
+    """
+    initiator = session.initiated_by
+    if initiator is None:
+        first = session.participants.select_related('profile').first()
+        initiator = first.profile if first else None
+    if initiator is None:
+        return
+    duration = int(session.duration_seconds or 0)
+    kind = 'Video' if session.call_type == 'video' else 'Voice'
+    if was_answered:
+        body = f'{kind} call · {duration // 60}:{duration % 60:02d}'
+        status_label = 'answered'
+    else:
+        body = f'Missed {kind.lower()} call'
+        status_label = 'missed'
+    msg = Message.objects.create(
+        conversation=conv,
+        sender=initiator,
+        message_type='event',
+        body=body,
+        metadata={'call': {
+            'call_type': session.call_type,
+            'duration_seconds': duration,
+            'status': status_label,
+            'session_id': str(session.id),
+        }},
+    )
+    conv.last_message_text = body
+    conv.last_message_at = timezone.now()
+    conv.save(update_fields=['last_message_text', 'last_message_at'])
+
+    from .serializers import MessageSerializer
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+    channel_layer = get_channel_layer()
+    # The channel layer packs with msgpack, which refuses UUID objects.
+    # Round-trip through JSON to flatten everything to wire-safe types.
+    import json
+    payload = json.loads(json.dumps(MessageSerializer(msg).data, default=str))
+    async_to_sync(channel_layer.group_send)(
+        f'conversation_{conv.id}', {'type': 'chat_message', 'data': payload},
+    )
+    for participant in conv.participants.exclude(user_id=initiator.user_id):
+        async_to_sync(channel_layer.group_send)(
+            f'user_{participant.user_id}',
+            {'type': 'event_message', 'data': {'type': 'new_message', **payload}},
+        )
+
+
+class CallSessionAddView(views.APIView):
+    """POST /conversations/<id>/calls/session/add/ — pull a confirmed buddy into the live call.
+
+    If the buddy is not a member of this conversation they are added as one,
+    and the ring they receive carries the two profiles already in the call
+    plus an is_buddies_call flag.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, conversation_id):
+        conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
+        requester = request.user.profile
+        session = _active_call_session(conv)
+        if not session:
+            return Response({'success': False, 'data': None,
+                             'message': 'No live call in this conversation.',
+                             'errors': None, 'pagination': None},
+                            status=status.HTTP_409_CONFLICT)
+        buddy_id = (request.data.get('buddy_user_id') or '').strip()
+        buddy = get_object_or_404(Profile, user_id=buddy_id)
+        if buddy == requester:
+            return Response({'success': False, 'data': None,
+                             'message': 'You are already in the call.',
+                             'errors': None, 'pagination': None},
+                            status=status.HTTP_400_BAD_REQUEST)
+        from apps.profiles.models import BuddyRelationship
+        is_buddy = BuddyRelationship.objects.filter(
+            status='confirmed',
+        ).filter(
+            db_models.Q(from_user=requester, to_user=buddy)
+            | db_models.Q(from_user=buddy, to_user=requester),
+        ).exists()
+        if not is_buddy:
+            return Response({'success': False, 'data': None,
+                             'message': 'You can only add confirmed buddies to a call.',
+                             'errors': None, 'pagination': None},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        if not conv.participants.filter(pk=buddy.pk).exists():
+            conv.participants.add(buddy)
+        participant, created = CallParticipant.objects.get_or_create(session=session, profile=buddy)
+        if not created and participant.left_at is not None:
+            participant.left_at = None
+            participant.declined = False
+            participant.save(update_fields=['left_at', 'declined'])
+
+        participants = [
+            {
+                'user_id': str(p.profile.user_id),
+                'display_name': p.profile.display_name,
+                'username': p.profile.username,
+                'avatar_url': p.profile.avatar_url or '',
+            }
+            for p in session.participants.filter(left_at__isnull=True).select_related('profile')
+        ]
+        _notify_call_members(conv, {
+            'type': 'incoming_call',
+            'session_id': str(session.id),
+            'conversation_id': str(conv.id),
+            'call_type': session.call_type,
+            'from_user_id': str(requester.user_id),
+            'from_username': requester.username,
+            'from_display_name': requester.display_name,
+            'from_avatar_url': requester.avatar_url or '',
+            'is_buddies_call': True,
+            'participant_count': len(participants),
+            'participants': participants,
+        }, exclude_user_id=requester.user_id)
+        return Response({
+            'success': True,
+            'data': {'participants': participants, 'conversation_id': str(conv.id)},
+            'message': 'Ringing your buddy.',
+            'errors': None, 'pagination': None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class CallSessionSwitchView(views.APIView):
+    """POST /conversations/<id>/calls/session/switch/ {accept: bool}
+
+    Accepting flips the session's call_type to video for everyone — fresh
+    joins then see a video call. Rejecting leaves it as voice.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, conversation_id):
+        conv = get_object_or_404(Conversation, id=conversation_id, participants=request.user.profile)
+        session = _active_call_session(conv)
+        if not session:
+            return Response({'success': False, 'data': None,
+                             'message': 'No live call in this conversation.',
+                             'errors': None, 'pagination': None},
+                            status=status.HTTP_409_CONFLICT)
+        if not session.participants.filter(profile=request.user.profile, left_at__isnull=True).exists():
+            return Response({'success': False, 'data': None,
+                             'message': 'You are not in this call.',
+                             'errors': None, 'pagination': None},
+                            status=status.HTTP_403_FORBIDDEN)
+        accept = bool(request.data.get('accept'))
+        if accept:
+            session.call_type = 'video'
+            session.save(update_fields=['call_type'])
+            _notify_call_members(conv, {
+                'type': 'call_switched_to_video',
+                'conversation_id': str(conv.id),
+                'session_id': str(session.id),
+            })
+        return Response({
+            'success': True,
+            'data': {'call_type': session.call_type, 'accepted': accept},
+            'message': 'Switched to video.' if accept else 'Call stays voice.',
+            'errors': None, 'pagination': None,
+        })

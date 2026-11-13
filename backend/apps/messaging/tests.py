@@ -89,14 +89,38 @@ class ConversationCallSessionTests(TestCase):
         self.assertEqual(CallSession.objects.count(), 1)
         self.assertEqual(CallParticipant.objects.count(), 2)
 
-    def test_last_leave_ends_session(self):
+    def test_a_two_person_call_ends_when_one_person_hangs_up(self):
         url = f'/api/v1/messaging/conversations/{self.conv.id}/calls/session/'
         self.client_alice.post(url, {'call_type': 'audio'}, format='json')
         self.client_bob.post(url, {'call_type': 'audio'}, format='json')
 
         resp = self.client_alice.delete(url)
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
-        self.assertFalse(resp.data['data']['ended'])  # bob still present
+        # The other person is not left on an empty line — the call ends for all.
+        self.assertTrue(resp.data['data']['ended'])
+        self.assertEqual(CallSession.objects.filter(status='ended').count(), 1)
+        self.conv.refresh_from_db()
+        self.assertFalse(self.conv.call_in_progress)
+        # Both participants are marked left.
+        self.assertEqual(CallParticipant.objects.filter(left_at__isnull=False).count(), 2)
+        # A log message landed in the chat, sent by the caller.
+        from apps.messaging.models import Message
+        log = Message.objects.filter(conversation=self.conv, message_type='event').latest('created_at')
+        self.assertEqual(log.sender_id, self.alice.user_id)
+        self.assertIn('call', log.metadata)
+        self.assertEqual(log.metadata['call']['status'], 'answered')
+
+    def test_leaving_a_three_person_call_leaves_the_other_two(self):
+        url = f'/api/v1/messaging/conversations/{self.conv.id}/calls/session/'
+        self.conv.participants.add(self.eve)
+        self.client_alice.post(url, {'call_type': 'audio'}, format='json')
+        self.client_bob.post(url, {'call_type': 'audio'}, format='json')
+        self.client_eve.post(url, {'call_type': 'audio'}, format='json')
+
+        resp = self.client_eve.delete(url)
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertFalse(resp.data['data']['ended'])  # two still talking
+        self.assertEqual(CallSession.objects.filter(status='active').count(), 1)
         self.conv.refresh_from_db()
         self.assertTrue(self.conv.call_in_progress)
 
@@ -809,3 +833,77 @@ class CommunityRosterPrivacyTests(TestCase):
             {p['username'] for p in res.data['data']['participants_data']},
             {'crow-owner', 'crow-outsider'},
         )
+
+
+class CallSessionAddAndSwitchTests(TestCase):
+    """Adding a buddy to a live call, and switching voice to video."""
+
+    def setUp(self):
+        from .models import Conversation  # local import mirrors module style
+        self.alice_user = User.objects.create_user(email='addswitch-a@example.com', password='TestPass123!')
+        self.bob_user = User.objects.create_user(email='addswitch-b@example.com', password='TestPass123!')
+        self.eve_user = User.objects.create_user(email='addswitch-e@example.com', password='TestPass123!')
+        self.alice = Profile.objects.create(user=self.alice_user, username='addswitch-a', display_name='Alice')
+        self.bob = Profile.objects.create(user=self.bob_user, username='addswitch-b', display_name='Bob')
+        self.eve = Profile.objects.create(user=self.eve_user, username='addswitch-e', display_name='Eve')
+
+        self.conv = Conversation.objects.create(is_group=False)
+        self.conv.participants.add(self.alice, self.bob)
+
+        self.client_alice = APIClient()
+        self.client_alice.force_authenticate(self.alice_user)
+        self.client_bob = APIClient()
+        self.client_bob.force_authenticate(self.bob_user)
+        self.client_eve = APIClient()
+        self.client_eve.force_authenticate(self.eve_user)
+
+        self.session_url = f'/api/v1/messaging/conversations/{self.conv.id}/calls/session/'
+        self.add_url = f'{self.session_url}add/'
+        self.switch_url = f'{self.session_url}switch/'
+
+    def _start_call(self):
+        self.client_alice.post(self.session_url, {'call_type': 'audio'}, format='json')
+        self.client_bob.post(self.session_url, {'call_type': 'audio'}, format='json')
+
+    def test_add_a_buddy_to_the_call(self):
+        BuddyRelationship.objects.create(from_user=self.alice, to_user=self.eve, status='confirmed')
+        self._start_call()
+        resp = self.client_alice.post(self.add_url, {'buddy_user_id': str(self.eve.user_id)}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(resp.data['data']['participants']), 3)
+        # Eve was added to the conversation and invited to the session.
+        self.assertTrue(self.conv.participants.filter(pk=self.eve.pk).exists())
+        self.assertTrue(CallParticipant.objects.filter(
+            session__conversation=self.conv, profile=self.eve, left_at__isnull=True,
+        ).exists())
+
+    def test_add_refuses_a_non_buddy(self):
+        self._start_call()
+        resp = self.client_alice.post(self.add_url, {'buddy_user_id': str(self.eve.user_id)}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_add_requires_a_live_call(self):
+        BuddyRelationship.objects.create(from_user=self.alice, to_user=self.eve, status='confirmed')
+        resp = self.client_alice.post(self.add_url, {'buddy_user_id': str(self.eve.user_id)}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+
+    def test_switch_flips_the_session_to_video(self):
+        self._start_call()
+        resp = self.client_bob.post(self.switch_url, {'accept': True}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['data']['call_type'], 'video')
+        session = CallSession.objects.get(conversation=self.conv)
+        self.assertEqual(session.call_type, 'video')
+
+    def test_decline_keeps_voice(self):
+        self._start_call()
+        resp = self.client_bob.post(self.switch_url, {'accept': False}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        session = CallSession.objects.get(conversation=self.conv)
+        self.assertEqual(session.call_type, 'audio')
+
+    def test_switch_requires_being_in_the_call(self):
+        self.conv.participants.add(self.eve)
+        self._start_call()
+        resp = self.client_eve.post(self.switch_url, {'accept': True}, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)

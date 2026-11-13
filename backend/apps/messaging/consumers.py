@@ -283,7 +283,8 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
             await self._guarded('read', self._handle_read, content)
         elif msg_type == 'react':
             await self._guarded('react', self._handle_react, content)
-        elif msg_type in ('call_offer', 'call_answer', 'call_ice', 'call_end', 'call_decline', 'call_ringing'):
+        elif msg_type in ('call_offer', 'call_answer', 'call_ice', 'call_end', 'call_decline', 'call_ringing',
+                          'call_switch_request', 'call_switch_response'):
             await self._guarded('call_signal', self._handle_call_signal, msg_type, content)
 
     async def _guarded(self, limit_key: str, handler, *args):
@@ -417,7 +418,7 @@ class ChatConsumer(HandshakeRejectMixin, AsyncJsonWebsocketConsumer):
             'data': payload,
             'sender_channel': self.channel_name,
         })
-        if signal_type == 'call_offer':
+        if signal_type in ('call_offer', 'call_switch_request', 'call_switch_response'):
             await self._push_call_signal_to_recipients(payload)
 
     # ── Channel layer handlers (broadcast receivers) ──────────────────────────

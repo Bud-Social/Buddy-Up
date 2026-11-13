@@ -437,6 +437,13 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   const sendReadRef = useRef<(id?: string) => void>(() => {});
   const lkLeaveRef = useRef<(() => Promise<void>) | null>(null);
 
+  // ── Multi-party calls (LiveKit SFU) ────────────────────────────────────────
+  const {
+    callState, callType, tiles, cameraError, myUserId,
+    remoteCallEvent, publishCallEvent, mediaSnapshot, setCameraEnabled,
+    join: joinCall, leave: leaveCall,
+    toggleMute: lkToggleMute, toggleCamera: lkToggleCamera, toggleScreenShare: lkToggleScreenShare,
+  } = useLiveKitCall(activeConvo?.id ?? null);
   const handleChatEvent = useCallback((event: ChatEvent) => {
     if (event.type === 'message') {
       const msg = event as unknown as MsgType & { type: string };
@@ -496,23 +503,65 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
     if (event.type === 'call_end' || event.type === 'call_decline') {
       void lkLeaveRef.current?.();
     }
-  }, [profile?.user_id]);
+    if (event.type === 'call_switch_request') {
+      const from = (event as unknown as { from_display_name?: string; from_username?: string });
+      setSwitchRequestFrom(from.from_display_name || from.from_username || 'Someone');
+      return;
+    }
+    if (event.type === 'call_switch_response') {
+      const data = event as unknown as { accepted?: boolean };
+      if (data.accepted) void setCameraEnabled(true);
+      setSwitchPending(false);
+      return;
+    }
+    if (event.type === 'call_switched_to_video') {
+      void setCameraEnabled(true);
+    }
+  }, [profile?.user_id, setCameraEnabled]);
 
-  const { sendMessage, sendTypingStart, sendTypingStop, sendRead, sendReact } = useChatSocket({
+  const { sendMessage, sendTypingStart, sendTypingStop, sendRead, sendReact, sendCallSignal } = useChatSocket({
     conversationId: activeConvo?.id ?? null,
     onEvent: handleChatEvent,
   });
 
   useEffect(() => { sendReadRef.current = sendRead; }, [sendRead]);
 
-  // ── Multi-party calls (LiveKit SFU) ────────────────────────────────────────
-  const {
-    callState, callType, tiles, cameraError, myUserId,
-    join: joinCall, leave: leaveCall,
-    toggleMute: lkToggleMute, toggleCamera: lkToggleCamera, toggleScreenShare: lkToggleScreenShare,
-  } = useLiveKitCall(activeConvo?.id ?? null);
+  const requestVideoSwitch = useCallback(() => {
+    setSwitchPending(true);
+    sendCallSignal('call_switch_request', {
+      from_user_id: profile?.user_id,
+      from_username: profile?.username,
+      from_display_name: profile?.display_name,
+      from_avatar_url: profile?.avatar_url ?? '',
+    }, 'audio');
+  }, [profile?.user_id, profile?.username, profile?.display_name, profile?.avatar_url, sendCallSignal]);
+
+  const acceptVideoSwitch = useCallback(() => {
+    if (activeConvo) void messagingApi.switchCallToVideo(activeConvo.id, true).catch(() => {});
+    sendCallSignal('call_switch_response', { accepted: true }, 'audio');
+    void setCameraEnabled(true);
+    setSwitchRequestFrom(null);
+  }, [activeConvo, sendCallSignal, setCameraEnabled]);
+
+  const declineVideoSwitch = useCallback(() => {
+    if (activeConvo) void messagingApi.switchCallToVideo(activeConvo.id, false).catch(() => {});
+    sendCallSignal('call_switch_response', { accepted: false }, 'audio');
+    setSwitchRequestFrom(null);
+  }, [activeConvo, sendCallSignal]);
+
+  const addBuddyToCall = useCallback((buddyUserId: string) => {
+    if (!activeConvo) return;
+    messagingApi.addCallBuddy(activeConvo.id, buddyUserId)
+      .then(() => toast('success', 'Ringing them…'))
+      .catch(() => toast('error', 'Could not add them — are you still in the call?'));
+  }, [activeConvo, toast]);
+
   const startCall = useCallback((type: 'audio' | 'video') => { void joinCall(type); }, [joinCall]);
   const hangUp = useCallback(() => { void leaveCall(); }, [leaveCall]);
+  const [switchRequestFrom, setSwitchRequestFrom] = useState<string | null>(null);
+  const [switchPending, setSwitchPending] = useState(false);
+  const [callAgainFor, setCallAgainFor] = useState<{ name: string } | null>(null);
+  const [joinableSession, setJoinableSession] = useState<{ call_type: 'audio' | 'video' } | null>(null);
 
   // Accepted an incoming invite from the overlay → join that conversation's room.
   const acceptedInvite = useCallStore((s) => s.acceptedInvite);
@@ -526,6 +575,35 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
   }, [acceptedInvite, activeConvo, joinCall, setAcceptedInvite]);
 
   useEffect(() => { lkLeaveRef.current = leaveCall; }, [leaveCall]);
+
+  // The backend ended the session (e.g. the last other participant left) —
+  // leave the room too, instead of holding an empty channel open.
+  const remoteEnd = useCallStore((s) => s.remoteEnd);
+  const setRemoteEnd = useCallStore((s) => s.setRemoteEnd);
+  useEffect(() => {
+    if (!remoteEnd || !activeConvo) return;
+    if (remoteEnd.conversation_id !== activeConvo.id) return;
+    setRemoteEnd(null);
+    if (callState !== 'idle') void leaveCall();
+  }, [remoteEnd, activeConvo, callState, leaveCall, setRemoteEnd]);
+
+  // Show a Join pill when a call is live in this conversation but you are not in it.
+  useEffect(() => {
+    setJoinableSession(null);
+    if (!activeConvo || callState !== 'idle') return;
+    // Optional: partial API mocks in tests may not implement this.
+    const fetchActive = (messagingApi as { getActiveCallSession?: typeof messagingApi.getActiveCallSession })
+      .getActiveCallSession;
+    if (typeof fetchActive !== 'function') return;
+    let alive = true;
+    fetchActive.call(messagingApi, activeConvo.id)
+      .then((res) => {
+        const data = (res as unknown as { data?: { call_type?: 'audio' | 'video' } | null })?.data;
+        if (alive && data) setJoinableSession({ call_type: data.call_type === 'video' ? 'video' : 'audio' });
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [activeConvo?.id, callState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Fetch conversations ────────────────────────────────────────────────────
   const fetchConversations = useCallback(async () => {
@@ -902,16 +980,48 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
           cameraError={cameraError}
           tiles={tiles}
           myUserId={myUserId}
+          remoteCallEvent={remoteCallEvent}
+          publishCallEvent={publishCallEvent}
+          mediaSnapshot={mediaSnapshot}
           identityName={activeIdentity?.name ?? 'Conversation'}
-          identityAvatar={activeIdentity?.avatarUrl}
+          identityAvatar={activeIdentity?.avatarUrl ?? ''}
           isCallee={callState === 'ringing'}
+          switchRequestFrom={switchRequestFrom}
+          switchPending={switchPending}
+          onRequestVideoSwitch={requestVideoSwitch}
+          onAcceptSwitch={acceptVideoSwitch}
+          onDeclineSwitch={declineVideoSwitch}
           onAccept={() => { void joinCall(callType); }}
           onDecline={hangUp}
           onHangUp={hangUp}
           onToggleMute={() => { void lkToggleMute(); }}
           onToggleCamera={() => { void lkToggleCamera(); }}
           onToggleScreenShare={lkToggleScreenShare}
+          onAddBuddy={addBuddyToCall}
         />
+      )}
+
+      {/* Call-back dialog for call-log bubbles */}
+      {callAgainFor && (
+        <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-6" onClick={() => setCallAgainFor(null)}>
+          <div className="bg-buddy-surface border border-buddy-surface-raised rounded-2xl p-6 w-full max-w-xs text-center space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-base font-semibold text-buddy-text-primary">Call back?</p>
+            <p className="text-xs text-buddy-text-secondary">Start a new call with {callAgainFor.name} from here.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => { startCall('audio'); setCallAgainFor(null); }}
+                className="flex flex-col items-center gap-1.5 rounded-2xl bg-buddy-green text-buddy-black py-4 hover:bg-buddy-green-deep transition-colors">
+                <Phone size={20} />
+                <span className="text-xs font-bold">Voice call</span>
+              </button>
+              <button onClick={() => { startCall('video'); setCallAgainFor(null); }}
+                className="flex flex-col items-center gap-1.5 rounded-2xl bg-buddy-surface-raised text-buddy-text-primary border border-buddy-green/30 py-4 hover:bg-buddy-surface transition-colors">
+                <Video size={20} />
+                <span className="text-xs font-bold">Video call</span>
+              </button>
+            </div>
+            <button onClick={() => setCallAgainFor(null)} className="text-xs text-buddy-text-secondary py-1">Cancel</button>
+          </div>
+        </div>
       )}
 
       {/* Sidebar */}
@@ -1145,6 +1255,15 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
               >
                 <Video size={18} />
               </button>
+              {joinableSession && callState === 'idle' && (
+                <button
+                  onClick={() => startCall(joinableSession.call_type)}
+                  className="flex items-center gap-1.5 rounded-full bg-buddy-green px-3 py-1.5 text-[11px] font-bold text-buddy-black hover:bg-buddy-green-deep transition-colors"
+                  title="A call is live in this conversation"
+                >
+                  <Phone size={12} /> Join call
+                </button>
+              )}
             </div>
           </div>
 
@@ -1226,6 +1345,8 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                 const isPoll = msg.metadata?.poll != null;
                 const isLocation = msg.message_type === 'location';
                 const isEvent = msg.message_type === 'event';
+                const isCallLog = isEvent && !!(msg.metadata as { call?: unknown })?.call;
+                const callMeta = (msg.metadata as { call?: { call_type?: string; status?: string; duration_seconds?: number } })?.call;
 
                 return (
                   <div
@@ -1310,6 +1431,25 @@ export default function Messages({ scope = 'all' }: MessagesProps = {}) {
                           {/* Poll */}
                           {isPoll && !isLocation && (
                             <PollCard msg={msg} isMine={isMine} />
+                          )}
+
+                          {/* Call log — tap for a call-back */}
+                          {isCallLog && (
+                            <button
+                              onClick={() => setCallAgainFor({ name: isMine ? 'them' : (msg.sender_data?.display_name ?? 'them') })}
+                              className="flex items-center gap-2.5 px-4 py-2.5 text-left"
+                              title="Call back"
+                            >
+                              <span className="w-9 h-9 rounded-full bg-black/10 flex items-center justify-center shrink-0">
+                                {callMeta?.call_type === 'video' ? <Video size={16} /> : <Phone size={16} />}
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block text-[13px] font-semibold leading-tight">{msg.body}</span>
+                                <span className="block text-[10px] opacity-70 mt-0.5">
+                                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · tap to call back
+                                </span>
+                              </span>
+                            </button>
                           )}
 
                           {/* Event */}

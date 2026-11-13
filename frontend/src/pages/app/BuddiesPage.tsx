@@ -24,7 +24,7 @@ export default function BuddiesPage() {
       profilesApi.getBuddies(myProfile.username),
       profilesApi.getPendingRequests?.(),
     ]).then(([buddiesRes, pendingRes]) => {
-      setBuddies(buddiesRes.data || []);
+      setBuddies((buddiesRes as { results?: Profile[]; data?: Profile[] })?.results ?? buddiesRes?.data ?? []);
       if (pendingRes?.data) setPendingProfiles(pendingRes.data);
     }).catch(() => {}).finally(() => setIsLoading(false));
   }, [myProfile]);
@@ -39,7 +39,7 @@ export default function BuddiesPage() {
     // Refresh buddies list
     if (myProfile) {
       const res = await profilesApi.getBuddies(myProfile.username);
-      setBuddies(res.data || []);
+      setBuddies((res as { results?: Profile[]; data?: Profile[] })?.results ?? res?.data ?? []);
     }
   };
 

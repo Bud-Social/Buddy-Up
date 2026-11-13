@@ -61,21 +61,37 @@ export function IncomingCallOverlay() {
       <div className="bg-gray-950 border border-gray-800 shadow-2xl shadow-black/60 rounded-3xl p-4 pointer-events-auto">
         {/* Pulse ring animation */}
         <div className="relative flex items-center gap-3.5">
-          <div className="relative shrink-0">
+          <div className="relative shrink-0 flex -space-x-4">
             <div className="absolute inset-0 rounded-full bg-buddy-green/20 animate-ping" />
-            <Avatar
-              src={pendingCall.from_avatar_url}
-              alt={pendingCall.from_display_name}
-              size="md"
-              className="relative ring-2 ring-buddy-green/40"
-            />
+            {pendingCall.is_buddies_call && pendingCall.participants && pendingCall.participants.length >= 1 ? (
+              pendingCall.participants.slice(0, 2).map((p, i) => (
+                <Avatar
+                  key={p.user_id ?? i}
+                  src={p.avatar_url}
+                  alt={p.display_name ?? ''}
+                  size="md"
+                  className="relative ring-2 ring-gray-950"
+                />
+              ))
+            ) : (
+              <Avatar
+                src={pendingCall.from_avatar_url}
+                alt={pendingCall.from_display_name}
+                size="md"
+                className="relative ring-2 ring-buddy-green/40"
+              />
+            )}
           </div>
 
           <div className="flex-1 min-w-0">
             <p className="font-bold text-white text-sm truncate">{pendingCall.from_display_name}</p>
-            <p className="text-xs text-buddy-green font-medium animate-pulse">
-              Incoming {pendingCall.call_type === 'video' ? 'video' : 'voice'} call
-            </p>
+            {pendingCall.is_buddies_call ? (
+              <p className="text-xs text-buddy-green font-semibold animate-pulse">Buddies call · {pendingCall.call_type === 'video' ? 'video' : 'voice'}</p>
+            ) : (
+              <p className="text-xs text-buddy-green font-medium animate-pulse">
+                Incoming {pendingCall.call_type === 'video' ? 'video' : 'voice'} call
+              </p>
+            )}
           </div>
 
           {/* Action buttons */}
